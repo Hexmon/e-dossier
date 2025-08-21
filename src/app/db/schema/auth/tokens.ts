@@ -15,3 +15,14 @@ export const refreshTokens = pgTable('refresh_tokens', {
   ixExp: index('ix_refresh_expires').on(t.expiresAt),
   ixReplacedBy: index('ix_refresh_replaced_by').on(t.replacedByJti),
 }));
+
+// ✅ Add this export (was missing)
+export const passwordResetAdminActions = pgTable('password_reset_admin_actions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  adminUserId: uuid('admin_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  targetUserId: uuid('target_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  reason: text('reason'),
+  requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+  executedAt: timestamp('executed_at', { withTimezone: true }),
+  status: text('status').notNull().default('requested'), // requested|completed|cancelled
+});
