@@ -1,12 +1,13 @@
-# Auth ER diagram
+erDiagram
+
 users {
   UUID id PK
   CITEXT username
   CITEXT email
-  VARCHAR phone
-  VARCHAR name
-  VARCHAR usertype
-  VARCHAR rank
+  VARCHAR(32) phone
+  VARCHAR(120) name
+  VARCHAR(64) usertype
+  VARCHAR(64) rank
   BOOLEAN is_active
   TIMESTAMPTZ deactivated_at
   TIMESTAMPTZ deleted_at
@@ -66,6 +67,16 @@ user_roles {
 user_guest_access {
   UUID user_id PK,FK
   TIMESTAMPTZ expires_at
+}
+
+platoons {
+  UUID id PK
+  VARCHAR key
+  VARCHAR name
+  TEXT about
+  TIMESTAMPTZ created_at
+  TIMESTAMPTZ updated_at
+  TIMESTAMPTZ deleted_at
 }
 
 appointments {
@@ -129,3 +140,6 @@ roles ||--o{ user_roles : contains
 roles ||--o{ role_permissions : grants
 permissions ||--o{ role_permissions : includes
 refresh_tokens ||--o| refresh_tokens : replaced_by
+
+platoons ||--o{ appointments : scoped_by
+platoons ||--o{ delegations : scoped_by
