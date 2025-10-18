@@ -8,14 +8,45 @@ const ALG = 'EdDSA';
 let _priv: CryptoKey | null = null;
 let _pub: CryptoKey | null = null;
 
+// src/app/lib/jwt.ts
+function normalizePem(s?: string) {
+  return (s ?? "")
+    // handle one-line env with \n
+    .replace(/\\n/g, "\n")
+    // remove accidental quotes from env managers
+    .replace(/^"+|"+$/g, "")
+    .trim();
+}
+
 async function getKeys() {
   if (_priv && _pub) return { priv: _priv, pub: _pub };
-  const privPem = process.env.ACCESS_TOKEN_PRIVATE_KEY!;
-  const pubPem = process.env.ACCESS_TOKEN_PUBLIC_KEY!;
-  _priv = await importPKCS8(privPem, ALG);
-  _pub = await importSPKI(pubPem, ALG);
+
+  const privPem = normalizePem(process.env.ACCESS_TOKEN_PRIVATE_KEY);
+  const pubPem = normalizePem(process.env.ACCESS_TOKEN_PUBLIC_KEY);
+
+  // guard-rails with clear messages
+  if (!privPem || !pubPem) {
+    throw new Error("JWT keys missing. Set ACCESS_TOKEN_PRIVATE_KEY and ACCESS_TOKEN_PUBLIC_KEY.");
+  }
+  if (!privPem.includes("BEGIN PRIVATE KEY")) {
+    throw new Error("ACCESS_TOKEN_PRIVATE_KEY must be a PKCS#8 PEM with 'BEGIN PRIVATE KEY'.");
+  }
+  if (!pubPem.includes("BEGIN PUBLIC KEY")) {
+    throw new Error("ACCESS_TOKEN_PUBLIC_KEY must be an SPKI PEM with 'BEGIN PUBLIC KEY'.");
+  }
+
+  try {
+    _priv = await importPKCS8(privPem, ALG); // ALG = 'EdDSA'
+    _pub = await importSPKI(pubPem, ALG);
+  } catch (e) {
+    // make the root cause obvious in logs
+    console.error("Failed to import JWT keys. Check algorithm, format, and newlines.", e);
+    throw e;
+  }
+
   return { priv: _priv, pub: _pub };
 }
+
 
 const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900); // 15m
 
