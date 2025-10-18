@@ -1,12 +1,12 @@
 // src\app\api\refresh\route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '../../db/client';
-import { refreshTokens } from '../../db/schema/auth/tokens';
-import { roles, userRoles } from '../../db/schema/auth/rbac';
+import { db } from '../../../db/client';
+import { refreshTokens } from '../../../db/schema/auth/tokens';
+import { roles, userRoles } from '../../../db/schema/auth/rbac';
 import { eq, sql } from 'drizzle-orm';
 import { createHash, randomBytes, randomUUID } from 'crypto';
-import { signAccessJWT } from '../../lib/jwt';
-import { setAccessCookie, setRefreshCookie, clearAuthCookies } from '../../lib/cookies';
+import { signAccessJWT } from '../../../lib/jwt';
+import { setAccessCookie, setRefreshCookie, clearAuthCookies } from '../../../lib/cookies';
 
 export async function POST(req: NextRequest) {
   const refresh = req.cookies.get('refresh_token')?.value;

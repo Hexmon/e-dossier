@@ -7,10 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:generate": "drizzle-kit generate --config=./src/app/db/drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config=./src/app/db/drizzle.config.ts",
+    "db:push": "drizzle-kit push --config=./src/app/db/drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config=./src/app/db/drizzle.config.ts",
+    "seed:rbac": "tsx src/app/db/seeds/seedRolesAndPermissions.ts",
+    "seed:admins": "tsx src/app/db/seeds/seedAdminUser.ts"
   },
   "dependencies": {
     "argon2": "^0.44.0",

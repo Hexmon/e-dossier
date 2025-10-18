@@ -1,145 +1,148 @@
-erDiagram
+1. users 
+| Column                     | Type         | Null | Key  | References          | Description                                                          |
+| -------------------------- | ------------ | ---: | ---- | ------------------- | -------------------------------------------------------------------- |
+| id                         | UUID         |   NO | PK   | –                   | User id                                                              |
+| username                   | CITEXT       |   NO | UNI* | –                   | Login username (unique, soft-delete aware)                           |
+| email                      | CITEXT       |   NO | UNI* | –                   | Email (unique, soft-delete aware)                                    |
+| phone                      | VARCHAR(32)  |   NO | UNI* | –                   | Phone (unique, soft-delete aware)                                    |
+| name                       | VARCHAR(120) |   NO | –    | –                   | Full name                                                            |
+| rank                       | VARCHAR(64)  |   NO | –    | –                   | Bio label (not auth)                                                 |
+| is_active                  | BOOLEAN      |   NO | –    | –                   | User enabled flag (default TRUE)                                     |
+| deactivated_at             | TIMESTAMPTZ  |  YES | –    | –                   | When deactivated                                                     |
+| deleted_at                 | TIMESTAMPTZ  |  YES | –    | –                   | Soft delete timestamp                                                |
+| current_appointment_id     | UUID         |  YES | FK   | **appointments.id** | Pointer to the user’s *current* active appointment (optional helper) |
+| created_at                 | TIMESTAMPTZ  |   NO | –    | –                   | Default `now()`                                                      |
+| updated_at                 | TIMESTAMPTZ  |   NO | –    | –                   | Auto-updated trigger                                                 |
 
-users {
-  UUID id PK
-  CITEXT username
-  CITEXT email
-  VARCHAR(32) phone
-  VARCHAR(120) name
-  VARCHAR(64) usertype
-  VARCHAR(64) rank
-  BOOLEAN is_active
-  TIMESTAMPTZ deactivated_at
-  TIMESTAMPTZ deleted_at
-  TIMESTAMPTZ created_at
-  TIMESTAMPTZ updated_at
-}
 
-credentials_local {
-  UUID user_id PK,FK
-  TEXT password_hash
-  TEXT password_algo
-  TIMESTAMPTZ password_updated_at
-}
+2. credentials_local
+| Column              | Type        | Null | Key   | References   | Description                     |
+| ------------------- | ----------- | ---: | ----- | ------------ | ------------------------------- |
+| user_id             | UUID        |   NO | PK,FK | **users.id** | One row per user (local auth)   |
+| password_hash       | TEXT        |   NO | –     | –            | Argon2id hash                   |
+| password_algo       | TEXT        |   NO | –     | –            | e.g. `argon2id`                 |
+| password_updated_at | TIMESTAMPTZ |   NO | –     | –            | For token invalidation & audits |
 
-refresh_tokens {
-  UUID jti PK
-  UUID user_id FK
-  TEXT token_hash
-  TIMESTAMPTZ issued_at
-  TIMESTAMPTZ expires_at
-  TIMESTAMPTZ revoked_at
-  UUID replaced_by_jti FK
-}
 
-password_reset_admin_actions {
-  UUID id PK
-  UUID admin_user_id FK
-  UUID target_user_id FK
-  TEXT reason
-  TIMESTAMPTZ requested_at
-  TIMESTAMPTZ executed_at
-  TEXT status
-}
+3. positions => list of appointments 
+| Column            | Type           | Null | Key | References | Description                                      |
+| ----------------- | -------------- | ---: | --- | ---------- | ------------------------------------------------ |
+| id                | UUID           |   NO | PK  | –          | Position id                                      |
+| key               | VARCHAR(64)    |   NO | UNI | –          | Machine key (e.g., `PLATOON_COMMANDER`, `ADMIN`) |
+| display_name      | VARCHAR(128)   |  YES | –   | –          | Human label                                      |
+| **default_scope** | **scope_type** |   NO | –   | –          | Expected scope of this post (`GLOBAL`/`PLATOON`) |
+| singleton         | BOOLEAN        |   NO | –   | –          | One active holder per slot (default TRUE)        |
+| description       | TEXT           |  YES | –   | –          | Notes                                            |
+| created_at        | TIMESTAMPTZ    |   NO | –   | –          | Default `now()`                                  |
 
-roles {
-  UUID id PK
-  VARCHAR key
-  TEXT description
-}
 
-permissions {
-  UUID id PK
-  VARCHAR key
-  TEXT description
-}
+4. platoons
+| Column     | Type         | Null | Key | References | Description                     |
+| ---------- | ------------ | ---: | --- | ---------- | ------------------------------- |
+| id         | UUID         |   NO | PK  | –          | Platoon id                      |
+| key        | VARCHAR(64)  |   NO | UNI | –          | e.g., `ARJUN`, `CHANDRAGUPT`, … |
+| name       | VARCHAR(128) |   NO | –   | –          | Display name                    |
+| about      | TEXT         |  YES | –   | –          | Optional info                   |
+| created_at | TIMESTAMPTZ  |   NO | –   | –          | Default `now()`                 |
+| updated_at | TIMESTAMPTZ  |   NO | –   | –          | Auto-updated trigger            |
+| deleted_at | TIMESTAMPTZ  |  YES | –   | –          | Soft delete                     |
 
-role_permissions {
-  UUID role_id PK,FK
-  UUID permission_id PK,FK
-}
 
-user_roles {
-  UUID user_id PK,FK
-  UUID role_id PK,FK
-}
+5. password_reset_admin_actions
+| Column         | Type        | Null | Key | References   | Description                  |           |            |
+| -------------- | ----------- | ---: | --- | ------------ | ---------------------------- | --------- | ---------- |
+| id             | UUID        |   NO | PK  | –            | Action id                    |           |            |
+| admin_user_id  | UUID        |   NO | FK  | **users.id** | Admin who requested/executed |           |            |
+| target_user_id | UUID        |   NO | FK  | **users.id** | Target user                  |           |            |
+| reason         | TEXT        |  YES | –   | –            | Why                          |           |            |
+| requested_at   | TIMESTAMPTZ |   NO | –   | –            | Request time                 |           |            |
+| executed_at    | TIMESTAMPTZ |  YES | –   | –            | Completion time              |           |            |
+| status         | TEXT        |   NO | –   | –            | `requested                   | completed | cancelled` |
 
-user_guest_access {
-  UUID user_id PK,FK
-  TIMESTAMPTZ expires_at
-}
 
-platoons {
-  UUID id PK
-  VARCHAR key
-  VARCHAR name
-  TEXT about
-  TIMESTAMPTZ created_at
-  TIMESTAMPTZ updated_at
-  TIMESTAMPTZ deleted_at
-}
+6. roles
+| Column      | Type    | Null | Key |
+| ----------- | ------- | ---: | --- |
+| id          | UUID    |   NO | PK  |
+| key         | VARCHAR |   NO | UNI |
+| description | TEXT    |  YES | –   |
 
-appointments {
-  UUID id PK
-  UUID user_id FK
-  position_type position
-  assignment_kind assignment
-  scope_type scope_type
-  UUID scope_id
-  TIMESTAMPTZ starts_at
-  TIMESTAMPTZ ends_at
-  TSTZRANGE valid_during
-  UUID appointed_by FK
-  UUID ended_by FK
-  TEXT reason
-  TIMESTAMPTZ deleted_at
-  TIMESTAMPTZ created_at
-  TIMESTAMPTZ updated_at
-}
+7. permissions
+| Column      | Type    | Null | Key |
+| ----------- | ------- | ---: | --- |
+| id          | UUID    |   NO | PK  |
+| key         | VARCHAR |   NO | UNI | // module:resource:action
+| description | TEXT    |  YES | –   |
 
-delegations {
-  UUID id PK
-  UUID grantor_user_id FK
-  UUID grantee_user_id FK
-  position_type act_as
-  scope_type scope_type
-  UUID scope_id
-  TIMESTAMPTZ starts_at
-  TIMESTAMPTZ ends_at
-  TSTZRANGE valid_during
-  UUID terminated_by FK
-  TEXT reason
-  TIMESTAMPTZ deleted_at
-  TIMESTAMPTZ created_at
-  TIMESTAMPTZ updated_at
-}
+8. role_permissions (many-to-many)
+| Column        | Type | Null | Key   | References         |
+| ------------- | ---- | ---: | ----- | ------------------ |
+| role_id       | UUID |   NO | PK,FK | **roles.id**       |
+| permission_id | UUID |   NO | PK,FK | **permissions.id** |
 
-audit_logs {
-  UUID id PK
-  UUID actor_user_id FK
-  VARCHAR event_type
-  VARCHAR resource_type
-  UUID resource_id
-  TEXT description
-  JSONB metadata
-  VARCHAR ip_addr
-  TEXT user_agent
-  TIMESTAMPTZ created_at
-}
 
-users ||--o{ credentials_local : has
-users ||--o{ refresh_tokens : has
-users ||--o{ password_reset_admin_actions : initiates
-users ||--o{ user_roles : assigned
-users ||--o{ user_guest_access : granted
-users ||--o{ appointments : appointed
-users ||--o{ delegations : delegates
-users ||--o{ audit_logs : actor
+9. user_roles (many-to-many)
+| Column  | Type | Null | Key   | References   |
+| ------- | ---- | ---: | ----- | ------------ |
+| user_id | UUID |   NO | PK,FK | **users.id** |
+| role_id | UUID |   NO | PK,FK | **roles.id** |
 
-roles ||--o{ user_roles : contains
-roles ||--o{ role_permissions : grants
-permissions ||--o{ role_permissions : includes
-refresh_tokens ||--o| refresh_tokens : replaced_by
 
-platoons ||--o{ appointments : scoped_by
-platoons ||--o{ delegations : scoped_by
+10. user_guest_access
+| Column     | Type        | Null | Key   | References   | Description                     |
+| ---------- | ----------- | ---: | ----- | ------------ | ------------------------------- |
+| user_id    | UUID        |   NO | PK,FK | **users.id** | One guest token window per user |
+| expires_at | TIMESTAMPTZ |   NO | –     | –            | When guest access ends          |
+
+
+11. appointments
+| Column           | Type                      | Null | Key | References                       | Description                                |
+| ---------------- | ------------------------- | ---: | --- | -------------------------------- | ------------------------------------------ |
+| id               | UUID                      |   NO | PK  | –                                | Appointment record id                      |
+| user_id          | UUID                      |   NO | FK  | **users.id**                     | Holder of the post during this window      |
+| **position_id**  | UUID                      |   NO | FK  | **positions.id**                 | Which post (from catalog)                  |
+| assignment       | **assignment_kind**       |   NO | –   | –                                | `PRIMARY` (main) or `OFFICIATING` (acting) |
+| scope_type       | **scope_type**            |   NO | –   | –                                | `GLOBAL` or `PLATOON`                      |
+| scope_id         | UUID                      |  YES | –   | **platoons.id** (when `PLATOON`) | Which platoon (NULL if `GLOBAL`)           |
+| starts_at        | TIMESTAMPTZ               |   NO | –   | –                                | Start of tenure                            |
+| ends_at          | TIMESTAMPTZ               |  YES | –   | –                                | End of tenure (NULL = active)              |
+| **valid_during** | **TSTZRANGE** (generated) |   NO | –   | –                                | `[starts_at, ends_at)` auto-generated      |
+| appointed_by     | UUID                      |  YES | FK  | **users.id**                     | Who appointed                              |
+| ended_by         | UUID                      |  YES | FK  | **users.id**                     | Who ended                                  |
+| reason           | TEXT                      |  YES | –   | –                                | Note (transfer, rotation, etc.)            |
+| deleted_at       | TIMESTAMPTZ               |  YES | –   | –                                | Soft delete                                |
+| created_at       | TIMESTAMPTZ               |   NO | –   | –                                | Default `now()`                            |
+| updated_at       | TIMESTAMPTZ               |   NO | –   | –                                | Auto-updated trigger                       |
+
+12. delegations
+| Column           | Type                      | Null | Key | References                       | Description              |
+| ---------------- | ------------------------- | ---: | --- | -------------------------------- | ------------------------ |
+| id               | UUID                      |   NO | PK  | –                                | Delegation id            |
+| grantor_user_id  | UUID                      |   NO | FK  | **users.id**                     | Who grants authority     |
+| grantee_user_id  | UUID                      |   NO | FK  | **users.id**                     | Who receives authority   |
+| **act_as**       | *(two options)*           |    – | –   | –                                | See note below           |
+| scope_type       | **scope_type**            |   NO | –   | –                                | `GLOBAL` or `PLATOON`    |
+| scope_id         | UUID                      |  YES | –   | **platoons.id** (when `PLATOON`) | Applies to which platoon |
+| starts_at        | TIMESTAMPTZ               |   NO | –   | –                                | Start time               |
+| ends_at          | TIMESTAMPTZ               |  YES | –   | –                                | End time (NULL = active) |
+| **valid_during** | **TSTZRANGE** (generated) |   NO | –   | –                                | Range from start/end     |
+| terminated_by    | UUID                      |  YES | FK  | **users.id**                     | Who revoked it           |
+| reason           | TEXT                      |  YES | –   | –                                | Why delegated            |
+| deleted_at       | TIMESTAMPTZ               |  YES | –   | –                                | Soft delete              |
+| created_at       | TIMESTAMPTZ               |   NO | –   | –                                | Default `now()`          |
+| updated_at       | TIMESTAMPTZ               |   NO | –   | –                                | Auto-updated trigger     |
+
+
+13. audit_logs
+| Column        | Type        | Null | Key | References   | Description                                 |
+| ------------- | ----------- | ---: | --- | ------------ | ------------------------------------------- |
+| id            | UUID        |   NO | PK  | –            | Audit id                                    |
+| actor_user_id | UUID        |  YES | FK  | **users.id** | Who did it (nullable for system)            |
+| event_type    | VARCHAR(96) |   NO | –   | –            | Event key (`auth.login`, `appt.assign`, …)  |
+| resource_type | VARCHAR(96) |   NO | –   | –            | Domain object (e.g., `appointment`, `user`) |
+| resource_id   | UUID        |  YES | –   | –            | Which object                                |
+| description   | TEXT        |  YES | –   | –            | Human context                               |
+| metadata      | JSONB       |  YES | –   | –            | Structured details (safe)                   |
+| ip_addr       | VARCHAR(64) |  YES | –   | –            | Origin IP                                   |
+| user_agent    | TEXT        |  YES | –   | –            | UA string                                   |
+| created_at    | TIMESTAMPTZ |   NO | –   | –            | Default `now()`                             |

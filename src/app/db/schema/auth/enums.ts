@@ -6,7 +6,9 @@ export const positionType = pgEnum('position_type', [
   'HOAT',
   'DEPUTY_SECRETARY',
   'PLATOON_COMMANDER',
-  'CLERK'
+  'CCO',
+  'ADMIN',
+  'SUPER_ADMIN',
 ]);
 
 export const assignmentKind = pgEnum('assignment_kind', ['PRIMARY', 'OFFICIATING']);

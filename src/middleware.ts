@@ -1,30 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAccessJWT } from './app/lib/jwt';
+import { json } from '@/app/lib/http'; // UPDATED: use central helpers for consistent envelopes
 
-const PUBLIC = new Set(['/api/login', '/api/refresh', '/api/logout', '/api/health']);
+const PROTECTED_PREFIX = '/api/v1/';
 
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+// Public endpoints (no auth required)
+const PUBLIC_PATHS: string[] = [
+  '/api/v1/auth/login',
+  '/api/v1/auth/signup',
+  '/api/v1/auth/logout',          // keep public so logout can clear cookies even if expired
+  '/api/v1/users/check-username',
+  '/api/v1/health',
+];
 
-  if (!pathname.startsWith('/api')) return NextResponse.next();
-  if (PUBLIC.has(pathname)) return NextResponse.next();
-
-  const token = req.cookies.get('access_token')?.value
-    ?? req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  try {
-    const payload = await verifyAccessJWT(token);
-    // Optionally forward identity to downstream handlers
-    const headers = new Headers(req.headers);
-    headers.set('x-user-id', payload.sub ?? '');
-    headers.set('x-user-roles', (payload.roles ?? []).join(','));
-
-    return NextResponse.next({ request: { headers } });
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+function isPublicPath(pathname: string) {
+  if (!pathname.startsWith(PROTECTED_PREFIX)) return true; // only guard v1 routes
+  return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 }
 
-export const config = { matcher: ['/api/:path*'] };
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Skip non-API or public v1 routes
+  if (isPublicPath(pathname)) return NextResponse.next();
+
+  // (Your existing exception) Allow GET platoons without auth
+  if (
+    req.method === 'GET' &&
+    (pathname === '/api/v1/admin/positions' || pathname.startsWith('/api/v1/admin/positions/'))
+  ) {
+    return NextResponse.next();
+  }
+
+  // Light gate: require token presence (verify inside the route)
+  const cookieToken = req.cookies.get('access_token')?.value ?? '';
+  const bearerToken = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
+  const token = cookieToken || bearerToken;
+
+  if (!token) {
+    // UPDATED: return unified 401 body with status field + WWW-Authenticate header
+    return json.unauthorized('Missing access token'); // UPDATED
+  }
+
+  // Token present → let the route verify & authorize (PEP-2)
+  return NextResponse.next();
+}
+
+// Limit to API v1 only (perf)
+export const config = {
+  matcher: ['/api/v1/:path*'],
+};

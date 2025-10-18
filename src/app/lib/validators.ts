@@ -1,3 +1,4 @@
+// src\app\lib\validators.ts
 import { z } from 'zod';
 
 // password policy: tune as you like
@@ -14,10 +15,10 @@ export const signupSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().trim().toLowerCase().email().max(255),
   phone: z.string().trim().min(3).max(32),
-  usertype: z.string().trim().min(1).max(64),
   rank: z.string().trim().min(1).max(64),
   password: passwordSchema,
   confirmPassword: z.string(),
+  note: z.string().trim().max(500).optional(),
 }).superRefine(({ password, confirmPassword }, ctx) => {
   if (password !== confirmPassword) {
     ctx.addIssue({
@@ -26,4 +27,86 @@ export const signupSchema = z.object({
       message: 'Passwords do not match',
     });
   }
+});
+
+export const platoonCreateSchema = z.object({
+  key: z.string().trim().min(2).max(64)
+    .regex(/^[A-Z0-9_-]+$/, 'Use UPPERCASE letters, digits, _ or -'),
+  name: z.string().trim().min(2).max(128),
+  about: z.string().trim().max(2000).optional().nullable(),
+});
+
+export const platoonUpdateSchema = z.object({
+  key: z.string().trim().min(2).max(64)
+    .regex(/^[A-Z0-9_-]+$/, 'Use UPPERCASE letters, digits, _ or -')
+    .optional(),
+  name: z.string().trim().min(2).max(128).optional(),
+  about: z.string().trim().max(2000).optional().nullable(),
+  restore: z.boolean().optional(), // set true to undelete a soft-deleted platoon
+}).refine((v) => Object.keys(v).some(k => k !== 'restore'), {
+  message: 'Provide at least one field (key/name/about) to update',
+});
+
+export const positionCreateSchema = z.object({
+  key: z.string().trim().min(2).max(64),
+  displayName: z.string().trim().min(1).max(128).optional(),
+  defaultScope: z.enum(['GLOBAL', 'PLATOON']),
+  singleton: z.boolean().optional().default(true),
+  description: z.string().optional(),
+});
+
+export const positionUpdateSchema = z.object({
+  displayName: z.string().trim().min(1).max(128).optional(),
+  defaultScope: z.enum(['GLOBAL', 'PLATOON']).optional(),
+  singleton: z.boolean().optional(),
+  description: z.string().optional(),
+});
+
+export const appointmentCreateSchema = z.object({
+  userId: z.string().uuid(),
+  // you can pass either positionId or positionKey; at least one required
+  positionId: z.string().uuid().optional(),
+  positionKey: z.string().trim().optional(),
+
+  assignment: z.enum(['PRIMARY', 'OFFICIATING']).default('PRIMARY'),
+  scopeType: z.enum(['GLOBAL', 'PLATOON']).default('GLOBAL'),
+  scopeId: z.string().uuid().nullable().optional(), // required when PLATOON
+
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date().nullable().optional(),
+  reason: z.string().optional(),
+});
+
+export const appointmentUpdateSchema = z.object({
+  assignment: z.enum(['PRIMARY', 'OFFICIATING']).optional(),
+  scopeType: z.enum(['GLOBAL', 'PLATOON']).optional(),
+  scopeId: z.string().uuid().nullable().optional(),
+  startsAt: z.coerce.date().optional(),
+  endsAt: z.coerce.date().nullable().optional(),
+  reason: z.string().nullable().optional(),
+  deletedAt: z.coerce.date().nullable().optional(),
+});
+
+// Query params for GET /appointments
+export const appointmentListQuerySchema = z.object({
+  active: z
+    .union([z.literal('true'), z.literal('false')])
+    .optional(), // active=true filters valid_during @> now()
+  positionKey: z.string().trim().optional(),
+  platoonKey: z.string().trim().optional(),
+  userId: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).max(5000).optional(),
+});
+
+export const grantSignupRequestSchema = z.object({
+  positionKey: z.string().trim().min(2),             // e.g. 'PLATOON_COMMANDER' | 'ADMIN'
+  scopeType: z.enum(['GLOBAL', 'PLATOON']),
+  scopeId: z.string().uuid().nullable().optional(),  // required if PLATOON
+  startsAt: z.string().datetime().optional(),        // default = now
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const rejectSignupRequestSchema = z.object({
+  reason: z.string().trim().min(1).max(500),
 });
