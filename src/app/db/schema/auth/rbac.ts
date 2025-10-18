@@ -1,3 +1,4 @@
+// src\app\db\schema\auth\rbac.ts
 import { pgTable, uuid, varchar, text, primaryKey, timestamp } from 'drizzle-orm/pg-core';
 import { users } from './users';
 

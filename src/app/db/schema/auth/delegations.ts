@@ -2,7 +2,8 @@
 import { pgTable, uuid, timestamp, text } from 'drizzle-orm/pg-core';
 import { users } from './users';
 import { platoons } from './platoons';
-import { positionType, scopeTypeEnum } from './enums';
+import { scopeTypeEnum } from './enums';
+import { positions } from './positions';
 
 export const delegations = pgTable('delegations', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -13,8 +14,7 @@ export const delegations = pgTable('delegations', {
   granteeUserId: uuid('grantee_user_id').notNull()
     .references(() => users.id, { onDelete: 'restrict' }),
 
-  // FIX: column name aligned to SQL
-  actAsPosition: positionType('act_as').notNull(),
+  actAsPositionId: uuid('act_as_position_id').references(() => positions.id, { onDelete: 'restrict' }),
 
   scopeType: scopeTypeEnum('scope_type').notNull().default('GLOBAL'),   // FIX: notNull + default
   scopeId: uuid('scope_id').references(() => platoons.id),
@@ -29,4 +29,3 @@ export const delegations = pgTable('delegations', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
-// NOTE: valid_during + EXCLUDE + grantor!=grantee added in SQL migration.

@@ -1,3 +1,4 @@
+// src\app\db\schema\auth\credentials.ts
 import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
 import { users } from './users';
 

@@ -1,9 +1,9 @@
 // src/app/api/sessions/revoke-all/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '../../../db/client';
-import { refreshTokens } from '../../../db/schema/auth/tokens';
+import { db } from '../../../../db/client';
+import { refreshTokens } from '../../../../db/schema/auth/tokens';
 import { eq } from 'drizzle-orm';
-import { verifyAccessJWT } from '../../../lib/jwt';
+import { verifyAccessJWT } from '../../../../lib/jwt';
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get('access_token')?.value
