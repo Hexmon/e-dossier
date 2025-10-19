@@ -7,5 +7,6 @@ export const endpoints = {
     },
     admin: {
         approval: "/admin/signup-requests",
+        appointments: "/admin/appointments",
     }
 }

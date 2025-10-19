@@ -7,7 +7,8 @@ import {
   Ban,
   Camera,
   Book,
-  CheckCircle
+  CheckCircle,
+  CalendarDays
 } from "lucide-react";
 
 
@@ -253,6 +254,22 @@ export const managementCard = [
     to: "/dashboard/genmgmt/usersmgmt",
     color: "bg-red-500"
   },
+  {
+    title: "Approval Management",
+    description: "Handle user approvals and verification processes",
+    icon: CheckCircle,
+    to: "/dashboard/genmgmt/approvalmgmt",
+    color: "bg-green-500"
+  },
+  {
+    title: "Appointment Management",
+    description: "Schedule, track, and manage appointments efficiently",
+    icon: CalendarDays,
+    to: "/dashboard/genmgmt/appointmentmgmt",
+    color: "bg-blue-500"
+  }
+
+
   // {
   //   title: "Settings Management",
   //   description: "Configure application preferences and settings",
@@ -497,12 +514,12 @@ export const events = [
 ]
 
 export const platoonsdata = [
-  { name: "Arjun", username: "pltn_arjun_cmdr" , id: "uuid_arjun"},
-  { name: "Chandragupt", username: "pltn_chandragupt_cmdr" , id: "uuid_chandragupt"},
-  { name: "Ranapratap", username: "pltn_ranapratap_cmdr" , id: "uuid_ranapratap"},
-  { name: "Shivaji", username: "pltn_shivaji_cmdr" , id: "uuid_shivaji"},
-  { name: "Karna", username: "pltn_karna_cmdr" , id: "uuid_karna"},
-  { name: "Prithviraj", username: "pltn_prithviraj_cmdr" , id: "uuid_prithviraj"},
+  { name: "Arjun", username: "pltn_arjun_cmdr", id: "uuid_arjun" },
+  { name: "Chandragupt", username: "pltn_chandragupt_cmdr", id: "uuid_chandragupt" },
+  { name: "Ranapratap", username: "pltn_ranapratap_cmdr", id: "uuid_ranapratap" },
+  { name: "Shivaji", username: "pltn_shivaji_cmdr", id: "uuid_shivaji" },
+  { name: "Karna", username: "pltn_karna_cmdr", id: "uuid_karna" },
+  { name: "Prithviraj", username: "pltn_prithviraj_cmdr", id: "uuid_prithviraj" },
 ]
 
 export const appointments = [
@@ -982,6 +999,20 @@ export const ocTabs = [
   { value: "course-mgmt", title: "Course Management", icon: FileText, link: "/dashboard/genmgmt/coursemgmt" },
   { value: "subject-mgmt", title: "Subject Management", icon: Book, link: "/dashboard/genmgmt/subjectmgmt" },
   { value: "user-mgmt", title: "User Management", icon: Shield, link: "/dashboard/genmgmt/usersmgmt" },
+  {
+    value: "approval-mgmt",
+    title: "Approval Management",
+    icon: CheckCircle,
+    link: "/dashboard/genmgmt/approvalmgmt"
+  },
+  {
+    value: "appointment-mgmt",
+    title: "Appointment Management",
+    icon: CalendarDays,
+    link: "/dashboard/genmgmt/appointmentmgmt"
+  }
+
+
 ];
 
 export const semesterTabs = [
@@ -1011,7 +1042,7 @@ export const dossierTabs = [
     title: "Dossier Insp Sheet",
     icon: ClipboardCheck,
   },
-    {
+  {
     value: "comn-parents",
     title: "Parent Communication",
     icon: Phone,

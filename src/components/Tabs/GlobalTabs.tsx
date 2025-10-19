@@ -24,7 +24,7 @@ export default function GlobalTabs({
   return (
     <Tabs defaultValue={defaultValue} className="space-y-6">
       <TabsList
-        className="grid w-full sticky top-36 z-40"
+        className="grid w-full sticky top-16 z-40"
         style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
       >
         {tabs.map(({ value, title, icon: Icon, link }) =>
