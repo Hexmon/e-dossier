@@ -6,7 +6,8 @@ import {
   LucideIcon,
   Ban,
   Camera,
-  Book
+  Book,
+  CheckCircle
 } from "lucide-react";
 
 
@@ -496,12 +497,12 @@ export const events = [
 ]
 
 export const platoonsdata = [
-  { name: "Arjun", username: "pltn_arjun_cmdr" },
-  { name: "Chandragupt", username: "pltn_chandragupt_cmdr" },
-  { name: "Ranapratap", username: "pltn_ranapratap_cmdr" },
-  { name: "Shivaji", username: "pltn_shivaji_cmdr" },
-  { name: "Karna", username: "pltn_karna_cmdr" },
-  { name: "Prithviraj", username: "pltn_prithviraj_cmdr" },
+  { name: "Arjun", username: "pltn_arjun_cmdr" , id: "uuid_arjun"},
+  { name: "Chandragupt", username: "pltn_chandragupt_cmdr" , id: "uuid_chandragupt"},
+  { name: "Ranapratap", username: "pltn_ranapratap_cmdr" , id: "uuid_ranapratap"},
+  { name: "Shivaji", username: "pltn_shivaji_cmdr" , id: "uuid_shivaji"},
+  { name: "Karna", username: "pltn_karna_cmdr" , id: "uuid_karna"},
+  { name: "Prithviraj", username: "pltn_prithviraj_cmdr" , id: "uuid_prithviraj"},
 ]
 
 export const appointments = [

@@ -7,16 +7,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import { appointments, platoonsdata } from "@/config/app.config";
 import Link from "next/link";
+import { api, ApiClientError } from "@/app/lib/apiClient";
+import { baseURL, endpoints } from "@/constants/endpoints";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
 
   const isOcCorner = searchParams.get("role") === "oc";
+
+  const appointmentIds: Record<string, string> = {
+    Commander: "uuid-for-commander",
+    "Deputy Commander": "uuid-for-deputy-commander",
+    "DS Coord": "uuid-for-ds-coord",
+    HoAT: "uuid-for-hoat",
+    CCO: "uuid-for-cco",
+    "Platoon Commander": "uuid-for-platoon-commander",
+  };
 
   const appointmentUsernames: Record<string, string> = {
     Commander: "commander_user",
@@ -24,7 +34,7 @@ export default function LoginPage() {
     "DS Coord": "ds_coord_user",
     HoAT: "hoat_user",
     CCO: "cco_user",
-    "Platoon Commander": "" // dynamically assigned later
+    "Platoon Commander": ""
   };
 
   const [formData, setFormData] = useState({
@@ -65,25 +75,61 @@ export default function LoginPage() {
     setIsUsernameManuallyEdited(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.username || !formData.password || !formData.appointment) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
+      toast.error("Please fill in all required fields");
       return;
     }
 
-    toast({
-      title: "Login Successful",
-      description: `Welcome, ${formData.appointment}!`
-    });
+    try {
+      // Find matching appointment and platoon IDs
+      const appointmentId = appointmentIds[formData.appointment];
+      const selectedPlatoon = platoonsdata.find(
+        (p) => p.name === formData.platoon
+      );
 
-    router.push("/dashboard");
+      // Build request body dynamically
+      const requestBody =
+        formData.appointment === "Platoon Commander"
+          ? {
+            appointmentId,
+            platoonId: selectedPlatoon?.id,
+            username: formData.username,
+            password: formData.password,
+          }
+          : {
+            appointmentId,
+            username: formData.username,
+            password: formData.password,
+          };
+
+      // POST to login API
+      const response = await api.post<{ token?: string; message?: string }>(
+        endpoints.auth.login,
+        requestBody,
+        { baseURL }
+      );
+
+      toast.success(`Welcome, ${formData.appointment}!`);
+
+      // Optional: store token if provided
+      // localStorage.setItem("token", response.token || "");
+
+      // Give the toast a short moment to appear before redirecting
+      router.push("/dashboard");
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        toast.error(err.message || "Invalid credentials");
+        console.error("Login error:", err);
+      } else {
+        toast.error("Something went wrong. Please try again later.");
+        console.error(err);
+      }
+    }
   };
+
 
   return (
     <div className="min-h-screen bg-[var(--primary)] flex items-center justify-center p-4 relative">

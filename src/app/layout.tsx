@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Providers } from "@/components/providers/Providers";
+import { Toaster } from "sonner";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ export default function RootLayout({
               className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
               <Providers>{children}</Providers>
+              <Toaster richColors position="top-right" />
             </body>
     </html>
   );

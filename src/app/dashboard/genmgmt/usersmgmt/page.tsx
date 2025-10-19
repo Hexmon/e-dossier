@@ -224,7 +224,7 @@ export default function UserManagement() {
                         onDelete={() => handleDelete(index)}
                       />
                     ))}
-                </div>
+                </div>                
               </TabsContent>
             </GlobalTabs>
           </main>

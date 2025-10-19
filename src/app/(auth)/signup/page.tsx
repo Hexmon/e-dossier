@@ -11,15 +11,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { api, ApiClientError } from "@/app/lib/apiClient";
+import { baseURL, endpoints } from "@/constants/endpoints";
+import { email } from "zod";
 
 export default function Signup() {
     const router = useRouter();
 
     const [formData, setFormData] = useState({
+        email: "",
         phone: "",
         rank: "",
         name: "",
-        appointment: "",
+        note: "",
         username: "",
         password: "",
         confirmPassword: ""
@@ -31,15 +35,15 @@ export default function Signup() {
         usernameUnique: false
     });
 
-    const appointments = [
-        "Commander",
-        "Deputy Commander",
-        "DS Coord",
-        "HoAT",
-        "CCO",
-        "Platoon Commander",
-        "OC"
-    ];
+    // const appointments = [
+    //     "Commander",
+    //     "Deputy Commander",
+    //     "DS Coord",
+    //     "HoAT",
+    //     "CCO",
+    //     "Platoon Commander",
+    //     "OC"
+    // ];
 
     const checkPasswordStrength = (password: string) => {
         const hasLength = password.length >= 8;
@@ -74,12 +78,14 @@ export default function Signup() {
         });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const { phone, rank, name, appointment, username, password, confirmPassword } = formData;
+        console.log("formData:", formData);
 
-        if (!phone || !rank || !name || !appointment || !username || !password || !confirmPassword) {
+        const { email, phone, rank, name, note, username, password, confirmPassword } = formData;
+
+        if (!email || !phone || !rank || !name || !note || !username || !password || !confirmPassword) {
             toast.error("Please fill in all required fields");
             return;
         }
@@ -99,9 +105,36 @@ export default function Signup() {
             return;
         }
 
-        toast.success("Account Created Successfully! You can now sign in with your credentials.");
-        router.push("/login");
+        try {
+            const response = await api.post<{ message: string }>(
+                endpoints.auth.signup,
+                {
+                    username,
+                    name,
+                    email,
+                    phone,
+                    rank,
+                    password,
+                    confirmPassword,
+                    note,
+                },
+                { baseURL }
+            );
+
+            toast.success("Account Created Successfully!");
+            router.push("/login");
+
+        } catch (err) {
+            if (err instanceof ApiClientError) {
+                toast.error(err.message || "Signup failed");
+                console.error("Signup error:", err);
+            } else {
+                toast.error("Unexpected error. Please try again.");
+                console.error(err);
+            }
+        }
     };
+
 
     return (
         <div className="min-h-screen bg-[var(--primary)] flex items-center justify-center p-4 relative overflow-hidden">
@@ -169,25 +202,18 @@ export default function Signup() {
                                     required
                                 />
                             </div>
-
                             <div className="space-y-2">
-                                <Label htmlFor="appointment">Appointment</Label>
-                                <Select
-                                    value={formData.appointment}
-                                    onValueChange={(value) => setFormData({ ...formData, appointment: value })}
-                                >
-                                    <SelectTrigger className="w-full cursor-pointer">
-                                        <SelectValue placeholder="Select your appointment" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {appointments.map((appointment) => (
-                                            <SelectItem key={appointment} value={appointment}>
-                                                {appointment}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    placeholder="Enter your email"
+                                    required
+                                />
                             </div>
+
 
                             <div className="space-y-2">
                                 <Label htmlFor="username">Unique Username</Label>
@@ -260,8 +286,19 @@ export default function Signup() {
                                     )}
                                 </div>
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="note">Note</Label>
+                                <Input
+                                    id="note"
+                                    type="text"
+                                    value={formData.note}
+                                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                                    placeholder="Enter your email"
+                                    required
+                                />
+                            </div>
 
-                            <Button type="submit" className="w-full" variant="default">
+                            <Button type="submit" className="w-full cursor-pointer" variant="default">
                                 Create Account
                             </Button>
                         </form>
