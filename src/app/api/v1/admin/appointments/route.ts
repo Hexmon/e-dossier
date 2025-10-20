@@ -66,8 +66,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        // appointment CRUD must be admin (safer per your notes)
-        requireAdmin(req);
+        await requireAdmin(req);
 
         const body = await req.json();
         const parsed = appointmentCreateSchema.safeParse(body);

@@ -105,6 +105,7 @@ export const grantSignupRequestSchema = z.object({
   scopeId: z.string().uuid().nullable().optional(),  // required if PLATOON
   startsAt: z.string().datetime().optional(),        // default = now
   reason: z.string().trim().max(500).optional(),
+  roleKeys: z.array(z.string().trim().min(1)).optional(),
 });
 
 export const rejectSignupRequestSchema = z.object({
