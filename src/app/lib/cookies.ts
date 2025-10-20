@@ -1,7 +1,7 @@
 // src/app/lib/cookies.ts
 import { NextResponse, NextRequest } from 'next/server';
 
-const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900); // 15m default
+const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 100000000000); // 15m default
 
 export function setAccessCookie(res: NextResponse, token: string) {
   res.cookies.set('access_token', token, {
@@ -24,12 +24,14 @@ export function clearAuthCookies(res: NextResponse) {
   });
 }
 
-// Optional helper for middleware/controllers
 export function readAccessToken(req: NextRequest): string | null {
-  const cookie = req.cookies.get('access_token')?.value;
-  if (cookie) return cookie;
+  // Prefer Authorization header if present
   const authz = req.headers.get('authorization');
-  if (!authz) return null;
-  const m = authz.match(/^Bearer\s+(.+)$/i);
-  return m ? m[1] : null;
+  if (authz) {
+    const m = authz.match(/^Bearer\s+(.+)$/i);
+    if (m) return m[1];
+  }console.log({authz});
+  
+  // Fallback to cookie
+  return req.cookies.get('access_token')?.value ?? null;
 }

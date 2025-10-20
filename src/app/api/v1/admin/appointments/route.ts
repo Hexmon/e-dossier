@@ -5,15 +5,12 @@ import { positions } from '@/app/db/schema/auth/positions';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { appointmentCreateSchema, appointmentListQuerySchema } from '@/app/lib/validators';
 import { and, eq, sql } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
     try {
-        // token required (but not necessarily admin)
-        requireAuth(req);
-
         const url = new URL(req.url);
         const qp = appointmentListQuerySchema.parse({
             active: url.searchParams.get('active') ?? undefined,
