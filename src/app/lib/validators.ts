@@ -87,6 +87,13 @@ export const appointmentUpdateSchema = z.object({
   deletedAt: z.coerce.date().nullable().optional(),
 });
 
+export const appointmentTransferBody = z.object({
+  newUserId: z.string().uuid(),
+  prevEndsAt: z.string().datetime(),   // end existing at this instant
+  newStartsAt: z.string().datetime(),  // start the new one at this instant
+  reason: z.string().max(500).optional(),
+});
+
 // Query params for GET /appointments
 export const appointmentListQuerySchema = z.object({
   active: z

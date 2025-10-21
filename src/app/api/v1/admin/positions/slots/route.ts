@@ -11,11 +11,19 @@ import { and, or, eq, isNull, lte, gte, inArray, sql } from 'drizzle-orm';
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
+
     // default: true (show only available)
     const onlyAvailable = url.searchParams.get('onlyAvailable') !== '0';
+
+    // filter by position keys (comma-separated)
     const keysParam = url.searchParams.get('positionKeys');
-    const keys =
+    const positionKeys =
       keysParam?.split(',').map((s) => s.trim()).filter(Boolean) ?? [];
+
+    // NEW: filter by platoon keys (comma-separated)
+    const platoonKeysParam = url.searchParams.get('platoonKeys');
+    const platoonKeys =
+      platoonKeysParam?.split(',').map((s) => s.trim()).filter(Boolean) ?? [];
 
     const now = new Date();
 
@@ -30,8 +38,8 @@ export async function GET(req: NextRequest) {
       eq(positions.defaultScope, 'GLOBAL' as const),
     ] as any[];
 
-    if (keys.length) {
-      globalWhere.push(inArray(positions.key, keys));
+    if (positionKeys.length) {
+      globalWhere.push(inArray(positions.key, positionKeys));
     }
 
     const globalRows = await db
@@ -39,9 +47,13 @@ export async function GET(req: NextRequest) {
         position_id: positions.id,
         position_key: positions.key,
         display_name: positions.displayName,
+
         scope_type: sql<'GLOBAL'>`'GLOBAL'`,
         scope_id: sql<string | null>`NULL`,
+        scope_key: sql<string | null>`NULL`,
         scope_name: sql<string | null>`NULL`,
+        scope_about: sql<string | null>`NULL`,
+
         appt_id: appointments.id,
         user_id: appointments.userId,
         username: users.username,
@@ -67,18 +79,27 @@ export async function GET(req: NextRequest) {
       eq(positions.defaultScope, 'PLATOON' as const),
     ] as any[];
 
-    if (keys.length) {
-      platoonWhere.push(inArray(positions.key, keys));
+    if (positionKeys.length) {
+      platoonWhere.push(inArray(positions.key, positionKeys));
     }
+
+    // NOTE: We CROSS JOIN platoons to create a slot per platoon.
+    // We can still filter by platoon keys without changing that pattern.
+    const platoonJoinFilter =
+      platoonKeys.length ? inArray(platoons.key, platoonKeys) : sql`TRUE`;
 
     const platoonRows = await db
       .select({
         position_id: positions.id,
         position_key: positions.key,
         display_name: positions.displayName,
+
         scope_type: sql<'PLATOON'>`'PLATOON'`,
         scope_id: platoons.id,
+        scope_key: platoons.key,             // NEW
         scope_name: platoons.name,
+        scope_about: platoons.about,         // NEW
+
         appt_id: appointments.id,
         user_id: appointments.userId,
         username: users.username,
@@ -86,8 +107,8 @@ export async function GET(req: NextRequest) {
         ends_at: appointments.endsAt,
       })
       .from(positions)
-      // CROSS JOIN platoons (one slot per platoon)
-      .innerJoin(platoons, sql`TRUE`)
+      // CROSS JOIN all platoons then filter by key (if provided)
+      .innerJoin(platoons, platoonJoinFilter)
       .leftJoin(
         appointments,
         and(
@@ -123,9 +144,11 @@ export async function GET(req: NextRequest) {
           displayName: r.display_name,
         },
         scope: {
-          type: r.scope_type, // 'GLOBAL' | 'PLATOON'
-          id: r.scope_id, // null for GLOBAL
-          name: r.scope_name ?? null, // platoon name if PLATOON
+          type: r.scope_type as 'GLOBAL' | 'PLATOON',
+          id: r.scope_id,                 // null for GLOBAL
+          key: r.scope_key ?? null,       // NEW (platoon key)
+          name: r.scope_name ?? null,     // platoon name if PLATOON
+          about: r.scope_about ?? null,   // NEW (platoon about)
         },
         occupied: r.appt_id != null,
         occupant: r.appt_id
