@@ -1,131 +1,22 @@
-# Auth ER diagram
-users {
-  UUID id PK
-  CITEXT username
-  CITEXT email
-  VARCHAR phone
-  VARCHAR name
-  VARCHAR usertype
-  VARCHAR rank
-  BOOLEAN is_active
-  TIMESTAMPTZ deactivated_at
-  TIMESTAMPTZ deleted_at
-  TIMESTAMPTZ created_at
-  TIMESTAMPTZ updated_at
-}
+DATABASE_URL=postgresql://postgres:root@localhost:5432/e_dossier_v2
+ACCESS_TOKEN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIKsoxAMJEZLV+A9pJF/1+A0vkGdjaKTQGVSlKHn7LBXw\n-----END PRIVATE KEY-----"
+ACCESS_TOKEN_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAX/+LJjlZfaHoN38xoH2VrDSmzcKUmySLHLrtI6nw7a4=\n-----END PUBLIC KEY-----"
+ACCESS_TOKEN_TTL_SECONDS=100000000000000000000000000000000000000
+NODE_ENV=development
+EXPOSE_TOKENS_IN_DEV=true
 
-credentials_local {
-  UUID user_id PK,FK
-  TEXT password_hash
-  TEXT password_algo
-  TIMESTAMPTZ password_updated_at
-}
+# Super Admin (post: SUPER_ADMIN)
+SUPERADMIN_USERNAME=superadmin
+SUPERADMIN_PASSWORD=ChangeMe!123
+SUPERADMIN_EMAIL=superadmin@example.com
+SUPERADMIN_PHONE=+910000000000
+SUPERADMIN_NAME=Super Admin
+SUPERADMIN_RANK=SUPER
 
-refresh_tokens {
-  UUID jti PK
-  UUID user_id FK
-  TEXT token_hash
-  TIMESTAMPTZ issued_at
-  TIMESTAMPTZ expires_at
-  TIMESTAMPTZ revoked_at
-  UUID replaced_by_jti FK
-}
-
-password_reset_admin_actions {
-  UUID id PK
-  UUID admin_user_id FK
-  UUID target_user_id FK
-  TEXT reason
-  TIMESTAMPTZ requested_at
-  TIMESTAMPTZ executed_at
-  TEXT status
-}
-
-roles {
-  UUID id PK
-  VARCHAR key
-  TEXT description
-}
-
-permissions {
-  UUID id PK
-  VARCHAR key
-  TEXT description
-}
-
-role_permissions {
-  UUID role_id PK,FK
-  UUID permission_id PK,FK
-}
-
-user_roles {
-  UUID user_id PK,FK
-  UUID role_id PK,FK
-}
-
-user_guest_access {
-  UUID user_id PK,FK
-  TIMESTAMPTZ expires_at
-}
-
-appointments {
-  UUID id PK
-  UUID user_id FK
-  position_type position
-  assignment_kind assignment
-  scope_type scope_type
-  UUID scope_id
-  TIMESTAMPTZ starts_at
-  TIMESTAMPTZ ends_at
-  TSTZRANGE valid_during
-  UUID appointed_by FK
-  UUID ended_by FK
-  TEXT reason
-  TIMESTAMPTZ deleted_at
-  TIMESTAMPTZ created_at
-  TIMESTAMPTZ updated_at
-}
-
-delegations {
-  UUID id PK
-  UUID grantor_user_id FK
-  UUID grantee_user_id FK
-  position_type act_as
-  scope_type scope_type
-  UUID scope_id
-  TIMESTAMPTZ starts_at
-  TIMESTAMPTZ ends_at
-  TSTZRANGE valid_during
-  UUID terminated_by FK
-  TEXT reason
-  TIMESTAMPTZ deleted_at
-  TIMESTAMPTZ created_at
-  TIMESTAMPTZ updated_at
-}
-
-audit_logs {
-  UUID id PK
-  UUID actor_user_id FK
-  VARCHAR event_type
-  VARCHAR resource_type
-  UUID resource_id
-  TEXT description
-  JSONB metadata
-  VARCHAR ip_addr
-  TEXT user_agent
-  TIMESTAMPTZ created_at
-}
-
-users ||--o{ credentials_local : has
-users ||--o{ refresh_tokens : has
-users ||--o{ password_reset_admin_actions : initiates
-users ||--o{ user_roles : assigned
-users ||--o{ user_guest_access : granted
-users ||--o{ appointments : appointed
-users ||--o{ delegations : delegates
-users ||--o{ audit_logs : actor
-
-roles ||--o{ user_roles : contains
-roles ||--o{ role_permissions : grants
-permissions ||--o{ role_permissions : includes
-refresh_tokens ||--o| refresh_tokens : replaced_by
+# Admin (post: ADMIN)
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=Admin@1234
+ADMIN_EMAIL=admin@example.com
+ADMIN_PHONE=+910000000001
+ADMIN_NAME=Admin
+ADMIN_RANK=ADMIN

@@ -1,51 +1,67 @@
+// src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { json } from '@/app/lib/http'; // UPDATED: use central helpers for consistent envelopes
+import { json } from '@/app/lib/http';
 
 const PROTECTED_PREFIX = '/api/v1/';
 
-// Public endpoints (no auth required)
-const PUBLIC_PATHS: string[] = [
+// Public for any method (rare)
+const PUBLIC_ANY: string[] = [
   '/api/v1/auth/login',
   '/api/v1/auth/signup',
-  '/api/v1/auth/logout',          // keep public so logout can clear cookies even if expired
-  '/api/v1/users/check-username',
+  '/api/v1/auth/logout',   // allow clearing cookies
+  '/api/v1/admin/users/check-username',
   '/api/v1/health',
 ];
 
-function isPublicPath(pathname: string) {
-  if (!pathname.startsWith(PROTECTED_PREFIX)) return true; // only guard v1 routes
-  return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+// Public only for specific methods
+const PUBLIC_BY_METHOD: Record<string, string[]> = {
+  // Make ONLY GET public for appointments
+  GET: [
+     '/api/v1/roles',
+    '/api/v1/admin/appointments',
+    '/api/v1/admin/positions',
+    '/api/v1/platoons'
+  ],
+  // If you ever want some POST public, add here:
+  // POST: [ '/api/v1/some/public/post' ],
+};
+
+function matchPrefix(pathname: string, prefix: string) {
+  // exact match OR prefix followed by '/...'
+  return pathname === prefix || pathname.startsWith(prefix + '/');
+}
+
+function isPublic(pathname: string, method: string) {
+  if (!pathname.startsWith(PROTECTED_PREFIX)) return true;
+
+  // method-agnostic public
+  if (PUBLIC_ANY.some((p) => matchPrefix(pathname, p))) return true;
+
+  // method-specific public
+  const allowForMethod = PUBLIC_BY_METHOD[method.toUpperCase()];
+  if (allowForMethod?.some((p) => matchPrefix(pathname, p))) return true;
+
+  return false;
 }
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const method = req.method.toUpperCase();
 
-  // Skip non-API or public v1 routes
-  if (isPublicPath(pathname)) return NextResponse.next();
+  if (isPublic(pathname, method)) return NextResponse.next();
 
-  // (Your existing exception) Allow GET platoons without auth
-  if (
-    req.method === 'GET' &&
-    (pathname === '/api/v1/admin/positions' || pathname.startsWith('/api/v1/admin/positions/'))
-  ) {
-    return NextResponse.next();
-  }
-
-  // Light gate: require token presence (verify inside the route)
+  // Light gate: token required for protected routes
   const cookieToken = req.cookies.get('access_token')?.value ?? '';
   const bearerToken = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
   const token = cookieToken || bearerToken;
 
   if (!token) {
-    // UPDATED: return unified 401 body with status field + WWW-Authenticate header
-    return json.unauthorized('Missing access token'); // UPDATED
+    return json.unauthorized('Missing access token');
   }
 
-  // Token present → let the route verify & authorize (PEP-2)
   return NextResponse.next();
 }
 
-// Limit to API v1 only (perf)
 export const config = {
   matcher: ['/api/v1/:path*'],
 };

@@ -87,6 +87,13 @@ export const appointmentUpdateSchema = z.object({
   deletedAt: z.coerce.date().nullable().optional(),
 });
 
+export const appointmentTransferBody = z.object({
+  newUserId: z.string().uuid(),
+  prevEndsAt: z.string().datetime(),   // end existing at this instant
+  newStartsAt: z.string().datetime(),  // start the new one at this instant
+  reason: z.string().max(500).optional(),
+});
+
 // Query params for GET /appointments
 export const appointmentListQuerySchema = z.object({
   active: z
@@ -105,8 +112,45 @@ export const grantSignupRequestSchema = z.object({
   scopeId: z.string().uuid().nullable().optional(),  // required if PLATOON
   startsAt: z.string().datetime().optional(),        // default = now
   reason: z.string().trim().max(500).optional(),
+  roleKeys: z.array(z.string().trim().min(1)).optional(),
 });
 
 export const rejectSignupRequestSchema = z.object({
   reason: z.string().trim().min(1).max(500),
 });
+
+// --- Users (Admin) ---
+export const userQuerySchema = z.object({
+  q: z.string().trim().optional(),                         // matches username/email/name/phone (ILIKE)
+  isActive: z.union([z.literal('true'), z.literal('false')]).optional(),
+  includeDeleted: z.union([z.literal('true'), z.literal('false')]).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).max(5000).optional(),
+});
+
+export const userCreateSchema = z.object({
+  username: z.string().trim().min(3).max(64),
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().toLowerCase().email().max(255),
+  phone: z.string().trim().min(3).max(32),
+  rank: z.string().trim().min(1).max(64),
+  isActive: z.boolean().optional().default(true),
+  appointId: z.string().uuid().nullable().optional(),
+  // Optional: set password at creation
+  password: passwordSchema.optional(),
+});
+
+export const userUpdateSchema = z.object({
+  username: z.string().trim().min(3).max(64).optional(),
+  name: z.string().trim().min(1).max(120).optional(),
+  email: z.string().trim().toLowerCase().email().max(255).optional(),
+  phone: z.string().trim().min(3).max(32).optional(),
+  rank: z.string().trim().min(1).max(64).optional(),
+  isActive: z.boolean().optional(),
+  appointId: z.string().uuid().nullable().optional(),
+  // Admin reset password
+  password: passwordSchema.optional(),
+  // Soft-delete / restore toggles
+  deletedAt: z.coerce.date().nullable().optional(),   // you can pass null to restore
+  restore: z.boolean().optional(),                    // convenience flag to undelete
+}).refine(v => Object.keys(v).length > 0, { message: 'Provide at least one field to update' });
