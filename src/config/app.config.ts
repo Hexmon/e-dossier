@@ -558,7 +558,7 @@ export const FALLBACK_SLOTS = [
       key: "HOAT",
       displayName: "HoAT",
     },
-    scope: { type: "GLOBAL", id: null, name: null },
+    scope: { type: "GLOBAL", id: null, name: "HoAT" },
     occupied: false,
     occupant: null,
   },
@@ -568,12 +568,38 @@ export const FALLBACK_SLOTS = [
       key: "PLATOON_COMMANDER",
       displayName: "Platoon Commander",
     },
-    scope: { type: "GLOBAL", id: null, name: null },
+    scope: { type: "GLOBAL", id: null, name: "Platoon Commander" },
     occupied: false,
     occupant: null,
   },
 ];
 
+export const fallbackUsers = [
+  {
+    id: "fallback-1",
+    username: "ds_coord",
+    name: "Alice Roy",
+    email: "admin@example.com",
+    phone: "+91-0000000000",
+    rank: "Admin",
+    appointId: "",
+    isActive: true,
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "fallback-2",
+    username: "hoat",
+    name: "Maj Sourav",
+    email: "user@example.com",
+    phone: "+91-1111111111",
+    rank: "Lieutenant",
+    appointId: "",
+    isActive: true,
+    createdAt: "",
+    updatedAt: "",
+  },
+];
 
 export const fallbackAppointments = [
   {
