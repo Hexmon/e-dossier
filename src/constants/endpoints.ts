@@ -1,9 +1,16 @@
-export const baseURL = 'http://localhost:3000/api/v1'
+import { platoons } from "@/app/db"
+
+export const baseURL = 'http://localhost:3000'
 
 export const endpoints = {
     auth: {
-        login: "/auth/login",
-        signup: "/auth/signup",
+        login: "/api/v1/auth/login",
+        signup: "/api/v1/auth/signup"
     },
-    admin: {}
+    admin: {
+        approval: "/api/v1/admin/signup-requests",
+        appointments: "/api/v1/admin/appointments",
+        platoons: "/api/v1/platoons",
+        slots: "/api/v1/admin/positions/slots"
+    }
 }
