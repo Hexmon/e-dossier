@@ -1,157 +1,156 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import Link from "next/link";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { appointments, platoonsdata } from "@/config/app.config";
-import Link from "next/link";
-import { api, ApiClientError } from "@/app/lib/apiClient";
-import { baseURL, endpoints } from "@/constants/endpoints";
-import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { getAppointments, Appointment } from "@/app/lib/api/appointmentApi";
+import { loginUser } from "@/app/lib/api/authApi";
+
+interface LoginForm {
+  appointment: string;
+  username: string;
+  password: string;
+  platoon?: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const isOcCorner = searchParams.get("role") === "oc";
 
-  const appointmentIds: Record<string, string> = {
-    Commander: "uuid-for-commander",
-    "Deputy Commander": "uuid-for-deputy-commander",
-    "DS Coord": "uuid-for-ds-coord",
-    HoAT: "uuid-for-hoat",
-    CCO: "uuid-for-cco",
-    "Platoon Commander": "uuid-for-platoon-commander",
-  };
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
 
-  const appointmentUsernames: Record<string, string> = {
-    Commander: "commander_user",
-    "Deputy Commander": "deputy_commander_user",
-    "DS Coord": "ds_coord_user",
-    HoAT: "hoat_user",
-    CCO: "cco_user",
-    "Platoon Commander": ""
-  };
-
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-    appointment: isOcCorner ? "OC" : "",
-    platoon: ""
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { isSubmitting },
+  } = useForm<LoginForm>({
+    defaultValues: {
+      appointment: isOcCorner ? "OC" : "",
+      username: "",
+      password: "",
+      platoon: "",
+    },
   });
 
-  const [isUsernameManuallyEdited, setIsUsernameManuallyEdited] = useState(false);
+  const appointment = watch("appointment");
+  const platoon = watch("platoon");
 
-  const handleAppointmentChange = (value: string) => {
-    const autoUsername =
-      value === "Platoon Commander" ? "" : appointmentUsernames[value] || "";
+  // 🔹 Fetch all appointments on mount
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const data = await getAppointments();
+        setAppointments(data);
+      } catch (err) {
+        console.error("Failed to fetch appointments", err);
+        toast.error("Unable to load appointments.");
+      } finally {
+        setLoadingAppointments(false);
+      }
+    };
+    fetchAppointments();
+  }, []);
 
-    setFormData((prev) => ({
-      ...prev,
-      appointment: value,
-      username: isUsernameManuallyEdited ? prev.username : autoUsername,
-      platoon: value === "Platoon Commander" ? prev.platoon : ""
-    }));
+  // 🔹 Filter platoon commanders directly from appointments
+  const platoonCommanders = appointments.filter(
+    (a) => a.positionName === "Platoon Commander"
+  );
 
-    if (value !== "Platoon Commander") {
-      setIsUsernameManuallyEdited(false);
-    }
-  };
-
-  const handlePlatoonChange = (value: string) => {
-    const selectedPlatoon = platoonsdata.find((p) => p.name === value);
-    const autoUsername = selectedPlatoon?.username || "";
-
-    setFormData((prev) => ({
-      ...prev,
-      platoon: value,
-      username: isUsernameManuallyEdited ? prev.username : autoUsername
-    }));
-
-    setIsUsernameManuallyEdited(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.username || !formData.password || !formData.appointment) {
+  const onSubmit = async (data: LoginForm) => {
+    if (!data.username || !data.password || !data.appointment) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     try {
-      // Find matching appointment and platoon IDs
-      const appointmentId = appointmentIds[formData.appointment];
-      const selectedPlatoon = platoonsdata.find(
-        (p) => p.name === formData.platoon
+      const selectedAppointment = appointments.find(
+        (a) => a.positionName === data.appointment
       );
 
-      // Build request body dynamically
-      const requestBody =
-        formData.appointment === "Platoon Commander"
+      const selectedPlatoonCommander = platoonCommanders.find(
+        (p) => p.username === data.platoon
+      );
+
+      const payload =
+        data.appointment === "Platoon Commander"
           ? {
-            appointmentId,
-            platoonId: selectedPlatoon?.id,
-            username: formData.username,
-            password: formData.password,
-          }
+              appointmentId: selectedAppointment?.id as string,
+              platoonId: selectedPlatoonCommander?.id as string,
+              username: data.username,
+              password: data.password,
+            }
           : {
-            appointmentId,
-            username: formData.username,
-            password: formData.password,
-          };
+              appointmentId: selectedAppointment?.id as string,
+              username: data.username,
+              password: data.password,
+            };
 
-      // POST to login API
-      const response = await api.post<{ token?: string; message?: string }>(
-        endpoints.auth.login,
-        requestBody,
-        { baseURL }
-      );
+      await loginUser(payload);
 
-      toast.success(`Welcome, ${formData.appointment}!`);
-
-      // Optional: store token if provided
-      // localStorage.setItem("token", response.token || "");
-
-      // Give the toast a short moment to appear before redirecting
+      toast.success(`Welcome, ${data.appointment}!`);
       router.push("/dashboard");
-    } catch (err) {
-      if (err instanceof ApiClientError) {
-        toast.error(err.message || "Invalid credentials");
-        console.error("Login error:", err);
-      } else {
-        toast.error("Something went wrong. Please try again later.");
-        console.error(err);
-      }
+    } catch (err: any) {
+      toast.error(err.message || "Login failed");
+      console.error(err);
     }
   };
 
+  const handleAppointmentChange = (value: string) => {
+    setValue("appointment", value);
+    setValue("username", "");
+    if (value !== "Platoon Commander") setValue("platoon", "");
+  };
+
+  const handlePlatoonChange = (value: string) => {
+    setValue("platoon", value);
+    const selectedPlatoon = platoonCommanders.find((p) => p.username === value);
+    const autoUsername = selectedPlatoon?.username || "";
+    setValue("username", autoUsername);
+  };
 
   return (
     <div className="min-h-screen bg-[var(--primary)] flex items-center justify-center p-4 relative">
-      {/* Background Logo */}
+      {/* Background */}
       <div className="absolute inset-0 opacity-5">
         <img
           src="https://facultytick.com/wp-content/uploads/2022/03/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
           alt="MCEME Background"
-          className="w-full h-full object-contain"
+          className="object-contain"
         />
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        {/* Header */}
         <div className="text-center mb-8">
           <img
             src="https://facultytick.com/wp-content/uploads/2022/03/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
             alt="MCEME Logo"
             className="h-16 w-auto mx-auto mb-4"
           />
-          <h1 className="text-2xl font-bold text-primary-foreground">MCEME CTW Portal</h1>
-          <p className="text-primary-foreground/80">Sign in to access your account</p>
+          <h1 className="text-2xl font-bold text-primary-foreground">
+            MCEME CTW Portal
+          </h1>
+          <p className="text-primary-foreground/80">
+            Sign in to access your account
+          </p>
         </div>
 
         {isOcCorner ? (
@@ -168,42 +167,52 @@ export default function LoginPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Appointment */}
-                <div className="space-y-2 w-full">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {/* Appointment Dropdown */}
+                <div className="space-y-2">
                   <Label htmlFor="appointment">Appointment</Label>
                   <Select
-                    value={formData.appointment}
+                    value={appointment}
                     onValueChange={handleAppointmentChange}
+                    disabled={loadingAppointments}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select your appointment" />
+                      <SelectValue
+                        placeholder={
+                          loadingAppointments
+                            ? "Loading..."
+                            : "Select your appointment"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {appointments.map((appointment) => (
-                        <SelectItem key={appointment} value={appointment}>
-                          {appointment}
+                      {appointments.map((item) => (
+                        <SelectItem key={item.id} value={item.positionName}>
+                          {item.positionName}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Platoon dropdown */}
-                {formData.appointment === "Platoon Commander" && (
+                {/* Platoon Dropdown (derived from appointments) */}
+                {appointment === "Platoon Commander" && (
                   <div className="space-y-2">
                     <Label htmlFor="platoon">Platoon</Label>
                     <Select
-                      value={formData.platoon}
+                      value={platoon}
                       onValueChange={handlePlatoonChange}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select your platoon" />
                       </SelectTrigger>
                       <SelectContent>
-                        {platoonsdata.map((platoon) => (
-                          <SelectItem key={platoon.name} value={platoon.name}>
-                            {platoon.name}
+                        {platoonCommanders.map((cmdr) => (
+                          <SelectItem
+                            key={cmdr.id}
+                            value={cmdr.username}
+                          >
+                            {cmdr.username}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -216,13 +225,8 @@ export default function LoginPage() {
                   <Label htmlFor="username">Username</Label>
                   <Input
                     id="username"
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => {
-                      setFormData({ ...formData, username: e.target.value });
-                      setIsUsernameManuallyEdited(true);
-                    }}
-                    placeholder="Username auto-filled"
+                    {...register("username")}
+                    placeholder="Enter username"
                     required
                   />
                 </div>
@@ -233,23 +237,28 @@ export default function LoginPage() {
                   <Input
                     id="password"
                     type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    placeholder="Enter your password"
+                    {...register("password")}
+                    placeholder="Enter password"
                     required
                   />
                 </div>
 
-                <Button type="submit" className="w-full bg-[var(--primary)] text-white cursor-pointer" variant="default">
-                  Sign In
+                <Button
+                  type="submit"
+                  className="w-full bg-[var(--primary)] text-white cursor-pointer"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
 
               <div className="mt-6 space-y-3">
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <Button asChild variant="outline" className="flex-1 border border-[var(--primary)]">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex-1 border border-[var(--primary)]"
+                  >
                     <Link href="/signup">Create New Account</Link>
                   </Button>
                   <Button asChild variant="ghost" className="flex-1">

@@ -530,6 +530,90 @@ export const appointments = [
   "CCO",
   "Platoon Commander"
 ]
+export const FALLBACK_PENDING_USERS = [
+  {
+    id: "970ffcca-3f7a-4191-b057-e02626d1b7f0",
+    username: "alice",
+    name: "Alice Roy",
+    email: "alice@example.com",
+    phone: "+91-9999999999",
+    rank: "Major",
+    note: "Please approve my account",
+  },
+  {
+    id: "f15c8aa0-2d21-48c8-a3f2-4f5c88b0d14e",
+    username: "bob",
+    name: "Bob Singh",
+    email: "bob@example.com",
+    phone: "+91-8888888888",
+    rank: "Captain",
+    note: "Awaiting approval for Platoon Commander role",
+  },
+];
+
+export const FALLBACK_SLOTS = [
+  {
+    position: {
+      id: "d81a17dd-9c17-4bb9-b45f-875fb1279600",
+      key: "HOAT",
+      displayName: "HoAT",
+    },
+    scope: { type: "GLOBAL", id: null, name: null },
+    occupied: false,
+    occupant: null,
+  },
+  {
+    position: {
+      id: "f3fdedc1-db12-403a-a104-d9a6cc903be0",
+      key: "PLATOON_COMMANDER",
+      displayName: "Platoon Commander",
+    },
+    scope: { type: "GLOBAL", id: null, name: null },
+    occupied: false,
+    occupant: null,
+  },
+];
+
+
+export const fallbackAppointments = [
+  {
+    id: "f67ce8d4-0ef8-4cc0-bd4a-ef5e26802d58",
+    userId: "8bf30fde-3cec-4b28-b2a8-1377da9d428a",
+    username: "admin",
+    positionId: "cd68ec90-c5c2-402e-bcc4-b3876c19ebeb",
+    positionKey: "ADMIN",
+    positionName: "Admin",
+    scopeType: "GLOBAL",
+    scopeId: null,
+    platoonKey: null,
+    platoonName: null,
+    startsAt: "2025-10-18T13:18:29.877Z",
+    endsAt: null,
+    reason: "bootstrap admin",
+    deletedAt: null,
+    createdAt: "2025-10-18T13:18:29.877Z",
+    updatedAt: "2025-10-18T13:18:29.877Z",
+  },
+  {
+    id: "a78b23e4-dfa3-42c1-bc89-fb328a19f113",
+    userId: "5b930b1f-72e3-478b-bef0-d24d87167e32",
+    username: "commander",
+    positionId: "e21ad832-7f0b-49b5-9b8e-df0f048b1a56",
+    positionKey: "COMMANDER",
+    positionName: "Commander",
+    scopeType: "PLATOON",
+    scopeId: "alpha-01",
+    platoonKey: "ALPHA",
+    platoonName: "Alpha Platoon",
+    startsAt: "2025-10-15T10:00:00.000Z",
+    endsAt: null,
+    reason: "initial assignment",
+    deletedAt: null,
+    createdAt: "2025-10-15T10:00:00.000Z",
+    updatedAt: "2025-10-18T14:45:00.000Z",
+  },
+];
+
 
 export const activities = [
   {
