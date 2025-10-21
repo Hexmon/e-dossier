@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 // { key, name, about? }
 export async function POST(req: NextRequest) {
     try {
-        requireAdmin(req);
+        await requireAdmin(req);
 
         const body = await req.json();
         const parsed = platoonCreateSchema.safeParse(body);
@@ -61,34 +61,40 @@ export async function POST(req: NextRequest) {
         }
 
         const data = parsed.data;
-        const [row] = await db.insert(platoons).values({
-            key: data.key.toUpperCase(),
-            name: data.name.trim(),
-            about: data.about ?? null,
-        }).returning({
-            id: platoons.id,
-            key: platoons.key,
-            name: platoons.name,
-            about: platoons.about,
-            createdAt: platoons.createdAt,
-            updatedAt: platoons.updatedAt,
-        });
+        const [row] = await db
+            .insert(platoons)
+            .values({
+                key: data.key.toUpperCase(),
+                name: data.name.trim(),
+                about: data.about ?? null,
+            })
+            .onConflictDoNothing({ target: [platoons.key] })   // <-- ignore duplicates
+            .returning({
+                id: platoons.id,
+                key: platoons.key,
+                name: platoons.name,
+                about: platoons.about,
+                createdAt: platoons.createdAt,
+                updatedAt: platoons.updatedAt,
+            });
+
+        if (!row) {
+            // nothing inserted -> key already existed
+            return json.conflict('Platoon key already exists', { key: data.key.toUpperCase() });
+        }
 
         return json.created({ platoon: row });
     } catch (err) {
-        const e = err as PgError;
-        if (e?.code === '23505') {
-            return json.conflict('Platoon key already exists');
-        }
         return handleApiError(err);
     }
 }
+
 
 // DELETE /api/v1/platoons  (ADMIN)
 // Soft-delete ALL platoons (sets deleted_at = now())
 export async function DELETE(req: NextRequest) {
     try {
-        requireAdmin(req);
+        await requireAdmin(req);
 
         const now = new Date();
         const deleted = await db

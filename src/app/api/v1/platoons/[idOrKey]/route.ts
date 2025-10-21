@@ -33,7 +33,7 @@ function whereForIdKeyName(idOrKey: string, includeDeleted = false) {
 // body: { key?, name?, about?, restore? }
 export async function PATCH(req: NextRequest, { params }: { params: { idOrKey: string } }) {
   try {
-    requireAdmin(req);
+    await requireAdmin(req);
 
     const body = await req.json();
     const parsed = platoonUpdateSchema.safeParse(body);

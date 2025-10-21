@@ -11,8 +11,8 @@ import { and, eq, sql } from 'drizzle-orm';
 
 export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
     try {
-        requireAuth(req);
-        const { id } = ctx.params;
+        await requireAuth(req);
+        const { id } = await ctx.params;
 
         const [row] = await db
             .select({
@@ -50,8 +50,8 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
 
 export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
     try {
-        requireAdmin(req);
-        const { id } = ctx.params;
+        await requireAdmin(req);
+        const { id } = await ctx.params;
         const body = await req.json();
         const parsed = appointmentUpdateSchema.safeParse(body);
         if (!parsed.success) throw new ApiError(400, 'Validation failed', 'bad_request', parsed.error.flatten());

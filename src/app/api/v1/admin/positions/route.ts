@@ -4,7 +4,7 @@ import { positions } from '@/app/db/schema/auth/positions';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAdmin } from '@/app/lib/authz';
 import { positionCreateSchema } from '@/app/lib/validators';
-import { asc, eq } from 'drizzle-orm';
+import { asc } from 'drizzle-orm';
 
 export async function GET() {
     try {
@@ -17,7 +17,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
-        requireAdmin(req);
+        await requireAdmin(req);
         const body = await req.json();
         const parsed = positionCreateSchema.safeParse(body);
         if (!parsed.success) {
