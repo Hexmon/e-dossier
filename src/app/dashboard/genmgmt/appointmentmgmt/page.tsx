@@ -7,14 +7,15 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
-import { fallbackAppointments, ocTabs } from "@/config/app.config";
+import { fallbackAppointments, fallbackUsers, ocTabs } from "@/config/app.config";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
-import { Appointment, getAppointments } from "@/app/lib/api/appointmentApi";
+import { Appointment, getAppointments, transferAppointment } from "@/app/lib/api/appointmentApi";
+import { getAllUsers, User } from "@/app/lib/api/userApi";
 
 interface ServedUser {
   user: string;
@@ -31,11 +32,13 @@ export default function AppointmentManagement() {
   const [error, setError] = useState<string | null>(null);
   const [handoverDialog, setHandoverDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { isSubmitting },
   } = useForm<{
     toUser: string;
@@ -48,6 +51,21 @@ export default function AppointmentManagement() {
       takeoverDate: "",
     },
   });
+
+  useEffect(() => {
+    if (handoverDialog) {
+      (async () => {
+        try {
+          const data = await getAllUsers();
+          setUsers(data);
+        } catch (err) {
+          console.error("Failed to fetch users:", err);
+          toast.error("Unable to load user list");
+          setUsers(fallbackUsers);
+        }
+      })();
+    }
+  }, [handoverDialog]);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -75,7 +93,7 @@ export default function AppointmentManagement() {
     setHandoverDialog(true);
   };
 
-  // 🔹 Submit Handover
+  //  Submit Handover
   const onSubmitHandover = async (formData: {
     toUser: string;
     handoverDate: string;
@@ -83,15 +101,25 @@ export default function AppointmentManagement() {
   }) => {
     if (!selectedAppointment) return;
 
-    try {
-      // await postHandover({
-      //   fromUserId: selectedAppointment.userId,
-      //   toUser: formData.toUser,
-      //   positionId: selectedAppointment.positionId,
-      //   handoverDate: formData.handoverDate,
-      //   takeoverDate: formData.takeoverDate,
-      // });
+    const handover = new Date(formData.handoverDate);
+    const takeover = new Date(formData.takeoverDate);
 
+    if (handover >= takeover) {
+      toast.error("Handover date must be before takeover date.");
+      return;
+    }
+
+    try {
+      const payload = {
+        newUserId: formData.toUser,
+        prevEndsAt: handover.toISOString(),
+        newStartsAt: takeover.toISOString(),
+        reason: "Shift handover",
+      };
+
+      await transferAppointment(selectedAppointment.id, payload);
+
+      // Update local state
       const newServed: ServedUser = {
         user: selectedAppointment.username,
         appointment: selectedAppointment.positionName,
@@ -100,16 +128,15 @@ export default function AppointmentManagement() {
       };
 
       setServedList((prev) => [...prev, newServed]);
-
       setAppointments((prev) =>
         prev.map((a) =>
           a.id === selectedAppointment.id
-            ? { ...a, username: formData.toUser, startsAt: formData.takeoverDate }
+            ? { ...a, username: users.find(u => u.id === formData.toUser)?.username || "", startsAt: formData.takeoverDate }
             : a
         )
       );
 
-      toast.success(`Appointment handed over to ${formData.toUser}`);
+      toast.success(`Appointment handed over successfully`);
       setHandoverDialog(false);
     } catch (err: any) {
       console.error("Handover failed:", err);
@@ -236,7 +263,7 @@ export default function AppointmentManagement() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Handing Over - {selectedAppointment?.positionName || ""}
+              Handing Over – {selectedAppointment?.positionName || ""}
             </DialogTitle>
           </DialogHeader>
 
@@ -246,19 +273,40 @@ export default function AppointmentManagement() {
               <Input value={selectedAppointment?.username || ""} disabled />
             </div>
 
+            {/* --- To User Dropdown --- */}
             <div>
               <label className="text-sm font-medium">To User</label>
-              <Input placeholder="Enter new username" {...register("toUser", { required: true })} />
+              <select
+                {...register("toUser", { required: true })}
+                className="w-full border rounded-md p-2 text-sm bg-background"
+              >
+                <option value="">Select user</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.username})
+                  </option>
+                ))}
+              </select>
             </div>
 
+            {/* --- Handover Date --- */}
             <div>
               <label className="text-sm font-medium">Handing Over Date</label>
-              <Input type="date" {...register("handoverDate", { required: true })} />
+              <Input
+                type="date"
+                {...register("handoverDate", { required: true })}
+                min={new Date().toISOString().split("T")[0]} // can't pick past
+              />
             </div>
 
+            {/* --- Takeover Date --- */}
             <div>
               <label className="text-sm font-medium">Taking Over Date</label>
-              <Input type="date" {...register("takeoverDate", { required: true })} />
+              <Input
+                type="date"
+                {...register("takeoverDate", { required: true })}
+                min={watch("handoverDate") || new Date().toISOString().split("T")[0]}
+              />
             </div>
 
             <div className="flex justify-end">

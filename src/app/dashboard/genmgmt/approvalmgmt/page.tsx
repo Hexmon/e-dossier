@@ -160,7 +160,7 @@ export default function ApprovalManagement() {
                                                                     key={slot.position.id}
                                                                     value={slot.position.id}
                                                                 >
-                                                                    {slot.position.displayName}
+                                                                    {slot.scope.name}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>

@@ -1,179 +1,112 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
 import { AppSidebar } from "@/components/AppSidebar";
-import { UserListItem } from "@/components/users/UserCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
-import { ocTabs } from "@/config/app.config";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  SidebarProvider,
-} from "@/components/ui/sidebar";
+import { fallbackUsers, ocTabs } from "@/config/app.config";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectTrigger, SelectContent, SelectValue, SelectItem } from "@/components/ui/select";
+import { UserListItem } from "@/components/users/UserCard";
+import { getAllUsers, saveUser, deleteUser, User } from "@/app/lib/api/userApi";
+
+const USER_ROLES = ["Comdt", "DCCI", "Cdr CTW", "DyCdr CTW", "DS Cord", "HOAT", "Platoon Cdr", "CCO", "User"];
 
 export default function UserManagement() {
   const router = useRouter();
-
-  const handleLogout = () => {
-    router.push("/login");
-  };
-
-  const [users, setUsers] = useState([
-    {
-      UserName: "admin.roy",
-      PersNo: "1001",
-      Rank: "Maj",
-      FullName: "Admin Roy",
-      Unit: "MCEME",
-      Role: "Administrator",
-      status: "active",
-    },
-    {
-      UserName: "kumar.staff",
-      PersNo: "1002",
-      Rank: "Capt",
-      FullName: "Staff Kumar",
-      Unit: "MCEME",
-      Role: "Staff Officer",
-      status: "active",
-    },
-    {
-      UserName: "patel.cmdr",
-      PersNo: "1003",
-      Rank: "Cmdr",
-      FullName: "Cmdr. Patel",
-      Unit: "MCEME",
-      Role: "Platoon Commander",
-      status: "active",
-    },
-  ]);
-
-  const [searchQuery, setSearchQuery] = useState("");
+  const { register, handleSubmit, reset, setValue, watch } = useForm<User>();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [viewUser, setViewUser] = useState<any | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const isActive = watch("isActive");
 
-  const [formData, setFormData] = useState<any>({
-    username: "",
-    unit: "",
-    persNo: "",
-    rank: "",
-    name: "",
-    userType: "",
-    role: "",
-    platoon: "",
-    isActive: true,
-    resetPwd: false,
-    createdDate: new Date().toISOString().split("T")[0],
-    approvedDate: new Date().toISOString().split("T")[0],
-  });
+  //  Fetch all users
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const list = await getAllUsers();
+        setUsers(list);
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+        toast.error("Unable to load user list");
+        setUsers(fallbackUsers);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadUsers();
+  }, []);
 
-  const handleChange = (key: string, value: any) => {
-    setFormData({ ...formData, [key]: value });
-  };
-
-  const handleSave = () => {
-    if (editingIndex !== null) {
-      const updatedUsers = [...users];
-      updatedUsers[editingIndex] = {
-        UserName: formData.username,
-        PersNo: formData.persNo,
-        Rank: formData.rank,
-        FullName: formData.name,
-        Unit: formData.unit,
-        Role: formData.role,
-        status: formData.isActive ? "active" : "disabled",
-      };
-      setUsers(updatedUsers);
-    } else {
-      setUsers([
-        ...users,
-        {
-          UserName: formData.username,
-          PersNo: formData.persNo,
-          Rank: formData.rank,
-          FullName: formData.name,
-          Unit: formData.unit,
-          Role: formData.role,
-          status: formData.isActive ? "active" : "disabled",
-        },
-      ]);
+  //  Add / Edit User
+  const onSubmit = async (data: User) => {
+    try {
+      const saved = await saveUser(data);
+      if (editingUser) {
+        setUsers((prev) => prev.map((u) => (u.id === saved.id ? saved : u)));
+        toast.success("User updated successfully");
+      } else {
+        setUsers((prev) => [...prev, saved]);
+        toast.success("User added successfully");
+      }
+      setOpen(false);
+      reset();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save user");
     }
-    setOpen(false);
-    setEditingIndex(null);
-    resetForm();
   };
 
-  const resetForm = () => {
-    setFormData({
-      username: "",
-      unit: "",
-      persNo: "",
-      rank: "",
-      name: "",
-      userType: "",
-      role: "",
-      platoon: "",
-      isActive: true,
-      resetPwd: false,
-      createdDate: new Date().toISOString().split("T")[0],
-      approvedDate: new Date().toISOString().split("T")[0],
-    });
-  };
-
-  const handleEdit = (index: number) => {
-    const user = users[index];
-    setFormData({
-      username: user.UserName,
-      unit: user.Unit,
-      persNo: user.PersNo,
-      rank: user.Rank,
-      name: user.FullName,
-      role: user.Role,
-      isActive: user.status === "active",
-      resetPwd: false,
-      createdDate: new Date().toISOString().split("T")[0],
-      approvedDate: new Date().toISOString().split("T")[0],
-    });
-    setEditingIndex(index);
+  //  Edit
+  const handleEdit = (user: User) => {
+    setEditingUser(user);
+    reset(user);
     setOpen(true);
   };
 
-  const handleView = (user: any) => {
-    setViewUser(user);
+  //  Delete
+  const handleDelete = async (user: User) => {
+    if (!user.id) {
+      setUsers((prev) => prev.filter((u) => u.username !== user.username));
+      return;
+    }
+    try {
+      await deleteUser(user.id);
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      toast.success("User deleted successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete user");
+    }
+  };
+
+  //  View
+  const handleView = (user: User) => {
+    setSelectedUser(user);
     setViewOpen(true);
   };
 
-  const handleDelete = (index: number) => {
-    const updatedUsers = [...users];
-    updatedUsers.splice(index, 1);
-    setUsers(updatedUsers);
-  };
+  const handleLogout = () => router.push("/login");
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
-
         <div className="flex-1 flex flex-col">
           <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
             <PageHeader
               title="User Management"
-              description="Manage user access and roles in MCEME"
+              description="Manage user access and roles"
               onLogout={handleLogout}
             />
           </header>
@@ -192,10 +125,9 @@ export default function UserManagement() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-foreground">User List</h2>
                   <Button
-                    variant="outline"
                     onClick={() => {
-                      resetForm();
-                      setEditingIndex(null);
+                      reset({ isActive: true });
+                      setEditingUser(null);
                       setOpen(true);
                     }}
                   >
@@ -203,128 +135,91 @@ export default function UserManagement() {
                   </Button>
                 </div>
 
-                <div className="divide-y border rounded-md">
-                  {users
-                    .filter(user =>
-                      user.UserName.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((user, index) => (
+                {loading ? (
+                  <p className="text-center p-4 text-muted-foreground">Loading users...</p>
+                ) : (
+                  <div className="divide-y border rounded-md">
+                    {users.map((user, idx) => (
                       <UserListItem
-                        key={index}
-                        id={index.toString()}
-                        username={user.UserName}
-                        fullName={user.FullName}
-                        role={user.Role}
-                        persNo={user.PersNo}
-                        rank={user.Rank}
-                        unit={user.Unit}
-                        status={user.status as "active" | "suspended" | "disabled"}
-                        onEdit={() => handleEdit(index)}
+                        key={user.id || idx}
+                        id={user.id || idx.toString()}
+                        username={user.username}
+                        fullName={user.name}
+                        role={user.rank || "N/A"}
+                        persNo={user.email || "N/A"}
+                        rank={user.rank || "N/A"}
+                        unit={user.appointId || "N/A"}
+                        status={user.isActive ? "active" : "disabled"}
+                        onEdit={() => handleEdit(user)}
                         onView={() => handleView(user)}
-                        onDelete={() => handleDelete(index)}
+                        onDelete={() => handleDelete(user)}
                       />
                     ))}
-                </div>                
+                  </div>
+                )}
               </TabsContent>
             </GlobalTabs>
           </main>
         </div>
       </div>
 
-      {/* Add/Edit Dialog */}
+      {/*  Add/Edit Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingIndex !== null ? "Edit User" : "Add User"}</DialogTitle>
+            <DialogTitle>{editingUser ? "Edit User" : "Add User"}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-            {["username", "unit", "persNo", "rank", "name", "platoon"].map((field) => (
-              <div key={field}>
-                <label className="block text-sm font-medium mb-1 capitalize">
-                  {field}
-                </label>
-                <Input
-                  value={formData[field]}
-                  onChange={(e) => handleChange(field, e.target.value)}
-                />
-              </div>
-            ))}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+            <Input placeholder="Username" {...register("username", { required: true })} />
+            <Input placeholder="Full Name" {...register("name", { required: true })} />
+            <Input placeholder="Email" {...register("email")} />
+            <Input placeholder="Phone" {...register("phone")} />
+            <Input placeholder="Rank" {...register("rank")} />
 
-            <div>
-              <label className="block text-sm font-medium mb-1">User Type</label>
-              <Select
-                onValueChange={(val) => {
-                  handleChange("userType", val);
-                  handleChange("role", val);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select User Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[
-                    "Comdt",
-                    "DCCI",
-                    "Cdr CTW",
-                    "DyCdr CTW",
-                    "DS Cord",
-                    "HOAT",
-                    "Platoon Cdr",
-                    "CCO",
-                    "User",
-                  ].map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select onValueChange={(v) => setValue("appointId", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Role" />
+              </SelectTrigger>
+              <SelectContent>
+                {USER_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <div className="flex items-center gap-2">
-              <Checkbox checked={formData.isActive} onCheckedChange={(val) => handleChange("isActive", !!val)} />
+              <Checkbox checked={isActive} onCheckedChange={(val) => setValue("isActive", !!val)} />
               <label className="text-sm font-medium">Is Active</label>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Checkbox checked={formData.resetPwd} onCheckedChange={(val) => handleChange("resetPwd", !!val)} />
-              <label className="text-sm font-medium">Reset Password</label>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Created Date</label>
-              <Input type="date" value={formData.createdDate} readOnly />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Approved Date</label>
-              <Input type="date" value={formData.approvedDate} readOnly />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>Save</Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
-      {/* View User Dialog */}
+      {/*  View Dialog */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
           </DialogHeader>
-          {viewUser && (
+          {selectedUser && (
             <div className="space-y-2">
-              <p><b>UserName:</b> {viewUser.UserName}</p>
-              <p><b>Full Name:</b> {viewUser.FullName}</p>
-              <p><b>Rank:</b> {viewUser.Rank}</p>
-              <p><b>Pers No:</b> {viewUser.PersNo}</p>
-              <p><b>Unit:</b> {viewUser.Unit}</p>
-              <p><b>Role:</b> {viewUser.Role}</p>
-              <p><b>Status:</b> {viewUser.status}</p>
+              <p><b>Username:</b> {selectedUser.username}</p>
+              <p><b>Full Name:</b> {selectedUser.name}</p>
+              <p><b>Email:</b> {selectedUser.email}</p>
+              <p><b>Phone:</b> {selectedUser.phone}</p>
+              <p><b>Rank:</b> {selectedUser.rank}</p>
+              <p><b>Active:</b> {selectedUser.isActive ? "Yes" : "No"}</p>
+              <p><b>Created:</b> {selectedUser.createdAt && new Date(selectedUser.createdAt).toLocaleString()}</p>
             </div>
           )}
         </DialogContent>

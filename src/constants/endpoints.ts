@@ -11,6 +11,10 @@ export const endpoints = {
         approval: "/api/v1/admin/signup-requests",
         appointments: "/api/v1/admin/appointments",
         platoons: "/api/v1/platoons",
-        slots: "/api/v1/admin/positions/slots"
-    }
+        slots: "/api/v1/admin/positions/slots",
+        transferappt: (appointmentId: string) =>
+            `/api/v1/admin/appointments/${appointmentId}/transfer`,
+
+        users: "/api/v1/admin/users"
+    },
 }

@@ -70,7 +70,7 @@ export default function LoginPage() {
     fetchAppointments();
   }, []);
 
-  // 🔹 Filter platoon commanders directly from appointments
+  // Filter platoon commanders directly from appointments
   const platoonCommanders = appointments.filter(
     (a) => a.positionName === "Platoon Commander"
   );
@@ -93,16 +93,16 @@ export default function LoginPage() {
       const payload =
         data.appointment === "Platoon Commander"
           ? {
-              appointmentId: selectedAppointment?.id as string,
-              platoonId: selectedPlatoonCommander?.id as string,
-              username: data.username,
-              password: data.password,
-            }
+            appointmentId: selectedAppointment?.id as string,
+            platoonId: selectedPlatoonCommander?.id as string,
+            username: data.username,
+            password: data.password,
+          }
           : {
-              appointmentId: selectedAppointment?.id as string,
-              username: data.username,
-              password: data.password,
-            };
+            appointmentId: selectedAppointment?.id as string,
+            username: data.username,
+            password: data.password,
+          };
 
       await loginUser(payload);
 
@@ -116,9 +116,17 @@ export default function LoginPage() {
 
   const handleAppointmentChange = (value: string) => {
     setValue("appointment", value);
-    setValue("username", "");
-    if (value !== "Platoon Commander") setValue("platoon", "");
+    if (value !== "Platoon Commander") {
+      const selectedAppointment = appointments.find(a => a.positionName === value);
+      if (selectedAppointment?.username) {
+        setValue("username", selectedAppointment.username);
+      } else {
+        setValue("username", "");
+      }
+      setValue("platoon", "");
+    }
   };
+
 
   const handlePlatoonChange = (value: string) => {
     setValue("platoon", value);
