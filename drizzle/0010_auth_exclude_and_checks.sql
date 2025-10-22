@@ -109,7 +109,6 @@ VALUES
   ('DEPUTY_SECRETARY',  'Deputy Secretary',    'GLOBAL',  true, 'DS Cord'),
   ('HOAT',              'HoAT',                'GLOBAL',  true, 'Head of Admin/Training'),
   ('PLATOON_COMMANDER', 'Platoon Commander',   'PLATOON', true, 'Exactly one active per platoon'),
-  -- also requested earlier:
   ('COMMANDER',         'Commander',           'GLOBAL',  true, 'Commander (org-specific)'),
   ('DCCI',              'DCCI',                'GLOBAL',  true, 'Custom org post')
 ON CONFLICT (key) DO NOTHING;
@@ -368,11 +367,57 @@ CREATE INDEX IF NOT EXISTS ix_appt_platoon_cmdr_active
   ON appointments (scope_id)
   WHERE scope_type = 'PLATOON' AND deleted_at IS NULL AND ends_at IS NULL;
 
+-- ===== appointment_transfers (ensure exists) ================================
+DO $$
+BEGIN
+  IF to_regclass('public.appointment_transfers') IS NULL THEN
+    CREATE TABLE appointment_transfers (
+      id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      from_appointment_id uuid NOT NULL REFERENCES appointments(id) ON DELETE RESTRICT,
+      to_appointment_id   uuid NOT NULL REFERENCES appointments(id) ON DELETE RESTRICT,
+      from_user_id        uuid NOT NULL REFERENCES users(id)        ON DELETE RESTRICT,
+      to_user_id          uuid NOT NULL REFERENCES users(id)        ON DELETE RESTRICT,
+      position_id         uuid NOT NULL REFERENCES positions(id)    ON DELETE RESTRICT,
+      scope_type          scope_type NOT NULL,       -- match enum used elsewhere
+      scope_id            uuid,                      -- null for GLOBAL
+      prev_starts_at      timestamptz NOT NULL,
+      prev_ends_at        timestamptz NOT NULL,
+      new_starts_at       timestamptz NOT NULL,
+      reason              text,
+      transferred_by      uuid REFERENCES users(id) ON DELETE SET NULL,
+      created_at          timestamptz NOT NULL DEFAULT now()
+    );
+  END IF;
+END$$;
+
+-- Helpful indexes for transfers
+CREATE INDEX IF NOT EXISTS ix_appt_transfers_slot
+  ON appointment_transfers(position_id, scope_type, scope_id);
+
+CREATE INDEX IF NOT EXISTS ix_appt_transfers_times
+  ON appointment_transfers(prev_starts_at, prev_ends_at, new_starts_at);
+
+CREATE INDEX IF NOT EXISTS ix_appt_transfers_users
+  ON appointment_transfers(from_user_id, to_user_id);
+
 -- ===== Delegations (act-as by position, with time range) ====================
 DO $$
 BEGIN
   IF to_regclass('public.delegations') IS NULL THEN
-    RAISE EXCEPTION 'delegations table is required by this migration.';
+    CREATE TABLE delegations (
+      id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      grantor_user_id    uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      grantee_user_id    uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      act_as_position_id uuid REFERENCES positions(id) ON DELETE RESTRICT,
+      scope_type         scope_type NOT NULL,
+      scope_id           uuid,
+      starts_at          timestamptz NOT NULL,
+      ends_at            timestamptz,
+      reason             text,
+      deleted_at         timestamptz,
+      created_at         timestamptz NOT NULL DEFAULT now(),
+      updated_at         timestamptz NOT NULL DEFAULT now()
+    );
   END IF;
 
   -- Add generated range if missing
