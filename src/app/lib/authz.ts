@@ -3,11 +3,32 @@ import { NextRequest } from 'next/server';
 import { ApiError } from '@/app/lib/http';
 import { readAccessToken } from '@/app/lib/cookies';
 import { verifyAccessJWT } from '@/app/lib/jwt';
+import { db } from '@/app/db/client';
+import { users } from '@/app/db/schema/auth/users';
+import { eq } from 'drizzle-orm'; 
 
 export function hasAdminRole(roles?: string[]) {
   return Array.isArray(roles) && roles.some(r =>
     r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'COMMANDANT' // adjust to your model
   );
+}
+
+async function ensureActiveUser(userId: string) {
+  const [u] = await db
+    .select({ isActive: users.isActive, deletedAt: users.deletedAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!u) throw new ApiError(401, 'Unauthorized', 'unauthorized');
+
+  if (!u.isActive || u.deletedAt) {
+    throw new ApiError(
+      403,
+      'Account is deactivated. Please contact administrator.',
+      'user_inactive_or_deleted'
+    );
+  }
 }
 
 export async function requireAuth(req: NextRequest) {
@@ -21,6 +42,7 @@ export async function requireAuth(req: NextRequest) {
       roles: (payload.roles ?? []) as string[],
       claims: payload,
     };
+    // await ensureActiveUser(res.userId); 
     return res;
   } catch (e) {
     // signature/exp/nbf/iss/aud failure

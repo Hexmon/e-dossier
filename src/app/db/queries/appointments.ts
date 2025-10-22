@@ -118,10 +118,10 @@ export async function getActiveAppointmentWithHolder(appointmentId: string) {
     .innerJoin(positions, eq(positions.id, appointments.positionId))
     .where(and(
       eq(appointments.id, appointmentId),
-      ACTIVE_NOW // <-- explicit window instead of valid_during @> now()
+      isNull(appointments.deletedAt),
+      isNull(appointments.endsAt)
     ))
     .limit(1);
-
   return rows[0] ?? null;
 }
 
