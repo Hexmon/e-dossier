@@ -68,20 +68,33 @@ export default function ApprovalManagement() {
 
     // --- Approve user
     const handleApprove = async (user: PendingUser) => {
-        const selectedPositionId = getValues()[user.username];
-        if (!selectedPositionId) {
+        const selectedKey = getValues()[user.username];
+        const selectedSlot = slots.find(
+            (s) => s.position.key === selectedKey
+        );
+
+        if (!selectedKey || !selectedSlot) {
             toast.error("Please select an appointment before approving.");
             return;
         }
 
         try {
-            const res = await approveSignupRequest(user.id, selectedPositionId);
+            const scopeType =
+                selectedSlot.scope.type === "GLOBAL" || selectedSlot.scope.type === "PLATOON"
+                    ? selectedSlot.scope.type
+                    : "GLOBAL";
+            const res = await approveSignupRequest(
+                user.id,
+                selectedKey,
+                scopeType
+            );
             toast.success(res.message || `${user.name} approved successfully.`);
             setPendingUsers((prev) => prev.filter((u) => u.id !== user.id));
         } catch (err: any) {
             toast.error(err.message || "Failed to approve user.");
         }
     };
+
 
     // --- Reject user
     const handleReject = async (user: PendingUser) => {
@@ -155,15 +168,18 @@ export default function ApprovalManagement() {
                                                             <SelectValue placeholder="Select Appointment" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {slots.map((slot) => (
+                                                            {[...new Map(
+                                                                slots.map(slot => [slot.position.key, slot])
+                                                            ).values()].map((slot) => (
                                                                 <SelectItem
-                                                                    key={slot.position.id}
-                                                                    value={slot.position.id}
+                                                                    key={slot.position.key}
+                                                                    value={slot.position.key}
                                                                 >
-                                                                    {slot.scope.name}
+                                                                    {slot.position.displayName}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
+
                                                     </Select>
 
                                                     <Button
