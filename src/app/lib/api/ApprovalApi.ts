@@ -72,30 +72,33 @@ export async function getPendingUsers(): Promise<PendingUser[]> {
   return response.items || [];
 }
 
-// 🔹 Fetch all available appointment slots
+//  Fetch all available appointment slots
 export async function getAvailableSlots(): Promise<PositionSlot[]> {
   const response = await api.get<SlotResponse>(endpoints.admin.slots, { baseURL });
   return response.slots || [];
 }
 
-// 🔹 Approve user signup request
+//  Approve user signup request
 export async function approveSignupRequest(
   requestId: string,
-  positionId: string
+  positionKey: string,
+  scopeType: "GLOBAL" | "PLATOON"
 ): Promise<ApproveResponse> {
   const response = await api.post<ApproveResponse>(
     `${endpoints.admin.approval}/${requestId}/approve`,
-    { positionId },
+    { positionKey, scopeType },
     { baseURL }
   );
   return response;
 }
 
-// 🔹 Reject user signup request
+
+
+//  Reject user signup request
 export async function rejectSignupRequest(requestId: string): Promise<RejectResponse> {
   const response = await api.post<RejectResponse>(
     `${endpoints.admin.approval}/${requestId}/reject`,
-    {},
+    { reason: "Rejected by administrator"},
     { baseURL }
   );
   return response;

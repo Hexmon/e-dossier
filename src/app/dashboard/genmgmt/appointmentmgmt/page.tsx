@@ -71,12 +71,22 @@ export default function AppointmentManagement() {
     const fetchAppointments = async () => {
       try {
         setLoading(true);
+        // throw new Error("Simulate API failure");
         const data = await getAppointments();
-        setAppointments(data);
-      } catch (err: any) {
+        if (!data || !Array.isArray(data)) {
+          throw new Error("Invalid appointments data");
+        }
+
+        if (data.length === 0) {
+          throw new Error("api data not found");
+        }
+        if (!Array.isArray(data)) {
+          throw new Error("Unexpected API response");
+        }
+        setAppointments(data)
+      } catch (err) {
         console.error("Failed to fetch appointments:", err);
-        // setError("Unable to load live data — showing fallback appointments.");
-        toast.error("Using fallback data due to API failure.");
+        toast.info("Using fallback data due to API failure.");
         setAppointments(fallbackAppointments);
       } finally {
         setLoading(false);
@@ -86,7 +96,8 @@ export default function AppointmentManagement() {
   }, []);
 
 
-  // 🔹 Open Handover Dialog
+
+  // Open Handover Dialog
   const openHandover = (appt: Appointment) => {
     setSelectedAppointment(appt);
     reset();
@@ -101,8 +112,18 @@ export default function AppointmentManagement() {
   }) => {
     if (!selectedAppointment) return;
 
-    const handover = new Date(formData.handoverDate);
-    const takeover = new Date(formData.takeoverDate);
+    const handover = new Date(`${formData.handoverDate}T00:00:00Z`);
+    const takeover = new Date(`${formData.takeoverDate}T00:00:00Z`);
+
+    const appointmentStart = new Date(selectedAppointment.startsAt);
+
+    if (handover <= appointmentStart) {
+      // toast.error(
+      //   `Handover date (${handover.toDateString()}) cannot be before the appointment start date (${appointmentStart.toDateString()}).`
+      // );
+      console.log(`Handover date (${handover.toDateString()}) cannot be before the appointment start date (${appointmentStart.toDateString()}`)
+      return;
+    }
 
     if (handover >= takeover) {
       toast.error("Handover date must be before takeover date.");
