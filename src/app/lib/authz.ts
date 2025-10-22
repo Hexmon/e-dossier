@@ -42,7 +42,7 @@ export async function requireAuth(req: NextRequest) {
       roles: (payload.roles ?? []) as string[],
       claims: payload,
     };
-    await ensureActiveUser(res.userId); 
+    // await ensureActiveUser(res.userId); 
     return res;
   } catch (e) {
     // signature/exp/nbf/iss/aud failure

@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
 
     // 3) Domain checks & auth
     const apt = await getActiveAppointmentWithHolder(appointmentId);
+    
     if (!apt) throw new ApiError(400, 'Appointment is not active', 'INVALID_APPOINTMENT');
 
     if (apt.positionKey === 'PLATOON_COMMANDER') {
@@ -69,27 +70,27 @@ export async function POST(req: NextRequest) {
       throw new ApiError(403, 'Username does not match the active holder of this appointment', 'USERNAME_MISMATCH');
     }
 
-    const [u] = await db
-      .select({
-        id: users.id,
-        isActive: users.isActive,
-        deletedAt: users.deletedAt,
-        deactivatedAt: users.deactivatedAt,
-      })
-      .from(users)
-      .where(eq(users.id, apt.userId))
-      .limit(1);
+    // const [u] = await db
+    //   .select({
+    //     id: users.id,
+    //     isActive: users.isActive,
+    //     deletedAt: users.deletedAt,
+    //     deactivatedAt: users.deactivatedAt,
+    //   })
+    //   .from(users)
+    //   .where(eq(users.id, apt.userId))
+    //   .limit(1);
 
-    if (!u) throw new ApiError(401, 'Unauthorized', 'unauthorized');
+    // if (!u) throw new ApiError(401, 'Unauthorized', 'unauthorized');
 
-    if (!u.isActive || u.deletedAt) {
-      // Consistent error envelope with your helpers
-      throw new ApiError(
-        403,
-        'Account is deactivated. Please contact administrator.',
-        'user_inactive_or_deleted'
-      );
-    }
+    // if (!u.isActive || u.deletedAt) {
+    //   // Consistent error envelope with your helpers
+    //   throw new ApiError(
+    //     403,
+    //     'Account is deactivated. Please contact administrator.',
+    //     'user_inactive_or_deleted'
+    //   );
+    // }
 
     const [cred] = await db.select().from(credentialsLocal).where(eq(credentialsLocal.userId, apt.userId)).limit(1);
     if (!cred) throw new ApiError(401, 'invalid_credentials', 'NO_CREDENTIALS');
