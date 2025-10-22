@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm';
 import argon2 from 'argon2';
 import { getActiveAppointmentWithHolder } from '@/app/db/queries/appointments';
 import { SCOPE } from '@/constants/app.constants';
+import { users } from '@/app/db/schema/auth/users';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.EXPOSE_TOKENS_IN_DEV === 'true';
 
@@ -66,6 +67,28 @@ export async function POST(req: NextRequest) {
 
     if ((apt.username ?? '').toLowerCase() !== username.trim().toLowerCase()) {
       throw new ApiError(403, 'Username does not match the active holder of this appointment', 'USERNAME_MISMATCH');
+    }
+
+    const [u] = await db
+      .select({
+        id: users.id,
+        isActive: users.isActive,
+        deletedAt: users.deletedAt,
+        deactivatedAt: users.deactivatedAt,
+      })
+      .from(users)
+      .where(eq(users.id, apt.userId))
+      .limit(1);
+
+    if (!u) throw new ApiError(401, 'Unauthorized', 'unauthorized');
+
+    if (!u.isActive || u.deletedAt) {
+      // Consistent error envelope with your helpers
+      throw new ApiError(
+        403,
+        'Account is deactivated. Please contact administrator.',
+        'user_inactive_or_deleted'
+      );
     }
 
     const [cred] = await db.select().from(credentialsLocal).where(eq(credentialsLocal.userId, apt.userId)).limit(1);
