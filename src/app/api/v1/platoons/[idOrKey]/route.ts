@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
-import { json, handleApiError } from '@/app/lib/http';
+import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { platoonUpdateSchema } from '@/app/lib/validators';
 import { requireAdmin } from '@/app/lib/authz';
 
@@ -13,7 +13,7 @@ function isUuid(s: string) {
 }
 
 function whereForIdKeyName(idOrKey: string, includeDeleted = false) {
-  const parts = [];
+  const parts: any[] = [];
   if (!includeDeleted) parts.push(isNull(platoons.deletedAt));
 
   if (isUuid(idOrKey)) {
@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { idOrKey: s
 
     const { key, name, about, restore } = parsed.data;
 
-    // Load the row (allow finding even if soft-deleted)
+    // Load target (include soft-deleted so we can restore)
     const [existing] = await db
       .select({
         id: platoons.id,
@@ -58,13 +58,45 @@ export async function PATCH(req: NextRequest, { params }: { params: { idOrKey: s
 
     if (!existing) return json.notFound('Platoon not found');
 
+    // 🔒 Uniqueness checks when changing key or name (ignore soft-deleted, exclude self)
+    if (key || name) {
+      const upKey = key ? key.toUpperCase() : null;
+      const lcName = name ? name.trim().toLowerCase() : null;
+
+      const clauses = [isNull(platoons.deletedAt), sql`${platoons.id} <> ${existing.id}`] as any[];
+
+      if (upKey && lcName) {
+        clauses.push(or(eq(platoons.key, upKey), sql`lower(${platoons.name}) = ${lcName}`));
+      } else if (upKey) {
+        clauses.push(eq(platoons.key, upKey));
+      } else if (lcName) {
+        clauses.push(sql`lower(${platoons.name}) = ${lcName}`);
+      }
+
+      if (clauses.length > 0) {
+        const [dup] = await db
+          .select({ id: platoons.id, key: platoons.key, name: platoons.name })
+          .from(platoons)
+          .where(and(...clauses))
+          .limit(1);
+
+        if (dup) {
+          const by =
+            upKey && dup.key === upKey ? 'key' :
+              lcName && dup.name?.toLowerCase() === lcName ? 'name' :
+                'key_or_name';
+          return json.conflict(`Platoon ${by} already exists`, { [by]: by === 'key' ? upKey : name?.trim() });
+        }
+      }
+    }
+
     // Build updates
     const updates: Partial<typeof platoons.$inferInsert> = {};
     if (key) updates.key = key.toUpperCase();
     if (name) updates.name = name.trim();
     if ('about' in parsed.data) updates.about = about ?? null;
-    if (restore === true) updates.deletedAt = null;          // undelete (restore)
-    if (restore === false) updates.deletedAt = new Date();   // optional: re-soft-delete
+    if (restore === true) updates.deletedAt = null;
+    if (restore === false) updates.deletedAt = new Date();
 
     const [updated] = await db
       .update(platoons)
@@ -82,10 +114,81 @@ export async function PATCH(req: NextRequest, { params }: { params: { idOrKey: s
 
     return json.ok({ platoon: updated });
   } catch (err) {
-    const e = err as PgError;
-    if (e?.code === '23505') {
-      return json.conflict('Platoon key already exists');
+    return handleApiError(err);
+  }
+}
+
+/**
+ * DELETE /api/v1/platoons/:idOrKey  (ADMIN)
+ * - Soft delete by default (sets deleted_at = now)
+ * - Hard delete with ?hard=true
+ */
+export async function DELETE(req: NextRequest, ctx: { params: { idOrKey: string } }) {
+  try {
+    await requireAdmin(req);
+
+    const idOrKey = decodeURIComponent((ctx.params?.idOrKey ?? '')).trim();
+    if (!idOrKey) throw new ApiError(400, 'idOrKey path param is required', 'bad_request');
+
+    // Find even if already soft-deleted (so we can hard-delete it)
+    const [existing] = await db
+      .select({
+        id: platoons.id,
+        key: platoons.key,
+        name: platoons.name,
+        deletedAt: platoons.deletedAt,
+      })
+      .from(platoons)
+      .where(whereForIdKeyName(idOrKey, true))
+      .limit(1);
+
+    if (!existing) throw new ApiError(404, 'Platoon not found', 'not_found');
+
+    const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
+
+    if (hard) {
+      // Hard delete (be mindful of any downstream FKs you may add later)
+      const [gone] = await db
+        .delete(platoons)
+        .where(eq(platoons.id, existing.id))
+        .returning({ id: platoons.id, key: platoons.key, name: platoons.name });
+
+      return json.ok({
+        message: 'Platoon hard-deleted',
+        platoon: gone,
+      });
     }
+
+    // Soft delete (no-op if already soft-deleted)
+    const [updated] = await db
+      .update(platoons)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(platoons.id, existing.id), isNull(platoons.deletedAt)))
+      .returning({
+        id: platoons.id,
+        key: platoons.key,
+        name: platoons.name,
+        deletedAt: platoons.deletedAt,
+      });
+
+    if (updated) {
+      return json.ok({
+        message: 'Platoon soft-deleted',
+        platoon: updated,
+      });
+    }
+
+    // Already soft-deleted – return current state
+    return json.ok({
+      message: 'Platoon already soft-deleted',
+      platoon: {
+        id: existing.id,
+        key: existing.key,
+        name: existing.name,
+        deletedAt: existing.deletedAt,
+      },
+    });
+  } catch (err) {
     return handleApiError(err);
   }
 }
