@@ -71,12 +71,21 @@ export default function AppointmentManagement() {
     const fetchAppointments = async () => {
       try {
         setLoading(true);
+        // throw new Error("Simulate API failure");
         const data = await getAppointments();
-        setAppointments(data);
-      } catch (err: any) {
+        if (!data || !Array.isArray(data)) {
+          throw new Error("Invalid appointments data");
+        }
+
+        if (data.length === 0) {
+          throw new Error("api data not found");
+        }
+        if (!Array.isArray(data)) {
+          throw new Error("Unexpected API response");
+        }
+      } catch (err) {
         console.error("Failed to fetch appointments:", err);
-        // setError("Unable to load live data — showing fallback appointments.");
-        toast.error("Using fallback data due to API failure.");
+        toast.info("Using fallback data due to API failure.");
         setAppointments(fallbackAppointments);
       } finally {
         setLoading(false);
@@ -86,7 +95,8 @@ export default function AppointmentManagement() {
   }, []);
 
 
-  // 🔹 Open Handover Dialog
+
+  // Open Handover Dialog
   const openHandover = (appt: Appointment) => {
     setSelectedAppointment(appt);
     reset();
