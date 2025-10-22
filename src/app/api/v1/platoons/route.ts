@@ -61,14 +61,36 @@ export async function POST(req: NextRequest) {
         }
 
         const data = parsed.data;
+        const upKey = data.key.toUpperCase();
+        const lcName = data.name.trim().toLowerCase();
+
+        // 🔒 Uniqueness checks (ignore soft-deleted)
+        const [conflict] = await db
+            .select({ id: platoons.id, key: platoons.key, name: platoons.name })
+            .from(platoons)
+            .where(
+                and(
+                    isNull(platoons.deletedAt),
+                    or(
+                        eq(platoons.key, upKey),
+                        sql`lower(${platoons.name}) = ${lcName}`
+                    )
+                )
+            )
+            .limit(1);
+
+        if (conflict) {
+            const by = conflict.key === upKey ? 'key' : 'name';
+            return json.conflict(`Platoon ${by} already exists`, { [by]: by === 'key' ? upKey : data.name.trim() });
+        }
+
         const [row] = await db
             .insert(platoons)
             .values({
-                key: data.key.toUpperCase(),
+                key: upKey,
                 name: data.name.trim(),
                 about: data.about ?? null,
             })
-            .onConflictDoNothing({ target: [platoons.key] })   // <-- ignore duplicates
             .returning({
                 id: platoons.id,
                 key: platoons.key,
@@ -77,11 +99,6 @@ export async function POST(req: NextRequest) {
                 createdAt: platoons.createdAt,
                 updatedAt: platoons.updatedAt,
             });
-
-        if (!row) {
-            // nothing inserted -> key already existed
-            return json.conflict('Platoon key already exists', { key: data.key.toUpperCase() });
-        }
 
         return json.created({ platoon: row });
     } catch (err) {

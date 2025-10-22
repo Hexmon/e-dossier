@@ -4,12 +4,11 @@ import { positions } from '@/app/db/schema/auth/positions';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAdmin } from '@/app/lib/authz';
 import { positionUpdateSchema } from '@/app/lib/validators';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne} from 'drizzle-orm';
 
 export async function GET(_: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { id: routeId } = await ctx.params;
-    // decode + trim to remove %0A or stray spaces
     const rawId = decodeURIComponent(routeId ?? '').trim();
 
     const [row] = await db
@@ -38,6 +37,30 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       throw new ApiError(400, 'Validation failed', 'bad_request', parsed.error.flatten());
     }
 
+    // Ensure the row exists first
+    const [existing] = await db.select().from(positions).where(eq(positions.id, rawId)).limit(1);
+    if (!existing) throw new ApiError(404, 'Position not found');
+
+    // Uniqueness check for displayName (if provided)
+    if (parsed.data.displayName && parsed.data.displayName.trim().length > 0) {
+      const [conflictByName] = await db
+        .select({ id: positions.id })
+        .from(positions)
+        .where(and(
+          eq(positions.displayName, parsed.data.displayName.trim()),
+          ne(positions.id, rawId)
+        ))
+        .limit(1);
+
+      if (conflictByName) {
+        // 409 with a clear field-level hint
+        return json.conflict('Display name already exists', {
+          field: 'displayName',
+          value: parsed.data.displayName.trim(),
+        });
+      }
+    }
+
     const [row] = await db
       .update(positions)
       .set({
@@ -62,9 +85,6 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
 
     const { id: routeId } = await ctx.params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
-
-    // optional: block delete if any appointments exist for this position
-    // const apptCount = await db.$count(appointments, eq(appointments.positionId, rawId));
 
     const [row] = await db.delete(positions).where(eq(positions.id, rawId)).returning();
     if (!row) throw new ApiError(404, 'Position not found');
