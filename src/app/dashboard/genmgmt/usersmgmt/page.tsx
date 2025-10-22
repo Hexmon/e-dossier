@@ -177,7 +177,7 @@ export default function UserManagement() {
             <Input placeholder="Phone" {...register("phone")} />
             <Input placeholder="Rank" {...register("rank")} />
 
-            <Select onValueChange={(v) => setValue("appointId", v)}>
+            {/* <Select onValueChange={(v) => setValue("appointId", v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select Role" />
               </SelectTrigger>
@@ -188,7 +188,7 @@ export default function UserManagement() {
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+            </Select> */}
 
             <div className="flex items-center gap-2">
               <Checkbox checked={isActive} onCheckedChange={(val) => setValue("isActive", !!val)} />
