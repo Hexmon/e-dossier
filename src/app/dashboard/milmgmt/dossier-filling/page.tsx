@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
+
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,44 +15,44 @@ import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
+import { useState } from "react";
+
+interface DossierFormData {
+  initiatedBy: string;
+  openedOn: string;
+  initialInterview: string;
+  closedBy: string;
+  closedOn: string;
+  finalInterview: string;
+}
 
 export default function DossierFilling() {
   const router = useRouter();
   const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
 
-  const handleLogout = () => {
-    router.push("/login");
-    console.log("Logout clicked");
-  };
-
-  const [dossier, setDossier] = useState({
-    initiatedBy: "",
-    openedOn: "",
-    initialInterview: "",
-    closedBy: "",
-    closedOn: "",
-    finalInterview: "",
-  });
-
-  const [savedDossier, setSavedDossier] = useState<typeof dossier | null>(null);
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavedDossier(dossier);
-    alert("Dossier saved successfully!");
-  };
-
-  const handleReset = () => {
-    setDossier({
+  const { register, handleSubmit, reset, watch } = useForm<DossierFormData>({
+    defaultValues: {
       initiatedBy: "",
       openedOn: "",
       initialInterview: "",
       closedBy: "",
       closedOn: "",
       finalInterview: "",
-    });
+    },
+  });
+
+  const [savedDossier, setSavedDossier] = useState<DossierFormData | null>(null);
+
+  const handleLogout = () => {
+    router.push("/login");
+    console.log("Logout clicked");
+  };
+
+  const onSubmit = (data: DossierFormData) => {
+    console.log("Dossier Saved:", data);
+    setSavedDossier(data);
+    alert("Dossier saved successfully!");
+    reset();
   };
 
   return (
@@ -58,7 +61,7 @@ export default function DossierFilling() {
         {/* Sidebar */}
         <AppSidebar />
 
-        {/* Main Content Area */}
+        {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
           <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
@@ -71,6 +74,7 @@ export default function DossierFilling() {
 
           {/* Main Section */}
           <main className="flex-1 p-6">
+            {/* Breadcrumb */}
             <BreadcrumbNav
               paths={[
                 { label: "Dashboard", href: "/dashboard" },
@@ -79,7 +83,7 @@ export default function DossierFilling() {
               ]}
             />
 
-            {/* Selected Cadet Info */}
+            {/* Selected Cadet */}
             <div className="hidden md:flex sticky top-16 z-40">
               {selectedCadet && <SelectedCadetTable selectedCadet={selectedCadet} />}
             </div>
@@ -111,39 +115,27 @@ export default function DossierFilling() {
 
                   {/* ---- Form Tab ---- */}
                   <TabsContent value="form">
-                    <form onSubmit={handleSave} className="space-y-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium">Initiated By</label>
                           <Input
-                            value={dossier.initiatedBy}
-                            onChange={(e) =>
-                              setDossier({ ...dossier, initiatedBy: e.target.value })
-                            }
                             placeholder="Enter your name"
+                            {...register("initiatedBy")}
                           />
                         </div>
                         <div>
                           <label className="text-sm font-medium">Opened On</label>
-                          <Input
-                            type="date"
-                            value={dossier.openedOn}
-                            onChange={(e) =>
-                              setDossier({ ...dossier, openedOn: e.target.value })
-                            }
-                          />
+                          <Input type="date" {...register("openedOn")} />
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Initial Interview</label>
                         <Textarea
-                          value={dossier.initialInterview}
-                          onChange={(e) =>
-                            setDossier({ ...dossier, initialInterview: e.target.value })
-                          }
                           placeholder="Enter initial interview notes..."
                           className="min-h-[100px]"
+                          {...register("initialInterview")}
                         />
                       </div>
 
@@ -151,39 +143,31 @@ export default function DossierFilling() {
                         <div>
                           <label className="text-sm font-medium">Closed By</label>
                           <Input
-                            value={dossier.closedBy}
-                            onChange={(e) =>
-                              setDossier({ ...dossier, closedBy: e.target.value })
-                            }
                             placeholder="Enter your name"
+                            {...register("closedBy")}
                           />
                         </div>
                         <div>
                           <label className="text-sm font-medium">Closed On</label>
-                          <Input
-                            type="date"
-                            value={dossier.closedOn}
-                            onChange={(e) =>
-                              setDossier({ ...dossier, closedOn: e.target.value })
-                            }
-                          />
+                          <Input type="date" {...register("closedOn")} />
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Final Interview</label>
                         <Textarea
-                          value={dossier.finalInterview}
-                          onChange={(e) =>
-                            setDossier({ ...dossier, finalInterview: e.target.value })
-                          }
                           placeholder="Enter final interview notes..."
                           className="min-h-[100px]"
+                          {...register("finalInterview")}
                         />
                       </div>
 
                       <div className="flex justify-end gap-2 mt-6">
-                        <Button variant="outline" type="button" onClick={handleReset}>
+                        <Button
+                          variant="outline"
+                          type="button"
+                          onClick={() => reset()}
+                        >
                           Reset
                         </Button>
                         <Button type="submit">Save</Button>
@@ -195,6 +179,7 @@ export default function DossierFilling() {
                   <TabsContent value="view">
                     <Card className="p-6 border rounded-lg bg-gray-50">
                       <h3 className="text-lg font-semibold mb-4">Saved Dossier Data</h3>
+
                       {savedDossier ? (
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <p>
