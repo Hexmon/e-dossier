@@ -94,7 +94,7 @@ export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
 
 export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) {
     try {
-        requireAdmin(req);
+        await requireAdmin(req);
         const { id } = ctx.params;
         // Soft delete by setting deleted_at = now()
         const [row] = await db
