@@ -1,6 +1,23 @@
 CREATE TYPE "public"."assignment_kind" AS ENUM('PRIMARY', 'OFFICIATING');--> statement-breakpoint
 CREATE TYPE "public"."position_type" AS ENUM('COMMANDANT', 'DEPUTY_COMMANDANT', 'HOAT', 'DEPUTY_SECRETARY', 'PLATOON_COMMANDER', 'CCO', 'ADMIN', 'SUPER_ADMIN');--> statement-breakpoint
 CREATE TYPE "public"."scope_type" AS ENUM('GLOBAL', 'PLATOON');--> statement-breakpoint
+CREATE TABLE "appointment_transfers" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"from_appointment_id" uuid NOT NULL,
+	"to_appointment_id" uuid NOT NULL,
+	"from_user_id" uuid NOT NULL,
+	"to_user_id" uuid NOT NULL,
+	"position_id" uuid NOT NULL,
+	"scope_type" text NOT NULL,
+	"scope_id" uuid,
+	"prev_starts_at" timestamp with time zone NOT NULL,
+	"prev_ends_at" timestamp with time zone NOT NULL,
+	"new_starts_at" timestamp with time zone NOT NULL,
+	"reason" text,
+	"transferred_by" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "appointments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -104,6 +121,21 @@ CREATE TABLE "user_roles" (
 	CONSTRAINT "user_roles_user_id_role_id_pk" PRIMARY KEY("user_id","role_id")
 );
 --> statement-breakpoint
+CREATE TABLE "signup_requests" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"desired_position_id" uuid,
+	"desired_scope_type" "scope_type" DEFAULT 'GLOBAL' NOT NULL,
+	"desired_scope_id" uuid,
+	"note" text,
+	"status" varchar(16) DEFAULT 'pending' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"resolved_at" timestamp with time zone,
+	"resolved_by" uuid,
+	"admin_reason" text,
+	"payload" jsonb
+);
+--> statement-breakpoint
 CREATE TABLE "password_reset_admin_actions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"admin_user_id" uuid NOT NULL,
@@ -129,6 +161,12 @@ CREATE TABLE "users" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "appointment_transfers" ADD CONSTRAINT "appointment_transfers_from_appointment_id_appointments_id_fk" FOREIGN KEY ("from_appointment_id") REFERENCES "public"."appointments"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "appointment_transfers" ADD CONSTRAINT "appointment_transfers_to_appointment_id_appointments_id_fk" FOREIGN KEY ("to_appointment_id") REFERENCES "public"."appointments"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "appointment_transfers" ADD CONSTRAINT "appointment_transfers_from_user_id_users_id_fk" FOREIGN KEY ("from_user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "appointment_transfers" ADD CONSTRAINT "appointment_transfers_to_user_id_users_id_fk" FOREIGN KEY ("to_user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "appointment_transfers" ADD CONSTRAINT "appointment_transfers_position_id_positions_id_fk" FOREIGN KEY ("position_id") REFERENCES "public"."positions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "appointment_transfers" ADD CONSTRAINT "appointment_transfers_transferred_by_users_id_fk" FOREIGN KEY ("transferred_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_position_id_positions_id_fk" FOREIGN KEY ("position_id") REFERENCES "public"."positions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_appointed_by_users_id_fk" FOREIGN KEY ("appointed_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -145,7 +183,12 @@ ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permission_id_pe
 ALTER TABLE "user_guest_access" ADD CONSTRAINT "user_guest_access_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "signup_requests" ADD CONSTRAINT "signup_requests_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "signup_requests" ADD CONSTRAINT "signup_requests_desired_position_id_positions_id_fk" FOREIGN KEY ("desired_position_id") REFERENCES "public"."positions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "signup_requests" ADD CONSTRAINT "signup_requests_resolved_by_users_id_fk" FOREIGN KEY ("resolved_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "password_reset_admin_actions" ADD CONSTRAINT "password_reset_admin_actions_admin_user_id_users_id_fk" FOREIGN KEY ("admin_user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "password_reset_admin_actions" ADD CONSTRAINT "password_reset_admin_actions_target_user_id_users_id_fk" FOREIGN KEY ("target_user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_appoint_id_positions_id_fk" FOREIGN KEY ("appoint_id") REFERENCES "public"."positions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "uq_platoons_key" ON "platoons" USING btree ("key");
+CREATE UNIQUE INDEX "uq_platoons_key" ON "platoons" USING btree ("key");--> statement-breakpoint
+CREATE INDEX "ix_signup_requests_status" ON "signup_requests" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "ix_signup_requests_created_at" ON "signup_requests" USING btree ("created_at");

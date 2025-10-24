@@ -4,21 +4,29 @@ import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAdmin } from '@/app/lib/authz';
 import { z } from 'zod';
+
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { platoons } from '@/app/db/schema/auth/platoons';
-import { eq, and, or, isNull, lte, gte } from 'drizzle-orm';
 import { appointmentTransfers } from '@/app/db/schema/admin/appointmentTransfers';
-import { appointmentCreateSchema, appointmentTransferBody } from '@/app/lib/validators';
+
+import { and, eq, or, isNull, lte, gt } from 'drizzle-orm';
+import { appointmentTransferBody } from '@/app/lib/validators';
 
 const IdSchema = z.object({ id: z.string().uuid() });
 
-export async function POST(req: NextRequest) {
+export async function POST(
+    req: NextRequest,
+    ctx: { params: { id: string } } | { params: Promise<{ id: string }> }
+) {
     try {
-        await requireAdmin(req);
+        const { userId: adminId } = await requireAdmin(req);
 
-        // 0) Parse JSON safely → give a nice error if body isn't valid JSON
+        const { id: raw } = await (ctx as any).params;
+        const { id } = IdSchema.parse({ id: decodeURIComponent((raw ?? '')).trim() });
+
+        // Parse body safely
         let body: unknown;
         try {
             body = await req.json();
@@ -28,130 +36,189 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // 1) Zod validation (shape/format)
-        const parsed = appointmentCreateSchema.safeParse(body);
+        const parsed = appointmentTransferBody.safeParse(body);
         if (!parsed.success) {
             throw new ApiError(400, 'Validation failed', 'bad_request', parsed.error.flatten());
         }
-        const p = parsed.data;
+        const dto = parsed.data;
 
-        // 2) Required semantic checks
-        // 2a) user must exist
-        {
-            const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, p.userId)).limit(1);
-            if (!u) {
-                throw new ApiError(400, 'User not found', 'user_not_found', { userId: p.userId });
-            }
+        const requestedPrevEndsAt = new Date(dto.prevEndsAt);
+        const newStartsAt = new Date(dto.newStartsAt);
+
+        // 1) Load current appointment
+        const [curr] = await db
+            .select({
+                id: appointments.id,
+                userId: appointments.userId,
+                positionId: appointments.positionId,
+                assignment: appointments.assignment,
+                scopeType: appointments.scopeType,
+                scopeId: appointments.scopeId,
+                startsAt: appointments.startsAt,
+                endsAt: appointments.endsAt,
+                deletedAt: appointments.deletedAt,
+            })
+            .from(appointments)
+            .where(eq(appointments.id, id))
+            .limit(1);
+
+        if (!curr) throw new ApiError(404, 'Appointment not found', 'not_found');
+        if (curr.deletedAt) throw new ApiError(409, 'Appointment is deleted', 'conflict');
+
+        // 2) Time handling
+        // If caller provided prevEndsAt earlier than startsAt, auto-bump to startsAt (DB requires starts_at < ends_at).
+        const effectivePrevEndsAt =
+            requestedPrevEndsAt < curr.startsAt ? curr.startsAt : requestedPrevEndsAt;
+
+        // Your rule: newStartsAt must be same as or after effectivePrevEndsAt
+        if (newStartsAt < effectivePrevEndsAt) {
+            throw new ApiError(
+                400,
+                'newStartsAt must be the same as or after prevEndsAt',
+                'bad_request',
+                { effectivePrevEndsAt }
+            );
         }
 
-        // 2b) resolve/verify position
-        let positionId = p.positionId ?? null;
-        if (!positionId && p.positionKey) {
-            const [pos] = await db
-                .select({ id: positions.id, key: positions.key, defaultScope: positions.defaultScope })
-                .from(positions)
-                .where(eq(positions.key, p.positionKey))
+        // 3) Validate new user exists & not deleted
+        const [targetUser] = await db
+            .select({ id: users.id, deletedAt: users.deletedAt })
+            .from(users)
+            .where(eq(users.id, dto.newUserId))
+            .limit(1);
+
+        if (!targetUser) throw new ApiError(400, 'Invalid newUserId', 'bad_request');
+        if (targetUser.deletedAt) throw new ApiError(400, 'Target user is deleted', 'bad_request');
+
+        // Defensive: ensure position/scope still exist
+        const [pos] = await db
+            .select({ id: positions.id })
+            .from(positions)
+            .where(eq(positions.id, curr.positionId))
+            .limit(1);
+        if (!pos) {
+            throw new ApiError(
+                409,
+                'Position for the current appointment no longer exists',
+                'position_missing'
+            );
+        }
+        if (curr.scopeType === 'PLATOON' && curr.scopeId) {
+            const [pl] = await db
+                .select({ id: platoons.id })
+                .from(platoons)
+                .where(eq(platoons.id, curr.scopeId))
                 .limit(1);
-
-            if (!pos) {
-                throw new ApiError(400, 'Position not found', 'position_not_found', { positionKey: p.positionKey });
-            }
-            positionId = pos.id;
-        }
-        if (!positionId) {
-            throw new ApiError(400, 'positionId or positionKey is required', 'missing_position');
-        }
-
-        // 2c) scope consistency + existence
-        if (p.scopeType === 'GLOBAL') {
-            if (p.scopeId !== null && p.scopeId !== undefined) {
-                throw new ApiError(400, 'scopeId must be null when scopeType = GLOBAL', 'invalid_scope');
-            }
-        } else if (p.scopeType === 'PLATOON') {
-            if (!p.scopeId) {
-                throw new ApiError(400, 'scopeId is required when scopeType = PLATOON', 'missing_scope_id');
-            }
-            const [pl] = await db.select({ id: platoons.id, key: platoons.key }).from(platoons).where(eq(platoons.id, p.scopeId)).limit(1);
             if (!pl) {
-                throw new ApiError(400, 'Platoon (scopeId) not found', 'scope_not_found', { scopeId: p.scopeId });
-            }
-        }
-
-        // 2d) time sanity (DB also checks, but we give nicer message)
-        if (p.endsAt && !(p.startsAt < p.endsAt)) {
-            throw new ApiError(400, 'startsAt must be earlier than endsAt', 'invalid_time_window', {
-                startsAt: p.startsAt,
-                endsAt: p.endsAt,
-            });
-        }
-
-        // 3) Business rule: only ONE active holder per (positionId, scopeType, scopeId) at the requested start time
-        //    We proactively check overlap to give a clean 409 (in addition to the GiST EXCLUDE).
-        {
-            const startAt = p.startsAt;
-            const overlap = await db
-                .select({ id: appointments.id, userId: appointments.userId, startsAt: appointments.startsAt, endsAt: appointments.endsAt })
-                .from(appointments)
-                .where(
-                    and(
-                        eq(appointments.positionId, positionId),
-                        eq(appointments.scopeType, p.scopeType),
-                        p.scopeType === 'PLATOON' ? eq(appointments.scopeId, p.scopeId!) : isNull(appointments.scopeId),
-                        isNull(appointments.deletedAt),
-                        // active window at startsAt: startsAt <= newStart && (endsAt IS NULL OR endsAt >= newStart)
-                        lte(appointments.startsAt, startAt),
-                        or(isNull(appointments.endsAt), gte(appointments.endsAt, startAt))
-                    )
-                )
-                .limit(1);
-
-            if (overlap.length) {
                 throw new ApiError(
                     409,
-                    'Another active holder already exists for this position/scope at the requested start time',
-                    'slot_conflict',
-                    { conflictingAppointmentId: overlap[0].id, conflictingUserId: overlap[0].userId }
+                    'Platoon (scope) for the current appointment no longer exists',
+                    'platoon_missing'
                 );
             }
         }
 
-        // 4) Insert
-        const [row] = await db
-            .insert(appointments)
-            .values({
-                userId: p.userId,
-                positionId,
-                assignment: p.assignment,
-                scopeType: p.scopeType,
-                scopeId: p.scopeType === 'PLATOON' ? p.scopeId! : null,
-                startsAt: p.startsAt,
-                endsAt: p.endsAt ?? null,
-                reason: p.reason ?? null,
-            })
-            .returning();
+        // 4) Ensure no active holder at newStartsAt (allow boundary: endsAt == newStartsAt)
+        const overlapping = await db
+            .select({ id: appointments.id })
+            .from(appointments)
+            .where(
+                and(
+                    eq(appointments.positionId, curr.positionId),
+                    eq(appointments.scopeType, curr.scopeType),
+                    curr.scopeType === 'PLATOON' && curr.scopeId
+                        ? eq(appointments.scopeId, curr.scopeId)
+                        : isNull(appointments.scopeId),
+                    isNull(appointments.deletedAt),
+                    lte(appointments.startsAt, newStartsAt),
+                    // strictly greater-than so boundary handoff is allowed
+                    or(isNull(appointments.endsAt), gt(appointments.endsAt, newStartsAt))
+                )
+            );
 
-        return json.created({ data: row });
+        const conflicts = overlapping.filter(o => o.id !== curr.id);
+        if (conflicts.length) {
+            throw new ApiError(
+                409,
+                'Another active holder exists at the newStartsAt time',
+                'conflict',
+                { conflictingAppointmentId: conflicts[0].id }
+            );
+        }
+
+        // 5) Transaction: end current, create new, audit
+        const result = await db.transaction(async (tx) => {
+            const [ended] = await tx
+                .update(appointments)
+                .set({ endsAt: effectivePrevEndsAt })
+                .where(eq(appointments.id, curr.id))
+                .returning({
+                    id: appointments.id,
+                    userId: appointments.userId,
+                    positionId: appointments.positionId,
+                    scopeType: appointments.scopeType,
+                    scopeId: appointments.scopeId,
+                    startsAt: appointments.startsAt,
+                    endsAt: appointments.endsAt,
+                });
+
+            if (!ended) throw new ApiError(404, 'Appointment not found during update', 'not_found');
+
+            const [next] = await tx
+                .insert(appointments)
+                .values({
+                    userId: dto.newUserId,
+                    positionId: ended.positionId,
+                    assignment: curr.assignment,
+                    scopeType: ended.scopeType,
+                    scopeId: ended.scopeId ?? null,
+                    startsAt: newStartsAt,
+                    endsAt: null,
+                    reason: dto.reason ?? `Transferred from ${ended.userId} by ${adminId}`,
+                    appointedBy: adminId,
+                })
+                .returning({
+                    id: appointments.id,
+                    userId: appointments.userId,
+                    positionId: appointments.positionId,
+                    scopeType: appointments.scopeType,
+                    scopeId: appointments.scopeId,
+                    startsAt: appointments.startsAt,
+                    endsAt: appointments.endsAt,
+                });
+
+            const [audit] = await tx
+                .insert(appointmentTransfers)
+                .values({
+                    fromAppointmentId: ended.id,
+                    toAppointmentId: next.id,
+                    fromUserId: ended.userId,
+                    toUserId: next.userId,
+                    positionId: next.positionId,
+                    scopeType: String(next.scopeType),
+                    scopeId: next.scopeId ?? null,
+                    prevStartsAt: ended.startsAt,
+                    prevEndsAt: ended.endsAt!, // set above
+                    newStartsAt,
+                    reason: dto.reason ?? null,
+                    transferredBy: adminId,
+                })
+                .returning({ id: appointmentTransfers.id, createdAt: appointmentTransfers.createdAt });
+
+            return { ended, next, audit };
+        });
+
+        return json.ok({
+            message: 'Appointment transferred',
+            ended_appointment: result.ended,
+            new_appointment: result.next,
+            transfer_audit: result.audit,
+            // for visibility if we had to bump the end time
+            ...(requestedPrevEndsAt < curr.startsAt
+                ? { adjustedPrevEndsAt: result.ended.endsAt }
+                : {}),
+        });
     } catch (err) {
-        // Map common constraint error codes to clear messages
-        const any = err as any;
-        if (any?.code === '23P01') {
-            // exclusion constraint (GiST) → overlapping holder
-            return json.conflict('Another active holder conflicts with this time window', {
-                code: 'slot_conflict',
-                detail: 'The (position, scope) slot already has a PRIMARY holder overlapping this time.',
-            });
-        }
-        if (any?.code === '23503') {
-            // FK violation
-            return json.badRequest('Foreign key constraint failed', {
-                code: 'foreign_key_violation',
-                detail: any?.detail,
-            });
-        }
-        if (any?.code === '23505') {
-            // Unique violation (unlikely here but covered)
-            return json.conflict('Unique constraint violated', { detail: any?.detail });
-        }
         return handleApiError(err);
     }
 }
