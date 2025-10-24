@@ -56,7 +56,7 @@ export default function DossierTab({
 
   return (
     <Tabs defaultValue={defaultValue} className="space-y-6">
-      <TabsList className="grid w-full grid-cols-2 sticky top-36 z-40">
+      <TabsList className="grid w-full grid-cols-2 sticky top-38 z-40">
         {visibleTabs.map(({ value, title, icon: Icon, link }) => {
           const isMilTrgTab = title.toLowerCase() === "mil-trg";
 

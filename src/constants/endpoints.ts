@@ -9,7 +9,7 @@ export const endpoints = {
     },
     admin: {
         approval: "/api/v1/admin/signup-requests",
-        appointments: "/api/v1/admin/appointments",
+        appointments: "/api/v1/admin/appointments?active=true",
         platoons: "/api/v1/platoons",
         slots: "/api/v1/admin/positions/slots",
         transferappt: (appointmentId: string) =>

@@ -39,11 +39,15 @@ export async function getAppointments(): Promise<Appointment[]> {
 /*--------------------Transfer appointment------------------*/
 
 export interface TransferPayload {
-  newUserId: string;
-  prevEndsAt: string;
-  newStartsAt: string;
-  reason: string;
+  userId: string;
+  positionId: string;
+  scopeType: string;
+  scopeId: string | null;
+  startsAt: string;
+  endsAt?: string | null;
+  reason?: string;
 }
+
 
 export interface TransferResponse {
   status: number;
