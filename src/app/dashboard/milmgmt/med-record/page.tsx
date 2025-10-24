@@ -120,7 +120,7 @@ export default function MedicalRecordsPage() {
 
     const onSubmitMedCat = (data: MedicalCategoryForm) => {
         console.log("🧾 Medical Category Submitted:", data);
-        alert("✅ Medical Category Saved Successfully!");
+        alert(" Medical Category Saved Successfully!");
     };
 
     // ─────────────────────────────── RENDER ───────────────────────────────

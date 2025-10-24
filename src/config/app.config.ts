@@ -8,7 +8,8 @@ import {
   Camera,
   Book,
   CheckCircle,
-  CalendarDays
+  CalendarDays,
+  Trophy
 } from "lucide-react";
 
 
@@ -357,6 +358,13 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: Dumbbell,
     to: "/dashboard/milmgmt/pt-swimming",
     color: "bg-orange-600"
+  },
+  {
+    title: "Sports & Motivation Awards",
+    description: "Manage cadet sports achievements and motivation awards",
+    icon: Trophy,
+    to: "/dashboard/milmgmt/sports-awards",
+    color: "bg-yellow-600"
   },
   {
     title: "Weapon Training",

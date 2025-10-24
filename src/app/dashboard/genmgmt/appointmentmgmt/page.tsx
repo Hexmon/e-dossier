@@ -131,12 +131,22 @@ export default function AppointmentManagement() {
     }
 
     try {
+      let scopeIdCheck: string | null;
+      if (selectedAppointment.scopeType === "GLOBAL") {
+        scopeIdCheck = null;
+      } else {
+        scopeIdCheck = selectedAppointment.scopeId;
+      }
       const payload = {
-        newUserId: formData.toUser,
-        prevEndsAt: handover.toISOString(),
-        newStartsAt: takeover.toISOString(),
+        userId: formData.toUser,
+        positionId: selectedAppointment.positionId,
+        scopeType: selectedAppointment.scopeType,
+        scopeId: scopeIdCheck,
+        startsAt: takeover.toISOString(),
+        endsAt: null,
         reason: "Shift handover",
       };
+
 
       await transferAppointment(selectedAppointment.id, payload);
 
