@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-export const IdSchema = z.object({ id: z.string().uuid() });
 export const OcIdParam = z.object({ ocId: z.string().uuid() });
 export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);

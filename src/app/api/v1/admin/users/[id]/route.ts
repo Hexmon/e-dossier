@@ -8,12 +8,10 @@ import { requireAdmin } from '@/app/lib/authz';
 import { userUpdateSchema } from '@/app/lib/validators';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { z } from 'zod';
 import argon2 from 'argon2';
+import { IdSchema } from '@/app/lib/apiClient';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
-
-const IdSchema = z.object({ id: z.string().uuid() });
 
 /** Select the enriched user row (with active appointment flags/list) */
 async function selectEnrichedUserById(id: string) {

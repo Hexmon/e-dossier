@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../_checks';
-import { OcIdParam, IdSchema, familyUpdateSchema } from '@/app/lib/oc-validators';
+import { OcIdParam, familyUpdateSchema } from '@/app/lib/oc-validators';
 import { getFamily, updateFamily, deleteFamily } from '@/app/db/queries/oc';
+import { IdSchema } from '@/app/lib/apiClient';
 
 export async function GET(req: NextRequest, ctx: any) {
     try {

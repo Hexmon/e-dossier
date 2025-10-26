@@ -5,13 +5,11 @@ import { setAccessCookie } from '@/app/lib/cookies';
 import { signAccessJWT } from '@/app/lib/jwt';
 import { LoginBody } from './dto';
 import { db } from '@/app/db/client';
-import { roles, userRoles } from '@/app/db/schema/auth/rbac';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { eq } from 'drizzle-orm';
 import argon2 from 'argon2';
 import { getActiveAppointmentWithHolder } from '@/app/db/queries/appointments';
 import { SCOPE } from '@/constants/app.constants';
-import { users } from '@/app/db/schema/auth/users';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.EXPOSE_TOKENS_IN_DEV === 'true';
 
@@ -54,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     // 3) Domain checks & auth
     const apt = await getActiveAppointmentWithHolder(appointmentId);
-    
+
     if (!apt) throw new ApiError(400, 'Appointment is not active', 'INVALID_APPOINTMENT');
 
     if (apt.positionKey === 'PLATOON_COMMANDER') {
@@ -98,12 +96,13 @@ export async function POST(req: NextRequest) {
     const ok = await argon2.verify(cred.passwordHash, password);
     if (!ok) throw new ApiError(401, 'invalid_credentials', 'BAD_PASSWORD');
 
-    const roleRows = await db
-      .select({ key: roles.key })
-      .from(userRoles)
-      .innerJoin(roles, eq(userRoles.roleId, roles.id))
-      .where(eq(userRoles.userId, apt.userId));
-    const roleKeys = roleRows.map((r) => r.key);
+    // const roleRows = await db
+    //   .select({ key: roles.key })
+    //   .from(userRoles)
+    //   .innerJoin(roles, eq(userRoles.roleId, roles.id))
+    //   .where(eq(userRoles.userId, apt.userId));
+    // const roleKeys = roleRows.map((r) => r.key);
+    const roleKeys = [apt.positionKey];
 
     const access = await signAccessJWT({
       sub: apt.userId,
