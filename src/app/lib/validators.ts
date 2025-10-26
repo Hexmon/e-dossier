@@ -136,7 +136,6 @@ export const userCreateSchema = z.object({
   rank: z.string().trim().min(1).max(64),
   isActive: z.boolean().optional().default(true),
   appointId: z.string().uuid().nullable().optional(),
-  // Optional: set password at creation
   password: passwordSchema.optional(),
 });
 

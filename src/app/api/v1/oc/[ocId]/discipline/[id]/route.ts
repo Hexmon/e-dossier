@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../_checks';
-import { OcIdParam, IdSchema, disciplineUpdateSchema } from '@/app/lib/oc-validators';
+import { OcIdParam, disciplineUpdateSchema } from '@/app/lib/oc-validators';
 import { getDiscipline, updateDiscipline, deleteDiscipline } from '@/app/db/queries/oc';
+import { IdSchema } from '@/app/lib/apiClient';
 
 export async function GET(req: NextRequest, ctx: any) {
   try { await mustBeAuthed(req);

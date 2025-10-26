@@ -8,6 +8,8 @@
  * - Works client & server (uses fetch; cookies are sent automatically on same-origin).
  */
 
+import z from "zod";
+
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 type Primitive = string | number | boolean | null | undefined;
@@ -18,6 +20,8 @@ export type ApiOk<T = unknown> = {
     status: number; // e.g., 200 or 201
     ok: true;
 } & T;
+
+export const IdSchema = z.object({ id: z.string().uuid() });
 
 export type ApiErrorEnvelope = {
     status: number; // matches HTTP code
