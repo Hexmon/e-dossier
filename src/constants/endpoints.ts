@@ -17,4 +17,15 @@ export const endpoints = {
 
         users: "/api/v1/admin/users"
     },
+    oc: {
+        list: "/api/v1/oc",
+        create: "/api/v1/oc",
+        update: (ocId: string) => `/api/v1/oc/${ocId}`,
+        delete: (ocId: string) => `/api/v1/oc/${ocId}`,
+        personal: (ocId: string) => `/api/v1/oc/${ocId}/personal`,
+        family: (ocId: string) => `/api/v1/oc/${ocId}/family`,
+    },
+    course: {
+        all: "/api/v1/courses"
+    }
 }

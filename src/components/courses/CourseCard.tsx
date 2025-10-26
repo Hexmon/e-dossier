@@ -41,7 +41,7 @@ export default function CourseCard({
 }: CourseCardProps) {
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 border-border/50 hover:border-primary/20">
-      <CardHeader className="pb-3">
+      <CardHeader className="">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 group-hover:from-blue-200 group-hover:to-blue-100">
@@ -51,9 +51,9 @@ export default function CourseCard({
               <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
                 {course.courseNo}
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              {/* <p className="text-sm text-muted-foreground">
                 Training Model: {course.trgModel}
-              </p>
+              </p> */}
             </div>
           </div>
           <Badge

@@ -19,8 +19,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Shield, ChevronDown, Settings } from "lucide-react";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DossierTab from "@/components/Tabs/DossierTab";
+import { createOCInsp, getOCInsp } from "@/app/lib/api/ocInsp";
 
 interface InspFormData {
     date: string;
@@ -35,7 +36,7 @@ export default function DossierInspSheetPage() {
     const router = useRouter();
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
 
-    const userRole = "Pl Cdr"; // Example roles: "Pl Cdr", "DS Coord", "Cdr"
+    const userRole = "Pl Cdr";
     const ROLES = ["Pl Cdr", "DS Coord", "Cdr"];
 
     const [inspData, setInspData] = useState<Record<string, InspFormData>>({
@@ -60,14 +61,65 @@ export default function DossierInspSheetPage() {
         console.log("Logout clicked");
     };
 
-    const onSubmit = (data: InspFormData) => {
-        setInspData((prev) => ({
-            ...prev,
-            [userRole]: data,
-        }));
-        alert(`Inspection data saved for ${userRole}`);
-        reset();
+    const onSubmit = async (data: InspFormData) => {
+        try {
+            if (!selectedCadet?.ocId) {
+                alert("No cadet selected");
+                return;
+            }
+
+            const ocId = selectedCadet.ocId;
+            console.log("ocid:", ocId);
+
+            const saved = await createOCInsp(ocId, data);
+
+            setInspData((prev) => ({
+                ...prev,
+                [userRole]: data,
+            }));
+
+            alert(`Inspection data saved for ${userRole}`);
+            reset();
+        } catch (err) {
+            console.error("Failed to save inspection:", err);
+            alert("Failed to save inspection record. Please try again.");
+        }
     };
+
+    useEffect(() => {
+        (async () => {
+            if (!selectedCadet?.ocId) return;
+
+            try {
+                const records = await getOCInsp(selectedCadet.ocId);
+                console.log("Loaded existing personal data:", records);
+
+                if (!records || !Array.isArray(records)) {
+                    console.warn("No personal records found or invalid response:", records);
+                    return;
+                }
+
+                const updatedData = { ...inspData };
+                records.forEach((record) => {
+                    const role = record.appointment || "Pl Cdr";
+                    updatedData[role] = {
+                        date: record.date,
+                        rk: record.rk,
+                        name: record.name,
+                        appointment: record.appointment,
+                        remarks: record.remarks,
+                        initials: record.initials,
+                    };
+                });
+                setInspData(updatedData);
+            } catch (err) {
+                console.error("Failed to fetch personal records:", err);
+            }
+        })();
+    }, [selectedCadet]);
+
+
+
 
     return (
         <SidebarProvider>

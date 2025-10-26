@@ -24,6 +24,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { saveFamilyDetails } from "@/app/lib/api/familyApi";
 
 interface FamilyMember {
     name: string;
@@ -80,9 +81,19 @@ export default function BackgroundDetlsPage() {
     });
     const { handleSubmit: handleFamilySubmit } = familyForm;
 
-    const submitFamily = (data: any) => {
-        console.log("Family Background Submitted:", data);
-        alert("Family background saved successfully!");
+    const submitFamily = async (data: { family: FamilyMember[] }) => {
+        if (!selectedCadet?.ocId) {
+            alert("No cadet selected");
+            return;
+        }
+
+        try {
+            await saveFamilyDetails(selectedCadet.ocId, data.family);
+            alert("Family background saved successfully!");
+        } catch (err) {
+            console.error("Failed to save family background:", err);
+            alert("Error saving family background data.");
+        }
     };
 
     // EDUCATIONAL QUALIFICATIONS

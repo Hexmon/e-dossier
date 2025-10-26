@@ -1,218 +1,235 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
-import { Edit3, Trash2 } from "lucide-react";
 
-import { AppSidebar } from "@/components/AppSidebar";
-import { Input } from "@/components/ui/input";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { OCListItem } from "@/components/oc/OCCard";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
-import { OCRecord, ocTabs } from "@/config/app.config";
+import { TabsContent } from "@/components/ui/tabs";
+import { OCListItem } from "@/components/oc/OCCard";
+import { Edit3, Trash2 } from "lucide-react";
+
+import { ocTabs } from "@/config/app.config";
+import { createOC, deleteOC, fetchOCs, OCRecord, updateOC } from "@/app/lib/api/ocApi";
+import { fetchCourseById, getAllCourses } from "@/app/lib/api/courseApi";
+import { fetchPlatoonByKey, getPlatoons } from "@/app/lib/api/platoonApi";
 
 export default function OCManagementPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCourse, setSelectedCourse] = useState("");
   const [ocList, setOcList] = useState<OCRecord[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [courseInfo, setCourseInfo] = useState<string | null>(null);
+  const [platoonName, setPlatoonName] = useState<string | null>(null);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [platoons, setPlatoons] = useState<any[]>([]);
 
-  const [newOC, setNewOC] = useState<OCRecord>({
-    tesNo: "",
-    name: "",
-    course: "",
-    dtOfArrival: "",
-    visibleIdenMks: "",
-    pl: "",
-    dob: "",
-    placeOfBirth: "",
-    domicile: "",
-    religion: "",
-    nationality: "",
-    bloodGp: "",
-    idenMarks: "",
-    fatherName: "",
-    fatherMobile: "",
-    fatherAddress: "",
-    fatherProfession: "",
-    guardianName: "",
-    guardianAddress: "",
-    monthlyIncome: "",
-    nokDetails: "",
-    nokAddress: "",
-    nearestRlyStn: "",
-    secunderabadAddr: "",
-    relativeArmedForces: "",
-    govtFinAsst: "",
-    mobNo: "",
-    email: "",
-    passportNo: "",
-    panCardNo: "",
-    aadharNo: "",
-    bankDetails: "",
-    idCardNo: "",
-    upscRollNo: "",
-    ssbCentre: "",
-    games: "",
-    hobbies: "",
-    swimmerStatus: "",
-    language: "",
+
+  const { register, handleSubmit, reset, setValue, watch } = useForm<OCRecord>({
+    defaultValues: {
+      name: "",
+      ocNo: "",
+      course: "",
+      branch: null,
+      platoonId: null,
+      arrivalAtUniversity: new Date().toISOString().slice(0, 10),
+    } as any,
   });
 
-  const handleSaveOC = () => {
-    if (editIndex !== null) {
-      const updatedList = [...ocList];
-      updatedList[editIndex] = newOC;
-      setOcList(updatedList);
+  // Watch form changes
+  const courseId = watch("courseId");
+  const platoonKey = watch("platoonId");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const courseResponse = await getAllCourses();
+        setCourses(courseResponse.data || []);
+
+        const platoonResponse = await getPlatoons();
+        setPlatoons(platoonResponse || []);
+      } catch (err) {
+        console.error("Failed to load courses or platoons:", err);
+      }
+    })();
+  }, []);
+
+
+  // Fetch course info when courseId changes
+  useEffect(() => {
+    if (!courseId) return;
+    (async () => {
+      try {
+        const course = await fetchCourseById(courseId);
+        setCourseInfo(`${course.code} - ${course.title}`);
+      } catch (err: any) {
+        console.warn("Course fetch failed:", err);
+        setCourseInfo(null);
+      }
+    })();
+  }, [courseId]);
+
+  // Fetch platoon info when platoonId/key changes
+  useEffect(() => {
+    if (!platoonKey) return;
+    (async () => {
+      try {
+        const platoon = await fetchPlatoonByKey(platoonKey);
+        setPlatoonName(platoon.name);
+      } catch (err: any) {
+        console.warn("Platoon fetch failed:", err);
+        setPlatoonName(null);
+      }
+    })();
+  }, [platoonKey]);
+
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const items = await fetchOCs({ active: true });
+        setOcList(items);
+      } catch (err) {
+        console.error("Failed to load OCs", err);
+      }
+    })();
+  }, []);
+
+  const onSubmit = async (data: OCRecord) => {
+    try {
+      if (editIndex !== null) {
+        const id = ocList[editIndex].id!;
+        const updated = await updateOC(id, data);
+        setOcList((prev) => prev.map((p, i) => (i === editIndex ? updated : p)));
+      } else {
+        const created = await createOC(data as Omit<OCRecord, "id" | "uid" | "createdAt">);
+        setOcList((prev) => [...prev, created]);
+      }
+      reset();
+      setIsDialogOpen(false);
       setEditIndex(null);
-    } else {
-      setOcList([...ocList, newOC]);
+    } catch (err) {
+      console.error("Save failed:", err);
     }
-    resetForm();
   };
 
-  const handleEditOC = (index: number) => {
-    setNewOC({ ...ocList[index] });
+  const handleEdit = async (index: number) => {
+    const oc = ocList[index];
     setEditIndex(index);
+
+    if (courses.length === 0) {
+      const courseResponse = await getAllCourses();
+      setCourses(courseResponse.data || []);
+    }
+
+    if (platoons.length === 0) {
+      const platoonResponse = await getPlatoons();
+      setPlatoons(platoonResponse || []);
+    }
+
+    setValue("name", oc.name);
+    setValue("ocNo", oc.ocNo);
+    setValue("courseId", oc.courseId);
+    setValue("branch", oc.branch ?? null);
+    setValue("platoonId", oc.platoonId ?? null);
+    setValue("arrivalAtUniversity", oc.arrivalAtUniversity?.slice(0, 10) ?? "");
+
     setIsDialogOpen(true);
   };
 
-  const handleDeleteOC = (index: number) => {
-    const updatedList = ocList.filter((_, i) => i !== index);
-    setOcList(updatedList);
+
+  const handleDelete = async (index: number) => {
+    try {
+      const id = ocList[index].id!;
+      await deleteOC(id);
+      setOcList((prev) => prev.filter((_, i) => i !== index));
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
   };
 
-  const handleAddOC = () => {
-    resetForm();
-    setIsDialogOpen(true);
+  // ---------- File upload + parse + upload ----------
+  const formatRecordFromSheet = (obj: any) => {
+    return {
+      name: obj["Name"] || obj["name"] || "",
+      ocNo: obj["OC No"] || obj["ocNo"] || obj["ocNo"] || obj["ocNo"] || obj["ocNo"] || "",
+      courseId: obj["CourseId"] || obj["courseId"] || obj["Course"] || "",
+      branch: (obj["Branch"] || obj["branch"] || null) as "E" | "M" | "O" | null,
+      platoonId: obj["PlatoonId"] || obj["platoonId"] || null,
+      arrivalAtUniversity: obj["Arrival Date"] || obj["arrivalAtUniversity"] || new Date().toISOString(),
+    };
   };
 
-  const resetForm = () => {
-    setNewOC({
-      tesNo: "",
-      name: "",
-      course: "",
-      dtOfArrival: "",
-      visibleIdenMks: "",
-      pl: "",
-      dob: "",
-      placeOfBirth: "",
-      domicile: "",
-      religion: "",
-      nationality: "",
-      bloodGp: "",
-      idenMarks: "",
-      fatherName: "",
-      fatherMobile: "",
-      fatherAddress: "",
-      fatherProfession: "",
-      guardianName: "",
-      guardianAddress: "",
-      monthlyIncome: "",
-      nokDetails: "",
-      nokAddress: "",
-      nearestRlyStn: "",
-      secunderabadAddr: "",
-      relativeArmedForces: "",
-      govtFinAsst: "",
-      mobNo: "",
-      email: "",
-      passportNo: "",
-      panCardNo: "",
-      aadharNo: "",
-      bankDetails: "",
-      idCardNo: "",
-      upscRollNo: "",
-      ssbCentre: "",
-      games: "",
-      hobbies: "",
-      swimmerStatus: "",
-      language: "",
-    });
-    setIsDialogOpen(false);
+  const uploadBatch = async (records: any[]) => {
+    setUploading(true);
+    const failed: any[] = [];
+    for (const rec of records) {
+      const payload = formatRecordFromSheet(rec);
+      if (!payload.name || !payload.courseId || !payload.ocNo) {
+        failed.push({ rec: payload, reason: "missing required fields (name/courseId/ocNo)" });
+        continue;
+      }
+      try {
+        await createOC(payload);
+      } catch (err) {
+        failed.push({ rec: payload, reason: String(err) });
+      }
+    }
+    setUploading(false);
+    // Refresh list after import
+    try {
+      const items = await fetchOCs({ active: true });
+      setOcList(items);
+    } catch (err) {
+      console.error("failed refresh after upload", err);
+    }
+    if (failed.length) {
+      console.warn("Some rows failed to upload:", failed);
+      alert(`Upload finished. ${failed.length} rows failed. Check console for details.`);
+    } else {
+      alert("Upload finished successfully!");
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const fname = file.name.toLowerCase();
 
-    const fileName = file.name.toLowerCase();
-    const formatRecord = (obj: any): OCRecord => ({
-      tesNo: obj["TesNo"] || "",
-      name: obj["Name"] || "",
-      course: obj["Course"] || "",
-      dtOfArrival: obj["Dt of Arrival"] || "",
-      pl: obj["Pl"] || "",
-      dob: obj["DOB"] || "",
-      placeOfBirth: obj["Place of Birth"] || "",
-      domicile: obj["Domicile"] || "",
-      religion: obj["Religion"] || "",
-      nationality: obj["Nationality"] || "",
-      bloodGp: obj["Blood Gp"] || "",
-      idenMarks: obj["Iden Marks"] || "",
-      fatherName: obj["Father's Name"] || "",
-      fatherMobile: obj["Father's Mobile No"] || "",
-      fatherAddress: obj["Father's Address"] || "",
-      fatherProfession: obj["Father's Profession"] || "",
-      guardianName: obj["Guardian’s Name"] || "",
-      guardianAddress: obj["Guardian’s Address"] || "",
-      monthlyIncome: obj["Monthly Income"] || "",
-      nokDetails: obj["Detls of NOK"] || "",
-      nokAddress: obj["NOK Address"] || "",
-      nearestRlyStn: obj["Nearest Rly Stn"] || "",
-      secunderabadAddr: obj["Secunderabad Addr"] || "",
-      relativeArmedForces: obj["Relative Armed Forces"] || "",
-      govtFinAsst: obj["Govt Fin Asst"] || "",
-      mobNo: obj["Mob No"] || "",
-      email: obj["Email"] || "",
-      aadharNo: obj["Aadhar No"] || "",
-      bankDetails: obj["Bank Details"] || "",
-      idCardNo: obj["Id Card No"] || "",
-      games: obj["Games"] || "",
-      hobbies: obj["Hobbies"] || "",
-      swimmerStatus: obj["Swimmer Status"] || "",
-      language: obj["Language"] || "",
-      upscRollNo: obj["UPSC Roll No"] || "",
-      ssbCentre: obj["SSB Centre"] || "",
-      passportNo: obj["Passport No"] || "",
-      panCardNo: obj["PAN Card No"] || "",
-      visibleIdenMks: obj["Visible Iden Mks"] || "",
-    });
-
-    if (fileName.endsWith(".csv")) {
+    if (fname.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
-        complete: (results) => {
-          const formatted = results.data.map(formatRecord);
-          setOcList((prev) => [...prev, ...formatted]);
+        skipEmptyLines: true,
+        complete: async (results) => {
+          const rows = results.data as any[];
+          await uploadBatch(rows);
         },
       });
-    } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+    } else if (fname.endsWith(".xlsx") || fname.endsWith(".xls")) {
       const reader = new FileReader();
-      reader.onload = (evt) => {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+      reader.onload = async (ev) => {
+        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
-        const worksheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        const formatted = (worksheet as any[]).map(formatRecord);
-        setOcList((prev) => [...prev, ...formatted]);
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as any[];
+        await uploadBatch(rows);
       };
       reader.readAsArrayBuffer(file);
     } else {
-      alert("Unsupported file type! Please upload CSV or Excel.");
+      alert("Unsupported file. Use CSV or Excel (.xlsx/.xls).");
     }
-  };
 
-  const courseOptions = Array.from(new Set(ocList.map((oc) => oc.course)));
+    e.currentTarget.value = "";
+  };
 
   return (
     <SidebarProvider>
@@ -241,94 +258,34 @@ export default function OCManagementPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-foreground">All OCs</h2>
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleAddOC}>
+                    <Button variant="outline" onClick={() => { reset(); setIsDialogOpen(true); }}>
                       Add OC
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => document.getElementById("fileUpload")?.click()}
-                    >
-                      Upload CSV / Excel
+                    <Button variant="outline" onClick={() => document.getElementById("fileUpload")?.click()}>
+                      {uploading ? "Uploading..." : "Upload CSV / Excel"}
                     </Button>
-                    <input
-                      type="file"
-                      id="fileUpload"
-                      accept=".csv, .xlsx, .xls"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
+                    <input id="fileUpload" type="file" accept=".csv, .xlsx, .xls" className="hidden" onChange={handleFileUpload} />
                   </div>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <label htmlFor="courseFilter" className="text-sm font-medium text-primary">
-                      Filter by Course:
-                    </label>
-                    <select
-                      id="courseFilter"
-                      value={selectedCourse}
-                      onChange={(e) => setSelectedCourse(e.target.value)}
-                      className="border border-primary text-primary bg-background rounded-md px-3 py-2 focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="">All Courses</option>
-                      {courseOptions.map((course) => (
-                        <option key={course} value={course}>
-                          {course}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <a
-                    href="/sample/Sample_OC_Upload_WithNames.xlsx"
-                    download
-                    className="text-sm text-primary underline"
-                  >
-                    Download Sample CSV
-                  </a>
                 </div>
 
                 <div className="divide-y rounded-md border border-border/50 overflow-hidden">
-                  {ocList
-                    .filter((oc) =>
-                      (selectedCourse ? oc.course === selectedCourse : true) &&
-                      (oc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        oc.tesNo.toLowerCase().includes(searchQuery.toLowerCase()))
-                    )
-                    .map((oc, index) => (
-                      <OCListItem
-                        key={index}
-                        name={oc.name}
-                        course={oc.course}
-                        platoon={oc.pl}
-                        status="active"
-                        onClick={() => handleEditOC(index)}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditOC(index);
-                          }}
-                        >
-                          <Edit3 className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteOC(index);
-                          }}
-                          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Delete
-                        </Button>
-                      </OCListItem>
-                    ))}
+                  {ocList.map((oc, index) => (
+                    <OCListItem
+                      key={oc.id ?? index}
+                      name={oc.name}
+                      course={oc.courseId}
+                      platoon={oc.platoonId ?? ""}
+                      status={oc.withdrawnOn ? "inactive" : "active"}
+                      onClick={() => handleEdit(index)}
+                    >
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(index); }}>
+                        <Edit3 className="h-3 w-3 mr-1" /> Edit
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(index); }} className="text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                        <Trash2 className="h-3 w-3 mr-1" /> Delete
+                      </Button>
+                    </OCListItem>
+                  ))}
                 </div>
               </TabsContent>
             </GlobalTabs>
@@ -336,71 +293,85 @@ export default function OCManagementPage() {
         </div>
       </div>
 
-      {/* Add/Edit OC Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editIndex !== null ? "Update OC" : "Add New OC"}</DialogTitle>
           </DialogHeader>
 
-          <h3 className="text-lg font-semibold mb-2">Pre-Commissioning TRG PH-I</h3>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <Label>Tes No</Label>
-              <Input
-                value={newOC.tesNo}
-                onChange={(e) => setNewOC({ ...newOC, tesNo: e.target.value })}
-              />
-            </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4 mb-6">
             <div>
               <Label>Name</Label>
-              <Input
-                value={newOC.name}
-                onChange={(e) => setNewOC({ ...newOC, name: e.target.value })}
-              />
+              <Input {...register("name", { required: true })} />
             </div>
+
+            <div>
+              <Label>Tes No</Label>
+              <Input {...register("ocNo", { required: true })} />
+            </div>
+
             <div>
               <Label>Course</Label>
-              <Input
-                value={newOC.course}
-                onChange={(e) => setNewOC({ ...newOC, course: e.target.value })}
-              />
+              <select
+                {...register("courseId", { required: true })}
+                className="w-full border border-input bg-background rounded-md p-2"
+                defaultValue=""
+              >
+                <option value="" disabled>Select Course</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code ? `${c.code} - ${c.title}` : c.title}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div>
-              <Label>Pl</Label>
-              <Input
-                value={newOC.pl}
-                onChange={(e) => setNewOC({ ...newOC, pl: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Date of Arrival</Label>
-              <Input
-                type="date"
-                value={newOC.dtOfArrival}
-                onChange={(e) => setNewOC({ ...newOC, dtOfArrival: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>DOB</Label>
-              <Input
-                type="date"
-                value={newOC.dob}
-                onChange={(e) => setNewOC({ ...newOC, dob: e.target.value })}
-              />
-            </div>
-          </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveOC}>
-              {editIndex !== null ? "Update" : "Save"}
-            </Button>
-          </div>
+            <div>
+              <Label>Branch</Label>
+              <Input {...register("branch")} placeholder="E / M / O" />
+            </div>
+
+            <div>
+              <Label>Platoon</Label>
+              <select
+                {...register("platoonId", { required: true })}
+                className="w-full border border-input bg-background rounded-md p-2"
+                defaultValue=""
+              >
+                <option value="" disabled>Select Platoon</option>
+                {platoons.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+
+            <div>
+              <Label>Arrival Date</Label>
+              <Input type="date" {...register("arrivalAtUniversity" as any)} />
+            </div>
+
+            <div className="col-span-2 flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  setIsDialogOpen(false);
+                  reset();
+                  setCourseInfo(null);
+                  setPlatoonName(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">{editIndex !== null ? "Update" : "Save"}</Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
+
     </SidebarProvider>
   );
 }
