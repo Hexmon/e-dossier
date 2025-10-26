@@ -1,12 +1,12 @@
 // src/app/db/seeds/seedAdminUser.ts
 import 'dotenv/config';
 import argon2 from 'argon2';
-import { and, eq, ilike, sql } from 'drizzle-orm';
+import { and, or, eq, ilike, lte, gte, isNull } from 'drizzle-orm';
 
 import { db } from '../client';
 import { users } from '../schema/auth/users';
 import { credentialsLocal } from '../schema/auth/credentials';
-import { roles, userRoles } from '../schema/auth/rbac';
+// ⛔ removed: roles, userRoles
 import { positions } from '../schema/auth/positions';
 import { appointments } from '../schema/auth/appointments';
 
@@ -98,32 +98,33 @@ async function upsertUserWithPassword(params: {
   return u;
 }
 
-async function ensureAdminRole(userId: string) {
-  let [adminRole] = await db.select().from(roles).where(eq(roles.key, 'admin')).limit(1);
-  if (!adminRole) {
-    [adminRole] = await db.insert(roles).values({ key: 'admin', description: 'Administrator' }).returning();
-  }
-  await db.insert(userRoles).values({ userId, roleId: adminRole.id }).onConflictDoNothing();
-}
-
-async function ensureActiveAppointment(userId: string, positionKey: string) {
-  // Get (or create) the position
-  let [pos] = await db.select().from(positions).where(eq(positions.key, positionKey)).limit(1);
+async function ensurePosition(key: string, displayName: string, defaultScope: 'GLOBAL' | 'PLATOON') {
+  let [pos] = await db.select().from(positions).where(eq(positions.key, key)).limit(1);
   if (!pos) {
     [pos] = await db
       .insert(positions)
       .values({
-        key: positionKey,
-        displayName: positionKey.replace(/_/g, ' '),
-        // default_scope is enum scope_type in DB:
-        defaultScope: positionKey === 'PLATOON_COMMANDER' ? (sql`'PLATOON'::scope_type` as any) : (sql`'GLOBAL'::scope_type` as any),
+        key,
+        displayName,
+        defaultScope,
         singleton: true,
-        description: 'Seeded automatically',
+        description: displayName,
       })
       .returning();
   }
+  return pos;
+}
 
-  // Check if an active PRIMARY appointment already exists for this user & position (GLOBAL scope)
+async function ensureActiveAppointment(userId: string, positionKey: string, scopeType: 'GLOBAL' | 'PLATOON' = 'GLOBAL') {
+  // Ensure position exists first
+  const pos = await ensurePosition(
+    positionKey,
+    positionKey.replace(/_/g, ' '),
+    positionKey === 'PLATOON_COMMANDER' ? 'PLATOON' : 'GLOBAL'
+  );
+
+  // Check if an active PRIMARY appointment already exists for this user & position
+  const now = new Date();
   const existing = await db
     .select({ id: appointments.id })
     .from(appointments)
@@ -132,9 +133,12 @@ async function ensureActiveAppointment(userId: string, positionKey: string) {
         eq(appointments.userId, userId),
         eq(appointments.positionId, pos.id),
         eq(appointments.assignment, 'PRIMARY' as any),
-        eq(appointments.scopeType, 'GLOBAL' as any),
-        sql`${appointments.deletedAt} IS NULL`,
-        sql`appointments.valid_during @> now()`
+        // scope: we seed GLOBAL by default; change if you need platoon-specific seed
+        eq(appointments.scopeType, scopeType as any),
+        isNull(appointments.deletedAt),
+        lte(appointments.startsAt, now),
+        // (endsAt is null OR endsAt >= now)
+        or(isNull(appointments.endsAt), gte(appointments.endsAt, now))
       )
     )
     .limit(1);
@@ -146,8 +150,8 @@ async function ensureActiveAppointment(userId: string, positionKey: string) {
         userId,
         positionId: pos.id,
         assignment: 'PRIMARY' as any,
-        scopeType: 'GLOBAL' as any,
-        scopeId: null,
+        scopeType: scopeType as any,
+        scopeId: scopeType === 'PLATOON' ? null : null, // set a platoon id if you seed a platoon role
         startsAt: new Date(),
         endsAt: null,
         appointedBy: userId, // bootstrap
@@ -160,7 +164,7 @@ async function ensureActiveAppointment(userId: string, positionKey: string) {
 export async function seedAdminUser() {
   assertEnv();
 
-  // 1) SUPER_ADMIN post + user
+  // SUPER_ADMIN user + appointment
   const superUser = await upsertUserWithPassword({
     username: SUPERADMIN_USERNAME!,
     email: SUPERADMIN_EMAIL!,
@@ -169,10 +173,10 @@ export async function seedAdminUser() {
     rank: SUPERADMIN_RANK ?? 'SUPER',
     password: SUPERADMIN_PASSWORD!,
   });
-  await ensureAdminRole(superUser.id);                // give admin role for UI/admin APIs
-  await ensureActiveAppointment(superUser.id, 'SUPER_ADMIN');
+  // ⛔ removed: ensureAdminRole(superUser.id)
+  await ensureActiveAppointment(superUser.id, 'SUPER_ADMIN', 'GLOBAL');
 
-  // 2) ADMIN post + user
+  // ADMIN user + appointment
   const adminUser = await upsertUserWithPassword({
     username: ADMIN_USERNAME!,
     email: ADMIN_EMAIL!,
@@ -181,10 +185,10 @@ export async function seedAdminUser() {
     rank: ADMIN_RANK ?? 'ADMIN',
     password: ADMIN_PASSWORD!,
   });
-  await ensureAdminRole(adminUser.id);
-  await ensureActiveAppointment(adminUser.id, 'ADMIN');
+  // ⛔ removed: ensureAdminRole(adminUser.id)
+  await ensureActiveAppointment(adminUser.id, 'ADMIN', 'GLOBAL');
 
-  console.log('✅ Seeded SUPER_ADMIN and ADMIN users with active appointments.');
+  console.log('✅ Seeded SUPER_ADMIN and ADMIN users with active appointments (position-as-authority).');
   console.log(`   SUPER_ADMIN login: ${SUPERADMIN_USERNAME}`);
   console.log(`   ADMIN login:       ${ADMIN_USERNAME}`);
 }

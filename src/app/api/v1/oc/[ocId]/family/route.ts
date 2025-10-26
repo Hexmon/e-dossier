@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam, listQuerySchema, familyCreateSchema } from '@/app/lib/oc-validators';
 import { listFamily, createFamily } from '@/app/db/queries/oc';
 

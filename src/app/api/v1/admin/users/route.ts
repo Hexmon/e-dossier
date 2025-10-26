@@ -36,15 +36,12 @@ export async function GET(req: NextRequest) {
 // body: userCreateSchema (password optional; if provided → credentials_local)
 export async function POST(req: NextRequest) {
     try {
-        console.log("abdd user ");
-        
         await requireAdmin(req);
 
         const body = await req.json();
         const parsed = userCreateSchema.safeParse(body);
         if (!parsed.success) {
             const issues = parsed.error.flatten();
-            console.warn('[USER CREATE] validation failed:', JSON.stringify(issues, null, 2));
             return json.badRequest('Validation failed', { issues });
         }
         const d = parsed.data;
