@@ -154,8 +154,9 @@ export const disciplineUpdateSchema = disciplineCreateSchema.partial();
 export const commCreateSchema = z.object({
     semester: Semester,
     mode: z.enum(['LETTER', 'PHONE', 'EMAIL', 'IN_PERSON', 'OTHER']),
-    letterNo: z.string().optional(),
+    refNo: z.string().optional(),
     date: z.coerce.date(),
+    subject: z.string(),
     brief: z.string().min(1),
     platoonCommanderName: z.string().optional(),
 });

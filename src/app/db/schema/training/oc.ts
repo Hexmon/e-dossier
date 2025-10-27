@@ -248,8 +248,9 @@ export const ocParentComms = pgTable('oc_parent_comms', {
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
     semester: integer('semester').notNull(),
     mode: commModeKind('mode').notNull(),
-    letterNo: varchar('letter_no', { length: 64 }),
+    refNo: varchar('ref_no', { length: 64 }),
     date: timestamp('date', { withTimezone: true }).notNull(),
+    subject: text('subject'),
     brief: text('brief').notNull(),
     platoonCommanderName: varchar('platoon_commander_name', { length: 160 }),
 }, (t) => ({
