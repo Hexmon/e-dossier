@@ -4,7 +4,7 @@ import { baseURL, endpoints } from "@/constants/endpoints";
 
 // Response shape from your backend
 export type GetCoursesResponse = {
-    data: Course[];
+    items: Course[];
     total?: number;
 };
 
@@ -30,15 +30,9 @@ export type CourseResponse = {
  * Fetch all courses (supports query filters)
  */
 export async function getAllCourses(
-    query = "TES",
-    includeDeleted = true
 ): Promise<GetCoursesResponse> {
     return api.get<GetCoursesResponse>(endpoints.course.all, {
         baseURL,
-        query: {
-            q: query,
-            includeDeleted,
-        },
     });
 }
 

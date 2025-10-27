@@ -55,34 +55,33 @@ export default function PersParticularsPage() {
         }
     };
 
+    const fetchPersonalData = async () => {
+        if (!selectedCadet?.ocId) {
+            console.warn("No cadet selected — skipping data fetch.");
+            return;
+        }
+
+        console.log(`Fetching personal data for cadet OC ID: ${selectedCadet.ocId}...`);
+
+        try {
+            const personals = await getOCPersonal(selectedCadet.ocId);
+
+            console.log("Data successfully fetched from backend:", personals);
+
+            if (personals.length > 0) {
+                setSavedData(personals[0]);
+                console.log("First record saved to state:", personals[0]);
+            } else {
+                setSavedData(null);
+                console.log("ℹNo personal data found for this cadet.");
+            }
+        } catch (err) {
+            console.error("Failed to load personal particulars:", err);
+            setSavedData(null);
+        }
+    };
 
     useEffect(() => {
-        const fetchPersonalData = async () => {
-            if (!selectedCadet?.ocId) {
-                console.warn("No cadet selected — skipping data fetch.");
-                return;
-            }
-
-            console.log(`Fetching personal data for cadet OC ID: ${selectedCadet.ocId}...`);
-
-            try {
-                const personals = await getOCPersonal(selectedCadet.ocId);
-
-                console.log("Data successfully fetched from backend:", personals);
-
-                if (personals.length > 0) {
-                    setSavedData(personals[0]);
-                    console.log("First record saved to state:", personals[0]);
-                } else {
-                    setSavedData(null);
-                    console.log("ℹNo personal data found for this cadet.");
-                }
-            } catch (err) {
-                console.error("Failed to load personal particulars:", err);
-                setSavedData(null);
-            }
-        };
-
         fetchPersonalData();
     }, [selectedCadet]);
 
@@ -111,17 +110,74 @@ export default function PersParticularsPage() {
         try {
             let saved: OCPersonalRecord;
 
-            const isOnlyBloodGroupChanged =
-                Object.keys(data).length === 1 && "bloodGp" in data;
-
-            if (isOnlyBloodGroupChanged) {
-                saved = await updateOCPersonal(selectedCadet.ocId, {
-                    bloodGp: String(data.bloodGp || ""),
-                });
-                alert("Blood group updated successfully!");
-            } else {
+            if (!savedData) {
                 saved = await createOCPersonal(selectedCadet.ocId, payload);
                 alert("Personal particulars saved successfully!");
+            }
+            else {
+                const updatableFields = [
+                    "visibleIdentMarks",
+                    "pi",
+                    "dob",
+                    "placeOfBirth",
+                    "domicile",
+                    "religion",
+                    "nationality",
+                    "bloodGroup",
+                    "identMarks",
+                    "mobileNo",
+                    "email",
+                    "passportNo",
+                    "panNo",
+                    "aadhaarNo",
+                    "fatherName",
+                    "fatherMobile",
+                    "fatherAddrPerm",
+                    "fatherAddrPresent",
+                    "fatherProfession",
+                    "guardianName",
+                    "guardianAddress",
+                    "monthlyIncome",
+                    "nokDetails",
+                    "nokAddrPerm",
+                    "nokAddrPresent",
+                    "nearestRailwayStation",
+                    "familyInSecunderabad",
+                    "relativeInArmedForces",
+                    "govtFinancialAssistance",
+                    "bankDetails",
+                    "idenCardNo",
+                    "upscRollNo",
+                    "ssbCentre",
+                    "games",
+                    "hobbies",
+                    "swimmer",
+                    "languages",
+                    "dsPiSsicNo",
+                    "dsPiRank",
+                    "dsPiName",
+                    "dsPiUnitArm",
+                    "dsPiMobile",
+                    "dsDyIcNo",
+                    "dsDyRank",
+                    "dsDyName",
+                    "dsDyUnitArm",
+                    "dsDyMobile",
+                    "dsCdrIcNo",
+                    "dsCdrRank",
+                    "dsCdrName",
+                    "dsCdrUnitArm",
+                    "dsCdrMobile",
+                ] as const;
+
+                const updatePayload = Object.fromEntries(
+                    Object.entries(payload).filter(([key]) =>
+                        updatableFields.includes(key as keyof typeof payload)
+                    )
+                );
+
+                saved = await updateOCPersonal(selectedCadet.ocId, updatePayload);
+                alert("Personal particulars updated successfully!");
             }
 
             setSavedData(saved);
@@ -130,10 +186,6 @@ export default function PersParticularsPage() {
             alert(err?.message || "Error saving data.");
         }
     };
-
-
-
-
 
     return (
         <SidebarProvider>

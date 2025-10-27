@@ -61,7 +61,7 @@ export async function listSignupRequests(
       email: users.email,
       phone: users.phone,
       rank: users.rank,
-      desiredPlatoonName: platoons.name,
+      // desiredPlatoonName: platoons.name,
 
       note: signupRequests.note,
     })

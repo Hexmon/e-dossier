@@ -53,7 +53,8 @@ export default function OCManagementPage() {
     (async () => {
       try {
         const courseResponse = await getAllCourses();
-        setCourses(courseResponse.data || []);
+        console.log(courseResponse)
+        setCourses(courseResponse.items || []);
 
         const platoonResponse = await getPlatoons();
         setPlatoons(platoonResponse || []);
@@ -70,6 +71,7 @@ export default function OCManagementPage() {
     (async () => {
       try {
         const course = await fetchCourseById(courseId);
+        console.log("course:", course)
         setCourseInfo(`${course.code} - ${course.title}`);
       } catch (err: any) {
         console.warn("Course fetch failed:", err);
@@ -128,7 +130,7 @@ export default function OCManagementPage() {
 
     if (courses.length === 0) {
       const courseResponse = await getAllCourses();
-      setCourses(courseResponse.data || []);
+      setCourses(courseResponse.items || []);
     }
 
     if (platoons.length === 0) {
@@ -320,7 +322,7 @@ export default function OCManagementPage() {
                 <option value="" disabled>Select Course</option>
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.code ? `${c.code} - ${c.title}` : c.title}
+                    {c.code}
                   </option>
                 ))}
               </select>

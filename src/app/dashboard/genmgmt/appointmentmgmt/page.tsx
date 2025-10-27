@@ -67,31 +67,31 @@ export default function AppointmentManagement() {
     }
   }, [handoverDialog]);
 
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        setLoading(true);
-        // throw new Error("Simulate API failure");
-        const data = await getAppointments();
-        if (!data || !Array.isArray(data)) {
-          throw new Error("Invalid appointments data");
-        }
-
-        if (data.length === 0) {
-          throw new Error("api data not found");
-        }
-        if (!Array.isArray(data)) {
-          throw new Error("Unexpected API response");
-        }
-        setAppointments(data)
-      } catch (err) {
-        console.error("Failed to fetch appointments:", err);
-        toast.info("Using fallback data due to API failure.");
-        setAppointments(fallbackAppointments);
-      } finally {
-        setLoading(false);
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const data = await getAppointments();
+      if (!data || !Array.isArray(data)) {
+        throw new Error("Invalid appointments data");
       }
-    };
+
+      if (data.length === 0) {
+        throw new Error("api data not found");
+      }
+      if (!Array.isArray(data)) {
+        throw new Error("Unexpected API response");
+      }
+      setAppointments(data)
+    } catch (err) {
+      console.error("Failed to fetch appointments:", err);
+      toast.info("Using fallback data due to API failure.");
+      setAppointments(fallbackAppointments);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAppointments();
   }, []);
 
@@ -138,12 +138,12 @@ export default function AppointmentManagement() {
         scopeIdCheck = selectedAppointment.scopeId;
       }
       const payload = {
-        userId: formData.toUser,
+        newUserId: formData.toUser,
+        prevEndsAt: handover.toISOString(),
+        newStartsAt: takeover.toISOString(),
         positionId: selectedAppointment.positionId,
         scopeType: selectedAppointment.scopeType,
-        scopeId: scopeIdCheck,
-        startsAt: takeover.toISOString(),
-        endsAt: null,
+        scopeId: selectedAppointment.scopeType === "GLOBAL" ? null : selectedAppointment.scopeId,
         reason: "Shift handover",
       };
 

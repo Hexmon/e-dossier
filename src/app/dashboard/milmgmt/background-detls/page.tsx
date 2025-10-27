@@ -25,41 +25,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { saveFamilyDetails } from "@/app/lib/api/familyApi";
-
-interface FamilyMember {
-    name: string;
-    relation: string;
-    age: string;
-    occupation: string;
-    education: string;
-    mobile: string;
-}
-
-interface Qualification {
-    qualification: string;
-    school: string;
-    subs: string;
-    board: string;
-    marks: string;
-    grade: string;
-}
-
-interface Achievement {
-    event: string;
-    year: string;
-    level: string;
-    prize: string;
-}
-
-interface AutoBio {
-    general: string;
-    proficiency: string;
-    work: string;
-    additional: string;
-    date: string;
-    sign_oc: string;
-    sign_pi: string;
-}
+import { Achievement, AutoBio, FamilyMember, Qualification } from "./types";
 
 export default function BackgroundDetlsPage() {
     const router = useRouter();
@@ -88,6 +54,7 @@ export default function BackgroundDetlsPage() {
         }
 
         try {
+            console.log("family details", data.family);
             await saveFamilyDetails(selectedCadet.ocId, data.family);
             alert("Family background saved successfully!");
         } catch (err) {

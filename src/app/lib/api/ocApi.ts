@@ -84,7 +84,7 @@ export async function createOC(body: Omit<OCRecord, "id" | "uid" | "createdAt">)
  * PUT {{baseURL}}/api/v1/oc/:id
  */
 export async function updateOC(id: string, body: Partial<OCRecord>): Promise<OCRecord> {
-    const response = await api.put<{ oc: OCRecord }, Partial<OCRecord>>(endpoints.oc.update(id), body, {
+    const response = await api.patch<{ oc: OCRecord }, Partial<OCRecord>>(endpoints.oc.update(id), body, {
         baseURL,
     });
 
