@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,12 +30,13 @@ import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import { militaryTrainingCards, miltrgTabs } from "@/config/app.config";
 import { Cadet } from "@/types/cadet";
 import { TabsContent } from "@/components/ui/tabs";
+import { getAllOCs, OCRecord } from "@/app/lib/api/ocApi";
 
-const cadets: Cadet[] = [
-  { name: "Ravi Kumar", course: "TES-43", ocNumber: "OC-101" },
-  { name: "Arjun Singh", course: "TES-44", ocNumber: "OC-102" },
-  { name: "Vikram Roy", course: "TES-45", ocNumber: "OC-103" },
-];
+// const cadets: Cadet[] = [
+//   { name: "Ravi Kumar", course: "TES-43", ocNumber: "OC-101" },
+//   { name: "Arjun Singh", course: "TES-44", ocNumber: "OC-102" },
+//   { name: "Vikram Roy", course: "TES-45", ocNumber: "OC-103" },
+// ];
 
 export default function MilitaryTrainingPage() {
   const dispatch = useDispatch();
@@ -44,20 +45,55 @@ export default function MilitaryTrainingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [ocList, setOcList] = useState<OCRecord[]>([]);
 
-  const handleSearch = () => {
-    const found = cadets.find(
-      (cadet) => cadet.name.toLowerCase() === searchQuery.trim().toLowerCase()
-    );
+  useEffect(() => {
+    (async () => {
+      try {
+        const ocs = await getAllOCs();
+        setOcList(ocs);
+        console.log("oc llist: ", ocs);
+      } catch (err) {
+        console.error("Failed to fetch OCs:", err);
+      }
+    })();
+  }, []);
 
-    if (found) {
-      dispatch(setSelectedCadet(found));
-    } else {
-      dispatch(setSelectedCadet(null));
-      setAlertMessage("Cadet not found. Please search again.");
+  const handleSearch = async () => {
+    try {
+      const results = await getAllOCs(searchQuery.trim());
+
+      if (results.length > 0) {
+        const found =
+          results.find(
+            (oc) =>
+              oc.name.toLowerCase() === searchQuery.trim().toLowerCase() ||
+              oc.ocNo.toLowerCase() === searchQuery.trim().toLowerCase() ||
+              oc.id?.toLowerCase() === searchQuery.trim().toLowerCase()
+          ) || results[0];
+
+        const cadetData: Cadet = {
+          name: found.name,
+          course: found.courseId,
+          ocNumber: found.ocNo,
+          ocId: found.id
+        };
+
+        dispatch(setSelectedCadet(cadetData));
+        setOcList(results);
+      } else {
+        dispatch(setSelectedCadet(null));
+        setAlertMessage("Cadet not found. Please search again.");
+        setShowAlert(true);
+      }
+    } catch (error) {
+      console.error("Search failed:", error);
+      setAlertMessage("Failed to fetch cadets. Please try again later.");
       setShowAlert(true);
     }
   };
+
+
 
   const handleLogout = () => {
     router.push("/login");

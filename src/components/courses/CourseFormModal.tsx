@@ -1,23 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Course } from "./CourseCard";
+import { Course } from "@/components/courses/CourseCard";
 
 interface CourseFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (course: Omit<Course, "id">) => void;
-  course?: Course | null;
+  onSave: (courseData: Omit<Course, "id">) => void;
+  course: Course | null;
   mode: "add" | "edit";
 }
 
@@ -28,120 +22,93 @@ export default function CourseFormModal({
   course,
   mode,
 }: CourseFormModalProps) {
-  const [formData, setFormData] = useState<Omit<Course, "id">>({
-    courseNo: "",
-    startDate: "",
-    endDate: "",
-    trgModel: 0,
-  });
-
-  useEffect(() => {
-    if (course && mode === "edit") {
-      setFormData({
-        courseNo: course.courseNo,
-        startDate: course.startDate,
-        endDate: course.endDate,
-        trgModel: course.trgModel,
-      });
-    } else {
-      setFormData({
-        courseNo: "",
-        startDate: "",
-        endDate: "",
-        trgModel: 0,
-      });
-    }
-  }, [course, mode, isOpen]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-    onClose();
-  };
-
-  const handleClose = () => {
-    onClose();
-    setFormData({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<Omit<Course, "id">>({
+    defaultValues: {
       courseNo: "",
       startDate: "",
       endDate: "",
       trgModel: 0,
-    });
+    },
+  });
+
+  useEffect(() => {
+    if (course) {
+      reset(course);
+    } else {
+      reset({ courseNo: "", startDate: "", endDate: "", trgModel: 0 });
+    }
+  }, [course, reset, isOpen]);
+
+  
+
+  const onSubmit = (data: Omit<Course, "id">) => {
+    onSave(data);
+    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[525px]">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>
-            {mode === "add" ? "Add New Course" : "Edit Course"}
-          </DialogTitle>
+          <DialogTitle>{mode === "add" ? "Add New Course" : "Edit Course"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="courseNo">Course Number</Label>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground">Course No</label>
             <Input
-              id="courseNo"
-              value={formData.courseNo}
-              onChange={(e) =>
-                setFormData({ ...formData, courseNo: e.target.value })
-              }
-              placeholder="e.g., TES-43"
-              required
+              {...register("courseNo", { required: "Course number is required" })}
+              placeholder="e.g. TES-50"
             />
+            {errors.courseNo && (
+              <p className="text-xs text-red-500 mt-1">{errors.courseNo.message}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground">Start Date</label>
               <Input
-                id="startDate"
                 type="date"
-                value={formData.startDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, startDate: e.target.value })
-                }
-                required
+                {...register("startDate", { required: "Start date is required" })}
               />
+              {errors.startDate && (
+                <p className="text-xs text-red-500 mt-1">{errors.startDate.message}</p>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground">End Date</label>
               <Input
-                id="endDate"
                 type="date"
-                value={formData.endDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, endDate: e.target.value })
-                }
-                required
+                {...register("endDate", { required: "End date is required" })}
               />
+              {errors.endDate && (
+                <p className="text-xs text-red-500 mt-1">{errors.endDate.message}</p>
+              )}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="trgModel">Training Model</Label>
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground">Training Model</label>
             <Input
-              id="trgModel"
               type="number"
-              value={formData.trgModel}
-              onChange={(e) =>
-                setFormData({ ...formData, trgModel: Number(e.target.value) })
-              }
+              {...register("trgModel", { valueAsNumber: true })}
               placeholder="Enter training model"
-              required
             />
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">
-              {mode === "add" ? "Add Course" : "Update Course"}
-            </Button>
-          </DialogFooter>
+            <Button type="submit">{mode === "add" ? "Add Course" : "Save Changes"}</Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

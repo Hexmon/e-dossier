@@ -4,28 +4,17 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { toast } from "sonner";
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { signupUser, isStrongPassword, RESERVED_USERNAMES } from "@/app/lib/api/authApi";
-
-// --- Constants ---
-const PASSWORD_RULE = "Must be 8+ characters with uppercase, number, and special character";
-
-type SignupFormValues = {
-  email: string;
-  phone: string;
-  rank: string;
-  name: string;
-  note: string;
-  username: string;
-  password: string;
-  confirmPassword: string;
-};
+import { signupUser, isStrongPassword, RESERVED_USERNAMES, checkUsernameAvailability } from "@/app/lib/api/authApi";
+import { PASSWORD_RULE, SignupFormValues } from "../../../types/signup";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export default function Signup() {
   const router = useRouter();
@@ -47,14 +36,42 @@ export default function Signup() {
     },
   });
 
-  const password = watch("password");
-  const confirmPassword = watch("confirmPassword");
-  const username = watch("username");
+  const [password, confirmPassword, username] = watch(["password", "confirmPassword", "username"]);
+  const [isChecking, setIsChecking] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!username || username.length < 3) {
+      setUsernameAvailable(null);
+      setUsernameSuggestions([]);
+      return;
+    }
+
+    // if (RESERVED_USERNAMES.includes(username.toLowerCase())) {
+    //   setUsernameAvailable(false);
+    //   setUsernameSuggestions([]);
+    //   return;
+    // }
+
+    const delayDebounce = setTimeout(async () => {
+      try {
+        setIsChecking(true);
+        const result = await checkUsernameAvailability(username);
+        setUsernameAvailable(result.available);
+        setUsernameSuggestions(result.suggestions || []);
+      } catch (error) {
+        setUsernameAvailable(null);
+      } finally {
+        setIsChecking(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [username]);
 
   const passwordStrong = isStrongPassword(password);
   const passwordMatch = password === confirmPassword;
-  const usernameUnique =
-    username.length >= 3 && !RESERVED_USERNAMES.includes(username.toLowerCase());
 
   const onSubmit = async (data: SignupFormValues) => {
     if (!passwordStrong) {
@@ -67,8 +84,8 @@ export default function Signup() {
       return;
     }
 
-    if (!usernameUnique) {
-      toast.error("Username is not available");
+    if (!usernameAvailable) {
+      toast.error("Username is already taken");
       return;
     }
 
@@ -82,25 +99,29 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--primary)] flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-5">
-        <img
-          src="https://facultytick.com/wp-content/uploads/2022/03/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+    <main className="min-h-screen bg-[var(--primary)] flex items-center justify-center p-4 relative overflow-hidden">
+      <figure className="absolute inset-0 opacity-5">
+        <Image
+          src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
           alt="MCEME Background"
+          width={122}
+          height={122}
           className="w-full h-full object-contain"
         />
-      </div>
+      </figure>
 
-      <div className="w-full max-w-lg relative z-10">
-        <div className="text-center mb-8">
-          <img
-            src="https://facultytick.com/wp-content/uploads/2022/03/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
-            alt="MCEME Logo"
+      <article className="w-full max-w-lg relative z-10">
+        <header className="text-center mb-8">
+          <Image
+            src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+            alt="MCEME Background"
+            width={122}
+            height={122}
             className="h-16 w-auto mx-auto mb-4"
           />
           <h1 className="text-2xl font-bold text-primary-foreground">Create Account</h1>
           <p className="text-primary-foreground/80">Join the MCEME CTW Portal</p>
-        </div>
+        </header>
 
         <Card className="shadow-command">
           <CardHeader>
@@ -166,16 +187,33 @@ export default function Signup() {
                     placeholder="Choose a unique username"
                     {...register("username", { required: "Username is required" })}
                   />
+
+                  {/* Right-side feedback icons */}
                   {username && (
                     <div className="absolute right-3 top-3">
-                      {usernameUnique ? (
+                      {isChecking ? (
+                        <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+                      ) : usernameAvailable ? (
                         <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
+                      ) : usernameAvailable === false ? (
                         <AlertCircle className="h-4 w-4 text-red-500" />
-                      )}
+                      ) : null}
                     </div>
                   )}
                 </div>
+
+                {/* Suggestions */}
+                {usernameAvailable === false && usernameSuggestions.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Try:{" "}
+                    {usernameSuggestions.map((s, i) => (
+                      <span key={s} className="text-blue-500 cursor-pointer">
+                        {s}
+                        {i < usernameSuggestions.length - 1 ? ", " : ""}
+                      </span>
+                    ))}
+                  </p>
+                )}
                 {errors.username && (
                   <p className="text-red-500 text-sm">{errors.username.message}</p>
                 )}
@@ -249,12 +287,12 @@ export default function Signup() {
           </CardContent>
         </Card>
 
-        <div className="text-center mt-6">
+        <nav className="text-center mt-6">
           <Button asChild variant="link" className="text-primary-foreground">
             <Link href="/">← Back to Home</Link>
           </Button>
-        </div>
-      </div>
-    </div>
+        </nav>
+      </article>
+    </main>
   );
 }

@@ -5,19 +5,12 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import { navItems } from "@/config/app.config";
+import Image from "next/image";
 
 const Navbar = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const navItems = [
-    { name: "Platoons", path: "/#platoons" },
-    { name: "Commander's Corner", path: "/#commanders-corner" },
-    { name: "Gallantry Awards", path: "/#gallantry-awards" },
-    { name: "History", path: "/#history" },
-    { name: "Events & News", path: "/#events-news" },
-  ];
-
   const isActive = (path: string) => {
     return pathname === path || (pathname === "/" && path.startsWith("/#"));
   };
@@ -28,10 +21,12 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
-            <img
-              src="https://facultytick.com/wp-content/uploads/2022/03/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+            <Image
+              src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
               alt="MCEME Logo"
-              className="h-12 w-auto object-contain"
+              width={89}
+              height={12}
+              className="object-contain"
             />
             <div className="hidden sm:block">
               <h1 className="text-lg font-semibold text-primary">MCEME</h1>
@@ -41,19 +36,21 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-6">
-            {navItems.map((item) => (
+            {navItems.map(({name, path}) => {
+              return(
               <a
-                key={item.name}
-                href={item.path}
+                key={name}
+                href={path}
                 className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive(item.path)
+                  isActive(path)
                     ? "text-primary"
                     : "text-muted-foreground"
                 }`}
               >
-                {item.name}
+                {name}
               </a>
-            ))}
+            )
+            })}
 
             <Button asChild variant="default" size="sm">
               <Link href="/login">Login</Link>
@@ -76,20 +73,22 @@ const Navbar = () => {
         {isMenuOpen && (
           <div className="lg:hidden mt-4 py-4 border-t border-border">
             <div className="flex flex-col space-y-3">
-              {navItems.map((item) => (
+              {navItems.map(({name, path}) => {
+                return(
                 <a
-                  key={item.name}
-                  href={item.path}
+                  key={name}
+                  href={path}
                   onClick={() => setIsMenuOpen(false)}
                   className={`text-sm font-medium transition-colors hover:text-primary ${
-                    isActive(item.path)
+                    isActive(path)
                       ? "text-primary"
                       : "text-muted-foreground"
                   }`}
                 >
-                  {item.name}
+                  {name}
                 </a>
-              ))}
+              )
+              })}
               <Button asChild variant="default" size="sm" className="w-fit">
                 <Link href="/login" onClick={() => setIsMenuOpen(false)}>
                   Login

@@ -7,8 +7,8 @@ import { ShieldAlert, Ban, UserCheck } from "lucide-react";
 interface OCListItemProps {
   name: string;
   course: string;
-  platoon: string;
-  status: "active" | "suspended" | "disabled";
+  platoon?: string | null;
+  status: "active" | "inactive" | "disabled";
   onClick?: () => void;
   children?: React.ReactNode;
 }

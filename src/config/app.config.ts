@@ -1,3 +1,4 @@
+import { Course } from "@/components/courses/CourseCard";
 import {
   Medal, Star, Award, ClipboardList, AlertCircle, MessageSquare, Footprints,
   Calendar, BookMarked, Tent, Timer, Mountain, Target, Dumbbell, Phone,
@@ -1246,4 +1247,35 @@ export type OCRecord = {
   hobbies: string;
   swimmerStatus: string;
   language: string;
+};
+
+export const fallbackCourses: Course[] = ([
+  { id: "6a7e3a5e-1b4f-42b6-b6ff-7ad1a244b001", courseNo: "TES-43", startDate: "10-02-2024", endDate: "10-09-2025", trgModel: 0 },
+  { id: "2", courseNo: "TES-44", startDate: "03-01-2022", endDate: "14-12-2024", trgModel: 0 },
+  { id: "3", courseNo: "TES-45", startDate: "04-07-2022", endDate: "14-06-2025", trgModel: 0 },
+  { id: "4", courseNo: "TES-46", startDate: "02-01-2023", endDate: "11-12-2025", trgModel: 0 },
+  { id: "5", courseNo: "TES-47", startDate: "03-07-2023", endDate: "13-06-2026", trgModel: 0 },
+  { id: "6", courseNo: "TES-48", startDate: "01-01-2024", endDate: "12-12-2026", trgModel: 0 },
+  { id: "7", courseNo: "TES-49", startDate: "01-07-2024", endDate: "12-06-2027", trgModel: 0 },
+  { id: "8", courseNo: "TES-49A", startDate: "30-01-2025", endDate: "11-12-2027", trgModel: 0 },
+]);
+
+export const navItems = [
+  { name: "Platoons", path: "/#platoons" },
+  { name: "Commander's Corner", path: "/#commanders-corner" },
+  { name: "Gallantry Awards", path: "/#gallantry-awards" },
+  { name: "History", path: "/#history" },
+  { name: "Events & News", path: "/#events-news" },
+];
+
+export const getTypeColor = (type: string) => {
+  const colors: Record<string, string> = {
+    ceremony: "bg-purple-100 text-purple-800",
+    sports: "bg-green-100 text-green-800",
+    academic: "bg-blue-100 text-blue-800",
+    training: "bg-orange-100 text-orange-800",
+    inspection: "bg-red-100 text-red-800",
+    cultural: "bg-pink-100 text-pink-800",
+  };
+  return colors[type] || "bg-gray-100 text-gray-800";
 };

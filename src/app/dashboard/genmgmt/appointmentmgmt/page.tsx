@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { Appointment, getAppointments, transferAppointment } from "@/app/lib/api/appointmentApi";
 import { getAllUsers, User } from "@/app/lib/api/userApi";
-
-interface ServedUser {
-  user: string;
-  appointment: string;
-  fromDate: string;
-  toDate: string;
-}
+import { ServedUser } from "@/types/appointmentmgmt";
 
 export default function AppointmentManagement() {
   const router = useRouter();
@@ -52,6 +46,10 @@ export default function AppointmentManagement() {
     },
   });
 
+  // Memoized static config
+  const memoizedTabs = useMemo(() => ocTabs, []);
+  const memoizedFallbackUsers = useMemo(() => fallbackUsers, []);
+
   useEffect(() => {
     if (handoverDialog) {
       (async () => {
@@ -59,52 +57,41 @@ export default function AppointmentManagement() {
           const data = await getAllUsers();
           setUsers(data);
         } catch (err) {
-          console.error("Failed to fetch users:", err);
           toast.error("Unable to load user list");
-          setUsers(fallbackUsers);
+          setUsers(memoizedFallbackUsers);
         }
       })();
     }
-  }, [handoverDialog]);
+  }, [handoverDialog, memoizedFallbackUsers]);
 
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        setLoading(true);
-        // throw new Error("Simulate API failure");
-        const data = await getAppointments();
-        if (!data || !Array.isArray(data)) {
-          throw new Error("Invalid appointments data");
-        }
+  const fetchAppointments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAppointments();
 
-        if (data.length === 0) {
-          throw new Error("api data not found");
-        }
-        if (!Array.isArray(data)) {
-          throw new Error("Unexpected API response");
-        }
-        setAppointments(data)
-      } catch (err) {
-        console.error("Failed to fetch appointments:", err);
-        toast.info("Using fallback data due to API failure.");
-        setAppointments(fallbackAppointments);
-      } finally {
-        setLoading(false);
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("No appointment data found");
       }
-    };
-    fetchAppointments();
+
+      setAppointments(data);
+    } catch (err) {
+      toast.info("Using fallback data due to API failure.");
+      setAppointments(fallbackAppointments);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchAppointments();
+  }, [fetchAppointments]);
 
-
-  // Open Handover Dialog
-  const openHandover = (appt: Appointment) => {
+  const openHandover = useCallback((appt: Appointment) => {
     setSelectedAppointment(appt);
     reset();
     setHandoverDialog(true);
-  };
+  }, [reset]);
 
-  //  Submit Handover
   const onSubmitHandover = async (formData: {
     toUser: string;
     handoverDate: string;
@@ -114,43 +101,27 @@ export default function AppointmentManagement() {
 
     const handover = new Date(`${formData.handoverDate}T00:00:00Z`);
     const takeover = new Date(`${formData.takeoverDate}T00:00:00Z`);
-
     const appointmentStart = new Date(selectedAppointment.startsAt);
 
-    if (handover <= appointmentStart) {
-      // toast.error(
-      //   `Handover date (${handover.toDateString()}) cannot be before the appointment start date (${appointmentStart.toDateString()}).`
-      // );
-      console.log(`Handover date (${handover.toDateString()}) cannot be before the appointment start date (${appointmentStart.toDateString()}`)
-      return;
-    }
-
+    if (handover <= appointmentStart) return;
     if (handover >= takeover) {
       toast.error("Handover date must be before takeover date.");
       return;
     }
 
     try {
-      let scopeIdCheck: string | null;
-      if (selectedAppointment.scopeType === "GLOBAL") {
-        scopeIdCheck = null;
-      } else {
-        scopeIdCheck = selectedAppointment.scopeId;
-      }
       const payload = {
-        userId: formData.toUser,
+        newUserId: formData.toUser,
+        prevEndsAt: handover.toISOString(),
+        newStartsAt: takeover.toISOString(),
         positionId: selectedAppointment.positionId,
         scopeType: selectedAppointment.scopeType,
-        scopeId: scopeIdCheck,
-        startsAt: takeover.toISOString(),
-        endsAt: null,
+        scopeId: selectedAppointment.scopeType === "GLOBAL" ? null : selectedAppointment.scopeId,
         reason: "Shift handover",
       };
 
-
       await transferAppointment(selectedAppointment.id, payload);
 
-      // Update local state
       const newServed: ServedUser = {
         user: selectedAppointment.username,
         appointment: selectedAppointment.positionName,
@@ -170,20 +141,20 @@ export default function AppointmentManagement() {
       toast.success(`Appointment handed over successfully`);
       setHandoverDialog(false);
     } catch (err: any) {
-      console.error("Handover failed:", err);
       toast.error(err.message || "Failed to hand over appointment");
     }
   };
 
-  const handleLogout = () => {
-    router.push("/login");
-  };
+  const handleLogout = () => router.push("/login");
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
+      <section className="min-h-screen flex w-full bg-background">
+        <aside>
+          <AppSidebar />
+        </aside>
+
+        <main className="flex-1 flex flex-col">
           <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
             <PageHeader
               title="Appointment Management"
@@ -192,34 +163,39 @@ export default function AppointmentManagement() {
             />
           </header>
 
-          <main className="flex-1 p-6">
-            <BreadcrumbNav
-              paths={[
-                { label: "Dashboard", href: "/dashboard" },
-                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
-                { label: "Appointment Management" },
-              ]}
-            />
+          <section className="flex-1 p-6">
+            <nav aria-label="Breadcrumb">
+              <BreadcrumbNav
+                paths={[
+                  { label: "Dashboard", href: "/dashboard" },
+                  { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                  { label: "Appointment Management" },
+                ]}
+              />
+            </nav>
 
-            <GlobalTabs tabs={ocTabs} defaultValue="appointment-mgmt">
+            <GlobalTabs tabs={memoizedTabs} defaultValue="appointment-mgmt">
               <TabsContent value="appointment-mgmt" className="space-y-8">
                 {/* --- Current Appointments --- */}
-                <section>
-                  <h2 className="text-2xl font-bold mb-4">Current Appointments</h2>
+                <section aria-labelledby="current-appointments">
+                  <h2 id="current-appointments" className="text-2xl font-bold mb-4">
+                    Current Appointments
+                  </h2>
 
                   {loading ? (
-                    <p className="text-center text-muted-foreground p-4">
+                    <p className="text-center text-muted-foreground p-4" aria-live="polite">
                       Loading appointments...
                     </p>
                   ) : error ? (
-                    <p className="text-center text-red-500 p-4">{error}</p>
-                  ) : appointments.length === 0 ? (
-                    <p className="text-center text-muted-foreground p-4">
-                      No appointments found.
+                    <p className="text-center text-red-500 p-4" role="alert">
+                      {error}
                     </p>
+                  ) : appointments.length === 0 ? (
+                    <p className="text-center text-muted-foreground p-4">No appointments found.</p>
                   ) : (
-                    <div className="overflow-x-auto border rounded-md">
+                    <article className="overflow-x-auto border rounded-md">
                       <table className="w-full text-sm text-left">
+                        <caption className="sr-only">Current Appointments List</caption>
                         <thead className="bg-muted text-foreground">
                           <tr>
                             <th className="px-4 py-2">Appointment</th>
@@ -229,15 +205,19 @@ export default function AppointmentManagement() {
                           </tr>
                         </thead>
                         <tbody>
-                          {appointments.map((a, i) => (
-                            <tr key={i} className="border-t">
+                          {appointments.map((a) => (
+                            <tr key={a.id} className="border-t">
                               <td className="px-4 py-2 font-medium">{a.positionName}</td>
                               <td className="px-4 py-2">{a.username}</td>
                               <td className="px-4 py-2">
                                 {new Date(a.startsAt).toLocaleDateString()}
                               </td>
                               <td className="px-4 py-2 text-center">
-                                <Button variant="outline" onClick={() => openHandover(a)}>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => openHandover(a)}
+                                  aria-label={`Hand over ${a.positionName}`}
+                                >
                                   Handing Over
                                 </Button>
                               </td>
@@ -245,15 +225,18 @@ export default function AppointmentManagement() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
+                    </article>
                   )}
                 </section>
 
                 {/* --- Served History --- */}
-                <section>
-                  <h2 className="text-2xl font-bold mb-4">Served History</h2>
-                  <div className="overflow-x-auto border rounded-md">
+                <section aria-labelledby="served-history">
+                  <h2 id="served-history" className="text-2xl font-bold mb-4">
+                    Served History
+                  </h2>
+                  <article className="overflow-x-auto border rounded-md">
                     <table className="w-full text-sm text-left">
+                      <caption className="sr-only">Served Appointment History</caption>
                       <thead className="bg-muted text-foreground">
                         <tr>
                           <th className="px-4 py-2">User & Appointment</th>
@@ -264,7 +247,10 @@ export default function AppointmentManagement() {
                       <tbody>
                         {servedList.length === 0 ? (
                           <tr>
-                            <td colSpan={3} className="text-center p-4 text-muted-foreground">
+                            <td
+                              colSpan={3}
+                              className="text-center p-4 text-muted-foreground"
+                            >
                               No served history available.
                             </td>
                           </tr>
@@ -281,13 +267,13 @@ export default function AppointmentManagement() {
                         )}
                       </tbody>
                     </table>
-                  </div>
+                  </article>
                 </section>
               </TabsContent>
             </GlobalTabs>
-          </main>
-        </div>
-      </div>
+          </section>
+        </main>
+      </section>
 
       {/* --- Handover Dialog --- */}
       <Dialog open={handoverDialog} onOpenChange={setHandoverDialog}>
@@ -299,14 +285,13 @@ export default function AppointmentManagement() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmitHandover)} className="space-y-4">
-            <div>
+            <fieldset>
+              <legend className="sr-only">Handover Details</legend>
+
               <label className="text-sm font-medium">From User</label>
               <Input value={selectedAppointment?.username || ""} disabled />
-            </div>
 
-            {/* --- To User Dropdown --- */}
-            <div>
-              <label className="text-sm font-medium">To User</label>
+              <label className="text-sm font-medium mt-4">To User</label>
               <select
                 {...register("toUser", { required: true })}
                 className="w-full border rounded-md p-2 text-sm bg-background"
@@ -318,33 +303,27 @@ export default function AppointmentManagement() {
                   </option>
                 ))}
               </select>
-            </div>
 
-            {/* --- Handover Date --- */}
-            <div>
-              <label className="text-sm font-medium">Handing Over Date</label>
+              <label className="text-sm font-medium mt-4">Handing Over Date</label>
               <Input
                 type="date"
                 {...register("handoverDate", { required: true })}
-                min={new Date().toISOString().split("T")[0]} // can't pick past
+                min={new Date().toISOString().split("T")[0]}
               />
-            </div>
 
-            {/* --- Takeover Date --- */}
-            <div>
-              <label className="text-sm font-medium">Taking Over Date</label>
+              <label className="text-sm font-medium mt-4">Taking Over Date</label>
               <Input
                 type="date"
                 {...register("takeoverDate", { required: true })}
                 min={watch("handoverDate") || new Date().toISOString().split("T")[0]}
               />
-            </div>
+            </fieldset>
 
-            <div className="flex justify-end">
+            <footer className="flex justify-end">
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Submitting..." : "Submit"}
               </Button>
-            </div>
+            </footer>
           </form>
         </DialogContent>
       </Dialog>
