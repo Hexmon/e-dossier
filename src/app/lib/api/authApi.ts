@@ -1,6 +1,33 @@
 import { api, ApiClientError } from "@/app/lib/apiClient";
 import { baseURL, endpoints } from "@/constants/endpoints";
 
+export interface UsernameCheckResponse {
+  status: number;
+  ok: boolean;
+  username: string;
+  assigned: boolean;
+  available: boolean;
+  suggestions: string[];
+}
+
+export async function checkUsernameAvailability(
+  username: string
+): Promise<UsernameCheckResponse> {
+  try {
+    const response = await api.get<UsernameCheckResponse>(
+      `${endpoints.users.checkUsername}?username=${encodeURIComponent(username)}`,
+      { baseURL }
+    );
+
+    return response;
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      throw new Error(error.message || "Failed to check username availability.");
+    }
+    throw new Error("Unexpected error. Please try again later.");
+  }
+}
+
 // Constant validation helpers
 export const RESERVED_USERNAMES = ["admin", "test", "user"];
 

@@ -1,21 +1,8 @@
-"use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin } from "lucide-react";
-import { events } from "@/config/app.config";
-
-const getTypeColor = (type: string) => {
-  const colors: Record<string, string> = {
-    ceremony: "bg-purple-100 text-purple-800",
-    sports: "bg-green-100 text-green-800",
-    academic: "bg-blue-100 text-blue-800",
-    training: "bg-orange-100 text-orange-800",
-    inspection: "bg-red-100 text-red-800",
-    cultural: "bg-pink-100 text-pink-800",
-  };
-  return colors[type] || "bg-gray-100 text-gray-800";
-};
+import { events, getTypeColor } from "@/config/app.config";
 
 const EventsNews = () => {
   return (

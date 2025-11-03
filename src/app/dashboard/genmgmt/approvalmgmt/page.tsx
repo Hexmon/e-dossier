@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -27,12 +27,8 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { approveSignupRequest, getAvailableSlots, getPendingUsers, PendingUser, PositionSlot, rejectSignupRequest } from "@/app/lib/api/ApprovalApi";
+import { ApprovalForm } from "@/types/approvalmgmt";
 
-
-
-interface ApprovalForm {
-    [username: string]: string;
-}
 
 export default function ApprovalManagement() {
     const router = useRouter();
@@ -42,34 +38,39 @@ export default function ApprovalManagement() {
     const [error, setError] = useState<string | null>(null);
     const { register, setValue, getValues } = useForm<ApprovalForm>();
 
+    const availableSlots = useMemo(
+        () => slots.filter((s) => !s.occupied),
+        [slots]
+    );
+
     // --- Fetch users + slots
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                const [users, slotList] = await Promise.all([
-                    getPendingUsers(),
-                    getAvailableSlots(),
-                ]);
-                setPendingUsers(users);
-                setSlots(slotList.filter((s) => !s.occupied));
-            } catch (err: any) {
-                console.warn("API failed, using fallback data.");
-                toast.warning("Using fallback data due to API failure.");
-                setError("Unable to load live data — showing fallback users.");
-                setPendingUsers(FALLBACK_PENDING_USERS);
-                setSlots(FALLBACK_SLOTS);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const [users, slotList] = await Promise.all([
+                getPendingUsers(),
+                getAvailableSlots(),
+            ]);
+            setPendingUsers(users);
+            setSlots(slotList);
+        } catch (err: any) {
+            console.warn("API failed, using fallback data.");
+            toast.warning("Using fallback data due to API failure.");
+            setError("Unable to load live data — showing fallback users.");
+            setPendingUsers(FALLBACK_PENDING_USERS);
+            setSlots(FALLBACK_SLOTS);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     // --- Approve user
-    const handleApprove = async (user: PendingUser) => {
+    const handleApprove = useCallback(async (user: PendingUser) => {
         const selectedKey = getValues()[user.username];
-        const selectedSlot = slots.find(
+        const selectedSlot = availableSlots.find(
             (s) => s.position.key === selectedKey
         );
 
@@ -79,25 +80,20 @@ export default function ApprovalManagement() {
         }
 
         try {
-            const scopeType =
+            const scopeType: "GLOBAL" | "PLATOON" =
                 selectedSlot.scope.type === "GLOBAL" || selectedSlot.scope.type === "PLATOON"
                     ? selectedSlot.scope.type
                     : "GLOBAL";
-            const res = await approveSignupRequest(
-                user.id,
-                selectedKey,
-                scopeType
-            );
+            const res = await approveSignupRequest(user.id, selectedKey, scopeType);
             toast.success(res.message || `${user.name} approved successfully.`);
             setPendingUsers((prev) => prev.filter((u) => u.id !== user.id));
         } catch (err: any) {
             toast.error(err.message || "Failed to approve user.");
         }
-    };
-
+    }, [availableSlots, getValues]);
 
     // --- Reject user
-    const handleReject = async (user: PendingUser) => {
+    const handleReject = useCallback(async (user: PendingUser) => {
         try {
             const res = await rejectSignupRequest(user.id);
             toast.error(res.message || `${user.name} rejected.`);
@@ -105,14 +101,14 @@ export default function ApprovalManagement() {
         } catch (err: any) {
             toast.error(err.message || "Failed to reject user.");
         }
-    };
+    }, []);
 
     const handleLogout = () => router.push("/login");
 
     return (
         <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
-                <AppSidebar />
+            <section className="min-h-screen flex w-full bg-background">
+                <aside><AppSidebar /></aside>
                 <div className="flex-1 flex flex-col">
                     <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
                         <PageHeader
@@ -186,6 +182,7 @@ export default function ApprovalManagement() {
                                                         type="button"
                                                         variant="default"
                                                         onClick={() => handleApprove(user)}
+                                                        aria-label={`Approve ${user.name}`}
                                                     >
                                                         Approve
                                                     </Button>
@@ -193,6 +190,7 @@ export default function ApprovalManagement() {
                                                         type="button"
                                                         variant="destructive"
                                                         onClick={() => handleReject(user)}
+                                                        aria-label={`Reject ${user.name}`}
                                                     >
                                                         Reject
                                                     </Button>
@@ -211,7 +209,7 @@ export default function ApprovalManagement() {
                         </GlobalTabs>
                     </main>
                 </div>
-            </div>
+            </section>
         </SidebarProvider>
     );
 }

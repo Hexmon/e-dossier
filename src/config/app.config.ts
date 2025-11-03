@@ -1259,3 +1259,23 @@ export const fallbackCourses: Course[] = ([
   { id: "7", courseNo: "TES-49", startDate: "01-07-2024", endDate: "12-06-2027", trgModel: 0 },
   { id: "8", courseNo: "TES-49A", startDate: "30-01-2025", endDate: "11-12-2027", trgModel: 0 },
 ]);
+
+export const navItems = [
+  { name: "Platoons", path: "/#platoons" },
+  { name: "Commander's Corner", path: "/#commanders-corner" },
+  { name: "Gallantry Awards", path: "/#gallantry-awards" },
+  { name: "History", path: "/#history" },
+  { name: "Events & News", path: "/#events-news" },
+];
+
+export const getTypeColor = (type: string) => {
+  const colors: Record<string, string> = {
+    ceremony: "bg-purple-100 text-purple-800",
+    sports: "bg-green-100 text-green-800",
+    academic: "bg-blue-100 text-blue-800",
+    training: "bg-orange-100 text-orange-800",
+    inspection: "bg-red-100 text-red-800",
+    cultural: "bg-pink-100 text-pink-800",
+  };
+  return colors[type] || "bg-gray-100 text-gray-800";
+};

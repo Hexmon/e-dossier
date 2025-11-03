@@ -4,19 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home,
-  FileText,
-  Users,
-  BookOpen,
-  GraduationCap,
-  Activity,
-  Settings,
   Shield,
   HelpCircle,
   ChevronRight,
-  UserCheck,
-  Book,
-  CalendarDays,
+
 } from "lucide-react";
 
 import {
@@ -33,77 +24,9 @@ import {
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-
-type MenuItem = {
-  title: string;
-  url: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge?: string;
-};
-
-type MenuSection = {
-  group: string;
-  collapsible?: boolean;
-  items: MenuItem[];
-};
-
-const menuItems:MenuSection[] = [
-  {
-    group: "Dashboard",
-    items: [{ title: "Home", url: "/dashboard", icon: Home }],
-  },
-  {
-    group: "Subject Management",
-    items: [{ title: "Subjects", url: "/dashboard/subjects", icon: Book }],
-  },
-  {
-    group: "Instructor Management",
-    items: [{ title: "Instructors", url: "/dashboard/instructors", icon: GraduationCap }],
-  },
-  {
-    group: "User Management",
-    items: [{ title: "Users", url: "/dashboard/users", icon: Shield }],
-  },
-  {
-    group: "Appointment Management",
-    items: [{ title: "Appointments", url: "/dashboard/appointments", icon: CalendarDays }],
-  },
-  {
-    group: "Assessment – NSA",
-    items: [{ title: "OLQA", url: "/dashboard/olqa", icon: FileText }],
-  },
-  {
-    group: "Overall OC Details",
-    items: [{ title: "View All", url: "/dashboard/view-ocs", icon: Users }],
-  },
-  {
-    group: "Academics",
-    items: [{ title: "Coming Soon", url: "/dashboard/academics", icon: BookOpen, badge: "Soon" }],
-  },
-  {
-    group: "Physical Training & Sports",
-    items: [{ title: "Activities", url: "/dashboard/activities", icon: Activity }],
-  },
-  {
-    group: "Interview",
-    collapsible: true,
-    items: [
-      { title: "Platoon Cdr", url: "/dashboard/interview/platoon-cdr", icon: UserCheck },
-      { title: "DS Coord", url: "/dashboard/interview/ds-coord", icon: UserCheck },
-      { title: "CDR CTW", url: "/dashboard/interview/cdr-ctw", icon: UserCheck },
-      { title: "DCCI", url: "/dashboard/interview/dcci", icon: UserCheck },
-      { title: "Comdt", url: "/dashboard/interview/comdt", icon: UserCheck },
-    ],
-  },
-  {
-    group: "Report Management",
-    items: [{ title: "Reports", url: "/dashboard/reports", icon: FileText }],
-  },
-  {
-    group: "Site Settings",
-    items: [{ title: "Configuration", url: "/dashboard/settings", icon: Settings }],
-  },
-];
+import Image from "next/image";
+import { MenuSection } from "@/types/appSidebar";
+import { menuItems } from "@/constants/app.constants";
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -128,9 +51,11 @@ export function AppSidebar() {
         {/* Logo */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <img
-              src="https://facultytick.com/wp-content/uploads/2022/03/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+            <Image
+              src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
               alt="MCEME Logo"
+              width={8}
+              height={8}
               className="h-8 w-8 object-contain rounded"
             />
             {!collapsed && (

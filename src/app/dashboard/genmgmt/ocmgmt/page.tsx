@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
@@ -49,64 +49,66 @@ export default function OCManagementPage() {
   const courseId = watch("courseId");
   const platoonKey = watch("platoonId");
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const courseResponse = await getAllCourses();
-        console.log(courseResponse)
-        setCourses(courseResponse.items || []);
+  const loadCoursesAndPlatoons = useCallback(async () => {
+    try {
+      const [courseResponse, platoonResponse] = await Promise.all([
+        getAllCourses(),
+        getPlatoons(),
+      ]);
+      setCourses(courseResponse.items || []);
+      setPlatoons(platoonResponse || []);
+    } catch (err) {
+      console.error("Failed to load courses or platoons:", err);
+    }
+  }, []);
 
-        const platoonResponse = await getPlatoons();
-        setPlatoons(platoonResponse || []);
-      } catch (err) {
-        console.error("Failed to load courses or platoons:", err);
-      }
-    })();
+  const loadCourseInfo = useCallback(async (courseId: string) => {
+    try {
+      const course = await fetchCourseById(courseId);
+      setCourseInfo(`${course.code} - ${course.title}`);
+    } catch (err) {
+      console.warn("Course fetch failed:", err);
+      setCourseInfo(null);
+    }
+  }, []);
+
+  const loadPlatoonInfo = useCallback(async (platoonKey: string) => {
+    try {
+      const platoon = await fetchPlatoonByKey(platoonKey);
+      setPlatoonName(platoon.name);
+    } catch (err) {
+      console.warn("Platoon fetch failed:", err);
+      setPlatoonName(null);
+    }
+  }, []);
+
+  const loadOCs = useCallback(async () => {
+    try {
+      const items = await fetchOCs({ active: true });
+      setOcList(items);
+    } catch (err) {
+      console.error("Failed to load OCs", err);
+    }
   }, []);
 
 
-  // Fetch course info when courseId changes
   useEffect(() => {
-    if (!courseId) return;
-    (async () => {
-      try {
-        const course = await fetchCourseById(courseId);
-        console.log("course:", course)
-        setCourseInfo(`${course.code} - ${course.title}`);
-      } catch (err: any) {
-        console.warn("Course fetch failed:", err);
-        setCourseInfo(null);
-      }
-    })();
-  }, [courseId]);
-
-  // Fetch platoon info when platoonId/key changes
-  useEffect(() => {
-    if (!platoonKey) return;
-    (async () => {
-      try {
-        const platoon = await fetchPlatoonByKey(platoonKey);
-        setPlatoonName(platoon.name);
-      } catch (err: any) {
-        console.warn("Platoon fetch failed:", err);
-        setPlatoonName(null);
-      }
-    })();
-  }, [platoonKey]);
-
+    loadCoursesAndPlatoons();
+  }, [loadCoursesAndPlatoons]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const items = await fetchOCs({ active: true });
-        setOcList(items);
-      } catch (err) {
-        console.error("Failed to load OCs", err);
-      }
-    })();
-  }, []);
+    if (courseId) loadCourseInfo(courseId);
+  }, [courseId, loadCourseInfo]);
 
-  const onSubmit = async (data: OCRecord) => {
+  useEffect(() => {
+    if (platoonKey) loadPlatoonInfo(platoonKey);
+  }, [platoonKey, loadPlatoonInfo]);
+
+  useEffect(() => {
+    loadOCs();
+  }, [loadOCs]);
+
+  const onSubmit = useCallback(async (data: OCRecord) => {
     try {
       if (editIndex !== null) {
         const id = ocList[editIndex].id!;
@@ -122,9 +124,9 @@ export default function OCManagementPage() {
     } catch (err) {
       console.error("Save failed:", err);
     }
-  };
+  }, [editIndex, ocList, reset]);
 
-  const handleEdit = async (index: number) => {
+  const handleEdit = useCallback(async (index: number) => {
     const oc = ocList[index];
     setEditIndex(index);
 
@@ -146,98 +148,85 @@ export default function OCManagementPage() {
     setValue("arrivalAtUniversity", oc.arrivalAtUniversity?.slice(0, 10) ?? "");
 
     setIsDialogOpen(true);
-  };
+  }, [ocList, courses.length, platoons.length, setValue]);
 
-
-  const handleDelete = async (index: number) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
-      const id = ocList[index].id!;
-      await deleteOC(id);
-      setOcList((prev) => prev.filter((_, i) => i !== index));
+      const res = await deleteOC(id);
+      console.log("Delete response:", res);
+      setOcList(prev => prev.filter((oc) => oc.id !== id));
     } catch (err) {
       console.error("Delete failed:", err);
     }
-  };
+  }, []);
 
   // ---------- File upload + parse + upload ----------
-  const formatRecordFromSheet = (obj: any) => {
-    return {
-      name: obj["Name"] || obj["name"] || "",
-      ocNo: obj["OC No"] || obj["ocNo"] || obj["ocNo"] || obj["ocNo"] || obj["ocNo"] || "",
-      courseId: obj["CourseId"] || obj["courseId"] || obj["Course"] || "",
-      branch: (obj["Branch"] || obj["branch"] || null) as "E" | "M" | "O" | null,
-      platoonId: obj["PlatoonId"] || obj["platoonId"] || null,
-      arrivalAtUniversity: obj["Arrival Date"] || obj["arrivalAtUniversity"] || new Date().toISOString(),
-    };
-  };
+  const formatRecordFromSheet = useCallback((obj: any) => ({
+    name: obj["Name"] || obj["name"] || "",
+    ocNo: obj["OC No"] || obj["ocNo"] || "",
+    courseId: obj["CourseId"] || obj["courseId"] || obj["Course"] || "",
+    branch: (obj["Branch"] || obj["branch"] || null) as "E" | "M" | "O" | null,
+    platoonId: obj["PlatoonId"] || obj["platoonId"] || null,
+    arrivalAtUniversity: obj["Arrival Date"] || obj["arrivalAtUniversity"] || new Date().toISOString(),
+  }), []);
 
-  const uploadBatch = async (records: any[]) => {
+  const uploadBatch = useCallback(async (records: any[]) => {
     setUploading(true);
-    const failed: any[] = [];
-    for (const rec of records) {
-      const payload = formatRecordFromSheet(rec);
-      if (!payload.name || !payload.courseId || !payload.ocNo) {
-        failed.push({ rec: payload, reason: "missing required fields (name/courseId/ocNo)" });
-        continue;
-      }
-      try {
-        await createOC(payload);
-      } catch (err) {
-        failed.push({ rec: payload, reason: String(err) });
-      }
-    }
-    setUploading(false);
-    // Refresh list after import
-    try {
-      const items = await fetchOCs({ active: true });
-      setOcList(items);
-    } catch (err) {
-      console.error("failed refresh after upload", err);
-    }
-    if (failed.length) {
-      console.warn("Some rows failed to upload:", failed);
-      alert(`Upload finished. ${failed.length} rows failed. Check console for details.`);
-    } else {
-      alert("Upload finished successfully!");
-    }
-  };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const payloads = records.map(formatRecordFromSheet).filter(p => p.name && p.courseId && p.ocNo);
+    const results = await Promise.allSettled(payloads.map(p => createOC(p)));
+    const failed = results.filter(r => r.status === "rejected");
+
+    setUploading(false);
+
+    const items = await fetchOCs({ active: true });
+    setOcList(items);
+
+    if (failed.length) {
+      console.warn("Some uploads failed:", failed);
+      alert(`Upload complete. ${failed.length} failed rows. Check console.`);
+    } else {
+      alert("All uploads succeeded!");
+    }
+  }, []);
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const fname = file.name.toLowerCase();
 
-    if (fname.endsWith(".csv")) {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: async (results) => {
-          const rows = results.data as any[];
+    const processFile = async () => {
+      try {
+        if (fname.endsWith(".csv")) {
+          Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => await uploadBatch(results.data as any[]),
+          });
+        } else if (fname.endsWith(".xlsx") || fname.endsWith(".xls")) {
+          const data = await file.arrayBuffer();
+          const workbook = XLSX.read(new Uint8Array(data), { type: "array" });
+          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]) as any[];
           await uploadBatch(rows);
-        },
-      });
-    } else if (fname.endsWith(".xlsx") || fname.endsWith(".xls")) {
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as any[];
-        await uploadBatch(rows);
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
-      alert("Unsupported file. Use CSV or Excel (.xlsx/.xls).");
-    }
+        } else {
+          alert("Unsupported file. Use CSV or Excel (.xlsx/.xls).");
+        }
+      } catch (err) {
+        console.error("File upload failed:", err);
+        alert("Error processing file.");
+      } finally {
+        e.target.value = "";
+      }
+    };
 
-    e.currentTarget.value = "";
-  };
+    processFile();
+  }, [uploadBatch]);
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
+      <section className="min-h-screen flex w-full bg-background">
+        <aside><AppSidebar /></aside>
+        <main className="flex-1 flex flex-col">
           <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
             <PageHeader
               title="OC Management"
@@ -246,14 +235,16 @@ export default function OCManagementPage() {
             />
           </header>
 
-          <main className="flex-1 p-6">
-            <BreadcrumbNav
-              paths={[
-                { label: "Dashboard", href: "/dashboard" },
-                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
-                { label: "OC Management" },
-              ]}
-            />
+          <section className="flex-1 p-6">
+            <nav>
+              <BreadcrumbNav
+                paths={[
+                  { label: "Dashboard", href: "/dashboard" },
+                  { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                  { label: "OC Management" },
+                ]}
+              />
+            </nav>
 
             <GlobalTabs tabs={ocTabs} defaultValue="oc-mgmt">
               <TabsContent value="oc-mgmt" className="space-y-6">
@@ -283,7 +274,7 @@ export default function OCManagementPage() {
                       <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(index); }}>
                         <Edit3 className="h-3 w-3 mr-1" /> Edit
                       </Button>
-                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(index); }} className="text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(oc.id!); }} className="text-destructive hover:bg-destructive hover:text-destructive-foreground">
                         <Trash2 className="h-3 w-3 mr-1" /> Delete
                       </Button>
                     </OCListItem>
@@ -291,9 +282,9 @@ export default function OCManagementPage() {
                 </div>
               </TabsContent>
             </GlobalTabs>
-          </main>
-        </div>
-      </div>
+          </section>
+        </main>
+      </section>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">

@@ -15,7 +15,7 @@ export const endpoints = {
         transferappt: (appointmentId: string) =>
             `/api/v1/admin/appointments/${appointmentId}/transfer`,
 
-        users: "/api/v1/admin/users"
+        users: "/api/v1/admin/users",
     },
     oc: {
         list: "/api/v1/oc",
@@ -27,5 +27,8 @@ export const endpoints = {
     },
     course: {
         all: "/api/v1/courses"
-    }
+    },
+    users: {
+        checkUsername: "/api/v1/admin/users/check-username",
+    },
 }

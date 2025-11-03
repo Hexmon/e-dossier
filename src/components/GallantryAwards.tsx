@@ -1,4 +1,3 @@
-"use client";
 
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,11 +33,11 @@ const GallantryAwards = () => {
 
         {/* Awards Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {awards.map((award) => {
-            const IconComponent = award.icon;
+          {awards.map(({icon, name, category, description}) => {
+            const IconComponent = icon;
             return (
               <Card
-                key={award.name}
+                key={name}
                 className="group hover:shadow-command transition-all duration-300"
               >
                 <CardHeader className="pb-3">
@@ -47,16 +46,16 @@ const GallantryAwards = () => {
                       <IconComponent className="h-6 w-6 text-primary" />
                     </div>
                     <Badge variant="secondary" className="text-xs">
-                      {award.category}
+                      {category}
                     </Badge>
                   </div>
                   <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                    {award.name}
+                    {name}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground leading-relaxed">
-                    {award.description}
+                    {description}
                   </p>
                 </CardContent>
               </Card>

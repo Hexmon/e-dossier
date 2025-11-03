@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -19,8 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectTrigger, SelectContent, SelectValue, SelectItem } from "@/components/ui/select";
 import { UserListItem } from "@/components/users/UserCard";
 import { getAllUsers, saveUser, deleteUser, User } from "@/app/lib/api/userApi";
-
-const USER_ROLES = ["Comdt", "DCCI", "Cdr CTW", "DyCdr CTW", "DS Cord", "HOAT", "Platoon Cdr", "CCO", "User"];
+import UserFormDialog from "@/components/users/UserFormDialog";
 
 export default function UserManagement() {
   const router = useRouter();
@@ -34,49 +33,46 @@ export default function UserManagement() {
   const isActive = watch("isActive");
 
   //  Fetch all users
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const list = await getAllUsers();
-        setUsers(list);
-      } catch (err) {
-        console.error("Failed to fetch users:", err);
-        toast.error("Unable to load user list");
-        setUsers(fallbackUsers);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadUsers();
+  const loadUsers = useCallback(async () => {
+    try {
+      const list = await getAllUsers();
+      setUsers(list);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+      toast.error("Unable to load user list");
+      setUsers(fallbackUsers);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   //  Add / Edit User
-  const onSubmit = async (data: User) => {
+  const onSubmit = useCallback(async (data: User) => {
     try {
       const saved = await saveUser(data);
-      if (editingUser) {
-        setUsers((prev) => prev.map((u) => (u.id === saved.id ? saved : u)));
-        toast.success("User updated successfully");
-      } else {
-        setUsers((prev) => [...prev, saved]);
-        toast.success("User added successfully");
-      }
+      setUsers((prev) =>
+        editingUser
+          ? prev.map((u) => (u.id === saved.id ? saved : u))
+          : [...prev, saved]
+      );
+      toast.success(editingUser ? "User updated successfully" : "User added successfully");
       setOpen(false);
       reset();
     } catch (err: any) {
       toast.error(err.message || "Failed to save user");
     }
-  };
+  }, [editingUser, reset]);
 
-  //  Edit
-  const handleEdit = (user: User) => {
+  const handleEdit = useCallback((user: User) => {
     setEditingUser(user);
     reset(user);
     setOpen(true);
-  };
+  }, [reset]);
 
-  //  Delete
-  const handleDelete = async (user: User) => {
+  const handleDelete = useCallback(async (user: User) => {
     if (!user.id) {
       setUsers((prev) => prev.filter((u) => u.username !== user.username));
       return;
@@ -88,21 +84,20 @@ export default function UserManagement() {
     } catch (err: any) {
       toast.error(err.message || "Failed to delete user");
     }
-  };
+  }, []);
 
-  //  View
-  const handleView = (user: User) => {
+  const handleView = useCallback((user: User) => {
     setSelectedUser(user);
     setViewOpen(true);
-  };
+  }, []);
 
   const handleLogout = () => router.push("/login");
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
+      <section className="min-h-screen flex w-full bg-background">
+        <aside><AppSidebar /></aside>
+        <main className="flex-1 flex flex-col">
           <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
             <PageHeader
               title="User Management"
@@ -111,14 +106,16 @@ export default function UserManagement() {
             />
           </header>
 
-          <main className="flex-1 p-6">
-            <BreadcrumbNav
-              paths={[
-                { label: "Dashboard", href: "/dashboard" },
-                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
-                { label: "User Management" },
-              ]}
-            />
+          <section className="flex-1 p-6">
+            <nav>
+              <BreadcrumbNav
+                paths={[
+                  { label: "Dashboard", href: "/dashboard" },
+                  { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                  { label: "User Management" },
+                ]}
+              />
+            </nav>
 
             <GlobalTabs tabs={ocTabs} defaultValue="user-mgmt">
               <TabsContent value="user-mgmt" className="space-y-6">
@@ -159,51 +156,20 @@ export default function UserManagement() {
                 )}
               </TabsContent>
             </GlobalTabs>
-          </main>
-        </div>
-      </div>
+          </section>
+        </main>
+      </section>
 
       {/*  Add/Edit Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? "Edit User" : "Add User"}</DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-            <Input placeholder="Username" {...register("username", { required: true })} />
-            <Input placeholder="Full Name" {...register("name", { required: true })} />
-            <Input placeholder="Email" {...register("email")} />
-            <Input placeholder="Phone" {...register("phone")} />
-            <Input placeholder="Rank" {...register("rank")} />
-
-            {/* <Select onValueChange={(v) => setValue("appointId", v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Role" />
-              </SelectTrigger>
-              <SelectContent>
-                {USER_ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select> */}
-
-            <div className="flex items-center gap-2">
-              <Checkbox checked={isActive} onCheckedChange={(val) => setValue("isActive", !!val)} />
-              <label className="text-sm font-medium">Is Active</label>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <UserFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        onSubmit={handleSubmit(onSubmit)}
+        editingUser={editingUser}
+        register={register}
+        setValue={setValue}
+         isActive={watch("isActive") ?? true}
+      />
 
       {/*  View Dialog */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
