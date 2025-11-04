@@ -38,8 +38,6 @@ export default function CourseManagement() {
     try {
       setLoading(true);
       const response = await getAllCourses();
-      console.log("courses:", response)
-
       if (response?.items?.length > 0) {
         const mapped = response.items.map((c: any):Course => ({
           id: c.id,
@@ -50,12 +48,10 @@ export default function CourseManagement() {
         }));
         setCourses(mapped);
       } else {
-        console.warn("API returned no data, using fallback.");
         toast.warning("No data received. Showing fallback courses.");
         setCourses(fallbackCourses);
       }
     } catch (error: any) {
-      console.error("Error fetching courses:", error);
       toast.error("Failed to fetch courses. Showing fallback data.");
       setCourses(fallbackCourses);
     } finally {

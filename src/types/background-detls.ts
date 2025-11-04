@@ -18,7 +18,7 @@ export interface FamilyMember {
 
 export interface Achievement {
     event: string;
-    year: string;
+    year: number;
     level: string;
     prize: string;
 }

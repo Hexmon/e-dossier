@@ -24,6 +24,8 @@ export const endpoints = {
         delete: (ocId: string) => `/api/v1/oc/${ocId}`,
         personal: (ocId: string) => `/api/v1/oc/${ocId}/personal`,
         family: (ocId: string) => `/api/v1/oc/${ocId}/family`,
+        education: (ocId: string) => `/api/v1/oc/${ocId}/education`,
+        achievements: (ocId: string) => `/api/v1/oc/${ocId}/achievements`
     },
     course: {
         all: "/api/v1/courses"

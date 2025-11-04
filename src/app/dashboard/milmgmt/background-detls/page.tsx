@@ -9,7 +9,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { Shield, ChevronDown } from "lucide-react";
+import { Shield, ChevronDown, School } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
@@ -25,11 +25,18 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { saveFamilyDetails } from "@/app/lib/api/familyApi";
-import { Achievement, AutoBio, FamilyMember, Qualification } from "./types";
+import { toast } from "sonner";
+import { Achievement, AutoBio, FamilyMember, Qualification } from "@/types/background-detls";
+import { saveEducationDetails } from "@/app/lib/api/educationApi";
+import { saveAchievements } from "@/app/lib/api/achievementsApi";
+import { useState } from "react";
 
 export default function BackgroundDetlsPage() {
     const router = useRouter();
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+    const [savedEducation, setSavedEducation] = useState<Qualification[]>([]);
+    const [savedFamily, setSavedFamily] = useState<FamilyMember[]>([]);
+    const [savedAchievements, setSavedAchievements] = useState<Achievement[]>([]);
 
     const handleLogout = () => {
         router.push("/login");
@@ -54,12 +61,11 @@ export default function BackgroundDetlsPage() {
         }
 
         try {
-            console.log("family details", data.family);
             await saveFamilyDetails(selectedCadet.ocId, data.family);
+            setSavedFamily((prev) => [...prev, ...data.family]);
             alert("Family background saved successfully!");
         } catch (err) {
-            console.error("Failed to save family background:", err);
-            alert("Error saving family background data.");
+            toast.success("Error saving family background data.");
         }
     };
 
@@ -75,14 +81,31 @@ export default function BackgroundDetlsPage() {
     });
     const { handleSubmit: handleQualSubmit } = qualificationForm;
 
-    const submitQualifications = (data: any) => {
-        console.log("Educational Qualifications Submitted:", data);
-        alert("Educational qualifications saved successfully!");
+    const submitQualifications = async (data: { qualifications: Qualification[] }) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+        try {
+            const payload = data.qualifications.map((q) => ({
+                level: q.qualification,
+                school: q.school,
+                board: q.board,
+                subjects: q.subs,
+                percentage: q.marks ? Number(q.marks) : 0,
+            }));
+            await saveEducationDetails(selectedCadet.ocId, payload);
+            setSavedEducation((prev) => [...prev, ...data.qualifications]);
+            toast.success("Educational qualifications saved successfully!")
+        } catch (err) {
+            toast.error("error saving eduacational qualifications");
+        }
+        toast.success("Educational qualifications saved successfully!");
     };
 
     // ACHIEVEMENTS
     const achievementForm = useForm<{ achievements: Achievement[] }>({
-        defaultValues: { achievements: [{ event: "", year: "", level: "", prize: "" }] },
+        defaultValues: { achievements: [{ event: "", year: 0, level: "", prize: "" }] },
     });
     const { fields: achFields, append: addAch, remove: removeAch } = useFieldArray({
         control: achievementForm.control,
@@ -90,9 +113,24 @@ export default function BackgroundDetlsPage() {
     });
     const { handleSubmit: handleAchSubmit } = achievementForm;
 
-    const submitAchievements = (data: any) => {
-        console.log("Achievements Submitted:", data);
-        alert("Achievements saved successfully!");
+    const submitAchievements = async (data: { achievements: Achievement[] }) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected")
+            return;
+        }
+        try {
+            const payload = data.achievements.map((a) => ({
+                event: a.event,
+                year: a.year,
+                level: a.level,
+                prize: a.prize,
+            }));
+            await saveAchievements(selectedCadet.ocId, payload);
+            setSavedAchievements((prev) => [...prev, ...data.achievements]);
+        } catch (err) {
+            toast.error("error saving achievements");
+        }
+        toast.success("Achievements saved successfully!");
     };
 
     // AUTOBIOGRAPHY
@@ -111,8 +149,7 @@ export default function BackgroundDetlsPage() {
     const savedAutoBio = watchAutoBio();
 
     const submitAutoBio = (data: AutoBio) => {
-        console.log("Autobiography Submitted:", data);
-        alert("Autobiography saved successfully!");
+        toast.success("Autobiography saved successfully!");
     };
 
     return (
@@ -172,6 +209,39 @@ export default function BackgroundDetlsPage() {
 
                                     {/* FAMILY BACKGROUND */}
                                     <TabsContent value="family-bgrnd">
+                                        {savedFamily && savedFamily.length > 0 ? (
+                                            <div className="overflow-x-auto mb-6 border rounded-lg shadow">
+                                                <table className="min-w-full text-sm text-left border border-gray-300">
+                                                    <thead className="bg-gray-100">
+                                                        <tr>
+                                                            {["S.No", "Name", "Relation", "Age", "Occupation", "Edn Qual", "Mobile"].map((head) => (
+                                                                <th key={head} className="border px-4 py-2 !bg-gray-300 text-center">
+                                                                    {head}
+                                                                </th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {savedFamily.map((member, idx) => (
+                                                            <tr key={idx}>
+                                                                <td className="border px-4 py-2 text-center">{idx + 1}</td>
+                                                                <td className="border px-4 py-2">{member.name}</td>
+                                                                <td className="border px-4 py-2">{member.relation}</td>
+                                                                <td className="border px-4 py-2">{member.age}</td>
+                                                                <td className="border px-4 py-2">{member.occupation}</td>
+                                                                <td className="border px-4 py-2">{member.education}</td>
+                                                                <td className="border px-4 py-2">{member.mobile}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : (
+                                            <p className="text-center mb-4 text-gray-500">
+                                                No family background data saved yet.
+                                            </p>
+                                        )}
+
                                         <form onSubmit={handleFamilySubmit(submitFamily)}>
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full text-sm text-left border border-gray-300">
@@ -210,6 +280,38 @@ export default function BackgroundDetlsPage() {
 
                                     {/* EDUCATIONAL QUALIFICATIONS */}
                                     <TabsContent value="edn-qlf">
+
+                                        <div className="overflow-x-auto mb-6 border rounded-lg shadow">
+                                            {savedEducation.length === 0 ? (
+                                                <p className="text-center p-4 text-gray-500">
+                                                    No educational qualifications saved yet.
+                                                </p>
+                                            ) : (
+                                                <table className="min-w-full text-sm border border-gray-300">
+                                                    <thead className="bg-gray-100">
+                                                        <tr>
+                                                            {["S.No", "Qualification", "School", "Subjects", "Board", "Marks (%)", "Grade"].map((head) => (
+                                                                <th key={head} className="border px-4 py-2 !bg-gray-300">{head}</th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {savedEducation.map((item, idx) => (
+                                                            <tr key={idx}>
+                                                                <td className="border px-4 py-2 text-center">{idx + 1}</td>
+                                                                <td className="border px-4 py-2">{item.qualification}</td>
+                                                                <td className="border px-4 py-2">{item.school}</td>
+                                                                <td className="border px-4 py-2">{item.subs}</td>
+                                                                <td className="border px-4 py-2">{item.board}</td>
+                                                                <td className="border px-4 py-2">{item.marks}</td>
+                                                                <td className="border px-4 py-2">{item.grade}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            )}
+                                        </div>
+
                                         <form onSubmit={handleQualSubmit(submitQualifications)}>
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full text-sm text-left border border-gray-300">
@@ -248,6 +350,36 @@ export default function BackgroundDetlsPage() {
 
                                     {/* ACHIEVEMENTS */}
                                     <TabsContent value="achievements">
+
+                                        {savedAchievements && savedAchievements.length > 0 ? (
+                                            <div className="overflow-x-auto mb-6 border rounded-lg shadow">
+                                                <table className="min-w-full text-sm text-left border border-gray-300">
+                                                    <thead className="bg-gray-100">
+                                                        <tr>
+                                                            {["S.No", "Event", "Year", "Level", "Prize"].map((head) => (
+                                                                <th key={head} className="border px-4 py-2 !bg-gray-300 text-center">
+                                                                    {head}
+                                                                </th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {savedAchievements.map((ach, idx) => (
+                                                            <tr key={idx}>
+                                                                <td className="border px-4 py-2 text-center">{idx + 1}</td>
+                                                                <td className="border px-4 py-2">{ach.event}</td>
+                                                                <td className="border px-4 py-2 text-center">{ach.year}</td>
+                                                                <td className="border px-4 py-2">{ach.level}</td>
+                                                                <td className="border px-4 py-2">{ach.prize}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : (
+                                            <p className="text-center mb-4 text-gray-500">No achievements saved yet.</p>
+                                        )}
+
                                         <form onSubmit={handleAchSubmit(submitAchievements)}>
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full text-sm text-left border border-gray-300">
