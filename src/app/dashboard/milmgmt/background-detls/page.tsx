@@ -61,11 +61,20 @@ export default function BackgroundDetlsPage() {
         }
 
         try {
-            await saveFamilyDetails(selectedCadet.ocId, data.family);
-            setSavedFamily((prev) => [...prev, ...data.family]);
-            alert("Family background saved successfully!");
-        } catch (err) {
-            toast.success("Error saving family background data.");
+            const responses = await saveFamilyDetails(selectedCadet.ocId, data.family);
+
+            const allSucceeded =
+                responses.length > 0
+
+            if (allSucceeded) {
+                setSavedFamily((prev) => [...prev, ...data.family]);
+                toast.success("Family details saved successfully!");
+            } else {
+                toast.warning("Some or all family members failed to save.");
+            }
+        } catch (error) {
+            console.error("Unexpected error saving family details:", error);
+            toast.error("Unexpected error while saving family details.");
         }
     };
 
@@ -94,13 +103,21 @@ export default function BackgroundDetlsPage() {
                 subjects: q.subs,
                 percentage: q.marks ? Number(q.marks) : 0,
             }));
-            await saveEducationDetails(selectedCadet.ocId, payload);
-            setSavedEducation((prev) => [...prev, ...data.qualifications]);
-            toast.success("Educational qualifications saved successfully!")
+            const responses = await saveEducationDetails(selectedCadet.ocId, payload);
+
+            const allSucceeded =
+                responses.length > 0
+
+            if (allSucceeded) {
+                setSavedEducation((prev) => [...prev, ...data.qualifications]);
+                toast.success("Educational qualifications saved successfully!");
+            } else {
+                toast.warning("Some qualifications failed to save. Please check and retry.");
+            }
         } catch (err) {
-            toast.error("error saving eduacational qualifications");
+            console.error("Error saving educational qualifications:", err);
+            toast.error("Error saving educational qualifications.");
         }
-        toast.success("Educational qualifications saved successfully!");
     };
 
     // ACHIEVEMENTS
@@ -125,12 +142,21 @@ export default function BackgroundDetlsPage() {
                 level: a.level,
                 prize: a.prize,
             }));
-            await saveAchievements(selectedCadet.ocId, payload);
-            setSavedAchievements((prev) => [...prev, ...data.achievements]);
+            const responses = await saveAchievements(selectedCadet.ocId, payload);
+
+            const allSucceeded =
+                responses.length > 0
+
+            if (allSucceeded) {
+                setSavedAchievements((prev) => [...prev, ...data.achievements]);
+                toast.success("Achievements saved successfully!");
+            } else {
+                toast.warning("Some achievements failed to save. Please check and retry.");
+            }
         } catch (err) {
-            toast.error("error saving achievements");
+            console.error("Error saving achievements:", err);
+            toast.error("Error saving achievements.");
         }
-        toast.success("Achievements saved successfully!");
     };
 
     // AUTOBIOGRAPHY
