@@ -1,7 +1,8 @@
 // src/app/lib/cookies.ts
 import { NextResponse, NextRequest } from 'next/server';
 
-const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 100000000000); // 15m default
+// SECURITY FIX: Changed default from 100000000000 (3,170 years) to 900 (15 minutes)
+const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900); // 15 minutes default
 
 export function setAccessCookie(res: NextResponse, token: string) {
   res.cookies.set('access_token', token, {
@@ -30,8 +31,9 @@ export function readAccessToken(req: NextRequest): string | null {
   if (authz) {
     const m = authz.match(/^Bearer\s+(.+)$/i);
     if (m) return m[1];
-  }console.log({authz});
-  
+  }
+  // SECURITY FIX: Removed console.log that exposed authorization header
+
   // Fallback to cookie
   return req.cookies.get('access_token')?.value ?? null;
 }

@@ -10,11 +10,48 @@ import { eq } from 'drizzle-orm';
 import argon2 from 'argon2';
 import { getActiveAppointmentWithHolder } from '@/app/db/queries/appointments';
 import { SCOPE } from '@/constants/app.constants';
+import { getClientIp, checkLoginRateLimit, getRateLimitHeaders } from '@/lib/ratelimit';
+import {
+  recordLoginAttempt,
+  isAccountLocked,
+  checkAndLockAccount,
+} from '@/app/db/queries/account-lockout';
+import {
+  logLoginSuccess,
+  logLoginFailure,
+  logAccountLocked,
+} from '@/lib/audit-log';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.EXPOSE_TOKENS_IN_DEV === 'true';
 
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY FIX: Rate limiting for login attempts (5 per 15 minutes)
+    const clientIp = getClientIp(req);
+    
+    const rateLimitResult = await checkLoginRateLimit(clientIp);
+
+    if (!rateLimitResult.success) {
+      const headers = getRateLimitHeaders(rateLimitResult);
+      return new Response(
+        JSON.stringify({
+          status: 429,
+          ok: false,
+          error: 'too_many_requests',
+          message: 'Too many login attempts. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+            'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+
     // 0) Parse JSON safely
     let body: unknown;
     try {
@@ -26,7 +63,6 @@ export async function POST(req: NextRequest) {
     // 1) Explicit missing-field check (before Zod)
     const b = (body ?? {}) as Record<string, unknown>;
     const requiredFields = ['appointmentId', 'username', 'password'] as const;
-
     const missing = requiredFields.filter((k) => {
       const v = b[k];
       if (v === null || v === undefined) return true;
@@ -50,8 +86,42 @@ export async function POST(req: NextRequest) {
 
     const { appointmentId, platoonId, username, password } = parsed.data;
 
-    // 3) Domain checks & auth
+    // SECURITY FIX: Check if account is locked before proceeding
+    // First, try to get the user ID from username to check lockout status
     const apt = await getActiveAppointmentWithHolder(appointmentId);
+
+    if (apt && apt.userId) {
+      const lockout = await isAccountLocked(apt.userId);
+      if (lockout) {
+        const minutesRemaining = Math.ceil((new Date(lockout.lockedUntil).getTime() - Date.now()) / 60000);
+
+        // Record the failed attempt (account locked)
+        await recordLoginAttempt({
+          userId: apt.userId,
+          username: username.toLowerCase(),
+          ipAddress: clientIp,
+          userAgent: req.headers.get('user-agent') ?? undefined,
+          success: false,
+          failureReason: 'Account locked',
+        });
+
+        // SECURITY FIX: Audit log - login attempt while account locked
+        await logLoginFailure({
+          userId: apt.userId,
+          username: username.toLowerCase(),
+          reason: 'Account locked',
+          request: req,
+        });
+
+        throw new ApiError(
+          403,
+          `Account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minutes.`,
+          'ACCOUNT_LOCKED'
+        );
+      }
+    }
+
+    // 3) Domain checks & auth
 
     if (!apt) throw new ApiError(400, 'Appointment is not active', 'INVALID_APPOINTMENT');
 
@@ -91,10 +161,91 @@ export async function POST(req: NextRequest) {
     // }
 
     const [cred] = await db.select().from(credentialsLocal).where(eq(credentialsLocal.userId, apt.userId)).limit(1);
-    if (!cred) throw new ApiError(401, 'invalid_credentials', 'NO_CREDENTIALS');
+    if (!cred) {
+      // SECURITY FIX: Record failed attempt (no credentials found)
+      await recordLoginAttempt({
+        userId: apt.userId,
+        username: username.toLowerCase(),
+        ipAddress: clientIp,
+        userAgent: req.headers.get('user-agent') ?? undefined,
+        success: false,
+        failureReason: 'No credentials found',
+      });
+
+      // Check if account should be locked
+      await checkAndLockAccount(username.toLowerCase(), apt.userId, clientIp);
+
+      // SECURITY FIX: Audit log - failed login (no credentials)
+      await logLoginFailure({
+        userId: apt.userId,
+        username: username.toLowerCase(),
+        reason: 'No credentials found',
+        request: req,
+      });
+
+      throw new ApiError(401, 'invalid_credentials', 'NO_CREDENTIALS');
+    }
 
     const ok = await argon2.verify(cred.passwordHash, password);
-    if (!ok) throw new ApiError(401, 'invalid_credentials', 'BAD_PASSWORD');
+    if (!ok) {
+      // SECURITY FIX: Record failed attempt (wrong password)
+      await recordLoginAttempt({
+        userId: apt.userId,
+        username: username.toLowerCase(),
+        ipAddress: clientIp,
+        userAgent: req.headers.get('user-agent') ?? undefined,
+        success: false,
+        failureReason: 'Invalid password',
+      });
+
+      // Check if account should be locked
+      const lockout = await checkAndLockAccount(username.toLowerCase(), apt.userId, clientIp);
+
+      if (lockout) {
+        // SECURITY FIX: Audit log - account locked
+        await logAccountLocked({
+          userId: apt.userId,
+          username: username.toLowerCase(),
+          failedAttempts: lockout.failedAttempts,
+          lockedUntil: new Date(lockout.lockedUntil),
+          request: req,
+        });
+
+        const minutesRemaining = Math.ceil((new Date(lockout.lockedUntil).getTime() - Date.now()) / 60000);
+        throw new ApiError(
+          403,
+          `Account has been locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minutes.`,
+          'ACCOUNT_LOCKED'
+        );
+      }
+
+      // SECURITY FIX: Audit log - failed login (invalid password)
+      await logLoginFailure({
+        userId: apt.userId,
+        username: username.toLowerCase(),
+        reason: 'Invalid password',
+        request: req,
+      });
+
+      throw new ApiError(401, 'invalid_credentials', 'BAD_PASSWORD');
+    }
+
+    // SECURITY FIX: Record successful login attempt
+    await recordLoginAttempt({
+      userId: apt.userId,
+      username: username.toLowerCase(),
+      ipAddress: clientIp,
+      userAgent: req.headers.get('user-agent') ?? undefined,
+      success: true,
+    });
+
+    // SECURITY FIX: Audit log - successful login
+    await logLoginSuccess({
+      userId: apt.userId,
+      username: username.toLowerCase(),
+      appointmentId: apt.id,
+      request: req,
+    });
 
     // const roleRows = await db
     //   .select({ key: roles.key })

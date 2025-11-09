@@ -5,7 +5,7 @@ import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ocCadets } from '@/app/db/schema/training/oc';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql, ilike, or } from 'drizzle-orm';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 
@@ -91,7 +91,15 @@ export async function GET(req: NextRequest) {
         const activeOnly = (sp.get('active') || '').toLowerCase() === 'true';
 
         const wh: any[] = [];
-        if (q) wh.push(sql`(${ocCadets.name} ILIKE ${'%' + q + '%'} OR ${ocCadets.ocNo} ILIKE ${'%' + q + '%'})`);
+        // SECURITY FIX: Use Drizzle's built-in ilike function with proper parameterization
+        // Also escape SQL LIKE wildcards to prevent injection
+        if (q) {
+            const searchPattern = `%${q.replace(/[%_\\]/g, '\\$&')}%`;
+            wh.push(or(
+                ilike(ocCadets.name, searchPattern),
+                ilike(ocCadets.ocNo, searchPattern)
+            ));
+        }
         if (courseId) wh.push(eq(ocCadets.courseId, courseId));
         if (activeOnly) wh.push(isNull(ocCadets.withdrawnOn));
 

@@ -48,7 +48,9 @@ async function getKeys() {
 }
 
 
-const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 1000000000000); // 15m
+// SECURITY FIX: Changed default from 1000000000000 (31,688 years) to 900 (15 minutes)
+// Always set ACCESS_TOKEN_TTL_SECONDS in .env to avoid using default
+const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900); // 15 minutes default
 
 export type AptClaim = {
   id: string;
@@ -85,8 +87,7 @@ export async function signAccessJWT(opts: {
 
 export async function verifyAccessJWT(token: string) {
   const { pub } = await getKeys();
-  // const { payload } = await jwtVerify(token, pub, { issuer: ISS, audience: AUD });
+  // SECURITY FIX: Removed duplicate JWT verification call
   const { payload } = await jwtVerify(token, pub, { issuer: ISS, audience: AUD });
-  const a = await jwtVerify(token, pub, { issuer: ISS, audience: AUD });
   return payload as JWTPayload & { roles?: string[]; apt?: AptClaim; pwd_at?: string | null };
 }

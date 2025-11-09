@@ -129,6 +129,23 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
         headers: { ...(headers ?? {}) },
     };
 
+    // SECURITY FIX: Add CSRF token for state-changing requests
+    // Only on client-side (browser environment)
+    if (typeof window !== 'undefined' && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
+        // Get CSRF token from cookie
+        const csrfToken = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrf-token='))
+            ?.split('=')[1];
+
+        if (csrfToken) {
+            init.headers = {
+                ...init.headers,
+                'X-CSRF-Token': csrfToken
+            };
+        }
+    }
+
     // Auto content-type + body
     if (body !== undefined && body !== null) {
         if (isFormLike(body)) {
@@ -145,6 +162,25 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
     }
 
     const res = await fetch(url, init);
+
+    // SECURITY FIX: Handle 401 Unauthorized - redirect to login
+    if (res.status === 401) {
+        // Only redirect on client-side (browser environment)
+        if (typeof window !== 'undefined') {
+            // Clear any stored auth state
+            document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            // Redirect to login page
+            window.location.href = '/';
+        }
+        // Still throw error for proper error handling
+        throw new ApiClientError(
+            'Unauthorized - Please log in',
+            401,
+            'unauthorized',
+            {},
+            res
+        );
+    }
 
     // Handle 204 (no content) quickly
     if (res.status === 204) return undefined as unknown as T;
