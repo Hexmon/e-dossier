@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
@@ -20,13 +20,8 @@ import {
 
 import { getAppointments, Appointment } from "@/app/lib/api/appointmentApi";
 import { loginUser } from "@/app/lib/api/authApi";
-
-interface LoginForm {
-  appointment: string;
-  username: string;
-  password: string;
-  platoon?: string;
-}
+import Image from "next/image";
+import { LoginForm } from "../../../types/login";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -54,26 +49,25 @@ export default function LoginPage() {
   const appointment = watch("appointment");
   const platoon = watch("platoon");
 
-  // 🔹 Fetch all appointments on mount
+  //  Fetch all appointments on mount
+  const fetchAppointments = async () => {
+    try {
+      const data = await getAppointments();
+      setAppointments(data);
+    } catch (err) {
+      toast.error("Unable to load appointments.");
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
   useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        const data = await getAppointments();
-        setAppointments(data);
-      } catch (err) {
-        console.error("Failed to fetch appointments", err);
-        toast.error("Unable to load appointments.");
-      } finally {
-        setLoadingAppointments(false);
-      }
-    };
     fetchAppointments();
   }, []);
 
   // Filter platoon commanders directly from appointments
-  const platoonCommanders = appointments.filter(
-    (a) => a.positionName === "Platoon Commander"
-  );
+const platoonCommanders = useMemo(() => {
+  return appointments.filter((a) => a.positionName === "Platoon Commander");
+}, [appointments]);
 
   const onSubmit = async (data: LoginForm) => {
     if (!data.username || !data.password || !data.appointment) {
@@ -139,18 +133,22 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[var(--primary)] flex items-center justify-center p-4 relative">
       {/* Background */}
       <div className="absolute inset-0 opacity-5">
-        <img
-          src="https://facultytick.com/wp-content/uploads/2022/03/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+        <Image
+          src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
           alt="MCEME Background"
-          className="object-contain"
+          width={122}
+          height={122}
+          className="w-full h-full object-contain"
         />
       </div>
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <img
-            src="https://facultytick.com/wp-content/uploads/2022/03/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
-            alt="MCEME Logo"
+          <Image
+            src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+            alt="MCEME Background"
+            width={122}
+            height={122}
             className="h-16 w-auto mx-auto mb-4"
           />
           <h1 className="text-2xl font-bold text-primary-foreground">
@@ -194,9 +192,9 @@ export default function LoginPage() {
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {appointments.map((item) => (
-                        <SelectItem key={item.id} value={item.positionName}>
-                          {item.positionName}
+                      {(appointments ?? []).map(({id, positionName}) => (
+                        <SelectItem key={id} value={positionName}>
+                          {positionName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -204,7 +202,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Platoon Dropdown (derived from appointments) */}
-                {appointment === "Platoon Commander" && (
+                {(appointment ?? "") === "Platoon Commander" && (
                   <div className="space-y-2">
                     <Label htmlFor="platoon">Platoon</Label>
                     <Select
@@ -215,14 +213,17 @@ export default function LoginPage() {
                         <SelectValue placeholder="Select your platoon" />
                       </SelectTrigger>
                       <SelectContent>
-                        {platoonCommanders.map((cmdr) => (
+                        {platoonCommanders.map((cmdr) => {
+                          const {id, username} = cmdr || {}
+                          return (
                           <SelectItem
-                            key={cmdr.id}
-                            value={cmdr.username}
+                            key={id ?? 0}
+                            value={username ?? ""}
                           >
-                            {cmdr.username}
+                            {username ?? ""}
                           </SelectItem>
-                        ))}
+                        )
+                        })}
                       </SelectContent>
                     </Select>
                   </div>

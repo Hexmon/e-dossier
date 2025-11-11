@@ -24,41 +24,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface FamilyMember {
-    name: string;
-    relation: string;
-    age: string;
-    occupation: string;
-    education: string;
-    mobile: string;
-}
-
-interface Qualification {
-    qualification: string;
-    school: string;
-    subs: string;
-    board: string;
-    marks: string;
-    grade: string;
-}
-
-interface Achievement {
-    event: string;
-    year: string;
-    level: string;
-    prize: string;
-}
-
-interface AutoBio {
-    general: string;
-    proficiency: string;
-    work: string;
-    additional: string;
-    date: string;
-    sign_oc: string;
-    sign_pi: string;
-}
+import { saveFamilyDetails } from "@/app/lib/api/familyApi";
+import { Achievement, AutoBio, FamilyMember, Qualification } from "./types";
 
 export default function BackgroundDetlsPage() {
     const router = useRouter();
@@ -80,9 +47,20 @@ export default function BackgroundDetlsPage() {
     });
     const { handleSubmit: handleFamilySubmit } = familyForm;
 
-    const submitFamily = (data: any) => {
-        console.log("Family Background Submitted:", data);
-        alert("Family background saved successfully!");
+    const submitFamily = async (data: { family: FamilyMember[] }) => {
+        if (!selectedCadet?.ocId) {
+            alert("No cadet selected");
+            return;
+        }
+
+        try {
+            console.log("family details", data.family);
+            await saveFamilyDetails(selectedCadet.ocId, data.family);
+            alert("Family background saved successfully!");
+        } catch (err) {
+            console.error("Failed to save family background:", err);
+            alert("Error saving family background data.");
+        }
     };
 
     // EDUCATIONAL QUALIFICATIONS

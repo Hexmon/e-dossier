@@ -23,13 +23,15 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createOCPersonal, getOCPersonal, OCPersonalRecord, updateOCPersonal } from "@/app/lib/api/ocPersonalApi";
 
 interface PersonalData {
-    [key: string]: string;
+    [key: string]: string | boolean;
 }
 
 export default function PersParticularsPage() {
+    const [savedData, setSavedData] = useState<OCPersonalRecord | null>(null);
     const router = useRouter();
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
 
@@ -37,16 +39,152 @@ export default function PersParticularsPage() {
         defaultValues: {},
     });
 
-    const [savedData, setSavedData] = useState<PersonalData | null>(null);
+    const handleBloodGroupUpdate = async () => {
+        if (!selectedCadet?.ocId) {
+            alert("No cadet selected");
+            return;
+        }
+
+        try {
+            const updated = await updateOCPersonal(selectedCadet.ocId, { bloodGp: "A+" });
+            setSavedData(updated);
+            alert("Blood group updated successfully!");
+        } catch (err) {
+            console.error("Failed to update blood group:", err);
+            alert("Error updating blood group.");
+        }
+    };
+
+    const fetchPersonalData = async () => {
+        if (!selectedCadet?.ocId) {
+            console.warn("No cadet selected — skipping data fetch.");
+            return;
+        }
+
+        console.log(`Fetching personal data for cadet OC ID: ${selectedCadet.ocId}...`);
+
+        try {
+            const personals = await getOCPersonal(selectedCadet.ocId);
+
+            console.log("Data successfully fetched from backend:", personals);
+
+            if (personals.length > 0) {
+                setSavedData(personals[0]);
+                console.log("First record saved to state:", personals[0]);
+            } else {
+                setSavedData(null);
+                console.log("ℹNo personal data found for this cadet.");
+            }
+        } catch (err) {
+            console.error("Failed to load personal particulars:", err);
+            setSavedData(null);
+        }
+    };
+
+    useEffect(() => {
+        fetchPersonalData();
+    }, [selectedCadet]);
+
+
+
 
     const handleLogout = () => {
         router.push("/login");
         console.log("Logout clicked");
     };
 
-    const onSubmit = (data: PersonalData) => {
-        setSavedData(data);
-        alert("Personal particulars saved successfully!");
+    const onSubmit = async (data: PersonalData) => {
+        if (!selectedCadet?.ocId) {
+            alert("No cadet selected");
+            return;
+        }
+
+        const payload = {
+            ...data,
+            swimmer:
+                data.swimmer === true ||
+                data.swimmer === "true" ||
+                data.swimmer === "on",
+        };
+
+        try {
+            let saved: OCPersonalRecord;
+
+            if (!savedData) {
+                saved = await createOCPersonal(selectedCadet.ocId, payload);
+                alert("Personal particulars saved successfully!");
+            }
+            else {
+                const updatableFields = [
+                    "visibleIdentMarks",
+                    "pi",
+                    "dob",
+                    "placeOfBirth",
+                    "domicile",
+                    "religion",
+                    "nationality",
+                    "bloodGroup",
+                    "identMarks",
+                    "mobileNo",
+                    "email",
+                    "passportNo",
+                    "panNo",
+                    "aadhaarNo",
+                    "fatherName",
+                    "fatherMobile",
+                    "fatherAddrPerm",
+                    "fatherAddrPresent",
+                    "fatherProfession",
+                    "guardianName",
+                    "guardianAddress",
+                    "monthlyIncome",
+                    "nokDetails",
+                    "nokAddrPerm",
+                    "nokAddrPresent",
+                    "nearestRailwayStation",
+                    "familyInSecunderabad",
+                    "relativeInArmedForces",
+                    "govtFinancialAssistance",
+                    "bankDetails",
+                    "idenCardNo",
+                    "upscRollNo",
+                    "ssbCentre",
+                    "games",
+                    "hobbies",
+                    "swimmer",
+                    "languages",
+                    "dsPiSsicNo",
+                    "dsPiRank",
+                    "dsPiName",
+                    "dsPiUnitArm",
+                    "dsPiMobile",
+                    "dsDyIcNo",
+                    "dsDyRank",
+                    "dsDyName",
+                    "dsDyUnitArm",
+                    "dsDyMobile",
+                    "dsCdrIcNo",
+                    "dsCdrRank",
+                    "dsCdrName",
+                    "dsCdrUnitArm",
+                    "dsCdrMobile",
+                ] as const;
+
+                const updatePayload = Object.fromEntries(
+                    Object.entries(payload).filter(([key]) =>
+                        updatableFields.includes(key as keyof typeof payload)
+                    )
+                );
+
+                saved = await updateOCPersonal(selectedCadet.ocId, updatePayload);
+                alert("Personal particulars updated successfully!");
+            }
+
+            setSavedData(saved);
+        } catch (err: any) {
+            console.error("Failed to save personal particulars:", err);
+            alert(err?.message || "Error saving data.");
+        }
     };
 
     return (
@@ -124,7 +262,7 @@ export default function PersParticularsPage() {
                                                                 "no",
                                                                 "name",
                                                                 "course",
-                                                                "doa",
+                                                                "date of arrvl",
                                                                 "idenMarks",
                                                                 "pi",
                                                                 "dob",
@@ -139,7 +277,7 @@ export default function PersParticularsPage() {
                                                                     <label className="text-sm font-medium capitalize">{name}</label>
                                                                     <Input
                                                                         {...register(name)}
-                                                                        type={name === "dob" || name === "doa" ? "date" : "text"}
+                                                                        type={name === "dob" || name === "date of arrvl" ? "date" : "text"}
                                                                         placeholder={`Enter ${name}`}
                                                                     />
                                                                 </div>
@@ -210,13 +348,25 @@ export default function PersParticularsPage() {
                                                         </CardHeader>
                                                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                             {["games", "hobbies", "swimmer", "languages"].map((name) => (
-                                                                <div key={name}>
-                                                                    <label className="text-sm font-medium capitalize">{name}</label>
-                                                                    <Input {...register(name)} placeholder={`Enter ${name}`} />
+                                                                <div key={name} className="flex items-center gap-2">
+                                                                    <label className="text-sm font-medium capitalize w-32">
+                                                                        {name}
+                                                                    </label>
+
+                                                                    {name === "swimmer" ? (
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            {...register("swimmer")}
+                                                                            className="h-4 w-4 accent-primary"
+                                                                        />
+                                                                    ) : (
+                                                                        <Input {...register(name)} placeholder={`Enter ${name}`} />
+                                                                    )}
                                                                 </div>
                                                             ))}
                                                         </CardContent>
                                                     </Card>
+
 
                                                     {/* SECTION E */}
                                                     <Card className="border-none">
@@ -274,15 +424,19 @@ export default function PersParticularsPage() {
                                                         <div className="grid grid-cols-2 gap-4 text-sm">
                                                             {Object.entries(savedData).map(([key, value]) => (
                                                                 <p key={key}>
-                                                                    <strong>{key}:</strong> {value || "-"}
+                                                                    <strong>{key}:</strong>{" "}
+                                                                    {typeof value === "boolean"
+                                                                        ? value ? "Yes" : "No"
+                                                                        : value || "-"}
                                                                 </p>
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <p className="text-gray-500 italic">No data saved yet.</p>
+                                                        <p className="text-gray-500 italic">No data found for this cadet.</p>
                                                     )}
                                                 </Card>
                                             </TabsContent>
+
                                         </Tabs>
                                     </CardContent>
                                 </Card>

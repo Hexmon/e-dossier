@@ -15,8 +15,6 @@ import { dashboardCards } from "@/config/app.config";
 
 const DashboardPage = () => {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-
   const handleLogout = () => {
     router.push("/login");
   };
@@ -24,7 +22,9 @@ const DashboardPage = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
+        <aside>
+          <AppSidebar />
+        </aside>
 
         <div className="flex-1 flex flex-col">
           {/* Header */}
@@ -38,15 +38,17 @@ const DashboardPage = () => {
 
           {/* Main Content */}
           <main className="flex-1 p-6">
-            <BreadcrumbNav
-              paths={[
-                { label: "Dashboard", href: "/dashboard" },
-                { label: "Home" },
-              ]}
-            />
+            <nav aria-label="Breadcrumb">
+              <BreadcrumbNav
+                paths={[
+                  { label: "Dashboard", href: "/dashboard" },
+                  { label: "Home" },
+                ]}
+              />
+            </nav>
 
             {/* Dashboard Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
               {dashboardCards.map((card, index) => {
                 const IconComponent = card.icon;
                 return (
@@ -77,10 +79,10 @@ const DashboardPage = () => {
                   </Card>
                 );
               })}
-            </div>
+            </section>
 
             {/* Quick Stats */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <section className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -118,7 +120,7 @@ const DashboardPage = () => {
                   </p>
                 </CardContent>
               </Card>
-            </div>
+            </section>
           </main>
         </div>
       </div>
