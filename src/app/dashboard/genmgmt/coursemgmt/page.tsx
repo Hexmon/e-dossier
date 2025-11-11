@@ -60,7 +60,7 @@ export default function CourseManagement() {
   };
   useEffect(() => {
     fetchCourses();
-  }, [fetchCourses]);
+  }, []);
 
   //  Create or update a course
   const handleSaveCourse = async (courseData: Omit<Course, "id">) => {

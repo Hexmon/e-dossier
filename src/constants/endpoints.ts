@@ -25,7 +25,13 @@ export const endpoints = {
         personal: (ocId: string) => `/api/v1/oc/${ocId}/personal`,
         family: (ocId: string) => `/api/v1/oc/${ocId}/family`,
         education: (ocId: string) => `/api/v1/oc/${ocId}/education`,
-        achievements: (ocId: string) => `/api/v1/oc/${ocId}/achievements`
+        achievements: (ocId: string) => `/api/v1/oc/${ocId}/achievements`,
+        autobiography: (ocId: string) => `/api/v1/oc/${ocId}/autobiography`,
+        ssbreport: (ocId: string) => `/api/v1/oc/${ocId}/ssb`,
+        medical: (ocId: string) => `/api/v1/oc/${ocId}/medical`,
+        medicalCategory: (ocId: string) => `/api/v1/oc/${ocId}/medical-category`,
+        discipline: (ocId: string) => `/api/v1/oc/${ocId}/discipline`,
+        parentComms: (ocId: string) => `/api/v1/oc/${ocId}/parent-comms`,
     },
     course: {
         all: "/api/v1/courses"

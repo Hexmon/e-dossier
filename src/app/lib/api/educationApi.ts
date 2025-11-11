@@ -2,6 +2,7 @@
 import { api } from "@/app/lib/apiClient";
 import { endpoints } from "@/constants/endpoints";
 
+
 // Type definition for the education record
 export interface EducationRecord {
     level: string;
@@ -10,6 +11,17 @@ export interface EducationRecord {
     subjects: string;
     percentage: number;
 }
+
+export interface EducationRecordResponse {
+  id: string;
+  ocId: string;
+  level: string;
+  schoolOrCollege: string | null;
+  boardOrUniv: string | null;
+  subjects: string | null;
+  totalPercent: number | null;
+}
+
 
 export interface ApiResponse<T = any> {
     status: number;
@@ -45,6 +57,22 @@ export async function saveEducationDetails(
         return responses;
     } catch (error: any) {
         console.error("Error saving education details:", error);
+        return [];
+    }
+}
+
+export async function getEducationDetails(ocId: string): Promise<EducationRecordResponse[]> {
+    try {
+        const response = await api.get<{ items: EducationRecordResponse[]; count: number }>(
+            endpoints.oc.education(ocId)
+        );
+        if (Array.isArray(response?.items)) {
+            return response.items;
+        }
+
+        return [];
+    } catch (error) {
+        console.error("Error fetching education details:", error);
         return [];
     }
 }

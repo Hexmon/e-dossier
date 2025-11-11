@@ -7,7 +7,7 @@ export interface FamilyMember {
     age?: string | number;
     occupation?: string;
     education?: string;
-    mobile?: string;
+    mobileNo?: string;
 }
 
 export interface ApiResponse<T = any> {
@@ -27,7 +27,6 @@ export async function saveFamilyDetails(
         for (const member of family) {
             const payload = {
                 ...member,
-                mobileNo: member.mobile,
                 age: member.age ? Number(member.age) : undefined,
             };
 
@@ -41,7 +40,18 @@ export async function saveFamilyDetails(
 
         return responses;
     } catch (error: any) {
-        console.error("Error saving family details:", error);
+        return [];
+    }
+}
+
+export async function getFamilyDetails(ocId: string): Promise<FamilyMember[]> {
+    try {
+        const response = await api.get(endpoints.oc.family(ocId)) as any;
+        if (Array.isArray(response?.items)) {
+            return response.items;
+        }
+        return [];
+    } catch (error) {
         return [];
     }
 }

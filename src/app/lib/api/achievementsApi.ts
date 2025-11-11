@@ -40,3 +40,24 @@ export async function saveAchievements(ocId: string, achievements: AchievementRe
         return [];
     }
 }
+
+export async function getAchievements(ocId: string): Promise<AchievementRecords[]> {
+    try {
+        const response: any = await api.get(endpoints.oc.achievements(ocId));
+
+        console.log("achievement response:", response)
+
+        if (response?.items && Array.isArray(response.items)) {
+            return response.items as AchievementRecords[];
+        }
+
+        if (Array.isArray(response?.data)) {
+            return response.items as AchievementRecords[];
+        }
+
+        return [];
+    } catch (error) {
+        console.error("Error fetching achievements:", error);
+        return [];
+    }
+}

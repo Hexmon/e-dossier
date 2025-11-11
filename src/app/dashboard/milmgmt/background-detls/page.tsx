@@ -24,12 +24,13 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { saveFamilyDetails } from "@/app/lib/api/familyApi";
+import { FamilyMember, getFamilyDetails, saveFamilyDetails } from "@/app/lib/api/familyApi";
 import { toast } from "sonner";
-import { Achievement, AutoBio, FamilyMember, Qualification } from "@/types/background-detls";
-import { saveEducationDetails } from "@/app/lib/api/educationApi";
-import { saveAchievements } from "@/app/lib/api/achievementsApi";
-import { useState } from "react";
+import { Achievement, AutoBio, Qualification } from "@/types/background-detls";
+import { EducationRecordResponse, getEducationDetails, saveEducationDetails } from "@/app/lib/api/educationApi";
+import { getAchievements, saveAchievements } from "@/app/lib/api/achievementsApi";
+import { useCallback, useEffect, useState } from "react";
+import { getAutobiographyDetails, saveAutobiography } from "@/app/lib/api/autobiographyApi";
 
 export default function BackgroundDetlsPage() {
     const router = useRouter();
@@ -43,9 +44,25 @@ export default function BackgroundDetlsPage() {
     };
 
     // FAMILY BACKGROUND
+    const fetchFamilyData = useCallback(async () => {
+        if (!selectedCadet?.ocId) return;
+        try {
+            const data = await getFamilyDetails(selectedCadet.ocId);
+            if (data.length > 0) {
+                setSavedFamily(data);
+            }
+        } catch (err) {
+            toast.error("Error loading family background data.");
+        }
+    }, [selectedCadet?.ocId]);
+
+    useEffect(() => {
+        fetchFamilyData();
+    }, [fetchFamilyData]);
+
     const familyForm = useForm<{ family: FamilyMember[] }>({
         defaultValues: {
-            family: [{ name: "", relation: "", age: "", occupation: "", education: "", mobile: "" }],
+            family: [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }],
         },
     });
     const { fields: familyFields, append: addFamily, remove: removeFamily } = useFieldArray({
@@ -56,7 +73,7 @@ export default function BackgroundDetlsPage() {
 
     const submitFamily = async (data: { family: FamilyMember[] }) => {
         if (!selectedCadet?.ocId) {
-            alert("No cadet selected");
+            toast.error("No cadet selected");
             return;
         }
 
@@ -79,6 +96,33 @@ export default function BackgroundDetlsPage() {
     };
 
     // EDUCATIONAL QUALIFICATIONS
+    const fetchEducationData = useCallback(async () => {
+        if (!selectedCadet?.ocId) return;
+        try {
+            const data = await getEducationDetails(selectedCadet.ocId) as EducationRecordResponse[];
+            console.log("Education data:", data);
+
+            if (Array.isArray(data) && data.length > 0) {
+                const formatted = data.map((item) => ({
+                    qualification: item.level || "",
+                    school: item.schoolOrCollege || "",
+                    subs: item.subjects || "",
+                    board: item.boardOrUniv || "",
+                    marks: item.totalPercent ? item.totalPercent.toString() : "",
+                    grade: "",
+                }));
+                setSavedEducation(formatted);
+            }
+        } catch (err) {
+            console.error("Error loading educational details:", err);
+            toast.error("Error loading educational details.");
+        }
+    }, [selectedCadet?.ocId]);
+
+    useEffect(() => {
+        fetchEducationData();
+    }, [fetchEducationData]);
+
     const qualificationForm = useForm<{ qualifications: Qualification[] }>({
         defaultValues: {
             qualifications: [{ qualification: "", school: "", subs: "", board: "", marks: "", grade: "" }],
@@ -121,6 +165,25 @@ export default function BackgroundDetlsPage() {
     };
 
     // ACHIEVEMENTS
+    const fetchAchievements = useCallback(async () => {
+        if (!selectedCadet?.ocId) return;
+        try {
+            const data = await getAchievements(selectedCadet.ocId);
+            console.log("Achievements data:", data);
+
+            if (Array.isArray(data) && data.length > 0) {
+                setSavedAchievements(data);
+            }
+        } catch (err) {
+            console.error("Error loading achievements:", err);
+            toast.error("Error loading achievements data.");
+        }
+    }, [selectedCadet?.ocId]);
+
+    useEffect(() => {
+        fetchAchievements();
+    }, [fetchAchievements]);
+
     const achievementForm = useForm<{ achievements: Achievement[] }>({
         defaultValues: { achievements: [{ event: "", year: 0, level: "", prize: "" }] },
     });
@@ -173,10 +236,48 @@ export default function BackgroundDetlsPage() {
     });
     const { register: autoBioRegister, handleSubmit: handleAutoBioSubmit, reset: resetAutoBio, watch: watchAutoBio } = autoBioForm;
     const savedAutoBio = watchAutoBio();
+    const fetchAutobiography = useCallback(async () => {
+        if (!selectedCadet?.ocId) return;
 
-    const submitAutoBio = (data: AutoBio) => {
-        toast.success("Autobiography saved successfully!");
+        try {
+            const data = await getAutobiographyDetails(selectedCadet.ocId);
+            console.log("auto bio data", data)
+            if (data) {
+                resetAutoBio(data);
+            } else {
+                console.log("No autobiography data found.");
+            }
+        } catch (err) {
+            console.error("Error loading autobiography data:", err);
+            toast.error("Error loading autobiography details.");
+        }
+    }, [selectedCadet?.ocId, resetAutoBio]);
+
+    useEffect(() => {
+        fetchAutobiography();
+    }, [fetchAutobiography]);
+
+    const submitAutoBio = async (data: AutoBio) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+
+        try {
+            const response = await saveAutobiography(selectedCadet.ocId, data);
+            console.log("response", response.ok, response.status);
+
+            if (response?.data && Object.keys(response.data).length > 0) {
+                toast.success("Autobiography saved successfully!");
+            } else {
+                toast.warning("Failed to save autobiography. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error saving autobiography:", error);
+            toast.error("An unexpected error occurred while saving autobiography.");
+        }
     };
+
 
     return (
         <SidebarProvider>
@@ -256,7 +357,7 @@ export default function BackgroundDetlsPage() {
                                                                 <td className="border px-4 py-2">{member.age}</td>
                                                                 <td className="border px-4 py-2">{member.occupation}</td>
                                                                 <td className="border px-4 py-2">{member.education}</td>
-                                                                <td className="border px-4 py-2">{member.mobile}</td>
+                                                                <td className="border px-4 py-2">{member.mobileNo}</td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
