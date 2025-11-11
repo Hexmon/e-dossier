@@ -26,6 +26,13 @@ export default function OCManagementPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
 
+  // Bulk upload helpers/state
+  const [rawRows, setRawRows] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ processed: number; total: number; success: number } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{ success: number; failed: number; errors: { row: number; error: string }[] } | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const [newOC, setNewOC] = useState<OCRecord>({
     tesNo: "",
     name: "",
@@ -145,55 +152,88 @@ export default function OCManagementPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const normalize = (s: string) =>
+      (s || "")
+        .toLowerCase()
+        .replace(/[\u2019'`]/g, "'")
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const toMap = (obj: any) => {
+      const m: Record<string, any> = {};
+      Object.keys(obj || {}).forEach((k) => (m[normalize(k)] = obj[k]));
+      return m;
+    };
+
+    const get = (m: Record<string, any>, aliases: string[]): any => {
+      for (const a of aliases) {
+        const v = m[normalize(a)];
+        if (v != null && v !== "") return v;
+      }
+      return "";
+    };
+
+    const formatRecordFromRaw = (raw: any): OCRecord => {
+      const m = toMap(raw);
+      const govFin = get(m, ["Govt Fin Asst Mob No"]);
+      let mobFromGov: string = "";
+      if (govFin) {
+        mobFromGov = String(govFin).replace(/[^0-9+]/g, "").slice(0, 20);
+      }
+      return {
+        tesNo: get(m, ["Tes No", "TesNo", "OC No", "OC Number"]).toString(),
+        name: get(m, ["Name"]).toString(),
+        course: get(m, ["Course", "Course Code", "Course Name"]).toString(),
+        dtOfArrival: get(m, ["Dt of Arrival", "Date of Arrival", "DOA"]).toString(),
+        pl: get(m, ["Pl"]).toString(),
+        dob: get(m, ["DOB", "Date of Birth"]).toString(),
+        placeOfBirth: get(m, ["Place of Birth"]).toString(),
+        domicile: get(m, ["Domicile"]).toString(),
+        religion: get(m, ["Religion"]).toString(),
+        nationality: get(m, ["Nationality"]).toString(),
+        bloodGp: get(m, ["Blood GP", "Blood Gp", "Blood Group"]).toString(),
+        idenMarks: get(m, ["Iden Marks", "Identification Marks"]).toString(),
+        fatherName: get(m, ["Father's Name", "Fathers Name"]).toString(),
+        fatherMobile: get(m, ["Father's Mobile", "Father's Mobile No", "Fathers Mobile"]).toString(),
+        fatherAddress: get(m, ["Father's Address", "Father Address"]).toString(),
+        fatherProfession: get(m, ["Father's Profession", "Father Profession"]).toString(),
+        guardianName: get(m, ["Guardian Name", "Guardian's Name"]).toString(),
+        guardianAddress: get(m, ["Guardian's Address", "Guardian Address"]).toString(),
+        monthlyIncome: get(m, ["Income(parents)", "Monthly Income"]).toString(),
+        nokDetails: get(m, ["Detls of NOK", "Details of NOK"]).toString(),
+        nokAddress: get(m, ["Permanent & Present Address", "NOK Address"]).toString(),
+        nearestRlyStn: get(m, ["Nearest RLY Stn", "Nearest Railway Station"]).toString(),
+        secunderabadAddr: get(m, ["Address of Family/Friends in Secunderbad", "Address of Family/Friends in Secunderabad", "Secunderabad Addr"]).toString(),
+        relativeArmedForces: get(m, ["RK Name & Relan of near Relative in Armed force", "Relative Armed Forces"]).toString(),
+        govtFinAsst: govFin ? "Yes" : "",
+        mobNo: mobFromGov || get(m, ["Mob No"]).toString(),
+        email: get(m, ["E mail", "Email"]).toString(),
+        passportNo: get(m, ["Passport No"]).toString(),
+        panCardNo: get(m, ["PAN Card No", "PAN No"]).toString(),
+        aadharNo: get(m, ["Aadhar No", "Aadhaar No"]).toString(),
+        bankDetails: get(m, ["Bank Detail", "Bank Details"]).toString(),
+        idCardNo: get(m, ["Iden card No", "Id Card No"]).toString(),
+        games: get(m, ["Games"]).toString(),
+        hobbies: get(m, ["Hobbies"]).toString(),
+        swimmerStatus: get(m, ["Swimmer/Non Swimmer", "Swimmer Status"]).toString(),
+        language: get(m, ["Language", "Languages"]).toString(),
+        upscRollNo: get(m, ["UPSC Roll No"]).toString(),
+        ssbCentre: get(m, ["SSB Centre"]).toString(),
+        visibleIdenMks: get(m, ["Visible Iden Mks", "Visible Ident Marks"]).toString(),
+      };
+    };
+
     const fileName = file.name.toLowerCase();
-    const formatRecord = (obj: any): OCRecord => ({
-      tesNo: obj["TesNo"] || "",
-      name: obj["Name"] || "",
-      course: obj["Course"] || "",
-      dtOfArrival: obj["Dt of Arrival"] || "",
-      pl: obj["Pl"] || "",
-      dob: obj["DOB"] || "",
-      placeOfBirth: obj["Place of Birth"] || "",
-      domicile: obj["Domicile"] || "",
-      religion: obj["Religion"] || "",
-      nationality: obj["Nationality"] || "",
-      bloodGp: obj["Blood Gp"] || "",
-      idenMarks: obj["Iden Marks"] || "",
-      fatherName: obj["Father's Name"] || "",
-      fatherMobile: obj["Father's Mobile No"] || "",
-      fatherAddress: obj["Father's Address"] || "",
-      fatherProfession: obj["Father's Profession"] || "",
-      guardianName: obj["Guardian’s Name"] || "",
-      guardianAddress: obj["Guardian’s Address"] || "",
-      monthlyIncome: obj["Monthly Income"] || "",
-      nokDetails: obj["Detls of NOK"] || "",
-      nokAddress: obj["NOK Address"] || "",
-      nearestRlyStn: obj["Nearest Rly Stn"] || "",
-      secunderabadAddr: obj["Secunderabad Addr"] || "",
-      relativeArmedForces: obj["Relative Armed Forces"] || "",
-      govtFinAsst: obj["Govt Fin Asst"] || "",
-      mobNo: obj["Mob No"] || "",
-      email: obj["Email"] || "",
-      aadharNo: obj["Aadhar No"] || "",
-      bankDetails: obj["Bank Details"] || "",
-      idCardNo: obj["Id Card No"] || "",
-      games: obj["Games"] || "",
-      hobbies: obj["Hobbies"] || "",
-      swimmerStatus: obj["Swimmer Status"] || "",
-      language: obj["Language"] || "",
-      upscRollNo: obj["UPSC Roll No"] || "",
-      ssbCentre: obj["SSB Centre"] || "",
-      passportNo: obj["Passport No"] || "",
-      panCardNo: obj["PAN Card No"] || "",
-      visibleIdenMks: obj["Visible Iden Mks"] || "",
-    });
 
     if (fileName.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
         complete: (results) => {
-          const formatted = results.data.map(formatRecord);
+          const raw = (results.data || []).filter(Boolean) as any[];
+          const formatted = raw.map(formatRecordFromRaw);
           setOcList((prev) => [...prev, ...formatted]);
+          setRawRows((prev) => [...prev, ...raw]);
         },
       });
     } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
@@ -203,13 +243,67 @@ export default function OCManagementPage() {
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        const formatted = (worksheet as any[]).map(formatRecord);
+        const raw = worksheet as any[];
+        const formatted = raw.map(formatRecordFromRaw);
         setOcList((prev) => [...prev, ...formatted]);
+        setRawRows((prev) => [...prev, ...raw]);
       };
       reader.readAsArrayBuffer(file);
     } else {
       alert("Unsupported file type! Please upload CSV or Excel.");
     }
+  };
+
+  // Upload in batches to show progress and avoid huge payloads
+  const handleBulkUpload = async () => {
+    if (!rawRows.length || isUploading) return;
+    setUploadError(null);
+    setUploadResult(null);
+    setIsUploading(true);
+
+    const batchSize = 25;
+    const total = rawRows.length;
+    let processed = 0;
+    let success = 0;
+    const errors: { row: number; error: string }[] = [];
+
+    for (let i = 0; i < rawRows.length; i += batchSize) {
+      const batch = rawRows.slice(i, i + batchSize);
+      setUploadProgress({ processed, total, success });
+      try {
+        const csrf = document.cookie.match(/(?:^|; )csrf-token=([^;]+)/)?.[1] ?? '';
+        const resp = await fetch('/api/v1/oc/bulk-upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrf,
+          },
+          body: JSON.stringify({ rows: batch }),
+          credentials: 'include',
+        });
+        if (!resp.ok) {
+          const msg = await resp.text();
+          throw new Error(msg || `Server error (${resp.status})`);
+        }
+        const data = await resp.json();
+        success += Number(data?.success || 0);
+        if (Array.isArray(data?.errors)) {
+          // Adjust row numbers to global indices
+          for (const err of data.errors) {
+            errors.push({ row: i + (err.row ?? 0), error: err.error });
+          }
+        }
+      } catch (err: any) {
+        setUploadError(err?.message || 'Failed while uploading');
+        break;
+      } finally {
+        processed = Math.min(processed + batch.length, total);
+        setUploadProgress({ processed, total, success });
+      }
+    }
+
+    setUploadResult({ success, failed: errors.length, errors });
+    setIsUploading(false);
   };
 
   const courseOptions = Array.from(new Set(ocList.map((oc) => oc.course)));
@@ -240,7 +334,7 @@ export default function OCManagementPage() {
               <TabsContent value="oc-mgmt" className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-foreground">All OCs</h2>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <Button variant="outline" onClick={handleAddOC}>
                       Add OC
                     </Button>
@@ -257,6 +351,22 @@ export default function OCManagementPage() {
                       className="hidden"
                       onChange={handleFileUpload}
                     />
+                    <Button
+                      onClick={handleBulkUpload}
+                      disabled={!rawRows.length || isUploading}
+                    >
+                      {isUploading && uploadProgress
+                        ? `Uploading ${uploadProgress.processed}/${uploadProgress.total}...`
+                        : 'Upload to Database'}
+                    </Button>
+                    {uploadError && (
+                      <span className="text-sm text-destructive">{uploadError}</span>
+                    )}
+                    {uploadResult && (
+                      <span className="text-sm text-muted-foreground">
+                        Done: {uploadResult.success} ok, {uploadResult.failed} failed
+                      </span>
+                    )}
                   </div>
                 </div>
 
