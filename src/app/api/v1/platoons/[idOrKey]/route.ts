@@ -31,10 +31,10 @@ function whereForIdKeyName(idOrKey: string, includeDeleted = false) {
 
 // PATCH /api/v1/platoons/:idOrKey  (ADMIN)
 // body: { key?, name?, about?, restore? }
-export async function PATCH(req: NextRequest, { params }: { params: { idOrKey: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
   try {
     await requireAdmin(req);
-
+    const { idOrKey } = await params;
     const body = await req.json();
     const parsed = platoonUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { idOrKey: s
         deletedAt: platoons.deletedAt,
       })
       .from(platoons)
-      .where(whereForIdKeyName(params.idOrKey, true))
+      .where(whereForIdKeyName(idOrKey, true))
       .limit(1);
 
     if (!existing) return json.notFound('Platoon not found');
@@ -123,11 +123,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { idOrKey: s
  * - Soft delete by default (sets deleted_at = now)
  * - Hard delete with ?hard=true
  */
-export async function DELETE(req: NextRequest, ctx: { params: { idOrKey: string } }) {
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ idOrKey: string }> }) {
   try {
     await requireAdmin(req);
-
-    const idOrKey = decodeURIComponent((ctx.params?.idOrKey ?? '')).trim();
+    const rawIdOrKey = await (ctx as any).params;
+    const idOrKey = decodeURIComponent((rawIdOrKey ?? '')).trim();
     if (!idOrKey) throw new ApiError(400, 'idOrKey path param is required', 'bad_request');
 
     // Find even if already soft-deleted (so we can hard-delete it)

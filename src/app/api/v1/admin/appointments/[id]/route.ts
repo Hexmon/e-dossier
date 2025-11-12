@@ -9,7 +9,7 @@ import { requireAuth, requireAdmin } from '@/app/lib/authz';
 import { appointmentUpdateSchema } from '@/app/lib/validators';
 import { and, eq, sql } from 'drizzle-orm';
 
-export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
     try {
         await requireAuth(req);
         const { id } = await ctx.params;
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
     }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
     try {
         await requireAdmin(req);
         const { id } = await ctx.params;
@@ -92,10 +92,10 @@ export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
     try {
         await requireAdmin(req);
-        const { id } = ctx.params;
+        const { id } = await ctx.params;
         // Soft delete by setting deleted_at = now()
         const [row] = await db
             .update(appointments)

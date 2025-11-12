@@ -74,7 +74,7 @@ async function selectEnrichedUserById(id: string) {
 
 export async function GET(
   req: NextRequest,
-  ctx: { params: { id: string } } | { params: Promise<{ id: string }> }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin(req);
@@ -96,7 +96,7 @@ export async function GET(
 // body: userUpdateSchema (password optional; restore toggles soft-delete)
 export async function PATCH(
   req: NextRequest,
-  ctx: { params: { id: string } } | { params: Promise<{ id: string }> }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin(req);
@@ -175,7 +175,7 @@ export async function PATCH(
 // Soft-delete by default; hard delete with ?hard=true
 export async function DELETE(
   req: NextRequest,
-  ctx: { params: { id: string } } | { params: Promise<{ id: string }> }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin(req);
