@@ -1,6 +1,19 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { json } from '@/app/lib/http';
+import {
+  generateCsrfToken,
+  setCsrfCookie,
+  validateCsrfToken,
+  requiresCsrfProtection
+} from '@/lib/csrf';
+import {
+  getClientIp,
+  checkApiRateLimit,
+  getRateLimitHeaders
+} from '@/lib/ratelimit';
+// NOTE: Cannot import audit-log in middleware (Edge Runtime doesn't support database operations)
+// Audit logging for middleware events should be done in API routes instead
 
 const PROTECTED_PREFIX = '/api/v1/';
 
@@ -45,9 +58,62 @@ function isPublic(pathname: string, method: string) {
   return false;
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method.toUpperCase();
+
+  // SECURITY FIX: Rate Limiting for API requests
+  // Apply rate limiting to all API endpoints
+  if (pathname.startsWith(PROTECTED_PREFIX)) {
+    const clientIp = getClientIp(req);
+    const rateLimitResult = await checkApiRateLimit(clientIp);
+
+    // Add rate limit headers to response
+    const headers = getRateLimitHeaders(rateLimitResult as any);
+
+    if (!rateLimitResult.success) {
+      // NOTE: Audit logging moved to API routes (Edge Runtime limitation)
+      // Rate limit exceeded
+      return new NextResponse(
+        JSON.stringify({
+          status: 429,
+          ok: false,
+          error: 'too_many_requests',
+          message: 'Too many requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+            'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+  }
+
+  // SECURITY FIX: CSRF Protection for state-changing requests
+  // Generate CSRF token for GET requests (safe methods)
+  if (method === 'GET' && pathname.startsWith(PROTECTED_PREFIX)) {
+    const response = NextResponse.next();
+    const csrfToken = await generateCsrfToken();
+    setCsrfCookie(response, csrfToken);
+    return response;
+  }
+
+  // Validate CSRF token for state-changing requests (POST, PUT, PATCH, DELETE)
+  if (requiresCsrfProtection(method) && pathname.startsWith(PROTECTED_PREFIX)) {
+    // Skip CSRF validation for login/signup (they don't have a token yet)
+    const skipCsrfPaths = ['/api/v1/auth/login', '/api/v1/auth/signup'];
+    const shouldSkipCsrf = skipCsrfPaths.some((p) => matchPrefix(pathname, p));
+
+    if (!shouldSkipCsrf && !(await validateCsrfToken(req))) {
+      // NOTE: Audit logging moved to API routes (Edge Runtime limitation)
+      return json.forbidden('Invalid or missing CSRF token');
+    }
+  }
 
   if (isPublic(pathname, method)) return NextResponse.next();
 

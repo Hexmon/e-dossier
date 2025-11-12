@@ -1,7 +1,7 @@
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql, ilike, or } from 'drizzle-orm';
 
 export type UserListQuery = {
     q?: string;
@@ -18,14 +18,17 @@ export async function listUsersWithActiveAppointments(qp: UserListQuery) {
     if (qp.includeDeleted !== 'true') where.push(isNull(u.deletedAt));
     if (qp.isActive === 'true') where.push(eq(u.isActive, true));
     if (qp.isActive === 'false') where.push(eq(u.isActive, false));
+
+    // SECURITY FIX: Use Drizzle's built-in ilike function with proper parameterization
+    // Also escape SQL LIKE wildcards to prevent injection
     if (qp.q) {
-        const ilike = (col: any, q: string) => sql`${col} ILIKE ${'%' + q + '%'}`;
-        where.push(sql`(
-      ${ilike(u.username, qp.q)} OR
-      ${ilike(u.email, qp.q)} OR
-      ${ilike(u.name, qp.q)} OR
-      ${ilike(u.phone, qp.q)}
-    )`);
+        const searchPattern = `%${qp.q.replace(/[%_\\]/g, '\\$&')}%`;
+        where.push(or(
+            ilike(u.username, searchPattern),
+            ilike(u.email, searchPattern),
+            ilike(u.name, searchPattern),
+            ilike(u.phone, searchPattern)
+        ));
     }
 
     const rows = await db

@@ -3,11 +3,16 @@ import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam, autobiographyUpsertSchema } from '@/app/lib/oc-validators';
 import { getAutobio, upsertAutobio, deleteAutobio } from '@/app/db/queries/oc';
+import { authorizeOcAccess } from '@/lib/authorization';
 
 export async function GET(req: NextRequest, ctx: any) {
     try {
-        await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
+        const { ocId } = await parseParam(ctx, OcIdParam);
+        await ensureOcExists(ocId);
+
+        // SECURITY FIX: Proper authorization check to prevent IDOR
+        await authorizeOcAccess(req, ocId);
+
         return json.ok({ data: await getAutobio(ocId) });
     } catch (err) { return handleApiError(err); }
 }
