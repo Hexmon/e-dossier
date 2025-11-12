@@ -5,6 +5,7 @@ import "./globals.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Providers } from "@/components/providers/Providers";
 import { Toaster } from "sonner";
+import GlobalLoader from "@/components/GlobalLoader";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ export default function RootLayout({
               className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
               <Providers>{children}</Providers>
+               {/* <GlobalLoader /> */}
               <Toaster richColors position="top-right" />
             </body>
     </html>

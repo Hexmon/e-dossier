@@ -82,46 +82,33 @@ export async function POST(req: NextRequest) {
 }
 
 // --- List OCs (token required; simple filters) --------------------------
+import { listOCsBasic, listOCsFull } from '@/app/db/queries/oc';
+
 export async function GET(req: NextRequest) {
-    try {
-        await requireAuth(req);
-        const sp = new URL(req.url).searchParams;
-        const q = (sp.get('q') || '').trim();
-        const courseId = (sp.get('courseId') || '').trim();
-        const activeOnly = (sp.get('active') || '').toLowerCase() === 'true';
+  try {
+    await requireAuth(req);
+    const sp = new URL(req.url).searchParams;
 
-        const wh: any[] = [];
-        // SECURITY FIX: Use Drizzle's built-in ilike function with proper parameterization
-        // Also escape SQL LIKE wildcards to prevent injection
-        if (q) {
-            const searchPattern = `%${q.replace(/[%_\\]/g, '\\$&')}%`;
-            wh.push(or(
-                ilike(ocCadets.name, searchPattern),
-                ilike(ocCadets.ocNo, searchPattern)
-            ));
-        }
-        if (courseId) wh.push(eq(ocCadets.courseId, courseId));
-        if (activeOnly) wh.push(isNull(ocCadets.withdrawnOn));
+    const q = (sp.get('q') || '').trim() || undefined;
+    const courseId = (sp.get('courseId') || '').trim() || undefined;
+    const activeOnly = (sp.get('active') || '').toLowerCase() === 'true';
 
-        const rows = await db
-            .select({
-                id: ocCadets.id,
-                name: ocCadets.name,
-                ocNo: ocCadets.ocNo,
-                uid: ocCadets.uid,
-                courseId: ocCadets.courseId,
-                branch: ocCadets.branch,
-                platoonId: ocCadets.platoonId,
-                arrivalAtUniversity: ocCadets.arrivalAtUniversity,
-                withdrawnOn: ocCadets.withdrawnOn,
-                createdAt: ocCadets.createdAt,
-            })
-            .from(ocCadets)
-            .where(wh.length ? and(...wh) : undefined)
-            .orderBy(ocCadets.createdAt);
+    // full toggle (accepts: full=true|1|all|full|* or include=full|all|*)
+    const includes = new Set(sp.getAll('include').map((s) => s.toLowerCase()));
+    const fullParam = (sp.get('full') || '').toLowerCase();
+    const wantFull =
+      ['true', '1', 'all', 'full', '*'].includes(fullParam) ||
+      includes.has('all') || includes.has('full') || includes.has('*');
 
-        return json.ok({ items: rows, count: rows.length });
-    } catch (err) {
-        return handleApiError(err);
-    }
+    const limit = Math.min(parseInt(sp.get('limit') || '200', 10) || 200, 1000);
+    const offset = parseInt(sp.get('offset') || '0', 10) || 0;
+
+    const opts = { q, courseId, active: activeOnly, limit, offset };
+
+    const items = wantFull ? await listOCsFull(opts) : await listOCsBasic(opts);
+
+    return json.ok({ items, count: items.length });
+  } catch (err) {
+    return handleApiError(err);
+  }
 }

@@ -2,10 +2,28 @@ import { db } from '@/app/db/client';
 import {
     ocPersonal, ocFamilyMembers, ocEducation, ocAchievements,
     ocAutobiography, ocSsbReports, ocSsbPoints,
-    ocMedicals, ocMedicalCategory, ocDiscipline, ocParentComms
+    ocMedicals, ocMedicalCategory, ocDiscipline, ocParentComms,
+    ocPreCommission,
+    ocCommissioning,
+    ocDelegations,
+    ocCadets,
 } from '@/app/db/schema/training/oc';
-import { eq, and } from 'drizzle-orm';
+import { courses } from '@/app/db/schema/training/courses';
+import { platoons } from '@/app/db/schema/auth/platoons';
+import { and, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
 
+type ListOpts = {
+    q?: string;
+    courseId?: string;
+    active?: boolean;
+    limit?: number;
+    offset?: number;
+};
+
+// Escape % _ \ for ILIKE
+function likeEscape(q: string) {
+    return `%${q.replace(/[%_\\]/g, '\\$&')}%`;
+}
 // ---- Personal ---------------------------------------------------------------
 export async function getPersonal(ocId: string) {
     const [row] = await db.select().from(ocPersonal).where(eq(ocPersonal.ocId, ocId)).limit(1);
@@ -228,4 +246,147 @@ export async function updateComm(ocId: string, id: string, data: Partial<typeof 
 export async function deleteComm(ocId: string, id: string) {
     const [row] = await db.delete(ocParentComms).where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId))).returning();
     return row ?? null;
+}
+export async function listOCsBasic(opts: ListOpts = {}) {
+    const { q, courseId, active, limit = 200, offset = 0 } = opts;
+
+    const wh: any[] = [];
+    if (q && q.trim()) {
+        const pattern = likeEscape(q.trim());
+        wh.push(or(ilike(ocCadets.name, pattern), ilike(ocCadets.ocNo, pattern)));
+    }
+    if (courseId && courseId.trim()) wh.push(eq(ocCadets.courseId, courseId.trim()));
+    if (active) wh.push(isNull(ocCadets.withdrawnOn));
+
+    const rows = await db
+        .select({
+            id: ocCadets.id,
+            name: ocCadets.name,
+            ocNo: ocCadets.ocNo,
+            uid: ocCadets.uid,
+            courseId: ocCadets.courseId,
+            courseCode: courses.code,
+            courseTitle: courses.title,
+            branch: ocCadets.branch,
+            platoonId: ocCadets.platoonId,
+            platoonKey: platoons.key,
+            platoonName: platoons.name,
+            arrivalAtUniversity: ocCadets.arrivalAtUniversity,
+            status: ocCadets.status,
+            managerUserId: ocCadets.managerUserId,
+            relegatedToCourseId: ocCadets.relegatedToCourseId,
+            relegatedOn: ocCadets.relegatedOn,
+            withdrawnOn: ocCadets.withdrawnOn,
+            createdAt: ocCadets.createdAt,
+            updatedAt: ocCadets.updatedAt,
+        })
+        .from(ocCadets)
+        .leftJoin(courses, eq(courses.id, ocCadets.courseId))
+        .leftJoin(platoons, eq(platoons.id, ocCadets.platoonId))
+        .where(wh.length ? and(...wh) : undefined)
+        .orderBy(ocCadets.createdAt)
+        .limit(Math.min(limit, 1000))
+        .offset(offset);
+
+    return rows;
+}
+
+export async function listOCsFull(opts: ListOpts = {}) {
+    const base = await listOCsBasic(opts);
+    if (base.length === 0) return [];
+
+    const ocIds = base.map((b) => b.id);
+
+    const [
+        personalRows,
+        preCommRows,
+        commRows,
+        autoRows,
+        famRows,
+        eduRows,
+        achRows,
+        ssbReportRows,
+        medRows,
+        medCatRows,
+        discRows,
+        commsRows,
+        delegRows,
+    ] = await Promise.all([
+        db.select().from(ocPersonal).where(inArray(ocPersonal.ocId, ocIds)),
+        db.select().from(ocPreCommission).where(inArray(ocPreCommission.ocId, ocIds)),
+        db.select().from(ocCommissioning).where(inArray(ocCommissioning.ocId, ocIds)),
+        db.select().from(ocAutobiography).where(inArray(ocAutobiography.ocId, ocIds)),
+        db.select().from(ocFamilyMembers).where(inArray(ocFamilyMembers.ocId, ocIds)),
+        db.select().from(ocEducation).where(inArray(ocEducation.ocId, ocIds)),
+        db.select().from(ocAchievements).where(inArray(ocAchievements.ocId, ocIds)),
+        db.select().from(ocSsbReports).where(inArray(ocSsbReports.ocId, ocIds)),
+        db.select().from(ocMedicals).where(inArray(ocMedicals.ocId, ocIds)),
+        db.select().from(ocMedicalCategory).where(inArray(ocMedicalCategory.ocId, ocIds)),
+        db.select().from(ocDiscipline).where(inArray(ocDiscipline.ocId, ocIds)),
+        db.select().from(ocParentComms).where(inArray(ocParentComms.ocId, ocIds)),
+        db.select().from(ocDelegations).where(inArray(ocDelegations.ocId, ocIds)),
+    ]);
+
+    const reportIds = ssbReportRows.map((r) => r.id);
+    const ssbPointRows = reportIds.length
+        ? await db.select().from(ocSsbPoints).where(inArray(ocSsbPoints.reportId, reportIds))
+        : [];
+
+    // Index helpers
+    const byOc = <T extends { ocId: string }>(rows: T[]) =>
+        rows.reduce<Record<string, T[]>>((acc, r) => {
+            (acc[r.ocId] ||= []).push(r);
+            return acc;
+        }, {});
+
+    const oneByOc = <T extends { ocId: string }>(rows: T[]) =>
+        rows.reduce<Record<string, T>>((acc, r) => {
+            if (!(r.ocId in acc)) acc[r.ocId] = r; // take first if multiple present
+            return acc;
+        }, {});
+
+    const personalByOc = oneByOc(personalRows);
+    const preCommByOc = oneByOc(preCommRows);
+    const commByOc = oneByOc(commRows);
+    const autoByOc = oneByOc(autoRows);
+
+    const famByOc = byOc(famRows);
+    const eduByOc = byOc(eduRows);
+    const achByOc = byOc(achRows);
+    const medByOc = byOc(medRows);
+    const medCatByOc = byOc(medCatRows);
+    const discByOc = byOc(discRows);
+    const commsByOc = byOc(commsRows);
+    const delegByOc = byOc(delegRows);
+
+    const pointsByReport = ssbPointRows.reduce<Record<string, typeof ssbPointRows>>((acc, p) => {
+        (acc[p.reportId] ||= []).push(p);
+        return acc;
+    }, {});
+    const reportsByOc = ssbReportRows.reduce<Record<string, Array<any>>>((acc, r) => {
+        const withPoints = { ...r, points: pointsByReport[r.id] ?? [] };
+        (acc[r.ocId] ||= []).push(withPoints);
+        return acc;
+    }, {});
+
+    // Assemble
+    const items = base.map((b) => ({
+        ...b,
+        personal: personalByOc[b.id] ?? null,
+        preCommission: preCommByOc[b.id] ?? null,
+        commissioning: commByOc[b.id] ?? null,
+        autobiography: autoByOc[b.id] ?? null,
+
+        familyMembers: famByOc[b.id] ?? [],
+        education: eduByOc[b.id] ?? [],
+        achievements: achByOc[b.id] ?? [],
+        ssbReports: reportsByOc[b.id] ?? [],
+        medicals: medByOc[b.id] ?? [],
+        medicalCategory: medCatByOc[b.id] ?? [],
+        discipline: discByOc[b.id] ?? [],
+        parentComms: commsByOc[b.id] ?? [],
+        delegations: delegByOc[b.id] ?? [],
+    }));
+
+    return items;
 }
