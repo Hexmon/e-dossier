@@ -40,53 +40,52 @@ export default function MilitaryTrainingPage() {
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [ocList, setOcList] = useState<OCRecord[]>([]);
+  const [filteredOCs, setFilteredOCs] = useState<OCRecord[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const ocs = await getAllOCs();
-        setOcList(ocs);
-        console.log("oc llist: ", ocs);
-      } catch (err) {
-        console.error("Failed to fetch OCs:", err);
-      }
-    })();
-  }, []);
-
-  const handleSearch = async () => {
+  const fetchOCs = async () => {
     try {
-      const results = await getAllOCs(searchQuery.trim());
-
-      if (results.length > 0) {
-        const found =
-          results.find(
-            (oc) =>
-              oc.name.toLowerCase() === searchQuery.trim().toLowerCase() ||
-              oc.ocNo.toLowerCase() === searchQuery.trim().toLowerCase() ||
-              oc.id?.toLowerCase() === searchQuery.trim().toLowerCase()
-          ) || results[0];
-
-        const cadetData: Cadet = {
-          name: found.name,
-          course: found.courseId,
-          ocNumber: found.ocNo,
-          ocId: found.id
-        };
-
-        dispatch(setSelectedCadet(cadetData));
-        setOcList(results);
-      } else {
-        dispatch(setSelectedCadet(null));
-        setAlertMessage("Cadet not found. Please search again.");
-        setShowAlert(true);
-      }
-    } catch (error) {
-      console.error("Search failed:", error);
-      setAlertMessage("Failed to fetch cadets. Please try again later.");
-      setShowAlert(true);
+      const ocs = await getAllOCs();
+      setOcList(ocs);
+      setFilteredOCs(ocs);
+    } catch (err) {
+      console.error("Failed to fetch OCs:", err);
     }
   };
+  useEffect(() => {
+    fetchOCs();
+  }, []);
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (!value) {
+      setFilteredOCs(ocList);
+      return;
+    }
+
+    const filtered = ocList.filter(
+      (oc) =>
+        oc.name.toLowerCase().includes(value.toLowerCase()) ||
+        oc.ocNo.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredOCs(filtered);
+    setShowDropdown(true);
+  };
+
+  const handleSelectOC = (oc: OCRecord) => {
+    const cadetData: Cadet = {
+      name: oc.name,
+      course: oc.courseId,
+      ocNumber: oc.ocNo,
+      ocId: oc.id,
+    };
+
+    dispatch(setSelectedCadet(cadetData));
+    setSearchQuery(`${oc.name} (${oc.ocNo})`);
+    setShowDropdown(false);
+  };
 
 
   const handleLogout = () => {
@@ -120,19 +119,33 @@ export default function MilitaryTrainingPage() {
               />
 
               {/* Search Section */}
-              <div className="flex items-center gap-2">
+              <div className="relative w-80">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    placeholder="Search Cadets..."
+                    placeholder="Search or select OC..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-80"
+                    onChange={handleSearchChange}
+                    onFocus={() => setShowDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                    className="pl-10 w-full"
                   />
                 </div>
-                <Button variant="default" size="sm" onClick={handleSearch}>
-                  Search
-                </Button>
+
+                {showDropdown && filteredOCs.length > 0 && (
+                  <ul className="absolute z-50 mt-1 w-full bg-card border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {filteredOCs.map((oc) => (
+                      <li
+                        key={oc.id}
+                        onMouseDown={() => handleSelectOC(oc)}
+                        className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        <div className="font-medium">{oc.name}</div>
+                        <div className="text-xs text-muted-foreground">{oc.ocNo}</div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
 
