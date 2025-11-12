@@ -5,11 +5,37 @@ import { signupSchema } from '@/app/lib/validators';
 import { signupLocal } from '@/app/db/queries/auth';
 import { createSignupRequest } from '@/app/db/queries/signupRequests';
 import { preflightConflicts } from '@/utils/preflightConflicts';
+import { getClientIp, checkSignupRateLimit, getRateLimitHeaders } from '@/lib/ratelimit';
 
 type PgError = { code?: string; detail?: string };
 
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY FIX: Rate limiting for signup attempts (3 per hour)
+    const clientIp = getClientIp(req);
+    const rateLimitResult = await checkSignupRateLimit(clientIp);
+
+    if (!rateLimitResult.success) {
+      const headers = getRateLimitHeaders(rateLimitResult as any);
+      return new Response(
+        JSON.stringify({
+          status: 429,
+          ok: false,
+          error: 'too_many_requests',
+          message: 'Too many signup attempts. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+            'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+
     const body = await req.json();
     const parsed = signupSchema.safeParse(body);
     if (!parsed.success) return json.badRequest('Validation failed', { issues: parsed.error.flatten() });

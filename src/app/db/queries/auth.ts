@@ -86,10 +86,11 @@ export async function signupLocal(payload: {
 export async function verifyPassword(username: string, password: string) {
   const uname = username.trim().toLowerCase();
 
+  // SECURITY FIX: Use parameterized query instead of raw SQL to prevent SQL injection
   const [u] = await db
     .select()
     .from(users)
-    .where(sql`lower(${users.username}) = ${uname}`)
+    .where(eq(sql`lower(${users.username})`, uname))
     .limit(1);
 
   if (!u) return null;
@@ -169,10 +170,11 @@ export async function setPasswordAdmin(userId: string, newPassword: string) {
  */
 export async function getUserByUsername(username: string) {
   const uname = username.trim().toLowerCase();
+  // SECURITY FIX: Use parameterized query instead of raw SQL to prevent SQL injection
   const [u] = await db
     .select()
     .from(users)
-    .where(sql`lower(${users.username}) = ${uname}`)
+    .where(eq(sql`lower(${users.username})`, uname))
     .limit(1);
   return u ?? null;
 }
