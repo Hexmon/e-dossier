@@ -251,6 +251,3 @@ export const api = {
     patch: <T = unknown, B = unknown>(endpoint: string, body?: B, opts?: Omit<ApiRequestOptions<B>, "method" | "endpoint" | "body">) =>
         apiRequest<T, B>({ method: "PATCH", endpoint, body: body as B, ...(opts ?? {}) }),
 };
-
-
-// api.get(meth)

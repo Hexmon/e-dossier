@@ -180,3 +180,16 @@
 //     }
 // }
 
+// src/app/api/v1/roles/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(_req: NextRequest) {
+  // TODO: fetch real roles from your DB
+  return NextResponse.json({ ok: true, roles: [] });
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  // TODO: validate & create role
+  return NextResponse.json({ ok: true, created: body }, { status: 201 });
+}

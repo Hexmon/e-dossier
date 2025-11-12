@@ -9,7 +9,7 @@ import { IdSchema } from '@/app/lib/apiClient';
 
 export async function POST(
     req: NextRequest,
-    ctx: { params: { id: string } } | { params: Promise<{ id: string }> }
+    ctx: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId: adminId } = await requireAdmin(req);

@@ -31,7 +31,7 @@ const PUBLIC_ANY: string[] = [
 const PUBLIC_BY_METHOD: Record<string, string[]> = {
   // Make ONLY GET public for appointments
   GET: [
-     '/api/v1/roles',
+    //  '/api/v1/roles',
     '/api/v1/admin/appointments',
     '/api/v1/admin/positions',
     '/api/v1/platoons'

@@ -32,6 +32,7 @@ export const endpoints = {
         medicalCategory: (ocId: string) => `/api/v1/oc/${ocId}/medical-category`,
         discipline: (ocId: string) => `/api/v1/oc/${ocId}/discipline`,
         parentComms: (ocId: string) => `/api/v1/oc/${ocId}/parent-comms`,
+        bulkUpload: "/api/v1/oc/bulk-upload",
     },
     course: {
         all: "/api/v1/courses"

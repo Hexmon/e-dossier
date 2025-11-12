@@ -3,10 +3,11 @@ import { json, handleApiError } from '@/app/lib/http';
 import { requireAdmin } from '@/app/lib/authz';
 import { deleteSignupRequest } from '@/app/db/queries/signupRequests';
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { userId: adminUserId } = requireAdmin(req);
-    await deleteSignupRequest({ requestId: params.id, adminUserId });
+    const { userId: adminUserId } = await requireAdmin(req);
+    const { id } = await params;
+    await deleteSignupRequest({ requestId: id, adminUserId });
     return json.ok({ message: 'Deleted' });
   } catch (err: any) {
     if (err?.message === 'request_not_found') return json.notFound('Request not found');
