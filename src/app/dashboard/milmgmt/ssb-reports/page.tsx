@@ -23,17 +23,16 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { PageHeader } from "@/components/layout/PageHeader";
 import DossierTab from "@/components/Tabs/DossierTab";
-
-interface SSBFormData {
-    positiveTraits: { trait: string }[];
-    negativeTraits: { trait: string }[];
-    rating: string;
-    improvement: string;
-}
+import { SSBFormData } from "@/types/ssb-rpt";
+import { getSsbReport, saveSsbReport, SsbReport } from "@/app/lib/api/ssbReportApi";
+import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 export default function SSBReportPage() {
     const router = useRouter();
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+    const [ssbReport, setSsbReport] = useState<SsbReport | null>(null);
+    const [loading, setLoading] = useState(false);
 
     const handleLogout = () => router.push("/login");
 
@@ -64,10 +63,49 @@ export default function SSBReportPage() {
         remove: removeNegative,
     } = useFieldArray({ control, name: "negativeTraits" });
 
-    const onSubmit = (data: SSBFormData) => {
-        console.log("SSB Report Submitted:", data);
-        alert("SSB Report saved successfully!");
+    const onSubmit = async (data: SSBFormData) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+
+        try {
+            const payload = {
+                positives: data.positiveTraits
+                    .filter((t) => t.trait)
+                    .map((t) => ({ note: t.trait, by: data.positiveBy })),
+                negatives: data.negativeTraits
+                    .filter((t) => t.trait)
+                    .map((t) => ({ note: t.trait, by: data.negativeBy })),
+                predictiveRating: Number(data.rating) || 0,
+                scopeForImprovement: data.improvement,
+            };
+
+            const response = await saveSsbReport(selectedCadet.ocId, payload);
+            if (response) {
+                toast.success("SSB Report saved successfully!");
+            } else {
+                toast.warning("Unexpected response while saving report.");
+            }
+        } catch (err) {
+            console.error("Error saving SSB Report:", err);
+            toast.error("Failed to save SSB Report.");
+        }
     };
+
+    useEffect(() => {
+        const fetchReport = async () => {
+            if (!selectedCadet?.ocId) return;
+            setLoading(true);
+            const data = await getSsbReport(selectedCadet.ocId);
+            console.log("view data", data)
+            setSsbReport(data);
+            setLoading(false);
+        };
+
+        fetchReport();
+    }, [selectedCadet]);
+
 
     const savedData = watch();
 
@@ -174,10 +212,12 @@ export default function SSBReportPage() {
 
                                                         <div className="w-full max-w-sm">
                                                             <label className="text-sm font-medium">By</label>
-                                                            <select className="mt-1 w-full rounded-md border p-2 text-sm" defaultValue="">
-                                                                <option value="" disabled>
-                                                                    Select
-                                                                </option>
+                                                            <select
+                                                                {...register("positiveBy")}
+                                                                className="mt-1 w-full rounded-md border p-2 text-sm"
+                                                                defaultValue=""
+                                                            >
+                                                                <option value="" disabled>Select</option>
                                                                 <option value="IO">IO</option>
                                                                 <option value="GTO">GTO</option>
                                                                 <option value="Psy">Psy</option>
@@ -221,10 +261,12 @@ export default function SSBReportPage() {
 
                                                         <div className="w-full max-w-sm">
                                                             <label className="text-sm font-medium">By</label>
-                                                            <select className="mt-1 w-full rounded-md border p-2 text-sm" defaultValue="">
-                                                                <option value="" disabled>
-                                                                    Select
-                                                                </option>
+                                                            <select
+                                                                {...register("negativeBy")}
+                                                                className="mt-1 w-full rounded-md border p-2 text-sm"
+                                                                defaultValue=""
+                                                            >
+                                                                <option value="" disabled>Select</option>
                                                                 <option value="IO">IO</option>
                                                                 <option value="GTO">GTO</option>
                                                                 <option value="Psy">Psy</option>

@@ -32,12 +32,6 @@ import { Cadet } from "@/types/cadet";
 import { TabsContent } from "@/components/ui/tabs";
 import { getAllOCs, OCRecord } from "@/app/lib/api/ocApi";
 
-// const cadets: Cadet[] = [
-//   { name: "Ravi Kumar", course: "TES-43", ocNumber: "OC-101" },
-//   { name: "Arjun Singh", course: "TES-44", ocNumber: "OC-102" },
-//   { name: "Vikram Roy", course: "TES-45", ocNumber: "OC-103" },
-// ];
-
 export default function MilitaryTrainingPage() {
   const dispatch = useDispatch();
   const router = useRouter();

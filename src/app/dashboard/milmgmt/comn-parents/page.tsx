@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useSelector } from "react-redux";
@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getParentComms, saveParentComms } from "@/app/lib/api/parentComnApi";
 
 // ─────────────── TYPES ───────────────
 interface ParentCommRow {
@@ -48,6 +49,8 @@ export default function ParentCommnPage() {
 
     const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
     const [activeTab, setActiveTab] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const defaultRow = {
         serialNo: "",
@@ -58,7 +61,6 @@ export default function ParentCommnPage() {
         sigPICdr: "",
     };
 
-    // ─────────────── HOOK FORM SETUP ───────────────
     const { control, handleSubmit, register, reset } = useForm<ParentCommForm>({
         defaultValues: {
             records: [{ ...defaultRow }],
@@ -74,19 +76,87 @@ export default function ParentCommnPage() {
         semesters.map(() => [])
     );
 
-    const onSubmit = (data: ParentCommForm) => {
+    const onSubmit = async (data: ParentCommForm) => {
+        if (!selectedCadet?.ocId) {
+            alert("Please select a cadet first.");
+            return;
+        }
+
         const newEntries = data.records.map((row, i) => ({
-            ...row,
             serialNo: String(savedData[activeTab].length + i + 1),
+            letterNo: row.letterNo,
+            date: row.date,
+            teleCorres: row.teleCorres,
+            briefContents: row.briefContents,
+            sigPICdr: row.sigPICdr,
         }));
 
-        const updated = [...savedData];
-        updated[activeTab] = [...updated[activeTab], ...newEntries];
-        setSavedData(updated);
+        const payloads = data.records.map((row) => ({
+            semester: activeTab + 1,
+            mode: "LETTER",
+            refNo: row.letterNo,
+            date: row.date,
+            subject: row.teleCorres || "Parent Communication",
+            brief: row.briefContents,
+            platoonCommanderName: row.sigPICdr || null,
+        }));
 
-        reset({ records: [{ ...defaultRow }] });
-        alert("✅ Record saved successfully!");
+        setLoading(true);
+        try {
+            const responses = await saveParentComms(selectedCadet.ocId, payloads);
+            if (responses.length > 0) {
+                alert("Records saved successfully!");
+                const updated = [...savedData];
+                updated[activeTab] = [...updated[activeTab], ...newEntries];
+                setSavedData(updated);
+                reset({ records: [{ ...defaultRow }] });
+            } else {
+                alert("Failed to save records. Check console for details.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error while saving records.");
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const fetchComms = async () => {
+        if (!selectedCadet?.ocId) return;
+        setLoading(true);
+        setError(null);
+
+        try {
+            const records = await getParentComms(selectedCadet.ocId);
+            console.log("Fetched Parent Comms:", records);
+
+            // Group by semester 1–6
+            const grouped = semesters.map(() => [] as ParentCommRow[]);
+            for (const rec of records) {
+                const semIndex = rec.semester - 1;
+                if (semIndex >= 0 && semIndex < semesters.length) {
+                    grouped[semIndex].push({
+                        serialNo: String(grouped[semIndex].length + 1),
+                        letterNo: rec.refNo || "-",
+                        date: rec.date?.split("T")[0] || "-",
+                        teleCorres: rec.subject || "-",
+                        briefContents: rec.brief || "-",
+                        sigPICdr: rec.platoonCommanderName || "-",
+                    });
+                }
+            }
+            setSavedData(grouped);
+        } catch (err) {
+            console.error(err);
+            setError("Failed to load parent communications");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchComms();
+    }, [selectedCadet]);
 
     // ─────────────── RENDER ───────────────
 
@@ -164,8 +234,8 @@ export default function ParentCommnPage() {
                                                     type="button"
                                                     onClick={() => setActiveTab(index)}
                                                     className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
-                                                            ? "bg-blue-600 text-white"
-                                                            : "bg-gray-200 text-gray-700"
+                                                        ? "bg-blue-600 text-white"
+                                                        : "bg-gray-200 text-gray-700"
                                                         }`}
                                                 >
                                                     {sem}

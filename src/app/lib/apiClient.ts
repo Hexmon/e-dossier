@@ -17,18 +17,18 @@ type QueryValue = Primitive | Primitive[];
 
 /** Matches your server's envelope in json.ts */
 export type ApiOk<T = unknown> = {
-    status: number; // e.g., 200 or 201
+    status: number;
     ok: true;
 } & T;
 
 export const IdSchema = z.object({ id: z.string().uuid() });
 
 export type ApiErrorEnvelope = {
-    status: number; // matches HTTP code
+    status: number;
     ok: false;
-    error: string;  // e.g., "bad_request"
+    error: string;
     message?: string;
-    [k: string]: unknown; // extras passthrough
+    [k: string]: unknown;
 };
 
 export class ApiClientError extends Error {
