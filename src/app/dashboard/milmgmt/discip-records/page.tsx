@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useSelector } from "react-redux";
@@ -24,25 +24,8 @@ import DossierTab from "@/components/Tabs/DossierTab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-// ─────────────────────────────── TYPES ───────────────────────────────
-
-interface DisciplineRow {
-    serialNo: string;
-    dateOfOffence: string;
-    offence: string;
-    punishmentAwarded: string;
-    dateOfAward: string;
-    byWhomAwarded: string;
-    negativePts: string;
-    cumulative: string;
-}
-
-interface DisciplineForm {
-    records: DisciplineRow[];
-}
-
-// ─────────────────────────────── COMPONENT ───────────────────────────────
+import { DisciplineForm, DisciplineRow } from "@/types/dicp-records";
+import { getDisciplineRecords, saveDisciplineRecords } from "@/app/lib/api/disciplineApi";
 
 export default function DisciplineRecordsPage() {
     const router = useRouter();
@@ -51,6 +34,8 @@ export default function DisciplineRecordsPage() {
 
     const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
     const [activeTab, setActiveTab] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const defaultRow = {
         serialNo: "",
@@ -63,7 +48,6 @@ export default function DisciplineRecordsPage() {
         cumulative: "",
     };
 
-    // ───────────── REACT HOOK FORM ─────────────
     const { control, handleSubmit, register, reset } = useForm<DisciplineForm>({
         defaultValues: {
             records: [{ ...defaultRow }],
@@ -79,22 +63,100 @@ export default function DisciplineRecordsPage() {
         semesters.map(() => [])
     );
 
-    const onSubmit = (data: DisciplineForm) => {
-        const newEntries = data.records.map((row, index) => ({
-            ...row,
-            serialNo: String(savedData[activeTab].length + index + 1),
+    const onSubmit = async (data: DisciplineForm) => {
+        if (!selectedCadet?.ocId) {
+            alert("Select a cadet first");
+            return;
+        }
+
+        const payloads = data.records.map((row, idx) => ({
+            semester: activeTab + 1,
+            dateOfOffence: row.dateOfOffence || row.dateOfOffence,
+            offence: row.offence || "",
+            punishmentAwarded: row.punishmentAwarded || row.punishmentAwarded || row.punishment || null,
+            awardedOn: row.dateOfAward || null,
+            awardedBy: row.byWhomAwarded || null,
+            pointsDelta: row.negativePts ? Number(row.negativePts) : 0,
+            pointsCumulative: row.cumulative ? Number(row.cumulative) : 0,
         }));
 
-        const updated = [...savedData];
-        updated[activeTab] = [...updated[activeTab], ...newEntries];
-        setSavedData(updated);
+        for (const p of payloads) {
+            if (!p.dateOfOffence) {
+                alert("Each row must have a Date of Offence.");
+                return;
+            }
+            if (!p.offence || p.offence.trim().length === 0) {
+                alert("Each row must have an offence description.");
+                return;
+            }
+        }
 
+        const resp = await saveDisciplineRecords(selectedCadet.ocId, payloads);
+        if (!resp.ok) {
+            console.error("Save failed:", resp.result, resp.payloads);
+            alert("Failed to save discipline records — check console for details.");
+            return;
+        }
+
+        const updated = [...savedData];
+        const formattedRows = payloads.map((r, index) => ({
+            serialNo: String(savedData[activeTab].length + index + 1),
+            dateOfOffence: typeof r.dateOfOffence === "string" ? r.dateOfOffence : String(r.dateOfOffence),
+            offence: r.offence,
+            punishmentAwarded: r.punishmentAwarded ?? "-",
+            dateOfAward: r.awardedOn ?? "-",
+            byWhomAwarded: r.awardedBy ?? "-",
+            negativePts: String(r.pointsDelta ?? ""),
+            cumulative: String(r.pointsCumulative ?? ""),
+        }));
+
+        updated[activeTab] = [...updated[activeTab], ...formattedRows];
+        setSavedData(updated);
         reset({ records: [{ ...defaultRow }] });
 
-        alert("✅ Discipline record saved successfully!");
+        alert("Discipline record(s) saved successfully!");
     };
 
-    // ─────────────────────────────── RENDER ───────────────────────────────
+    const fetchRecords = async () => {
+        if (!selectedCadet?.ocId) return;
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const records = await getDisciplineRecords(selectedCadet.ocId);
+            console.log("Fetched discipline records:", records);
+
+            // Group by semester (1–6)
+            const grouped = semesters.map(() => [] as DisciplineRow[]);
+            for (const rec of records) {
+                const semIndex = rec.semester - 1;
+                if (semIndex >= 0 && semIndex < semesters.length) {
+                    grouped[semIndex].push({
+                        serialNo: String(grouped[semIndex].length + 1),
+                        dateOfOffence: rec.dateOfOffence?.split("T")[0] || "-",
+                        offence: rec.offence || "-",
+                        punishmentAwarded: rec.punishmentAwarded || "-",
+                        dateOfAward: rec.awardedOn?.split("T")[0] || "-",
+                        byWhomAwarded: rec.awardedBy || "-",
+                        negativePts: String(rec.pointsDelta ?? ""),
+                        cumulative: String(rec.pointsCumulative ?? ""),
+                    });
+                }
+            }
+
+            setSavedData(grouped);
+        } catch (err: any) {
+            console.error(err);
+            setError("Failed to load discipline records");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRecords();
+    }, [selectedCadet]);
 
     return (
         <SidebarProvider>
@@ -174,8 +236,8 @@ export default function DisciplineRecordsPage() {
                                                     type="button"
                                                     onClick={() => setActiveTab(index)}
                                                     className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
-                                                            ? "bg-blue-600 text-white"
-                                                            : "bg-gray-200 text-gray-700"
+                                                        ? "bg-blue-600 text-white"
+                                                        : "bg-gray-200 text-gray-700"
                                                         }`}
                                                 >
                                                     {sem}

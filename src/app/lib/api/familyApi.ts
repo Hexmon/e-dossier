@@ -7,29 +7,51 @@ export interface FamilyMember {
     age?: string | number;
     occupation?: string;
     education?: string;
-    mobile?: string;
+    mobileNo?: string;
 }
 
+export interface ApiResponse<T = any> {
+    status: number;
+    ok?: boolean;
+    data?: T;
+}
 
 /** Save or update all family members for a cadet */
-export async function saveFamilyDetails(ocId: string, family: FamilyMember[]) {
-    for (const member of family) {
-        const payload = {
-            ...member,
-            mobileNo: member.mobile,
-            age: member.age ? Number(member.age) : undefined,
-        };
+export async function saveFamilyDetails(
+    ocId: string,
+    family: FamilyMember[]
+): Promise<ApiResponse[]> {
+    const responses: ApiResponse[] = [];
 
-        await api.post(endpoints.oc.family(ocId), payload);
+    try {
+        for (const member of family) {
+            const payload = {
+                ...member,
+                age: member.age ? Number(member.age) : undefined,
+            };
+
+            const response = (await api.post(
+                endpoints.oc.family(ocId),
+                payload
+            )) as ApiResponse;
+
+            responses.push(response);
+        }
+
+        return responses;
+    } catch (error: any) {
+        return [];
     }
 }
 
-
-/** Optionally patch partial updates */
-export async function patchFamilyDetails(
-    ocId: string,
-    family: Partial<FamilyMember>[]
-) {
-    return api.patch(endpoints.oc.family(ocId), { family });
+export async function getFamilyDetails(ocId: string): Promise<FamilyMember[]> {
+    try {
+        const response = await api.get(endpoints.oc.family(ocId)) as any;
+        if (Array.isArray(response?.items)) {
+            return response.items;
+        }
+        return [];
+    } catch (error) {
+        return [];
+    }
 }
-

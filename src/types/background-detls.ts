@@ -10,15 +10,15 @@ export interface Qualification {
 export interface FamilyMember {
     name: string;
     relation: string;
-    age: string;
-    occupation: string;
-    education: string;
-    mobile: string;
+    age?: string | number;
+    occupation?: string;
+    education?: string;
+    mobile?: string;
 }
 
 export interface Achievement {
     event: string;
-    year: string;
+    year: number;
     level: string;
     prize: string;
 }
