@@ -9,9 +9,7 @@ import { setSelectedCadet } from "@/store/cadetSlice";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  SidebarProvider,
-} from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Search, Settings } from "lucide-react";
 import {
   AlertDialog,
@@ -30,51 +28,72 @@ import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import { militaryTrainingCards, miltrgTabs } from "@/config/app.config";
 import { Cadet } from "@/types/cadet";
 import { TabsContent } from "@/components/ui/tabs";
-import { getAllOCs, OCRecord } from "@/app/lib/api/ocApi";
+
+// 🔹 debounce hook
+import { useDebouncedValue } from "@/app/lib/debounce";
+// 🔹 single universal OC API
+import { fetchOCs, OCListRow } from "@/app/lib/api/ocApi";
 
 export default function MilitaryTrainingPage() {
   const dispatch = useDispatch();
   const router = useRouter();
-  const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+  const selectedCadet = useSelector(
+    (state: RootState) => state.cadet.selectedCadet
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
-  const [ocList, setOcList] = useState<OCRecord[]>([]);
-  const [filteredOCs, setFilteredOCs] = useState<OCRecord[]>([]);
+  const [filteredOCs, setFilteredOCs] = useState<OCListRow[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const fetchOCs = async () => {
-    try {
-      const ocs = await getAllOCs();
-      setOcList(ocs);
-      setFilteredOCs(ocs);
-    } catch (err) {
-      console.error("Failed to fetch OCs:", err);
-    }
-  };
+  // 🔁 debounced search term
+  const debouncedSearch = useDebouncedValue(searchQuery, 400);
+
+  // 🔎 Debounced server-side search using a SINGLE fetchOCs
   useEffect(() => {
-    fetchOCs();
-  }, []);
+    let cancelled = false;
+
+    const run = async () => {
+      setIsSearching(true);
+      try {
+        const trimmed = debouncedSearch.trim();
+
+        const items = await fetchOCs<OCListRow>({
+          active: true,       // always only active cadets for this page
+          q: trimmed || undefined,
+          limit: 50,          // pagination size for dropdown
+        });
+
+        if (!cancelled) {
+          setFilteredOCs(items);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to fetch OCs:", err);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSearching(false);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
-
-    if (!value) {
-      setFilteredOCs(ocList);
-      return;
-    }
-
-    const filtered = ocList.filter(
-      (oc) =>
-        oc.name.toLowerCase().includes(value.toLowerCase()) ||
-        oc.ocNo.toLowerCase().includes(value.toLowerCase())
-    );
-    setFilteredOCs(filtered);
     setShowDropdown(true);
   };
 
-  const handleSelectOC = (oc: OCRecord) => {
+  const handleSelectOC = (oc: OCListRow) => {
     const cadetData: Cadet = {
       name: oc.name,
       course: oc.courseId,
@@ -86,7 +105,6 @@ export default function MilitaryTrainingPage() {
     setSearchQuery(`${oc.name} (${oc.ocNo})`);
     setShowDropdown(false);
   };
-
 
   const handleLogout = () => {
     router.push("/login");
@@ -132,18 +150,33 @@ export default function MilitaryTrainingPage() {
                   />
                 </div>
 
-                {showDropdown && filteredOCs.length > 0 && (
+                {showDropdown && (
                   <ul className="absolute z-50 mt-1 w-full bg-card border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {filteredOCs.map((oc) => (
-                      <li
-                        key={oc.id}
-                        onMouseDown={() => handleSelectOC(oc)}
-                        className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
-                      >
-                        <div className="font-medium">{oc.name}</div>
-                        <div className="text-xs text-muted-foreground">{oc.ocNo}</div>
+                    {isSearching && (
+                      <li className="px-3 py-2 text-xs text-muted-foreground">
+                        Searching...
                       </li>
-                    ))}
+                    )}
+
+                    {!isSearching && filteredOCs.length === 0 && (
+                      <li className="px-3 py-2 text-xs text-muted-foreground">
+                        No OCs found
+                      </li>
+                    )}
+
+                    {!isSearching &&
+                      filteredOCs.map((oc) => (
+                        <li
+                          key={oc.id}
+                          onMouseDown={() => handleSelectOC(oc)}
+                          className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
+                        >
+                          <div className="font-medium">{oc.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {oc.ocNo}
+                          </div>
+                        </li>
+                      ))}
                   </ul>
                 )}
               </div>
@@ -151,7 +184,9 @@ export default function MilitaryTrainingPage() {
 
             {/* Selected Cadet */}
             <div className="hidden md:flex sticky top-16 z-40">
-              {selectedCadet && <SelectedCadetTable selectedCadet={selectedCadet} />}
+              {selectedCadet && (
+                <SelectedCadetTable selectedCadet={selectedCadet} />
+              )}
             </div>
 
             {/* Tabs */}
@@ -167,7 +202,9 @@ export default function MilitaryTrainingPage() {
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${card.color} text-white`}>
+                            <div
+                              className={`p-2 rounded-lg ${card.color} text-white`}
+                            >
                               <IconComponent className="h-5 w-5" />
                             </div>
                             <div className="flex-1">
@@ -230,7 +267,9 @@ export default function MilitaryTrainingPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowAlert(false)}>OK</AlertDialogAction>
+            <AlertDialogAction onClick={() => setShowAlert(false)}>
+              OK
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
