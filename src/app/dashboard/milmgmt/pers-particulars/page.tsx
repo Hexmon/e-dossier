@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 import { createOCPersonal, getOCPersonal, OCPersonalRecord, updateOCPersonal } from "@/app/lib/api/ocPersonalApi";
+import { fetchCourseById } from "@/app/lib/api/courseApi";
 
 interface PersonalData {
     [key: string]: string | boolean;
@@ -32,12 +33,15 @@ interface PersonalData {
 
 export default function PersParticularsPage() {
     const [savedData, setSavedData] = useState<OCPersonalRecord | null>(null);
+    const [courseName, setCourseName] = useState("")
     const router = useRouter();
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
 
+    const {course = "", name, ocId, ocNumber} = selectedCadet || {}
     const { register, handleSubmit, reset, watch } = useForm<PersonalData>({
         defaultValues: {},
     });
+console.log({savedData});
 
     const handleBloodGroupUpdate = async () => {
         if (!selectedCadet?.ocId) {
@@ -83,10 +87,7 @@ export default function PersParticularsPage() {
 
     useEffect(() => {
         fetchPersonalData();
-    }, [selectedCadet]);
-
-
-
+    }, []);
 
     const handleLogout = () => {
         router.push("/login");
@@ -186,6 +187,19 @@ export default function PersParticularsPage() {
             alert(err?.message || "Error saving data.");
         }
     };
+
+    const handleFetchCourseById = async () => {
+        try {
+            const res = await fetchCourseById(course ?? "");
+            setCourseName(res.code);
+        } catch (error) {
+            
+        }
+    }
+
+    useEffect(() => {
+        handleFetchCourseById()
+    }, [])
 
     return (
         <SidebarProvider>

@@ -5,9 +5,10 @@ import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ocCadets } from '@/app/db/schema/training/oc';
-import { and, eq, isNull, sql, ilike, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
+import { listOCsBasic, listOCsFull } from '@/app/db/queries/oc';
 
 // --- Create OC (token required; no admin) -------------------------------
 const createSchema = z.object({
@@ -81,34 +82,176 @@ export async function POST(req: NextRequest) {
     }
 }
 
-// --- List OCs (token required; simple filters) --------------------------
-import { listOCsBasic, listOCsFull } from '@/app/db/queries/oc';
-
 export async function GET(req: NextRequest) {
-  try {
-    await requireAuth(req);
-    const sp = new URL(req.url).searchParams;
+    try {
+        await requireAuth(req);
+        const sp = new URL(req.url).searchParams;
 
-    const q = (sp.get('q') || '').trim() || undefined;
-    const courseId = (sp.get('courseId') || '').trim() || undefined;
-    const activeOnly = (sp.get('active') || '').toLowerCase() === 'true';
+        const q = (sp.get('q') || '').trim() || undefined;
+        const courseId = (sp.get('courseId') || '').trim() || undefined;
+        const activeOnly = (sp.get('active') || '').toLowerCase() === 'true';
 
-    // full toggle (accepts: full=true|1|all|full|* or include=full|all|*)
-    const includes = new Set(sp.getAll('include').map((s) => s.toLowerCase()));
-    const fullParam = (sp.get('full') || '').toLowerCase();
-    const wantFull =
-      ['true', '1', 'all', 'full', '*'].includes(fullParam) ||
-      includes.has('all') || includes.has('full') || includes.has('*');
+        // ---------- include / full parsing ----------
+        const truthy = new Set(['true', '1', 'yes', 'on', '*', 'all', 'full']);
 
-    const limit = Math.min(parseInt(sp.get('limit') || '200', 10) || 200, 1000);
-    const offset = parseInt(sp.get('offset') || '0', 10) || 0;
+        // collect all `include` params (support comma-separated too)
+        const rawIncludes = sp
+            .getAll('include')
+            .flatMap((s) => s.split(','))
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean);
 
-    const opts = { q, courseId, active: activeOnly, limit, offset };
+        const includeSet = new Set(rawIncludes);
 
-    const items = wantFull ? await listOCsFull(opts) : await listOCsBasic(opts);
+        // full toggle (only controls *loading*, not which sections are kept)
+        const fullParam = (sp.get('full') || '').toLowerCase();
+        const wantFullToggle =
+            truthy.has(fullParam) ||
+            includeSet.has('all') ||
+            includeSet.has('full') ||
+            includeSet.has('*');
 
-    return json.ok({ items, count: items.length });
-  } catch (err) {
-    return handleApiError(err);
-  }
+        // explicit per-section includes (via own flag OR `include=...`)
+        const explicitIncludes = {
+            personal:
+                truthy.has((sp.get('personal') || '').toLowerCase()) ||
+                includeSet.has('personal'),
+            preCommission:
+                truthy.has((sp.get('preCommission') || '').toLowerCase()) ||
+                includeSet.has('precommission'),
+            commissioning:
+                truthy.has((sp.get('commissioning') || '').toLowerCase()) ||
+                includeSet.has('commissioning'),
+            autobiography:
+                truthy.has((sp.get('autobiography') || '').toLowerCase()) ||
+                includeSet.has('autobiography'),
+            familyMembers:
+                truthy.has((sp.get('familyMembers') || '').toLowerCase()) ||
+                includeSet.has('familymembers'),
+            education:
+                truthy.has((sp.get('education') || '').toLowerCase()) ||
+                includeSet.has('education'),
+            achievements:
+                truthy.has((sp.get('achievements') || '').toLowerCase()) ||
+                includeSet.has('achievements'),
+            ssbReports:
+                truthy.has((sp.get('ssbReports') || '').toLowerCase()) ||
+                includeSet.has('ssbreports'),
+            medicals:
+                truthy.has((sp.get('medicals') || '').toLowerCase()) ||
+                includeSet.has('medicals'),
+            medicalCategory:
+                truthy.has((sp.get('medicalCategory') || '').toLowerCase()) ||
+                includeSet.has('medicalcategory'),
+            discipline:
+                truthy.has((sp.get('discipline') || '').toLowerCase()) ||
+                includeSet.has('discipline'),
+            parentComms:
+                truthy.has((sp.get('parentComms') || '').toLowerCase()) ||
+                includeSet.has('parentcomms'),
+            delegations:
+                truthy.has((sp.get('delegations') || '').toLowerCase()) ||
+                includeSet.has('delegations'),
+        };
+
+        const anyExplicit = Object.values(explicitIncludes).some(Boolean);
+
+        // helper: should we include a given section in response?
+        const want = (key: keyof typeof explicitIncludes): boolean => {
+            // If *any* explicit section flags are present, only respect them
+            if (anyExplicit) {
+                return explicitIncludes[key];
+            }
+
+            // No explicit flags → behave like old logic
+            const p = (sp.get(key) || '').toLowerCase();
+            return (
+                wantFullToggle ||
+                truthy.has(p) ||
+                includeSet.has(key.toLowerCase())
+            );
+        };
+
+        // per-section flags (what we actually return)
+        const includeFlags = {
+            personal: want('personal'),
+            preCommission: want('preCommission'),
+            commissioning: want('commissioning'),
+            autobiography: want('autobiography'),
+            familyMembers: want('familyMembers'),
+            education: want('education'),
+            achievements: want('achievements'),
+            ssbReports: want('ssbReports'),
+            medicals: want('medicals'),
+            medicalCategory: want('medicalCategory'),
+            discipline: want('discipline'),
+            parentComms: want('parentComms'),
+            delegations: want('delegations'),
+        };
+
+        const anySectionIncluded = Object.values(includeFlags).some(Boolean);
+
+        const limit = Math.min(parseInt(sp.get('limit') || '200', 10) || 200, 1000);
+        const offset = parseInt(sp.get('offset') || '0', 10) || 0;
+
+        const opts = { q, courseId, active: activeOnly, limit, offset };
+
+        // if NO full toggle + NO per-section includes → basic list (old behavior)
+        if (!wantFullToggle && !anySectionIncluded) {
+            const items = await listOCsBasic(opts);
+            return json.ok({ items, count: items.length });
+        }
+
+        // If full toggle but no explicit flags → return everything exactly as before
+        // (?full=true or ?include=all, but no personal=/delegations=/include=personal, etc.)
+        if (wantFullToggle && !anyExplicit) {
+            const items = await listOCsFull(opts);
+            return json.ok({ items, count: items.length });
+        }
+
+        // Otherwise: load full and trim to only requested sections
+        const fullItems = await listOCsFull(opts);
+
+        const items = fullItems.map((item: any) => {
+            const {
+                personal,
+                preCommission,
+                commissioning,
+                autobiography,
+                familyMembers,
+                education,
+                achievements,
+                ssbReports,
+                medicals,
+                medicalCategory,
+                discipline,
+                parentComms,
+                delegations,
+                ...base
+            } = item;
+
+            const out: any = { ...base };
+
+            if (includeFlags.personal) out.personal = personal ?? null;
+            if (includeFlags.preCommission) out.preCommission = preCommission ?? null;
+            if (includeFlags.commissioning) out.commissioning = commissioning ?? null;
+            if (includeFlags.autobiography) out.autobiography = autobiography ?? null;
+            if (includeFlags.familyMembers) out.familyMembers = familyMembers ?? [];
+            if (includeFlags.education) out.education = education ?? [];
+            if (includeFlags.achievements) out.achievements = achievements ?? [];
+            if (includeFlags.ssbReports) out.ssbReports = ssbReports ?? [];
+            if (includeFlags.medicals) out.medicals = medicals ?? [];
+            if (includeFlags.medicalCategory)
+                out.medicalCategory = medicalCategory ?? [];
+            if (includeFlags.discipline) out.discipline = discipline ?? [];
+            if (includeFlags.parentComms) out.parentComms = parentComms ?? [];
+            if (includeFlags.delegations) out.delegations = delegations ?? [];
+
+            return out;
+        });
+
+        return json.ok({ items, count: items.length });
+    } catch (err) {
+        return handleApiError(err);
+    }
 }
