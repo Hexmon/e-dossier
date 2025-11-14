@@ -87,3 +87,13 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
     throw new Error("Something went wrong. Please try again later.");
   }
 }
+
+export async function logout() {
+  try {
+    await api.post(endpoints.auth.logout);
+    return true;
+  } catch (err) {
+    console.error("Logout error:", err);
+    return false;
+  }
+}

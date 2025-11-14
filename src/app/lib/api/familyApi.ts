@@ -7,8 +7,13 @@ export interface FamilyMember {
     age?: string | number;
     occupation?: string;
     education?: string;
-    mobileNo?: string;
+    mobile?: string;
 }
+
+export interface FamilyMemberRecord extends FamilyMember {
+    id: string;
+}
+
 
 export interface ApiResponse<T = any> {
     status: number;
@@ -44,14 +49,28 @@ export async function saveFamilyDetails(
     }
 }
 
-export async function getFamilyDetails(ocId: string): Promise<FamilyMember[]> {
+export async function getFamilyDetails(ocId: string): Promise<FamilyMemberRecord[]> {
     try {
         const response = await api.get(endpoints.oc.family(ocId)) as any;
+
         if (Array.isArray(response?.items)) {
-            return response.items;
+            return response.items as FamilyMemberRecord[];
         }
         return [];
     } catch (error) {
         return [];
     }
 }
+
+export async function updateFamilyMember(
+    ocId: string,
+    familyId: string,
+    payload: Partial<FamilyMemberRecord>
+) {
+    return api.patch(endpoints.oc.familyById(ocId, familyId), payload);
+}
+
+export async function deleteFamilyMember(ocId: string, familyId: string) {
+    return api.delete(endpoints.oc.familyById(ocId, familyId));
+}
+

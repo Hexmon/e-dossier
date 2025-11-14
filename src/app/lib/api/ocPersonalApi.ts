@@ -6,6 +6,10 @@ import { baseURL, endpoints } from "@/constants/endpoints";
 export interface OCPersonalRecord {
     id?: string;
     ocId: string;
+    pl?: string;
+    pi?: string;
+    pob?: string;
+    placeOfBirth?: string;
     no?: string;
     name?: string;
     course?: string;
@@ -15,6 +19,7 @@ export interface OCPersonalRecord {
     idenMarks2?: string;
     nationality?: string;
     bloodGp?: string;
+    bloodGroup?: string;
     religion?: string;
     domicile?: string;
     fatherName?: string;
@@ -45,19 +50,37 @@ export interface OCPersonalRecord {
     hobbies?: string;
     swimmer?: boolean;
     languages?: string;
+
+    dsPiSsicNo?: string;
+    dsPiRank?: string;
+    dsPiName?: string;
+    dsPiUnitArm?: string;
+    dsPiMobile?: string;
+
+    dsDyIcNo?: string;
+    dsDyRank?: string;
+    dsDyName?: string;
+    dsDyUnitArm?: string;
+    dsDyMobile?: string;
+
+    dsCdrIcNo?: string;
+    dsCdrRank?: string;
+    dsCdrName?: string;
+    dsCdrUnitArm?: string;
+    dsCdrMobile?: string;
+
     createdAt?: string;
     updatedAt?: string;
 }
 
+
 // Fetch personal particulars for one OC
-export async function getOCPersonal(ocId: string): Promise<OCPersonalRecord[]> {
-    const response = await api.get<{ personals: OCPersonalRecord[] }>(
-        endpoints.oc.personal(ocId),
-        { baseURL }
+export async function getOCPersonal(ocId: string) {
+    const res = await api.get<{ data: OCPersonalRecord }>(
+        endpoints.oc.personal(ocId)
     );
 
-    if (Array.isArray(response)) return response;
-    return response?.personals ?? [];
+    return res.data ?? null;
 }
 
 // Create or update (POST) OC personal particulars

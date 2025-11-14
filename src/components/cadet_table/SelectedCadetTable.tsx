@@ -26,7 +26,7 @@ export default function SelectedCadetTable({ selectedCadet }: CadetTableProps) {
         <tbody className="bg-white text-center">
           <tr>
             <td className="px-6 py-3 border border-gray-300">{selectedCadet.name}</td>
-            <td className="px-6 py-3 border border-gray-300">{selectedCadet.course}</td>
+            <td className="px-6 py-3 border border-gray-300">{selectedCadet.courseName}</td>
             <td className="px-6 py-3 border border-gray-300">{selectedCadet.ocNumber}</td>
           </tr>
         </tbody>

@@ -32,7 +32,6 @@ const DashboardPage = () => {
             <PageHeader
               title="MCEME CTW Dashboard"
               description="Training Management System"
-              onLogout={handleLogout}
             />
           </header>
 

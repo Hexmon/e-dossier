@@ -5,7 +5,8 @@ export const baseURL = 'http://localhost:3000'
 export const endpoints = {
     auth: {
         login: "/api/v1/auth/login",
-        signup: "/api/v1/auth/signup"
+        signup: "/api/v1/auth/signup",
+        logout: "/api/v1/auth/logout",
     },
     admin: {
         approval: "/api/v1/admin/signup-requests",
@@ -33,6 +34,8 @@ export const endpoints = {
         discipline: (ocId: string) => `/api/v1/oc/${ocId}/discipline`,
         parentComms: (ocId: string) => `/api/v1/oc/${ocId}/parent-comms`,
         bulkUpload: "/api/v1/oc/bulk-upload",
+        familyById: (ocId: string, familyId: string) =>
+        `/api/v1/oc/${ocId}/family/${familyId}`,
     },
     course: {
         all: "/api/v1/courses"

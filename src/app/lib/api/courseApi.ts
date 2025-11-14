@@ -15,6 +15,19 @@ export type CreateCourseRequest = {
     notes?: string;
 };
 
+export type FetchCourseByIdResponse = {
+    course: {
+        id: string;
+        code: string;
+        title: string;
+        notes?: string;
+        createdAt?: string;
+        updatedAt?: string;
+    };
+    offerings: any[];
+};
+
+
 // Response type for a single course
 export type CourseResponse = {
     id: string;
@@ -68,13 +81,15 @@ export async function deleteCourse(courseId: string): Promise<void> {
 }
 
 export async function fetchCourseById(courseId: string) {
-  if (!courseId) throw new Error("Missing courseId");
-  const res = await api.get<{ id: string; code: string; title: string }>(
-    `${endpoints.course.all}/${courseId}`,
-    {
-      baseURL,
-      query: { expand: "subjects", semester: 1 },
-    }
-  );
-  return res;
+    if (!courseId) throw new Error("Missing courseId");
+
+    const res = await api.get<FetchCourseByIdResponse>(
+        `${endpoints.course.all}/${courseId}`,
+        {
+            baseURL,
+            query: { expand: "subjects", semester: 1 },
+        }
+    );
+
+    return res;
 }
