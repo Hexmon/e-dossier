@@ -139,6 +139,77 @@ export async function upsertSsbReport(ocId: string, data: Partial<typeof ocSsbRe
     const [row] = await db.insert(ocSsbReports).values({ ocId, ...data }).returning();
     return row;
 }
+
+export type SsbNoteInput = {
+    note: string;
+    by: string;
+};
+
+export type SsbReportWithPointsInput = {
+    positives: SsbNoteInput[];
+    negatives: SsbNoteInput[];
+    overallPredictiveRating: number | null;
+    scopeOfImprovement: string | null;
+};
+
+export async function upsertSsbReportWithPoints(ocId: string, input: SsbReportWithPointsInput) {
+    await db.transaction(async (tx) => {
+        const [existing] = await tx
+            .select()
+            .from(ocSsbReports)
+            .where(eq(ocSsbReports.ocId, ocId))
+            .limit(1);
+
+        let report = existing;
+        if (report) {
+            const [updated] = await tx
+                .update(ocSsbReports)
+                .set({
+                    overallPredictiveRating: input.overallPredictiveRating,
+                    scopeOfImprovement: input.scopeOfImprovement,
+                })
+                .where(eq(ocSsbReports.ocId, ocId))
+                .returning();
+            report = updated;
+        } else {
+            const [created] = await tx
+                .insert(ocSsbReports)
+                .values({
+                    ocId,
+                    overallPredictiveRating: input.overallPredictiveRating,
+                    scopeOfImprovement: input.scopeOfImprovement,
+                })
+                .returning();
+            report = created;
+        }
+
+        if (!report) return;
+
+        await tx.delete(ocSsbPoints).where(eq(ocSsbPoints.reportId, report.id));
+
+        const pointRows = [
+            ...input.positives.map((p) => ({
+                reportId: report!.id,
+                kind: 'POSITIVE' as const,
+                remark: p.note,
+                authorName: p.by,
+                authorUserId: null,
+            })),
+            ...input.negatives.map((n) => ({
+                reportId: report!.id,
+                kind: 'NEGATIVE' as const,
+                remark: n.note,
+                authorName: n.by,
+                authorUserId: null,
+            })),
+        ];
+
+        if (pointRows.length) {
+            await tx.insert(ocSsbPoints).values(pointRows);
+        }
+    });
+}
+
 export async function deleteSsbReport(ocId: string) {
     const [row] = await db.delete(ocSsbReports).where(eq(ocSsbReports.ocId, ocId)).returning();
     return row ?? null;
