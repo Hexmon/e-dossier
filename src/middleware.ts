@@ -23,8 +23,7 @@ const PUBLIC_ANY: string[] = [
   '/api/v1/auth/signup',
   '/api/v1/auth/logout',   // allow clearing cookies
   '/api/v1/admin/users/check-username',
-  '/api/v1/health',
-  '/api/v1/change-password'
+  '/api/v1/health'
 ];
 
 // Public only for specific methods

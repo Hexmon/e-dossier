@@ -102,13 +102,20 @@ export function extractCsrfToken(req: NextRequest): string | null {
  * @param token - CSRF token to set
  */
 export function setCsrfCookie(res: NextResponse, token: string): void {
+  // SECURITY FIX: Store CSRF token in an HttpOnly cookie so it cannot be read by
+  // malicious JavaScript, and also expose it once via the X-CSRF-Token header
+  // for SPA clients (see apiClient.ts).
   res.cookies.set('csrf-token', token, {
-    httpOnly: false, // Must be accessible to JavaScript for inclusion in requests
+    httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
-    maxAge: 60 * 60 * 24, // 24 hours
+    maxAge: 3600, // 1 hour
   });
+
+  // Provide the token to the client via response header; middleware merges this
+  // header into the final response so the browser can read it.
+  res.headers.set('X-CSRF-Token', token);
 }
 
 /**

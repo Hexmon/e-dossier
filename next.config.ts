@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   eslint: {
     // SECURITY FIX: Enable linting during builds to catch security issues
-    ignoreDuringBuilds: true
+    ignoreDuringBuilds: false
   },
 
   // SECURITY FIX: Disable X-Powered-By header to avoid exposing Next.js
@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Note: Adjust based on your needs
+              "script-src 'self'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",
@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
+              "block-all-mixed-content",
               "upgrade-insecure-requests"
             ].join('; ')
           },

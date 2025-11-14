@@ -103,6 +103,46 @@ function isFormLike(x: unknown): x is FormData | Blob | File {
     return typeof Blob !== "undefined" && (x instanceof FormData || x instanceof Blob || x instanceof File);
 }
 
+let csrfToken: string | null = null;
+let csrfPromise: Promise<void> | null = null;
+
+/**
+ * Ensure a CSRF token is available in the browser by performing a
+ * lightweight GET to the health endpoint, which sets the cookie and
+ * returns the token in the X-CSRF-Token header via middleware.
+ */
+async function ensureCsrfToken(baseURL?: string) {
+    if (typeof window === 'undefined') return;
+
+    if (csrfToken) return;
+    if (!csrfPromise) {
+        csrfPromise = (async () => {
+            try {
+                const healthUrl = baseURL
+                    ? new URL('/api/v1/health', baseURL).toString()
+                    : '/api/v1/health';
+
+                const res = await fetch(healthUrl, {
+                    method: 'GET',
+                    credentials: 'include',
+                });
+
+                const headerToken = res.headers.get('X-CSRF-Token');
+                if (headerToken) {
+                    csrfToken = headerToken;
+                }
+            } catch {
+                // Best-effort only; middleware will reject requests without a valid token.
+            } finally {
+                csrfPromise = null;
+            }
+        })();
+    }
+
+    await csrfPromise;
+}
+
+
 export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptions<B>): Promise<T> {
     const {
         method,
@@ -129,19 +169,17 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
         headers: { ...(headers ?? {}) },
     };
 
-    // SECURITY FIX: Add CSRF token for state-changing requests
-    // Only on client-side (browser environment)
+    // SECURITY FIX: Add CSRF token for state-changing requests.
+    // Only on client-side (browser environment). We lazily obtain the token
+    // via a lightweight GET to /api/v1/health, which the middleware uses to
+    // set the CSRF cookie and return the token in the X-CSRF-Token header.
     if (typeof window !== 'undefined' && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
-        // Get CSRF token from cookie
-        const csrfToken = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrf-token='))
-            ?.split('=')[1];
+        await ensureCsrfToken(baseURL);
 
         if (csrfToken) {
             init.headers = {
                 ...init.headers,
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': csrfToken,
             };
         }
     }
@@ -162,6 +200,12 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
     }
 
     const res = await fetch(url, init);
+
+    // Refresh CSRF token from response header if present
+    const resCsrf = res.headers.get('X-CSRF-Token');
+    if (resCsrf) {
+        csrfToken = resCsrf;
+    }
 
     // SECURITY FIX: Handle 401 Unauthorized - redirect to login
     if (res.status === 401) {
