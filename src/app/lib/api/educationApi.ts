@@ -16,6 +16,15 @@ export interface EducationUpdate extends EducationRecord {
     id: string;
 }
 
+export interface EducationUI {
+    id: string;
+    qualification: string;
+    school: string;
+    subs: string;
+    board: string;
+    marks: string;
+    grade: string;
+}
 
 export interface EducationRecordResponse {
     id: string;
