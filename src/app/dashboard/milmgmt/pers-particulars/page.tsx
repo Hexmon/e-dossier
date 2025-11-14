@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 import { createOCPersonal, getOCPersonal, OCPersonalRecord, updateOCPersonal } from "@/app/lib/api/ocPersonalApi";
+import { toast } from "sonner";
+import { dsFieldMap } from "@/constants/app.constants";
 
 interface PersonalData {
     [key: string]: string | boolean;
@@ -34,9 +36,8 @@ export default function PersParticularsPage() {
     const [savedData, setSavedData] = useState<OCPersonalRecord | null>(null);
     const router = useRouter();
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
-
-    const { register, handleSubmit, reset, watch } = useForm<PersonalData>({
-        defaultValues: {},
+    const { register, handleSubmit, reset } = useForm<OCPersonalRecord>({
+        defaultValues: {} as OCPersonalRecord,
     });
 
     const handleBloodGroupUpdate = async () => {
@@ -56,28 +57,30 @@ export default function PersParticularsPage() {
     };
 
     const fetchPersonalData = async () => {
-        if (!selectedCadet?.ocId) {
-            console.warn("No cadet selected — skipping data fetch.");
-            return;
-        }
-
-        console.log(`Fetching personal data for cadet OC ID: ${selectedCadet.ocId}...`);
+        if (!selectedCadet?.ocId) return;
 
         try {
-            const personals = await getOCPersonal(selectedCadet.ocId);
+            const response = await getOCPersonal(selectedCadet.ocId);
 
-            console.log("Data successfully fetched from backend:", personals);
+            if (response) {
+                const transformed: OCPersonalRecord = {
+                    ...response,
+                    no:selectedCadet.ocNumber,
+                    name: selectedCadet.name,
+                    pl: response.pi ?? "",
+                    dob: response.dob ? response.dob.split("T")[0] : "",
+                    bloodGp: response.bloodGroup ?? "",
+                };
 
-            if (personals.length > 0) {
-                setSavedData(personals[0]);
-                console.log("First record saved to state:", personals[0]);
+                setSavedData(transformed);
+                reset(transformed);
             } else {
                 setSavedData(null);
-                console.log("ℹNo personal data found for this cadet.");
+                reset({} as OCPersonalRecord);
             }
         } catch (err) {
-            console.error("Failed to load personal particulars:", err);
             setSavedData(null);
+            reset({} as OCPersonalRecord);
         }
     };
 
@@ -85,17 +88,9 @@ export default function PersParticularsPage() {
         fetchPersonalData();
     }, [selectedCadet]);
 
-
-
-
-    const handleLogout = () => {
-        router.push("/login");
-        console.log("Logout clicked");
-    };
-
     const onSubmit = async (data: PersonalData) => {
         if (!selectedCadet?.ocId) {
-            alert("No cadet selected");
+            toast.error("No cadet selected");
             return;
         }
 
@@ -112,12 +107,12 @@ export default function PersParticularsPage() {
 
             if (!savedData) {
                 saved = await createOCPersonal(selectedCadet.ocId, payload);
-                alert("Personal particulars saved successfully!");
+                toast.success("Personal particulars saved successfully!");
             }
             else {
                 const updatableFields = [
                     "visibleIdentMarks",
-                    "pi",
+                    "pl",
                     "dob",
                     "placeOfBirth",
                     "domicile",
@@ -177,13 +172,12 @@ export default function PersParticularsPage() {
                 );
 
                 saved = await updateOCPersonal(selectedCadet.ocId, updatePayload);
-                alert("Personal particulars updated successfully!");
+                toast.success("Personal particulars updated successfully!");
             }
 
             setSavedData(saved);
         } catch (err: any) {
-            console.error("Failed to save personal particulars:", err);
-            alert(err?.message || "Error saving data.");
+            toast.error(err?.message || "Error saving data.");
         }
     };
 
@@ -196,7 +190,6 @@ export default function PersParticularsPage() {
                     <PageHeader
                         title="Personal Particulars"
                         description="Record and manage personal details of cadets, including background information, identification, and essential documentation for reference."
-                        onLogout={handleLogout}
                     />
 
                     <main className="flex-1 p-6">
@@ -244,10 +237,10 @@ export default function PersParticularsPage() {
 
                                     <CardContent>
                                         <Tabs defaultValue="form">
-                                            <TabsList className="mb-6">
+                                            {/* <TabsList className="mb-6">
                                                 <TabsTrigger value="form">Fill Form</TabsTrigger>
                                                 <TabsTrigger value="view">View Data</TabsTrigger>
-                                            </TabsList>
+                                            </TabsList> */}
 
                                             {/* FORM TAB */}
                                             <TabsContent value="form">
@@ -263,15 +256,15 @@ export default function PersParticularsPage() {
                                                                 "name",
                                                                 "course",
                                                                 "date of arrvl",
-                                                                "idenMarks",
-                                                                "pi",
+                                                                "visibleIdentMarks",
+                                                                "pl",
                                                                 "dob",
-                                                                "pob",
+                                                                "placeOfBirth",
                                                                 "domicile",
                                                                 "religion",
                                                                 "nationality",
                                                                 "bloodGp",
-                                                                "idenMarks2",
+                                                                "identMarks",
                                                             ].map((name) => (
                                                                 <div key={name}>
                                                                     <label className="text-sm font-medium capitalize">{name}</label>
@@ -294,19 +287,19 @@ export default function PersParticularsPage() {
                                                             {[
                                                                 "fatherName",
                                                                 "fatherMobile",
-                                                                "fatherAddressPermt",
-                                                                "fatherAddressPresent",
+                                                                "fatherAddrPerm",
+                                                                "fatherAddrPresent",
                                                                 "fatherProfession",
                                                                 "guardianName",
                                                                 "guardianAddress",
-                                                                "income",
+                                                                "monthlyIncome",
                                                                 "nokDetails",
-                                                                "nokAddressPermanent",
-                                                                "nokAddressPresent",
-                                                                "nearestRlyStn",
-                                                                "familySecunderabad",
-                                                                "armedForcesRelative",
-                                                                "govtAssistance",
+                                                                "nokAddrPerm",
+                                                                "nokAddrPresent",
+                                                                "nearestRailwayStation",
+                                                                "familyInSecunderabad",
+                                                                "relativeInArmedForces",
+                                                                "govtFinancialAssistance",
                                                             ].map((name) => (
                                                                 <div key={name}>
                                                                     <label className="text-sm font-medium capitalize">{name}</label>
@@ -323,15 +316,15 @@ export default function PersParticularsPage() {
                                                         </CardHeader>
                                                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                             {[
-                                                                "mobile",
+                                                                "mobileNo",
                                                                 "email",
-                                                                "passport",
-                                                                "pan",
-                                                                "aadhaar",
-                                                                "bank",
-                                                                "idCard",
-                                                                "upsc",
-                                                                "ssb",
+                                                                "passportNo",
+                                                                "panNo",
+                                                                "aadhaarNo",
+                                                                "bankDetails",
+                                                                "idenCardNo",
+                                                                "upscRollNo",
+                                                                "ssbCentre",
                                                             ].map((name) => (
                                                                 <div key={name}>
                                                                     <label className="text-sm font-medium capitalize">{name}</label>
@@ -377,6 +370,7 @@ export default function PersParticularsPage() {
                                                             {["PI Cdr", "Dy Cdr", "Cdr"].map((role) => (
                                                                 <div key={role} className="border p-4 rounded-lg space-y-2">
                                                                     <h3 className="font-semibold">{role}</h3>
+
                                                                     {[
                                                                         role === "PI Cdr" ? "SS/IC No" : "IC No",
                                                                         "Rank",
@@ -384,12 +378,15 @@ export default function PersParticularsPage() {
                                                                         "Unit/Arm",
                                                                         "Mobile No",
                                                                     ].map((field) => {
-                                                                        const name = `${role}-${field.toLowerCase().replace(" ", "-")}`;
+                                                                        const uiName = `${role}-${field.toLowerCase().replace(" ", "-")}`;
+                                                                        const backendKey = dsFieldMap[uiName];
+
                                                                         return (
-                                                                            <div key={name}>
+                                                                            <div key={uiName}>
                                                                                 <label className="text-sm font-medium">{field}</label>
+
                                                                                 <Input
-                                                                                    {...register(name)}
+                                                                                    {...register(backendKey as keyof OCPersonalRecord)}
                                                                                     placeholder={`Enter ${field}`}
                                                                                 />
                                                                             </div>
@@ -417,7 +414,7 @@ export default function PersParticularsPage() {
                                             </TabsContent>
 
                                             {/* VIEW TAB */}
-                                            <TabsContent value="view">
+                                            {/* <TabsContent value="view">
                                                 <Card className="p-6 border rounded-lg bg-gray-50">
                                                     <h3 className="text-lg font-semibold mb-4">Saved Data</h3>
                                                     {savedData ? (
@@ -435,7 +432,7 @@ export default function PersParticularsPage() {
                                                         <p className="text-gray-500 italic">No data found for this cadet.</p>
                                                     )}
                                                 </Card>
-                                            </TabsContent>
+                                            </TabsContent> */}
 
                                         </Tabs>
                                     </CardContent>

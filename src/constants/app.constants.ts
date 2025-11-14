@@ -1,3 +1,4 @@
+import { OCPersonalRecord } from "@/app/lib/api/ocPersonalApi";
 import { MenuSection } from "@/types/appSidebar";
 import { Activity, Book, BookOpen, CalendarDays, FileText, GraduationCap, Home, Settings, Shield, UserCheck, Users } from "lucide-react";
 
@@ -92,3 +93,23 @@ export const dossierDetails = [
 ];
 
 export const USER_ROLES = ["Comdt", "DCCI", "Cdr CTW", "DyCdr CTW", "DS Cord", "HOAT", "Platoon Cdr", "CCO", "User"];
+
+export const dsFieldMap: Record<string, keyof OCPersonalRecord> = {
+  "PI Cdr-ss/ic-no": "dsPiSsicNo",
+  "PI Cdr-rank": "dsPiRank",
+  "PI Cdr-name": "dsPiName",
+  "PI Cdr-unit/arm": "dsPiUnitArm",
+  "PI Cdr-mobile-no": "dsPiMobile",
+
+  "Dy Cdr-ic-no": "dsDyIcNo",
+  "Dy Cdr-rank": "dsDyRank",
+  "Dy Cdr-name": "dsDyName",
+  "Dy Cdr-unit/arm": "dsDyUnitArm",
+  "Dy Cdr-mobile-no": "dsDyMobile",
+
+  "Cdr-ic-no": "dsCdrIcNo",
+  "Cdr-rank": "dsCdrRank",
+  "Cdr-name": "dsCdrName",
+  "Cdr-unit/arm": "dsCdrUnitArm",
+  "Cdr-mobile-no": "dsCdrMobile",
+};

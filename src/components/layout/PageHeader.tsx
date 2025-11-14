@@ -1,3 +1,5 @@
+"use client";
+
 import { User, LogOut } from "lucide-react";
 import {
   DropdownMenu,
@@ -8,17 +10,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
+import { useRouter } from "next/navigation";
+import { logout } from "@/app/lib/api/authApi";
 
 interface PageHeaderProps {
   title: string;
   description?: string;
-  onLogout?: () => void;
 }
 
-export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
+export function PageHeader({ title, description }: PageHeaderProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const ok = await logout();
+    if (ok) {
+      router.push("/login");
+    }
+  };
+
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
       <div className="flex items-center justify-between px-4 h-full">
+
         {/* Left side */}
         <div className="flex items-center gap-4">
           <SidebarTrigger className="h-8 w-8" />
@@ -30,14 +43,11 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
           </div>
         </div>
 
-        {/* Right side (fixed user menu) */}
+        {/* Right side */}
         <div className="flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="relative h-8 w-8 rounded-full"
-              >
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     PC
@@ -45,6 +55,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end" className="w-56">
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
@@ -54,11 +65,13 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
                   </p>
                 </div>
               </div>
+
               <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile Settings</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onLogout}>
+
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Logout</span>
               </DropdownMenuItem>
