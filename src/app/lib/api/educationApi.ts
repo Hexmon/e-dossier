@@ -12,14 +12,19 @@ export interface EducationRecord {
     percentage: number;
 }
 
+export interface EducationUpdate extends EducationRecord {
+    id: string;
+}
+
+
 export interface EducationRecordResponse {
-  id: string;
-  ocId: string;
-  level: string;
-  schoolOrCollege: string | null;
-  boardOrUniv: string | null;
-  subjects: string | null;
-  totalPercent: number | null;
+    id: string;
+    ocId: string;
+    level: string;
+    schoolOrCollege: string | null;
+    boardOrUniv: string | null;
+    subjects: string | null;
+    totalPercent: number | null;
 }
 
 
@@ -75,4 +80,18 @@ export async function getEducationDetails(ocId: string): Promise<EducationRecord
         console.error("Error fetching education details:", error);
         return [];
     }
+}
+
+// UPDATE Education Entry
+export async function updateEducationRecord(
+    ocId: string,
+    eduId: string,
+    payload: Partial<{ percentage: number }>
+) {
+    return api.patch(`${endpoints.oc.education(ocId)}/${eduId}`, payload);
+}
+
+// DELETE Education Entry
+export async function deleteEducationRecord(ocId: string, eduId: string) {
+    return api.delete(`${endpoints.oc.education(ocId)}/${eduId}`);
 }

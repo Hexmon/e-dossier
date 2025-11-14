@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 type Cadet = {
   name: string;
   course: string;
+  courseName: string;
   ocNumber: string;
   ocId: string;
 };
@@ -12,14 +13,14 @@ interface CadetState {
 }
 
 const initialState: CadetState = {
-  selectedCadet: null,
+  selectedCadet: null as Cadet | null,
 };
 
 const cadetSlice = createSlice({
   name: "cadet",
   initialState,
   reducers: {
-    setSelectedCadet: (state, action: PayloadAction<Cadet | null>) => {
+    setSelectedCadet: (state, action: PayloadAction<Cadet>) => {
       state.selectedCadet = action.payload;
     },
     clearCadet: (state) => {

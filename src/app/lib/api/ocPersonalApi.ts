@@ -50,24 +50,29 @@ export interface OCPersonalRecord {
     hobbies?: string;
     swimmer?: boolean;
     languages?: string;
-    createdAt?: string;
-    updatedAt?: string;
+
     dsPiSsicNo?: string;
     dsPiRank?: string;
     dsPiName?: string;
     dsPiUnitArm?: string;
     dsPiMobile?: string;
+
     dsDyIcNo?: string;
     dsDyRank?: string;
     dsDyName?: string;
     dsDyUnitArm?: string;
     dsDyMobile?: string;
+
     dsCdrIcNo?: string;
     dsCdrRank?: string;
     dsCdrName?: string;
     dsCdrUnitArm?: string;
     dsCdrMobile?: string;
+
+    createdAt?: string;
+    updatedAt?: string;
 }
+
 
 // Fetch personal particulars for one OC
 export async function getOCPersonal(ocId: string) {

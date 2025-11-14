@@ -24,20 +24,27 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FamilyMember, getFamilyDetails, saveFamilyDetails } from "@/app/lib/api/familyApi";
+import { deleteFamilyMember, FamilyMember, FamilyMemberRecord, getFamilyDetails, saveFamilyDetails, updateFamilyMember } from "@/app/lib/api/familyApi";
 import { toast } from "sonner";
 import { Achievement, AutoBio, Qualification } from "@/types/background-detls";
-import { EducationRecordResponse, getEducationDetails, saveEducationDetails } from "@/app/lib/api/educationApi";
+import { deleteEducationRecord, EducationRecordResponse, getEducationDetails, saveEducationDetails, updateEducationRecord } from "@/app/lib/api/educationApi";
 import { getAchievements, saveAchievements } from "@/app/lib/api/achievementsApi";
 import { useCallback, useEffect, useState } from "react";
 import { getAutobiographyDetails, saveAutobiography } from "@/app/lib/api/autobiographyApi";
+import { EditableTable } from "@/components/background_detls/EditableTable";
 
 export default function BackgroundDetlsPage() {
     const router = useRouter();
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
     const [savedEducation, setSavedEducation] = useState<Qualification[]>([]);
-    const [savedFamily, setSavedFamily] = useState<FamilyMember[]>([]);
+    const [savedFamily, setSavedFamily] = useState<FamilyMemberRecord[]>([]);
     const [savedAchievements, setSavedAchievements] = useState<Achievement[]>([]);
+    const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState<FamilyMemberRecord | null>(null);
+    const [editingEduId, setEditingEduId] = useState<string | null>(null);
+    const [editEduForm, setEditEduForm] = useState<EducationRecordResponse | null>(null);
+
 
     const handleLogout = () => {
         router.push("/login");
@@ -71,7 +78,7 @@ export default function BackgroundDetlsPage() {
     });
     const { handleSubmit: handleFamilySubmit } = familyForm;
 
-    const submitFamily = async (data: { family: FamilyMember[] }) => {
+    const submitFamily = async (data: { family: FamilyMemberRecord[] }) => {
         if (!selectedCadet?.ocId) {
             toast.error("No cadet selected");
             return;
@@ -104,6 +111,7 @@ export default function BackgroundDetlsPage() {
 
             if (Array.isArray(data) && data.length > 0) {
                 const formatted = data.map((item) => ({
+                    id: item.id,
                     qualification: item.level || "",
                     school: item.schoolOrCollege || "",
                     subs: item.subjects || "",
@@ -111,6 +119,7 @@ export default function BackgroundDetlsPage() {
                     marks: item.totalPercent ? item.totalPercent.toString() : "",
                     grade: "",
                 }));
+
                 setSavedEducation(formatted);
             }
         } catch (err) {
@@ -278,6 +287,122 @@ export default function BackgroundDetlsPage() {
         }
     };
 
+    const handleEditFamily = (member: FamilyMemberRecord) => {
+        setEditingId(member.id);
+        setEditForm({ ...member });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingId(null);
+        setEditForm(null);
+    };
+
+    const handleChangeEdit = (field: keyof FamilyMember, value: string | number) => {
+        setEditForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+    };
+
+    const handleSaveFamily = async () => {
+        if (!selectedCadet?.ocId || !editingId || !editForm) {
+            toast.error("Invalid operation");
+            return;
+        }
+
+        try {
+            await updateFamilyMember(selectedCadet.ocId, editingId, {
+                name: editForm.name,
+                relation: editForm.relation,
+                age: editForm.age,
+                occupation: editForm.occupation,
+                education: editForm.education,
+                mobileNo: editForm.mobileNo,
+            });
+
+            setSavedFamily((prev) => prev.map((f) => (f.id === editingId ? editForm : f)));
+            toast.success("Family member updated");
+            setEditingId(null);
+            setEditForm(null);
+        } catch (err) {
+            console.error("Failed to update family member:", err);
+            toast.error("Failed to update family member");
+        }
+    };
+
+    const handleDeleteFamily = async (member: FamilyMemberRecord) => {
+        if (!selectedCadet?.ocId || !member.id) return toast.error("Invalid family record");
+
+        try {
+            await deleteFamilyMember(selectedCadet.ocId, member.id);
+            setSavedFamily((prev) => prev.filter((f) => f.id !== member.id));
+            toast.success("Family member deleted");
+        } catch (err) {
+            console.error("Failed to delete family member:", err);
+            toast.error("Failed to delete member");
+        }
+    };
+
+    const handleEditEducation = (row: EducationRecordResponse) => {
+        setEditingEduId(row.id);
+        setEditEduForm({
+            ...row,
+            totalPercent: row.totalPercent ?? 0
+        });
+    };
+
+    const handleCancelEducation = () => {
+        setEditingEduId(null);
+        setEditEduForm(null);
+    };
+
+    const handleChangeEducation = (field: string, value: string | number) => {
+        setEditEduForm((prev) => prev ? { ...prev, [field]: value } : prev);
+    };
+
+    const handleSaveEducation = async () => {
+        if (!selectedCadet?.ocId || !editingEduId || !editEduForm) {
+            return toast.error("Invalid operation");
+        }
+
+        try {
+            await updateEducationRecord(selectedCadet.ocId, editingEduId, {
+                percentage: Number(editEduForm.totalPercent),
+            });
+
+            // Update local table
+            setSavedEducation((prev) =>
+                prev.map((item: any) =>
+                    item.id === editingEduId
+                        ? {
+                            ...item,
+                            marks: String(editEduForm.totalPercent),
+                        }
+                        : item
+                )
+            );
+
+            toast.success("Educational record updated successfully!");
+
+            setEditingEduId(null);
+            setEditEduForm(null);
+        } catch (err) {
+            console.error("Failed to update education:", err);
+            toast.error("Failed to update educational record");
+        }
+    };
+
+    const handleDeleteEducation = async (row: EducationRecordResponse) => {
+        if (!selectedCadet?.ocId || !row.id) return toast.error("Invalid education record");
+
+        try {
+            await deleteEducationRecord(selectedCadet.ocId, row.id);
+
+            setSavedEducation((prev) => prev.filter((x: any) => x.id !== row.id));
+
+            toast.success("Educational qualification deleted!");
+        } catch (err) {
+            console.error("Failed to delete education:", err);
+            toast.error("Failed to delete educational record");
+        }
+    };
 
     return (
         <SidebarProvider>
@@ -287,7 +412,6 @@ export default function BackgroundDetlsPage() {
                     <PageHeader
                         title="Background Details"
                         description="Maintain and review cadets' background information, including family, education, and prior experiences."
-                        onLogout={handleLogout}
                     />
 
                     <main className="flex-1 p-6">
@@ -338,35 +462,35 @@ export default function BackgroundDetlsPage() {
                                     <TabsContent value="family-bgrnd">
                                         {savedFamily && savedFamily.length > 0 ? (
                                             <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-                                                <table className="min-w-full text-sm text-left border border-gray-300">
-                                                    <thead className="bg-gray-100">
-                                                        <tr>
-                                                            {["S.No", "Name", "Relation", "Age", "Occupation", "Edn Qual", "Mobile"].map((head) => (
-                                                                <th key={head} className="border px-4 py-2 !bg-gray-300 text-center">
-                                                                    {head}
-                                                                </th>
-                                                            ))}
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {savedFamily.map((member, idx) => (
-                                                            <tr key={idx}>
-                                                                <td className="border px-4 py-2 text-center">{idx + 1}</td>
-                                                                <td className="border px-4 py-2">{member.name}</td>
-                                                                <td className="border px-4 py-2">{member.relation}</td>
-                                                                <td className="border px-4 py-2">{member.age}</td>
-                                                                <td className="border px-4 py-2">{member.occupation}</td>
-                                                                <td className="border px-4 py-2">{member.education}</td>
-                                                                <td className="border px-4 py-2">{member.mobileNo}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                <EditableTable
+                                                    data={savedFamily}
+                                                    editingId={editingId}
+                                                    editForm={editForm}
+                                                    columns={[
+                                                        { key: "name", label: "Name" },
+                                                        { key: "relation", label: "Relation" },
+                                                        { key: "age", label: "Age", type: "number" },
+                                                        { key: "occupation", label: "Occupation" },
+                                                        { key: "education", label: "Edn Qual" },
+                                                        { key: "mobileNo", label: "Mobile" },
+                                                    ]}
+                                                    onEdit={(row) => {
+                                                        setEditingId(row.id);
+                                                        setEditForm({ ...row });
+                                                    }}
+                                                    onChange={(field, value) =>
+                                                        setEditForm((prev) => (prev ? { ...prev, [field]: value } : prev))
+                                                    }
+                                                    onSave={handleSaveFamily}
+                                                    onCancel={() => {
+                                                        setEditingId(null);
+                                                        setEditForm(null);
+                                                    }}
+                                                    onDelete={handleDeleteFamily}
+                                                />
                                             </div>
                                         ) : (
-                                            <p className="text-center mb-4 text-gray-500">
-                                                No family background data saved yet.
-                                            </p>
+                                            <p className="text-center mb-4 text-gray-500">No family background data saved yet.</p>
                                         )}
 
                                         <form onSubmit={handleFamilySubmit(submitFamily)}>
@@ -414,28 +538,32 @@ export default function BackgroundDetlsPage() {
                                                     No educational qualifications saved yet.
                                                 </p>
                                             ) : (
-                                                <table className="min-w-full text-sm border border-gray-300">
-                                                    <thead className="bg-gray-100">
-                                                        <tr>
-                                                            {["S.No", "Qualification", "School", "Subjects", "Board", "Marks (%)", "Grade"].map((head) => (
-                                                                <th key={head} className="border px-4 py-2 !bg-gray-300">{head}</th>
-                                                            ))}
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {savedEducation.map((item, idx) => (
-                                                            <tr key={idx}>
-                                                                <td className="border px-4 py-2 text-center">{idx + 1}</td>
-                                                                <td className="border px-4 py-2">{item.qualification}</td>
-                                                                <td className="border px-4 py-2">{item.school}</td>
-                                                                <td className="border px-4 py-2">{item.subs}</td>
-                                                                <td className="border px-4 py-2">{item.board}</td>
-                                                                <td className="border px-4 py-2">{item.marks}</td>
-                                                                <td className="border px-4 py-2">{item.grade}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                <EditableTable
+                                                    data={savedEducation}
+                                                    editingId={editingEduId}
+                                                    editForm={editEduForm as any}
+                                                    columns={[
+                                                        { key: "qualification", label: "Qualification" },
+                                                        { key: "school", label: "School" },
+                                                        { key: "subs", label: "Subjects" },
+                                                        { key: "board", label: "Board" },
+                                                        { key: "marks", label: "Marks (%)", type: "number" },
+                                                        { key: "grade", label: "Grade/Div" },
+                                                    ]}
+                                                    onEdit={(row) => {
+                                                        setEditingEduId(row.id);
+                                                        setEditEduForm({ ...row });
+                                                    }}
+                                                    onChange={(field, value) =>
+                                                        setEditEduForm((prev) => (prev ? { ...prev, [field]: value } : prev))
+                                                    }
+                                                    onSave={handleSaveEducation}
+                                                    onCancel={() => {
+                                                        setEditingEduId(null);
+                                                        setEditEduForm(null);
+                                                    }}
+                                                    onDelete={handleDeleteEducation}
+                                                />
                                             )}
                                         </div>
 

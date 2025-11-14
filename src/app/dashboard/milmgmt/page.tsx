@@ -33,6 +33,8 @@ import { TabsContent } from "@/components/ui/tabs";
 import { useDebouncedValue } from "@/app/lib/debounce";
 // 🔹 single universal OC API
 import { fetchOCs, OCListRow } from "@/app/lib/api/ocApi";
+import { fetchCourseById } from "@/app/lib/api/courseApi";
+import { toast } from "sonner";
 
 export default function MilitaryTrainingPage() {
   const dispatch = useDispatch();
@@ -48,10 +50,10 @@ export default function MilitaryTrainingPage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
-  // 🔁 debounced search term
+  // debounced search term
   const debouncedSearch = useDebouncedValue(searchQuery, 400);
 
-  // 🔎 Debounced server-side search using a SINGLE fetchOCs
+  // Debounced server-side search using a SINGLE fetchOCs
   useEffect(() => {
     let cancelled = false;
 
@@ -93,17 +95,24 @@ export default function MilitaryTrainingPage() {
     setShowDropdown(true);
   };
 
-  const handleSelectOC = (oc: OCListRow) => {
-    const cadetData: Cadet = {
-      name: oc.name,
-      course: oc.courseId,
-      ocNumber: oc.ocNo,
-      ocId: oc.id,
-    };
+  const handleSelectOC = async (oc: OCListRow) => {
+    try {
+      const res = await fetchCourseById(oc.courseId);
+      const courseCode = res?.course?.code || "";
+      const cadetData: Cadet = {
+        name: oc.name,
+        course: oc.courseId,
+        courseName: courseCode,
+        ocNumber: oc.ocNo,
+        ocId: oc.id,
+      };
 
-    dispatch(setSelectedCadet(cadetData));
-    setSearchQuery(`${oc.name} (${oc.ocNo})`);
-    setShowDropdown(false);
+      dispatch(setSelectedCadet(cadetData));
+      setSearchQuery(`${oc.name} (${oc.ocNo})`);
+      setShowDropdown(false);
+    } catch (err) {
+      toast.error("error")
+    }
   };
 
   const handleLogout = () => {
@@ -121,7 +130,6 @@ export default function MilitaryTrainingPage() {
             <PageHeader
               title="Dossier"
               description="Organize, manage, and securely store essential documents and files"
-              onLogout={handleLogout}
             />
           </header>
 
