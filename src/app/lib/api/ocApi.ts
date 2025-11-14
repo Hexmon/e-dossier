@@ -30,9 +30,6 @@ export interface OCDenorm {
   updatedAt?: string;
 }
 
-/** Basic list row shape (cadet + denorm) */
-export type OCListRow = OCRecord & OCDenorm;
-
 /** Full graph shape when full=true */
 export interface FullOCRecord extends OCListRow {
   personal?: Record<string, unknown> | null;
@@ -50,13 +47,6 @@ export interface FullOCRecord extends OCListRow {
   parentComms?: Record<string, unknown>[];
   delegations?: Record<string, unknown>[];
 }
-
-type ListEnvelope<T> = {
-  status: number;
-  ok: boolean;
-  items: T[];
-  count: number;
-};
 
 export interface FetchOCParams {
   /** quick text search on name/ocNo */
@@ -106,19 +96,145 @@ export async function getAllOCs(query?: string): Promise<OCListRow[]> {
  * When `params.full === true`, returns the full graph per OC.
  * Otherwise returns list rows with denormalized fields.
  */
-export async function fetchOCs<T extends OCListRow | FullOCRecord = OCListRow>(
-  params: FetchOCParams = {}
-): Promise<T[]> {
+
+/** Base OC row from oc_cadets */
+export interface OCRecord {
+  id: string;
+  name: string;
+  ocNo: string;
+  uid?: string;
+  courseId: string;
+  branch?: "E" | "M" | "O" | null;
+  platoonId?: string | null;
+  arrivalAtUniversity: string; // ISO string
+  withdrawnOn?: string | null;
+  createdAt?: string;
+}
+
+/** Optional denormalized fields the list API now returns */
+export interface OCDenorm {
+  courseCode?: string;
+  courseTitle?: string;
+  platoonKey?: string | null;
+  platoonName?: string | null;
+
+  status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
+  managerUserId?: string | null;
+  relegateToCourseId?: string | null;
+  relegatedOn?: string | null;
+  updatedAt?: string;
+}
+
+/** Basic list row shape (cadet + denorm) */
+export type OCListRow = OCRecord & OCDenorm;
+
+/** Full graph shape when full=true */
+export interface FullOCRecord extends OCListRow {
+  personal?: Record<string, unknown> | null;
+  preCommission?: Record<string, unknown> | null;
+  commissioning?: Record<string, unknown> | null;
+  autobiography?: Record<string, unknown> | null;
+
+  familyMembers?: Record<string, unknown>[];
+  education?: Record<string, unknown>[];
+  achievements?: Record<string, unknown>[];
+  ssbReports?: Array<Record<string, unknown>>;
+  medicals?: Record<string, unknown>[];
+  medicalCategory?: Record<string, unknown>[];
+  discipline?: Record<string, unknown>[];
+  parentComms?: Record<string, unknown>[];
+  delegations?: Record<string, unknown>[];
+}
+
+type ListEnvelope<T> = {
+  status: number;
+  ok: boolean;
+  items: T[];
+  count: number;
+};
+
+/**
+ * All possible query params supported by /api/v1/oc
+ */
+export interface FetchOCParams {
+  /** quick text search on name/ocNo */
+  q?: string;
+  /** filter by course */
+  courseId?: string;
+  /** filter by platoon */
+  platoonId?: string;
+  /** filter by branch */
+  branch?: "O" | "E" | "M";
+  /** filter by status enum */
+  status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
+  /** shorthand for withdrawnOn IS NULL */
+  active?: boolean;
+  /** arrival date range filters (ISO) */
+  arrivalFrom?: string;
+  arrivalTo?: string;
+  /** pagination */
+  limit?: number;
+  offset?: number;
+
+  /** return the full graph (all sections) */
+  full?: boolean;
+
+  /**
+   * "include" style – eg:
+   * include=personal,delegations
+   */
+  include?: string | string[];
+
+  /** fine-grained section toggles */
+  personal?: boolean;
+  preCommission?: boolean;
+  commissioning?: boolean;
+  autobiography?: boolean;
+  familyMembers?: boolean;
+  education?: boolean;
+  achievements?: boolean;
+  ssbReports?: boolean;
+  medicals?: boolean;
+  medicalCategory?: boolean;
+  discipline?: boolean;
+  parentComms?: boolean;
+  delegations?: boolean;
+}
+
+/**
+ * Fetch OC list with optional filters.
+ * When `params.full === true`, returns the full graph per OC.
+ * Otherwise returns list rows with denormalized fields.
+ */
+export async function fetchOCs<
+  T extends OCListRow | FullOCRecord = OCListRow
+>(params: FetchOCParams = {}): Promise<T[]> {
   const query: Record<string, string> = {};
+
   for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null) query[k] = String(v);
+    if (v === undefined || v === null) continue;
+
+    // special handling for include (can be string or string[])
+    if (k === "include") {
+      if (Array.isArray(v) && v.length > 0) {
+        query.include = v.join(",");
+      } else if (typeof v === "string" && v.trim()) {
+        query.include = v.trim();
+      }
+      continue;
+    }
+
+    query[k] = String(v);
   }
+
   const res = await api.get<ListEnvelope<T>>(endpoints.oc.list, {
     baseURL,
     query,
   });
+
   return res.items;
 }
+
 
 /** Convenience: fetch one OC by id with full graph */
 export async function fetchOCByIdFull(id: string): Promise<FullOCRecord | null> {

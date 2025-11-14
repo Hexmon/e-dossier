@@ -27,6 +27,7 @@ import { useEffect, useState } from "react";
 import { createOCPersonal, getOCPersonal, OCPersonalRecord, updateOCPersonal } from "@/app/lib/api/ocPersonalApi";
 import { toast } from "sonner";
 import { dsFieldMap } from "@/constants/app.constants";
+import { fetchCourseById } from "@/app/lib/api/courseApi";
 
 interface PersonalData {
     [key: string]: string | boolean;
@@ -34,11 +35,15 @@ interface PersonalData {
 
 export default function PersParticularsPage() {
     const [savedData, setSavedData] = useState<OCPersonalRecord | null>(null);
+    const [courseName, setCourseName] = useState("")
     const router = useRouter();
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
-    const { register, handleSubmit, reset } = useForm<OCPersonalRecord>({
+
+    const { course = "", name, ocId, ocNumber } = selectedCadet || {}
+    const { register, handleSubmit, reset, watch } = useForm<OCPersonalRecord>({
         defaultValues: {} as OCPersonalRecord,
     });
+    console.log({ savedData });
 
     const handleBloodGroupUpdate = async () => {
         if (!selectedCadet?.ocId) {
@@ -65,7 +70,7 @@ export default function PersParticularsPage() {
             if (response) {
                 const transformed: OCPersonalRecord = {
                     ...response,
-                    no:selectedCadet.ocNumber,
+                    no: selectedCadet.ocNumber,
                     name: selectedCadet.name,
                     pl: response.pi ?? "",
                     dob: response.dob ? response.dob.split("T")[0] : "",
@@ -180,6 +185,19 @@ export default function PersParticularsPage() {
             toast.error(err?.message || "Error saving data.");
         }
     };
+
+    const handleFetchCourseById = async () => {
+        try {
+            const res = await fetchCourseById(course ?? "");
+            setCourseName(res.code);
+        } catch (error) {
+
+        }
+    }
+
+    useEffect(() => {
+        handleFetchCourseById()
+    }, [])
 
     return (
         <SidebarProvider>

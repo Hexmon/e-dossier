@@ -44,8 +44,6 @@ export default function CourseFormModal({
     }
   }, [course, reset, isOpen]);
 
-  
-
   const onSubmit = (data: Omit<Course, "id">) => {
     onSave(data);
     onClose();
@@ -86,7 +84,8 @@ export default function CourseFormModal({
               <label className="block text-sm font-medium text-muted-foreground">End Date</label>
               <Input
                 type="date"
-                {...register("endDate", { required: "End date is required" })}
+                // ⬇️ removed "required" so endDate is optional
+                {...register("endDate")}
               />
               {errors.endDate && (
                 <p className="text-xs text-red-500 mt-1">{errors.endDate.message}</p>
