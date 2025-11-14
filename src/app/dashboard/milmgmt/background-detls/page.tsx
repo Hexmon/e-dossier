@@ -27,11 +27,10 @@ import {
 import { deleteFamilyMember, FamilyMember, FamilyMemberRecord, getFamilyDetails, saveFamilyDetails, updateFamilyMember } from "@/app/lib/api/familyApi";
 import { toast } from "sonner";
 import { Achievement, AutoBio, Qualification } from "@/types/background-detls";
-import { deleteEducationRecord, EducationRecordResponse, getEducationDetails, saveEducationDetails, updateEducationRecord } from "@/app/lib/api/educationApi";
+import { EducationRecordResponse, getEducationDetails, saveEducationDetails } from "@/app/lib/api/educationApi";
 import { getAchievements, saveAchievements } from "@/app/lib/api/achievementsApi";
 import { useCallback, useEffect, useState } from "react";
 import { getAutobiographyDetails, saveAutobiography } from "@/app/lib/api/autobiographyApi";
-import { EditableTable } from "@/components/background_detls/EditableTable";
 
 export default function BackgroundDetlsPage() {
     const router = useRouter();
@@ -42,9 +41,6 @@ export default function BackgroundDetlsPage() {
     const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<FamilyMemberRecord | null>(null);
-    const [editingEduId, setEditingEduId] = useState<string | null>(null);
-    const [editEduForm, setEditEduForm] = useState<EducationRecordResponse | null>(null);
-
 
     const handleLogout = () => {
         router.push("/login");
@@ -111,7 +107,6 @@ export default function BackgroundDetlsPage() {
 
             if (Array.isArray(data) && data.length > 0) {
                 const formatted = data.map((item) => ({
-                    id: item.id,
                     qualification: item.level || "",
                     school: item.schoolOrCollege || "",
                     subs: item.subjects || "",
@@ -119,7 +114,6 @@ export default function BackgroundDetlsPage() {
                     marks: item.totalPercent ? item.totalPercent.toString() : "",
                     grade: "",
                 }));
-
                 setSavedEducation(formatted);
             }
         } catch (err) {
@@ -340,69 +334,6 @@ export default function BackgroundDetlsPage() {
         }
     };
 
-    const handleEditEducation = (row: EducationRecordResponse) => {
-        setEditingEduId(row.id);
-        setEditEduForm({
-            ...row,
-            totalPercent: row.totalPercent ?? 0
-        });
-    };
-
-    const handleCancelEducation = () => {
-        setEditingEduId(null);
-        setEditEduForm(null);
-    };
-
-    const handleChangeEducation = (field: string, value: string | number) => {
-        setEditEduForm((prev) => prev ? { ...prev, [field]: value } : prev);
-    };
-
-    const handleSaveEducation = async () => {
-        if (!selectedCadet?.ocId || !editingEduId || !editEduForm) {
-            return toast.error("Invalid operation");
-        }
-
-        try {
-            await updateEducationRecord(selectedCadet.ocId, editingEduId, {
-                percentage: Number(editEduForm.totalPercent),
-            });
-
-            // Update local table
-            setSavedEducation((prev) =>
-                prev.map((item: any) =>
-                    item.id === editingEduId
-                        ? {
-                            ...item,
-                            marks: String(editEduForm.totalPercent),
-                        }
-                        : item
-                )
-            );
-
-            toast.success("Educational record updated successfully!");
-
-            setEditingEduId(null);
-            setEditEduForm(null);
-        } catch (err) {
-            console.error("Failed to update education:", err);
-            toast.error("Failed to update educational record");
-        }
-    };
-
-    const handleDeleteEducation = async (row: EducationRecordResponse) => {
-        if (!selectedCadet?.ocId || !row.id) return toast.error("Invalid education record");
-
-        try {
-            await deleteEducationRecord(selectedCadet.ocId, row.id);
-
-            setSavedEducation((prev) => prev.filter((x: any) => x.id !== row.id));
-
-            toast.success("Educational qualification deleted!");
-        } catch (err) {
-            console.error("Failed to delete education:", err);
-            toast.error("Failed to delete educational record");
-        }
-    };
 
     return (
         <SidebarProvider>
@@ -462,32 +393,95 @@ export default function BackgroundDetlsPage() {
                                     <TabsContent value="family-bgrnd">
                                         {savedFamily && savedFamily.length > 0 ? (
                                             <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-                                                <EditableTable
-                                                    data={savedFamily}
-                                                    editingId={editingId}
-                                                    editForm={editForm}
-                                                    columns={[
-                                                        { key: "name", label: "Name" },
-                                                        { key: "relation", label: "Relation" },
-                                                        { key: "age", label: "Age", type: "number" },
-                                                        { key: "occupation", label: "Occupation" },
-                                                        { key: "education", label: "Edn Qual" },
-                                                        { key: "mobileNo", label: "Mobile" },
-                                                    ]}
-                                                    onEdit={(row) => {
-                                                        setEditingId(row.id);
-                                                        setEditForm({ ...row });
-                                                    }}
-                                                    onChange={(field, value) =>
-                                                        setEditForm((prev) => (prev ? { ...prev, [field]: value } : prev))
-                                                    }
-                                                    onSave={handleSaveFamily}
-                                                    onCancel={() => {
-                                                        setEditingId(null);
-                                                        setEditForm(null);
-                                                    }}
-                                                    onDelete={handleDeleteFamily}
-                                                />
+                                                <table className="min-w-full text-sm text-left border border-gray-300">
+                                                    <thead className="bg-gray-100">
+                                                        <tr>
+                                                            {["S.No", "Name", "Relation", "Age", "Occupation", "Edn Qual", "Mobile", "Action"].map((head) => (
+                                                                <th key={head} className="border px-4 py-2 !bg-gray-300 text-center">{head}</th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+
+                                                    <tbody>
+                                                        {savedFamily.map((member: FamilyMemberRecord, idx) => {
+                                                            const isEditingRow = editingId === member.id;
+                                                            return (
+                                                                <tr key={member.id}>
+                                                                    <td className="border px-4 py-2 text-center">{idx + 1}</td>
+
+                                                                    {/* Name */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditingRow ? (
+                                                                            <Input value={editForm?.name || ""} onChange={(e) => handleChangeEdit("name", e.target.value)} />
+                                                                        ) : (
+                                                                            member.name
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* Relation */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditingRow ? (
+                                                                            <Input value={editForm?.relation || ""} onChange={(e) => handleChangeEdit("relation", e.target.value)} />
+                                                                        ) : (
+                                                                            member.relation
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* Age */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditingRow ? (
+                                                                            <Input type="number" value={String(editForm?.age ?? "")} onChange={(e) => handleChangeEdit("age", e.target.value ? Number(e.target.value) : "")} />
+                                                                        ) : (
+                                                                            member.age ?? ""
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* Occupation */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditingRow ? (
+                                                                            <Input value={editForm?.occupation || ""} onChange={(e) => handleChangeEdit("occupation", e.target.value)} />
+                                                                        ) : (
+                                                                            member.occupation ?? ""
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* Education */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditingRow ? (
+                                                                            <Input value={editForm?.education || ""} onChange={(e) => handleChangeEdit("education", e.target.value)} />
+                                                                        ) : (
+                                                                            member.education ?? ""
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* Mobile */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditingRow ? (
+                                                                            <Input value={editForm?.mobileNo || ""} onChange={(e) => handleChangeEdit("mobileNo", e.target.value)} />
+                                                                        ) : (
+                                                                            member.mobileNo ?? ""
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* ACTIONS */}
+                                                                    <td className="border px-4 py-2 text-center space-x-2">
+                                                                        {!isEditingRow ? (
+                                                                            <>
+                                                                                <Button size="sm" variant="outline" onClick={() => handleEditFamily(member)}>Edit</Button>
+                                                                                <Button size="sm" variant="destructive" onClick={() => handleDeleteFamily(member)}>Delete</Button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Button size="sm" onClick={handleSaveFamily}>Save</Button>
+                                                                                <Button size="sm" variant="outline" onClick={handleCancelEdit}>Cancel</Button>
+                                                                            </>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         ) : (
                                             <p className="text-center mb-4 text-gray-500">No family background data saved yet.</p>
@@ -538,32 +532,28 @@ export default function BackgroundDetlsPage() {
                                                     No educational qualifications saved yet.
                                                 </p>
                                             ) : (
-                                                <EditableTable
-                                                    data={savedEducation}
-                                                    editingId={editingEduId}
-                                                    editForm={editEduForm as any}
-                                                    columns={[
-                                                        { key: "qualification", label: "Qualification" },
-                                                        { key: "school", label: "School" },
-                                                        { key: "subs", label: "Subjects" },
-                                                        { key: "board", label: "Board" },
-                                                        { key: "marks", label: "Marks (%)", type: "number" },
-                                                        { key: "grade", label: "Grade/Div" },
-                                                    ]}
-                                                    onEdit={(row) => {
-                                                        setEditingEduId(row.id);
-                                                        setEditEduForm({ ...row });
-                                                    }}
-                                                    onChange={(field, value) =>
-                                                        setEditEduForm((prev) => (prev ? { ...prev, [field]: value } : prev))
-                                                    }
-                                                    onSave={handleSaveEducation}
-                                                    onCancel={() => {
-                                                        setEditingEduId(null);
-                                                        setEditEduForm(null);
-                                                    }}
-                                                    onDelete={handleDeleteEducation}
-                                                />
+                                                <table className="min-w-full text-sm border border-gray-300">
+                                                    <thead className="bg-gray-100">
+                                                        <tr>
+                                                            {["S.No", "Qualification", "School", "Subjects", "Board", "Marks (%)", "Grade"].map((head) => (
+                                                                <th key={head} className="border px-4 py-2 !bg-gray-300">{head}</th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {savedEducation.map((item, idx) => (
+                                                            <tr key={idx}>
+                                                                <td className="border px-4 py-2 text-center">{idx + 1}</td>
+                                                                <td className="border px-4 py-2">{item.qualification}</td>
+                                                                <td className="border px-4 py-2">{item.school}</td>
+                                                                <td className="border px-4 py-2">{item.subs}</td>
+                                                                <td className="border px-4 py-2">{item.board}</td>
+                                                                <td className="border px-4 py-2">{item.marks}</td>
+                                                                <td className="border px-4 py-2">{item.grade}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
                                             )}
                                         </div>
 
