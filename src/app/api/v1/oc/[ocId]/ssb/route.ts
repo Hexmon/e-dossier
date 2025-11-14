@@ -4,14 +4,64 @@ import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../_ch
 import { OcIdParam, ssbReportUpsertSchema } from '@/app/lib/oc-validators';
 import { getSsbReport, upsertSsbReport, deleteSsbReport, listSsbPoints } from '@/app/db/queries/oc';
 
+type SsbReportRow = {
+    id: string;
+    overallPredictiveRating: number | null;
+    scopeOfImprovement: string | null;
+} | null;
+
+type SsbPointRow = {
+    kind: 'POSITIVE' | 'NEGATIVE';
+    remark: string;
+    authorName: string | null;
+};
+
+export type SsbReportResponse = {
+    positives: { note: string; by: string }[];
+    negatives: { note: string; by: string }[];
+    predictiveRating: number;
+    scopeForImprovement: string;
+};
+
+export function mapSsbDbToResponse(report: SsbReportRow, points: SsbPointRow[]): SsbReportResponse {
+    const positives: SsbReportResponse['positives'] = [];
+    const negatives: SsbReportResponse['negatives'] = [];
+
+    for (const p of points) {
+        const mapped = {
+            note: p.remark,
+            by: p.authorName ?? '',
+        };
+
+        if (p.kind === 'POSITIVE') {
+            positives.push(mapped);
+        } else if (p.kind === 'NEGATIVE') {
+            negatives.push(mapped);
+        }
+    }
+
+    return {
+        positives,
+        negatives,
+        predictiveRating: report?.overallPredictiveRating ?? 0,
+        scopeForImprovement: report?.scopeOfImprovement ?? '',
+    };
+}
+
 export async function GET(req: NextRequest, ctx: any) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
-        const report = await getSsbReport(ocId);
-        const points = report ? await listSsbPoints(report.id) : [];
-        return json.ok({ report, points });
-    } catch (err) { return handleApiError(err); }
+        const { ocId } = await parseParam(ctx, OcIdParam);
+        await ensureOcExists(ocId);
+
+        const report = (await getSsbReport(ocId)) as SsbReportRow;
+        const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
+
+        const body = mapSsbDbToResponse(report, points);
+        return json.ok(body);
+    } catch (err) {
+        return handleApiError(err);
+    }
 }
 
 export async function POST(req: NextRequest, ctx: any) {
