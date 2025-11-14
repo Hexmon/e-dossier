@@ -105,8 +105,14 @@ export async function middleware(req: NextRequest) {
 
   // Validate CSRF token for state-changing requests (POST, PUT, PATCH, DELETE)
   if (requiresCsrfProtection(method) && pathname.startsWith(PROTECTED_PREFIX)) {
-    // Skip CSRF validation for login/signup (they don't have a token yet)
-    const skipCsrfPaths = ['/api/v1/auth/login', '/api/v1/auth/signup'];
+    // Skip CSRF validation for login/signup/logout:
+    // - login/signup may not have a token yet
+    // - logout relies on same-origin checks inside the route handler
+    const skipCsrfPaths = [
+      '/api/v1/auth/login',
+      '/api/v1/auth/signup',
+      '/api/v1/auth/logout',
+    ];
     const shouldSkipCsrf = skipCsrfPaths.some((p) => matchPrefix(pathname, p));
 
     if (!shouldSkipCsrf && !(await validateCsrfToken(req))) {
