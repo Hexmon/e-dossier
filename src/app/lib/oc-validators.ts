@@ -97,9 +97,23 @@ export const autobiographyUpsertSchema = z.object({
     platoonCommanderName: z.string().optional(),
 });
 
+// Legacy metadata-only schema (used in some internal APIs)
 export const ssbReportUpsertSchema = z.object({
     overallPredictiveRating: z.coerce.number().int().min(0).max(10).nullable().optional(),
     scopeOfImprovement: z.string().nullable().optional(),
+});
+
+// Full SSB report payload as used by the frontend and /oc/:ocId/ssb POST/PATCH
+export const ssbNoteSchema = z.object({
+    note: z.string().min(1),
+    by: z.string().min(1),
+});
+
+export const ssbReportFullSchema = z.object({
+    positives: z.array(ssbNoteSchema).default([]),
+    negatives: z.array(ssbNoteSchema).default([]),
+    predictiveRating: z.coerce.number().int().min(0).max(10),
+    scopeForImprovement: z.string().default(''),
 });
 
 export const ssbPointCreateSchema = z.object({
