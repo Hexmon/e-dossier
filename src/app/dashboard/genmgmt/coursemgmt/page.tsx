@@ -18,7 +18,8 @@ import { FileText, BarChart3, Settings, Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
-import { fallbackCourses, ocTabs } from "@/config/app.config";
+// ⬇️ removed fallbackCourses here
+import { ocTabs } from "@/config/app.config";
 import { TabsContent } from "@/components/ui/tabs";
 import { createCourse, deleteCourse, getAllCourses, updateCourse } from "@/app/lib/api/courseApi";
 import { toast } from "sonner";
@@ -33,13 +34,14 @@ export default function CourseManagement() {
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
-  //  Fetch courses with fallback
+  //  Fetch courses without fallback
   const fetchCourses = async () => {
     try {
       setLoading(true);
       const response = await getAllCourses();
+
       if (response?.items?.length > 0) {
-        const mapped = response.items.map((c: any):Course => ({
+        const mapped = response.items.map((c: any): Course => ({
           id: c.id,
           courseNo: c.code || "",
           startDate: "",
@@ -48,16 +50,19 @@ export default function CourseManagement() {
         }));
         setCourses(mapped);
       } else {
-        toast.warning("No data received. Showing fallback courses.");
-        setCourses(fallbackCourses);
+        // no items from API – just empty courses and a message
+        toast.warning("No courses available.");
+        setCourses([]);
       }
     } catch (error: any) {
-      toast.error("Failed to fetch courses. Showing fallback data.");
-      setCourses(fallbackCourses);
+      toast.error("Failed to fetch courses.");
+      // no fallback data, just empty
+      setCourses([]);
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchCourses();
   }, []);
@@ -150,9 +155,13 @@ export default function CourseManagement() {
   };
 
   const filteredCourses = useMemo(
-    () => courses.filter((course) =>
-      ((course.courseNo ?? (course as any).code) ?? "").toLowerCase().includes(searchQuery.toLowerCase())
-    ), [courses, searchQuery]
+    () =>
+      courses.filter((course) =>
+        ((course.courseNo ?? (course as any).code) ?? "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      ),
+    [courses, searchQuery]
   );
 
   return (
@@ -192,6 +201,7 @@ export default function CourseManagement() {
                 {loading ? (
                   <p>Loading courses...</p>
                 ) : filteredCourses.length > 0 ? (
+                  // ⬇️ this grid only renders real courses (no fallback anymore)
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredCourses.map((course) => (
                       <CourseCard
@@ -204,19 +214,20 @@ export default function CourseManagement() {
                     ))}
                   </div>
                 ) : (
+                  // when no data: just show a "not available" style message
                   <div className="text-center py-12">
                     <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-xl font-semibold text-foreground mb-2">
-                      No courses found
+                      No courses available
                     </h3>
                     <p className="text-muted-foreground mb-4">
                       {searchQuery
                         ? "No courses match your search criteria."
-                        : "No courses available yet."}
+                        : "Courses are not available at the moment."}
                     </p>
                     <Button onClick={handleAddCourse}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Course
+                      Add Course
                     </Button>
                   </div>
                 )}

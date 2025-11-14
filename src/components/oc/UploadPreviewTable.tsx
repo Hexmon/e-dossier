@@ -37,12 +37,28 @@ export default function UploadPreviewTable({
     onValidateRow,
     rowValidations = {},
 }: Props) {
+    // --- decide which rows to show in preview ---
+    // Before bulk upload: show all rows
+    // After bulk upload: show only failed rows (using 1-based row numbers from server)
+    const failedRowNumbers =
+        bulkResult?.errors && bulkResult.errors.length > 0
+            ? new Set(bulkResult.errors.map((e) => e.row))
+            : null;
+
+    const visibleRows = failedRowNumbers
+        ? rows
+            .map((row, idx) => ({ row, idx }))          // keep original index
+            .filter(({ idx }) => failedRowNumbers.has(idx + 1)) // match 1-based row
+        : rows.map((row, idx) => ({ row, idx }));
+
     if (rows.length === 0) return null;
 
     return (
         <div className="rounded-md border border-border/50 overflow-hidden">
             <div className="flex items-center justify-between px-3 py-3 bg-muted/40">
-                <h3 className="font-semibold">Latest Upload (preview) — {rows.length} rows</h3>
+                <h3 className="font-semibold">
+                    Latest Upload (preview) — {visibleRows.length} rows
+                </h3>
                 <div className="flex items-center gap-2">
                     {onValidateAll && (
                         <Button variant="outline" onClick={onValidateAll} className="gap-2">
@@ -113,7 +129,7 @@ export default function UploadPreviewTable({
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((r, idx) => {
+                    {visibleRows.map(({ row: r, idx }) => {
                         const val = rowValidations[idx];
                         return (
                             <tr key={idx} className="border-t border-border/50">
@@ -125,13 +141,27 @@ export default function UploadPreviewTable({
                                 <td className="px-3 py-2">{r.arrival}</td>
                                 <td className="px-3 py-2">
                                     {onValidateRow && (
-                                        <Button variant="outline" size="sm" onClick={() => onValidateRow(idx)} className="gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => onValidateRow(idx)}
+                                            className="gap-2"
+                                        >
                                             <ShieldCheck className="h-3 w-3" /> Check
                                         </Button>
                                     )}
                                     {val && (
-                                        <span className={`ml-2 text-xs ${val === "ok" ? "text-emerald-600" : "text-destructive"}`}>
-                                            {val === "ok" ? (<><CircleCheck className="inline h-3 w-3" /> OK</>) : val}
+                                        <span
+                                            className={`ml-2 text-xs ${val === "ok" ? "text-emerald-600" : "text-destructive"
+                                                }`}
+                                        >
+                                            {val === "ok" ? (
+                                                <>
+                                                    <CircleCheck className="inline h-3 w-3" /> OK
+                                                </>
+                                            ) : (
+                                                val
+                                            )}
                                         </span>
                                     )}
                                 </td>
