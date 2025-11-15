@@ -146,7 +146,7 @@ export interface FullOCRecord extends OCListRow {
   delegations?: Record<string, unknown>[];
 }
 
-type ListEnvelope<T> = {
+export type ListEnvelope<T> = {
   status: number;
   ok: boolean;
   items: T[];
@@ -202,13 +202,10 @@ export interface FetchOCParams {
 }
 
 /**
- * Fetch OC list with optional filters.
- * When `params.full === true`, returns the full graph per OC.
- * Otherwise returns list rows with denormalized fields.
+ * Build query params for /api/v1/oc from FetchOCParams.
+ * Kept internal so both helpers share identical behavior.
  */
-export async function fetchOCs<
-  T extends OCListRow | FullOCRecord = OCListRow
->(params: FetchOCParams = {}): Promise<T[]> {
+function buildOCQuery(params: FetchOCParams = {}): Record<string, string> {
   const query: Record<string, string> = {};
 
   for (const [k, v] of Object.entries(params)) {
@@ -227,11 +224,37 @@ export async function fetchOCs<
     query[k] = String(v);
   }
 
-  const res = await api.get<ListEnvelope<T>>(endpoints.oc.list, {
+  return query;
+}
+
+/**
+ * Fetch OC list with optional filters, returning the full list envelope
+ * including `items` and total `count`. Use this for server-side pagination.
+ */
+export async function fetchOCsWithCount<
+  T extends OCListRow | FullOCRecord = OCListRow
+>(params: FetchOCParams = {}): Promise<ListEnvelope<T>> {
+  const query = buildOCQuery(params);
+
+  return api.get<ListEnvelope<T>>(endpoints.oc.list, {
     baseURL,
     query,
   });
+}
 
+/**
+ * Fetch OC list with optional filters.
+ * When `params.full === true`, returns the full graph per OC.
+ * Otherwise returns list rows with denormalized fields.
+ *
+ * This helper returns only the `items` array for convenience and
+ * backward compatibility. Use `fetchOCsWithCount` when you also
+ * need the total `count` for pagination.
+ */
+export async function fetchOCs<
+  T extends OCListRow | FullOCRecord = OCListRow
+>(params: FetchOCParams = {}): Promise<T[]> {
+  const res = await fetchOCsWithCount<T>(params);
   return res.items;
 }
 

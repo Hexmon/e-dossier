@@ -81,8 +81,8 @@ export default function DisciplineRecordsPage() {
         if (!selectedCadet?.ocId || !editingId || !editForm) return;
 
         const payload = {
-            punishment: editForm.punishmentAwarded,
-            points: Number(editForm.negativePts),
+            punishmentAwarded: editForm.punishmentAwarded,
+            pointsDelta: Number(editForm.negativePts),
         };
 
         try {
