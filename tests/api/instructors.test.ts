@@ -1,0 +1,154 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GET as getInstructors, POST as postInstructor } from '@/app/api/v1/instructors/route';
+import { makeJsonRequest } from '../utils/next';
+import { ApiError } from '@/app/lib/http';
+import * as authz from '@/app/lib/authz';
+import * as instructorQueries from '@/app/db/queries/instructors';
+import { db } from '@/app/db/client';
+
+vi.mock('@/app/lib/authz', () => ({
+  requireAuth: vi.fn(),
+  requireAdmin: vi.fn(),
+}));
+
+vi.mock('@/app/db/queries/instructors', () => ({
+  listInstructors: vi.fn(async () => []),
+}));
+
+vi.mock('@/app/db/client', () => {
+  const insert = vi.fn(() => ({
+    values: () => ({
+      returning: async () => [
+        {
+          id: 'inst-1',
+          userId: '11111111-1111-4111-8111-111111111111',
+          name: 'Instructor One',
+          email: 'inst1@example.com',
+          phone: '123',
+          affiliation: 'External',
+          notes: null,
+        },
+      ],
+    }),
+  }));
+  return { db: { insert } };
+});
+
+const path = '/api/v1/instructors';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('GET /api/v1/instructors', () => {
+  it('returns 401 when auth fails', async () => {
+    (authz.requireAuth as any).mockRejectedValueOnce(
+      new ApiError(401, 'Unauthorized', 'unauthorized'),
+    );
+    const req = makeJsonRequest({ method: 'GET', path });
+    const res = await getInstructors(req as any);
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('unauthorized');
+  });
+
+  it('returns filtered instructors on happy path', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'u1', roles: [] });
+    (instructorQueries.listInstructors as any).mockResolvedValueOnce([
+      { id: 'inst-1', name: 'Instructor One', deletedAt: null },
+    ]);
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `${path}?q=inst&includeDeleted=true&limit=10&offset=5`,
+    });
+    const res = await getInstructors(req as any);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.items).toHaveLength(1);
+    expect(body.count).toBe(1);
+    expect(instructorQueries.listInstructors).toHaveBeenCalledWith({
+      q: 'inst',
+      includeDeleted: true,
+      limit: 10,
+      offset: 5,
+    });
+  });
+});
+
+describe('POST /api/v1/instructors', () => {
+  it('returns 401 when not authenticated', async () => {
+    (authz.requireAdmin as any).mockRejectedValueOnce(
+      new ApiError(401, 'Unauthorized', 'unauthorized'),
+    );
+    const req = makeJsonRequest({ method: 'POST', path, body: {} });
+    const res = await postInstructor(req as any);
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('unauthorized');
+  });
+
+  it('returns 400 when body fails validation', async () => {
+    (authz.requireAdmin as any).mockResolvedValueOnce({
+      userId: 'admin-1',
+      roles: ['ADMIN'],
+    });
+    const req = makeJsonRequest({
+      method: 'POST',
+      path,
+      body: { name: '' },
+    });
+    const res = await postInstructor(req as any);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('bad_request');
+  });
+
+  it('returns 409 when unique constraint is violated', async () => {
+    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (db.insert as any).mockImplementationOnce(() => ({
+      values: () => ({
+        returning: async () => {
+          const err: any = new Error('duplicate');
+          err.code = '23505';
+          throw err;
+        },
+      }),
+    }));
+    const req = makeJsonRequest({
+      method: 'POST',
+      path,
+      body: {
+        userId: '11111111-1111-4111-8111-111111111111',
+        name: 'Instructor One',
+      },
+    });
+    const res = await postInstructor(req as any);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('conflict');
+  });
+
+  it('creates instructor on happy path', async () => {
+    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    const req = makeJsonRequest({
+      method: 'POST',
+      path,
+      body: {
+        userId: '11111111-1111-4111-8111-111111111111',
+        name: 'Instructor One',
+      },
+    });
+    const res = await postInstructor(req as any);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.instructor.id).toBe('inst-1');
+    expect(body.instructor.name).toBe('Instructor One');
+  });
+});
+
