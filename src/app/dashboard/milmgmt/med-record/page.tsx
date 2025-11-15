@@ -22,8 +22,9 @@ import DossierTab from "@/components/Tabs/DossierTab";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import { toast } from "sonner";
 import { MedCatRow, MedicalCategoryForm, MedicalInfoForm, MedInfoRow } from "@/types/med-records";
-import { getMedicalInfo, saveMedicalInfo } from "@/app/lib/api/medinfoApi";
-import { getMedicalCategory, saveMedicalCategory } from "@/app/lib/api/medCatApi";
+import { deleteMedicalInfo, getMedicalInfo, saveMedicalInfo, updateMedicalInfo } from "@/app/lib/api/medinfoApi";
+import { getMedicalCategory, saveMedicalCategory, updateMedicalCategory } from "@/app/lib/api/medCatApi";
+import { updateMedCat } from "@/app/db/queries/oc";
 
 
 export default function MedicalRecordsPage() {
@@ -37,6 +38,10 @@ export default function MedicalRecordsPage() {
     const [savedMedInfo, setSavedMedInfo] = useState<MedInfoRow[]>([]);
     const [savedMedCats, setSavedMedCats] = useState<MedCatRow[]>([]);
     const [loading, setLoading] = useState(false);
+    const [editingMedInfoId, setEditingMedInfoId] = useState<string | null>(null);
+    const [editMedInfoForm, setEditMedInfoForm] = useState<MedInfoRow | null>(null);
+    const [editingCatId, setEditingCatId] = useState<string | null>(null);
+    const [editCatForm, setEditCatForm] = useState<MedCatRow | null>(null);
 
     // ───────────── Medical Info Form ─────────────
     const medInfoForm = useForm<MedicalInfoForm>({
@@ -57,6 +62,129 @@ export default function MedicalRecordsPage() {
         control: medInfoControl,
         name: "medInfo",
     });
+
+    const handleEditMedCat = (row: MedCatRow) => {
+        if (!row.id) return toast.error("Cannot edit unsaved row");
+
+        setEditingCatId(row.id);
+        setEditCatForm({ ...row });
+    };
+
+    const handleCancelMedCat = () => {
+        setEditingCatId(null);
+        setEditCatForm(null);
+    };
+
+    const handleChangeMedCat = (field: keyof MedCatRow, value: any) => {
+        setEditCatForm(prev => prev ? { ...prev, [field]: value } : prev);
+    };
+
+    const handleSaveMedCat = async () => {
+        if (!selectedCadet?.ocId || !editingCatId || !editCatForm)
+            return toast.error("Invalid operation");
+
+        const payload = {
+            date: editCatForm.date,
+            mosAndDiagnostics: editCatForm.diagnosis,
+            categoryFrom: editCatForm.catFrom,
+            categoryTo: editCatForm.catTo,
+            mhAdmissionFrom: editCatForm.mhFrom,
+            mhAdmissionTo: editCatForm.mhTo,
+            absence: editCatForm.absence,
+            platoonCommanderName: editCatForm.piCdrInitial,
+        };
+
+        try {
+            await updateMedicalCategory(selectedCadet.ocId, editingCatId, payload);
+
+            setSavedMedCats(prev =>
+                prev.map(item =>
+                    item.id === editingCatId ? { ...editCatForm } : item
+                )
+            );
+
+            toast.success("MED CAT updated!");
+            setEditingCatId(null);
+            setEditCatForm(null);
+        } catch {
+            toast.error("Failed to update MED CAT record");
+        }
+    };
+
+    const handleDeleteMedCat = async (row: MedCatRow) => {
+        if (!selectedCadet?.ocId || !row.id)
+            return toast.error("Invalid MED CAT record");
+
+        try {
+            await fetchMedicalCategory();
+
+            setSavedMedCats(prev => prev.filter(r => r.id !== row.id));
+
+            toast.success("MED CAT record deleted");
+        } catch {
+            toast.error("Failed to delete MED CAT");
+        }
+    };
+
+
+    const handleEditMedInfo = (row: MedInfoRow) => {
+        if (!row.id) return toast.error("Cannot edit unsaved row");
+
+        setEditingMedInfoId(row.id);
+        setEditMedInfoForm({ ...row });
+    };
+
+    const handleChangeMedInfo = (field: keyof MedInfoRow, value: any) => {
+        setEditMedInfoForm(prev => prev ? { ...prev, [field]: value } : prev);
+    };
+
+    const handleSaveMedInfo = async () => {
+        if (!selectedCadet?.ocId || !editingMedInfoId) {
+            return toast.error("Invalid operation");
+        }
+        if (!editMedInfoForm) return;
+
+        const payload: any = {
+            age: Number(editMedInfoForm.age),
+            heightCm: Number(editMedInfoForm.height),
+            ibwKg: Number(editMedInfoForm.ibw),
+            abwKg: Number(editMedInfoForm.abw),
+            overweightPct: Number(editMedInfoForm.overw),
+            bmi: Number(editMedInfoForm.bmi),
+            chestCm: Number(editMedInfoForm.chest),
+            examDate: editMedInfoForm.date,
+        };
+
+        try {
+            await updateMedicalInfo(selectedCadet.ocId, editingMedInfoId, payload);
+
+            setSavedMedInfo(prev =>
+                prev.map(item =>
+                    item.id === editingMedInfoId ? { ...editMedInfoForm } : item
+                )
+            );
+
+            toast.success("Medical info updated!");
+            setEditingMedInfoId(null);
+            setEditMedInfoForm(null);
+        } catch {
+            toast.error("Failed to update medical info");
+        }
+    };
+
+    const handleDeleteMedInfo = async (row: any) => {
+        if (!selectedCadet?.ocId || !row.id) return toast.error("Invalid row");
+
+        try {
+            await deleteMedicalInfo(selectedCadet.ocId, row.id);
+
+            setSavedMedInfo(prev => prev.filter(item => item.id !== row.id));
+
+            toast.success("Row deleted");
+        } catch {
+            toast.error("Failed to delete row");
+        }
+    };
 
     const onSubmitMedInfo = async (data: MedicalInfoForm) => {
         if (!selectedCadet?.ocId) {
@@ -106,7 +234,15 @@ export default function MedicalRecordsPage() {
                 ...r,
                 term: semesters[activeTab],
             }));
-            setSavedMedInfo((prev) => [...prev, ...enrichedRows]);
+            setSavedMedInfo(prev => [
+                ...prev,
+                ...response.map((r, i) => ({
+                    ...data.medInfo[i],
+                    id: r.data?.id
+                }))
+            ]);
+
+
             resetMedInfo();
 
         } catch {
@@ -120,9 +256,9 @@ export default function MedicalRecordsPage() {
         try {
             setLoading(true);
             const data = await getMedicalInfo(selectedCadet.ocId);
-            console.log("fetched response data", data)
 
-            const formatted = data.map((item) => ({
+            const formatted: MedInfoRow[] = data.map((item) => ({
+                id: item.id,
                 term: semesters[item.semester - 1] || `TERM ${item.semester}`,
                 date: item.date?.split("T")[0] || "",
                 age: String(item.age ?? ""),
@@ -131,11 +267,10 @@ export default function MedicalRecordsPage() {
                 abw: String(item.abwKg ?? ""),
                 overw: String(item.overweightPct ?? ""),
                 bmi: String(item.bmi ?? ""),
-                chest: String(item.chestCm ?? ""),
+                chest: String(item.chestCm ?? "")
             }));
 
             setSavedMedInfo(formatted);
-            console.log("Fetched medical info:", formatted);
         } catch (err) {
             console.error("Failed to fetch medical info:", err);
             toast.error("Failed to load medical info.");
@@ -233,6 +368,7 @@ export default function MedicalRecordsPage() {
             console.log("Fetched MED CAT data:", data);
 
             const formatted = data.map((item) => ({
+                id: item.id,
                 term: semesters[item.semester - 1] || `TERM ${item.semester}`,
                 date: item.date?.split("T")[0] || "",
                 diagnosis: item.mosAndDiagnostics || "",
@@ -270,7 +406,6 @@ export default function MedicalRecordsPage() {
                     <PageHeader
                         title="Medical Records"
                         description="Maintain and review cadet medical history, document examinations, and ensure accurate health records."
-                        onLogout={handleLogout}
                     />
 
                     <main className="flex-1 p-6">
@@ -367,6 +502,7 @@ export default function MedicalRecordsPage() {
                                                                                 "Overwt (%)",
                                                                                 "BMI",
                                                                                 "Chest (cm)",
+                                                                                "Action"
                                                                             ].map((h) => (
                                                                                 <th key={h} className="border p-2 text-center">
                                                                                     {h}
@@ -374,19 +510,150 @@ export default function MedicalRecordsPage() {
                                                                             ))}
                                                                         </tr>
                                                                     </thead>
+
                                                                     <tbody>
-                                                                        {filtered.map((row, idx) => (
-                                                                            <tr key={idx}>
-                                                                                <td className="border p-2 text-center">{row.date}</td>
-                                                                                <td className="border p-2 text-center">{row.age}</td>
-                                                                                <td className="border p-2 text-center">{row.height}</td>
-                                                                                <td className="border p-2 text-center">{row.ibw}</td>
-                                                                                <td className="border p-2 text-center">{row.abw}</td>
-                                                                                <td className="border p-2 text-center">{row.overw}</td>
-                                                                                <td className="border p-2 text-center">{row.bmi}</td>
-                                                                                <td className="border p-2 text-center">{row.chest}</td>
-                                                                            </tr>
-                                                                        ))}
+                                                                        {filtered.map((row: any, idx: number) => {
+                                                                            const isEditing = editingMedInfoId === row.id;
+
+                                                                            return (
+                                                                                <tr key={row.id}>
+                                                                                    {/* Date */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing ? (
+                                                                                            <Input
+                                                                                                type="date"
+                                                                                                value={editMedInfoForm?.date || ""}
+                                                                                                onChange={(e) => handleChangeMedInfo("date", e.target.value)}
+                                                                                            />
+                                                                                        ) : (
+                                                                                            row.date
+                                                                                        )}
+                                                                                    </td>
+
+                                                                                    {/* Age */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing ? (
+                                                                                            <Input
+                                                                                                value={editMedInfoForm?.age || ""}
+                                                                                                onChange={(e) => handleChangeMedInfo("age", e.target.value)}
+                                                                                            />
+                                                                                        ) : (
+                                                                                            row.age
+                                                                                        )}
+                                                                                    </td>
+
+                                                                                    {/* Height */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing ? (
+                                                                                            <Input
+                                                                                                value={editMedInfoForm?.height || ""}
+                                                                                                onChange={(e) => handleChangeMedInfo("height", e.target.value)}
+                                                                                            />
+                                                                                        ) : (
+                                                                                            row.height
+                                                                                        )}
+                                                                                    </td>
+
+                                                                                    {/* IBW */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing ? (
+                                                                                            <Input
+                                                                                                value={editMedInfoForm?.ibw || ""}
+                                                                                                onChange={(e) => handleChangeMedInfo("ibw", e.target.value)}
+                                                                                            />
+                                                                                        ) : (
+                                                                                            row.ibw
+                                                                                        )}
+                                                                                    </td>
+
+                                                                                    {/* ABW */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing ? (
+                                                                                            <Input
+                                                                                                value={editMedInfoForm?.abw || ""}
+                                                                                                onChange={(e) => handleChangeMedInfo("abw", e.target.value)}
+                                                                                            />
+                                                                                        ) : (
+                                                                                            row.abw
+                                                                                        )}
+                                                                                    </td>
+
+                                                                                    {/* Overweight */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing ? (
+                                                                                            <Input
+                                                                                                value={editMedInfoForm?.overw || ""}
+                                                                                                onChange={(e) => handleChangeMedInfo("overw", e.target.value)}
+                                                                                            />
+                                                                                        ) : (
+                                                                                            row.overw
+                                                                                        )}
+                                                                                    </td>
+
+                                                                                    {/* BMI */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing ? (
+                                                                                            <Input
+                                                                                                value={editMedInfoForm?.bmi || ""}
+                                                                                                onChange={(e) => handleChangeMedInfo("bmi", e.target.value)}
+                                                                                            />
+                                                                                        ) : (
+                                                                                            row.bmi
+                                                                                        )}
+                                                                                    </td>
+
+                                                                                    {/* Chest */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing ? (
+                                                                                            <Input
+                                                                                                value={editMedInfoForm?.chest || ""}
+                                                                                                onChange={(e) => handleChangeMedInfo("chest", e.target.value)}
+                                                                                            />
+                                                                                        ) : (
+                                                                                            row.chest
+                                                                                        )}
+                                                                                    </td>
+
+                                                                                    {/* ACTION BUTTONS */}
+                                                                                    <td className="border p-2 text-center space-x-2">
+                                                                                        {!isEditing ? (
+                                                                                            <>
+                                                                                                <Button
+                                                                                                    size="sm"
+                                                                                                    variant="outline"
+                                                                                                    onClick={() => handleEditMedInfo(row)}
+                                                                                                >
+                                                                                                    Edit
+                                                                                                </Button>
+                                                                                                <Button
+                                                                                                    size="sm"
+                                                                                                    variant="destructive"
+                                                                                                    onClick={() => handleDeleteMedInfo(row)}
+                                                                                                >
+                                                                                                    Delete
+                                                                                                </Button>
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            <>
+                                                                                                <Button size="sm" onClick={handleSaveMedInfo}>
+                                                                                                    Save
+                                                                                                </Button>
+                                                                                                <Button
+                                                                                                    size="sm"
+                                                                                                    variant="outline"
+                                                                                                    onClick={() => {
+                                                                                                        setEditingMedInfoId(null);
+                                                                                                        setEditMedInfoForm(null);
+                                                                                                    }}
+                                                                                                >
+                                                                                                    Cancel
+                                                                                                </Button>
+                                                                                            </>
+                                                                                        )}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        })}
                                                                     </tbody>
                                                                 </table>
                                                             </div>
@@ -548,18 +815,92 @@ export default function MedicalRecordsPage() {
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
-                                                                        {filteredCats.map((row, idx) => (
-                                                                            <tr key={idx}>
-                                                                                <td className="border p-2 text-center">{row.date}</td>
-                                                                                <td className="border p-2 text-center">{row.diagnosis}</td>
-                                                                                <td className="border p-2 text-center">{row.catFrom}</td>
-                                                                                <td className="border p-2 text-center">{row.catTo}</td>
-                                                                                <td className="border p-2 text-center">{row.mhFrom}</td>
-                                                                                <td className="border p-2 text-center">{row.mhTo}</td>
-                                                                                <td className="border p-2 text-center">{row.absence}</td>
-                                                                                <td className="border p-2 text-center">{row.piCdrInitial}</td>
-                                                                            </tr>
-                                                                        ))}
+                                                                        {filteredCats.map((row, idx) => {
+                                                                            const isEditing = editingCatId === row.id;
+
+                                                                            return (
+                                                                                <tr key={row.id}>
+                                                                                    {/* DATE */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing
+                                                                                            ? <Input value={editCatForm?.date || ""} type="date"
+                                                                                                onChange={(e) => handleChangeMedCat("date", e.target.value)} />
+                                                                                            : row.date}
+                                                                                    </td>
+
+                                                                                    {/* DIAGNOSIS */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing
+                                                                                            ? <Input value={editCatForm?.diagnosis || ""}
+                                                                                                onChange={(e) => handleChangeMedCat("diagnosis", e.target.value)} />
+                                                                                            : row.diagnosis}
+                                                                                    </td>
+
+                                                                                    {/* Cat From */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing
+                                                                                            ? <Input value={editCatForm?.catFrom || ""}
+                                                                                                onChange={(e) => handleChangeMedCat("catFrom", e.target.value)} />
+                                                                                            : row.catFrom}
+                                                                                    </td>
+
+                                                                                    {/* Cat To */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing
+                                                                                            ? <Input value={editCatForm?.catTo || ""}
+                                                                                                onChange={(e) => handleChangeMedCat("catTo", e.target.value)} />
+                                                                                            : row.catTo}
+                                                                                    </td>
+
+                                                                                    {/* MH From */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing
+                                                                                            ? <Input value={editCatForm?.mhFrom || ""}
+                                                                                                onChange={(e) => handleChangeMedCat("mhFrom", e.target.value)} />
+                                                                                            : row.mhFrom}
+                                                                                    </td>
+
+                                                                                    {/* MH To */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing
+                                                                                            ? <Input value={editCatForm?.mhTo || ""}
+                                                                                                onChange={(e) => handleChangeMedCat("mhTo", e.target.value)} />
+                                                                                            : row.mhTo}
+                                                                                    </td>
+
+                                                                                    {/* Absence */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing
+                                                                                            ? <Input value={editCatForm?.absence || ""}
+                                                                                                onChange={(e) => handleChangeMedCat("absence", e.target.value)} />
+                                                                                            : row.absence}
+                                                                                    </td>
+
+                                                                                    {/* PI Cdr Initial */}
+                                                                                    <td className="border p-2 text-center">
+                                                                                        {isEditing
+                                                                                            ? <Input value={editCatForm?.piCdrInitial || ""}
+                                                                                                onChange={(e) => handleChangeMedCat("piCdrInitial", e.target.value)} />
+                                                                                            : row.piCdrInitial}
+                                                                                    </td>
+
+                                                                                    {/* ACTIONS */}
+                                                                                    <td className="border p-2 text-center space-x-2">
+                                                                                        {!isEditing ? (
+                                                                                            <>
+                                                                                                <Button size="sm" variant="outline" onClick={() => handleEditMedCat(row)}>Edit</Button>
+                                                                                                <Button size="sm" variant="destructive" onClick={() => handleDeleteMedCat(row)}>Delete</Button>
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            <>
+                                                                                                <Button size="sm" onClick={handleSaveMedCat}>Save</Button>
+                                                                                                <Button size="sm" variant="outline" onClick={handleCancelMedCat}>Cancel</Button>
+                                                                                            </>
+                                                                                        )}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        })}
                                                                     </tbody>
                                                                 </table>
                                                             </div>

@@ -25,7 +25,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DisciplineForm, DisciplineRow } from "@/types/dicp-records";
-import { getDisciplineRecords, saveDisciplineRecords } from "@/app/lib/api/disciplineApi";
+import { deleteDisciplineRecord, getDisciplineRecords, saveDisciplineRecords, updateDisciplineRecord } from "@/app/lib/api/disciplineApi";
+import { toast } from "sonner";
 
 export default function DisciplineRecordsPage() {
     const router = useRouter();
@@ -36,6 +37,8 @@ export default function DisciplineRecordsPage() {
     const [activeTab, setActiveTab] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState<DisciplineRow | null>(null);
 
     const defaultRow = {
         serialNo: "",
@@ -63,9 +66,73 @@ export default function DisciplineRecordsPage() {
         semesters.map(() => [])
     );
 
+    const handleEdit = (row: DisciplineRow) => {
+        if (!row.id) return toast.error("Record missing ID");
+        setEditingId(row.id);
+        setEditForm({ ...row });
+    };
+
+    const handleCancel = () => {
+        setEditingId(null);
+        setEditForm(null);
+    };
+
+    const handleSave = async () => {
+        if (!selectedCadet?.ocId || !editingId || !editForm) return;
+
+        const payload = {
+            punishment: editForm.punishmentAwarded,
+            points: Number(editForm.negativePts),
+        };
+
+        try {
+            await updateDisciplineRecord(selectedCadet.ocId, editingId, payload);
+
+            // Update UI locally
+            setSavedData(prev => {
+                const updated = [...prev];
+                updated[activeTab] = updated[activeTab].map(r =>
+                    r.id === editingId ? { ...editForm } : r
+                );
+                return updated;
+            });
+
+            toast.success("Record updated successfully!");
+            setEditingId(null);
+            setEditForm(null);
+
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update record");
+        }
+    };
+
+    const handleDelete = async (row: DisciplineRow) => {
+        if (!selectedCadet?.ocId || !row.id) return;
+
+        if (!confirm("Delete this discipline record?")) return;
+
+        try {
+            await deleteDisciplineRecord(selectedCadet.ocId, row.id);
+
+            setSavedData(prev => {
+                const updated = [...prev];
+                updated[activeTab] = updated[activeTab].filter(r => r.id !== row.id);
+                return updated;
+            });
+
+            toast.success("Discipline record deleted");
+
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete");
+        }
+    };
+
+
     const onSubmit = async (data: DisciplineForm) => {
         if (!selectedCadet?.ocId) {
-            alert("Select a cadet first");
+            toast.error("Select a cadet first");
             return;
         }
 
@@ -82,11 +149,11 @@ export default function DisciplineRecordsPage() {
 
         for (const p of payloads) {
             if (!p.dateOfOffence) {
-                alert("Each row must have a Date of Offence.");
+                toast.error("Each row must have a Date of Offence.");
                 return;
             }
             if (!p.offence || p.offence.trim().length === 0) {
-                alert("Each row must have an offence description.");
+                toast.error("Each row must have an offence description.");
                 return;
             }
         }
@@ -94,27 +161,37 @@ export default function DisciplineRecordsPage() {
         const resp = await saveDisciplineRecords(selectedCadet.ocId, payloads);
         if (!resp.ok) {
             console.error("Save failed:", resp.result, resp.payloads);
-            alert("Failed to save discipline records — check console for details.");
+            toast.error("Failed to save discipline records — check console for details.");
             return;
         }
 
         const updated = [...savedData];
-        const formattedRows = payloads.map((r, index) => ({
-            serialNo: String(savedData[activeTab].length + index + 1),
-            dateOfOffence: typeof r.dateOfOffence === "string" ? r.dateOfOffence : String(r.dateOfOffence),
-            offence: r.offence,
-            punishmentAwarded: r.punishmentAwarded ?? "-",
-            dateOfAward: r.awardedOn ?? "-",
-            byWhomAwarded: r.awardedBy ?? "-",
-            negativePts: String(r.pointsDelta ?? ""),
-            cumulative: String(r.pointsCumulative ?? ""),
-        }));
+
+        const formattedRows = payloads.map((r, index) => {
+            const saved = resp.result?.[index];
+
+            return {
+                id: saved?.id,
+                serialNo: String(savedData[activeTab].length + index + 1),
+                dateOfOffence:
+                    typeof r.dateOfOffence === "string"
+                        ? r.dateOfOffence
+                        : String(r.dateOfOffence),
+                offence: r.offence,
+                punishmentAwarded: r.punishmentAwarded ?? "-",
+                dateOfAward: r.awardedOn ?? "-",
+                byWhomAwarded: r.awardedBy ?? "-",
+                negativePts: String(r.pointsDelta ?? ""),
+                cumulative: String(r.pointsCumulative ?? ""),
+            };
+        });
+
 
         updated[activeTab] = [...updated[activeTab], ...formattedRows];
         setSavedData(updated);
         reset({ records: [{ ...defaultRow }] });
 
-        alert("Discipline record(s) saved successfully!");
+        toast.success("Discipline record(s) saved successfully!");
     };
 
     const fetchRecords = async () => {
@@ -133,6 +210,7 @@ export default function DisciplineRecordsPage() {
                 const semIndex = rec.semester - 1;
                 if (semIndex >= 0 && semIndex < semesters.length) {
                     grouped[semIndex].push({
+                        id: rec.id,
                         serialNo: String(grouped[semIndex].length + 1),
                         dateOfOffence: rec.dateOfOffence?.split("T")[0] || "-",
                         offence: rec.offence || "-",
@@ -167,7 +245,6 @@ export default function DisciplineRecordsPage() {
                     <PageHeader
                         title="Discipline Records"
                         description="Log disciplinary actions and observations."
-                        onLogout={handleLogout}
                     />
 
                     {/* Main Content */}
@@ -253,25 +330,153 @@ export default function DisciplineRecordsPage() {
                                                 </p>
                                             ) : (
                                                 <table className="w-full border text-sm">
-                                                    <thead>
-                                                        <tr className="bg-gray-100 text-left">
+                                                    <thead className="bg-gray-100">
+                                                        <tr>
                                                             {Object.keys(defaultRow).map((key) => (
                                                                 <th key={key} className="p-2 border capitalize">
                                                                     {key.replace(/([A-Z])/g, " $1")}
                                                                 </th>
                                                             ))}
+                                                            <th className="p-2 border text-center">Action</th>
                                                         </tr>
                                                     </thead>
+
                                                     <tbody>
-                                                        {savedData[activeTab].map((row, index) => (
-                                                            <tr key={index}>
-                                                                {Object.keys(defaultRow).map((field) => (
-                                                                    <td key={field} className="p-2 border">
-                                                                        {row[field as keyof DisciplineRow] || "-"}
+                                                        {savedData[activeTab].map((row, index) => {
+                                                            const isEditing = editingId === row.id;
+
+                                                            return (
+                                                                <tr key={row.id || index}>
+                                                                    {/* Serial No */}
+                                                                    <td className="p-2 border">{row.serialNo}</td>
+
+                                                                    {/* Date of Offence */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                type="date"
+                                                                                value={editForm?.dateOfOffence || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm((prev) =>
+                                                                                        prev ? { ...prev, dateOfOffence: e.target.value } : prev
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : row.dateOfOffence}
                                                                     </td>
-                                                                ))}
-                                                            </tr>
-                                                        ))}
+
+                                                                    {/* Offence */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editForm?.offence || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm((prev) =>
+                                                                                        prev ? { ...prev, offence: e.target.value } : prev
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : row.offence}
+                                                                    </td>
+
+                                                                    {/* Punishment */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editForm?.punishmentAwarded || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm((prev) =>
+                                                                                        prev ? { ...prev, punishmentAwarded: e.target.value } : prev
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : row.punishmentAwarded}
+                                                                    </td>
+
+                                                                    {/* Date of Award */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                type="date"
+                                                                                value={editForm?.dateOfAward || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm((prev) =>
+                                                                                        prev ? { ...prev, dateOfAward: e.target.value } : prev
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : row.dateOfAward}
+                                                                    </td>
+
+                                                                    {/* By Whom Awarded */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editForm?.byWhomAwarded || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm((prev) =>
+                                                                                        prev ? { ...prev, byWhomAwarded: e.target.value } : prev
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : row.byWhomAwarded}
+                                                                    </td>
+
+                                                                    {/* Negative Points */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                type="number"
+                                                                                value={editForm?.negativePts || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm((prev) =>
+                                                                                        prev ? { ...prev, negativePts: e.target.value } : prev
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : row.negativePts}
+                                                                    </td>
+
+                                                                    {/* Cumulative */}
+                                                                    <td className="p-2 border">{row.cumulative}</td>
+
+                                                                    {/* ACTION BUTTONS */}
+                                                                    <td className="p-2 border text-center">
+                                                                        {!isEditing ? (
+                                                                            <>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    onClick={() => handleEdit(row)}
+                                                                                >
+                                                                                    Edit
+                                                                                </Button>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="destructive"
+                                                                                    onClick={() => handleDelete(row)}
+                                                                                >
+                                                                                    Delete
+                                                                                </Button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Button size="sm" onClick={handleSave}>
+                                                                                    Save
+                                                                                </Button>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    onClick={handleCancel}
+                                                                                >
+                                                                                    Cancel
+                                                                                </Button>
+                                                                            </>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             )}

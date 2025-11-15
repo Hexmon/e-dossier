@@ -98,3 +98,15 @@ export async function getMedicalInfo(
         return [];
     }
 }
+
+export async function updateMedicalInfo(
+    ocId: string,
+    medicalInfoId: string,
+    payload: any
+) {
+    return api.patch(endpoints.oc.medicalById(ocId, medicalInfoId), payload);
+}
+
+export async function deleteMedicalInfo(ocId: string, medicalInfoId: string) {
+    return api.delete(endpoints.oc.medicalById(ocId, medicalInfoId));
+}

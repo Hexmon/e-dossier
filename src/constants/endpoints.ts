@@ -1,4 +1,5 @@
 import { platoons } from "@/app/db"
+import { string } from "zod"
 
 export const baseURL = 'http://localhost:3000'
 
@@ -35,7 +36,17 @@ export const endpoints = {
         parentComms: (ocId: string) => `/api/v1/oc/${ocId}/parent-comms`,
         bulkUpload: "/api/v1/oc/bulk-upload",
         familyById: (ocId: string, familyId: string) =>
-        `/api/v1/oc/${ocId}/family/${familyId}`,
+            `/api/v1/oc/${ocId}/family/${familyId}`,
+        achievementById: (ocId: string, achId: string) =>
+            `/api/v1/oc/${ocId}/achievements/${achId}`,
+        medicalById: (ocId: string, medId: string) =>
+            `/api/v1/oc/${ocId}/medical/${medId}`,
+        medcatById: (ocId: string, mcatId: string) =>
+            `/api/v1/oc/${ocId}/medical-category/${mcatId}`,
+        discipRec: (ocId: string, discId: string) =>
+            `/api/v1/oc/${ocId}/discipline/${discId}`,
+        parentCommsById: (ocId: string, commId: string) =>
+            `/api/v1/oc/${ocId}/parent-comms/${commId}`,
     },
     course: {
         all: "/api/v1/courses"

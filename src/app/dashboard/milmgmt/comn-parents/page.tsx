@@ -24,21 +24,9 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getParentComms, saveParentComms } from "@/app/lib/api/parentComnApi";
-
-// ─────────────── TYPES ───────────────
-interface ParentCommRow {
-    serialNo: string;
-    letterNo: string;
-    date: string;
-    teleCorres: string;
-    briefContents: string;
-    sigPICdr: string;
-}
-
-interface ParentCommForm {
-    records: ParentCommRow[];
-}
+import { deleteParentComm, getParentComms, saveParentComms, updateParentComm } from "@/app/lib/api/parentComnApi";
+import { toast } from "sonner";
+import { ParentCommForm, ParentCommRow } from "@/types/comn-partents";
 
 // ─────────────── COMPONENT ───────────────
 
@@ -51,6 +39,8 @@ export default function ParentCommnPage() {
     const [activeTab, setActiveTab] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState<ParentCommRow | null>(null);
 
     const defaultRow = {
         serialNo: "",
@@ -76,9 +66,72 @@ export default function ParentCommnPage() {
         semesters.map(() => [])
     );
 
+    const handleEdit = (row: ParentCommRow) => {
+        if (!row.id) return toast.error("Record missing ID");
+        setEditingId(row.id);
+        setEditForm({ ...row });
+    };
+
+    const handleCancel = () => {
+        setEditingId(null);
+        setEditForm(null);
+    };
+
+    const handleSave = async () => {
+        if (!selectedCadet?.ocId || !editingId || !editForm) return;
+
+        const payload = {
+            refNo: editForm.letterNo,
+            date: editForm.date,
+            subject: editForm.teleCorres,
+            brief: editForm.briefContents,
+            platoonCommanderName: editForm.sigPICdr,
+        };
+
+        try {
+            await updateParentComm(selectedCadet.ocId, editingId, payload);
+
+            setSavedData(prev => {
+                const updated = [...prev];
+                updated[activeTab] = updated[activeTab].map(r =>
+                    r.id === editingId ? { ...editForm } : r
+                );
+                return updated;
+            });
+
+            toast.success("Record updated!");
+            handleCancel();
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update record");
+        }
+    };
+
+    const handleDelete = async (row: ParentCommRow) => {
+        if (!selectedCadet?.ocId || !row.id) return;
+
+        if (!toast.warning("Delete this record?")) return;
+
+        try {
+            await deleteParentComm(selectedCadet.ocId, row.id);
+
+            setSavedData(prev => {
+                const updated = [...prev];
+                updated[activeTab] = updated[activeTab].filter(r => r.id !== row.id);
+                return updated;
+            });
+
+            toast.success("Record deleted");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete record");
+        }
+    };
+
+
     const onSubmit = async (data: ParentCommForm) => {
         if (!selectedCadet?.ocId) {
-            alert("Please select a cadet first.");
+            toast.error("Please select a cadet first.");
             return;
         }
 
@@ -105,17 +158,16 @@ export default function ParentCommnPage() {
         try {
             const responses = await saveParentComms(selectedCadet.ocId, payloads);
             if (responses.length > 0) {
-                alert("Records saved successfully!");
+                toast.success("Records saved successfully!");
                 const updated = [...savedData];
                 updated[activeTab] = [...updated[activeTab], ...newEntries];
                 setSavedData(updated);
                 reset({ records: [{ ...defaultRow }] });
             } else {
-                alert("Failed to save records. Check console for details.");
+                toast.error("Failed to save records. Check console for details.");
             }
         } catch (err) {
-            console.error(err);
-            alert("Error while saving records.");
+            toast.error("Error while saving records.");
         } finally {
             setLoading(false);
         }
@@ -136,6 +188,7 @@ export default function ParentCommnPage() {
                 const semIndex = rec.semester - 1;
                 if (semIndex >= 0 && semIndex < semesters.length) {
                     grouped[semIndex].push({
+                        id: rec.id,
                         serialNo: String(grouped[semIndex].length + 1),
                         letterNo: rec.refNo || "-",
                         date: rec.date?.split("T")[0] || "-",
@@ -168,7 +221,6 @@ export default function ParentCommnPage() {
                     <PageHeader
                         title="Record of Communication with Parents/Guardian"
                         description="Maintain communication details with parents or guardians."
-                        onLogout={handleLogout}
                     />
 
                     <main className="flex-1 p-6">
@@ -258,18 +310,107 @@ export default function ParentCommnPage() {
                                                                     {key.replace(/([A-Z])/g, " $1")}
                                                                 </th>
                                                             ))}
+                                                            <th className="p-2 border text-center">Action</th>   {/* FIXED */}
                                                         </tr>
                                                     </thead>
+
                                                     <tbody>
-                                                        {savedData[activeTab].map((row, index) => (
-                                                            <tr key={index}>
-                                                                {Object.keys(defaultRow).map((field) => (
-                                                                    <td key={field} className="p-2 border">
-                                                                        {row[field as keyof ParentCommRow] || "-"}
+                                                        {savedData[activeTab].map((row, index) => {
+                                                            const isEditing = editingId === row.id;
+
+                                                            return (
+                                                                <tr key={row.id || index}>
+
+                                                                    {/* SERIAL NO — THIS WAS MISSING */}
+                                                                    <td className="p-2 border">{row.serialNo}</td>
+
+                                                                    {/* Letter No */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editForm?.letterNo || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm(prev => prev ? { ...prev, letterNo: e.target.value } : prev)
+                                                                                }
+                                                                            />
+                                                                        ) : row.letterNo}
                                                                     </td>
-                                                                ))}
-                                                            </tr>
-                                                        ))}
+
+                                                                    {/* Date */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                type="date"
+                                                                                value={editForm?.date || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm(prev => prev ? { ...prev, date: e.target.value } : prev)
+                                                                                }
+                                                                            />
+                                                                        ) : row.date}
+                                                                    </td>
+
+                                                                    {/* Tele/Corres */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editForm?.teleCorres || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm(prev => prev ? { ...prev, teleCorres: e.target.value } : prev)
+                                                                                }
+                                                                            />
+                                                                        ) : row.teleCorres}
+                                                                    </td>
+
+                                                                    {/* Brief */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editForm?.briefContents || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm(prev => prev ? { ...prev, briefContents: e.target.value } : prev)
+                                                                                }
+                                                                            />
+                                                                        ) : row.briefContents}
+                                                                    </td>
+
+                                                                    {/* Sig PI Cdr */}
+                                                                    <td className="p-2 border">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editForm?.sigPICdr || ""}
+                                                                                onChange={(e) =>
+                                                                                    setEditForm(prev => prev ? { ...prev, sigPICdr: e.target.value } : prev)
+                                                                                }
+                                                                            />
+                                                                        ) : row.sigPICdr}
+                                                                    </td>
+
+                                                                    {/* ACTION BUTTONS */}
+                                                                    <td className="p-2 border text-center">
+                                                                        {!isEditing ? (
+                                                                            <>
+                                                                                <Button size="sm" variant="outline" onClick={() => handleEdit(row)}>
+                                                                                    Edit
+                                                                                </Button>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="destructive"
+                                                                                    onClick={() => handleDelete(row)}
+                                                                                >
+                                                                                    Delete
+                                                                                </Button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Button size="sm" onClick={handleSave}>Save</Button>
+                                                                                <Button size="sm" variant="outline" onClick={handleCancel}>Cancel</Button>
+                                                                            </>
+                                                                        )}
+                                                                    </td>
+
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             )}

@@ -1,4 +1,5 @@
 export interface MedInfoRow {
+    id?: string;
     term?: string;
     date: string;
     age: string;
@@ -18,6 +19,7 @@ export interface MedicalInfoForm {
 }
 
 export interface MedCatRow {
+    id?: string;
     term?: string;
     date: string;
     diagnosis: string;

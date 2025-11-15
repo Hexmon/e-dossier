@@ -78,3 +78,35 @@ export async function getParentComms(
         return [];
     }
 }
+
+export async function updateParentComm(
+    ocId: string,
+    commId: string,
+    payload: Partial<ParentCommPayload>
+): Promise<ApiResponse> {
+    try {
+        const res = await api.patch(
+            endpoints.oc.parentCommsById(ocId, commId),
+            payload
+        );
+        return res as ApiResponse;
+    } catch (err) {
+        console.error("Failed to update Parent Communication:", err);
+        throw err;
+    }
+}
+
+export async function deleteParentComm(
+    ocId: string,
+    commId: string
+): Promise<ApiResponse> {
+    try {
+        const res = await api.delete(
+            endpoints.oc.parentCommsById(ocId, commId)
+        );
+        return res as ApiResponse;
+    } catch (err) {
+        console.error("Failed to delete Parent Communication:", err);
+        throw err;
+    }
+}
