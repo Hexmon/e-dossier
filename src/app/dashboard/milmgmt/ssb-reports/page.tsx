@@ -24,7 +24,7 @@ import { RootState } from "@/store";
 import { PageHeader } from "@/components/layout/PageHeader";
 import DossierTab from "@/components/Tabs/DossierTab";
 import { SSBFormData } from "@/types/ssb-rpt";
-import { getSsbReport, saveSsbReport, SsbReport } from "@/app/lib/api/ssbReportApi";
+import { getSsbReport, saveSsbReport, SsbReport, updateSsbReport } from "@/app/lib/api/ssbReportApi";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
@@ -33,6 +33,9 @@ export default function SSBReportPage() {
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
     const [ssbReport, setSsbReport] = useState<SsbReport | null>(null);
     const [loading, setLoading] = useState(false);
+    const [isEditingView, setIsEditingView] = useState(false);
+    const [editForm, setEditForm] = useState<SsbReport | null>(null);
+
 
     const handleLogout = () => router.push("/login");
 
@@ -62,6 +65,39 @@ export default function SSBReportPage() {
         append: addNegative,
         remove: removeNegative,
     } = useFieldArray({ control, name: "negativeTraits" });
+
+    const startEdit = () => {
+        setEditForm(ssbReport);
+        setIsEditingView(true);
+    };
+
+    const handleEditChange = (field: keyof SsbReport, value: any) => {
+        setEditForm(prev => prev ? { ...prev, [field]: value } : prev);
+    };
+
+    const saveEdit = async () => {
+        if (!selectedCadet?.ocId || !editForm) return;
+
+        try {
+            const response = await updateSsbReport(selectedCadet.ocId, editForm);
+
+            if (response) {
+                toast.success("SSB Report updated successfully!");
+                setSsbReport(editForm);
+                setIsEditingView(false);
+            } else {
+                toast.error("Failed to update SSB Report");
+            }
+        } catch (err) {
+            toast.error("Error updating SSB report");
+        }
+    };
+
+    const cancelEdit = () => {
+        setIsEditingView(false);
+        setEditForm(null);
+    };
+
 
     const onSubmit = async (data: SSBFormData) => {
         if (!selectedCadet?.ocId) {
@@ -96,15 +132,19 @@ export default function SSBReportPage() {
     useEffect(() => {
         const fetchReport = async () => {
             if (!selectedCadet?.ocId) return;
+
             setLoading(true);
-            const data = await getSsbReport(selectedCadet.ocId);
-            console.log("view data", data)
-            setSsbReport(data);
+            const report = await getSsbReport(selectedCadet.ocId);
+            console.log("view data", report);
+
+            setSsbReport(report);
             setLoading(false);
         };
 
         fetchReport();
     }, [selectedCadet]);
+
+
 
 
     const savedData = watch();
@@ -117,7 +157,6 @@ export default function SSBReportPage() {
                     <PageHeader
                         title="SSB Report"
                         description="Document candidate performance, assess psychological, group, and interview outcomes, and compile structured evaluations."
-                        onLogout={handleLogout}
                     />
 
                     <main className="flex-1 p-6">
@@ -347,23 +386,69 @@ export default function SSBReportPage() {
                                             {/* ---- View Data ---- */}
                                             <TabsContent value="view">
                                                 <Card className="p-6 border rounded-lg bg-gray-50">
-                                                    <h3 className="text-lg font-semibold mb-4">Saved SSB Report Data</h3>
-                                                    <div className="text-sm space-y-3">
-                                                        <p>
-                                                            <strong>Positive Traits:</strong>{" "}
-                                                            {savedData.positiveTraits.map((t) => t.trait).filter(Boolean).join(", ") || "-"}
-                                                        </p>
-                                                        <p>
-                                                            <strong>Negative Traits:</strong>{" "}
-                                                            {savedData.negativeTraits.map((t) => t.trait).filter(Boolean).join(", ") || "-"}
-                                                        </p>
-                                                        <p>
-                                                            <strong>Rating:</strong> {savedData.rating || "-"}
-                                                        </p>
-                                                        <p>
-                                                            <strong>Scope of Improvement:</strong> {savedData.improvement || "-"}
-                                                        </p>
-                                                    </div>
+                                                    <h3 className="text-lg font-semibold mb-4 flex justify-between">
+                                                        Saved SSB Report Data
+                                                        {!isEditingView && ssbReport && (
+                                                            <Button size="sm" onClick={startEdit}>
+                                                                Edit
+                                                            </Button>
+                                                        )}
+                                                    </h3>
+
+                                                    {!ssbReport ? (
+                                                        <p>No SSB Report Found.</p>
+                                                    ) : !isEditingView ? (
+                                                        // ------------------ NORMAL VIEW MODE -----------------------
+                                                        <div className="text-sm space-y-3">
+                                                            <p><strong>Positive Traits:</strong>{" "}
+                                                                {ssbReport.positives.length > 0
+                                                                    ? ssbReport.positives.map(p => `${p.note} (${p.by})`).join(", ")
+                                                                    : "-"}
+                                                            </p>
+
+                                                            <p><strong>Negative Traits:</strong>{" "}
+                                                                {ssbReport.negatives.length > 0
+                                                                    ? ssbReport.negatives.map(n => `${n.note} (${n.by})`).join(", ")
+                                                                    : "-"}
+                                                            </p>
+
+                                                            <p><strong>Rating:</strong> {ssbReport.predictiveRating}</p>
+
+                                                            <p><strong>Scope For Improvement:</strong> {ssbReport.scopeForImprovement}</p>
+                                                        </div>
+                                                    ) : (
+                                                        // ------------------ EDIT MODE -----------------------------
+                                                        <div className="text-sm space-y-4">
+
+                                                            {/* Predictive Rating */}
+                                                            <div>
+                                                                <label className="font-semibold">Predictive Rating</label>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={editForm?.predictiveRating}
+                                                                    onChange={(e) =>
+                                                                        handleEditChange("predictiveRating", Number(e.target.value))
+                                                                    }
+                                                                />
+                                                            </div>
+
+                                                            {/* Scope For Improvement */}
+                                                            <div>
+                                                                <label className="font-semibold">Scope For Improvement</label>
+                                                                <Textarea
+                                                                    value={editForm?.scopeForImprovement}
+                                                                    onChange={(e) =>
+                                                                        handleEditChange("scopeForImprovement", e.target.value)
+                                                                    }
+                                                                />
+                                                            </div>
+
+                                                            <div className="flex gap-3 mt-4">
+                                                                <Button onClick={saveEdit}>Save</Button>
+                                                                <Button variant="outline" onClick={cancelEdit}>Cancel</Button>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </Card>
                                             </TabsContent>
                                         </Tabs>

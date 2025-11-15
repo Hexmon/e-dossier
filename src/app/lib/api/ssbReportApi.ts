@@ -54,3 +54,21 @@ export async function getSsbReport(
     return null;
   }
 }
+
+export async function updateSsbReport(
+  ocId: string,
+  payload: Partial<SsbReport>
+): Promise<ApiResponse<SsbReport>> {
+  try {
+    const response = (await api.patch(
+      endpoints.oc.ssbreport(ocId),
+      payload
+    )) as ApiResponse<SsbReport>;
+
+    console.log("SSB Report PATCH:", response);
+    return response;
+  } catch (error) {
+    console.error("Error updating SSB report:", error);
+    throw error;
+  }
+}

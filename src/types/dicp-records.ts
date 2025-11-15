@@ -1,4 +1,5 @@
 export interface DisciplineRow {
+    id?: string;
     serialNo: string;
     dateOfOffence: string;
     offence: string;

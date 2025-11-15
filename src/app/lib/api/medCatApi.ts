@@ -88,3 +88,37 @@ export async function getMedicalCategory(
         return [];
     }
 }
+
+export async function updateMedicalCategory(
+    ocId: string,
+    catId: string,
+    payload: Partial<MedicalCategoryPayload>
+): Promise<ApiResponse> {
+    try {
+        const response = (await api.patch(
+            endpoints.oc.medcatById(ocId, catId),
+            payload
+        )) as ApiResponse;
+
+        return response;
+    } catch (err) {
+        console.error("Failed to update MED CAT:", err);
+        throw err;
+    }
+}
+
+export async function deleteMedicalCategory(
+    ocId: string,
+    catId: string
+): Promise<ApiResponse> {
+    try {
+        const response = (await api.delete(
+            endpoints.oc.medcatById(ocId, catId)
+        )) as ApiResponse;
+
+        return response;
+    } catch (err) {
+        console.error("Failed to delete MED CAT:", err);
+        throw err;
+    }
+}

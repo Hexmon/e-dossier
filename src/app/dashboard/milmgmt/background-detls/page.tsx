@@ -27,20 +27,81 @@ import {
 import { deleteFamilyMember, FamilyMember, FamilyMemberRecord, getFamilyDetails, saveFamilyDetails, updateFamilyMember } from "@/app/lib/api/familyApi";
 import { toast } from "sonner";
 import { Achievement, AutoBio, Qualification } from "@/types/background-detls";
-import { EducationRecordResponse, getEducationDetails, saveEducationDetails } from "@/app/lib/api/educationApi";
-import { getAchievements, saveAchievements } from "@/app/lib/api/achievementsApi";
+import { deleteEducationRecord, EducationItem, EducationRecordResponse, EducationUI, getEducationDetails, saveEducationDetails, updateEducationRecord } from "@/app/lib/api/educationApi";
+import { deleteAchievementRecord, getAchievements, saveAchievements, updateAchievementRecord } from "@/app/lib/api/achievementsApi";
 import { useCallback, useEffect, useState } from "react";
-import { getAutobiographyDetails, saveAutobiography } from "@/app/lib/api/autobiographyApi";
+import { AutoBioPayload, getAutobiographyDetails, saveAutobiography } from "@/app/lib/api/autobiographyApi";
 
 export default function BackgroundDetlsPage() {
     const router = useRouter();
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
-    const [savedEducation, setSavedEducation] = useState<Qualification[]>([]);
+    const [savedEducation, setSavedEducation] = useState<EducationItem[]>([]);
     const [savedFamily, setSavedFamily] = useState<FamilyMemberRecord[]>([]);
     const [savedAchievements, setSavedAchievements] = useState<Achievement[]>([]);
     const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<FamilyMemberRecord | null>(null);
+    const [editingEduId, setEditingEduId] = useState<string | null>(null);
+    const [editEduForm, setEditEduForm] = useState<EducationUI | null>(null);
+    const [editingAchId, setEditingAchId] = useState<string | null>(null);
+    const [editAchForm, setEditAchForm] = useState<Achievement | null>(null);
+
+    const handleEditAchievement = (row: Achievement) => {
+        setEditingAchId(row.id ?? null);
+        setEditAchForm({ ...row });
+    };
+
+    const handleCancelAchievement = () => {
+        setEditingAchId(null);
+        setEditAchForm(null);
+    };
+
+    const handleChangeAchievement = (field: keyof Achievement, value: any) => {
+        setEditAchForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+    };
+
+    const handleSaveAchievement = async () => {
+        if (!selectedCadet?.ocId || !editingAchId || !editAchForm) {
+            return toast.error("Invalid operation");
+        }
+
+        try {
+            await updateAchievementRecord(selectedCadet.ocId, editingAchId, {
+                event: editAchForm.event,
+                year: editAchForm.year,
+                level: editAchForm.level,
+                prize: editAchForm.prize,
+            });
+
+            setSavedAchievements((prev) =>
+                prev.map((a) =>
+                    a.id === editingAchId ? { ...editAchForm } : a
+                )
+            );
+
+            toast.success("Achievement updated!");
+            setEditingAchId(null);
+            setEditAchForm(null);
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update achievement");
+        }
+    };
+
+    const handleDeleteAchievement = async (row: Achievement) => {
+        if (!selectedCadet?.ocId || !row.id)
+            return toast.error("Invalid achievement record");
+
+        try {
+            await deleteAchievementRecord(selectedCadet.ocId, row.id);
+
+            setSavedAchievements((prev) => prev.filter((x) => x.id !== row.id));
+            toast.success("Achievement deleted!");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete achievement");
+        }
+    };
 
     const handleLogout = () => {
         router.push("/login");
@@ -106,7 +167,8 @@ export default function BackgroundDetlsPage() {
             console.log("Education data:", data);
 
             if (Array.isArray(data) && data.length > 0) {
-                const formatted = data.map((item) => ({
+                const formatted: EducationItem[] = data.map((item) => ({
+                    id: item.id,
                     qualification: item.level || "",
                     school: item.schoolOrCollege || "",
                     subs: item.subjects || "",
@@ -156,7 +218,11 @@ export default function BackgroundDetlsPage() {
                 responses.length > 0
 
             if (allSucceeded) {
-                setSavedEducation((prev) => [...prev, ...data.qualifications]);
+                setSavedEducation((prev) =>
+                    prev.map((item) =>
+                        item.id === editingEduId ? { ...item, ...editEduForm } : item
+                    )
+                );
                 toast.success("Educational qualifications saved successfully!");
             } else {
                 toast.warning("Some qualifications failed to save. Please check and retry.");
@@ -172,11 +238,13 @@ export default function BackgroundDetlsPage() {
         if (!selectedCadet?.ocId) return;
         try {
             const data = await getAchievements(selectedCadet.ocId);
-            console.log("Achievements data:", data);
 
-            if (Array.isArray(data) && data.length > 0) {
-                setSavedAchievements(data);
-            }
+            const withIds: Achievement[] = data.map(a => ({
+                id: crypto.randomUUID(),
+                ...a
+            }));
+
+            setSavedAchievements(withIds);
         } catch (err) {
             console.error("Error loading achievements:", err);
             toast.error("Error loading achievements data.");
@@ -214,7 +282,15 @@ export default function BackgroundDetlsPage() {
                 responses.length > 0
 
             if (allSucceeded) {
-                setSavedAchievements((prev) => [...prev, ...data.achievements]);
+                setSavedAchievements(prev => [
+                    ...prev,
+                    ...responses.map((r, i) => ({
+                        ...data.achievements[i],
+                        id: r.id
+                    }))
+                ]);
+
+
                 toast.success("Achievements saved successfully!");
             } else {
                 toast.warning("Some achievements failed to save. Please check and retry.");
@@ -244,11 +320,17 @@ export default function BackgroundDetlsPage() {
 
         try {
             const data = await getAutobiographyDetails(selectedCadet.ocId);
-            console.log("auto bio data", data)
+
             if (data) {
-                resetAutoBio(data);
-            } else {
-                console.log("No autobiography data found.");
+                resetAutoBio({
+                    general: data.general ?? "",
+                    proficiency: data.sportsProficiency ?? "",
+                    work: data.achievementsNote ?? "",
+                    additional: data.areasToWork ?? "",
+                    date: data.filledOn ?? "",
+                    sign_oc: data.platoonCommanderName ?? "",
+                    sign_pi: ""
+                });
             }
         } catch (err) {
             console.error("Error loading autobiography data:", err);
@@ -266,9 +348,20 @@ export default function BackgroundDetlsPage() {
             return;
         }
 
+        const payload: AutoBioPayload = {
+            general: data.general,
+            sportsProficiency: data.proficiency,
+            achievementsNote: data.work,
+            areasToWork: data.additional,
+            additionalInfo: data.additional,
+            filledOn: typeof data.date === "string"
+                ? data.date
+                : new Date(data.date).toISOString().split("T")[0],
+            platoonCommanderName: data.sign_oc,
+        };
+
         try {
-            const response = await saveAutobiography(selectedCadet.ocId, data);
-            console.log("response", response.ok, response.status);
+            const response = await saveAutobiography(selectedCadet.ocId, payload);
 
             if (response?.data && Object.keys(response.data).length > 0) {
                 toast.success("Autobiography saved successfully!");
@@ -332,6 +425,66 @@ export default function BackgroundDetlsPage() {
             console.error("Failed to delete family member:", err);
             toast.error("Failed to delete member");
         }
+    };
+
+    const handleEditEducation = (row: EducationUI) => {
+        setEditingEduId(row.id);
+        setEditEduForm({ ...row });
+    };
+
+    const handleChangeEducation = (field: keyof EducationUI, value: any) => {
+        setEditEduForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+    };
+
+    const handleSaveEducation = async () => {
+        if (!selectedCadet?.ocId || !editingEduId || !editEduForm) {
+            return toast.error("Invalid operation");
+        }
+
+        try {
+            await updateEducationRecord(selectedCadet.ocId, editingEduId, {
+                totalPercent:
+                    editEduForm.marks !== null &&
+                        editEduForm.marks !== undefined &&
+                        editEduForm.marks !== ""
+                        ? Number(editEduForm.marks)
+                        : 0,
+            });
+
+            setSavedEducation((prev) =>
+                prev.map((item) =>
+                    item.id === editingEduId ? { ...editEduForm } : item
+                )
+            );
+
+            toast.success("Educational record updated!");
+
+            setEditingEduId(null);
+            setEditEduForm(null);
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update educational record");
+        }
+    };
+
+    const handleDeleteEducation = async (row: EducationUI) => {
+        if (!selectedCadet?.ocId || !row.id) return toast.error("Invalid education record");
+
+        try {
+            await deleteEducationRecord(selectedCadet.ocId, row.id);
+
+            setSavedEducation((prev) => prev.filter((x) => x.id !== row.id));
+
+            toast.success("Educational qualification deleted!");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete educational record");
+        }
+    };
+
+    const handleCancelEducation = () => {
+        setEditingEduId(null);
+        setEditEduForm(null);
     };
 
 
@@ -535,23 +688,171 @@ export default function BackgroundDetlsPage() {
                                                 <table className="min-w-full text-sm border border-gray-300">
                                                     <thead className="bg-gray-100">
                                                         <tr>
-                                                            {["S.No", "Qualification", "School", "Subjects", "Board", "Marks (%)", "Grade"].map((head) => (
-                                                                <th key={head} className="border px-4 py-2 !bg-gray-300">{head}</th>
+                                                            {[
+                                                                "S.No", "Qualification", "School", "Subjects",
+                                                                "Board", "Marks (%)", "Grade", "Action"
+                                                            ].map((head) => (
+                                                                <th
+                                                                    key={head}
+                                                                    className="border px-4 py-2 !bg-gray-300 text-center"
+                                                                >
+                                                                    {head}
+                                                                </th>
                                                             ))}
                                                         </tr>
                                                     </thead>
+
                                                     <tbody>
-                                                        {savedEducation.map((item, idx) => (
-                                                            <tr key={idx}>
-                                                                <td className="border px-4 py-2 text-center">{idx + 1}</td>
-                                                                <td className="border px-4 py-2">{item.qualification}</td>
-                                                                <td className="border px-4 py-2">{item.school}</td>
-                                                                <td className="border px-4 py-2">{item.subs}</td>
-                                                                <td className="border px-4 py-2">{item.board}</td>
-                                                                <td className="border px-4 py-2">{item.marks}</td>
-                                                                <td className="border px-4 py-2">{item.grade}</td>
-                                                            </tr>
-                                                        ))}
+                                                        {savedEducation.map((row, idx) => {
+                                                            const isEditing = editingEduId === row.id;
+
+                                                            return (
+                                                                <tr key={row.id}>
+                                                                    <td className="border px-4 py-2 text-center">
+                                                                        {idx + 1}
+                                                                    </td>
+
+                                                                    {/* Qualification */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editEduForm?.qualification || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeEducation(
+                                                                                        "qualification",
+                                                                                        e.target.value
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            row.qualification
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* School */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editEduForm?.school || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeEducation(
+                                                                                        "school",
+                                                                                        e.target.value
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            row.school
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* Subjects */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editEduForm?.subs || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeEducation(
+                                                                                        "subs",
+                                                                                        e.target.value
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            row.subs
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* Board */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editEduForm?.board || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeEducation(
+                                                                                        "board",
+                                                                                        e.target.value
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            row.board
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* Marks (%) — only editable field used by backend */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                type="number"
+                                                                                value={editEduForm?.marks || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeEducation(
+                                                                                        "marks",
+                                                                                        e.target.value
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            row.marks
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* Grade */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editEduForm?.grade || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeEducation(
+                                                                                        "grade",
+                                                                                        e.target.value
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            row.grade
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* ACTIONS */}
+                                                                    <td className="border px-4 py-2 text-center space-x-2">
+                                                                        {!isEditing ? (
+                                                                            <>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    onClick={() => handleEditEducation(row)}
+                                                                                >
+                                                                                    Edit
+                                                                                </Button>
+
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="destructive"
+                                                                                    onClick={() => handleDeleteEducation(row)}
+                                                                                >
+                                                                                    Delete
+                                                                                </Button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Button size="sm" onClick={handleSaveEducation}>
+                                                                                    Save
+                                                                                </Button>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    onClick={handleCancelEducation}
+                                                                                >
+                                                                                    Cancel
+                                                                                </Button>
+                                                                            </>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             )}
@@ -601,28 +902,129 @@ export default function BackgroundDetlsPage() {
                                                 <table className="min-w-full text-sm text-left border border-gray-300">
                                                     <thead className="bg-gray-100">
                                                         <tr>
-                                                            {["S.No", "Event", "Year", "Level", "Prize"].map((head) => (
-                                                                <th key={head} className="border px-4 py-2 !bg-gray-300 text-center">
+                                                            {["S.No", "Event", "Year", "Level", "Prize", "Action"].map((head) => (
+                                                                <th
+                                                                    key={head}
+                                                                    className="border px-4 py-2 !bg-gray-300 text-center"
+                                                                >
                                                                     {head}
                                                                 </th>
                                                             ))}
                                                         </tr>
                                                     </thead>
+
                                                     <tbody>
-                                                        {savedAchievements.map((ach, idx) => (
-                                                            <tr key={idx}>
-                                                                <td className="border px-4 py-2 text-center">{idx + 1}</td>
-                                                                <td className="border px-4 py-2">{ach.event}</td>
-                                                                <td className="border px-4 py-2 text-center">{ach.year}</td>
-                                                                <td className="border px-4 py-2">{ach.level}</td>
-                                                                <td className="border px-4 py-2">{ach.prize}</td>
-                                                            </tr>
-                                                        ))}
+                                                        {savedAchievements.map((ach, idx) => {
+                                                            const isEditing = editingAchId === ach.id;
+
+                                                            return (
+                                                                <tr key={ach.id}>
+                                                                    <td className="border px-4 py-2 text-center">{idx + 1}</td>
+
+                                                                    {/* EVENT */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editAchForm?.event || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeAchievement("event", e.target.value)
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            ach.event
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* YEAR */}
+                                                                    <td className="border px-4 py-2 text-center">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                type="number"
+                                                                                value={editAchForm?.year || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeAchievement(
+                                                                                        "year",
+                                                                                        e.target.value ? Number(e.target.value) : ""
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            ach.year
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* LEVEL */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editAchForm?.level || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeAchievement("level", e.target.value)
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            ach.level
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* PRIZE */}
+                                                                    <td className="border px-4 py-2">
+                                                                        {isEditing ? (
+                                                                            <Input
+                                                                                value={editAchForm?.prize || ""}
+                                                                                onChange={(e) =>
+                                                                                    handleChangeAchievement("prize", e.target.value)
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            ach.prize
+                                                                        )}
+                                                                    </td>
+
+                                                                    {/* ACTIONS */}
+                                                                    <td className="border px-4 py-2 text-center space-x-2">
+                                                                        {!isEditing ? (
+                                                                            <>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    onClick={() => handleEditAchievement(ach)}
+                                                                                >
+                                                                                    Edit
+                                                                                </Button>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="destructive"
+                                                                                    onClick={() => handleDeleteAchievement(ach)}
+                                                                                >
+                                                                                    Delete
+                                                                                </Button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Button size="sm" onClick={handleSaveAchievement}>
+                                                                                    Save
+                                                                                </Button>
+                                                                                <Button
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    onClick={handleCancelAchievement}
+                                                                                >
+                                                                                    Cancel
+                                                                                </Button>
+                                                                            </>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             </div>
                                         ) : (
-                                            <p className="text-center mb-4 text-gray-500">No achievements saved yet.</p>
+                                            <p className="text-center mb-4 text-gray-500">
+                                                No achievements saved yet.
+                                            </p>
                                         )}
 
                                         <form onSubmit={handleAchSubmit(submitAchievements)}>

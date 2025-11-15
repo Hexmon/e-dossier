@@ -105,3 +105,25 @@ export async function getDisciplineRecords(ocId: string): Promise<DisciplineResp
         return [];
     }
 }
+
+// PATCH update
+export async function updateDisciplineRecord(
+    ocId: string,
+    disciplineId: string,
+    payload: { points: number; punishment: string }
+) {
+    return await api.patch(
+        endpoints.oc.discipRec(ocId, disciplineId),
+        payload
+    );
+}
+
+// DELETE record
+export async function deleteDisciplineRecord(
+    ocId: string,
+    disciplineId: string
+) {
+    return await api.delete(
+        endpoints.oc.discipRec(ocId, disciplineId),
+    );
+}

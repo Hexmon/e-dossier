@@ -1,6 +1,7 @@
 // src/app/lib/api/educationApi.ts
 import { api } from "@/app/lib/apiClient";
 import { endpoints } from "@/constants/endpoints";
+import { Qualification } from "@/types/background-detls";
 
 
 // Type definition for the education record
@@ -15,6 +16,11 @@ export interface EducationRecord {
 export interface EducationUpdate extends EducationRecord {
     id: string;
 }
+
+export interface EducationItem extends Qualification {
+    id: string;
+}
+
 
 export interface EducationUI {
     id: string;
@@ -95,7 +101,7 @@ export async function getEducationDetails(ocId: string): Promise<EducationRecord
 export async function updateEducationRecord(
     ocId: string,
     eduId: string,
-    payload: Partial<{ percentage: number }>
+    payload: Partial<{ totalPercent: number }>
 ) {
     return api.patch(`${endpoints.oc.education(ocId)}/${eduId}`, payload);
 }

@@ -3,10 +3,12 @@ import { endpoints } from "@/constants/endpoints";
 
 export interface AutoBio {
     general: string;
-    proficiency: string;
-    work: string;
-    additional: string;
-    date: string;
+    sportsProficiency: string;
+    achievementsNote?: string;
+    areasToWork: string;
+    additionalInfo: string;
+    filledOn: string;
+    platoonCommanderName: string;
     sign_oc: string;
     sign_pi: string;
 }
@@ -17,9 +19,20 @@ export interface ApiResponse<T = any> {
     data?: T;
 }
 
+export interface AutoBioPayload {
+    general: string;
+    sportsProficiency: string;
+    achievementsNote: string;
+    areasToWork: string;
+    additionalInfo: string;
+    filledOn: string;
+    platoonCommanderName: string;
+}
+
+
 export async function saveAutobiography(
     ocId: string,
-    autobiography: AutoBio
+    autobiography: AutoBioPayload
 ): Promise<ApiResponse> {
     try {
         const response = (await api.post(
