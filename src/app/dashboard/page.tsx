@@ -1,129 +1,93 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/layout/PageHeader";
-import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import { dashboardCards } from "@/config/app.config";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 
 const DashboardPage = () => {
-  const router = useRouter();
-  const handleLogout = () => {
-    router.push("/login");
-  };
-
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <aside>
-          <AppSidebar />
-        </aside>
+    <DashboardLayout title="MCEME CTW Dashboard" description="Training Management System">
+      <main className="flex-1 p-6">
 
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="h-16 border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 sticky top-0 z-50">
-            <PageHeader
-              title="MCEME CTW Dashboard"
-              description="Training Management System"
-            />
-          </header>
-
-          {/* Main Content */}
-          <main className="flex-1 p-6">
-            <nav aria-label="Breadcrumb">
-              <BreadcrumbNav
-                paths={[
-                  { label: "Dashboard", href: "/dashboard" },
-                  { label: "Home" },
-                ]}
-              />
-            </nav>
-
-            {/* Dashboard Cards */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
-              {dashboardCards.map((card, index) => {
-                const IconComponent = card.icon;
-                return (
-                  <Card
-                    key={index}
-                    className="group hover:shadow-command transition-all duration-300 cursor-pointer rounded-xl shadow-lg"
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${card.color} text-white`}>
-                          <IconComponent className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                            {card.title}
-                          </CardTitle>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                        {card.description}
-                      </p>
-                      <Button asChild variant="outline" size="sm" className="w-full border border-blue-700">
-                        <Link href={card.to}>Access Module →</Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </section>
-
-            {/* Quick Stats */}
-            <section className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Active OCs
-                  </CardTitle>
+        {/* Dashboard Cards */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
+          {dashboardCards.map((card, index) => {
+            const IconComponent = card.icon;
+            return (
+              <Card
+                key={index}
+                className="group hover:shadow-command transition-all duration-300 cursor-pointer rounded-xl shadow-lg"
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${card.color} text-white`}>
+                      <IconComponent className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                        {card.title}
+                      </CardTitle>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-primary">246</div>
-                  <p className="text-xs text-muted-foreground">Across 6 platoons</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Ongoing Assessments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">12</div>
-                  <p className="text-xs text-muted-foreground">This week</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Training Completion
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">87%</div>
-                  <p className="text-xs text-muted-foreground">
-                    Current batch average
+                  <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                    {card.description}
                   </p>
+                  <Button asChild variant="outline" size="sm" className="w-full border border-blue-700">
+                    <Link href={card.to}>Access Module →</Link>
+                  </Button>
                 </CardContent>
               </Card>
-            </section>
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+            );
+          })}
+        </section>
+
+        {/* Quick Stats */}
+        <section className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Active OCs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">246</div>
+              <p className="text-xs text-muted-foreground">Across 6 platoons</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Ongoing Assessments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">12</div>
+              <p className="text-xs text-muted-foreground">This week</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Training Completion
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">87%</div>
+              <p className="text-xs text-muted-foreground">
+                Current batch average
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+
+      </main>
+    </DashboardLayout>
   );
 };
 

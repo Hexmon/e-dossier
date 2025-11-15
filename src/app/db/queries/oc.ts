@@ -127,7 +127,7 @@ export async function deleteAutobio(ocId: string) {
 
 // ---- SSB report + points ----------------------------------------------------
 export async function getSsbReport(ocId: string) {
-    const [row] = await db.select().from(ocSsbReports).where(eq(ocSsbReports.ocId, ocId)).limit(1);
+    const [row] = await db.select().from(ocSsbReports).where(eq(ocSsbReports.ocId, ocId));
     return row ?? null;
 }
 export async function upsertSsbReport(ocId: string, data: Partial<typeof ocSsbReports.$inferInsert>) {
@@ -216,7 +216,7 @@ export async function deleteSsbReport(ocId: string) {
 }
 
 export async function listSsbPoints(reportId: string, limit = 100, offset = 0) {
-    return db.select().from(ocSsbPoints).where(eq(ocSsbPoints.reportId, reportId)).limit(limit).offset(offset);
+    return db.select().from(ocSsbPoints).where(eq(ocSsbPoints.reportId, reportId)).offset(offset);
 }
 export async function createSsbPoint(reportId: string, data: Omit<typeof ocSsbPoints.$inferInsert, 'id' | 'reportId'>) {
     const [row] = await db.insert(ocSsbPoints).values({ reportId, ...data }).returning();
