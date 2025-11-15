@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -12,9 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import { dashboardCards } from "@/config/app.config";
+import { fetchMe, MeResponse } from "../lib/api/me";
 
 const DashboardPage = () => {
   const router = useRouter();
+
   const handleLogout = () => {
     router.push("/login");
   };
