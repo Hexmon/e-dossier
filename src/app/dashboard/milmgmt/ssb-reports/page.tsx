@@ -27,6 +27,7 @@ import { SSBFormData } from "@/types/ssb-rpt";
 import { getSsbReport, saveSsbReport, SsbReport, updateSsbReport } from "@/app/lib/api/ssbReportApi";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 
 export default function SSBReportPage() {
     const router = useRouter();
@@ -35,9 +36,6 @@ export default function SSBReportPage() {
     const [loading, setLoading] = useState(false);
     const [isEditingView, setIsEditingView] = useState(false);
     const [editForm, setEditForm] = useState<SsbReport | null>(null);
-
-
-    const handleLogout = () => router.push("/login");
 
     const {
         control,
@@ -98,7 +96,6 @@ export default function SSBReportPage() {
         setEditForm(null);
     };
 
-
     const onSubmit = async (data: SSBFormData) => {
         if (!selectedCadet?.ocId) {
             toast.error("No cadet selected");
@@ -144,333 +141,312 @@ export default function SSBReportPage() {
         fetchReport();
     }, [selectedCadet]);
 
-
-
-
     const savedData = watch();
 
     return (
-        <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
-                <AppSidebar />
-                <div className="flex-1 flex flex-col">
-                    <PageHeader
-                        title="SSB Report"
-                        description="Document candidate performance, assess psychological, group, and interview outcomes, and compile structured evaluations."
-                    />
+        <DashboardLayout
+            title="SSB Report"
+            description="Document candidate performance, assess psychological, group, and interview outcomes, and compile structured evaluations."
+        >
+            <main className="p-6">
 
-                    <main className="flex-1 p-6">
-                        <BreadcrumbNav
-                            paths={[
-                                { label: "Dashboard", href: "/dashboard" },
-                                { label: "Dossier", href: "/dashboard/milmgmt" },
-                                { label: "SSB Report" },
-                            ]}
-                        />
+                <BreadcrumbNav
+                    paths={[
+                        { label: "Dashboard", href: "/dashboard" },
+                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "SSB Report" }
+                    ]}
+                />
 
-                        {selectedCadet && <SelectedCadetTable selectedCadet={selectedCadet} />}
+                {selectedCadet && <SelectedCadetTable selectedCadet={selectedCadet} />}
 
-                        <DossierTab
-                            tabs={dossierTabs}
-                            defaultValue="ssb-reports"
-                            extraTabs={
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <TabsTrigger
-                                            value="ssb-reports"
-                                            className="flex items-center gap-2 border border-transparent hover:!border-blue-700"
-                                        >
-                                            <Shield className="h-4 w-4" />
-                                            Mil-Trg
-                                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                        </TabsTrigger>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                                        {militaryTrainingCards.map((card) => (
-                                            <DropdownMenuItem key={card.to} asChild>
-                                                <a href={card.to} className="flex items-center gap-2 w-full">
-                                                    <card.icon className={`h-4 w-4 ${card.color}`} />
-                                                    <span>{card.title}</span>
-                                                </a>
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            }
-                        >
-                            <TabsContent value="ssb-reports" className="space-y-6">
-                                <Card className="shadow-lg rounded-xl p-6 border border-border w-full max-w-5xl mx-auto">
-                                    <CardHeader>
-                                        <CardTitle className="text-xl font-semibold text-primary text-center">
-                                            SSB Report
-                                        </CardTitle>
-                                    </CardHeader>
+                {/* ------------------ TABS + CONTENT ------------------ */}
+                <DossierTab
+                    tabs={dossierTabs}
+                    defaultValue="ssb-reports"
+                    extraTabs={
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <TabsTrigger value="miltrg" className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4" /> Mil-Trg
+                                    <ChevronDown className="h-4 w-4" />
+                                </TabsTrigger>
+                            </DropdownMenuTrigger>
 
-                                    <CardContent>
-                                        <Tabs defaultValue="form">
-                                            <TabsList className="mb-6">
-                                                <TabsTrigger value="form">Fill Form</TabsTrigger>
-                                                <TabsTrigger value="view">View Data</TabsTrigger>
-                                            </TabsList>
+                            <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                                {militaryTrainingCards.map(card => (
+                                    <DropdownMenuItem key={card.to} asChild>
+                                        <a href={card.to} className="flex items-center gap-2">
+                                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                                            {card.title}
+                                        </a>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    }
+                >
 
-                                            {/* ---- Form ---- */}
-                                            <TabsContent value="form">
-                                                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                                                    {/* Positive Traits */}
-                                                    <div className="grid grid-cols-2 gap-12">
-                                                        <div>
-                                                            <label className="text-sm font-medium">Positive Traits</label>
-                                                            <div className="space-y-2 mt-2">
-                                                                {positiveFields.map((field, index) => (
-                                                                    <div key={field.id} className="flex items-center gap-2">
-                                                                        <Input
-                                                                            {...register(`positiveTraits.${index}.trait` as const)}
-                                                                            placeholder={`Positive trait ${index + 1}`}
-                                                                            className="flex-1"
-                                                                        />
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="destructive"
-                                                                            size="sm"
-                                                                            onClick={() => removePositive(index)}
-                                                                        >
-                                                                            Remove
-                                                                        </Button>
-                                                                    </div>
-                                                                ))}
+                    <TabsContent value="ssb-reports" className="space-y-6">
+                        <Card className="shadow-lg rounded-xl p-6 border border-border w-full max-w-5xl mx-auto">
+                            <CardHeader>
+                                <CardTitle className="text-xl font-semibold text-primary text-center">
+                                    SSB Report
+                                </CardTitle>
+                            </CardHeader>
+
+                            <CardContent>
+                                <Tabs defaultValue="form">
+                                    <TabsList className="mb-6">
+                                        <TabsTrigger value="form">Fill Form</TabsTrigger>
+                                        <TabsTrigger value="view">View Data</TabsTrigger>
+                                    </TabsList>
+
+                                    {/* ---- Form ---- */}
+                                    <TabsContent value="form">
+                                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                                            {/* Positive Traits */}
+                                            <div className="grid grid-cols-2 gap-12">
+                                                <div>
+                                                    <label className="text-sm font-medium">Positive Traits</label>
+                                                    <div className="space-y-2 mt-2">
+                                                        {positiveFields.map((field, index) => (
+                                                            <div key={field.id} className="flex items-center gap-2">
+                                                                <Input
+                                                                    {...register(`positiveTraits.${index}.trait` as const)}
+                                                                    placeholder={`Positive trait ${index + 1}`}
+                                                                    className="flex-1"
+                                                                />
                                                                 <Button
                                                                     type="button"
-                                                                    variant="outline"
+                                                                    variant="destructive"
                                                                     size="sm"
-                                                                    onClick={() => addPositive({ trait: "" })}
+                                                                    onClick={() => removePositive(index)}
                                                                 >
-                                                                    + Add Positive Trait
+                                                                    Remove
                                                                 </Button>
                                                             </div>
-                                                        </div>
-
-                                                        <div className="w-full max-w-sm">
-                                                            <label className="text-sm font-medium">By</label>
-                                                            <select
-                                                                {...register("positiveBy")}
-                                                                className="mt-1 w-full rounded-md border p-2 text-sm"
-                                                                defaultValue=""
-                                                            >
-                                                                <option value="" disabled>Select</option>
-                                                                <option value="IO">IO</option>
-                                                                <option value="GTO">GTO</option>
-                                                                <option value="Psy">Psy</option>
-                                                                <option value="TO">TO</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Negative Traits */}
-                                                    <div className="grid grid-cols-2 gap-12">
-                                                        <div>
-                                                            <label className="text-sm font-medium">Negative Traits</label>
-                                                            <div className="space-y-2 mt-2">
-                                                                {negativeFields.map((field, index) => (
-                                                                    <div key={field.id} className="flex items-center gap-2">
-                                                                        <Input
-                                                                            {...register(`negativeTraits.${index}.trait` as const)}
-                                                                            placeholder={`Negative trait ${index + 1}`}
-                                                                            className="flex-1"
-                                                                        />
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="destructive"
-                                                                            size="sm"
-                                                                            onClick={() => removeNegative(index)}
-                                                                        >
-                                                                            Remove
-                                                                        </Button>
-                                                                    </div>
-                                                                ))}
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => addNegative({ trait: "" })}
-                                                                >
-                                                                    + Add Negative Trait
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="w-full max-w-sm">
-                                                            <label className="text-sm font-medium">By</label>
-                                                            <select
-                                                                {...register("negativeBy")}
-                                                                className="mt-1 w-full rounded-md border p-2 text-sm"
-                                                                defaultValue=""
-                                                            >
-                                                                <option value="" disabled>Select</option>
-                                                                <option value="IO">IO</option>
-                                                                <option value="GTO">GTO</option>
-                                                                <option value="Psy">Psy</option>
-                                                                <option value="TO">TO</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Rating */}
-                                                    <div className="grid grid-cols-2 gap-12">
-                                                        <div>
-                                                            <label className="text-sm font-medium">
-                                                                Overall Predictive Rating as an Officer
-                                                            </label>
-                                                            <select
-                                                                {...register("rating")}
-                                                                className="mt-1 w-full rounded-md border p-2 text-sm"
-                                                            >
-                                                                <option value="">Select Rating</option>
-                                                                <option value="OS">Outstanding (OS)</option>
-                                                                <option value="WAA">Way Above Avg (WAA)</option>
-                                                                <option value="AA">Above Avg (AA)</option>
-                                                                <option value="JAA">Just Above Avg (JAA)</option>
-                                                                <option value="HA">High Avg (HA)</option>
-                                                                <option value="LA">Low Avg (LA)</option>
-                                                                <option value="JBA">Just Below Avg (JBA)</option>
-                                                                <option value="BA">Below Avg (BA)</option>
-                                                                <option value="WBA">Way Below Avg (WBA)</option>
-                                                                <option value="Poor">Poor</option>
-                                                            </select>
-                                                        </div>
-
-                                                        <div className="w-full max-w-sm">
-                                                            <label className="text-sm font-medium">By</label>
-                                                            <select className="mt-1 w-full rounded-md border p-2 text-sm" defaultValue="">
-                                                                <option value="" disabled>
-                                                                    Select
-                                                                </option>
-                                                                <option value="IO">IO</option>
-                                                                <option value="GTO">GTO</option>
-                                                                <option value="Psy">Psy</option>
-                                                                <option value="TO">TO</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Scope of Improvement */}
-                                                    <div>
-                                                        <label className="text-sm font-medium">Scope of Improvement</label>
-                                                        <Textarea
-                                                            {...register("improvement")}
-                                                            placeholder="Mention areas of improvement..."
-                                                            className="mt-1 max-w-5xl"
-                                                        />
-                                                    </div>
-
-                                                    {/* Buttons */}
-                                                    <div className="flex justify-center gap-2">
+                                                        ))}
                                                         <Button
                                                             type="button"
                                                             variant="outline"
-                                                            onClick={() =>
-                                                                reset({
-                                                                    positiveTraits: [{ trait: "" }],
-                                                                    negativeTraits: [{ trait: "" }],
-                                                                    rating: "",
-                                                                    improvement: "",
-                                                                })
-                                                            }
+                                                            size="sm"
+                                                            onClick={() => addPositive({ trait: "" })}
                                                         >
-                                                            Reset
+                                                            + Add Positive Trait
                                                         </Button>
-                                                        <Button type="submit">Save</Button>
                                                     </div>
-                                                </form>
-                                            </TabsContent>
+                                                </div>
 
-                                            {/* ---- View Data ---- */}
-                                            <TabsContent value="view">
-                                                <Card className="p-6 border rounded-lg bg-gray-50">
-                                                    <h3 className="text-lg font-semibold mb-4 flex justify-between">
-                                                        Saved SSB Report Data
-                                                        {!isEditingView && ssbReport && (
-                                                            <Button size="sm" onClick={startEdit}>
-                                                                Edit
-                                                            </Button>
-                                                        )}
-                                                    </h3>
+                                                <div className="w-full max-w-sm">
+                                                    <label className="text-sm font-medium">By</label>
+                                                    <select
+                                                        {...register("positiveBy")}
+                                                        className="mt-1 w-full rounded-md border p-2 text-sm"
+                                                        defaultValue=""
+                                                    >
+                                                        <option value="" disabled>Select</option>
+                                                        <option value="IO">IO</option>
+                                                        <option value="GTO">GTO</option>
+                                                        <option value="Psy">Psy</option>
+                                                        <option value="TO">TO</option>
+                                                    </select>
+                                                </div>
+                                            </div>
 
-                                                    {!ssbReport ? (
-                                                        <p>No SSB Report Found.</p>
-                                                    ) : !isEditingView ? (
-                                                        // ------------------ NORMAL VIEW MODE -----------------------
-                                                        <div className="text-sm space-y-3">
-                                                            <p><strong>Positive Traits:</strong>{" "}
-                                                                {ssbReport.positives.length > 0
-                                                                    ? ssbReport.positives.map(p => `${p.note} (${p.by})`).join(", ")
-                                                                    : "-"}
-                                                            </p>
-
-                                                            <p><strong>Negative Traits:</strong>{" "}
-                                                                {ssbReport.negatives.length > 0
-                                                                    ? ssbReport.negatives.map(n => `${n.note} (${n.by})`).join(", ")
-                                                                    : "-"}
-                                                            </p>
-
-                                                            <p><strong>Rating:</strong> {ssbReport.predictiveRating}</p>
-
-                                                            <p><strong>Scope For Improvement:</strong> {ssbReport.scopeForImprovement}</p>
-                                                        </div>
-                                                    ) : (
-                                                        // ------------------ EDIT MODE -----------------------------
-                                                        <div className="text-sm space-y-4">
-
-                                                            {/* Predictive Rating */}
-                                                            <div>
-                                                                <label className="font-semibold">Predictive Rating</label>
+                                            {/* Negative Traits */}
+                                            <div className="grid grid-cols-2 gap-12">
+                                                <div>
+                                                    <label className="text-sm font-medium">Negative Traits</label>
+                                                    <div className="space-y-2 mt-2">
+                                                        {negativeFields.map((field, index) => (
+                                                            <div key={field.id} className="flex items-center gap-2">
                                                                 <Input
-                                                                    type="number"
-                                                                    value={editForm?.predictiveRating}
-                                                                    onChange={(e) =>
-                                                                        handleEditChange("predictiveRating", Number(e.target.value))
-                                                                    }
+                                                                    {...register(`negativeTraits.${index}.trait` as const)}
+                                                                    placeholder={`Negative trait ${index + 1}`}
+                                                                    className="flex-1"
                                                                 />
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="destructive"
+                                                                    size="sm"
+                                                                    onClick={() => removeNegative(index)}
+                                                                >
+                                                                    Remove
+                                                                </Button>
                                                             </div>
+                                                        ))}
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => addNegative({ trait: "" })}
+                                                        >
+                                                            + Add Negative Trait
+                                                        </Button>
+                                                    </div>
+                                                </div>
 
-                                                            {/* Scope For Improvement */}
-                                                            <div>
-                                                                <label className="font-semibold">Scope For Improvement</label>
-                                                                <Textarea
-                                                                    value={editForm?.scopeForImprovement}
-                                                                    onChange={(e) =>
-                                                                        handleEditChange("scopeForImprovement", e.target.value)
-                                                                    }
-                                                                />
-                                                            </div>
+                                                <div className="w-full max-w-sm">
+                                                    <label className="text-sm font-medium">By</label>
+                                                    <select
+                                                        {...register("negativeBy")}
+                                                        className="mt-1 w-full rounded-md border p-2 text-sm"
+                                                        defaultValue=""
+                                                    >
+                                                        <option value="" disabled>Select</option>
+                                                        <option value="IO">IO</option>
+                                                        <option value="GTO">GTO</option>
+                                                        <option value="Psy">Psy</option>
+                                                        <option value="TO">TO</option>
+                                                    </select>
+                                                </div>
+                                            </div>
 
-                                                            <div className="flex gap-3 mt-4">
-                                                                <Button onClick={saveEdit}>Save</Button>
-                                                                <Button variant="outline" onClick={cancelEdit}>Cancel</Button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </Card>
-                                            </TabsContent>
-                                        </Tabs>
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
+                                            {/* Rating */}
+                                            <div className="grid grid-cols-2 gap-12">
+                                                <div>
+                                                    <label className="text-sm font-medium">
+                                                        Overall Predictive Rating as an Officer
+                                                    </label>
+                                                    <select
+                                                        {...register("rating")}
+                                                        className="mt-1 w-full rounded-md border p-2 text-sm"
+                                                    >
+                                                        <option value="">Select Rating</option>
+                                                        <option value="OS">Outstanding (OS)</option>
+                                                        <option value="WAA">Way Above Avg (WAA)</option>
+                                                        <option value="AA">Above Avg (AA)</option>
+                                                        <option value="JAA">Just Above Avg (JAA)</option>
+                                                        <option value="HA">High Avg (HA)</option>
+                                                        <option value="LA">Low Avg (LA)</option>
+                                                        <option value="JBA">Just Below Avg (JBA)</option>
+                                                        <option value="BA">Below Avg (BA)</option>
+                                                        <option value="WBA">Way Below Avg (WBA)</option>
+                                                        <option value="Poor">Poor</option>
+                                                    </select>
+                                                </div>
 
-                            <TabsContent value="settings">
-                                <div className="text-center py-12">
-                                    <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                                    <h3 className="text-xl font-semibold text-foreground mb-2">
-                                        General Settings
-                                    </h3>
-                                    <p className="text-muted-foreground">
-                                        Manage system roles, permissions, and more.
-                                    </p>
-                                </div>
-                            </TabsContent>
-                        </DossierTab>
-                    </main>
-                </div>
-            </div>
-        </SidebarProvider>
+                                                <div className="w-full max-w-sm">
+                                                    <label className="text-sm font-medium">By</label>
+                                                    <select className="mt-1 w-full rounded-md border p-2 text-sm" defaultValue="">
+                                                        <option value="" disabled>
+                                                            Select
+                                                        </option>
+                                                        <option value="IO">IO</option>
+                                                        <option value="GTO">GTO</option>
+                                                        <option value="Psy">Psy</option>
+                                                        <option value="TO">TO</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            {/* Scope of Improvement */}
+                                            <div>
+                                                <label className="text-sm font-medium">Scope of Improvement</label>
+                                                <Textarea
+                                                    {...register("improvement")}
+                                                    placeholder="Mention areas of improvement..."
+                                                    className="mt-1 max-w-5xl"
+                                                />
+                                            </div>
+
+                                            {/* Buttons */}
+                                            <div className="flex justify-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        reset({
+                                                            positiveTraits: [{ trait: "" }],
+                                                            negativeTraits: [{ trait: "" }],
+                                                            rating: "",
+                                                            improvement: "",
+                                                        })
+                                                    }
+                                                >
+                                                    Reset
+                                                </Button>
+                                                <Button type="submit">Save</Button>
+                                            </div>
+                                        </form>
+                                    </TabsContent>
+
+                                    {/* ---- View Data ---- */}
+                                    <TabsContent value="view">
+                                        <Card className="p-6 border rounded-lg bg-gray-50">
+                                            <h3 className="text-lg font-semibold mb-4 flex justify-between">
+                                                Saved SSB Report Data
+                                                {!isEditingView && ssbReport && (
+                                                    <Button size="sm" onClick={startEdit}>
+                                                        Edit
+                                                    </Button>
+                                                )}
+                                            </h3>
+
+                                            {!ssbReport ? (
+                                                <p>No SSB Report Found.</p>
+                                            ) : !isEditingView ? (
+                                                // ------------------ NORMAL VIEW MODE -----------------------
+                                                <div className="text-sm space-y-3">
+                                                    <p><strong>Positive Traits:</strong>{" "}
+                                                        {ssbReport.positives.length > 0
+                                                            ? ssbReport.positives.map(p => `${p.note} (${p.by})`).join(", ")
+                                                            : "-"}
+                                                    </p>
+
+                                                    <p><strong>Negative Traits:</strong>{" "}
+                                                        {ssbReport.negatives.length > 0
+                                                            ? ssbReport.negatives.map(n => `${n.note} (${n.by})`).join(", ")
+                                                            : "-"}
+                                                    </p>
+
+                                                    <p><strong>Rating:</strong> {ssbReport.predictiveRating}</p>
+
+                                                    <p><strong>Scope For Improvement:</strong> {ssbReport.scopeForImprovement}</p>
+                                                </div>
+                                            ) : (
+                                                // ------------------ EDIT MODE -----------------------------
+                                                <div className="text-sm space-y-4">
+
+                                                    {/* Predictive Rating */}
+                                                    <div>
+                                                        <label className="font-semibold">Predictive Rating</label>
+                                                        <Input
+                                                            type="number"
+                                                            value={editForm?.predictiveRating}
+                                                            onChange={(e) =>
+                                                                handleEditChange("predictiveRating", Number(e.target.value))
+                                                            }
+                                                        />
+                                                    </div>
+
+                                                    {/* Scope For Improvement */}
+                                                    <div>
+                                                        <label className="font-semibold">Scope For Improvement</label>
+                                                        <Textarea
+                                                            value={editForm?.scopeForImprovement}
+                                                            onChange={(e) =>
+                                                                handleEditChange("scopeForImprovement", e.target.value)
+                                                            }
+                                                        />
+                                                    </div>
+
+                                                    <div className="flex gap-3 mt-4">
+                                                        <Button onClick={saveEdit}>Save</Button>
+                                                        <Button variant="outline" onClick={cancelEdit}>Cancel</Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </Card>
+                                    </TabsContent>
+                                </Tabs>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </DossierTab>
+
+            </main>
+        </DashboardLayout>
     );
 }

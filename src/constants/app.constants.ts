@@ -1,5 +1,9 @@
 import { OCPersonalRecord } from "@/app/lib/api/ocPersonalApi";
 import { MenuSection } from "@/types/appSidebar";
+import { ClubRow, DrillRow } from "@/types/club-detls";
+import { Row as ObstacleRow } from "@/types/obstacleTrg";
+import { Row as SpeedRow } from "@/types/speedMarchRunback";
+import { Row as sportsRow } from "@/types/sportsAwards";
 import { Activity, Book, BookOpen, CalendarDays, FileText, GraduationCap, Home, Settings, Shield, UserCheck, Users } from "lucide-react";
 
 // src\constants\app.constants.ts
@@ -113,3 +117,128 @@ export const dsFieldMap: Record<string, keyof OCPersonalRecord> = {
   "Cdr-unit/arm": "dsCdrUnitArm",
   "Cdr-mobile-no": "dsCdrMobile",
 };
+
+export const stats = [
+  {
+    title: "Active OCs",
+    value: "246",
+    subtitle: "Across 6 platoons",
+  },
+  {
+    title: "Ongoing Assessments",
+    value: "12",
+    subtitle: "This week",
+  },
+  {
+    title: "Training Completion",
+    value: "87%",
+    subtitle: "Current batch average",
+  },
+];
+
+export const defaultClubRows: ClubRow[] = [
+  { semester: "I", clubName: "", splAchievement: "", remarks: "" },
+  { semester: "II", clubName: "", splAchievement: "", remarks: "" },
+  { semester: "III", clubName: "", splAchievement: "", remarks: "" },
+  { semester: "IV", clubName: "", splAchievement: "", remarks: "" },
+  { semester: "V", clubName: "", splAchievement: "", remarks: "" },
+  { semester: "VI", clubName: "", splAchievement: "", remarks: "" },
+];
+
+export const defaultDrillRows: DrillRow[] = [
+  { semester: "IV", maxMks: 25, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
+  { semester: "V", maxMks: 25, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
+  { semester: "VI", maxMks: 40, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
+  { semester: "Total", maxMks: 90, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
+];
+
+export const terms = ["IV TERM", "V TERM", "VI TERM"];
+
+export const obstaclePrefill: ObstacleRow[] = [
+    { obstacle: "EX (15 Mks)", obtained: "", remark: "" },
+    { obstacle: "Good (12 Mks)", obtained: "", remark: "" },
+    { obstacle: "Sat (09 Mks)", obtained: "", remark: "" },
+    { obstacle: "Fail (Nil)", obtained: "", remark: "" },
+];
+
+export const tablePrefill: SpeedRow[] = [
+    {
+        test: "Ex (30 Mks)",
+        timing10Label: "1hr 15 mins",
+        distance10: "",
+        timing20Label: "2hr 40 mins",
+        distance20: "",
+        timing30Label: "4hr",
+        distance30: "",
+        marks: "30",
+        remark: "",
+    },
+    {
+        test: "Good (21 Mks)",
+        timing10Label: "1hr 30 mins",
+        distance10: "",
+        timing20Label: "2hr 45 mins",
+        distance20: "",
+        timing30Label: "4hr 7 mins 30 secs",
+        distance30: "",
+        marks: "21",
+        remark: "",
+    },
+    {
+        test: "Sat (12 Mks)",
+        timing10Label: "1hr 35 mins",
+        distance10: "",
+        timing20Label: "2hr 50 mins",
+        distance20: "",
+        timing30Label: "4hr 10 mins",
+        distance30: "",
+        marks: "12",
+        remark: "",
+    },
+    {
+        test: "Fail (Nil)",
+        timing10Label: "Beyond 1hr 35 mins",
+        distance10: "",
+        timing20Label: "Beyond 2hr 50 mins",
+        distance20: "",
+        timing30Label: "Beyond 4hr 10 mins",
+        distance30: "",
+        marks: "Nil",
+        remark: "",
+    },
+    {
+        test: "Marks",
+        timing10Label: "",
+        distance10: "",
+        timing20Label: "",
+        distance20: "",
+        timing30Label: "",
+        distance30: "",
+        marks: "",
+        remark: "",
+    },
+];
+
+// ─────────────── PREFILL DATA ───────────────
+export const springPrefill: sportsRow[] = [
+    { activity: "X - Country", string: "", maxMarks: 30, obtained: "" },
+    { activity: "Basket Ball", string: "", maxMarks: 15, obtained: "" },
+    { activity: "Football", string: "", maxMarks: 15, obtained: "" },
+    { activity: "Squash", string: "", maxMarks: 15, obtained: "" },
+    { activity: "Wg Team", string: "", maxMarks: 25, obtained: "" },
+];
+
+export const autumnPrefill: sportsRow[] = [
+    { activity: "X - Country", string: "", maxMarks: 30, obtained: "" },
+    { activity: "Hockey", string: "", maxMarks: 15, obtained: "" },
+    { activity: "Volley Ball", string: "", maxMarks: 15, obtained: "" },
+    { activity: "Tennis", string: "", maxMarks: 15, obtained: "" },
+    { activity: "Wg Team", string: "", maxMarks: 25, obtained: "" },
+];
+
+export const motivationPrefill: sportsRow[] = [
+    { activity: "Merit Card", string: "", maxMarks: "", obtained: "" },
+    { activity: "Half Blue", string: "", maxMarks: "", obtained: "" },
+    { activity: "Blue", string: "", maxMarks: "", obtained: "" },
+    { activity: "Blazer", string: "", maxMarks: "", obtained: "" },
+];

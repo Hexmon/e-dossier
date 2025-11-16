@@ -47,6 +47,9 @@ export const endpoints = {
             `/api/v1/oc/${ocId}/discipline/${discId}`,
         parentCommsById: (ocId: string, commId: string) =>
             `/api/v1/oc/${ocId}/parent-comms/${commId}`,
+        motivationAwards: (ocId: string) =>
+            `${baseURL}/api/v1/oc/${ocId}/motivation-awards`,
+        sportsAndGames: (ocId: string) => `/api/v1/oc/${ocId}/sports-and-games`,
     },
     course: {
         all: "/api/v1/courses"

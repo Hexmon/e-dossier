@@ -5,32 +5,25 @@ import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-import { AppSidebar } from "@/components/AppSidebar";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
+import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
-import { PageHeader } from "@/components/layout/PageHeader";
-import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 import { Shield, ChevronDown, Settings } from "lucide-react";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
+import DossierTab from "@/components/Tabs/DossierTab";
 
 import { useEffect, useState } from "react";
-import DossierTab from "@/components/Tabs/DossierTab";
 import { createOCInsp, getOCInsp } from "@/app/lib/api/ocInsp";
-
-interface InspFormData {
-    date: string;
-    rk: string;
-    name: string;
-    appointment: string;
-    remarks: string;
-    initials: string;
-}
+import { InspFormData } from "@/types/dossierInsp";
 
 export default function DossierInspSheetPage() {
     const router = useRouter();
@@ -45,7 +38,7 @@ export default function DossierInspSheetPage() {
         "Cdr": {} as InspFormData,
     });
 
-    const { register, handleSubmit, reset, watch } = useForm<InspFormData>({
+    const { register, handleSubmit, reset } = useForm<InspFormData>({
         defaultValues: {
             date: "",
             rk: "",
@@ -56,22 +49,14 @@ export default function DossierInspSheetPage() {
         },
     });
 
-    const handleLogout = () => {
-        router.push("/login");
-        console.log("Logout clicked");
-    };
-
     const onSubmit = async (data: InspFormData) => {
+        if (!selectedCadet?.ocId) {
+            alert("No cadet selected");
+            return;
+        }
+
         try {
-            if (!selectedCadet?.ocId) {
-                alert("No cadet selected");
-                return;
-            }
-
-            const ocId = selectedCadet.ocId;
-            console.log("ocid:", ocId);
-
-            const saved = await createOCInsp(ocId, data);
+            const saved = await createOCInsp(selectedCadet.ocId, data);
 
             setInspData((prev) => ({
                 ...prev,
@@ -82,27 +67,23 @@ export default function DossierInspSheetPage() {
             reset();
         } catch (err) {
             console.error("Failed to save inspection:", err);
-            alert("Failed to save inspection record. Please try again.");
+            alert("Failed to save inspection record.");
         }
     };
 
     useEffect(() => {
-        (async () => {
-            if (!selectedCadet?.ocId) return;
+        if (!selectedCadet?.ocId) return;
 
+        (async () => {
             try {
                 const records = await getOCInsp(selectedCadet.ocId);
-                console.log("Loaded existing personal data:", records);
 
-                if (!records || !Array.isArray(records)) {
-                    console.warn("No personal records found or invalid response:", records);
-                    return;
-                }
+                if (!Array.isArray(records)) return;
 
-                const updatedData = { ...inspData };
+                const updated = { ...inspData };
                 records.forEach((record) => {
                     const role = record.appointment || "Pl Cdr";
-                    updatedData[role] = {
+                    updated[role] = {
                         date: record.date,
                         rk: record.rk,
                         name: record.name,
@@ -111,216 +92,170 @@ export default function DossierInspSheetPage() {
                         initials: record.initials,
                     };
                 });
-                setInspData(updatedData);
+
+                setInspData(updated);
             } catch (err) {
-                console.error("Failed to fetch personal records:", err);
+                console.error("Failed to load insp data:", err);
             }
         })();
     }, [selectedCadet]);
 
-
-
-
     return (
-        <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
-                <AppSidebar />
+        <DashboardLayout
+            title="Dossier Insp Sheet"
+            description="Maintain and review cadet inspection details for evaluation and documentation."
+        >
+            <main className="p-6">
+                {/* Breadcrumb */}
+                <BreadcrumbNav
+                    paths={[
+                        { label: "Dashboard", href: "/dashboard" },
+                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Dossier Insp" },
+                    ]}
+                />
 
-                <div className="flex-1 flex flex-col">
-                    {/* Header */}
-                    <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
-                        <PageHeader
-                            title="Dossier Insp Sheet"
-                            description="Maintain and review cadet dossiers, record inspection notes, and track progress for evaluation and documentation."
-                            onLogout={handleLogout}
-                        />
-                    </header>
+                {selectedCadet && (
+                    <div className="hidden md:flex sticky top-16 z-40 mb-6">
+                        <SelectedCadetTable selectedCadet={selectedCadet} />
+                    </div>
+                )}
 
+                {/* Dossier Tabs */}
+                <DossierTab
+                    tabs={dossierTabs}
+                    defaultValue="dossier-insp"
+                    extraTabs={
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <TabsTrigger
+                                    value="dossier-insp"
+                                    className="flex items-center gap-2 border border-transparent hover:!border-blue-700"
+                                >
+                                    <Shield className="h-4 w-4" />
+                                    Mil-Trg
+                                    <ChevronDown className="h-4 w-4" />
+                                </TabsTrigger>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                                {militaryTrainingCards.map((card) => (
+                                    <DropdownMenuItem key={card.to} asChild>
+                                        <a href={card.to} className="flex items-center gap-2 w-full">
+                                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                                            {card.title}
+                                        </a>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    }
+                >
                     {/* Main Content */}
-                    <main className="flex-1 p-6">
-                        <BreadcrumbNav
-                            paths={[
-                                { label: "Dashboard", href: "/dashboard" },
-                                { label: "Dossier", href: "/dashboard/milmgmt" },
-                                { label: "Dossier Insp" },
-                            ]}
-                        />
+                    <TabsContent value="dossier-insp" className="space-y-6">
+                        <Card className="shadow-lg rounded-xl border p-6">
+                            <CardHeader>
+                                <CardTitle className="text-lg font-semibold text-primary">
+                                    Dossier Inspection — {userRole}
+                                </CardTitle>
+                                <p className="text-sm text-muted-foreground">
+                                    Fill inspection details as {userRole} or view inspection summary.
+                                </p>
+                            </CardHeader>
 
-                        {/* Selected Cadet */}
-                        <div className="hidden md:flex sticky top-16 z-40">
-                            {selectedCadet && <SelectedCadetTable selectedCadet={selectedCadet} />}
-                        </div>
+                            <CardContent>
+                                <Tabs defaultValue="fill">
+                                    <TabsList className="mb-4">
+                                        <TabsTrigger value="fill" className="border text-blue-700 px-3 py-2">
+                                            Fill Form
+                                        </TabsTrigger>
+                                        <TabsTrigger value="preview" className="border text-blue-700 px-3 py-2">
+                                            Preview All
+                                        </TabsTrigger>
+                                    </TabsList>
 
-                        {/* Tabs */}
-                        <DossierTab
-                            tabs={dossierTabs}
-                            defaultValue="dossier-insp"
-                            extraTabs={
-                                <div className="flex items-center justify-center">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <TabsTrigger
-                                                value="dossier-insp"
-                                                className="flex items-center gap-2 border border-transparent hover:!border-blue-700"
-                                            >
-                                                <Shield className="h-4 w-4" />
-                                                Mil-Trg
-                                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                            </TabsTrigger>
-                                        </DropdownMenuTrigger>
-
-                                        <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                                            {militaryTrainingCards.map((card) => (
-                                                <DropdownMenuItem key={card.to} asChild>
-                                                    <a href={card.to} className="flex items-center gap-2 w-full">
-                                                        <card.icon className={`h-4 w-4 ${card.color}`} />
-                                                        <span>{card.title}</span>
-                                                    </a>
-                                                </DropdownMenuItem>
-                                            ))}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            }
-                        >
-                            {/* Dossier Inspection Form */}
-                            <TabsContent value="dossier-insp" className="space-y-6">
-                                <Card className="shadow-lg rounded-xl border border-border p-6">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg font-semibold text-primary">
-                                            Dossier Inspection — {userRole}
-                                        </CardTitle>
-                                        <p className="text-sm text-muted-foreground">
-                                            Fill inspection details as {userRole} or view full inspection summary.
-                                        </p>
-                                    </CardHeader>
-
-                                    <CardContent>
-                                        <Tabs defaultValue="fill" className="w-full">
-                                            <TabsList className="mb-4">
-                                                <TabsTrigger
-                                                    value="fill"
-                                                    className="border border-gray-300 text-blue-700 data-[state=inactive]:bg-blue-100 data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2"
-                                                >
-                                                    Fill Form
-                                                </TabsTrigger>
-                                                <TabsTrigger
-                                                    value="preview"
-                                                    className="border border-gray-300 text-blue-700 data-[state=inactive]:bg-blue-100 data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2"
-                                                >
-                                                    Preview All
-                                                </TabsTrigger>
-                                            </TabsList>
-
-                                            {/* --- Fill Form --- */}
-                                            <TabsContent value="fill" className="space-y-6">
-                                                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                        <div>
-                                                            <label className="text-sm font-medium">Date</label>
-                                                            <Input type="date" {...register("date")} className="mt-1" />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-sm font-medium">Rank</label>
-                                                            <Input
-                                                                placeholder="Enter Rank"
-                                                                {...register("rk")}
-                                                                className="mt-1"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-sm font-medium">Name</label>
-                                                            <Input
-                                                                placeholder="Enter Name"
-                                                                {...register("name")}
-                                                                className="mt-1"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="text-sm font-medium">Appointment</label>
-                                                        <Input
-                                                            placeholder="Enter Appointment"
-                                                            {...register("appointment")}
-                                                            className="mt-1"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="text-sm font-medium">Remarks</label>
-                                                        <Textarea
-                                                            placeholder="Enter remarks..."
-                                                            className="mt-1 min-h-[100px]"
-                                                            {...register("remarks")}
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="text-sm font-medium">Initials</label>
-                                                        <Textarea
-                                                            placeholder="Enter initials..."
-                                                            className="mt-1 min-h-[80px]"
-                                                            {...register("initials")}
-                                                        />
-                                                    </div>
-
-                                                    <div className="flex justify-end gap-3">
-                                                        <Button variant="outline" type="button" onClick={() => reset()}>
-                                                            Reset
-                                                        </Button>
-                                                        <Button type="submit">Save</Button>
-                                                    </div>
-                                                </form>
-                                            </TabsContent>
-
-                                            {/* --- Preview All --- */}
-                                            <TabsContent value="preview">
-                                                <div className="space-y-4">
-                                                    {ROLES.map((role) => (
-                                                        <div
-                                                            key={role}
-                                                            className="bg-gray-50 border rounded-lg p-4 space-y-1"
-                                                        >
-                                                            <h4 className="font-semibold text-primary">{role}</h4>
-                                                            {inspData[role]?.name ? (
-                                                                <>
-                                                                    <p><strong>Date:</strong> {inspData[role].date}</p>
-                                                                    <p><strong>Rank:</strong> {inspData[role].rk}</p>
-                                                                    <p><strong>Name:</strong> {inspData[role].name}</p>
-                                                                    <p><strong>Appointment:</strong> {inspData[role].appointment}</p>
-                                                                    <p><strong>Remarks:</strong> {inspData[role].remarks}</p>
-                                                                    <p><strong>Initials:</strong> {inspData[role].initials}</p>
-                                                                </>
-                                                            ) : (
-                                                                <p className="text-muted-foreground italic">
-                                                                    No data submitted yet.
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                    {/* Fill Form */}
+                                    <TabsContent value="fill" className="space-y-6">
+                                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label className="text-sm font-medium">Date</label>
+                                                    <Input type="date" {...register("date")} className="mt-1" />
                                                 </div>
-                                            </TabsContent>
-                                        </Tabs>
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
+                                                <div>
+                                                    <label className="text-sm font-medium">Rank</label>
+                                                    <Input {...register("rk")} placeholder="Rank" className="mt-1" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm font-medium">Name</label>
+                                                    <Input {...register("name")} placeholder="Name" className="mt-1" />
+                                                </div>
+                                            </div>
 
-                            <TabsContent value="settings" className="space-y-6">
-                                <div className="text-center py-12">
-                                    <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                                    <h3 className="text-xl font-semibold text-foreground mb-2">
-                                        General Settings
-                                    </h3>
-                                    <p className="text-muted-foreground">
-                                        Manage system roles, permissions, and more.
-                                    </p>
-                                </div>
-                            </TabsContent>
-                        </DossierTab>
-                    </main>
-                </div>
-            </div>
-        </SidebarProvider>
+                                            <div>
+                                                <label className="text-sm font-medium">Appointment</label>
+                                                <Input {...register("appointment")} className="mt-1" />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-sm font-medium">Remarks</label>
+                                                <Textarea {...register("remarks")} className="mt-1 min-h-[100px]" />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-sm font-medium">Initials</label>
+                                                <Textarea {...register("initials")} className="mt-1 min-h-[80px]" />
+                                            </div>
+
+                                            <div className="flex justify-end gap-3">
+                                                <Button variant="outline" type="button" onClick={() => reset()}>
+                                                    Reset
+                                                </Button>
+                                                <Button type="submit">Save</Button>
+                                            </div>
+                                        </form>
+                                    </TabsContent>
+
+                                    {/* Preview All */}
+                                    <TabsContent value="preview">
+                                        <div className="space-y-4">
+                                            {ROLES.map((role) => (
+                                                <div key={role} className="bg-gray-50 border rounded-lg p-4">
+                                                    <h4 className="font-semibold text-primary">{role}</h4>
+
+                                                    {inspData[role]?.name ? (
+                                                        <>
+                                                            <p><strong>Date:</strong> {inspData[role].date}</p>
+                                                            <p><strong>Rank:</strong> {inspData[role].rk}</p>
+                                                            <p><strong>Name:</strong> {inspData[role].name}</p>
+                                                            <p><strong>Appointment:</strong> {inspData[role].appointment}</p>
+                                                            <p><strong>Remarks:</strong> {inspData[role].remarks}</p>
+                                                            <p><strong>Initials:</strong> {inspData[role].initials}</p>
+                                                        </>
+                                                    ) : (
+                                                        <p className="text-muted-foreground italic">No data yet.</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </TabsContent>
+                                </Tabs>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Settings Tab */}
+                    <TabsContent value="settings">
+                        <div className="text-center py-12">
+                            <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                            <h3 className="text-xl font-semibold">General Settings</h3>
+                            <p className="text-muted-foreground">
+                                Manage system roles, permissions, and general configurations.
+                            </p>
+                        </div>
+                    </TabsContent>
+                </DossierTab>
+            </main>
+        </DashboardLayout>
     );
 }

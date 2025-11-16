@@ -1157,9 +1157,19 @@ export const miltrgTabs = [
 
 export const dossierTabs = [
   {
+    value: "speed-march",
+    title: "Speed March / Runs",
+    icon: Timer,
+  },
+  {
     value: "dossier-insp",
     title: "Dossier Insp Sheet",
     icon: ClipboardCheck,
+  },
+  {
+    value: "obstacle-trg",
+    title: "Obstacle Training",
+    icon: Mountain,
   },
   {
     value: "comn-parents",
@@ -1195,6 +1205,21 @@ export const dossierTabs = [
     value: "mil-trg",
     title: "Mil-Trg",
     icon: Shield,
+  },
+  {
+    value: "sports-awards",
+    title: "Sports & Motivation Awards",
+    icon: Trophy,
+  },
+  {
+    value: "wpn-trg",
+    title: "Weapon Training",
+    icon: Target,
+  },
+  {
+    value: "club-detls",
+    title: "Club Details",
+    icon: BookMarked,
   },
 ];
 
