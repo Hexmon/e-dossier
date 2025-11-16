@@ -7,6 +7,12 @@ import {
     ocCommissioning,
     ocDelegations,
     ocCadets,
+    ocMotivationAwards,
+    ocSportsAndGames,
+    ocWeaponTraining,
+    ocSpecialAchievementInFiring,
+    ocObstacleTraining,
+    ocSpeedMarch,
 } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -318,6 +324,353 @@ export async function deleteComm(ocId: string, id: string) {
     const [row] = await db.delete(ocParentComms).where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId))).returning();
     return row ?? null;
 }
+
+// ---- Motivation awards ----------------------------------------------------
+export async function listMotivationAwards(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocMotivationAwards)
+        .where(and(eq(ocMotivationAwards.ocId, ocId), isNull(ocMotivationAwards.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+export async function createMotivationAward(
+    ocId: string,
+    data: Omit<typeof ocMotivationAwards.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db.insert(ocMotivationAwards).values({ ocId, ...data }).returning();
+    return row;
+}
+export async function getMotivationAward(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocMotivationAwards)
+        .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+export async function updateMotivationAward(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocMotivationAwards.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocMotivationAwards)
+        .set(data)
+        .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+export async function deleteMotivationAward(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocMotivationAwards)
+            .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocMotivationAwards)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+// ---- Sports & games --------------------------------------------------------
+export async function listSportsAndGames(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocSportsAndGames)
+        .where(and(eq(ocSportsAndGames.ocId, ocId), isNull(ocSportsAndGames.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+export async function createSportsAndGames(
+    ocId: string,
+    data: Omit<typeof ocSportsAndGames.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db.insert(ocSportsAndGames).values({ ocId, ...data }).returning();
+    return row;
+}
+export async function getSportsAndGames(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocSportsAndGames)
+        .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+export async function updateSportsAndGames(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocSportsAndGames.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocSportsAndGames)
+        .set(data)
+        .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+export async function deleteSportsAndGames(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocSportsAndGames)
+            .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocSportsAndGames)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+// ---- Weapon training -------------------------------------------------------
+export async function listWeaponTraining(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocWeaponTraining)
+        .where(and(eq(ocWeaponTraining.ocId, ocId), isNull(ocWeaponTraining.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+export async function createWeaponTraining(
+    ocId: string,
+    data: Omit<typeof ocWeaponTraining.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db.insert(ocWeaponTraining).values({ ocId, ...data }).returning();
+    return row;
+}
+export async function getWeaponTraining(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocWeaponTraining)
+        .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+export async function updateWeaponTraining(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocWeaponTraining.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocWeaponTraining)
+        .set(data)
+        .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+export async function deleteWeaponTraining(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocWeaponTraining)
+            .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocWeaponTraining)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+// ---- Special achievement in firing ----------------------------------------
+export async function listSpecialAchievementInFiring(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocSpecialAchievementInFiring)
+        .where(and(eq(ocSpecialAchievementInFiring.ocId, ocId), isNull(ocSpecialAchievementInFiring.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+export async function createSpecialAchievementInFiring(
+    ocId: string,
+    data: Omit<typeof ocSpecialAchievementInFiring.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db.insert(ocSpecialAchievementInFiring).values({ ocId, ...data }).returning();
+    return row;
+}
+export async function getSpecialAchievementInFiring(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocSpecialAchievementInFiring)
+        .where(and(eq(ocSpecialAchievementInFiring.id, id), eq(ocSpecialAchievementInFiring.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+export async function updateSpecialAchievementInFiring(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocSpecialAchievementInFiring.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocSpecialAchievementInFiring)
+        .set(data)
+        .where(and(eq(ocSpecialAchievementInFiring.id, id), eq(ocSpecialAchievementInFiring.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+export async function deleteSpecialAchievementInFiring(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocSpecialAchievementInFiring)
+            .where(
+                and(
+                    eq(ocSpecialAchievementInFiring.id, id),
+                    eq(ocSpecialAchievementInFiring.ocId, ocId),
+                ),
+            )
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocSpecialAchievementInFiring)
+        .set({ deletedAt: new Date() })
+        .where(
+            and(
+                eq(ocSpecialAchievementInFiring.id, id),
+                eq(ocSpecialAchievementInFiring.ocId, ocId),
+            ),
+        )
+        .returning();
+    return row ?? null;
+}
+
+// ---- Obstacle training -----------------------------------------------------
+export async function listObstacleTraining(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocObstacleTraining)
+        .where(and(eq(ocObstacleTraining.ocId, ocId), isNull(ocObstacleTraining.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+export async function createObstacleTraining(
+    ocId: string,
+    data: Omit<typeof ocObstacleTraining.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db.insert(ocObstacleTraining).values({ ocId, ...data }).returning();
+    return row;
+}
+export async function getObstacleTraining(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocObstacleTraining)
+        .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+export async function updateObstacleTraining(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocObstacleTraining.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocObstacleTraining)
+        .set(data)
+        .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+export async function deleteObstacleTraining(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocObstacleTraining)
+            .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocObstacleTraining)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+// ---- Speed march -----------------------------------------------------------
+export async function listSpeedMarch(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocSpeedMarch)
+        .where(and(eq(ocSpeedMarch.ocId, ocId), isNull(ocSpeedMarch.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+export async function createSpeedMarch(
+    ocId: string,
+    data: Omit<typeof ocSpeedMarch.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db.insert(ocSpeedMarch).values({ ocId, ...data }).returning();
+    return row;
+}
+export async function getSpeedMarch(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocSpeedMarch)
+        .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+export async function updateSpeedMarch(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocSpeedMarch.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocSpeedMarch)
+        .set(data)
+        .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+export async function deleteSpeedMarch(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocSpeedMarch)
+            .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocSpeedMarch)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
 export async function listOCsBasic(opts: ListOpts = {}) {
     const { q, courseId, active, limit = 200, offset = 0 } = opts;
 
@@ -382,6 +735,12 @@ export async function listOCsFull(opts: ListOpts = {}) {
         discRows,
         commsRows,
         delegRows,
+        motivationAwardRows,
+        sportsAndGamesRows,
+        weaponTrainingRows,
+        specialFiringRows,
+        obstacleTrainingRows,
+        speedMarchRows,
     ] = await Promise.all([
         db.select().from(ocPersonal).where(inArray(ocPersonal.ocId, ocIds)),
         db.select().from(ocPreCommission).where(inArray(ocPreCommission.ocId, ocIds)),
@@ -396,6 +755,12 @@ export async function listOCsFull(opts: ListOpts = {}) {
         db.select().from(ocDiscipline).where(inArray(ocDiscipline.ocId, ocIds)),
         db.select().from(ocParentComms).where(inArray(ocParentComms.ocId, ocIds)),
         db.select().from(ocDelegations).where(inArray(ocDelegations.ocId, ocIds)),
+        db.select().from(ocMotivationAwards).where(inArray(ocMotivationAwards.ocId, ocIds)),
+        db.select().from(ocSportsAndGames).where(inArray(ocSportsAndGames.ocId, ocIds)),
+        db.select().from(ocWeaponTraining).where(inArray(ocWeaponTraining.ocId, ocIds)),
+        db.select().from(ocSpecialAchievementInFiring).where(inArray(ocSpecialAchievementInFiring.ocId, ocIds)),
+        db.select().from(ocObstacleTraining).where(inArray(ocObstacleTraining.ocId, ocIds)),
+        db.select().from(ocSpeedMarch).where(inArray(ocSpeedMarch.ocId, ocIds)),
     ]);
 
     const reportIds = ssbReportRows.map((r) => r.id);
@@ -429,6 +794,12 @@ export async function listOCsFull(opts: ListOpts = {}) {
     const discByOc = byOc(discRows);
     const commsByOc = byOc(commsRows);
     const delegByOc = byOc(delegRows);
+    const motivationAwardsByOc = byOc(motivationAwardRows);
+    const sportsAndGamesByOc = byOc(sportsAndGamesRows);
+    const weaponTrainingByOc = byOc(weaponTrainingRows);
+    const specialFiringByOc = byOc(specialFiringRows);
+    const obstacleTrainingByOc = byOc(obstacleTrainingRows);
+    const speedMarchByOc = byOc(speedMarchRows);
 
     const pointsByReport = ssbPointRows.reduce<Record<string, typeof ssbPointRows>>((acc, p) => {
         (acc[p.reportId] ||= []).push(p);
@@ -457,6 +828,12 @@ export async function listOCsFull(opts: ListOpts = {}) {
         discipline: discByOc[b.id] ?? [],
         parentComms: commsByOc[b.id] ?? [],
         delegations: delegByOc[b.id] ?? [],
+        motivationAwards: motivationAwardsByOc[b.id] ?? [],
+        sportsAndGames: sportsAndGamesByOc[b.id] ?? [],
+        weaponTraining: weaponTrainingByOc[b.id] ?? [],
+        specialAchievementInFiring: specialFiringByOc[b.id] ?? [],
+        obstacleTraining: obstacleTrainingByOc[b.id] ?? [],
+        speedMarch: speedMarchByOc[b.id] ?? [],
     }));
 
     return items;

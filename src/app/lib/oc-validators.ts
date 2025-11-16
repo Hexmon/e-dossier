@@ -3,6 +3,8 @@ import { z } from 'zod';
 export const OcIdParam = z.object({ ocId: z.string().uuid() });
 export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);
+export const SeniorSemester = z.coerce.number().int().min(4).max(6);
+export const TermKind = z.enum(['spring', 'autumn']);
 
 export const personalUpsertSchema = z.object({
     visibleIdentMarks: z.string().optional(),
@@ -175,6 +177,55 @@ export const commCreateSchema = z.object({
     platoonCommanderName: z.string().optional(),
 });
 export const commUpdateSchema = commCreateSchema.partial();
+
+// === Training & performance =====================================================
+export const motivationAwardCreateSchema = z.object({
+    semester: Semester,
+    motivationTitle: z.string().min(1),
+    fieldName: z.string().min(1),
+    maxMarks: z.coerce.number(),
+    marksObtained: z.coerce.number(),
+});
+export const motivationAwardUpdateSchema = motivationAwardCreateSchema.partial();
+
+export const sportsAndGamesCreateSchema = z.object({
+    semester: Semester,
+    term: TermKind,
+    sport: z.string().min(1),
+    maxMarks: z.coerce.number(),
+    marksObtained: z.coerce.number(),
+});
+export const sportsAndGamesUpdateSchema = sportsAndGamesCreateSchema.partial();
+
+export const weaponTrainingCreateSchema = z.object({
+    subject: z.string().min(1),
+    semester: Semester,
+    maxMarks: z.coerce.number(),
+    marksObtained: z.coerce.number(),
+});
+export const weaponTrainingUpdateSchema = weaponTrainingCreateSchema.partial();
+
+export const specialAchievementInFiringCreateSchema = z.object({
+    achievement: z.string().min(1),
+});
+export const specialAchievementInFiringUpdateSchema = specialAchievementInFiringCreateSchema.partial();
+
+export const obstacleTrainingCreateSchema = z.object({
+    semester: SeniorSemester,
+    obstacle: z.string().min(1),
+    marksObtained: z.coerce.number(),
+    remark: z.string().optional(),
+}); 
+export const obstacleTrainingUpdateSchema = obstacleTrainingCreateSchema.partial();
+
+export const speedMarchCreateSchema = z.object({
+    semester: SeniorSemester,
+    test: z.string().min(1),
+    timings: z.string().min(1),
+    marks: z.coerce.number(),
+    remark: z.string().optional(),
+});
+export const speedMarchUpdateSchema = speedMarchCreateSchema.partial();
 
 // list query helpers
 export const listQuerySchema = z.object({
