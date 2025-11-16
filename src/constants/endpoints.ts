@@ -47,6 +47,24 @@ export const endpoints = {
             `/api/v1/oc/${ocId}/discipline/${discId}`,
         parentCommsById: (ocId: string, commId: string) =>
             `/api/v1/oc/${ocId}/parent-comms/${commId}`,
+        motivationAwards: (ocId: string) => `/api/v1/oc/${ocId}/motivation-awards`,
+        motivationAwardById: (ocId: string, awardId: string) =>
+            `/api/v1/oc/${ocId}/motivation-awards/${awardId}`,
+        sportsAndGames: (ocId: string) => `/api/v1/oc/${ocId}/sports-and-games`,
+        sportsAndGamesById: (ocId: string, recordId: string) =>
+            `/api/v1/oc/${ocId}/sports-and-games/${recordId}`,
+        weaponTraining: (ocId: string) => `/api/v1/oc/${ocId}/weapon-training`,
+        weaponTrainingById: (ocId: string, recordId: string) =>
+            `/api/v1/oc/${ocId}/weapon-training/${recordId}`,
+        specialAchievementInFiring: (ocId: string) => `/api/v1/oc/${ocId}/special-achievement-in-firing`,
+        specialAchievementInFiringById: (ocId: string, recordId: string) =>
+            `/api/v1/oc/${ocId}/special-achievement-in-firing/${recordId}`,
+        obstacleTraining: (ocId: string) => `/api/v1/oc/${ocId}/obstacle-training`,
+        obstacleTrainingById: (ocId: string, recordId: string) =>
+            `/api/v1/oc/${ocId}/obstacle-training/${recordId}`,
+        speedMarch: (ocId: string) => `/api/v1/oc/${ocId}/speed-march`,
+        speedMarchById: (ocId: string, recordId: string) =>
+            `/api/v1/oc/${ocId}/speed-march/${recordId}`,
     },
     course: {
         all: "/api/v1/courses"

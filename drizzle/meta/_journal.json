@@ -8,6 +8,27 @@
       "when": 1761473358157,
       "tag": "0000_milky_pretty_boy",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1763279722459,
+      "tag": "0001_same_madame_web",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763280883696,
+      "tag": "0002_overrated_infant_terrible",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1763291633877,
+      "tag": "0003_rapid_the_executioner",
+      "breakpoints": true
     }
   ]
 }

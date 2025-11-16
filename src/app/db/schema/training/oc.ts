@@ -1,6 +1,7 @@
-import { pgTable, uuid, varchar, timestamp, text, integer, boolean } from 'drizzle-orm/pg-core';
-import { branchKind, ocStatusKind, commModeKind, ssbPointKind, delegationKind } from './enums';
+import { pgTable, uuid, varchar, timestamp, text, integer, boolean, numeric } from 'drizzle-orm/pg-core';
+import { branchKind, ocStatusKind, commModeKind, ssbPointKind, delegationKind, termKind } from './enums';
 import { courses } from './courses';
+import { subjects } from './subjects';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { users } from '@/app/db/schema/auth/users';
 import { sql } from 'drizzle-orm';
@@ -268,3 +269,74 @@ export const ocDelegations = pgTable('oc_delegations', {
     decidedOn: timestamp('decided_on', { withTimezone: true }).notNull().defaultNow(),
     decidedByUserId: uuid('decided_by_user_id').references(() => users.id, { onDelete: 'set null' }),
 });
+
+// === Training & performance =====================================================
+export const ocMotivationAwards = pgTable('oc_motivation_awards', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    motivationTitle: varchar('motivation_title', { length: 200 }).notNull(),
+    fieldName: varchar('field_name', { length: 160 }).notNull(),
+    maxMarks: numeric('max_marks', { mode: 'number' }).notNull(),
+    marksObtained: numeric('marks_obtained', { mode: 'number' }).notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+}));
+
+export const ocSportsAndGames = pgTable('oc_sports_and_games', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    term: termKind('term').notNull(),
+    sport: varchar('sport', { length: 160 }).notNull(),
+    maxMarks: numeric('max_marks').notNull(),
+    marksObtained: numeric('marks_obtained').notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+}));
+
+export const ocWeaponTraining = pgTable('oc_weapon_training', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    subject: varchar('subject', { length: 200 }).notNull(),
+    semester: integer('semester').notNull(),
+    maxMarks: numeric('max_marks').notNull(),
+    marksObtained: numeric('marks_obtained').notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+}));
+
+export const ocSpecialAchievementInFiring = pgTable('oc_special_achievement_in_firing', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    achievement: text('achievement').notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+});
+
+export const ocObstacleTraining = pgTable('oc_obstacle_training', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    obstacle: varchar('obstacle', { length: 160 }).notNull(),
+    marksObtained: numeric('marks_obtained').notNull(),
+    remark: text('remark'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 4 AND 6)` },
+}));
+
+export const ocSpeedMarch = pgTable('oc_speed_march', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    test: varchar('test', { length: 160 }).notNull(),
+    timings: varchar('timings', { length: 64 }).notNull(),
+    marks: numeric('marks').notNull(),
+    remark: text('remark'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 4 AND 6)` },
+}));
