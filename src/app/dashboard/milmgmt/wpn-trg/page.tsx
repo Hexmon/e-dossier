@@ -5,14 +5,18 @@ import { useForm, useWatch } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { PageHeader } from "@/components/layout/PageHeader";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import DossierTab from "@/components/Tabs/DossierTab";
+import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
+import { ChevronDown, Shield } from "lucide-react";
 
 // ─────────────── TYPES ───────────────
 interface Row {
@@ -74,11 +78,11 @@ export default function WpnTrgPage() {
     const onSubmit = (formData: TermData) => {
         const updated = [...savedData];
         updated[activeTab] = {
-            records: formData.records.slice(0, 3), // exclude Total row for saving
+            records: formData.records.slice(0, 3), // exclude Total row
             achievements: formData.achievements,
         };
         setSavedData(updated);
-        alert(` Data saved for ${terms[activeTab]}!`);
+        alert(`Data saved for ${terms[activeTab]}!`);
     };
 
     // ─────────────── RENDER TABLE ───────────────
@@ -167,30 +171,51 @@ export default function WpnTrgPage() {
 
     // ─────────────── MAIN RENDER ───────────────
     return (
-        <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
-                <AppSidebar />
-                <div className="flex-1 flex flex-col">
-                    <PageHeader
-                        title="Assessment: Weapon Training (WPN TRG)"
-                        description="Record of marks and special achievements in firing."
-                    />
+        <DashboardLayout
+            title="Assessment: Weapon Training (WPN TRG)"
+            description="Record of marks and special achievements in firing."
+        >
+            <main className="p-6">
+                <BreadcrumbNav
+                    paths={[
+                        { label: "Dashboard", href: "/dashboard" },
+                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Weapon Training" },
+                    ]}
+                />
 
-                    <main className="flex-1 p-6">
-                        <BreadcrumbNav
-                            paths={[
-                                { label: "Dashboard", href: "/dashboard" },
-                                { label: "Dossier", href: "/dashboard/milmgmt" },
-                                { label: "Weapon Training" },
-                            ]}
-                        />
+                {selectedCadet && (
+                    <div className="hidden md:flex sticky top-16 z-40 mb-6">
+                        <SelectedCadetTable selectedCadet={selectedCadet} />
+                    </div>
+                )}
+                <DossierTab
+                    tabs={dossierTabs}
+                    defaultValue="wpn-trg"
+                    extraTabs={
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <TabsTrigger value="miltrg" className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4" /> Mil-Trg
+                                    <ChevronDown className="h-4 w-4" />
+                                </TabsTrigger>
+                            </DropdownMenuTrigger>
 
-                        {selectedCadet && (
-                            <div className="hidden md:flex sticky top-16 z-40 mb-6">
-                                <SelectedCadetTable selectedCadet={selectedCadet} />
-                            </div>
-                        )}
+                            <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                                {militaryTrainingCards.map(card => (
+                                    <DropdownMenuItem key={card.to} asChild>
+                                        <a href={card.to} className="flex items-center gap-2">
+                                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                                            {card.title}
+                                        </a>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    }
+                >
 
+                    <TabsContent value="wpn-trg" className="space-y-6">
                         <Card className="max-w-5xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold text-center text-primary">
@@ -222,13 +247,12 @@ export default function WpnTrgPage() {
                                 {/* Saved Table */}
                                 <div className="mb-6">{renderSaved()}</div>
 
-
                                 {/* Form */}
                                 <form onSubmit={handleSubmit(onSubmit)}>
                                     {renderTable()}
 
                                     {/* Firing Standard */}
-                                    <div className="mt-6 border rounded-lg p-4 bg-gray-50 flex justify-center" >
+                                    <div className="mt-6 border rounded-lg p-4 bg-gray-50 flex justify-center">
                                         <div>
                                             <div className="flex justify-center">
                                                 <h2 className="font-semibold underline mb-2">FIRING STD</h2>
@@ -238,7 +262,8 @@ export default function WpnTrgPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    {/* Achievements Section */}
+
+                                    {/* Achievements */}
                                     <div className="mt-6">
                                         <h2 className="font-semibold underline mb-2">
                                             Special Achievements in Firing
@@ -254,8 +279,8 @@ export default function WpnTrgPage() {
                                         </div>
                                     </div>
 
-                                    {/* Special Achievement Like */}
-                                    <div className="mt-6 border rounded-lg p-4 bg-gray-50 flex justify-center" >
+                                    {/* Special Achievement Info */}
+                                    <div className="mt-6 border rounded-lg p-4 bg-gray-50 flex justify-center">
                                         <div>
                                             <div className="flex justify-center">
                                                 <h2 className="font-semibold underline mb-2">Special Achievement Like</h2>
@@ -283,9 +308,9 @@ export default function WpnTrgPage() {
                                 </form>
                             </CardContent>
                         </Card>
-                    </main>
-                </div>
-            </div>
-        </SidebarProvider>
+                    </TabsContent>
+                </DossierTab>
+            </main>
+        </DashboardLayout>
     );
 }

@@ -1,12 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboardCards } from "@/config/app.config";
-import { fetchMe, MeResponse } from "../lib/api/me";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { DashboardCard } from "@/components/cards/DashboardCard";
+import { StatCard } from "@/components/cards/StatCard";
+import { stats } from "@/constants/app.constants";
 
 const DashboardPage = () => {
   return (
@@ -18,74 +16,28 @@ const DashboardPage = () => {
           {dashboardCards.map((card, index) => {
             const IconComponent = card.icon;
             return (
-              <Card
+              <DashboardCard
                 key={index}
-                className="group hover:shadow-command transition-all duration-300 cursor-pointer rounded-xl shadow-lg"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${card.color} text-white`}>
-                      <IconComponent className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                        {card.title}
-                      </CardTitle>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                    {card.description}
-                  </p>
-                  <Button asChild variant="outline" size="sm" className="w-full border border-blue-700">
-                    <Link href={card.to}>Access Module →</Link>
-                  </Button>
-                </CardContent>
-              </Card>
+                title={card.title}
+                description={card.description}
+                to={card.to}
+                icon={IconComponent}
+                color={card.color}
+              />
             );
           })}
         </section>
 
         {/* Quick Stats */}
         <section className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active OCs
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">246</div>
-              <p className="text-xs text-muted-foreground">Across 6 platoons</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Ongoing Assessments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">12</div>
-              <p className="text-xs text-muted-foreground">This week</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Training Completion
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">87%</div>
-              <p className="text-xs text-muted-foreground">
-                Current batch average
-              </p>
-            </CardContent>
-          </Card>
+          {stats.map((item, index) => (
+            <StatCard
+              key={index}
+              title={item.title}
+              value={item.value}
+              subtitle={item.subtitle}
+            />
+          ))}
         </section>
 
       </main>

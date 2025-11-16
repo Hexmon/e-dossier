@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
+import { DashboardCard } from "@/components/cards/DashboardCard";
 
 export default function GeneralManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,27 +27,29 @@ export default function GeneralManagementPage() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
+      <main className="min-h-screen flex w-full bg-background">
+        <aside><AppSidebar /></aside>
 
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <PageHeader
-            title="General Management"
-            description="Manage user access and roles in MCEME"
-            onLogout={handleLogout}
-          />
+          <header>
+            <PageHeader
+              title="General Management"
+              description="Manage user access and roles in MCEME"
+            />
+          </header>
 
           {/* Main Content */}
-          <main className="flex-1 p-6">
+          <section className="flex-1 p-6">
             {/* Breadcrumb */}
-            <BreadcrumbNav
-              paths={[
-                { label: "Dashboard", href: "/dashboard" },
-                { label: "Gen Mgmt" },
-              ]}
-            />
-
+            <nav>
+              <BreadcrumbNav
+                paths={[
+                  { label: "Dashboard", href: "/dashboard" },
+                  { label: "Gen Mgmt" },
+                ]}
+              />
+            </nav>
             {/* Welcome section */}
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-primary mb-2">
@@ -65,31 +68,14 @@ export default function GeneralManagementPage() {
                   {managementCard.map((card, index) => {
                     const IconComponent = card.icon;
                     return (
-                      <Card
+                      <DashboardCard
                         key={index}
-                        className="group hover:shadow-command transition-all duration-300 cursor-pointer rounded-xl shadow-lg"
-                      >
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${card.color} text-white`}>
-                              <IconComponent className="h-5 w-5" />
-                            </div>
-                            <div className="flex-1">
-                              <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                                {card.title}
-                              </CardTitle>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                            {card.description}
-                          </p>
-                          <Button asChild variant="outline" size="sm" className="w-full">
-                            <Link href={card.to}>Access Module →</Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
+                        title={card.title}
+                        description={card.description}
+                        to={card.to}
+                        icon={IconComponent}
+                        color={card.color}
+                      />
                     );
                   })}
                 </div>
@@ -108,9 +94,9 @@ export default function GeneralManagementPage() {
                 </div>
               </TabsContent>
             </GlobalTabs>
-          </main>
+          </section>
         </div>
-      </div>
+      </main>
     </SidebarProvider>
   );
 }

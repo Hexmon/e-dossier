@@ -5,52 +5,25 @@ import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { PageHeader } from "@/components/layout/PageHeader";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { Row, SemesterData } from "@/types/sportsAwards";
+import { autumnPrefill, motivationPrefill, springPrefill } from "@/constants/app.constants";
+import SportsGamesTable from "@/components/sports/SportsTable";
+import DossierTab from "@/components/Tabs/DossierTab";
+import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
+import { ChevronDown, Shield } from "lucide-react";
+import { createMotivationAward } from "@/app/lib/api/motivationAwardsApi";
+import { saveSportsGame } from "@/app/lib/api/sportsAndGamesApi";
 
-// ─────────────── TYPES ───────────────
-interface Row {
-    activity: string;
-    string: string;
-    maxMarks: string | number;
-    obtained: string;
-}
-
-interface SemesterData {
-    spring: Row[];
-    autumn: Row[];
-    motivation: Row[];
-}
-
-// ─────────────── PREFILL DATA ───────────────
-const springPrefill: Row[] = [
-    { activity: "X - Country", string: "", maxMarks: 30, obtained: "" },
-    { activity: "Basket Ball", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Football", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Squash", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Wg Team", string: "", maxMarks: 25, obtained: "" },
-];
-
-const autumnPrefill: Row[] = [
-    { activity: "X - Country", string: "", maxMarks: 30, obtained: "" },
-    { activity: "Hockey", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Volley Ball", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Tennis", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Wg Team", string: "", maxMarks: 25, obtained: "" },
-];
-
-const motivationPrefill: Row[] = [
-    { activity: "Merit Card", string: "", maxMarks: "", obtained: "" },
-    { activity: "Half Blue", string: "", maxMarks: "", obtained: "" },
-    { activity: "Blue", string: "", maxMarks: "", obtained: "" },
-    { activity: "Blazer", string: "", maxMarks: "", obtained: "" },
-];
 
 // ─────────────── COMPONENT ───────────────
 export default function SportsGamesPage() {
@@ -67,7 +40,6 @@ export default function SportsGamesPage() {
         }))
     );
 
-    // ─────────────── FORM SETUP ───────────────
     const { register, handleSubmit, reset } = useForm<SemesterData>({
         defaultValues: {
             spring: springPrefill,
@@ -76,116 +48,105 @@ export default function SportsGamesPage() {
         },
     });
 
-    const onSubmit = (formData: SemesterData) => {
+    const onSubmit = async (formData: SemesterData) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+
+        const semesterNumber = activeTab + 1;
+        const ocId = selectedCadet.ocId;
+
+        try {
+            // SPRING
+            for (const row of formData.spring) {
+                await saveSportsGame(selectedCadet.ocId, {
+                    semester: semesterNumber,
+                    term: "spring",
+                    sport: row.activity,
+                    maxMarks: Number(row.maxMarks),
+                    marksObtained: Number(row.obtained)
+                });
+            }
+
+            // AUTUMN
+            for (const row of formData.autumn) {
+                await saveSportsGame(selectedCadet.ocId, {
+                    semester: semesterNumber,
+                    term: "autumn",
+                    sport: row.activity,
+                    maxMarks: Number(row.maxMarks),
+                    marksObtained: Number(row.obtained)
+                });
+            }
+
+            //MOTIVATION AWARDS
+            for (const row of formData.motivation) {
+                await createMotivationAward(ocId, {
+                    semester: semesterNumber,
+                    fieldName: row.activity,
+                    motivationTitle: row.string,
+                    maxMarks: Number(row.maxMarks),
+                    marksObtained: Number(row.obtained || 0),
+                });
+            }
+
+            toast.success(`Saved successfully for ${semesters[activeTab]}!`);
+
+        } catch (err) {
+            toast.error("Failed to save");
+        }
+
         const updated = [...savedData];
         updated[activeTab] = { ...formData };
         setSavedData(updated);
-        alert(`✅ Data saved for ${semesters[activeTab]}!`);
     };
 
-    const renderTable = (termKey: keyof SemesterData, title: string, rows: Row[]) => (
-        <div className="mb-10">
-            <h2 className="font-semibold text-md mb-2 underline">{title}</h2>
-
-            {/* Saved Data Table */}
-            <div className="overflow-x-auto border rounded-lg shadow mb-4">
-                {savedData[activeTab][termKey].length === 0 ? (
-                    <p className="text-center p-4 text-gray-500">
-                        No data submitted yet for this term.
-                    </p>
-                ) : (
-                    <table className="w-full border text-sm">
-                        <thead className="bg-gray-100 text-left">
-                            <tr>
-                                <th className="p-2 border">Games / Awards</th>
-                                <th className="p-2 border">String</th>
-                                <th className="p-2 border">Max Marks</th>
-                                <th className="p-2 border">Marks Obtained</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {savedData[activeTab][termKey].map((row, i) => (
-                                <tr key={i}>
-                                    <td className="p-2 border">{row.activity}</td>
-                                    <td className="p-2 border">{row.string || "-"}</td>
-                                    <td className="p-2 border">{row.maxMarks || "-"}</td>
-                                    <td className="p-2 border">{row.obtained || "-"}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-
-            {/* Input Form Table */}
-            <div className="overflow-x-auto border rounded-lg shadow">
-                <table className="w-full border text-sm">
-                    <thead className="bg-gray-100 text-left">
-                        <tr>
-                            <th className="p-2 border">Games / Awards</th>
-                            <th className="p-2 border">String</th>
-                            <th className="p-2 border">Max Marks</th>
-                            <th className="p-2 border">Marks Obtained</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.map((row, index) => (
-                            <tr key={index}>
-                                <td className="p-2 border">{row.activity}</td>
-                                <td className="p-2 border">
-                                    <Input
-                                        {...register(`${termKey}.${index}.string` as const)}
-                                        type="text"
-                                        defaultValue={row.string}
-                                    />
-                                </td>
-                                <td className="p-2 border">
-                                    <Input
-                                        value={row.maxMarks}
-                                        disabled
-                                        className="bg-gray-100"
-                                    />
-                                </td>
-                                <td className="p-2 border">
-                                    <Input
-                                        {...register(`${termKey}.${index}.obtained` as const)}
-                                        type="number"
-                                        defaultValue={row.obtained}
-                                    />
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-
     return (
-        <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
-                <AppSidebar />
-                <div className="flex-1 flex flex-col">
-                    <PageHeader
-                        title="Assessment: Sports / Games & Motivation Awards"
-                        description="Enter marks for sports/games and record motivation awards for the cadet."
-                    />
+        <DashboardLayout
+            title="Assessment: Sports / Games & Motivation Awards"
+            description="Enter marks for sports and motivation awards."
+        >
+            <main className="p-6">
+                <BreadcrumbNav
+                    paths={[
+                        { label: "Dashboard", href: "/dashboard" },
+                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Sports - Games Assessment" },
+                    ]}
+                />
 
-                    <main className="flex-1 p-6">
-                        <BreadcrumbNav
-                            paths={[
-                                { label: "Dashboard", href: "/dashboard" },
-                                { label: "Dossier", href: "/dashboard/milmgmt" },
-                                { label: "Assessment - Sports/Games" },
-                            ]}
-                        />
+                {selectedCadet && (
+                    <div className="hidden md:flex sticky top-16 z-40 mb-6">
+                        <SelectedCadetTable selectedCadet={selectedCadet} />
+                    </div>
+                )}
+                <DossierTab
+                    tabs={dossierTabs}
+                    defaultValue="sports-awards"
+                    extraTabs={
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <TabsTrigger value="miltrg" className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4" /> Mil-Trg
+                                    <ChevronDown className="h-4 w-4" />
+                                </TabsTrigger>
+                            </DropdownMenuTrigger>
 
-                        {selectedCadet && (
-                            <div className="hidden md:flex sticky top-16 z-40 mb-6">
-                                <SelectedCadetTable selectedCadet={selectedCadet} />
-                            </div>
-                        )}
-
+                            <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                                {militaryTrainingCards.map(card => (
+                                    <DropdownMenuItem key={card.to} asChild>
+                                        <a href={card.to} className="flex items-center gap-2">
+                                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                                            {card.title}
+                                        </a>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    }
+                >
+                    <TabsContent value="sports-awards" className="space-y-6">
                         <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold text-center text-primary">
@@ -202,8 +163,8 @@ export default function SportsGamesPage() {
                                             type="button"
                                             onClick={() => setActiveTab(index)}
                                             className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-gray-200 text-gray-700"
+                                                ? "bg-blue-600 text-white"
+                                                : "bg-gray-200 text-gray-700"
                                                 }`}
                                         >
                                             {sem}
@@ -211,17 +172,34 @@ export default function SportsGamesPage() {
                                     ))}
                                 </div>
 
-                                {/* Form Section */}
+                                {/* Form */}
                                 <form onSubmit={handleSubmit(onSubmit)}>
-                                    {renderTable("spring", "SPRING TERM", springPrefill)}
-                                    {renderTable("autumn", "AUTUMN TERM", autumnPrefill)}
-                                    {renderTable("motivation", "MOTIVATION AWARDS", motivationPrefill)}
+                                    <SportsGamesTable
+                                        title="SPRING TERM"
+                                        termKey="spring"
+                                        rows={springPrefill}
+                                        savedRows={savedData[activeTab].spring}
+                                        register={register}
+                                    />
+
+                                    <SportsGamesTable
+                                        title="AUTUMN TERM"
+                                        termKey="autumn"
+                                        rows={autumnPrefill}
+                                        savedRows={savedData[activeTab].autumn}
+                                        register={register}
+                                    />
+
+                                    <SportsGamesTable
+                                        title="MOTIVATION AWARDS"
+                                        termKey="motivation"
+                                        rows={motivationPrefill}
+                                        savedRows={savedData[activeTab].motivation}
+                                        register={register}
+                                    />
 
                                     <div className="flex justify-center gap-3 mt-6">
-                                        <Button
-                                            type="submit"
-                                            className="bg-green-600 hover:bg-green-700"
-                                        >
+                                        <Button type="submit" className="bg-green-600 hover:bg-green-700">
                                             Save All Tables
                                         </Button>
                                         <Button
@@ -241,9 +219,9 @@ export default function SportsGamesPage() {
                                 </form>
                             </CardContent>
                         </Card>
-                    </main>
-                </div>
-            </div>
-        </SidebarProvider>
+                    </TabsContent>
+                </DossierTab>
+            </main>
+        </DashboardLayout>
     );
 }

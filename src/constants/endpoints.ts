@@ -47,10 +47,10 @@ export const endpoints = {
             `/api/v1/oc/${ocId}/discipline/${discId}`,
         parentCommsById: (ocId: string, commId: string) =>
             `/api/v1/oc/${ocId}/parent-comms/${commId}`,
+        sportsAndGames: (ocId: string) => `/api/v1/oc/${ocId}/sports-and-games`,
         motivationAwards: (ocId: string) => `/api/v1/oc/${ocId}/motivation-awards`,
         motivationAwardById: (ocId: string, awardId: string) =>
             `/api/v1/oc/${ocId}/motivation-awards/${awardId}`,
-        sportsAndGames: (ocId: string) => `/api/v1/oc/${ocId}/sports-and-games`,
         sportsAndGamesById: (ocId: string, recordId: string) =>
             `/api/v1/oc/${ocId}/sports-and-games/${recordId}`,
         weaponTraining: (ocId: string) => `/api/v1/oc/${ocId}/weapon-training`,

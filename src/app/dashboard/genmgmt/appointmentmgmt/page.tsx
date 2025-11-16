@@ -159,7 +159,6 @@ export default function AppointmentManagement() {
             <PageHeader
               title="Appointment Management"
               description="Manage current and past appointments, handle handovers"
-              onLogout={handleLogout}
             />
           </header>
 

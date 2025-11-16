@@ -5,58 +5,25 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
-import { PageHeader } from "@/components/layout/PageHeader";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-type ClubRow = {
-    semester: string;
-    clubName: string;
-    splAchievement: string;
-    remarks: string;
-};
-
-type DrillRow = {
-    semester: string;
-    maxMks: number | "";
-    m1: number | "";
-    m2: number | "";
-    a1c1: number | "";
-    a2c2: number | "";
-    remarks: string;
-};
-
-type FormValues = {
-    clubRows: ClubRow[];
-    drillRows: DrillRow[];
-    splAchievementsList: string[];
-};
+import { FormValues } from "@/types/club-detls";
+import { defaultClubRows, defaultDrillRows } from "@/constants/app.constants";
+import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
+import { ChevronDown, Shield } from "lucide-react";
+import DossierTab from "@/components/Tabs/DossierTab";
 
 export default function ClubDetailsAndDrillPage() {
     const selectedCadet = useSelector((s: RootState) => s.cadet.selectedCadet);
     const [savedData, setSavedData] = useState<FormValues | null>(null);
 
-    const defaultClubRows: ClubRow[] = [
-        { semester: "I", clubName: "", splAchievement: "", remarks: "" },
-        { semester: "II", clubName: "", splAchievement: "", remarks: "" },
-        { semester: "III", clubName: "", splAchievement: "", remarks: "" },
-        { semester: "IV", clubName: "", splAchievement: "", remarks: "" },
-        { semester: "V", clubName: "", splAchievement: "", remarks: "" },
-        { semester: "VI", clubName: "", splAchievement: "", remarks: "" },
-    ];
-
-    const defaultDrillRows: DrillRow[] = [
-        { semester: "IV", maxMks: 25, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
-        { semester: "V", maxMks: 25, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
-        { semester: "VI", maxMks: 40, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
-        { semester: "Total", maxMks: 90, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
-    ];
 
     const { register, control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
         defaultValues: {
@@ -98,30 +65,54 @@ export default function ClubDetailsAndDrillPage() {
     };
 
     return (
-        <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
-                <AppSidebar />
-                <div className="flex-1 flex flex-col">
-                    <PageHeader
-                        title="Assessment: Club Details & Drill"
-                        description="Maintain cadet’s club involvement and drill performance records."
-                    />
+        <DashboardLayout
+            title="Assessment: Club Details & Drill"
+            description="Maintain cadet’s club involvement and drill performance records."
+        >
+            <main className="flex-1 p-6">
+                {/* Breadcrumb */}
+                <BreadcrumbNav
+                    paths={[
+                        { label: "Dashboard", href: "/dashboard" },
+                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Club Details" },
+                    ]}
+                />
 
-                    <main className="flex-1 p-6">
-                        <BreadcrumbNav
-                            paths={[
-                                { label: "Dashboard", href: "/dashboard" },
-                                { label: "Dossier", href: "/dashboard/milmgmt" },
-                                { label: "Club Details" },
-                            ]}
-                        />
+                {selectedCadet && (
+                    <div className="hidden md:flex sticky top-16 z-40 mb-6">
+                        <SelectedCadetTable selectedCadet={selectedCadet} />
+                    </div>
+                )}
+                <DossierTab
+                    tabs={dossierTabs}
+                    defaultValue="wpn-trg"
+                    extraTabs={
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <TabsTrigger value="miltrg" className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4" /> Mil-Trg
+                                    <ChevronDown className="h-4 w-4" />
+                                </TabsTrigger>
+                            </DropdownMenuTrigger>
 
-                        {selectedCadet && (
-                            <div className="hidden md:flex sticky top-16 z-40 mb-6">
-                                <SelectedCadetTable selectedCadet={selectedCadet} />
-                            </div>
-                        )}
+                            <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                                {militaryTrainingCards.map(card => (
+                                    <DropdownMenuItem key={card.to} asChild>
+                                        <a href={card.to} className="flex items-center gap-2">
+                                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                                            {card.title}
+                                        </a>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    }
+                >
 
+                    <TabsContent value="club-detls" className="space-y-6">
+
+                        {/* CARD */}
                         <Card className="max-w-5xl mx-auto p-6 shadow-lg rounded-2xl bg-white">
                             <CardHeader>
                                 <CardTitle className="text-center text-primary font-bold">
@@ -312,9 +303,9 @@ export default function ClubDetailsAndDrillPage() {
                                 )}
                             </CardContent>
                         </Card>
-                    </main>
-                </div>
-            </div>
-        </SidebarProvider>
+                    </TabsContent>
+                </DossierTab>
+            </main>
+        </DashboardLayout>
     );
 }

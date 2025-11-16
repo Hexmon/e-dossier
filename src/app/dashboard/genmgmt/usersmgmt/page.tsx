@@ -102,7 +102,6 @@ export default function UserManagement() {
             <PageHeader
               title="User Management"
               description="Manage user access and roles"
-              onLogout={handleLogout}
             />
           </header>
 

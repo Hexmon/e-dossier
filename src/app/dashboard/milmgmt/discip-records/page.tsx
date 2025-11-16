@@ -6,37 +6,49 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
+import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
+
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import { Shield, ChevronDown } from "lucide-react";
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
-import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
-import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
-import { PageHeader } from "@/components/layout/PageHeader";
 import DossierTab from "@/components/Tabs/DossierTab";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+import {
+    deleteDisciplineRecord,
+    getDisciplineRecords,
+    saveDisciplineRecords,
+    updateDisciplineRecord,
+} from "@/app/lib/api/disciplineApi";
+
 import { DisciplineForm, DisciplineRow } from "@/types/dicp-records";
-import { deleteDisciplineRecord, getDisciplineRecords, saveDisciplineRecords, updateDisciplineRecord } from "@/app/lib/api/disciplineApi";
 import { toast } from "sonner";
 
 export default function DisciplineRecordsPage() {
     const router = useRouter();
-    const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
-    const handleLogout = () => router.push("/login");
+    const selectedCadet = useSelector(
+        (state: RootState) => state.cadet.selectedCadet
+    );
 
     const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
     const [activeTab, setActiveTab] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<DisciplineRow | null>(null);
 
@@ -88,21 +100,17 @@ export default function DisciplineRecordsPage() {
         try {
             await updateDisciplineRecord(selectedCadet.ocId, editingId, payload);
 
-            // Update UI locally
-            setSavedData(prev => {
+            setSavedData((prev) => {
                 const updated = [...prev];
-                updated[activeTab] = updated[activeTab].map(r =>
+                updated[activeTab] = updated[activeTab].map((r) =>
                     r.id === editingId ? { ...editForm } : r
                 );
                 return updated;
             });
 
             toast.success("Record updated successfully!");
-            setEditingId(null);
-            setEditForm(null);
-
-        } catch (err) {
-            console.error(err);
+            handleCancel();
+        } catch {
             toast.error("Failed to update record");
         }
     };
@@ -110,25 +118,23 @@ export default function DisciplineRecordsPage() {
     const handleDelete = async (row: DisciplineRow) => {
         if (!selectedCadet?.ocId || !row.id) return;
 
-        if (!confirm("Delete this discipline record?")) return;
-
-        try {
-            await deleteDisciplineRecord(selectedCadet.ocId, row.id);
-
-            setSavedData(prev => {
-                const updated = [...prev];
-                updated[activeTab] = updated[activeTab].filter(r => r.id !== row.id);
-                return updated;
-            });
-
-            toast.success("Discipline record deleted");
-
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to delete");
-        }
+        toast.warning("Are you sure?", {
+            action: {
+                label: "Delete",
+                onClick: async () => {
+                    await deleteDisciplineRecord(selectedCadet.ocId, row.id);
+                    setSavedData((prev) => {
+                        const updated = [...prev];
+                        updated[activeTab] = updated[activeTab].filter(
+                            (r) => r.id !== row.id
+                        );
+                        return updated;
+                    });
+                    toast.success("Record deleted");
+                },
+            },
+        });
     };
-
 
     const onSubmit = async (data: DisciplineForm) => {
         if (!selectedCadet?.ocId) {
@@ -136,100 +142,47 @@ export default function DisciplineRecordsPage() {
             return;
         }
 
-        const payloads = data.records.map((row, idx) => ({
+        const payloads = data.records.map((row) => ({
             semester: activeTab + 1,
-            dateOfOffence: row.dateOfOffence || row.dateOfOffence,
-            offence: row.offence || "",
-            punishmentAwarded: row.punishmentAwarded || row.punishmentAwarded || row.punishment || null,
+            dateOfOffence: row.dateOfOffence,
+            offence: row.offence,
+            punishmentAwarded: row.punishmentAwarded || null,
             awardedOn: row.dateOfAward || null,
             awardedBy: row.byWhomAwarded || null,
             pointsDelta: row.negativePts ? Number(row.negativePts) : 0,
             pointsCumulative: row.cumulative ? Number(row.cumulative) : 0,
         }));
 
-        for (const p of payloads) {
-            if (!p.dateOfOffence) {
-                toast.error("Each row must have a Date of Offence.");
-                return;
-            }
-            if (!p.offence || p.offence.trim().length === 0) {
-                toast.error("Each row must have an offence description.");
-                return;
-            }
-        }
-
         const resp = await saveDisciplineRecords(selectedCadet.ocId, payloads);
-        if (!resp.ok) {
-            console.error("Save failed:", resp.result, resp.payloads);
-            toast.error("Failed to save discipline records — check console for details.");
-            return;
-        }
+        if (!resp.ok) return toast.error("Failed to save");
 
-        const updated = [...savedData];
-
-        const formattedRows = payloads.map((r, index) => {
-            const saved = resp.result?.[index];
-
-            return {
-                id: saved?.id,
-                serialNo: String(savedData[activeTab].length + index + 1),
-                dateOfOffence:
-                    typeof r.dateOfOffence === "string"
-                        ? r.dateOfOffence
-                        : String(r.dateOfOffence),
-                offence: r.offence,
-                punishmentAwarded: r.punishmentAwarded ?? "-",
-                dateOfAward: r.awardedOn ?? "-",
-                byWhomAwarded: r.awardedBy ?? "-",
-                negativePts: String(r.pointsDelta ?? ""),
-                cumulative: String(r.pointsCumulative ?? ""),
-            };
-        });
-
-
-        updated[activeTab] = [...updated[activeTab], ...formattedRows];
-        setSavedData(updated);
+        await fetchRecords();
         reset({ records: [{ ...defaultRow }] });
-
-        toast.success("Discipline record(s) saved successfully!");
+        toast.success("Saved successfully!");
     };
 
     const fetchRecords = async () => {
         if (!selectedCadet?.ocId) return;
 
-        setLoading(true);
-        setError(null);
+        const records = await getDisciplineRecords(selectedCadet.ocId);
+        const grouped = semesters.map(() => [] as DisciplineRow[]);
 
-        try {
-            const records = await getDisciplineRecords(selectedCadet.ocId);
-            console.log("Fetched discipline records:", records);
-
-            // Group by semester (1–6)
-            const grouped = semesters.map(() => [] as DisciplineRow[]);
-            for (const rec of records) {
-                const semIndex = rec.semester - 1;
-                if (semIndex >= 0 && semIndex < semesters.length) {
-                    grouped[semIndex].push({
-                        id: rec.id,
-                        serialNo: String(grouped[semIndex].length + 1),
-                        dateOfOffence: rec.dateOfOffence?.split("T")[0] || "-",
-                        offence: rec.offence || "-",
-                        punishmentAwarded: rec.punishmentAwarded || "-",
-                        dateOfAward: rec.awardedOn?.split("T")[0] || "-",
-                        byWhomAwarded: rec.awardedBy || "-",
-                        negativePts: String(rec.pointsDelta ?? ""),
-                        cumulative: String(rec.pointsCumulative ?? ""),
-                    });
-                }
-            }
-
-            setSavedData(grouped);
-        } catch (err: any) {
-            console.error(err);
-            setError("Failed to load discipline records");
-        } finally {
-            setLoading(false);
+        for (const rec of records) {
+            const semIndex = rec.semester - 1;
+            grouped[semIndex].push({
+                id: rec.id,
+                serialNo: String(grouped[semIndex].length + 1),
+                dateOfOffence: rec.dateOfOffence?.split("T")[0] ?? "-",
+                offence: rec.offence ?? "-",
+                punishmentAwarded: rec.punishmentAwarded ?? "-",
+                dateOfAward: rec.awardedOn?.split("T")[0] ?? "-",
+                byWhomAwarded: rec.awardedBy ?? "-",
+                negativePts: String(rec.pointsDelta ?? ""),
+                cumulative: String(rec.pointsCumulative ?? ""),
+            });
         }
+
+        setSavedData(grouped);
     };
 
     useEffect(() => {
@@ -237,320 +190,313 @@ export default function DisciplineRecordsPage() {
     }, [selectedCadet]);
 
     return (
-        <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
-                <AppSidebar />
-                <div className="flex-1 flex flex-col">
-                    {/* Header */}
-                    <PageHeader
-                        title="Discipline Records"
-                        description="Log disciplinary actions and observations."
-                    />
+        <DashboardLayout
+            title="Discipline Records"
+            description="Log disciplinary actions and observations."
+        >
+            <main className="p-6">
 
-                    {/* Main Content */}
-                    <main className="flex-1 p-6">
-                        <BreadcrumbNav
-                            paths={[
-                                { label: "Dashboard", href: "/dashboard" },
-                                { label: "Dossier", href: "/dashboard/milmgmt" },
-                                { label: "Discipline Records" },
-                            ]}
-                        />
+                <BreadcrumbNav
+                    paths={[
+                        { label: "Dashboard", href: "/dashboard" },
+                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Discipline Records" },
+                    ]}
+                />
 
-                        {/* Selected Cadet */}
-                        {selectedCadet && (
-                            <div className="hidden md:flex sticky top-16 z-40">
-                                <SelectedCadetTable selectedCadet={selectedCadet} />
-                            </div>
-                        )}
+                {selectedCadet && (
+                    <SelectedCadetTable selectedCadet={selectedCadet} />
+                )}
 
-                        {/* Tabs */}
-                        <DossierTab
-                            tabs={dossierTabs}
-                            defaultValue="discip-records"
-                            extraTabs={
-                                <div className="flex items-center justify-center">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <TabsTrigger
-                                                value="dossier-insp"
-                                                className="flex items-center gap-2 border border-transparent hover:!border-blue-700"
-                                            >
-                                                <Shield className="h-4 w-4" />
-                                                Mil-Trg
-                                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                            </TabsTrigger>
-                                        </DropdownMenuTrigger>
+                <DossierTab
+                    tabs={dossierTabs}
+                    defaultValue="discip-records"
+                    extraTabs={
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <TabsTrigger value="dossier-insp">
+                                    <Shield className="h-4 w-4" />
+                                    Mil-Trg
+                                    <ChevronDown className="h-4 w-4 ml-1" />
+                                </TabsTrigger>
+                            </DropdownMenuTrigger>
 
-                                        <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                                            {militaryTrainingCards.map((card) => (
-                                                <DropdownMenuItem key={card.to} asChild>
-                                                    <a href={card.to} className="flex items-center gap-2 w-full">
-                                                        <card.icon className={`h-4 w-4 ${card.color}`} />
-                                                        <span>{card.title}</span>
-                                                    </a>
-                                                </DropdownMenuItem>
-                                            ))}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                            <DropdownMenuContent>
+                                {militaryTrainingCards.map((card) => (
+                                    <DropdownMenuItem key={card.to} asChild>
+                                        <a href={card.to} className="flex items-center gap-2">
+                                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                                            {card.title}
+                                        </a>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    }
+                >
+                    <TabsContent value="discip-records" className="space-y-6">
+                        <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+                            <CardHeader>
+                                <CardTitle className="text-xl font-semibold text-center text-primary">
+                                    DISCIPLINE RECORDS
+                                </CardTitle>
+                            </CardHeader>
+
+                            <CardContent>
+                                {/* Semester Tabs */}
+                                <div className="flex justify-center mb-6 space-x-2">
+                                    {semesters.map((sem, index) => (
+                                        <button
+                                            key={sem}
+                                            type="button"
+                                            onClick={() => setActiveTab(index)}
+                                            className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
+                                                ? "bg-blue-600 text-white"
+                                                : "bg-gray-200 text-gray-700"
+                                                }`}
+                                        >
+                                            {sem}
+                                        </button>
+                                    ))}
                                 </div>
-                            }
-                        >
-                            <TabsContent value="discip-records" className="space-y-6">
-                                <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
-                                    <CardHeader>
-                                        <CardTitle className="text-xl font-semibold text-center text-primary">
-                                            DISCIPLINE RECORDS
-                                        </CardTitle>
-                                    </CardHeader>
 
-                                    <CardContent>
-                                        {/* Semester Tabs */}
-                                        <div className="flex justify-center mb-6 space-x-2">
-                                            {semesters.map((sem, index) => (
-                                                <button
-                                                    key={sem}
-                                                    type="button"
-                                                    onClick={() => setActiveTab(index)}
-                                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
-                                                        ? "bg-blue-600 text-white"
-                                                        : "bg-gray-200 text-gray-700"
-                                                        }`}
-                                                >
-                                                    {sem}
-                                                </button>
-                                            ))}
-                                        </div>
+                                {/* Saved Data */}
+                                <div className="overflow-x-auto border rounded-lg shadow mb-6">
+                                    {savedData[activeTab].length === 0 ? (
+                                        <p className="text-center p-4 text-gray-500">
+                                            No data submitted yet for this semester.
+                                        </p>
+                                    ) : (
+                                        <table className="w-full border text-sm">
+                                            <thead className="bg-gray-100">
+                                                <tr>
+                                                    {Object.keys(defaultRow).map((key) => (
+                                                        <th key={key} className="p-2 border capitalize">
+                                                            {key.replace(/([A-Z])/g, " $1")}
+                                                        </th>
+                                                    ))}
+                                                    <th className="p-2 border text-center">Action</th>
+                                                </tr>
+                                            </thead>
 
-                                        {/* Saved Data */}
-                                        <div className="overflow-x-auto border rounded-lg shadow mb-6">
-                                            {savedData[activeTab].length === 0 ? (
-                                                <p className="text-center p-4 text-gray-500">
-                                                    No data submitted yet for this semester.
-                                                </p>
-                                            ) : (
-                                                <table className="w-full border text-sm">
-                                                    <thead className="bg-gray-100">
-                                                        <tr>
-                                                            {Object.keys(defaultRow).map((key) => (
-                                                                <th key={key} className="p-2 border capitalize">
-                                                                    {key.replace(/([A-Z])/g, " $1")}
-                                                                </th>
-                                                            ))}
-                                                            <th className="p-2 border text-center">Action</th>
+                                            <tbody>
+                                                {savedData[activeTab].map((row, index) => {
+                                                    const isEditing = editingId === row.id;
+
+                                                    return (
+                                                        <tr key={row.id || index}>
+                                                            {/* Serial No */}
+                                                            <td className="p-2 border">{row.serialNo}</td>
+
+                                                            {/* Date of Offence */}
+                                                            <td className="p-2 border">
+                                                                {isEditing ? (
+                                                                    <Input
+                                                                        type="date"
+                                                                        value={editForm?.dateOfOffence || ""}
+                                                                        onChange={(e) =>
+                                                                            setEditForm((prev) =>
+                                                                                prev ? { ...prev, dateOfOffence: e.target.value } : prev
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                ) : row.dateOfOffence}
+                                                            </td>
+
+                                                            {/* Offence */}
+                                                            <td className="p-2 border">
+                                                                {isEditing ? (
+                                                                    <Input
+                                                                        value={editForm?.offence || ""}
+                                                                        onChange={(e) =>
+                                                                            setEditForm((prev) =>
+                                                                                prev ? { ...prev, offence: e.target.value } : prev
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                ) : row.offence}
+                                                            </td>
+
+                                                            {/* Punishment */}
+                                                            <td className="p-2 border">
+                                                                {isEditing ? (
+                                                                    <Input
+                                                                        value={editForm?.punishmentAwarded || ""}
+                                                                        onChange={(e) =>
+                                                                            setEditForm((prev) =>
+                                                                                prev ? { ...prev, punishmentAwarded: e.target.value } : prev
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                ) : row.punishmentAwarded}
+                                                            </td>
+
+                                                            {/* Date of Award */}
+                                                            <td className="p-2 border">
+                                                                {isEditing ? (
+                                                                    <Input
+                                                                        type="date"
+                                                                        value={editForm?.dateOfAward || ""}
+                                                                        onChange={(e) =>
+                                                                            setEditForm((prev) =>
+                                                                                prev ? { ...prev, dateOfAward: e.target.value } : prev
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                ) : row.dateOfAward}
+                                                            </td>
+
+                                                            {/* By Whom Awarded */}
+                                                            <td className="p-2 border">
+                                                                {isEditing ? (
+                                                                    <Input
+                                                                        value={editForm?.byWhomAwarded || ""}
+                                                                        onChange={(e) =>
+                                                                            setEditForm((prev) =>
+                                                                                prev ? { ...prev, byWhomAwarded: e.target.value } : prev
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                ) : row.byWhomAwarded}
+                                                            </td>
+
+                                                            {/* Negative Points */}
+                                                            <td className="p-2 border">
+                                                                {isEditing ? (
+                                                                    <Input
+                                                                        type="number"
+                                                                        value={editForm?.negativePts || ""}
+                                                                        onChange={(e) =>
+                                                                            setEditForm((prev) =>
+                                                                                prev ? { ...prev, negativePts: e.target.value } : prev
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                ) : row.negativePts}
+                                                            </td>
+
+                                                            {/* Cumulative */}
+                                                            <td className="p-2 border">{row.cumulative}</td>
+
+                                                            {/* ACTION BUTTONS */}
+                                                            <td className="p-2 border text-center">
+                                                                {!isEditing ? (
+                                                                    <>
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            onClick={() => handleEdit(row)}
+                                                                        >
+                                                                            Edit
+                                                                        </Button>
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="destructive"
+                                                                            onClick={() => handleDelete(row)}
+                                                                        >
+                                                                            Delete
+                                                                        </Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Button size="sm" onClick={handleSave}>
+                                                                            Save
+                                                                        </Button>
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            onClick={handleCancel}
+                                                                        >
+                                                                            Cancel
+                                                                        </Button>
+                                                                    </>
+                                                                )}
+                                                            </td>
                                                         </tr>
-                                                    </thead>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
 
-                                                    <tbody>
-                                                        {savedData[activeTab].map((row, index) => {
-                                                            const isEditing = editingId === row.id;
+                                {/* Input Form */}
+                                <form onSubmit={handleSubmit(onSubmit)}>
+                                    <div className="overflow-x-auto border rounded-lg shadow">
+                                        <table className="w-full border text-sm">
+                                            <thead className="bg-gray-100">
+                                                <tr>
+                                                    {Object.keys(defaultRow).map((key) => (
+                                                        <th key={key} className="p-2 border capitalize">
+                                                            {key.replace(/([A-Z])/g, " $1")}
+                                                        </th>
+                                                    ))}
+                                                    <th className="p-2 border text-center">Action</th>
+                                                </tr>
+                                            </thead>
 
-                                                            return (
-                                                                <tr key={row.id || index}>
-                                                                    {/* Serial No */}
-                                                                    <td className="p-2 border">{row.serialNo}</td>
-
-                                                                    {/* Date of Offence */}
-                                                                    <td className="p-2 border">
-                                                                        {isEditing ? (
-                                                                            <Input
-                                                                                type="date"
-                                                                                value={editForm?.dateOfOffence || ""}
-                                                                                onChange={(e) =>
-                                                                                    setEditForm((prev) =>
-                                                                                        prev ? { ...prev, dateOfOffence: e.target.value } : prev
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        ) : row.dateOfOffence}
-                                                                    </td>
-
-                                                                    {/* Offence */}
-                                                                    <td className="p-2 border">
-                                                                        {isEditing ? (
-                                                                            <Input
-                                                                                value={editForm?.offence || ""}
-                                                                                onChange={(e) =>
-                                                                                    setEditForm((prev) =>
-                                                                                        prev ? { ...prev, offence: e.target.value } : prev
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        ) : row.offence}
-                                                                    </td>
-
-                                                                    {/* Punishment */}
-                                                                    <td className="p-2 border">
-                                                                        {isEditing ? (
-                                                                            <Input
-                                                                                value={editForm?.punishmentAwarded || ""}
-                                                                                onChange={(e) =>
-                                                                                    setEditForm((prev) =>
-                                                                                        prev ? { ...prev, punishmentAwarded: e.target.value } : prev
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        ) : row.punishmentAwarded}
-                                                                    </td>
-
-                                                                    {/* Date of Award */}
-                                                                    <td className="p-2 border">
-                                                                        {isEditing ? (
-                                                                            <Input
-                                                                                type="date"
-                                                                                value={editForm?.dateOfAward || ""}
-                                                                                onChange={(e) =>
-                                                                                    setEditForm((prev) =>
-                                                                                        prev ? { ...prev, dateOfAward: e.target.value } : prev
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        ) : row.dateOfAward}
-                                                                    </td>
-
-                                                                    {/* By Whom Awarded */}
-                                                                    <td className="p-2 border">
-                                                                        {isEditing ? (
-                                                                            <Input
-                                                                                value={editForm?.byWhomAwarded || ""}
-                                                                                onChange={(e) =>
-                                                                                    setEditForm((prev) =>
-                                                                                        prev ? { ...prev, byWhomAwarded: e.target.value } : prev
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        ) : row.byWhomAwarded}
-                                                                    </td>
-
-                                                                    {/* Negative Points */}
-                                                                    <td className="p-2 border">
-                                                                        {isEditing ? (
-                                                                            <Input
-                                                                                type="number"
-                                                                                value={editForm?.negativePts || ""}
-                                                                                onChange={(e) =>
-                                                                                    setEditForm((prev) =>
-                                                                                        prev ? { ...prev, negativePts: e.target.value } : prev
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        ) : row.negativePts}
-                                                                    </td>
-
-                                                                    {/* Cumulative */}
-                                                                    <td className="p-2 border">{row.cumulative}</td>
-
-                                                                    {/* ACTION BUTTONS */}
-                                                                    <td className="p-2 border text-center">
-                                                                        {!isEditing ? (
-                                                                            <>
-                                                                                <Button
-                                                                                    size="sm"
-                                                                                    variant="outline"
-                                                                                    onClick={() => handleEdit(row)}
-                                                                                >
-                                                                                    Edit
-                                                                                </Button>
-                                                                                <Button
-                                                                                    size="sm"
-                                                                                    variant="destructive"
-                                                                                    onClick={() => handleDelete(row)}
-                                                                                >
-                                                                                    Delete
-                                                                                </Button>
-                                                                            </>
-                                                                        ) : (
-                                                                            <>
-                                                                                <Button size="sm" onClick={handleSave}>
-                                                                                    Save
-                                                                                </Button>
-                                                                                <Button
-                                                                                    size="sm"
-                                                                                    variant="outline"
-                                                                                    onClick={handleCancel}
-                                                                                >
-                                                                                    Cancel
-                                                                                </Button>
-                                                                            </>
-                                                                        )}
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                            )}
-                                        </div>
-
-                                        {/* Input Form */}
-                                        <form onSubmit={handleSubmit(onSubmit)}>
-                                            <div className="overflow-x-auto border rounded-lg shadow">
-                                                <table className="w-full border text-sm">
-                                                    <thead className="bg-gray-100">
-                                                        <tr>
-                                                            {Object.keys(defaultRow).map((key) => (
-                                                                <th key={key} className="p-2 border capitalize">
-                                                                    {key.replace(/([A-Z])/g, " $1")}
-                                                                </th>
-                                                            ))}
-                                                            <th className="p-2 border text-center">Action</th>
-                                                        </tr>
-                                                    </thead>
-
-                                                    <tbody>
-                                                        {fields.map((field, index) => (
-                                                            <tr key={field.id}>
-                                                                {Object.keys(defaultRow).map((key) => (
-                                                                    <td key={key} className="p-2 border">
-                                                                        <Input
-                                                                            {...register(`records.${index}.${key}` as const)}
-                                                                            type={key.includes("date") ? "date" : "text"}
-                                                                        />
-                                                                    </td>
-                                                                ))}
-                                                                <td className="p-2 border text-center">
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="destructive"
-                                                                        size="sm"
-                                                                        onClick={() => remove(index)}
-                                                                    >
-                                                                        Remove
-                                                                    </Button>
+                                            <tbody>
+                                                {fields.map((field, index) => (
+                                                    <tr key={field.id}>
+                                                        <td className="p-2 border text-center">
+                                                            <Input
+                                                                value={index + 1}
+                                                                disabled
+                                                                className="text-center bg-gray-100 cursor-not-allowed"
+                                                            />
+                                                        </td>
+                                                        {Object.keys(defaultRow)
+                                                            .filter(key => key !== "serialNo")
+                                                            .map((key) => (
+                                                                <td key={key} className="p-2 border">
+                                                                    <Input
+                                                                        {...register(`records.${index}.${key}` as const)}
+                                                                        type={key.includes("date") ? "date" : "text"}
+                                                                    />
                                                                 </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                            ))}
+                                                        <td className="p-2 border text-center">
+                                                            <Button
+                                                                type="button"
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() => remove(index)}
+                                                            >
+                                                                Remove
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
 
-                                            {/* Actions */}
-                                            <div className="mt-4 flex justify-center gap-3">
-                                                <Button
-                                                    type="button"
-                                                    onClick={() => append({ ...defaultRow })}
-                                                >
-                                                    + Add Row
-                                                </Button>
-                                                <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                                                    Submit
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    onClick={() => reset({ records: [{ ...defaultRow }] })}
-                                                >
-                                                    Reset
-                                                </Button>
-                                            </div>
-                                        </form>
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-                        </DossierTab>
-                    </main>
-                </div>
-            </div>
-        </SidebarProvider>
+                                    {/* Actions */}
+                                    <div className="mt-4 flex justify-center gap-3">
+                                        <Button
+                                            type="button"
+                                            onClick={() => append({ ...defaultRow })}
+                                        >
+                                            + Add Row
+                                        </Button>
+                                        <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                                            Submit
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => reset({ records: [{ ...defaultRow }] })}
+                                        >
+                                            Reset
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </DossierTab>
+
+            </main>
+        </DashboardLayout>
     );
 }
