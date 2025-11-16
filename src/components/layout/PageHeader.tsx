@@ -12,6 +12,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
 import { useRouter } from "next/navigation";
 import { logout } from "@/app/lib/api/authApi";
+import { fetchMe, MeResponse } from "@/app/lib/api/me";
+import { useEffect, useState } from "react";
 
 interface PageHeaderProps {
   title: string;
@@ -19,6 +21,61 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, description }: PageHeaderProps) {
+
+  const [data, setData] = useState<MeResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadMeSafely = async (
+    setData: (d: any) => void,
+    setLoading: (v: boolean) => void,
+    isMounted: () => boolean
+  ) => {
+    setLoading(true);
+
+    try {
+      const res = await fetchMe();
+      if (isMounted()) {
+        setData(res);
+      }
+    } catch (err) {
+      console.error("Failed to load /me:", err);
+    } finally {
+      if (isMounted()) {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const isMounted = () => mounted;
+
+    loadMeSafely(setData, setLoading, isMounted);
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const {
+    user = {},
+    roles = [],
+    apt = {},
+  } = (data ?? {}) as Partial<MeResponse>;
+
+  const {
+    email = "",
+    name = "",
+    username = "",
+    phone = "",
+    rank = "",
+  } = user as any;
+
+  const {
+    id = "",
+    position ="",
+  } = apt as any;
+
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -59,9 +116,9 @@ export function PageHeader({ title, description }: PageHeaderProps) {
             <DropdownMenuContent align="end" className="w-56">
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
-                  <p className="font-medium">Platoon Commander</p>
+                  <p className="font-medium">{position}</p>
                   <p className="w-[200px] truncate text-sm text-muted-foreground">
-                    platoon.cmd@mceme.gov.in
+                    {email}
                   </p>
                 </div>
               </div>
