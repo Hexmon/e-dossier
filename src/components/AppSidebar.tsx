@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { MenuSection } from "@/types/appSidebar";
 import { menuItems } from "@/constants/app.constants";
+import { fetchMe, MeResponse } from "@/app/lib/api/me";
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -44,6 +45,52 @@ export function AppSidebar() {
         : [...prev, groupName]
     );
   };
+
+  const [data, setData] = useState<MeResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadMeSafely = async (
+    setData: (d: any) => void,
+    setLoading: (v: boolean) => void,
+    isMounted: () => boolean
+  ) => {
+    setLoading(true);
+
+    try {
+      const res = await fetchMe();
+      if (isMounted()) {
+        setData(res);
+      }
+    } catch (err) {
+      console.error("Failed to load /me:", err);
+    } finally {
+      if (isMounted()) {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const isMounted = () => mounted;
+
+    loadMeSafely(setData, setLoading, isMounted);
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const {
+    user = {},
+    roles = [],
+    apt = {},
+  } = (data ?? {}) as Partial<MeResponse>;
+
+  const {
+    id = "",
+    position = "",
+  } = apt as any;
 
   return (
     <Sidebar className={collapsed ? "w-16" : "w-64"} collapsible="icon">
@@ -72,7 +119,7 @@ export function AppSidebar() {
           <div className="p-4 border-b border-border">
             <Badge variant="secondary" className="w-full justify-center">
               <Shield className="h-3 w-3 mr-1" />
-              Platoon Commander
+              {position}
             </Badge>
           </div>
         )}
@@ -93,9 +140,8 @@ export function AppSidebar() {
                       </span>
                       {!collapsed && (
                         <ChevronRight
-                          className={`h-3 w-3 transition-transform ${
-                            openGroups.includes(section.group) ? "rotate-90" : ""
-                          }`}
+                          className={`h-3 w-3 transition-transform ${openGroups.includes(section.group) ? "rotate-90" : ""
+                            }`}
                         />
                       )}
                     </SidebarGroupLabel>
@@ -108,11 +154,10 @@ export function AppSidebar() {
                             <SidebarMenuButton asChild>
                               <Link
                                 href={item.url}
-                                className={`flex items-center gap-2 px-2 py-1 rounded-md ${
-                                  isActive(item.url)
+                                className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
                                     ? "bg-accent text-primary"
                                     : "hover:bg-accent/50"
-                                }`}
+                                  }`}
                               >
                                 <item.icon className="h-4 w-4" />
                                 {!collapsed && (
@@ -147,11 +192,10 @@ export function AppSidebar() {
                           <SidebarMenuButton asChild>
                             <Link
                               href={item.url}
-                              className={`flex items-center gap-2 px-2 py-1 rounded-md ${
-                                isActive(item.url)
+                              className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
                                   ? "bg-accent text-primary"
                                   : "hover:bg-accent/50"
-                              }`}
+                                }`}
                             >
                               <item.icon className="h-4 w-4" />
                               {!collapsed && (
@@ -183,11 +227,10 @@ export function AppSidebar() {
               <SidebarMenuButton asChild>
                 <Link
                   href="/dashboard/help"
-                  className={`flex items-center gap-2 px-2 py-1 rounded-md ${
-                    isActive("/dashboard/help")
+                  className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive("/dashboard/help")
                       ? "bg-accent text-primary"
                       : "hover:bg-accent/50"
-                  }`}
+                    }`}
                 >
                   <HelpCircle className="h-4 w-4" />
                   {!collapsed && <span>Help / How-To</span>}

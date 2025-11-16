@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboardCards } from "@/config/app.config";
+import { fetchMe, MeResponse } from "../lib/api/me";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
 const DashboardPage = () => {
