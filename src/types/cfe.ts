@@ -1,0 +1,17 @@
+export type cfeRow = {
+    serialNo: string;
+    cat: string;
+    mks: string;
+    remarks: string;
+};
+
+export type cfeFormData = {
+    records: cfeRow[];
+};
+
+export const defaultRow: cfeRow = {
+    serialNo: "",
+    cat: "",
+    mks: "",
+    remarks: "",
+};

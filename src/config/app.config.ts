@@ -10,7 +10,8 @@ import {
   Book,
   CheckCircle,
   CalendarDays,
-  Trophy
+  Trophy,
+  FileBadge
 } from "lucide-react";
 
 
@@ -451,6 +452,14 @@ export const militaryTrainingCards: TrainingCard[] = [
     to: "",
     color: "bg-orange-500"
   },
+  {
+  title: "Credit for Excellence",
+  description: "Manage cadet CFE scores and evaluation records",
+  icon: FileBadge,
+  to: "/dashboard/milmgmt/credit-excellence",
+  color: "bg-violet-600"
+}
+
 ];
 
 
@@ -1162,6 +1171,11 @@ export const dossierTabs = [
     icon: Timer,
   },
   {
+    value: "credit-excellence",
+    title: "Speed March / Runs",
+    icon: FileBadge,
+  },
+  {
     value: "dossier-insp",
     title: "Dossier Insp Sheet",
     icon: ClipboardCheck,
@@ -1220,6 +1234,11 @@ export const dossierTabs = [
     value: "club-detls",
     title: "Club Details",
     icon: BookMarked,
+  },
+   {
+    value: "counselling",
+    title: "Counselling",
+    icon: MessageSquare,
   },
 ];
 
