@@ -227,6 +227,17 @@ export const speedMarchCreateSchema = z.object({
 });
 export const speedMarchUpdateSchema = speedMarchCreateSchema.partial();
 
+export const creditForExcellenceItemSchema = z.object({
+    cat: z.string().min(1),
+    marks: z.coerce.number(),
+});
+export const creditForExcellenceCreateSchema = z.object({
+    semester: Semester,
+    data: z.array(creditForExcellenceItemSchema).min(1),
+    remark: z.string().optional(),
+});
+export const creditForExcellenceUpdateSchema = creditForExcellenceCreateSchema.partial();
+
 // list query helpers
 export const listQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(200).optional(),
