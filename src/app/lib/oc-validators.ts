@@ -232,3 +232,50 @@ export const listQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(200).optional(),
     offset: z.coerce.number().int().min(0).max(5000).optional(),
 });
+export const LeaveRecordType = z.enum(['HIKE', 'LEAVE', 'DETENTION']);
+
+export const CounsellingWarningKind = z.enum([
+    'RELEGATION',
+    'WITHDRAWAL',
+    'OTHER',
+]);
+
+// === Training & performance =====================================================
+// existing motivation, sports, weapon, firing, obstacle, speed march...
+
+// --- Clubs ----------------------------------------------------------------------
+export const clubCreateSchema = z.object({
+    semester: Semester,
+    clubName: z.string().min(1),
+    specialAchievement: z.string().optional(),
+    remark: z.string().optional(),
+});
+export const clubUpdateSchema = clubCreateSchema.partial();
+
+// --- Special achievements in clubs ---------------------------------------------
+export const clubAchievementCreateSchema = z.object({
+    achievement: z.string().min(1),
+});
+export const clubAchievementUpdateSchema = clubAchievementCreateSchema.partial();
+
+// --- Recording of leave / hike / detention -------------------------------------
+export const recordingLeaveHikeDetentionCreateSchema = z.object({
+    semester: Semester,
+    reason: z.string().min(1),
+    type: LeaveRecordType,
+    dateFrom: z.coerce.date(),
+    dateTo: z.coerce.date(),
+    remark: z.string().optional(),
+});
+export const recordingLeaveHikeDetentionUpdateSchema =
+    recordingLeaveHikeDetentionCreateSchema.partial();
+
+// --- Counselling ---------------------------------------------------------------
+export const counsellingCreateSchema = z.object({
+    semester: Semester,
+    reason: z.string().min(1),
+    natureOfWarning: CounsellingWarningKind,
+    date: z.coerce.date(),
+    warnedBy: z.string().min(1),
+});
+export const counsellingUpdateSchema = counsellingCreateSchema.partial();
