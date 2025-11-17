@@ -1,10 +1,20 @@
-import { pgTable, uuid, varchar, timestamp, text, integer, boolean, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, text, integer, boolean, numeric, date } from 'drizzle-orm/pg-core';
 import { branchKind, ocStatusKind, commModeKind, ssbPointKind, delegationKind, termKind } from './enums';
 import { courses } from './courses';
-import { subjects } from './subjects';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { users } from '@/app/db/schema/auth/users';
 import { sql } from 'drizzle-orm';
+import { pgEnum } from 'drizzle-orm/pg-core';
+
+// NEW enums
+export const leaveRecordKind = pgEnum('leave_record_kind', ['HIKE', 'LEAVE', 'DETENTION']);
+
+export const counsellingWarningKind = pgEnum('counselling_warning_kind', [
+    'RELEGATION',
+    'WITHDRAWAL',
+    'OTHER',
+]);
+
 
 // === Core OC card ============================================================
 export const ocCadets = pgTable('oc_cadets', {
@@ -339,4 +349,69 @@ export const ocSpeedMarch = pgTable('oc_speed_march', {
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 4 AND 6)` },
+}));
+// -----------------------------------------------------------------------------
+// oc_clubs
+// -----------------------------------------------------------------------------
+export const ocClubs = pgTable('oc_clubs', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    clubName: varchar('club_name', { length: 160 }).notNull(),
+    specialAchievement: text('special_achievement'),
+    remark: text('remark'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+}));
+
+// -----------------------------------------------------------------------------
+// oc_special_achievement_in_clubs
+// -----------------------------------------------------------------------------
+export const ocSpecialAchievementInClubs = pgTable('oc_special_achievement_in_clubs', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    achievement: text('achievement').notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+});
+
+// -----------------------------------------------------------------------------
+// oc_recording_leave_hike_detention
+// -----------------------------------------------------------------------------
+export const ocRecordingLeaveHikeDetention = pgTable('oc_recording_leave_hike_detention', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    reason: text('reason').notNull(),
+    type: leaveRecordKind('type').notNull(), // HIKE | LEAVE | DETENTION
+    dateFrom: date('date_from').notNull(),
+    dateTo: date('date_to').notNull(),
+    remark: text('remark'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+}));
+
+// -----------------------------------------------------------------------------
+// oc_counselling
+// -----------------------------------------------------------------------------
+export const ocCounselling = pgTable('oc_counselling', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    reason: text('reason').notNull(),
+    natureOfWarning: counsellingWarningKind('nature_of_warning').notNull(), // RELEGATION | WITHDRAWAL | OTHER
+    date: date('date').notNull(),
+    warnedBy: varchar('warned_by', { length: 160 }).notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
 }));
