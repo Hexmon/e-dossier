@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -21,8 +21,8 @@ import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { ChevronDown, Shield } from "lucide-react";
-import { createMotivationAward } from "@/app/lib/api/motivationAwardsApi";
-import { saveSportsGame } from "@/app/lib/api/sportsAndGamesApi";
+import { createMotivationAward, getMotivationAwards } from "@/app/lib/api/motivationAwardsApi";
+import { listSportsAndGames, saveSportsGame } from "@/app/lib/api/sportsAndGamesApi";
 
 
 // ─────────────── COMPONENT ───────────────
@@ -59,29 +59,32 @@ export default function SportsGamesPage() {
 
         try {
             // SPRING
-            for (const row of formData.spring) {
+            const newSpringRows = formData.spring.filter((row) => !row.id);
+            for (const row of newSpringRows) {
                 await saveSportsGame(selectedCadet.ocId, {
                     semester: semesterNumber,
                     term: "spring",
                     sport: row.activity,
                     maxMarks: Number(row.maxMarks),
-                    marksObtained: Number(row.obtained)
+                    marksObtained: Number(row.obtained),
                 });
             }
 
             // AUTUMN
-            for (const row of formData.autumn) {
+            const newAutumnRows = formData.autumn.filter((row) => !row.id);
+            for (const row of newAutumnRows) {
                 await saveSportsGame(selectedCadet.ocId, {
                     semester: semesterNumber,
                     term: "autumn",
                     sport: row.activity,
                     maxMarks: Number(row.maxMarks),
-                    marksObtained: Number(row.obtained)
+                    marksObtained: Number(row.obtained),
                 });
             }
 
-            //MOTIVATION AWARDS
-            for (const row of formData.motivation) {
+            // MOTIVATION AWARDS
+            const newMotivationRows = formData.motivation.filter((row) => !row.id);
+            for (const row of newMotivationRows) {
                 await createMotivationAward(ocId, {
                     semester: semesterNumber,
                     fieldName: row.activity,
@@ -91,16 +94,128 @@ export default function SportsGamesPage() {
                 });
             }
 
-            toast.success(`Saved successfully for ${semesters[activeTab]}!`);
-
+            toast.success(`Created successfully for ${semesters[activeTab]}!`);
         } catch (err) {
             toast.error("Failed to save");
         }
 
-        const updated = [...savedData];
-        updated[activeTab] = { ...formData };
-        setSavedData(updated);
+        await loadSavedData(ocId);
     };
+
+    const loadSavedData = async (ocId: string) => {
+        try {
+            const sportsRes = await listSportsAndGames(ocId);
+            const motRes = await getMotivationAwards(ocId);
+
+            const sportsItems = sportsRes.items ?? [];
+            const motivationItems = motRes ?? [];
+
+            const updated: SemesterData[] = semesters.map(() => ({
+                spring: [],
+                autumn: [],
+                motivation: [],
+            }));
+
+            sportsItems.forEach((item) => {
+                const idx = item.semester - 1;
+
+                if (item.term === "spring") {
+                    // Avoid duplicates by checking if the row already exists
+                    if (!updated[idx].spring.some((r) => r.id === item.id)) {
+                        updated[idx].spring.push({
+                            id: item.id,
+                            ocId: item.ocId,
+                            term: "spring",
+                            activity: item.sport,
+                            string: "",
+                            maxMarks: item.maxMarks,
+                            obtained: item.marksObtained,
+                        });
+                    }
+                }
+
+                if (item.term === "autumn") {
+                    // Avoid duplicates by checking if the row already exists
+                    if (!updated[idx].autumn.some((r) => r.id === item.id)) {
+                        updated[idx].autumn.push({
+                            id: item.id,
+                            ocId: item.ocId,
+                            term: "autumn",
+                            activity: item.sport,
+                            string: "",
+                            maxMarks: item.maxMarks,
+                            obtained: item.marksObtained,
+                        });
+                    }
+                }
+            });
+
+            motivationItems.forEach((item) => {
+                const idx = item.semester - 1;
+
+                // Avoid duplicates by checking if the row already exists
+                if (!updated[idx].motivation.some((r) => r.id === item.id)) {
+                    updated[idx].motivation.push({
+                        id: item.id,
+                        ocId: item.ocId,
+                        term: "motivation",
+                        activity: item.fieldName,
+                        string: item.motivationTitle,
+                        maxMarks: item.maxMarks,
+                        obtained: item.marksObtained,
+                    });
+                }
+            });
+
+            setSavedData(updated);
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to load saved Sports & Awards data");
+        }
+    };
+
+    useEffect(() => {
+        if (!selectedCadet?.ocId) return;
+        loadSavedData(selectedCadet.ocId);
+    }, [selectedCadet?.ocId]);
+
+    const handleRowUpdated = useCallback(
+        (term: "spring" | "autumn" | "motivation", updatedRow: any) => {
+            setSavedData((prev) => {
+                const updated = [...prev];
+                updated[activeTab] = {
+                    ...updated[activeTab],
+                    [term]: updated[activeTab][term].map((r: any) =>
+                        r.id === updatedRow.id ? updatedRow : r
+                    ),
+                };
+                return updated;
+            });
+        },
+        [activeTab]
+    );
+
+    const handleRowDeleted = useCallback(
+        (term: "spring" | "autumn" | "motivation", id: string) => {
+            setSavedData((prev) => {
+                const updated = [...prev];
+                updated[activeTab] = {
+                    ...updated[activeTab],
+                    [term]: updated[activeTab][term].filter((r) => r.id !== id),
+                };
+                return updated;
+            });
+        },
+        [activeTab]
+    );
+
+    const memoizedSpringRows = useMemo(() => springPrefill, []);
+    const memoizedAutumnRows = useMemo(() => autumnPrefill, []);
+    const memoizedMotivationRows = useMemo(() => motivationPrefill, []);
+
+    const memoizedSavedSpringRows = useMemo(() => savedData[activeTab].spring, [savedData, activeTab]);
+    const memoizedSavedAutumnRows = useMemo(() => savedData[activeTab].autumn, [savedData, activeTab]);
+    const memoizedSavedMotivationRows = useMemo(() => savedData[activeTab].motivation, [savedData, activeTab]);
 
     return (
         <DashboardLayout
@@ -177,26 +292,33 @@ export default function SportsGamesPage() {
                                     <SportsGamesTable
                                         title="SPRING TERM"
                                         termKey="spring"
-                                        rows={springPrefill}
-                                        savedRows={savedData[activeTab].spring}
+                                        rows={memoizedSpringRows}
+                                        savedRows={memoizedSavedSpringRows}
                                         register={register}
+                                        onRowUpdated={(updatedRow) => handleRowUpdated("spring", updatedRow)}
+                                        onRowDeleted={(id) => handleRowDeleted("spring", id)}
                                     />
 
                                     <SportsGamesTable
                                         title="AUTUMN TERM"
                                         termKey="autumn"
-                                        rows={autumnPrefill}
-                                        savedRows={savedData[activeTab].autumn}
+                                        rows={memoizedAutumnRows}
+                                        savedRows={memoizedSavedAutumnRows}
                                         register={register}
+                                        onRowUpdated={(updatedRow) => handleRowUpdated("autumn", updatedRow)}
+                                        onRowDeleted={(id) => handleRowDeleted("autumn", id)}
                                     />
 
                                     <SportsGamesTable
                                         title="MOTIVATION AWARDS"
                                         termKey="motivation"
-                                        rows={motivationPrefill}
-                                        savedRows={savedData[activeTab].motivation}
+                                        rows={memoizedMotivationRows}
+                                        savedRows={memoizedSavedMotivationRows}
                                         register={register}
+                                        onRowUpdated={(updatedRow) => handleRowUpdated("motivation", updatedRow)}
+                                        onRowDeleted={(id) => handleRowDeleted("motivation", id)}
                                     />
+
 
                                     <div className="flex justify-center gap-3 mt-6">
                                         <Button type="submit" className="bg-green-600 hover:bg-green-700">

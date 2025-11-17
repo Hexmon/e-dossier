@@ -17,6 +17,10 @@ import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { ChevronDown, Shield } from "lucide-react";
+import { toast } from "sonner";
+import { createSpecialAchievementInFiring, listSpecialAchievementsInFiring, SpecialAchievementInFiringRecord } from "@/app/lib/api/specialAchievementInFiringApi";
+import { createWeaponTraining, deleteWeaponTraining, listWeaponTraining, updateWeaponTraining, WeaponTrainingRecord, WeaponTrainingUpdate } from "@/app/lib/api/weaponTrainingApi";
+import { Semester } from "@/app/lib/oc-validators";
 
 // ─────────────── TYPES ───────────────
 interface Row {
@@ -43,6 +47,54 @@ export default function WpnTrgPage() {
     const [activeTab, setActiveTab] = useState(0);
 
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+    const ocId = selectedCadet?.ocId;   // your OC ID
+
+    const [weaponTrainingRecords, setWeaponTrainingRecords] = useState<WeaponTrainingRecord[]>([]);
+    const [achievementRecords, setAchievementRecords] = useState<SpecialAchievementInFiringRecord[]>([]);
+
+    useEffect(() => {
+        if (!ocId) return;
+
+        const fetchData = async () => {
+            try {
+                const wpn = await listWeaponTraining(ocId);
+                setWeaponTrainingRecords(wpn.items);
+
+                const ach = await listSpecialAchievementsInFiring(ocId);
+                setAchievementRecords(ach.items);
+            } catch (err) {
+                toast.error("Failed to load weapon training data");
+            }
+        };
+
+        fetchData();
+    }, [ocId]);
+
+    const handleUpdateWeaponTraining = async (recordId: string, payload: WeaponTrainingUpdate) => {
+        try {
+            await updateWeaponTraining(ocId!, recordId, payload);
+
+            setWeaponTrainingRecords(prev =>
+                prev.map(r => (r.id === recordId ? { ...r, ...payload } : r))
+            );
+
+            toast.success("Weapon Training updated");
+        } catch (err) {
+            toast.error("Failed to update weapon training");
+        }
+    };
+
+    const handleDeleteWeaponTraining = async (recordId: string) => {
+        try {
+            await deleteWeaponTraining(ocId!, recordId);
+
+            setWeaponTrainingRecords(prev => prev.filter(r => r.id !== recordId));
+
+            toast.success("Weapon Training deleted");
+        } catch (err) {
+            toast.error("Failed to delete");
+        }
+    };
 
     const [savedData, setSavedData] = useState<TermData[]>(
         terms.map(() => ({
@@ -72,17 +124,49 @@ export default function WpnTrgPage() {
             ...(watchedRecords || []),
             { subject: "Total", maxMarks: 120, obtained: totalMarks.toString() },
         ]);
-    }, [totalMarks]);
+    }, []);
 
     // ─────────────── SUBMIT ───────────────
-    const onSubmit = (formData: TermData) => {
-        const updated = [...savedData];
-        updated[activeTab] = {
-            records: formData.records.slice(0, 3), // exclude Total row
-            achievements: formData.achievements,
-        };
-        setSavedData(updated);
-        alert(`Data saved for ${terms[activeTab]}!`);
+    const onSubmit = async (formData: TermData) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("Cadet not selected");
+            return;
+        }
+
+        try {
+            // ---------------------------
+            // 1. CREATE WEAPON TRAINING
+            // ---------------------------
+            const wpnPayload = formData.records.slice(0, 3).map(r => ({
+                subject: r.subject,
+                semester: activeTab + 3,
+                maxMarks: r.maxMarks,
+                marksObtained: Number(r.obtained) || 0,
+
+            }));
+
+            for (const payload of wpnPayload) {
+                await createWeaponTraining(selectedCadet?.ocId, payload);
+            }
+
+            toast.success("Weapon Training saved!");
+
+            // ---------------------------
+            // 2. CREATE SPECIAL ACHIEVEMENTS
+            // ---------------------------
+            for (const ach of formData.achievements) {
+                if (ach.trim().length === 0) continue;
+
+                await createSpecialAchievementInFiring(selectedCadet.ocId, {
+                    achievement: ach,
+                });
+            }
+
+            toast.success("Achievements saved!");
+
+        } catch (err) {
+            toast.error("Failed to save data");
+        }
     };
 
     // ─────────────── RENDER TABLE ───────────────
