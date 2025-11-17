@@ -13,6 +13,10 @@ import {
     ocSpecialAchievementInFiring,
     ocObstacleTraining,
     ocSpeedMarch,
+    ocCounselling,
+    ocClubs,
+    ocRecordingLeaveHikeDetention,
+    ocSpecialAchievementInClubs,
 } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -837,4 +841,249 @@ export async function listOCsFull(opts: ListOpts = {}) {
     }));
 
     return items;
+}
+// ---- Clubs --------------------------------------------------------------------
+export async function listClubs(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocClubs)
+        .where(and(eq(ocClubs.ocId, ocId), isNull(ocClubs.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+
+export async function createClub(
+    ocId: string,
+    data: Omit<typeof ocClubs.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db.insert(ocClubs).values({ ocId, ...data }).returning();
+    return row;
+}
+
+export async function getClub(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocClubs)
+        .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+
+export async function updateClub(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocClubs.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocClubs)
+        .set(data)
+        .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+export async function deleteClub(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocClubs)
+            .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocClubs)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+// ---- Special achievements in clubs -------------------------------------------
+export async function listClubAchievements(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocSpecialAchievementInClubs)
+        .where(and(eq(ocSpecialAchievementInClubs.ocId, ocId), isNull(ocSpecialAchievementInClubs.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+
+export async function createClubAchievement(
+    ocId: string,
+    data: Omit<typeof ocSpecialAchievementInClubs.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db
+        .insert(ocSpecialAchievementInClubs)
+        .values({ ocId, ...data })
+        .returning();
+    return row;
+}
+
+export async function getClubAchievement(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocSpecialAchievementInClubs)
+        .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+
+export async function updateClubAchievement(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocSpecialAchievementInClubs.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocSpecialAchievementInClubs)
+        .set(data)
+        .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+export async function deleteClubAchievement(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocSpecialAchievementInClubs)
+            .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocSpecialAchievementInClubs)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+// ---- Recording leave/hike/detention ------------------------------------------
+export async function listRecordingLeaveHikeDetention(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocRecordingLeaveHikeDetention)
+        .where(and(eq(ocRecordingLeaveHikeDetention.ocId, ocId), isNull(ocRecordingLeaveHikeDetention.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+
+export async function createRecordingLeaveHikeDetention(
+    ocId: string,
+    data: Omit<typeof ocRecordingLeaveHikeDetention.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db
+        .insert(ocRecordingLeaveHikeDetention)
+        .values({ ocId, ...data })
+        .returning();
+    return row;
+}
+
+export async function getRecordingLeaveHikeDetention(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocRecordingLeaveHikeDetention)
+        .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+
+export async function updateRecordingLeaveHikeDetention(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocRecordingLeaveHikeDetention.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocRecordingLeaveHikeDetention)
+        .set(data)
+        .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+export async function deleteRecordingLeaveHikeDetention(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocRecordingLeaveHikeDetention)
+            .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocRecordingLeaveHikeDetention)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+// ---- Counselling -------------------------------------------------------------
+export async function listCounselling(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocCounselling)
+        .where(and(eq(ocCounselling.ocId, ocId), isNull(ocCounselling.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+
+export async function createCounselling(
+    ocId: string,
+    data: Omit<typeof ocCounselling.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db.insert(ocCounselling).values({ ocId, ...data }).returning();
+    return row;
+}
+
+export async function getCounselling(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocCounselling)
+        .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+
+export async function updateCounselling(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocCounselling.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocCounselling)
+        .set(data)
+        .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+export async function deleteCounselling(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocCounselling)
+            .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocCounselling)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId)))
+        .returning();
+    return row ?? null;
 }
