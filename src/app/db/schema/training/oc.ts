@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, text, integer, boolean, numeric, date } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, text, integer, boolean, numeric, date, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
 import { branchKind, ocStatusKind, commModeKind, ssbPointKind, delegationKind, termKind } from './enums';
 import { courses } from './courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -14,6 +14,11 @@ export const counsellingWarningKind = pgEnum('counselling_warning_kind', [
     'WITHDRAWAL',
     'OTHER',
 ]);
+
+export type CreditForExcellenceEntry = {
+    cat: string;
+    marks: number;
+};
 
 
 // === Core OC card ============================================================
@@ -349,6 +354,42 @@ export const ocSpeedMarch = pgTable('oc_speed_march', {
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 4 AND 6)` },
+}));
+
+export const ocDrill = pgTable('oc_drill', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    maxMarks: numeric('max_marks', { mode: 'number' }).notNull(),
+    m1Marks: numeric('m1_marks', { mode: 'number' }),
+    m2Marks: numeric('m2_marks', { mode: 'number' }),
+    a1c1Marks: numeric('a1c1_marks', { mode: 'number' }),
+    a2c2Marks: numeric('a2c2_marks', { mode: 'number' }),
+    remark: text('remark'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 4 AND 6)` },
+}));
+
+// ---------------------------------------------------------------------------
+// oc_credit_for_excellence (CFE)
+// ---------------------------------------------------------------------------
+export const ocCreditForExcellence = pgTable('oc_credit_for_excellence', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    data: jsonb('data')
+        .$type<CreditForExcellenceEntry[]>()
+        .notNull(),
+    remark: text('remark'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+    uqPerSemester: uniqueIndex('uq_oc_cfe_per_semester').on(t.ocId, t.semester),
 }));
 // -----------------------------------------------------------------------------
 // oc_clubs

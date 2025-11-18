@@ -13,10 +13,12 @@ import {
     ocSpecialAchievementInFiring,
     ocObstacleTraining,
     ocSpeedMarch,
+    ocDrill,
     ocCounselling,
     ocClubs,
     ocRecordingLeaveHikeDetention,
     ocSpecialAchievementInClubs,
+    ocCreditForExcellence,
 } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -675,6 +677,166 @@ export async function deleteSpeedMarch(
     return row ?? null;
 }
 
+// ---- Drill ------------------------------------------------------------------
+export async function listDrill(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocDrill)
+        .where(and(eq(ocDrill.ocId, ocId), isNull(ocDrill.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+export async function createDrill(
+    ocId: string,
+    data: Omit<typeof ocDrill.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db.insert(ocDrill).values({ ocId, ...data }).returning();
+    return row;
+}
+export async function getDrill(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocDrill)
+        .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId), isNull(ocDrill.deletedAt)))
+        .limit(1);
+    return row ?? null;
+}
+export async function updateDrill(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocDrill.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocDrill)
+        .set(data)
+        .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+export async function deleteDrill(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocDrill)
+            .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocDrill)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+// ---- Credit for excellence (CFE) -----------------------------------------
+export async function listCreditForExcellence(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select()
+        .from(ocCreditForExcellence)
+        .where(and(eq(ocCreditForExcellence.ocId, ocId), isNull(ocCreditForExcellence.deletedAt)))
+        .limit(limit)
+        .offset(offset);
+}
+
+export async function createCreditForExcellence(
+    ocId: string,
+    data: Omit<typeof ocCreditForExcellence.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
+) {
+    const [row] = await db
+        .insert(ocCreditForExcellence)
+        .values({ ocId, ...data })
+        .onConflictDoUpdate({
+            target: [ocCreditForExcellence.ocId, ocCreditForExcellence.semester],
+            set: {
+                data: data.data,
+                remark: data.remark ?? null,
+                deletedAt: null,
+            },
+        })
+        .returning();
+    return row;
+}
+
+export async function createManyCreditForExcellence(
+    ocId: string,
+    rows: Array<Omit<typeof ocCreditForExcellence.$inferInsert, 'id' | 'ocId' | 'deletedAt'>>,
+) {
+    if (!rows.length) return [];
+
+    return db.transaction(async (tx) => {
+        const created: Array<typeof ocCreditForExcellence.$inferSelect> = [];
+        for (const item of rows) {
+            const [row] = await tx
+                .insert(ocCreditForExcellence)
+                .values({ ocId, ...item })
+                .onConflictDoUpdate({
+                    target: [ocCreditForExcellence.ocId, ocCreditForExcellence.semester],
+                    set: {
+                        data: item.data,
+                        remark: item.remark ?? null,
+                        deletedAt: null,
+                    },
+                })
+                .returning();
+            if (row) created.push(row);
+        }
+        return created;
+    });
+}
+
+export async function getCreditForExcellence(ocId: string, id: string) {
+    const [row] = await db
+        .select()
+        .from(ocCreditForExcellence)
+        .where(
+            and(
+                eq(ocCreditForExcellence.id, id),
+                eq(ocCreditForExcellence.ocId, ocId),
+                isNull(ocCreditForExcellence.deletedAt),
+            ),
+        )
+        .limit(1);
+    return row ?? null;
+}
+
+export async function updateCreditForExcellence(
+    ocId: string,
+    id: string,
+    data: Partial<typeof ocCreditForExcellence.$inferInsert>,
+) {
+    const [row] = await db
+        .update(ocCreditForExcellence)
+        .set(data)
+        .where(and(eq(ocCreditForExcellence.id, id), eq(ocCreditForExcellence.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+export async function deleteCreditForExcellence(
+    ocId: string,
+    id: string,
+    opts: { hard?: boolean } = {},
+) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocCreditForExcellence)
+            .where(and(eq(ocCreditForExcellence.id, id), eq(ocCreditForExcellence.ocId, ocId)))
+            .returning();
+        return row ?? null;
+    }
+    const [row] = await db
+        .update(ocCreditForExcellence)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocCreditForExcellence.id, id), eq(ocCreditForExcellence.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
 export async function listOCsBasic(opts: ListOpts = {}) {
     const { q, courseId, active, limit = 200, offset = 0 } = opts;
 
@@ -745,6 +907,8 @@ export async function listOCsFull(opts: ListOpts = {}) {
         specialFiringRows,
         obstacleTrainingRows,
         speedMarchRows,
+        drillRows,
+        creditForExcellenceRows,
     ] = await Promise.all([
         db.select().from(ocPersonal).where(inArray(ocPersonal.ocId, ocIds)),
         db.select().from(ocPreCommission).where(inArray(ocPreCommission.ocId, ocIds)),
@@ -765,6 +929,8 @@ export async function listOCsFull(opts: ListOpts = {}) {
         db.select().from(ocSpecialAchievementInFiring).where(inArray(ocSpecialAchievementInFiring.ocId, ocIds)),
         db.select().from(ocObstacleTraining).where(inArray(ocObstacleTraining.ocId, ocIds)),
         db.select().from(ocSpeedMarch).where(inArray(ocSpeedMarch.ocId, ocIds)),
+        db.select().from(ocDrill).where(inArray(ocDrill.ocId, ocIds)),
+        db.select().from(ocCreditForExcellence).where(inArray(ocCreditForExcellence.ocId, ocIds)),
     ]);
 
     const reportIds = ssbReportRows.map((r) => r.id);
@@ -804,6 +970,8 @@ export async function listOCsFull(opts: ListOpts = {}) {
     const specialFiringByOc = byOc(specialFiringRows);
     const obstacleTrainingByOc = byOc(obstacleTrainingRows);
     const speedMarchByOc = byOc(speedMarchRows);
+    const drillByOc = byOc(drillRows);
+    const creditForExcellenceByOc = byOc(creditForExcellenceRows);
 
     const pointsByReport = ssbPointRows.reduce<Record<string, typeof ssbPointRows>>((acc, p) => {
         (acc[p.reportId] ||= []).push(p);
@@ -838,6 +1006,8 @@ export async function listOCsFull(opts: ListOpts = {}) {
         specialAchievementInFiring: specialFiringByOc[b.id] ?? [],
         obstacleTraining: obstacleTrainingByOc[b.id] ?? [],
         speedMarch: speedMarchByOc[b.id] ?? [],
+        drill: drillByOc[b.id] ?? [],
+        creditForExcellence: creditForExcellenceByOc[b.id] ?? [],
     }));
 
     return items;
