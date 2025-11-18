@@ -238,6 +238,17 @@ export const creditForExcellenceCreateSchema = z.object({
 });
 export const creditForExcellenceUpdateSchema = creditForExcellenceCreateSchema.partial();
 
+export const drillCreateSchema = z.object({
+    semester: SeniorSemester,
+    maxMarks: z.coerce.number(),
+    m1Marks: z.coerce.number().optional(),
+    m2Marks: z.coerce.number().optional(),
+    a1c1Marks: z.coerce.number().optional(),
+    a2c2Marks: z.coerce.number().optional(),
+    remark: z.string().optional(),
+});
+export const drillUpdateSchema = drillCreateSchema.partial();
+
 // list query helpers
 export const listQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(200).optional(),
