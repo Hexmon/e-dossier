@@ -155,101 +155,101 @@ export const defaultDrillRows: DrillRow[] = [
 export const terms = ["IV TERM", "V TERM", "VI TERM"];
 
 export const obstaclePrefill: ObstacleRow[] = [
-    { obstacle: "EX (15 Mks)", obtained: "", remark: "" },
-    { obstacle: "Good (12 Mks)", obtained: "", remark: "" },
-    { obstacle: "Sat (09 Mks)", obtained: "", remark: "" },
-    { obstacle: "Fail (Nil)", obtained: "", remark: "" },
+  { obstacle: "EX (15 Mks)", obtained: "", remark: "" },
+  { obstacle: "Good (12 Mks)", obtained: "", remark: "" },
+  { obstacle: "Sat (09 Mks)", obtained: "", remark: "" },
+  { obstacle: "Fail (Nil)", obtained: "", remark: "" },
 ];
 
 export const tablePrefill: SpeedRow[] = [
-    {
-        test: "Ex (30 Mks)",
-        timing10Label: "1hr 15 mins",
-        distance10: "",
-        timing20Label: "2hr 40 mins",
-        distance20: "",
-        timing30Label: "4hr",
-        distance30: "",
-        marks: "30",
-        remark: "",
-    },
-    {
-        test: "Good (21 Mks)",
-        timing10Label: "1hr 30 mins",
-        distance10: "",
-        timing20Label: "2hr 45 mins",
-        distance20: "",
-        timing30Label: "4hr 7 mins 30 secs",
-        distance30: "",
-        marks: "21",
-        remark: "",
-    },
-    {
-        test: "Sat (12 Mks)",
-        timing10Label: "1hr 35 mins",
-        distance10: "",
-        timing20Label: "2hr 50 mins",
-        distance20: "",
-        timing30Label: "4hr 10 mins",
-        distance30: "",
-        marks: "12",
-        remark: "",
-    },
-    {
-        test: "Fail (Nil)",
-        timing10Label: "Beyond 1hr 35 mins",
-        distance10: "",
-        timing20Label: "Beyond 2hr 50 mins",
-        distance20: "",
-        timing30Label: "Beyond 4hr 10 mins",
-        distance30: "",
-        marks: "Nil",
-        remark: "",
-    },
-    {
-        test: "Marks",
-        timing10Label: "",
-        distance10: "",
-        timing20Label: "",
-        distance20: "",
-        timing30Label: "",
-        distance30: "",
-        marks: "",
-        remark: "",
-    },
+  {
+    test: "Ex (30 Mks)",
+    timing10Label: "1hr 15 mins",
+    distance10: "",
+    timing20Label: "2hr 40 mins",
+    distance20: "",
+    timing30Label: "4hr",
+    distance30: "",
+    marks: "30",
+    remark: "",
+  },
+  {
+    test: "Good (21 Mks)",
+    timing10Label: "1hr 30 mins",
+    distance10: "",
+    timing20Label: "2hr 45 mins",
+    distance20: "",
+    timing30Label: "4hr 7 mins 30 secs",
+    distance30: "",
+    marks: "21",
+    remark: "",
+  },
+  {
+    test: "Sat (12 Mks)",
+    timing10Label: "1hr 35 mins",
+    distance10: "",
+    timing20Label: "2hr 50 mins",
+    distance20: "",
+    timing30Label: "4hr 10 mins",
+    distance30: "",
+    marks: "12",
+    remark: "",
+  },
+  {
+    test: "Fail (Nil)",
+    timing10Label: "Beyond 1hr 35 mins",
+    distance10: "",
+    timing20Label: "Beyond 2hr 50 mins",
+    distance20: "",
+    timing30Label: "Beyond 4hr 10 mins",
+    distance30: "",
+    marks: "Nil",
+    remark: "",
+  },
+  {
+    test: "Marks",
+    timing10Label: "",
+    distance10: "",
+    timing20Label: "",
+    distance20: "",
+    timing30Label: "",
+    distance30: "",
+    marks: "",
+    remark: "",
+  },
 ];
 
 // ─────────────── PREFILL DATA ───────────────
 export const springPrefill: sportsRow[] = [
-    { activity: "X - Country", string: "", maxMarks: 30, obtained: "" },
-    { activity: "Basket Ball", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Football", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Squash", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Wg Team", string: "", maxMarks: 25, obtained: "" },
+  { activity: "X - Country", string: "", maxMarks: 30, obtained: "" },
+  { activity: "Basket Ball", string: "", maxMarks: 15, obtained: "" },
+  { activity: "Football", string: "", maxMarks: 15, obtained: "" },
+  { activity: "Squash", string: "", maxMarks: 15, obtained: "" },
+  { activity: "Wg Team", string: "", maxMarks: 25, obtained: "" },
 ];
 
 export const autumnPrefill: sportsRow[] = [
-    { activity: "X - Country", string: "", maxMarks: 30, obtained: "" },
-    { activity: "Hockey", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Volley Ball", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Tennis", string: "", maxMarks: 15, obtained: "" },
-    { activity: "Wg Team", string: "", maxMarks: 25, obtained: "" },
+  { activity: "X - Country", string: "", maxMarks: 30, obtained: "" },
+  { activity: "Hockey", string: "", maxMarks: 15, obtained: "" },
+  { activity: "Volley Ball", string: "", maxMarks: 15, obtained: "" },
+  { activity: "Tennis", string: "", maxMarks: 15, obtained: "" },
+  { activity: "Wg Team", string: "", maxMarks: 25, obtained: "" },
 ];
 
 export const motivationPrefill: sportsRow[] = [
-    { activity: "Merit Card", string: "", maxMarks: "", obtained: "" },
-    { activity: "Half Blue", string: "", maxMarks: "", obtained: "" },
-    { activity: "Blue", string: "", maxMarks: "", obtained: "" },
-    { activity: "Blazer", string: "", maxMarks: "", obtained: "" },
+  { activity: "Merit Card", string: "", maxMarks: "", obtained: "" },
+  { activity: "Half Blue", string: "", maxMarks: "", obtained: "" },
+  { activity: "Blue", string: "", maxMarks: "", obtained: "" },
+  { activity: "Blazer", string: "", maxMarks: "", obtained: "" },
 ];
 
 export const catOptions = [
-    "Sports Awards (Blazer/Blue/H-Blue/Merit)",
-    "70%+ in Service Subjects",
-    "Academic Torches (G/S/B)",
-    "Debate / Public Speaking (Wg/Pl)",
-    "Discipline (Negatives)",
-    "Misc Activities (Adv, MC, TD, etc.)"
+  "Sports Awards (Blazer/Blue/H-Blue/Merit)",
+  "70%+ in Service Subjects",
+  "Academic Torches (G/S/B)",
+  "Debate / Public Speaking (Wg/Pl)",
+  "Discipline (Negatives)",
+  "Misc Activities (Adv, MC, TD, etc.)"
 ];
 
 export const semestersCfe = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
@@ -257,3 +257,12 @@ export const semestersCfe = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM
 export const semestersCounselling = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 export const warningTypes = ["Relegation", "Withdrawal"];
 export const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
+export const termColumns: Record<
+  number,
+  { timing: keyof SpeedRow; distance: keyof SpeedRow }
+> = {
+  0: { timing: "timing10Label", distance: "distance10" },
+  1: { timing: "timing20Label", distance: "distance20" },
+  2: { timing: "timing30Label", distance: "distance30" },
+};
+
