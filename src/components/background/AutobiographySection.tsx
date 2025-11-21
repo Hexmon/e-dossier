@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -13,11 +12,14 @@ import {
     getAutobiographyDetails,
     saveAutobiography,
     AutoBioPayload,
+    patchAutobiography,
 } from "@/app/lib/api/autobiographyApi";
 
 import { AutoBio } from "@/types/background-detls";
 
 export default function AutobiographySection({ selectedCadet }: { selectedCadet: any }) {
+    const [isEditing, setIsEditing] = useState(false);
+
     const autoBioForm = useForm<AutoBio>({
         defaultValues: {
             general: "",
@@ -30,9 +32,8 @@ export default function AutobiographySection({ selectedCadet }: { selectedCadet:
         },
     });
 
-    const { register, handleSubmit, reset, watch } = autoBioForm;
-    const savedAutoBio = watch();
-
+    const { register, handleSubmit, reset } = autoBioForm;
+    const [hasExistingRecord, setHasExistingRecord] = useState(false);
 
     // ---------------------------
     // FETCH AUTOBIOGRAPHY
@@ -44,15 +45,21 @@ export default function AutobiographySection({ selectedCadet }: { selectedCadet:
             const data = await getAutobiographyDetails(selectedCadet.ocId);
 
             if (data) {
+                setHasExistingRecord(true);
                 reset({
-                    general: data.general ?? "",
-                    proficiency: data.sportsProficiency ?? "",
+                    general: data.generalSelf ?? "",
+                    proficiency: data.proficiencySports ?? "",
                     work: data.achievementsNote ?? "",
                     additional: data.areasToWork ?? "",
                     date: data.filledOn ?? "",
-                    sign_oc: data.platoonCommanderName ?? "",
-                    sign_pi: "",
+                    sign_oc: selectedCadet.name ?? "",
+                    sign_pi: data.platoonCommanderName ?? "",
                 });
+                setIsEditing(false);
+            } else {
+                setHasExistingRecord(false);
+                reset();
+                setIsEditing(true);
             }
         } catch (err) {
             console.error("Error loading autobiography data:", err);
@@ -60,11 +67,9 @@ export default function AutobiographySection({ selectedCadet }: { selectedCadet:
         }
     }, [selectedCadet?.ocId, reset]);
 
-
     useEffect(() => {
         fetchAutobiography();
     }, [fetchAutobiography]);
-
 
     // ---------------------------
     // SAVE AUTOBIOGRAPHY
@@ -76,33 +81,42 @@ export default function AutobiographySection({ selectedCadet }: { selectedCadet:
         }
 
         const payload: AutoBioPayload = {
-            general: data.general,
-            sportsProficiency: data.proficiency,
+            generalSelf: data.general,
+            proficiencySports: data.proficiency,
             achievementsNote: data.work,
             areasToWork: data.additional,
             additionalInfo: data.additional,
-            filledOn:
-                typeof data.date === "string"
-                    ? data.date
-                    : new Date(data.date).toISOString().split("T")[0],
+            filledOn: typeof data.date === "string" ? data.date : new Date(data.date).toISOString().split("T")[0],
             platoonCommanderName: data.sign_oc,
         };
 
         try {
-            const response = await saveAutobiography(selectedCadet.ocId, payload);
+            let response;
 
-            if (response?.data && Object.keys(response.data).length > 0) {
-                await fetchAutobiography();
-                toast.success("Autobiography saved successfully!");
+            if (hasExistingRecord) {
+                response = await patchAutobiography(selectedCadet.ocId, payload);
             } else {
-                toast.warning("Failed to save autobiography. Please try again.");
+                response = await saveAutobiography(selectedCadet.ocId, payload);
+            }
+
+            if (response?.data) {
+                toast.success(
+                    hasExistingRecord
+                        ? "Autobiography updated successfully!"
+                        : "Autobiography created successfully!"
+                );
+
+                await fetchAutobiography();
+                setIsEditing(false);
+                setHasExistingRecord(true);
+            } else {
+                toast.warning("Failed to save autobiography.");
             }
         } catch (err) {
             console.error("Error saving autobiography:", err);
             toast.error("Unexpected error saving autobiography.");
         }
     };
-
 
     return (
         <Card className="shadow-lg rounded-2xl border border-border w-full max-w-4xl mx-auto">
@@ -113,77 +127,71 @@ export default function AutobiographySection({ selectedCadet }: { selectedCadet:
             </CardHeader>
 
             <CardContent>
-                <Tabs defaultValue="form">
-                    <TabsList className="mb-6">
-                        <TabsTrigger value="form">Fill Form</TabsTrigger>
-                        <TabsTrigger value="view">View Data</TabsTrigger>
-                    </TabsList>
+                <form onSubmit={handleSubmit(submitAutoBio)} className="space-y-6">
 
+                    {["general", "proficiency", "work", "additional"].map((field, i) => (
+                        <div key={field}>
+                            <label className="block font-semibold mb-2">
+                                {i + 1}. {field.charAt(0).toUpperCase() + field.slice(1)}
+                            </label>
+                            <Textarea
+                                {...register(field)}
+                                rows={4}
+                                disabled={!isEditing}
+                                className="w-full"
+                            />
+                        </div>
+                    ))}
 
-                    {/* ---------------- FORM TAB ---------------- */}
-                    <TabsContent value="form">
-                        <form onSubmit={handleSubmit(submitAutoBio)} className="space-y-6">
-                            {["general", "proficiency", "work", "additional"].map((field, i) => (
-                                <div key={field}>
-                                    <label className="block font-semibold mb-2">
-                                        {i + 1}. {field.charAt(0).toUpperCase() + field.slice(1)}
-                                    </label>
-                                    <Textarea {...register(field)} rows={4} className="w-full" />
-                                </div>
-                            ))}
+                    <div>
+                        <label className="block font-semibold mb-2">Date</label>
+                        <Input type="date" {...register("date")} disabled={!isEditing} />
+                    </div>
 
-                            {/* DATE */}
-                            <div>
-                                <label className="block font-semibold mb-2">Date</label>
-                                <Input type="date" {...register("date")} />
-                            </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block font-semibold mb-2">Sign of OC</label>
+                            <Input {...register("sign_oc")} disabled={!isEditing} />
+                        </div>
 
-                            {/* SIGNATURES */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block font-semibold mb-2">Sign of OC</label>
-                                    <Input {...register("sign_oc")} placeholder="Signature / Name" />
-                                </div>
+                        <div>
+                            <label className="block font-semibold mb-2">Sign of PI Cdr</label>
+                            <Input {...register("sign_pi")} disabled={!isEditing} />
+                        </div>
+                    </div>
 
-                                <div>
-                                    <label className="block font-semibold mb-2">Sign of PI Cdr</label>
-                                    <Input {...register("sign_pi")} placeholder="Signature / Name" />
-                                </div>
-                            </div>
+                    <div className="flex justify-center gap-2 mt-6">
 
-                            {/* BUTTONS */}
-                            <div className="flex justify-center gap-2 mt-6">
+                        {!isEditing ? (
+                            <Button
+                                type="button"
+                                className="w-[200px]"
+                                onClick={() => setIsEditing(true)}
+                            >
+                                Edit
+                            </Button>
+                        ) : (
+                            <>
                                 <Button
                                     variant="outline"
                                     type="button"
                                     className="w-[200px]"
-                                    onClick={() => reset()}
+                                    onClick={() => { fetchAutobiography(); setIsEditing(false); }}
                                 >
-                                    Reset
+                                    Cancel
                                 </Button>
-                                <Button type="submit" className="w-[200px]">
+
+                                <Button
+                                    type="submit"
+                                    className="w-[200px]"
+                                >
                                     Save
                                 </Button>
-                            </div>
-                        </form>
-                    </TabsContent>
+                            </>
+                        )}
 
-
-                    {/* ---------------- VIEW TAB ---------------- */}
-                    <TabsContent value="view">
-                        <div className="p-6 bg-gray-50 border rounded-lg">
-                            <h3 className="text-lg font-semibold mb-4">Saved Autobiography Data</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                                {Object.entries(savedAutoBio).map(([key, value]) => (
-                                    <p key={key}>
-                                        <strong>{key}:</strong> {value || "-"}
-                                    </p>
-                                ))}
-                            </div>
-                        </div>
-                    </TabsContent>
-
-                </Tabs>
+                    </div>
+                </form>
             </CardContent>
         </Card>
     );

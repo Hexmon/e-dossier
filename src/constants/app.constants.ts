@@ -242,3 +242,18 @@ export const motivationPrefill: sportsRow[] = [
     { activity: "Blue", string: "", maxMarks: "", obtained: "" },
     { activity: "Blazer", string: "", maxMarks: "", obtained: "" },
 ];
+
+export const catOptions = [
+    "Sports Awards (Blazer/Blue/H-Blue/Merit)",
+    "70%+ in Service Subjects",
+    "Academic Torches (G/S/B)",
+    "Debate / Public Speaking (Wg/Pl)",
+    "Discipline (Negatives)",
+    "Misc Activities (Adv, MC, TD, etc.)"
+];
+
+export const semestersCfe = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
+
+export const semestersCounselling = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
+export const warningTypes = ["Relegation", "Withdrawal"];
+export const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];

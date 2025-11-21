@@ -67,10 +67,10 @@ export default function MedicalCategorySection({
                 term: semesters[item.semester - 1] || `TERM ${item.semester}`,
                 date: item.date?.split("T")[0] || "",
                 diagnosis: item.mosAndDiagnostics || "",
-                catFrom: item.categoryFrom || "",
-                catTo: item.categoryTo || "",
-                mhFrom: item.mhAdmissionFrom || "",
-                mhTo: item.mhAdmissionTo || "",
+                catFrom: item.catFrom?.split("T")[0] || "",
+                catTo: item.catTo?.split("T")[0] || "",
+                mhFrom: item.mhFrom?.split("T")[0] || "",
+                mhTo: item.mhTo?.split("T")[0] || "",
                 absence: item.absence || "",
                 piCdrInitial: item.platoonCommanderName || "",
             }));
@@ -99,10 +99,10 @@ export default function MedicalCategorySection({
                 semester: activeTab + 1,
                 date: r.date,
                 mosAndDiagnostics: r.diagnosis || "",
-                categoryFrom: r.catFrom || "",
-                categoryTo: r.catTo || "",
-                mhAdmissionFrom: r.mhFrom || "",
-                mhAdmissionTo: r.mhTo || "",
+                catFrom: r.catFrom || "",
+                catTo: r.catTo || "",
+                mhFrom: r.mhFrom || "",
+                mhTo: r.mhTo || "",
                 absence: r.absence || "",
                 platoonCommanderName: r.piCdrInitial || "",
             }));
@@ -144,10 +144,10 @@ export default function MedicalCategorySection({
         const payload = {
             date: editForm.date,
             mosAndDiagnostics: editForm.diagnosis,
-            categoryFrom: editForm.catFrom,
-            categoryTo: editForm.catTo,
-            mhAdmissionFrom: editForm.mhFrom,
-            mhAdmissionTo: editForm.mhTo,
+            catFrom: editForm.catFrom,
+            catTo: editForm.catTo,
+            mhFrom: editForm.mhFrom,
+            mhTo: editForm.mhTo,
             absence: editForm.absence,
             platoonCommanderName: editForm.piCdrInitial,
         };
@@ -276,10 +276,13 @@ export default function MedicalCategorySection({
                                                         {isEditing ? (
                                                             <Input
                                                                 value={(editForm as any)[field] ?? ""}
-                                                                type={field === "date" ? "date" : "text"}
-                                                                onChange={(e) =>
-                                                                    handleChange(field as any, e.target.value)
+                                                                type={
+                                                                    ["date", "catFrom", "catTo", "mhFrom", "mhTo"].includes(field)
+                                                                        ? "date"
+                                                                        : "text"
                                                                 }
+                                                                className={`h-7 text-xs px-2 ${["date", "catFrom", "catTo", "mhFrom", "mhTo"].includes(field) ? "w-[90px]" : "w-full"} `}
+                                                                onChange={(e) => handleChange(field as any, e.target.value)}
                                                             />
                                                         ) : (
                                                             (row as any)[field]
@@ -364,7 +367,8 @@ export default function MedicalCategorySection({
                                                 <td key={key} className="border p-2">
                                                     <Input
                                                         {...register(`records.${index}.${key}` as const)}
-                                                        type={key === "date" ? "date" : "text"}
+                                                        type={["date", "catFrom", "catTo", "mhFrom", "mhTo"].includes(key) ? "date" : "text"}
+                                                        className={` h-7 text-xs px-2 ${["date", "catFrom", "catTo", "mhFrom", "mhTo"].includes(key) ? "w-[90px]" : "w-full"}`}
                                                     />
                                                 </td>
                                             ))}

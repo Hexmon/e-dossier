@@ -2,8 +2,8 @@ import { api } from "@/app/lib/apiClient";
 import { endpoints } from "@/constants/endpoints";
 
 export interface AutoBio {
-    general: string;
-    sportsProficiency: string;
+    generalSelf: string;
+    proficiencySports: string;
     achievementsNote?: string;
     areasToWork: string;
     additionalInfo: string;
@@ -20,8 +20,8 @@ export interface ApiResponse<T = any> {
 }
 
 export interface AutoBioPayload {
-    general: string;
-    sportsProficiency: string;
+    generalSelf: string;
+    proficiencySports: string;
     achievementsNote: string;
     areasToWork: string;
     additionalInfo: string;
@@ -62,3 +62,22 @@ export async function getAutobiographyDetails(ocId: string): Promise<AutoBio | n
         return null;
     }
 }
+
+export async function patchAutobiography(
+    ocId: string,
+    autobiography: Partial<AutoBioPayload>
+): Promise<ApiResponse> {
+    try {
+        const response = await api.patch<ApiResponse, Partial<AutoBioPayload>>(
+            endpoints.oc.autobiography(ocId),
+            autobiography
+        );
+
+        return response;
+    } catch (error: any) {
+        console.error("Error patching autobiography:", error);
+        return { ok: false, status: error?.response?.status || 500 };
+    }
+}
+
+

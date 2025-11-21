@@ -27,7 +27,7 @@ export default function MedicalInfoSection({
     const [activeTab, setActiveTab] = useState(0);
     const [savedMedInfo, setSavedMedInfo] = useState<MedInfoRow[]>([]);
     const [loading, setLoading] = useState(false);
-
+    const [detailsDisabled, setDetailsDisabled] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<MedInfoRow | null>(null);
 
@@ -69,9 +69,30 @@ export default function MedicalInfoSection({
                 overw: String(item.overwtPct ?? ""),
                 bmi: String(item.bmi ?? ""),
                 chest: String(item.chestCm ?? ""),
+                medicalHistory: item.medicalHistory ?? "",
+                medicalIssues: item.hereditaryIssues ?? "",
+                allergies: item.allergies ?? "",
             }));
 
             setSavedMedInfo(formatted);
+            if (formatted.length > 0) {
+
+                const hasDetails =
+                    formatted[0].medicalHistory ||
+                    formatted[0].medicalIssues ||
+                    formatted[0].allergies;
+
+                setDetailsDisabled(hasDetails);
+
+                reset({
+                    medInfo: [
+                        { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "" }
+                    ],
+                    medicalHistory: formatted[0].medicalHistory || "",
+                    medicalIssues: formatted[0].medicalIssues || "",
+                    allergies: formatted[0].allergies || "",
+                });
+            }
         } catch (err) {
             toast.error("Failed to load medical info.");
         } finally {
@@ -95,7 +116,7 @@ export default function MedicalInfoSection({
                 heightCm: Number(r.height),
                 ibwKg: Number(r.ibw),
                 abwKg: Number(r.abw),
-                overweightPct: Number(r.overw),
+                overwtPct: Number(r.overw),
                 bmi: Number(r.bmi),
                 chestCm: Number(r.chest),
                 medicalHistory: data.medicalHistory || "",
@@ -138,7 +159,7 @@ export default function MedicalInfoSection({
             heightCm: Number(editForm.height),
             ibwKg: Number(editForm.ibw),
             abwKg: Number(editForm.abw),
-            overweightPct: Number(editForm.overw),
+            overwtPct: Number(editForm.overw),
             bmi: Number(editForm.bmi),
             chestCm: Number(editForm.chest),
         };
@@ -400,11 +421,27 @@ export default function MedicalInfoSection({
 
                     {/* TEXT AREAS */}
                     <div className="mt-6 space-y-4">
-                        <Textarea {...register("medicalHistory")} placeholder="Medical History" rows={3} />
-                        <Textarea {...register("medicalIssues")} placeholder="Medical Issues" rows={3} />
-                        <Textarea {...register("allergies")} placeholder="Allergies" rows={3} />
-                    </div>
+                        <Textarea
+                            {...register("medicalHistory")}
+                            placeholder="Medical History"
+                            rows={3}
+                            disabled={detailsDisabled}
+                        />
 
+                        <Textarea
+                            {...register("medicalIssues")}
+                            placeholder="Medical Issues"
+                            rows={3}
+                            disabled={detailsDisabled}
+                        />
+
+                        <Textarea
+                            {...register("allergies")}
+                            placeholder="Allergies"
+                            rows={3}
+                            disabled={detailsDisabled}
+                        />
+                    </div>
                     <div className="flex justify-center mt-4">
                         <Button type="submit" className="w-64 bg-blue-600 cursor-pointer">
                             Submit Medical Info

@@ -40,13 +40,109 @@ export default function SportsGamesPage() {
         }))
     );
 
-    const { register, handleSubmit, reset } = useForm<SemesterData>({
+    const { register, handleSubmit, reset, getValues } = useForm<SemesterData>({
         defaultValues: {
             spring: springPrefill,
             autumn: autumnPrefill,
             motivation: motivationPrefill,
         },
     });
+
+    const handleSpringSubmit = async () => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+
+        const semesterNumber = activeTab + 1;
+        const ocId = selectedCadet.ocId;
+
+        const springRows = getValues("spring");
+
+        const newRows = springRows.filter((row) => !row.id);
+
+        try {
+            for (const row of newRows) {
+                await saveSportsGame(ocId, {
+                    semester: semesterNumber,
+                    term: "spring",
+                    sport: row.activity,
+                    maxMarks: Number(row.maxMarks),
+                    marksObtained: Number(row.obtained),
+                });
+            }
+
+            toast.success("Spring term saved!");
+            await loadSavedData(ocId);
+            reset({ spring: springPrefill }, { keepValues: false });
+        } catch (err) {
+            toast.error("Failed to save Spring!");
+        }
+    };
+
+    const handleAutumnSubmit = async () => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+
+        const semesterNumber = activeTab + 1;
+        const ocId = selectedCadet.ocId;
+
+        const autumnRows = getValues("autumn");
+
+        const newRows = autumnRows.filter((row) => !row.id);
+
+        try {
+            for (const row of newRows) {
+                await saveSportsGame(ocId, {
+                    semester: semesterNumber,
+                    term: "autumn",
+                    sport: row.activity,
+                    maxMarks: Number(row.maxMarks),
+                    marksObtained: Number(row.obtained),
+                });
+            }
+
+            toast.success("Autumn term saved!");
+            await loadSavedData(ocId);
+            reset({ autumn: autumnPrefill }, { keepValues: false });
+        } catch (err) {
+            toast.error("Failed to save Autumn!");
+        }
+    };
+
+    const handleMotivationSubmit = async () => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+
+        const semesterNumber = activeTab + 1;
+        const ocId = selectedCadet.ocId;
+
+        const motivationRows = getValues("motivation");
+
+        const newRows = motivationRows.filter((row) => !row.id);
+
+        try {
+            for (const row of newRows) {
+                await createMotivationAward(ocId, {
+                    semester: semesterNumber,
+                    fieldName: row.activity,
+                    motivationTitle: row.string,
+                    maxMarks: Number(row.maxMarks),
+                    marksObtained: Number(row.obtained || 0),
+                });
+            }
+
+            toast.success("Motivation awards saved!");
+            await loadSavedData(ocId);
+            reset({ motivation: motivationPrefill }, { keepValues: false });
+        } catch (err) {
+            toast.error("Failed to save Motivation awards!");
+        }
+    };
 
     const onSubmit = async (formData: SemesterData) => {
         if (!selectedCadet?.ocId) {
@@ -88,7 +184,7 @@ export default function SportsGamesPage() {
                 await createMotivationAward(ocId, {
                     semester: semesterNumber,
                     fieldName: row.activity,
-                    motivationTitle: row.string,
+                    motivationTitle: "motivation",
                     maxMarks: Number(row.maxMarks),
                     marksObtained: Number(row.obtained || 0),
                 });
@@ -288,7 +384,7 @@ export default function SportsGamesPage() {
                                 </div>
 
                                 {/* Form */}
-                                <form onSubmit={handleSubmit(onSubmit)}>
+                                <form onSubmit={handleSubmit(handleSpringSubmit)}>
                                     <SportsGamesTable
                                         title="SPRING TERM"
                                         termKey="spring"
@@ -299,6 +395,12 @@ export default function SportsGamesPage() {
                                         onRowDeleted={(id) => handleRowDeleted("spring", id)}
                                     />
 
+                                    <div className="flex justify-center mt-4">
+                                        <Button type="submit" className="bg-green-600">Save Spring</Button>
+                                    </div>
+                                </form>
+
+                                <form onSubmit={handleSubmit(handleAutumnSubmit)}>
                                     <SportsGamesTable
                                         title="AUTUMN TERM"
                                         termKey="autumn"
@@ -309,6 +411,12 @@ export default function SportsGamesPage() {
                                         onRowDeleted={(id) => handleRowDeleted("autumn", id)}
                                     />
 
+                                    <div className="flex justify-center mt-4">
+                                        <Button type="submit" className="bg-green-600">Save Autumn</Button>
+                                    </div>
+                                </form>
+
+                                <form onSubmit={handleSubmit(handleMotivationSubmit)}>
                                     <SportsGamesTable
                                         title="MOTIVATION AWARDS"
                                         termKey="motivation"
@@ -319,24 +427,8 @@ export default function SportsGamesPage() {
                                         onRowDeleted={(id) => handleRowDeleted("motivation", id)}
                                     />
 
-
-                                    <div className="flex justify-center gap-3 mt-6">
-                                        <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                                            Save All Tables
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() =>
-                                                reset({
-                                                    spring: springPrefill,
-                                                    autumn: autumnPrefill,
-                                                    motivation: motivationPrefill,
-                                                })
-                                            }
-                                        >
-                                            Reset
-                                        </Button>
+                                    <div className="flex justify-center mt-4">
+                                        <Button type="submit" className="bg-green-600">Save Motivation</Button>
                                     </div>
                                 </form>
                             </CardContent>

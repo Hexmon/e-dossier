@@ -8,7 +8,7 @@ export interface MedicalInfoPayload {
     heightCm: number;
     ibwKg: number;
     abwKg: number;
-    overweightPct: number;
+    overwtPct: number;
     bmi: number;
     chestCm: number;
     medicalHistory?: string | null;
@@ -53,7 +53,7 @@ export async function saveMedicalInfo(
                 heightCm: Number(r.heightCm),
                 ibwKg: Number(r.ibwKg),
                 abwKg: Number(r.abwKg),
-                overweightPct: Number(r.overweightPct),
+                overwtPct: Number(r.overwtPct),
                 bmi: Number(r.bmi),
                 chestCm: Number(r.chestCm),
                 medicalHistory: r.medicalHistory ?? null,

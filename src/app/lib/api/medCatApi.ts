@@ -3,12 +3,12 @@ import { endpoints } from "@/constants/endpoints";
 
 export interface MedicalCategoryPayload {
     semester: number;
-    date: string; // "YYYY-MM-DD"
+    date: string;
     mosAndDiagnostics: string;
-    categoryFrom?: string | null;
-    categoryTo?: string | null;
-    mhAdmissionFrom?: string | null;
-    mhAdmissionTo?: string | null;
+    catFrom?: string | null;
+    catTo?: string | null;
+    mhFrom?: string | null;
+    mhTo?: string | null;
     absence?: string | null;
     platoonCommanderName?: string | null;
 }
@@ -41,10 +41,10 @@ export async function saveMedicalCategory(
                 semester: Number(r.semester),
                 date: r.date ? r.date.split("T")[0] : "",
                 mosAndDiagnostics: r.mosAndDiagnostics,
-                categoryFrom: r.categoryFrom || null,
-                categoryTo: r.categoryTo || null,
-                mhAdmissionFrom: r.mhAdmissionFrom || null,
-                mhAdmissionTo: r.mhAdmissionTo || null,
+                catFrom: r.catFrom || null,
+                catTo: r.catTo || null,
+                mhFrom: r.mhFrom || null,
+                mhTo: r.mhTo || null,
                 absence: r.absence || null,
                 platoonCommanderName: r.platoonCommanderName || null,
             };

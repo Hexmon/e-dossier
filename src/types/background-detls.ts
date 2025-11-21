@@ -33,3 +33,12 @@ export interface AutoBio {
     sign_oc: string;
     sign_pi: string;
 }
+
+export interface AutoBioAPI {
+    generalSelf: string;
+    proficiencySports: string;
+    achievementsNote: string;
+    areasToWork: string;
+    filledOn: string;
+    platoonCommanderName: string;
+}
