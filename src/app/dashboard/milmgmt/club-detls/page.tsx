@@ -86,7 +86,7 @@ export default function ClubDetailsAndDrillPage() {
                 )}
                 <DossierTab
                     tabs={dossierTabs}
-                    defaultValue="wpn-trg"
+                    defaultValue="club-detls"
                     extraTabs={
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

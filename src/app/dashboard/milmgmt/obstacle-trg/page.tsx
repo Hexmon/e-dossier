@@ -20,6 +20,7 @@ import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Settings, Shield } from "lucide-react";
 import { TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 export default function ObstacleTrgPage() {
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
@@ -45,7 +46,7 @@ export default function ObstacleTrgPage() {
             records: formData.records.slice(0, obstaclePrefill.length),
         };
         setSavedData(updated);
-        alert(`Data saved for ${terms[activeTab]}!`);
+        toast.success(`Data saved for ${terms[activeTab]}!`);
     };
 
     const handleTabChange = (index: number) => {

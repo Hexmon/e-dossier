@@ -432,13 +432,6 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "bg-yellow-700"
   },
   {
-    title: "Warning Records",
-    description: "Track formal warnings and remarks",
-    icon: AlertCircle,
-    to: "/dashboard/milmgmt/warning-records",
-    color: "bg-orange-700"
-  },
-  {
     title: "Assessment",
     description: "Conduct, manage, and review assessments",
     icon: FileText,
@@ -453,12 +446,12 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "bg-orange-500"
   },
   {
-  title: "Credit for Excellence",
-  description: "Manage cadet CFE scores and evaluation records",
-  icon: FileBadge,
-  to: "/dashboard/milmgmt/credit-excellence",
-  color: "bg-violet-600"
-}
+    title: "Credit for Excellence",
+    description: "Manage cadet CFE scores and evaluation records",
+    icon: FileBadge,
+    to: "/dashboard/milmgmt/credit-excellence",
+    color: "bg-violet-600"
+  }
 
 ];
 
@@ -1235,10 +1228,25 @@ export const dossierTabs = [
     title: "Club Details",
     icon: BookMarked,
   },
-   {
+  {
     value: "counselling",
     title: "Counselling",
     icon: MessageSquare,
+  },
+  {
+    value: "hikes",
+    title: "Hike Records",
+    icon: Footprints,
+  },
+  {
+    value:"leave-record",
+    title: "Leave Records",
+    icon: Calendar,
+  },
+  {
+    value: "detention",
+    title: "Detention",
+    icon: Ban,
   },
 ];
 
@@ -1323,3 +1331,20 @@ export const getTypeColor = (type: string) => {
   };
   return colors[type] || "bg-gray-100 text-gray-800";
 };
+
+export const ratingMap: Record<number, string> = {
+    9: "OS",
+    8: "WAA",
+    7: "AA",
+    6: "JAA",
+    5: "HA",
+    4: "LA",
+    3: "JBA",
+    2: "BA",
+    1: "WBA",
+    0: "Poor",
+};
+
+export const reverseRatingMap: Record<string, number> = Object.fromEntries(
+    Object.entries(ratingMap).map(([k, v]) => [v, Number(k)])
+);

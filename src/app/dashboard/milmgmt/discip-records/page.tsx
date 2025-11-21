@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
@@ -40,6 +40,7 @@ import {
 
 import { DisciplineForm, DisciplineRow } from "@/types/dicp-records";
 import { toast } from "sonner";
+import { semesters } from "@/constants/app.constants";
 
 export default function DisciplineRecordsPage() {
     const router = useRouter();
@@ -47,7 +48,6 @@ export default function DisciplineRecordsPage() {
         (state: RootState) => state.cadet.selectedCadet
     );
 
-    const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
     const [activeTab, setActiveTab] = useState(0);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<DisciplineRow | null>(null);
@@ -63,11 +63,26 @@ export default function DisciplineRecordsPage() {
         cumulative: "",
     };
 
-    const { control, handleSubmit, register, reset } = useForm<DisciplineForm>({
+    const { control, handleSubmit, register, reset, setValue } = useForm<DisciplineForm>({
         defaultValues: {
             records: [{ ...defaultRow }],
         },
     });
+
+    const watchedRecords = useWatch({ control, name: "records" });
+
+    useEffect(() => {
+        if (!watchedRecords) return;
+
+        let total = 0;
+
+        watchedRecords.forEach((row, index) => {
+            const neg = Number(row.negativePts || 0);
+            total += neg;
+            setValue(`records.${index}.cumulative`, total.toString());
+        });
+
+    }, [JSON.stringify(watchedRecords)]);
 
     const { fields, append, remove } = useFieldArray({
         control,
@@ -438,6 +453,7 @@ export default function DisciplineRecordsPage() {
                                             <tbody>
                                                 {fields.map((field, index) => (
                                                     <tr key={field.id}>
+                                                        {/* Serial No */}
                                                         <td className="p-2 border text-center">
                                                             <Input
                                                                 value={index + 1}
@@ -445,16 +461,29 @@ export default function DisciplineRecordsPage() {
                                                                 className="text-center bg-gray-100 cursor-not-allowed"
                                                             />
                                                         </td>
+
                                                         {Object.keys(defaultRow)
-                                                            .filter(key => key !== "serialNo")
+                                                            .filter((key) => key !== "serialNo")
                                                             .map((key) => (
                                                                 <td key={key} className="p-2 border">
-                                                                    <Input
-                                                                        {...register(`records.${index}.${key}` as const)}
-                                                                        type={key.includes("date") ? "date" : "text"}
-                                                                    />
+
+                                                                    {key === "cumulative" ? (
+                                                                        <Input
+                                                                            {...register(`records.${index}.cumulative` as const)}
+                                                                            disabled
+                                                                            className="bg-gray-100 text-center cursor-not-allowed"
+                                                                        />
+                                                                    ) : (
+                                                                        <Input
+                                                                            {...register(`records.${index}.${key}` as const)}
+                                                                            type={key.includes("date") ? "date" : "text"}
+                                                                        />
+                                                                    )}
+
                                                                 </td>
                                                             ))}
+
+                                                        {/* Remove button */}
                                                         <td className="p-2 border text-center">
                                                             <Button
                                                                 type="button"

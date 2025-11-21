@@ -256,3 +256,4 @@ export const semestersCfe = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM
 
 export const semestersCounselling = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 export const warningTypes = ["Relegation", "Withdrawal"];
+export const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
