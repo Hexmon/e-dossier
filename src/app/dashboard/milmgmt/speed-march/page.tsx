@@ -13,12 +13,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TermData } from "@/types/speedMarchRunback";
-import { tablePrefill, terms } from "@/constants/app.constants";
+import { tablePrefill, termColumns, terms } from "@/constants/app.constants";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import DossierTab from "@/components/Tabs/DossierTab";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Settings, Shield } from "lucide-react";
+import { toast } from "sonner";
 
 export default function SpeedMarchPage() {
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
@@ -36,7 +37,7 @@ export default function SpeedMarchPage() {
         const updated = [...savedData];
         updated[activeTab] = { records: formData.records };
         setSavedData(updated);
-        alert(`Data saved for ${terms[activeTab]}!`);
+        toast.success(`Data saved for ${terms[activeTab]}!`);
     };
 
     const handleTabChange = (idx: number) => {
@@ -128,28 +129,17 @@ export default function SpeedMarchPage() {
                                                 <tr>
                                                     <th className="p-2 border">Test</th>
                                                     <th className="p-2 border">Timings</th>
-                                                    <th className="p-2 border">10 KM</th>
-                                                    <th className="p-2 border">Timings</th>
-                                                    <th className="p-2 border">20 KM</th>
-                                                    <th className="p-2 border">Timings</th>
-                                                    <th className="p-2 border">30 KM</th>
-                                                    <th className="p-2 border">Full Marks</th>
-                                                    <th className="p-2 border">Remarks</th>
+                                                    <th className="p-2 border">
+                                                        {activeTab === 0 ? "10 KM" : activeTab === 1 ? "20 KM" : "30 KM"}
+                                                    </th>
                                                 </tr>
                                             </thead>
-
                                             <tbody>
                                                 {savedData[activeTab].records.map((r, i) => (
                                                     <tr key={i}>
                                                         <td className="p-2 border">{r.test}</td>
-                                                        <td className="p-2 border text-center">{r.timing10Label}</td>
-                                                        <td className="p-2 border text-center">{r.distance10}</td>
-                                                        <td className="p-2 border text-center">{r.timing20Label}</td>
-                                                        <td className="p-2 border text-center">{r.distance20}</td>
-                                                        <td className="p-2 border text-center">{r.timing30Label}</td>
-                                                        <td className="p-2 border text-center">{r.distance30}</td>
-                                                        <td className="p-2 border text-center">{r.marks}</td>
-                                                        <td className="p-2 border text-center">{r.remark || "-"}</td>
+                                                        <td className="p-2 border text-center">{r[termColumns[activeTab].timing]}</td>
+                                                        <td className="p-2 border text-center">{r[termColumns[activeTab].distance]}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -165,51 +155,28 @@ export default function SpeedMarchPage() {
                                                 <tr>
                                                     <th className="p-2 border">Test</th>
                                                     <th className="p-2 border">Timings</th>
-                                                    <th className="p-2 border">10 KM</th>
-                                                    <th className="p-2 border">Timings</th>
-                                                    <th className="p-2 border">20 KM</th>
-                                                    <th className="p-2 border">Timings</th>
-                                                    <th className="p-2 border">30 KM</th>
-                                                    <th className="p-2 border">Full Marks</th>
-                                                    <th className="p-2 border">Remarks</th>
+                                                    <th className="p-2 border">
+                                                        {activeTab === 0 ? "10 KM" : activeTab === 1 ? "20 KM" : "30 KM"}
+                                                    </th>
                                                 </tr>
                                             </thead>
-
                                             <tbody>
                                                 {tablePrefill.map((row, i) => (
                                                     <tr key={i}>
                                                         <td className="p-2 border">{row.test}</td>
 
                                                         <td className="p-2 border">
-                                                            <Input {...register(`records.${i}.timing10Label`)} defaultValue={row.timing10Label} />
+                                                            <Input
+                                                                {...register(`records.${i}.${termColumns[activeTab].timing}`)}
+                                                                defaultValue={row[termColumns[activeTab].timing]}
+                                                            />
                                                         </td>
 
                                                         <td className="p-2 border">
-                                                            <Input {...register(`records.${i}.distance10`)} defaultValue={row.distance10} />
-                                                        </td>
-
-                                                        <td className="p-2 border">
-                                                            <Input {...register(`records.${i}.timing20Label`)} defaultValue={row.timing20Label} />
-                                                        </td>
-
-                                                        <td className="p-2 border">
-                                                            <Input {...register(`records.${i}.distance20`)} defaultValue={row.distance20} />
-                                                        </td>
-
-                                                        <td className="p-2 border">
-                                                            <Input {...register(`records.${i}.timing30Label`)} defaultValue={row.timing30Label} />
-                                                        </td>
-
-                                                        <td className="p-2 border">
-                                                            <Input {...register(`records.${i}.distance30`)} defaultValue={row.distance30} />
-                                                        </td>
-
-                                                        <td className="p-2 border">
-                                                            <Input {...register(`records.${i}.marks`)} defaultValue={row.marks} />
-                                                        </td>
-
-                                                        <td className="p-2 border">
-                                                            <Input {...register(`records.${i}.remark`)} placeholder="Enter remark" />
+                                                            <Input
+                                                                {...register(`records.${i}.${termColumns[activeTab].distance}`)}
+                                                                defaultValue={row[termColumns[activeTab].distance]}
+                                                            />
                                                         </td>
                                                     </tr>
                                                 ))}
