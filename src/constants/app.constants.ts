@@ -151,6 +151,14 @@ export const defaultDrillRows: DrillRow[] = [
   { semester: "VI", maxMks: 40, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
   { semester: "Total", maxMks: 90, m1: "", m2: "", a1c1: "", a2c2: "", remarks: "" },
 ];
+export const romanToNumber: Record<string, number> = {
+  I: 1,
+  II: 2,
+  III: 3,
+  IV: 4,
+  V: 5,
+  VI: 6,
+};
 
 export const terms = ["IV TERM", "V TERM", "VI TERM"];
 

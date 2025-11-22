@@ -65,6 +65,9 @@ export const endpoints = {
         speedMarch: (ocId: string) => `/api/v1/oc/${ocId}/speed-march`,
         speedMarchById: (ocId: string, recordId: string) =>
             `/api/v1/oc/${ocId}/speed-march/${recordId}`,
+        clubDetls: (ocId: string) => `/api/v1/oc/${ocId}/clubs`,
+        clubDetlsById: (ocId: string, clubDtlId: string) =>
+            `/api/v1/oc/${ocId}/clubs/${clubDtlId}`,
     },
     course: {
         all: "/api/v1/courses"
