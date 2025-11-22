@@ -361,7 +361,7 @@ export default function ObstacleTrgPage() {
                                                                     <Button size="sm" variant="ghost" onClick={() => handleEditObstacle(r)}>
                                                                         Edit
                                                                     </Button>
-                                                                    <Button className='hover:bg-red-500 hover:text-white' size="sm" variant="outline" onClick={() => handleDelete(r, i)}>
+                                                                    <Button className='hover:bg-red-500 hover:text-white' size="sm" variant="destructive" onClick={() => handleDelete(r, i)}>
                                                                         Delete
                                                                     </Button>
                                                                 </td>

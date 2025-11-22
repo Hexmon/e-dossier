@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -12,7 +12,7 @@ import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TermData } from "@/types/speedMarchRunback";
+import { TermData, Row } from "@/types/speedMarchRunback";
 import { tablePrefill, termColumns, terms } from "@/constants/app.constants";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import DossierTab from "@/components/Tabs/DossierTab";
@@ -20,9 +20,13 @@ import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Settings, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { createSpeedMarch, listSpeedMarch, updateSpeedMarch } from "@/app/lib/api/speedMarchApi";
 
 export default function SpeedMarchPage() {
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+
+    const [isSaving, setIsSaving] = useState(false);
+    const [isEditingAll, setIsEditingAll] = useState(false);
 
     const [activeTab, setActiveTab] = useState<number>(0);
     const [savedData, setSavedData] = useState<TermData[]>(
@@ -33,18 +37,102 @@ export default function SpeedMarchPage() {
         defaultValues: { records: tablePrefill },
     });
 
-    const onSubmit = (formData: TermData) => {
-        const updated = [...savedData];
-        updated[activeTab] = { records: formData.records };
-        setSavedData(updated);
-        toast.success(`Data saved for ${terms[activeTab]}!`);
+
+
+    const fetchSaved = async (ocId?: string | null) => {
+        if (!ocId) return;
+        try {
+            const res = await listSpeedMarch(ocId);
+            const items = res.items || [];
+
+            const newSaved = terms.map((_, idx) => {
+                const sem = idx + 4;
+                const rows = tablePrefill.map((pref) => {
+                    const found = (items as any[]).find((it) => Number(it.semester) === sem && it.test === pref.test);
+                    return {
+                        id: found?.id,
+                        test: pref.test,
+                        timing10Label: pref.timing10Label,
+                        distance10: sem === 4 ? (found?.timings ?? "") : pref.distance10,
+                        timing20Label: pref.timing20Label,
+                        distance20: sem === 5 ? (found?.timings ?? "") : pref.distance20,
+                        timing30Label: pref.timing30Label,
+                        distance30: sem === 6 ? (found?.timings ?? "") : pref.distance30,
+                        marks: String(found?.marks ?? pref.marks),
+                        remark: found?.remark ?? pref.remark ?? "",
+                    } as any;
+                });
+                return { records: rows } as TermData;
+            });
+
+            setSavedData(newSaved);
+            const current = newSaved[activeTab];
+            if (!current?.records?.length) return;
+
+            reset({ records: tablePrefill });
+
+        } catch (err) {
+            console.error("Failed to load speed march:", err);
+        }
     };
+
+    useEffect(() => {
+        if (!selectedCadet?.ocId) return;
+        fetchSaved(selectedCadet.ocId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedCadet?.ocId, activeTab]);
+
+    const onSubmit = async (formData: TermData) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+        const ocId = selectedCadet.ocId;
+        const semester = activeTab + 4;
+        setIsSaving(true);
+        try {
+            const existing = savedData[activeTab]?.records || [];
+            for (let i = 0; i < (formData.records || []).length; i++) {
+                const r = formData.records[i] as any;
+                const timingKey = termColumns[activeTab].distance; // measured value
+                const timingsRaw = r[timingKey];
+                const timings = timingsRaw !== undefined && timingsRaw !== null ? String(timingsRaw).trim() : "";
+                const marks = Number(tablePrefill[i].marks);
+                const remark = r.remark ? String(r.remark).trim() : undefined;
+
+                const matched = existing.find((ex) => ex.test === tablePrefill[i].test && ex.id);
+                if (matched && matched.id) {
+                    const payload: any = {};
+                    if (timings !== "") payload.timings = timings;
+                    if (!Number.isNaN(marks)) payload.marks = marks;
+                    if (remark) payload.remark = remark;
+
+                    if (Object.keys(payload).length > 0) {
+                        await updateSpeedMarch(ocId, matched.id, payload);
+                    }
+                } else {
+                    if (timings === "") continue;
+                    await createSpeedMarch(ocId, { semester, test: tablePrefill[i].test, timings, marks, remark });
+                }
+            }
+
+            await fetchSaved(ocId);
+            setIsEditingAll(false);
+            toast.success("Speed march saved");
+        } catch (err) {
+            console.error("Failed to save speed march:", err);
+            toast.error("Failed to save speed march. Try again.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+
 
     const handleTabChange = (idx: number) => {
         setActiveTab(idx);
-        const term = savedData[idx];
-        if (term.records.length) reset({ records: term.records });
-        else reset({ records: tablePrefill });
+        // Always reset the editable form to the default prefill when switching tabs
+        reset({ records: tablePrefill });
     };
 
     return (
@@ -122,7 +210,7 @@ export default function SpeedMarchPage() {
                                 </div>
 
                                 {/* Saved table */}
-                                {savedData[activeTab].records.length > 0 && (
+                                {savedData[activeTab].records.length > 0 &&  (
                                     <div className="mb-6 overflow-x-auto border rounded-lg shadow">
                                         <table className="w-full border text-sm rounded-lg overflow-hidden">
                                             <thead className="bg-gray-200">
@@ -135,17 +223,138 @@ export default function SpeedMarchPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {savedData[activeTab].records.map((r, i) => (
-                                                    <tr key={i}>
-                                                        <td className="p-2 border">{r.test}</td>
-                                                        <td className="p-2 border text-center">{r[termColumns[activeTab].timing]}</td>
-                                                        <td className="p-2 border text-center">{r[termColumns[activeTab].distance]}</td>
-                                                    </tr>
-                                                ))}
+                                                {savedData[activeTab].records.map((r, i) => {
+                                                    const timingKey = termColumns[activeTab].timing as keyof Row;
+                                                    const distanceKey = termColumns[activeTab].distance as keyof Row;
+                                                    return (
+                                                        <tr key={i}>
+                                                            <td className="p-2 border">{r.test}</td>
+                                                            <td className="p-2 border text-center">
+                                                                {isEditingAll ? (
+                                                                    <Input
+                                                                        value={(r as any)[timingKey] ?? ""}
+                                                                        onChange={(e) => {
+                                                                            const v = e.target.value;
+                                                                            setSavedData(prev => {
+                                                                                const copy = prev.map(t => ({ records: t.records.map(rr => ({ ...rr })) }));
+                                                                                if (!copy[activeTab]) return prev;
+                                                                                copy[activeTab].records[i] = { ...copy[activeTab].records[i], [timingKey]: v } as Row;
+                                                                                return copy;
+                                                                            });
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <span>{r[termColumns[activeTab].timing]}</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-2 border text-center">
+                                                                {isEditingAll ? (
+                                                                    <Input
+                                                                        value={(r as any)[distanceKey] ?? ""}
+                                                                        onChange={(e) => {
+                                                                            const v = e.target.value;
+                                                                            setSavedData(prev => {
+                                                                                const copy = prev.map(t => ({ records: t.records.map(rr => ({ ...rr })) }));
+                                                                                if (!copy[activeTab]) return prev;
+                                                                                copy[activeTab].records[i] = { ...copy[activeTab].records[i], [distanceKey]: v } as Row;
+                                                                                return copy;
+                                                                            });
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <span>{r[termColumns[activeTab].distance]}</span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
+                                        {/* Edit whole table button placed outside saved table (rendered below) */}
                                     </div>
                                 )}
+
+                                {/* Bulk edit controls (outside saved table) */}
+                                <div className="mb-4 flex justify-end gap-2">
+                                    {!isEditingAll ? (
+                                        <Button
+                                            type="button"
+                                            onClick={() => {
+                                                if (savedData[activeTab]?.records?.length) {
+                                                    setIsEditingAll(true);
+                                                }
+                                            }}
+                                        >
+                                            Edit Table
+                                        </Button>
+                                    ) : (
+                                        <>
+                                            <Button
+                                                type="button"
+                                                className="bg-green-600 hover:bg-green-700"
+                                                onClick={async () => {
+                                                    if (!selectedCadet?.ocId) {
+                                                        toast.error("No cadet selected");
+                                                        return;
+                                                    }
+                                                    setIsSaving(true);
+                                                    try {
+                                                        const ocId = selectedCadet.ocId;
+                                                        const semester = activeTab + 4;
+                                                        const rows = savedData[activeTab]?.records || [];
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            const rec = rows[i] as any;
+                                                            const timingKey = termColumns[activeTab].distance;
+                                                            const timingsRaw = rec[timingKey];
+                                                            const timings = timingsRaw !== undefined && timingsRaw !== null ? String(timingsRaw).trim() : "";
+                                                            const marks = Number(rec.marks);
+                                                            const remark = rec.remark ? String(rec.remark).trim() : undefined;
+
+                                                            if (rec.id) {
+                                                                const payload: any = {};
+                                                                if (timings !== "") payload.timings = timings;
+                                                                if (!Number.isNaN(marks)) payload.marks = marks;
+                                                                if (remark) payload.remark = remark;
+                                                                if (Object.keys(payload).length > 0) {
+                                                                    await updateSpeedMarch(ocId, rec.id, payload);
+                                                                }
+                                                            } else {
+                                                                if (timings === "") continue;
+                                                                await createSpeedMarch(ocId, { semester, test: rec.test, timings, marks, remark });
+                                                            }
+                                                        }
+
+                                                        await fetchSaved(selectedCadet.ocId);
+                                                        setIsEditingAll(false);
+                                                        toast.success("Saved table changes");
+                                                    } catch (err) {
+                                                        console.error("Failed saving edited table:", err);
+                                                        toast.error("Failed to save changes. Try again.");
+                                                    } finally {
+                                                        setIsSaving(false);
+                                                    }
+                                                }}
+                                                disabled={isSaving}
+                                            >
+                                                Save Changes
+                                            </Button>
+
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={async () => {
+                                                    if (!selectedCadet?.ocId) return;
+                                                    await fetchSaved(selectedCadet.ocId);
+                                                    setIsEditingAll(false);
+                                                }}
+                                            >
+                                                Cancel Edit
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* (bulk edit operates directly on savedData; no separate edit copy) */}
 
                                 {/* Editable Form */}
                                 <form onSubmit={handleSubmit(onSubmit)}>
@@ -169,6 +378,7 @@ export default function SpeedMarchPage() {
                                                             <Input
                                                                 {...register(`records.${i}.${termColumns[activeTab].timing}`)}
                                                                 defaultValue={row[termColumns[activeTab].timing]}
+                                                                disabled={isEditingAll}
                                                             />
                                                         </td>
 
@@ -176,6 +386,7 @@ export default function SpeedMarchPage() {
                                                             <Input
                                                                 {...register(`records.${i}.${termColumns[activeTab].distance}`)}
                                                                 defaultValue={row[termColumns[activeTab].distance]}
+                                                                disabled={isEditingAll}
                                                             />
                                                         </td>
                                                     </tr>
@@ -185,7 +396,7 @@ export default function SpeedMarchPage() {
                                     </div>
 
                                     <div className="flex justify-center gap-3 mt-6">
-                                        <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                                        <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSaving || isEditingAll}>
                                             Save
                                         </Button>
 
@@ -193,6 +404,7 @@ export default function SpeedMarchPage() {
                                             type="button"
                                             variant="outline"
                                             onClick={() => reset({ records: tablePrefill })}
+                                            disabled={isEditingAll}
                                         >
                                             Reset
                                         </Button>
