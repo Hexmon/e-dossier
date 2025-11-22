@@ -1,5 +1,6 @@
 // TYPES --------------------
 export type ClubRow = {
+    id?: string | null;
     semester: string;
     clubName: string;
     splAchievement: string;
