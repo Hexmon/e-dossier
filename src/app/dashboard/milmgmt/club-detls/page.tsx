@@ -11,27 +11,45 @@ import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { FormValues } from "@/types/club-detls";
-import { defaultClubRows, defaultDrillRows } from "@/constants/app.constants";
+
+import { ClubRow, DrillRow, FormValues } from "@/types/club-detls";
+import { defaultClubRows, defaultDrillRows, romanToNumber } from "@/constants/app.constants";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { ChevronDown, Shield } from "lucide-react";
 import DossierTab from "@/components/Tabs/DossierTab";
+import ClubForm from "@/components/club_drill/ClubForm";
+import DrillForm from "@/components/club_drill/DrillForm";
+import AchievementsForm from "@/components/club_drill/AchievementsForm";
+import { createOcClub, getOcClubs, updateOcClub } from "@/app/lib/api/clubApi";
+import { toast } from "sonner";
+import { updateClub } from "@/app/db/queries/oc";
 
 export default function ClubDetailsAndDrillPage() {
     const selectedCadet = useSelector((s: RootState) => s.cadet.selectedCadet);
-    const [savedData, setSavedData] = useState<FormValues | null>(null);
-
-
-    const { register, control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
-        defaultValues: {
-            clubRows: defaultClubRows,
-            drillRows: defaultDrillRows,
-            splAchievementsList: ["", "", "", ""],
-        },
+    const [clubSaved, setClubSaved] = useState(false);
+    const [drillSaved, setDrillSaved] = useState(false);
+    const [achSaved, setAchSaved] = useState(false);
+    const [savedData, setSavedData] = useState<FormValues>({
+        clubRows: defaultClubRows,
+        drillRows: defaultDrillRows,
+        splAchievementsList: ["", "", "", ""],
     });
+
+    const { register, control, handleSubmit, reset, watch, setValue, getValues } =
+        useForm<FormValues>({
+            defaultValues: {
+                clubRows: defaultClubRows,
+                drillRows: defaultDrillRows,
+                splAchievementsList: ["", "", "", ""],
+            },
+        });
 
     const { fields: clubFields } = useFieldArray({ control, name: "clubRows" });
     const { fields: drillFields } = useFieldArray({ control, name: "drillRows" });
@@ -39,29 +57,125 @@ export default function ClubDetailsAndDrillPage() {
     const watchedDrill = watch("drillRows");
     useEffect(() => {
         if (!watchedDrill) return;
+
         const totals = watchedDrill.slice(0, 3).reduce(
-            (acc, r) => {
-                acc.m1 += Number(r.m1 || 0);
-                acc.m2 += Number(r.m2 || 0);
-                acc.a1c1 += Number(r.a1c1 || 0);
-                acc.a2c2 += Number(r.a2c2 || 0);
-                return acc;
-            },
+            (acc, r) => ({
+                m1: acc.m1 + Number(r.m1 || 0),
+                m2: acc.m2 + Number(r.m2 || 0),
+                a1c1: acc.a1c1 + Number(r.a1c1 || 0),
+                a2c2: acc.a2c2 + Number(r.a2c2 || 0),
+            }),
             { m1: 0, m2: 0, a1c1: 0, a2c2: 0 }
         );
-        setValue("drillRows.3.m1", totals.m1 || "");
-        setValue("drillRows.3.m2", totals.m2 || "");
-        setValue("drillRows.3.a1c1", totals.a1c1 || "");
-        setValue("drillRows.3.a2c2", totals.a2c2 || "");
+
+        setValue("drillRows.3", {
+            ...watchedDrill[3],
+            ...totals,
+        });
     }, [watchedDrill, setValue]);
 
-    const onSubmit = (data: FormValues) => {
-        setSavedData(data);
+    const onSubmitClub = async () => {
+        try {
+            const values = getValues();
+            if (!selectedCadet) throw new Error("No cadet selected");
+
+            const filledRows = values.clubRows.filter(row =>
+                row.clubName?.trim() ||
+                row.splAchievement?.trim() ||
+                row.remarks?.trim()
+            );
+
+            for (const [index, row] of filledRows.entries()) {
+                const body = {
+                    semester: romanToNumber[row.semester],
+                    clubName: row.clubName?.trim() || "",
+                    specialAchievement: row.splAchievement?.trim() || "",
+                    remark: row.remarks?.trim() || "",
+                };
+                if (row.id) {
+                    await updateOcClub(selectedCadet.ocId, row.id, body);
+                } else {
+                    const created = await createOcClub(selectedCadet.ocId, body);
+                    row.id = created.id;
+
+                    setValue(`clubRows.${index}.id`, created.id);
+                }
+            }
+
+            toast.success("Club records saved successfully");
+            setSavedData(prev => ({ ...prev, clubRows: values.clubRows }));
+            setClubSaved(true);
+
+        } catch (error) {
+            console.error("Failed to save club records:", error);
+            toast.error("Failed to save club details");
+        }
     };
 
-    const onReset = () => {
-        reset();
-        setSavedData(null);
+    async function loadClubData() {
+        if (!selectedCadet?.ocId) return;
+
+        try {
+            const res = await getOcClubs(selectedCadet.ocId);
+            const clubs = res?.items ?? [];
+
+            const mapped = defaultClubRows.map(row => {
+                const apiData = clubs.find(
+                    (x: any) => x.semester === romanToNumber[row.semester]
+                );
+
+                return {
+                    id: apiData?.id || null,
+                    semester: row.semester,
+                    clubName: apiData?.clubName || "",
+                    splAchievement: apiData?.specialAchievement || "",
+                    remarks: apiData?.remark || "",
+                };
+            });
+
+            setValue("clubRows", mapped);
+            setSavedData(prev => ({ ...prev, clubRows: mapped }));
+            setClubSaved(true);
+
+        } catch (error) {
+            console.error("Failed to fetch club data:", error);
+        }
+    }
+
+    useEffect(() => {
+        loadClubData();
+    }, [selectedCadet, setValue]);
+
+
+    const onSubmitDrill = () => {
+        const values = getValues();
+        setSavedData(prev => ({ ...prev, drillRows: values.drillRows }));
+        setDrillSaved(true);
+    };
+
+    const onSubmitAchievements = () => {
+        const values = getValues();
+        setSavedData(prev => ({ ...prev, splAchievementsList: values.splAchievementsList }));
+        setAchSaved(true);
+    };
+
+    const onResetClub = () => {
+        reset({ ...getValues(), clubRows: defaultClubRows });
+    };
+
+    const onResetDrill = () => {
+        reset({ ...getValues(), drillRows: defaultDrillRows });
+    };
+
+    const onResetAll = () => {
+        reset({
+            clubRows: defaultClubRows,
+            drillRows: defaultDrillRows,
+            splAchievementsList: ["", "", "", ""],
+        });
+        setClubSaved(false);
+        setDrillSaved(false);
+        setAchSaved(false);
     };
 
     return (
@@ -70,7 +184,6 @@ export default function ClubDetailsAndDrillPage() {
             description="Maintain cadet’s club involvement and drill performance records."
         >
             <main className="flex-1 p-6">
-                {/* Breadcrumb */}
                 <BreadcrumbNav
                     paths={[
                         { label: "Dashboard", href: "/dashboard" },
@@ -84,6 +197,7 @@ export default function ClubDetailsAndDrillPage() {
                         <SelectedCadetTable selectedCadet={selectedCadet} />
                     </div>
                 )}
+
                 <DossierTab
                     tabs={dossierTabs}
                     defaultValue="club-detls"
@@ -109,10 +223,7 @@ export default function ClubDetailsAndDrillPage() {
                         </DropdownMenu>
                     }
                 >
-
                     <TabsContent value="club-detls" className="space-y-6">
-
-                        {/* CARD */}
                         <Card className="max-w-5xl mx-auto p-6 shadow-lg rounded-2xl bg-white">
                             <CardHeader>
                                 <CardTitle className="text-center text-primary font-bold">
@@ -121,182 +232,119 @@ export default function ClubDetailsAndDrillPage() {
                             </CardHeader>
 
                             <CardContent>
-                                {!savedData ? (
-                                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                                        {/* Club Table */}
-                                        <div className="overflow-x-auto border rounded-lg shadow-sm">
-                                            <table className="w-full border-collapse text-sm">
-                                                <thead className="bg-blue-50 text-gray-700">
-                                                    <tr>
-                                                        <th className="border p-2">Semester</th>
-                                                        <th className="border p-2">Name of Club</th>
-                                                        <th className="border p-2">Spl Achievement</th>
-                                                        <th className="border p-2">Remarks by Club OIC</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {clubFields.map((f, idx) => (
-                                                        <tr key={f.id}>
-                                                            <td className="border p-2">
-                                                                <Input {...register(`clubRows.${idx}.semester`)} />
-                                                            </td>
-                                                            <td className="border p-2">
-                                                                <Input {...register(`clubRows.${idx}.clubName`)} />
-                                                            </td>
-                                                            <td className="border p-2">
-                                                                <Input {...register(`clubRows.${idx}.splAchievement`)} />
-                                                            </td>
-                                                            <td className="border p-2">
-                                                                <Input {...register(`clubRows.${idx}.remarks`)} />
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        {/* Drill Table */}
-                                        <div className="text-center font-semibold underline text-primary text-lg mt-6">
-                                            ASSESSMENT : DRILL
-                                        </div>
-                                        <div className="overflow-x-auto border rounded-lg shadow-sm">
-                                            <table className="w-full border-collapse text-sm">
-                                                <thead className="bg-blue-50 text-gray-700">
-                                                    <tr>
-                                                        <th className="border p-2">Semester</th>
-                                                        <th className="border p-2">Max Mks</th>
-                                                        <th className="border p-2">M1</th>
-                                                        <th className="border p-2">M2</th>
-                                                        <th className="border p-2">A1/C1</th>
-                                                        <th className="border p-2">A2/C2</th>
-                                                        <th className="border p-2">Remarks</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {drillFields.map((f, idx) => (
-                                                        <tr key={f.id}>
-                                                            <td className="border p-2">
-                                                                <Input {...register(`drillRows.${idx}.semester`)} />
-                                                            </td>
-                                                            <td className="border p-2">
-                                                                <Input type="number" {...register(`drillRows.${idx}.maxMks`)} />
-                                                            </td>
-                                                            <td className="border p-2">
-                                                                <Input type="number" {...register(`drillRows.${idx}.m1`)} />
-                                                            </td>
-                                                            <td className="border p-2">
-                                                                <Input type="number" {...register(`drillRows.${idx}.m2`)} />
-                                                            </td>
-                                                            <td className="border p-2">
-                                                                <Input type="number" {...register(`drillRows.${idx}.a1c1`)} />
-                                                            </td>
-                                                            <td className="border p-2">
-                                                                <Input type="number" {...register(`drillRows.${idx}.a2c2`)} />
-                                                            </td>
-                                                            <td className="border p-2">
-                                                                <Input {...register(`drillRows.${idx}.remarks`)} />
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        {/* Special Achievements */}
-                                        <p className="mt-4 font-bold text-gray-700">
-                                            <u>Spl Achievement</u> (Cane Orderly, Samman Toli, Nishan Toli, Best in Drill)
-                                        </p>
-                                        <div className="mt-3 space-y-3">
-                                            {Array.from({ length: 4 }).map((_, i) => (
-                                                <div key={i} className="flex items-center space-x-3">
-                                                    <div className="w-6 text-sm">{i + 1}.</div>
-                                                    <Input {...register(`splAchievementsList.${i}`)} />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div className="flex justify-center gap-4 mt-6">
-                                            <Button type="submit" className="bg-blue-600 text-white">
-                                                Save
-                                            </Button>
-                                            <Button type="button" variant="outline" onClick={onReset}>
-                                                Reset
-                                            </Button>
-                                        </div>
-                                    </form>
+                                {/* CLUB SECTION */}
+                                {!clubSaved ? (
+                                    <ClubForm
+                                        register={register}
+                                        fields={clubFields}
+                                        getValues={getValues}
+                                        onSubmit={handleSubmit(onSubmitClub)}
+                                        onReset={onResetClub}
+                                    />
                                 ) : (
-                                    <div className="space-y-8">
-                                        <h2 className="text-lg font-bold text-center text-primary">Saved Records</h2>
+                                    <div>
+                                        <h2 className="font-bold text-primary mb-2">Saved Club Records</h2>
 
-                                        {/* View Club Table */}
-                                        <div className="overflow-x-auto border rounded-lg shadow-sm">
-                                            <table className="w-full border text-sm">
-                                                <thead className="bg-blue-50">
-                                                    <tr>
-                                                        <th className="border p-2">Semester</th>
-                                                        <th className="border p-2">Club</th>
-                                                        <th className="border p-2">Spl Achievement</th>
-                                                        <th className="border p-2">Remarks</th>
+                                        <table className="w-full border text-sm">
+                                            <thead className="bg-blue-50">
+                                                <tr>
+                                                    <th className="border p-2">Semester</th>
+                                                    <th className="border p-2">Club</th>
+                                                    <th className="border p-2">Achievement</th>
+                                                    <th className="border p-2">Remarks</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {savedData.clubRows.map((row, i) => (
+                                                    <tr key={i}>
+                                                        <td className="border p-2">{row.semester}</td>
+                                                        <td className="border p-2">{row.clubName}</td>
+                                                        <td className="border p-2">{row.splAchievement}</td>
+                                                        <td className="border p-2">{row.remarks}</td>
                                                     </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {savedData.clubRows.map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="border p-2">{row.semester}</td>
-                                                            <td className="border p-2">{row.clubName}</td>
-                                                            <td className="border p-2">{row.splAchievement}</td>
-                                                            <td className="border p-2">{row.remarks}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div className="flex justify-center items-center">
+                                            <Button onClick={() => setClubSaved(false)} className="mt-4 bg-blue-600 text-white">
+                                                Edit Club
+                                            </Button>
                                         </div>
+                                    </div>
+                                )}
 
-                                        {/* View Drill Table */}
-                                        <div className="overflow-x-auto border rounded-lg shadow-sm">
-                                            <table className="w-full border text-sm">
-                                                <thead className="bg-blue-50">
-                                                    <tr>
-                                                        <th className="border p-2">Semester</th>
-                                                        <th className="border p-2">Max Mks</th>
-                                                        <th className="border p-2">M1</th>
-                                                        <th className="border p-2">M2</th>
-                                                        <th className="border p-2">A1/C1</th>
-                                                        <th className="border p-2">A2/C2</th>
-                                                        <th className="border p-2">Remarks</th>
+                                {/* DRILL SECTION */}
+                                {!drillSaved ? (
+                                    <DrillForm
+                                        register={register}
+                                        fields={drillFields}
+                                        onSubmit={handleSubmit(onSubmitDrill)}
+                                        onReset={onResetDrill}
+                                    />
+                                ) : (
+                                    <div>
+                                        <h2 className="font-bold text-primary mb-2">Saved Drill Records</h2>
+
+                                        <table className="w-full border text-sm">
+                                            <thead className="bg-blue-50">
+                                                <tr>
+                                                    <th className="border p-2">Semester</th>
+                                                    <th className="border p-2">Max Mks</th>
+                                                    <th className="border p-2">M1</th>
+                                                    <th className="border p-2">M2</th>
+                                                    <th className="border p-2">A1/C1</th>
+                                                    <th className="border p-2">A2/C2</th>
+                                                    <th className="border p-2">Remarks</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {savedData.drillRows.map((row, i) => (
+                                                    <tr key={i}>
+                                                        <td className="border p-2">{row.semester}</td>
+                                                        <td className="border p-2">{row.maxMks}</td>
+                                                        <td className="border p-2">{row.m1}</td>
+                                                        <td className="border p-2">{row.m2}</td>
+                                                        <td className="border p-2">{row.a1c1}</td>
+                                                        <td className="border p-2">{row.a2c2}</td>
+                                                        <td className="border p-2">{row.remarks}</td>
                                                     </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {savedData.drillRows.map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="border p-2">{row.semester}</td>
-                                                            <td className="border p-2">{row.maxMks}</td>
-                                                            <td className="border p-2">{row.m1}</td>
-                                                            <td className="border p-2">{row.m2}</td>
-                                                            <td className="border p-2">{row.a1c1}</td>
-                                                            <td className="border p-2">{row.a2c2}</td>
-                                                            <td className="border p-2">{row.remarks}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div className="flex justify-center items-center">
+                                            <Button onClick={() => setDrillSaved(false)} className="mt-4 bg-blue-600 text-white">
+                                                Edit Drill
+                                            </Button>
                                         </div>
+                                    </div>
+                                )}
 
-                                        {/* Spl Achievement List */}
-                                        <div>
-                                            <h3 className="font-semibold underline text-primary mb-2">Special Achievements</h3>
-                                            <ul className="list-disc pl-6 space-y-1">
-                                                {savedData.splAchievementsList
-                                                    .filter((s) => s)
-                                                    .map((s, i) => (
-                                                        <li key={i}>{s}</li>
-                                                    ))}
-                                            </ul>
-                                        </div>
+                                {/* ACHIEVEMENTS SECTION */}
+                                {!achSaved ? (
+                                    <AchievementsForm
+                                        register={register}
+                                        onSubmit={handleSubmit(onSubmitAchievements)}
+                                        onReset={() =>
+                                            reset({
+                                                ...getValues(),
+                                                splAchievementsList: ["", "", "", ""],
+                                            })
+                                        }
+                                    />
+                                ) : (
+                                    <div>
+                                        <h2 className="font-bold text-primary mb-2">Saved Achievements</h2>
+                                        <ul className="list-disc pl-6 space-y-1">
+                                            {savedData.splAchievementsList
+                                                .filter((s) => s)
+                                                .map((s, i) => (
+                                                    <li key={i}>{s}</li>
+                                                ))}
+                                        </ul>
 
-                                        <div className="flex justify-center mt-4">
-                                            <Button onClick={() => setSavedData(null)} className="bg-blue-600 text-white">
-                                                Edit Again
+                                        <div className="flex justify-center items-center">
+                                            <Button onClick={() => setAchSaved(false)} className="mt-4 bg-blue-600 text-white">
+                                                Edit Achievements
                                             </Button>
                                         </div>
                                     </div>
