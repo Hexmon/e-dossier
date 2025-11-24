@@ -47,19 +47,21 @@ export default function SpeedMarchPage() {
 
             const newSaved = terms.map((_, idx) => {
                 const sem = idx + 4;
-                const rows = tablePrefill.map((pref) => {
-                    const found = (items as any[]).find((it) => Number(it.semester) === sem && it.test === pref.test);
+                const rows = tablePrefill.map((pref, i) => {
+                    const { test, timing30Label, distance10, distance20, distance30, marks, remark } = pref || {};
+                    const found = (items as any[]).find((it) => Number(it.semester) === sem && it.test === test);
+                    const id = found?.id || `${test}-${i}`;
                     return {
-                        id: found?.id,
-                        test: pref.test,
-                        timing10Label: pref.timing10Label,
-                        distance10: sem === 4 ? (found?.timings ?? "") : pref.distance10,
-                        timing20Label: pref.timing20Label,
-                        distance20: sem === 5 ? (found?.timings ?? "") : pref.distance20,
-                        timing30Label: pref.timing30Label,
-                        distance30: sem === 6 ? (found?.timings ?? "") : pref.distance30,
-                        marks: String(found?.marks ?? pref.marks),
-                        remark: found?.remark ?? pref.remark ?? "",
+                        id: id,
+                        test: test,
+                        timing10Label: timing30Label,
+                        distance10: sem === 4 ? (found?.timings ?? "") : distance10,
+                        timing20Label: timing30Label,
+                        distance20: sem === 5 ? (found?.timings ?? "") : distance20,
+                        timing30Label: timing30Label,
+                        distance30: sem === 6 ? (found?.timings ?? "") : distance30,
+                        marks: String(found?.marks ?? marks),
+                        remark: found?.remark ?? remark ?? "",
                     } as any;
                 });
                 return { records: rows } as TermData;
@@ -72,7 +74,7 @@ export default function SpeedMarchPage() {
             reset({ records: tablePrefill });
 
         } catch (err) {
-            console.error("Failed to load speed march:", err);
+            toast.error("Failed to load speed march records");
         }
     };
 
@@ -120,7 +122,6 @@ export default function SpeedMarchPage() {
             setIsEditingAll(false);
             toast.success("Speed march saved");
         } catch (err) {
-            console.error("Failed to save speed march:", err);
             toast.error("Failed to save speed march. Try again.");
         } finally {
             setIsSaving(false);
@@ -171,14 +172,18 @@ export default function SpeedMarchPage() {
                                 </TabsTrigger>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
-                                {militaryTrainingCards.map((card) => (
-                                    <DropdownMenuItem key={card.to} asChild>
-                                        <a href={card.to} className="flex items-center gap-2">
-                                            <card.icon className={`h-4 w-4 ${card.color}`} />
-                                            <span>{card.title}</span>
-                                        </a>
-                                    </DropdownMenuItem>
-                                ))}
+                                {militaryTrainingCards.map((card) => {
+                                    const { to } = card;
+                                    if (!to) return null;
+                                    return (
+                                        <DropdownMenuItem key={to} asChild>
+                                            <a href={to} className="flex items-center gap-2">
+                                                <card.icon className={`h-4 w-4 ${card.color}`} />
+                                                <span>{card.title}</span>
+                                            </a>
+                                        </DropdownMenuItem>
+                                    );
+                                })}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     }
@@ -210,7 +215,7 @@ export default function SpeedMarchPage() {
                                 </div>
 
                                 {/* Saved table */}
-                                {savedData[activeTab].records.length > 0 &&  (
+                                {savedData[activeTab].records.length > 0 && (
                                     <div className="mb-6 overflow-x-auto border rounded-lg shadow">
                                         <table className="w-full border text-sm rounded-lg overflow-hidden">
                                             <thead className="bg-gray-200">
@@ -224,11 +229,12 @@ export default function SpeedMarchPage() {
                                             </thead>
                                             <tbody>
                                                 {savedData[activeTab].records.map((r, i) => {
+                                                    const { id, test } = r;
                                                     const timingKey = termColumns[activeTab].timing as keyof Row;
                                                     const distanceKey = termColumns[activeTab].distance as keyof Row;
                                                     return (
-                                                        <tr key={i}>
-                                                            <td className="p-2 border">{r.test}</td>
+                                                        <tr key={id || `${test}-${i}`}>
+                                                            <td className="p-2 border">{test}</td>
                                                             <td className="p-2 border text-center">
                                                                 {isEditingAll ? (
                                                                     <Input
@@ -328,7 +334,6 @@ export default function SpeedMarchPage() {
                                                         setIsEditingAll(false);
                                                         toast.success("Saved table changes");
                                                     } catch (err) {
-                                                        console.error("Failed saving edited table:", err);
                                                         toast.error("Failed to save changes. Try again.");
                                                     } finally {
                                                         setIsSaving(false);
@@ -369,29 +374,35 @@ export default function SpeedMarchPage() {
                                                     </th>
                                                 </tr>
                                             </thead>
+
                                             <tbody>
-                                                {tablePrefill.map((row, i) => (
-                                                    <tr key={i}>
-                                                        <td className="p-2 border">{row.test}</td>
+                                                {(tablePrefill || []).map((row, i) => {
+                                                    const { id, test } = row;
 
-                                                        <td className="p-2 border">
-                                                            <Input
-                                                                {...register(`records.${i}.${termColumns[activeTab].timing}`)}
-                                                                defaultValue={row[termColumns[activeTab].timing]}
-                                                                disabled={isEditingAll}
-                                                            />
-                                                        </td>
+                                                    return (
+                                                        <tr key={id || `${test}-${i}`}>
+                                                            <td className="p-2 border">{test}</td>
 
-                                                        <td className="p-2 border">
-                                                            <Input
-                                                                {...register(`records.${i}.${termColumns[activeTab].distance}`)}
-                                                                defaultValue={row[termColumns[activeTab].distance]}
-                                                                disabled={isEditingAll}
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                            <td className="p-2 border">
+                                                                <Input
+                                                                    {...register(`records.${i}.${termColumns[activeTab].timing}`)}
+                                                                    defaultValue={row[termColumns[activeTab].timing]}
+                                                                    disabled={isEditingAll}
+                                                                />
+                                                            </td>
+
+                                                            <td className="p-2 border">
+                                                                <Input
+                                                                    {...register(`records.${i}.${termColumns[activeTab].distance}`)}
+                                                                    defaultValue={row[termColumns[activeTab].distance]}
+                                                                    disabled={isEditingAll}
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
+
                                         </table>
                                     </div>
 

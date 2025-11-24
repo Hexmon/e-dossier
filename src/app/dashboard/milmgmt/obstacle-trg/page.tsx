@@ -87,8 +87,7 @@ export default function ObstacleTrgPage() {
                 reset({ records: obstaclePrefill });
             }
         } catch (err) {
-            console.error("Failed to fetch obstacle training:", err);
-            // Don't surface noisy errors on initial load, but log for debugging
+            toast.error("Failed to load obstacle training records");
         }
     };
 
@@ -101,12 +100,16 @@ export default function ObstacleTrgPage() {
         const ocId = selectedCadet.ocId;
         const semester = activeTab + 4; // terms are IV/V/VI
 
-        const payloads = formData.records.slice(0, obstaclePrefill.length).map((r) => ({
-            semester,
-            obstacle: r.obstacle,
-            marksObtained: Number(r.obtained) || 0,
-            remark: r.remark || undefined,
-        }));
+        const payloads = formData.records.slice(0, obstaclePrefill.length).map((r) => {
+            const { id, obstacle, obtained, remark } = r;
+            return {
+                id: id,
+                semester: semester,
+                obstacle: obstacle,
+                marksObtained: Number(obtained) || 0,
+                remark: remark || undefined,
+            }
+        });
 
         setIsSaving(true);
 
@@ -120,7 +123,6 @@ export default function ObstacleTrgPage() {
 
             toast.success(`Data saved for ${terms[activeTab]}!`);
         } catch (err) {
-            console.error("Failed to save obstacle training:", err);
             toast.error("Failed to save obstacle training. Try again.");
         } finally {
             setIsSaving(false);
@@ -148,25 +150,27 @@ export default function ObstacleTrgPage() {
     }, [selectedCadet?.ocId, activeTab]);
 
     const handleDelete = (r: Row, i: number): void => {
+        const { id } = r;
         if (!selectedCadet?.ocId) {
             toast.error("No cadet selected");
             return;
         }
-        
-        setPendingDelete({ id: r.id, index: i, row: r });
+
+        setPendingDelete({ id: id, index: i, row: r });
         setDeleteDialogOpen(true);
     };
 
     const handleEditObstacle = (record: Row) => {
+        const { id } = record;
         if (!selectedCadet?.ocId) {
             toast.error("No cadet selected");
             return;
         }
 
-        setEditingId(record.id);
+        setEditingId(id);
         setEditForm({ ...record });
     };
-    
+
 
     const confirmDelete = async () => {
         if (!selectedCadet?.ocId || !pendingDelete) {
@@ -188,7 +192,6 @@ export default function ObstacleTrgPage() {
             });
             toast.success("Record deleted");
         } catch (err) {
-            console.error("Failed to delete obstacle training:", err);
             toast.error("Failed to delete record");
         } finally {
             setDeleteDialogOpen(false);
@@ -196,7 +199,7 @@ export default function ObstacleTrgPage() {
         }
     };
 
-    
+
     const handleCancelObstacleEdit = () => {
         setEditingId(null);
         setEditForm(null);
@@ -206,15 +209,16 @@ export default function ObstacleTrgPage() {
     };
 
     const handleSaveObstacle = async () => {
-        if (!selectedCadet?.ocId || !editingId || !editForm) {
+        const { obtained, remark } = editForm || {};
+        if (!selectedCadet?.ocId || !editingId || !editForm || !obtained || !remark) {
             toast.error("Invalid operation");
             return;
         }
 
         try {
             await updateObstacleTraining(selectedCadet.ocId, editingId, {
-                marksObtained: Number(editForm.obtained),
-                remark: editForm.remark || undefined,
+                marksObtained: Number(obtained),
+                remark: remark,
             });
 
             setSavedData(prev => {
@@ -268,14 +272,18 @@ export default function ObstacleTrgPage() {
                                 </TabsTrigger>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
-                                {militaryTrainingCards.map((card) => (
-                                    <DropdownMenuItem key={card.to} asChild>
-                                        <a href={card.to} className="flex items-center gap-2">
-                                            <card.icon className={`h-4 w-4 ${card.color}`} />
-                                            <span>{card.title}</span>
-                                        </a>
-                                    </DropdownMenuItem>
-                                ))}
+                                {militaryTrainingCards.map((card) => {
+                                    const { to } = card;
+                                    if (!to) return null;
+                                    return (
+                                        <DropdownMenuItem key={to} asChild>
+                                            <a href={to} className="flex items-center gap-2">
+                                                <card.icon className={`h-4 w-4 ${card.color}`} />
+                                                <span>{card.title}</span>
+                                            </a>
+                                        </DropdownMenuItem>
+                                    );
+                                })}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     }
@@ -291,19 +299,19 @@ export default function ObstacleTrgPage() {
                             <CardContent>
                                 {/* Term Tabs */}
                                 <div className="flex justify-center mb-6 space-x-2">
-                                    {terms.map((term, idx) => (
-                                        <button
-                                            key={term}
-                                            type="button"
-                                            onClick={() => handleTabChange(idx)}
-                                            className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
-                                                ? "bg-blue-600 text-white"
-                                                : "bg-gray-200 text-gray-700"
-                                                }`}
-                                        >
-                                            {term}
-                                        </button>
-                                    ))}
+                                    {terms.map((term, idx) => {
+                                        return(
+                                            <button
+                                                key={term}
+                                                onClick={() => handleTabChange(idx)}
+                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
+                                                    ? "bg-blue-600 text-white"
+                                                    : "bg-gray-200 text-gray-700"
+                                                    }`}
+                                            >
+                                                {term}
+                                            </button>
+                                    )})}
                                 </div>
 
                                 {/* Saved Table */}
@@ -324,51 +332,67 @@ export default function ObstacleTrgPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {savedData[activeTab].records.map((r, i) => (
-                                                    <tr key={r.id ?? i}>
-                                                        <td className="p-2 border text-center">{i + 1}</td>
-                                                        <td className="p-2 border">{r.obstacle}</td>
-                                                        {editingId && r.id === editingId ? (
-                                                            <>
-                                                                <td className="p-2 border text-center">
-                                                                    <Input
-                                                                        value={editForm?.obtained ?? ''}
-                                                                        onChange={(e) => handleChangeObstacle('obtained', e.target.value)}
-                                                                        type="number"
-                                                                    />
-                                                                </td>
-                                                                <td className="p-2 border text-center">
-                                                                    <Input
-                                                                        value={editForm?.remark ?? ''}
-                                                                        onChange={(e) => handleChangeObstacle('remark', e.target.value)}
-                                                                        type="text"
-                                                                    />
-                                                                </td>
-                                                                <td className="p-2 border text-center space-x-2">
-                                                                    <Button size="sm" className="bg-green-600 text-white" onClick={handleSaveObstacle} disabled={isSaving}>
-                                                                        {isSaving ? 'Saving...' : 'Save'}
-                                                                    </Button>
-                                                                    <Button size="sm" variant="outline" onClick={handleCancelObstacleEdit} disabled={isSaving}>
-                                                                        Cancel
-                                                                    </Button>
-                                                                </td>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <td className="p-2 border text-center">{r.obtained || "-"}</td>
-                                                                <td className="p-2 border text-center">{r.remark || "-"}</td>
-                                                                <td className="p-2 border text-center space-x-2">
-                                                                    <Button size="sm" variant="ghost" onClick={() => handleEditObstacle(r)}>
-                                                                        Edit
-                                                                    </Button>
-                                                                    <Button className='hover:bg-red-500 hover:text-white' size="sm" variant="destructive" onClick={() => handleDelete(r, i)}>
-                                                                        Delete
-                                                                    </Button>
-                                                                </td>
-                                                            </>
-                                                        )}
-                                                    </tr>
-                                                ))}
+                                                {savedData[activeTab].records.map((r, i) => {
+                                                    const { id, obstacle } = r;
+                                                    return (
+
+                                                        <tr key={id || `${obstacle}-${i}`}>
+                                                            <td className="p-2 border text-center">{i + 1}</td>
+                                                            <td className="p-2 border">{obstacle}</td>
+
+                                                            {editingId && id === editingId ? (
+                                                                <>
+                                                                    <td className="p-2 border text-center">
+                                                                        <Input
+                                                                            value={editForm?.obtained ?? ''}
+                                                                            onChange={(e) => handleChangeObstacle('obtained', e.target.value)}
+                                                                            type="number"
+                                                                        />
+                                                                    </td>
+
+                                                                    <td className="p-2 border text-center">
+                                                                        <Input
+                                                                            value={editForm?.remark ?? ''}
+                                                                            onChange={(e) => handleChangeObstacle('remark', e.target.value)}
+                                                                            type="text"
+                                                                        />
+                                                                    </td>
+
+                                                                    <td className="p-2 border text-center space-x-2">
+                                                                        <Button size="sm" className="bg-green-600 text-white" onClick={handleSaveObstacle} disabled={isSaving}>
+                                                                            {isSaving ? 'Saving...' : 'Save'}
+                                                                        </Button>
+
+                                                                        <Button size="sm" variant="outline" onClick={handleCancelObstacleEdit} disabled={isSaving}>
+                                                                            Cancel
+                                                                        </Button>
+                                                                    </td>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <td className="p-2 border text-center">{r.obtained || "-"}</td>
+                                                                    <td className="p-2 border text-center">{r.remark || "-"}</td>
+
+                                                                    <td className="p-2 border text-center space-x-2">
+                                                                        <Button size="sm" variant="ghost" onClick={() => handleEditObstacle(r)}>
+                                                                            Edit
+                                                                        </Button>
+
+                                                                        <Button
+                                                                            className="hover:bg-red-500 hover:text-white"
+                                                                            size="sm"
+                                                                            variant="destructive"
+                                                                            onClick={() => handleDelete(r, i)}
+                                                                        >
+                                                                            Delete
+                                                                        </Button>
+                                                                    </td>
+                                                                </>
+                                                            )}
+                                                        </tr>
+                                                    )
+                                                })}
+
 
                                                 {/* Total Row */}
                                                 <tr className="font-semibold bg-gray-50">
@@ -397,27 +421,29 @@ export default function ObstacleTrgPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {obstaclePrefill.map((row, i) => (
-                                                    <tr key={i}>
-                                                        <td className="p-2 border text-center">{i + 1}</td>
-                                                        <td className="p-2 border">{row.obstacle}</td>
-                                                        <td className="p-2 border">
-                                                            <Input
-                                                                {...register(`records.${i}.obtained`)}
-                                                                type="number"
-                                                                placeholder="Marks"
-                                                            />
-                                                        </td>
-                                                        <td className="p-2 border">
-                                                            <Input
-                                                                {...register(`records.${i}.remark`)}
-                                                                type="text"
-                                                                placeholder="Remark"
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                ))}
-
+                                                {obstaclePrefill.map((row, i) => {
+                                                    const { id, obstacle } = row;
+                                                    return (
+                                                        <tr key={id || `${obstacle}-${i}`}>
+                                                            <td className="p-2 border text-center">{i + 1}</td>
+                                                            <td className="p-2 border">{obstacle}</td>
+                                                            <td className="p-2 border">
+                                                                <Input
+                                                                    {...register(`records.${i}.obtained`)}
+                                                                    type="number"
+                                                                    placeholder="Marks"
+                                                                />
+                                                            </td>
+                                                            <td className="p-2 border">
+                                                                <Input
+                                                                    {...register(`records.${i}.remark`)}
+                                                                    type="text"
+                                                                    placeholder="Remark"
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
                                                 {/* Total row */}
                                                 <tr className="font-semibold bg-gray-50">
                                                     <td className="p-2 border text-center">{obstaclePrefill.length + 1}</td>
