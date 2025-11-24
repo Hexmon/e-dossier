@@ -1,4 +1,5 @@
 export interface Row {
+    id?: string;
     test: string;
     timing10Label: string;
     distance10: string;
