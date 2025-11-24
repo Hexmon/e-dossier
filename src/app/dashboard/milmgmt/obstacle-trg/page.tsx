@@ -75,10 +75,24 @@ export default function ObstacleTrgPage() {
             });
 
             setSavedData(newSaved);
-            // If current term has data, reset form to it, else prefill
-            const current = newSaved[activeTab];
+            // For the current term, populate the fixed prefill rows with the latest saved values per obstacle
+            const current = newSaved[activeTab] ?? { records: [] };
             if (current && current.records.length) {
-                reset({ records: current.records });
+                const latestByObstacle = new Map<string, any>();
+                // keep the last occurrence for each obstacle
+                for (const r of current.records) {
+                    if (r && r.obstacle) latestByObstacle.set(r.obstacle, r);
+                }
+
+                const merged = obstaclePrefill.map((p) => {
+                    const { id,obstacle, obtained, remark } = p;
+                    const found = latestByObstacle.get(obstacle);
+                    return found
+                        ? { id: found.id, obstacle: found.obstacle ?? obstacle, obtained: found.obtained ?? obtained, remark: found.remark ?? remark }
+                        : p;
+                });
+
+                reset({ records: merged });
             } else {
                 reset({ records: obstaclePrefill });
             }
@@ -129,11 +143,23 @@ export default function ObstacleTrgPage() {
     const handleTabChange = (index: number) => {
         setActiveTab(index);
 
-        const term = savedData[index];
-        if (term.records.length) {
-            reset({
-                records: term.records,
+        const term = savedData[index] ?? { records: [] };
+        if (term.records && term.records.length) {
+            const { records } = term;
+            const latestByObstacle = new Map<string, any>();
+            for (const r of records) {
+                if (r && r.obstacle) latestByObstacle.set(r.obstacle, r);
+            }
+
+            const merged = obstaclePrefill.map((p) => {
+                const { id, obstacle, obtained, remark } = p;
+                const found = latestByObstacle.get(obstacle);
+                return found
+                    ? { ...p, id: found.id, obtained: found.obtained ?? obtained, remark: found.remark ?? remark }
+                    : p;
             });
+
+            reset({ records: merged });
         } else {
             reset({ records: obstaclePrefill });
         }
@@ -285,10 +311,10 @@ export default function ObstacleTrgPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {obstaclePrefill.map((row, i) => {
+                                                {(watchedRecords ?? obstaclePrefill).map((row, i) => {
                                                     const { id, obstacle } = row;
                                                     return (
-                                                        <tr key={id || `${obstacle}-${i}`}>
+                                                        <tr key={id || `${obstacle || 'row'}-${i}`}>
                                                             <td className="p-2 border text-center">{i + 1}</td>
                                                             <td className="p-2 border">{obstacle}</td>
                                                             <td className="p-2 border">
@@ -312,7 +338,7 @@ export default function ObstacleTrgPage() {
                                                 })}
                                                 {/* Total row */}
                                                 <tr className="font-semibold bg-gray-50">
-                                                    <td className="p-2 border text-center">{obstaclePrefill.length + 1}</td>
+                                                    <td className="p-2 border text-center">{(watchedRecords?.length ?? obstaclePrefill.length) + 1}</td>
                                                     <td className="p-2 border">Total</td>
                                                     <td className="p-2 border text-center">{totalMarks}</td>
                                                     <td className="p-2 border text-center">—</td>
@@ -325,7 +351,7 @@ export default function ObstacleTrgPage() {
                                         {isEditingAll ? (
                                             <>
                                                 <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
-                                                    {isSaving ? "Saving..." : "Save"}
+                                                    {isSaving ? "Saving..." : "Save "}
                                                 </Button>
 
                                                 <Button
@@ -339,11 +365,11 @@ export default function ObstacleTrgPage() {
                                                     }}
                                                     disabled={isSaving}
                                                 >
-                                                    Cancel Edit
+                                                    Cancel 
                                                 </Button>
 
                                                 <Button type="button" variant="outline" onClick={() => reset({ records: obstaclePrefill })} disabled={isSaving}>
-                                                    Reset
+                                                    Reset 
                                                 </Button>
                                             </>
                                         ) : null}
@@ -358,7 +384,7 @@ export default function ObstacleTrgPage() {
                                             onClick={() => setIsEditingAll(true)}
                                             disabled={isSaving}
                                         >
-                                            Edit Table
+                                            Edit 
                                         </Button>
                                     )}
                                 </div>

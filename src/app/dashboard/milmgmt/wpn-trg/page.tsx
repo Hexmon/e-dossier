@@ -29,13 +29,12 @@ import {
 
 import {
     createWeaponTraining,
-    deleteWeaponTraining,
     listWeaponTraining,
     updateWeaponTraining,
     WeaponTrainingRecord,
     WeaponTrainingUpdate,
 } from "@/app/lib/api/weaponTrainingApi";
-import WeaponTrainingTable, { TableRow } from "@/components/wpnTrg/WeaponTrainingTable";
+import WeaponTrainingTable from "@/components/wpnTrg/WeaponTrainingTable";
 
 /**
  * Page-level types for form
@@ -109,26 +108,19 @@ export default function WpnTrgPage() {
     }, [ocId, reset]);
 
 
-    const handleUpdateWeaponTraining = async (recordId: string, payload: WeaponTrainingUpdate) => {
-        try {
-            await updateWeaponTraining(ocId!, recordId, payload);
-            setWeaponTrainingRecords(prev => prev.map(r => (r.id === recordId ? { ...r, ...payload } : r)));
-            toast.success("Weapon Training updated");
-        } catch (err) {
-            toast.error("Failed to update weapon training");
-            console.error(err);
-        }
-    };
 
-    const handleDeleteWeaponTraining = async (recordId: string) => {
-        try {
-            await deleteWeaponTraining(ocId!, recordId);
-            setWeaponTrainingRecords(prev => prev.filter(r => r.id !== recordId));
-            toast.success("Weapon Training deleted");
-        } catch (err) {
-            toast.error("Failed to delete");
-            console.error(err);
-        }
+    // helper to build merged records for a semester: merge latest saved values into the fixed prefill
+    const buildMergedRecordsForSemester = (semesterNumber: number) => {
+        const savedForTerm = weaponTrainingRecords.filter((r) => r.semester === semesterNumber);
+        return termPrefill.map((pref) => {
+            const { subject, maxMarks } = pref;
+            const latest = [...savedForTerm].slice().reverse().find((s) => s.subject === subject);
+            return {
+                subject,
+                maxMarks,
+                obtained: latest ? String(latest.marksObtained ?? "") : "",
+            };
+        });
     };
 
     const watchedRecords = useWatch({ control, name: "records" });
@@ -137,20 +129,24 @@ export default function WpnTrgPage() {
         [watchedRecords]
     );
     const apiTermNumber = activeTab + 3;
-    const savedRowsForTerm: TableRow[] = useMemo(() => {
-        return weaponTrainingRecords
-            .filter((r) => r.semester === apiTermNumber)
-            .map((r) => ({
-                id: r.id,
-                subject: r.subject,
-                maxMarks: r.maxMarks,
-                obtained: String(r.marksObtained ?? ""),
-            }));
-    }, [weaponTrainingRecords, apiTermNumber]);
 
-    const savedAchievementsForTerm = achievementRecords;
+    const [isEditingRecords, setIsEditingRecords] = useState(false);
+    const [isSavingRecords, setIsSavingRecords] = useState(false);
 
     const onSubmitWeaponTraining = async (formData: TermData) => {
+        // Validate obtained <= maxMarks for all rows before saving
+        const rowsForValidation = formData.records.slice(0, 3) ?? [];
+        for (let i = 0; i < rowsForValidation.length; i++) {
+            const r = rowsForValidation[i] as any;
+            const max = Number(r?.maxMarks ?? 0);
+            const obtained = Number(r?.obtained ?? 0);
+            if (!Number.isNaN(max) && !Number.isNaN(obtained) && obtained > max) {
+                toast.error(`Obtained marks for "${r?.subject || `row ${i + 1}`}" cannot exceed Max Marks (${max})`);
+                return;
+            }
+        }
+
+        setIsSavingRecords(true);
         try {
             const payloads = formData.records.slice(0, 3).map((r) => ({
                 subject: r.subject,
@@ -158,20 +154,43 @@ export default function WpnTrgPage() {
                 maxMarks: r.maxMarks,
                 marksObtained: Number(r.obtained) || 0,
             }));
-
+            
             for (const p of payloads) {
-                await createWeaponTraining(ocId!, p);
+                const { subject, maxMarks, marksObtained } = p;
+                const existing = weaponTrainingRecords.find((r) => r.semester === apiTermNumber && r.subject === subject);
+                if (existing && existing.id) {
+                    await updateWeaponTraining(ocId!, existing.id, {
+                        subject,
+                        maxMarks,
+                        marksObtained,
+                    });
+                } else {
+                    await createWeaponTraining(ocId!, { ...p });
+                }
             }
 
             toast.success("Weapon Training saved!");
 
             const refreshed = await listWeaponTraining(ocId!);
             setWeaponTrainingRecords(refreshed.items || []);
+            setIsEditingRecords(false);
 
         } catch (err) {
             toast.error("Failed to save weapon training");
+        } finally {
+            setIsSavingRecords(false);
         }
     };
+
+    // whenever the fetched records or the active tab change, reset the form to the merged prefill
+    useEffect(() => {
+        if (!weaponTrainingRecords) return;
+        const merged = buildMergedRecordsForSemester(apiTermNumber);
+        // preserve achievements mapping already computed
+        const filled = (achievementRecords || []).map(a => a.achievement);
+        const padded = filled.concat(Array(achievementPrefill.length - filled.length).fill(""));
+        reset({ records: merged, achievements: padded });
+    }, [weaponTrainingRecords, activeTab, reset, achievementRecords]);
 
 
     const onSubmitAchievements = async (formData: TermData) => {
@@ -202,20 +221,6 @@ export default function WpnTrgPage() {
         } catch (err) {
             toast.error("Failed to update achievements");
         }
-    };
-
-    const handleEditSave = async (updated: { id: string; subject: string; maxMarks: number; marksObtained: number }) => {
-        if (!ocId) return;
-        await handleUpdateWeaponTraining(updated.id, {
-            subject: updated.subject,
-            maxMarks: updated.maxMarks,
-            marksObtained: updated.marksObtained,
-        });
-    };
-
-    const handleDelete = async (id: string) => {
-        if (!ocId) return;
-        await handleDeleteWeaponTraining(id);
     };
 
     return (
@@ -251,14 +256,18 @@ export default function WpnTrgPage() {
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                                {militaryTrainingCards.map((card) => (
-                                    <DropdownMenuItem key={card.to} asChild>
-                                        <a href={card.to} className="flex items-center gap-2">
-                                            <card.icon className={`h-4 w-4 ${card.color}`} />
-                                            {card.title}
-                                        </a>
-                                    </DropdownMenuItem>
-                                ))}
+                                {militaryTrainingCards.map((card) => {
+                                    const { to, color, title } = card;
+                                    if (!to) return null;
+                                    return (
+                                        <DropdownMenuItem key={to} asChild>
+                                            <a href={to} className="flex items-center gap-2">
+                                                <card.icon className={`h-4 w-4 ${color}`} />
+                                                <span>{title}</span>
+                                            </a>
+                                        </DropdownMenuItem>
+                                    );
+                                })}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     }
@@ -278,8 +287,12 @@ export default function WpnTrgPage() {
                                             type="button"
                                             onClick={() => {
                                                 setActiveTab(index);
-                                                // reset inputs when switching term
-                                                reset({ records: termPrefill, achievements: achievementPrefill });
+                                                // reset inputs when switching term to merged backend values
+                                                const sem = index + 3;
+                                                const merged = buildMergedRecordsForSemester(sem);
+                                                const filled = (achievementRecords || []).map(a => a.achievement);
+                                                const padded = filled.concat(Array(achievementPrefill.length - filled.length).fill(""));
+                                                reset({ records: merged, achievements: padded });
                                             }}
                                             className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
                                         >
@@ -290,24 +303,59 @@ export default function WpnTrgPage() {
 
                                 {/* Weapon Training Table */}
 
+
                                 <form onSubmit={handleSubmit(onSubmitWeaponTraining)}>
                                     <WeaponTrainingTable
-                                        title={`Weapon Training - ${terms[activeTab]}`}
-                                        savedRows={savedRowsForTerm}
+                                        title={`Weapon Training - ${terms[activeTab]} Term`}
                                         inputRows={termPrefill}
                                         register={register}
                                         total={totalMarks}
-                                        onDelete={handleDelete}
-                                        onEditSave={handleEditSave}
+                                        disabled={!isEditingRecords}
                                     />
 
                                     <div className="flex justify-center gap-3 mt-6">
-                                        <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                                            Save Weapon Training
-                                        </Button>
+                                        {isEditingRecords ? (
+                                            <>
+                                                <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSavingRecords}>
+                                                    {isSavingRecords ? "Saving..." : "Save Training"}
+                                                </Button>
+
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={async () => {
+                                                        // revert form to server merged state and exit edit mode
+                                                        const merged = buildMergedRecordsForSemester(apiTermNumber);
+                                                        const filled = (achievementRecords || []).map(a => a.achievement);
+                                                        const padded = filled.concat(Array(achievementPrefill.length - filled.length).fill(""));
+                                                        reset({ records: merged, achievements: padded });
+                                                        setIsEditingRecords(false);
+                                                    }}
+                                                    disabled={isSavingRecords}
+                                                >
+                                                    Cancel
+                                                </Button>
+
+                                                <Button type="button" variant="outline" onClick={() => reset({ records: termPrefill })} disabled={isSavingRecords}>
+                                                    Reset
+                                                </Button>
+                                            </>
+                                        ) : null}
                                     </div>
                                 </form>
 
+                                {/* Edit Table button is intentionally outside the form to avoid accidental submits */}
+                                <div className="flex justify-center mb-4">
+                                    {!isEditingRecords && (
+                                        <Button
+                                            type="button"
+                                            onClick={() => setIsEditingRecords(true)}
+                                            disabled={isSavingRecords}
+                                        >
+                                            Edit
+                                        </Button>
+                                    )}
+                                </div>
 
                                 {/* Firing Standard */}
                                 <div className="mt-6 border rounded-lg p-4 bg-gray-50 flex justify-center">
@@ -366,7 +414,6 @@ export default function WpnTrgPage() {
                                         </Button>
                                     </div>
                                 </form>
-
                             </CardContent>
                         </Card>
                     </TabsContent>
