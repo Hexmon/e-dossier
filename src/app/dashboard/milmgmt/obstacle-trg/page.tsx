@@ -21,17 +21,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChevronDown, Settings, Shield } from "lucide-react";
 import { TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { createObstacleTraining, listObstacleTraining, updateObstacleTraining, deleteObstacleTraining } from "@/app/lib/api/obstacleTrainingApi";
-import {
-    AlertDialog,
-    AlertDialogContent,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogAction,
-    AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
+import { createObstacleTraining, listObstacleTraining, updateObstacleTraining } from "@/app/lib/api/obstacleTrainingApi";
+
 
 
 export default function ObstacleTrgPage() {
@@ -40,16 +31,13 @@ export default function ObstacleTrgPage() {
     const [editingId, setEditingId] = useState<string | null | undefined>(null);
     const [editForm, setEditForm] = useState<Row | null>(null);
 
-    // Delete dialog state
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [pendingDelete, setPendingDelete] = useState<{ id?: string | null; index: number; row: Row } | null>(null);
-
 
     const [activeTab, setActiveTab] = useState<number>(0);
     const [savedData, setSavedData] = useState<TermData[]>(
         terms.map(() => ({ records: [] }))
     );
     const [isSaving, setIsSaving] = useState(false);
+    const [isEditingAll, setIsEditingAll] = useState(false);
 
     const { register, handleSubmit, reset, control } = useForm<TermData>({
         defaultValues: { records: obstaclePrefill },
@@ -73,8 +61,16 @@ export default function ObstacleTrgPage() {
             const newSaved = terms.map((_, idx) => {
                 const sem = idx + 4; // IV -> 4, V -> 5, VI -> 6
                 const rows = items
-                    .filter((it: any) => Number(it.semester) === sem)
-                    .map((it: any) => ({ id: it.id, obstacle: it.obstacle, obtained: String(it.marksObtained ?? ""), remark: it.remark ?? "" }));
+                    .filter((it) => Number(it.semester) === sem)
+                    .map((it) => {
+                        const { id, obstacle, marksObtained, remark } = it;
+                        return {
+                            id: id,
+                            obstacle: obstacle,
+                            obtained: String(marksObtained ?? ""),
+                            remark: remark ?? "",
+                        };
+                    });
                 return { records: rows } as TermData;
             });
 
@@ -108,7 +104,7 @@ export default function ObstacleTrgPage() {
                 obstacle: obstacle,
                 marksObtained: Number(obtained) || 0,
                 remark: remark || undefined,
-            }
+            };
         });
 
         setIsSaving(true);
@@ -120,6 +116,7 @@ export default function ObstacleTrgPage() {
 
             // Refresh from server to keep client and server in sync
             await fetchSaved(ocId);
+            setIsEditingAll(false);
 
             toast.success(`Data saved for ${terms[activeTab]}!`);
         } catch (err) {
@@ -146,19 +143,7 @@ export default function ObstacleTrgPage() {
         // Fetch saved rows when cadet or activeTab changes
         if (!selectedCadet?.ocId) return;
         fetchSaved(selectedCadet.ocId);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCadet?.ocId, activeTab]);
-
-    const handleDelete = (r: Row, i: number): void => {
-        const { id } = r;
-        if (!selectedCadet?.ocId) {
-            toast.error("No cadet selected");
-            return;
-        }
-
-        setPendingDelete({ id: id, index: i, row: r });
-        setDeleteDialogOpen(true);
-    };
 
     const handleEditObstacle = (record: Row) => {
         const { id } = record;
@@ -169,34 +154,6 @@ export default function ObstacleTrgPage() {
 
         setEditingId(id);
         setEditForm({ ...record });
-    };
-
-
-    const confirmDelete = async () => {
-        if (!selectedCadet?.ocId || !pendingDelete) {
-            setDeleteDialogOpen(false);
-            setPendingDelete(null);
-            return;
-        }
-
-        const { id, index } = pendingDelete;
-
-        try {
-            if (id) {
-                await deleteObstacleTraining(selectedCadet.ocId, id);
-            }
-            setSavedData(prev => {
-                const updated = [...prev];
-                updated[activeTab].records = updated[activeTab].records.filter((_, idx) => idx !== index);
-                return updated;
-            });
-            toast.success("Record deleted");
-        } catch (err) {
-            toast.error("Failed to delete record");
-        } finally {
-            setDeleteDialogOpen(false);
-            setPendingDelete(null);
-        }
     };
 
 
@@ -273,13 +230,13 @@ export default function ObstacleTrgPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
                                 {militaryTrainingCards.map((card) => {
-                                    const { to } = card;
+                                    const { to,color,title } = card;
                                     if (!to) return null;
                                     return (
                                         <DropdownMenuItem key={to} asChild>
                                             <a href={to} className="flex items-center gap-2">
-                                                <card.icon className={`h-4 w-4 ${card.color}`} />
-                                                <span>{card.title}</span>
+                                                <card.icon className={`h-4 w-4 ${color}`} />
+                                                <span>{title}</span>
                                             </a>
                                         </DropdownMenuItem>
                                     );
@@ -300,7 +257,7 @@ export default function ObstacleTrgPage() {
                                 {/* Term Tabs */}
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {terms.map((term, idx) => {
-                                        return(
+                                        return (
                                             <button
                                                 key={term}
                                                 onClick={() => handleTabChange(idx)}
@@ -311,101 +268,8 @@ export default function ObstacleTrgPage() {
                                             >
                                                 {term}
                                             </button>
-                                    )})}
-                                </div>
-
-                                {/* Saved Table */}
-                                <div className="mb-6">
-                                    {savedData[activeTab].records.length === 0 ? (
-                                        <p className="text-center text-gray-500 border rounded-lg p-4">
-                                            No data submitted yet for this term.
-                                        </p>
-                                    ) : (
-                                        <table className="w-full border text-sm rounded-lg overflow-hidden">
-                                            <thead className="bg-gray-200">
-                                                <tr>
-                                                    <th className="p-2 border">No</th>
-                                                    <th className="p-2 border">Obstacle</th>
-                                                    <th className="p-2 border">Obtained</th>
-                                                    <th className="p-2 border">Remarks</th>
-                                                    <th className="p-2 border">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {savedData[activeTab].records.map((r, i) => {
-                                                    const { id, obstacle } = r;
-                                                    return (
-
-                                                        <tr key={id || `${obstacle}-${i}`}>
-                                                            <td className="p-2 border text-center">{i + 1}</td>
-                                                            <td className="p-2 border">{obstacle}</td>
-
-                                                            {editingId && id === editingId ? (
-                                                                <>
-                                                                    <td className="p-2 border text-center">
-                                                                        <Input
-                                                                            value={editForm?.obtained ?? ''}
-                                                                            onChange={(e) => handleChangeObstacle('obtained', e.target.value)}
-                                                                            type="number"
-                                                                        />
-                                                                    </td>
-
-                                                                    <td className="p-2 border text-center">
-                                                                        <Input
-                                                                            value={editForm?.remark ?? ''}
-                                                                            onChange={(e) => handleChangeObstacle('remark', e.target.value)}
-                                                                            type="text"
-                                                                        />
-                                                                    </td>
-
-                                                                    <td className="p-2 border text-center space-x-2">
-                                                                        <Button size="sm" className="bg-green-600 text-white" onClick={handleSaveObstacle} disabled={isSaving}>
-                                                                            {isSaving ? 'Saving...' : 'Save'}
-                                                                        </Button>
-
-                                                                        <Button size="sm" variant="outline" onClick={handleCancelObstacleEdit} disabled={isSaving}>
-                                                                            Cancel
-                                                                        </Button>
-                                                                    </td>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <td className="p-2 border text-center">{r.obtained || "-"}</td>
-                                                                    <td className="p-2 border text-center">{r.remark || "-"}</td>
-
-                                                                    <td className="p-2 border text-center space-x-2">
-                                                                        <Button size="sm" variant="ghost" onClick={() => handleEditObstacle(r)}>
-                                                                            Edit
-                                                                        </Button>
-
-                                                                        <Button
-                                                                            className="hover:bg-red-500 hover:text-white"
-                                                                            size="sm"
-                                                                            variant="destructive"
-                                                                            onClick={() => handleDelete(r, i)}
-                                                                        >
-                                                                            Delete
-                                                                        </Button>
-                                                                    </td>
-                                                                </>
-                                                            )}
-                                                        </tr>
-                                                    )
-                                                })}
-
-
-                                                {/* Total Row */}
-                                                <tr className="font-semibold bg-gray-50">
-                                                    <td className="p-2 border text-center">{obstaclePrefill.length + 1}</td>
-                                                    <td className="p-2 border">Total</td>
-                                                    <td className="p-2 border text-center">
-                                                        {totalMarks}
-                                                    </td>
-                                                    <td className="p-2 border text-center">—</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    )}
+                                        );
+                                    })}
                                 </div>
 
                                 {/* Form */}
@@ -432,6 +296,7 @@ export default function ObstacleTrgPage() {
                                                                     {...register(`records.${i}.obtained`)}
                                                                     type="number"
                                                                     placeholder="Marks"
+                                                                    disabled={!isEditingAll}
                                                                 />
                                                             </td>
                                                             <td className="p-2 border">
@@ -439,10 +304,11 @@ export default function ObstacleTrgPage() {
                                                                     {...register(`records.${i}.remark`)}
                                                                     type="text"
                                                                     placeholder="Remark"
+                                                                    disabled={!isEditingAll}
                                                                 />
                                                             </td>
                                                         </tr>
-                                                    )
+                                                    );
                                                 })}
                                                 {/* Total row */}
                                                 <tr className="font-semibold bg-gray-50">
@@ -456,14 +322,46 @@ export default function ObstacleTrgPage() {
                                     </div>
 
                                     <div className="flex justify-center gap-3 mt-6">
-                                        <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
-                                            {isSaving ? "Saving..." : "Save"}
-                                        </Button>
-                                        <Button type="button" variant="outline" onClick={() => reset({ records: obstaclePrefill })}>
-                                            Reset
-                                        </Button>
+                                        {isEditingAll ? (
+                                            <>
+                                                <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
+                                                    {isSaving ? "Saving..." : "Save"}
+                                                </Button>
+
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={async () => {
+                                                        // revert form to server state and exit edit mode
+                                                        if (!selectedCadet?.ocId) return;
+                                                        await fetchSaved(selectedCadet.ocId);
+                                                        setIsEditingAll(false);
+                                                    }}
+                                                    disabled={isSaving}
+                                                >
+                                                    Cancel Edit
+                                                </Button>
+
+                                                <Button type="button" variant="outline" onClick={() => reset({ records: obstaclePrefill })} disabled={isSaving}>
+                                                    Reset
+                                                </Button>
+                                            </>
+                                        ) : null}
                                     </div>
                                 </form>
+
+                                {/* Edit Table button is intentionally outside the form to avoid accidental submits */}
+                                <div className="flex justify-center mb-4">
+                                    {!isEditingAll && (
+                                        <Button
+                                            type="button"
+                                            onClick={() => setIsEditingAll(true)}
+                                            disabled={isSaving}
+                                        >
+                                            Edit Table
+                                        </Button>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -474,25 +372,6 @@ export default function ObstacleTrgPage() {
                         </div>
                     </TabsContent>
                 </DossierTab>
-                {/* Delete confirmation dialog */}
-                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Delete obstacle record?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This will remove the selected obstacle record. This action cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel onClick={() => { setDeleteDialogOpen(false); setPendingDelete(null); }}>
-                                Cancel
-                            </AlertDialogCancel>
-                            <AlertDialogAction onClick={confirmDelete}>
-                                Delete
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
             </main>
         </DashboardLayout >
     );
