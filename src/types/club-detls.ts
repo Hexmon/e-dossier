@@ -8,6 +8,7 @@ export type ClubRow = {
 };
 
 export type DrillRow = {
+    id?: string;
     semester: string;
     maxMks: number | "";
     m1: number | "";
@@ -17,8 +18,13 @@ export type DrillRow = {
     remarks: string;
 };
 
+export type AchievementRow = {
+    id?: string | null;
+    achievement: string;
+};
+
 export type FormValues = {
     clubRows: ClubRow[];
     drillRows: DrillRow[];
-    splAchievementsList: string[];
+    achievements: AchievementRow[];
 };
