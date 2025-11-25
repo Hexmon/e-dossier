@@ -84,7 +84,6 @@ export async function saveSportsGame(
     ocId: string,
     payload: SportsGamePayload
 ) {
-    console.log("spring, autmn", payload)
     return api.post(endpoints.oc.sportsAndGames(ocId), payload);
 }
 
