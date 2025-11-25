@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
@@ -30,6 +30,8 @@ import AchievementsForm from "@/components/club_drill/AchievementsForm";
 import { createOcClub, getOcClubs, updateOcClub } from "@/app/lib/api/clubApi";
 import { toast } from "sonner";
 import { updateClub } from "@/app/db/queries/oc";
+import { createOcDrill, listOcDrill, updateOcDrill } from "@/app/lib/api/drillApi";
+import { createOcAchievement, deleteOcAchievement, listOcAchievements, updateOcAchievement } from "@/app/lib/api/achievementApi";
 
 export default function ClubDetailsAndDrillPage() {
     const selectedCadet = useSelector((s: RootState) => s.cadet.selectedCadet);
@@ -39,40 +41,63 @@ export default function ClubDetailsAndDrillPage() {
     const [savedData, setSavedData] = useState<FormValues>({
         clubRows: defaultClubRows,
         drillRows: defaultDrillRows,
-        splAchievementsList: ["", "", "", ""],
+        achievements: [{ id: null, achievement: "" }],
     });
 
-    const { register, control, handleSubmit, reset, watch, setValue, getValues } =
+    const { register, control, handleSubmit, reset, watch, setValue, getValues, trigger } =
         useForm<FormValues>({
             defaultValues: {
                 clubRows: defaultClubRows,
                 drillRows: defaultDrillRows,
-                splAchievementsList: ["", "", "", ""],
+                achievements: [{ id: null, achievement: "" }],
             },
         });
 
     const { fields: clubFields } = useFieldArray({ control, name: "clubRows" });
     const { fields: drillFields } = useFieldArray({ control, name: "drillRows" });
+    const { fields: achievementFields, append: addAchievement, remove: removeAchievement, } = useFieldArray({ control, name: "achievements", });
 
-    const watchedDrill = watch("drillRows");
+    const watchedDrill = useWatch({ control, name: "drillRows" });
+    const totals = watchedDrill?.slice(0, 3).reduce(
+        (acc, row) => ({
+            maxMks: acc.maxMks + Number(row.maxMks || 0),
+            m1: acc.m1 + Number(row.m1 || 0),
+            m2: acc.m2 + Number(row.m2 || 0),
+            a1c1: acc.a1c1 + Number(row.a1c1 || 0),
+            a2c2: acc.a2c2 + Number(row.a2c2 || 0),
+        }),
+        { maxMks: 0, m1: 0, m2: 0, a1c1: 0, a2c2: 0 }
+    );
+
     useEffect(() => {
-        if (!watchedDrill) return;
+        if (!watchedDrill || watchedDrill.length < 4) return;
 
-        const totals = watchedDrill.slice(0, 3).reduce(
-            (acc, r) => ({
-                m1: acc.m1 + Number(r.m1 || 0),
-                m2: acc.m2 + Number(r.m2 || 0),
-                a1c1: acc.a1c1 + Number(r.a1c1 || 0),
-                a2c2: acc.a2c2 + Number(r.a2c2 || 0),
-            }),
-            { m1: 0, m2: 0, a1c1: 0, a2c2: 0 }
-        );
+        const current = watchedDrill[3];
+
+        const shouldUpdate =
+            current.m1 !== totals.m1 ||
+            current.m2 !== totals.m2 ||
+            current.a1c1 !== totals.a1c1 ||
+            current.a2c2 !== totals.a2c2 ||
+            current.maxMks !== totals.maxMks;
+
+        if (!shouldUpdate) return;
 
         setValue("drillRows.3", {
-            ...watchedDrill[3],
-            ...totals,
+            ...current,
+            maxMks: totals.maxMks,
+            m1: totals.m1,
+            m2: totals.m2,
+            a1c1: totals.a1c1,
+            a2c2: totals.a2c2,
         });
-    }, [watchedDrill, setValue]);
+    }, [watchedDrill]);
+
+    const toNumberOrEmpty = (v: any): number | "" => {
+        if (v === null || v === undefined || v === "") return "";
+        const num = Number(v);
+        return isNaN(num) ? "" : num;
+    };
 
     const onSubmitClub = async () => {
         try {
@@ -146,18 +171,169 @@ export default function ClubDetailsAndDrillPage() {
         loadClubData();
     }, [selectedCadet, setValue]);
 
+    const onSubmitDrill = async () => {
+        try {
+            const values = getValues();
+            if (!selectedCadet) throw new Error("No cadet selected");
+            const drillRows = [...values.drillRows];
+            drillRows[3] = { ...drillRows[3], ...totals };
+            const rowsToSave = drillRows.slice(0, 3);
 
-    const onSubmitDrill = () => {
-        const values = getValues();
-        setSavedData(prev => ({ ...prev, drillRows: values.drillRows }));
-        setDrillSaved(true);
+            for (const [index, row] of rowsToSave.entries()) {
+                const body = {
+                    semester: romanToNumber[row.semester],
+                    maxMarks: Number(row.maxMks),
+                    m1Marks: Number(row.m1),
+                    m2Marks: Number(row.m2),
+                    a1c1Marks: Number(row.a1c1),
+                    a2c2Marks: Number(row.a2c2),
+                    remark: row.remarks?.trim() || "",
+                };
+
+                if (row.id) {
+                    await updateOcDrill(selectedCadet.ocId, row.id, body);
+                } else {
+                    const created = await createOcDrill(selectedCadet.ocId, body);
+                    row.id = created.id;
+                    setValue(`drillRows.${index}.id`, created.id);
+                }
+            }
+
+            toast.success("Drill records saved successfully");
+
+            setSavedData(prev => ({
+                ...prev,
+                drillRows: drillRows
+            }));
+            setDrillSaved(true);
+
+        } catch (error) {
+            console.error("Failed to save drill records:", error);
+            toast.error("Failed to save drill details");
+        }
     };
 
-    const onSubmitAchievements = () => {
-        const values = getValues();
-        setSavedData(prev => ({ ...prev, splAchievementsList: values.splAchievementsList }));
-        setAchSaved(true);
+    async function loadDrillData() {
+        if (!selectedCadet?.ocId) return;
+
+        try {
+            const res = await listOcDrill(selectedCadet.ocId, 50, 0);
+            const items = res?.items ?? [];
+
+            let mapped: DrillRow[] = defaultDrillRows.map(row => {
+                const apiRow = items.find(
+                    x => x.semester === romanToNumber[row.semester]
+                );
+
+                return {
+                    id: apiRow?.id || null,
+                    semester: row.semester,
+                    maxMks: apiRow ? toNumberOrEmpty(apiRow.maxMarks) : "",
+                    m1: apiRow ? toNumberOrEmpty(apiRow.m1Marks) : "",
+                    m2: apiRow ? toNumberOrEmpty(apiRow.m2Marks) : "",
+                    a1c1: apiRow ? toNumberOrEmpty(apiRow.a1c1Marks) : "",
+                    a2c2: apiRow ? toNumberOrEmpty(apiRow.a2c2Marks) : "",
+                    remarks: apiRow?.remark ?? "",
+                };
+            });
+
+            const backendTotals = mapped.slice(0, 3).reduce(
+                (acc, row) => ({
+                    maxMks: acc.maxMks + Number(row.maxMks || 0),
+                    m1: acc.m1 + Number(row.m1 || 0),
+                    m2: acc.m2 + Number(row.m2 || 0),
+                    a1c1: acc.a1c1 + Number(row.a1c1 || 0),
+                    a2c2: acc.a2c2 + Number(row.a2c2 || 0),
+                }),
+                { maxMks: 0, m1: 0, m2: 0, a1c1: 0, a2c2: 0 }
+            );
+
+            mapped[3] = {
+                ...mapped[3],
+                maxMks: backendTotals.maxMks,
+                m1: backendTotals.m1,
+                m2: backendTotals.m2,
+                a1c1: backendTotals.a1c1,
+                a2c2: backendTotals.a2c2,
+            };
+            setValue("drillRows", mapped);
+            setTimeout(() => trigger("drillRows"), 0);
+            setSavedData(prev => ({ ...prev, drillRows: mapped }));
+            setDrillSaved(true);
+
+        } catch (err) {
+            console.error("Failed to fetch drill data:", err);
+        }
+    }
+
+    useEffect(() => {
+        loadDrillData();
+    }, [selectedCadet, setValue]);
+
+    const onSubmitAchievements = async () => {
+        try {
+            if (!selectedCadet) throw new Error("No cadet selected");
+
+            const values = getValues();
+            const rows = values.achievements;
+
+            for (const [i, row] of rows.entries()) {
+                const trimmed = row.achievement.trim();
+
+                if (!trimmed) {
+                    if (row.id) await deleteOcAchievement(selectedCadet.ocId, row.id);
+                    continue;
+                }
+
+                if (row.id) {
+                    await updateOcAchievement(selectedCadet.ocId, row.id, { achievement: trimmed });
+                } else {
+                    const created = await createOcAchievement(selectedCadet.ocId, { achievement: trimmed });
+                    setValue(`achievements.${i}.id`, created.id);
+                }
+            }
+
+            toast.success("Achievements updated");
+
+            setSavedData(prev => ({
+                ...prev,
+                achievements: rows
+            }));
+
+            setAchSaved(true);
+
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to save achievements");
+        }
     };
+
+    async function loadAchievements() {
+        if (!selectedCadet?.ocId) return;
+
+        try {
+            const res = await listOcAchievements(selectedCadet.ocId);
+            const items = res.items ?? [];
+
+            const mapped = items.map(a => ({
+                id: a.id,
+                achievement: a.achievement || ""
+            }));
+            setValue("achievements", mapped.length ? mapped : [{ id: null, achievement: "" }]);
+            setSavedData(prev => ({
+                ...prev,
+                achievements: mapped
+            }));
+
+            setAchSaved(true);
+
+        } catch (error) {
+            console.error("Failed to fetch achievements:", error);
+        }
+    }
+    useEffect(() => {
+        loadAchievements();
+    }, [selectedCadet]);
 
     const onResetClub = () => {
         reset({ ...getValues(), clubRows: defaultClubRows });
@@ -166,12 +342,18 @@ export default function ClubDetailsAndDrillPage() {
     const onResetDrill = () => {
         reset({ ...getValues(), drillRows: defaultDrillRows });
     };
+    const onResetAchievements = () => {
+        reset({
+            ...getValues(),
+            achievements: [{ id: null, achievement: "" }],
+        });
+    };
 
     const onResetAll = () => {
         reset({
             clubRows: defaultClubRows,
             drillRows: defaultDrillRows,
-            splAchievementsList: ["", "", "", ""],
+            achievements: [{ id: null, achievement: "" }]
         });
         setClubSaved(false);
         setDrillSaved(false);
@@ -320,34 +502,47 @@ export default function ClubDetailsAndDrillPage() {
                                 )}
 
                                 {/* ACHIEVEMENTS SECTION */}
-                                {!achSaved ? (
-                                    <AchievementsForm
-                                        register={register}
-                                        onSubmit={handleSubmit(onSubmitAchievements)}
-                                        onReset={() =>
-                                            reset({
-                                                ...getValues(),
-                                                splAchievementsList: ["", "", "", ""],
-                                            })
-                                        }
-                                    />
-                                ) : (
+                                {achSaved ? (
                                     <div>
                                         <h2 className="font-bold text-primary mb-2">Saved Achievements</h2>
-                                        <ul className="list-disc pl-6 space-y-1">
-                                            {savedData.splAchievementsList
-                                                .filter((s) => s)
-                                                .map((s, i) => (
-                                                    <li key={i}>{s}</li>
-                                                ))}
-                                        </ul>
+                                        <AchievementsForm
+                                            register={register}
+                                            fields={achievementFields}
+                                            append={addAchievement}
+                                            remove={removeAchievement}
+                                            disabled={true}
+                                        />
 
                                         <div className="flex justify-center items-center">
-                                            <Button onClick={() => setAchSaved(false)} className="mt-4 bg-blue-600 text-white">
+                                            <Button
+                                                onClick={() => setAchSaved(false)}
+                                                className="mt-4 bg-blue-600 text-white"
+                                            >
                                                 Edit Achievements
                                             </Button>
                                         </div>
                                     </div>
+                                ) : (
+                                    <AchievementsForm
+                                        register={register}
+                                        fields={achievementFields}
+                                        append={addAchievement}
+                                        remove={removeAchievement}
+                                        onDeleteRow={async (i) => {
+                                            const row = getValues().achievements[i];
+
+                                            console.log("Deleting backend ID:", row.id);
+
+                                            if (row?.id) {
+                                                await deleteOcAchievement(selectedCadet!.ocId, row.id);
+                                                toast.success("Deleted");
+                                            }
+                                            removeAchievement(i);
+                                        }}
+                                        onSubmit={handleSubmit(onSubmitAchievements)}
+                                        onReset={() => reset({ ...getValues(), achievements: [] })}
+                                        disabled={false}
+                                    />
                                 )}
                             </CardContent>
                         </Card>
