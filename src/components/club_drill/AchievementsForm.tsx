@@ -2,7 +2,12 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { UseFormRegister, FieldArrayWithId, UseFieldArrayRemove, UseFieldArrayAppend } from "react-hook-form";
+import {
+    UseFormRegister,
+    FieldArrayWithId,
+    UseFieldArrayAppend,
+    UseFieldArrayRemove
+} from "react-hook-form";
 import { FormValues } from "@/types/club-detls";
 
 interface Props {
@@ -11,8 +16,10 @@ interface Props {
     append: UseFieldArrayAppend<FormValues, "achievements">;
     remove: UseFieldArrayRemove;
     onDeleteRow?: (index: number) => void;
-    onSubmit?: () => void;
+    onSubmit?: (e?: any) => void;
     onReset?: () => void;
+    disabled?: boolean;
+    onEdit?: () => void;
 }
 
 export default function AchievementsForm({
@@ -23,45 +30,43 @@ export default function AchievementsForm({
     onSubmit,
     onDeleteRow,
     onReset,
-    disabled = false
-}: Props & { disabled?: boolean }) {
+    disabled = false,
+    onEdit,
+}: Props) {
     return (
-        <form onSubmit={onSubmit ?? (() => { })}>
+        <form onSubmit={onSubmit ?? ((e) => e.preventDefault())}>
             <p className="mt-4 font-bold text-gray-700">
                 <u>Spl Achievement</u> (Cane Orderly, Samman Toli, Nishan Toli, Best in Drill)
             </p>
 
             <div className="mt-3 space-y-3">
-                {fields.map((field, i) => (
-                    <div key={field.id} className="flex items-center space-x-3">
-                        <div className="w-6 text-sm">{i + 1}.</div>
+                {fields.map((field, i) => {
+                    return (
+                        <div key={field.id ?? i} className="flex items-center space-x-3">
+                            <div className="w-6 text-sm">{i + 1}.</div>
 
-                        <input
-                            type="hidden"
-                            {...register(`achievements.${i}.id` as const)}
-                            defaultValue={field.id || ""}
-                        />
+                            <input type="hidden" {...register(`achievements.${i}.id` as const)} />
 
-                        <Input
-                            {...register(`achievements.${i}.achievement` as const)}
-                            defaultValue={field.achievement}
-                            disabled={disabled}
-                        />
-                        {!disabled && (
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={() => {
-                                    if (onDeleteRow) onDeleteRow(i);
-                                    else remove(i);
-                                }}
-                                className="ml-2"
-                            >
-                                X
-                            </Button>
-                        )}
-                    </div>
-                ))}
+                            <Input
+                                {...register(`achievements.${i}.achievement` as const)}
+                                disabled={disabled}
+                            />
+
+                            {!disabled && (
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    onClick={() =>
+                                        onDeleteRow ? onDeleteRow(i) : remove(i)
+                                    }
+                                    className="ml-2"
+                                >
+                                    X
+                                </Button>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
 
             {!disabled && (
@@ -76,11 +81,23 @@ export default function AchievementsForm({
                 </div>
             )}
 
-            {!disabled && (
+            {/* CONTROL BUTTONS */}
+            {disabled ? (
+                <div className="flex justify-center items-center mt-4">
+                    <Button
+                        type="button"
+                        className="bg-blue-600 text-white"
+                        onClick={onEdit}
+                    >
+                        Edit Achievements
+                    </Button>
+                </div>
+            ) : (
                 <div className="flex justify-center gap-4 mt-6">
                     <Button type="submit" className="bg-blue-600 text-white">
                         Save Achievements
                     </Button>
+
                     <Button type="button" variant="outline" onClick={onReset}>
                         Reset Achievements
                     </Button>

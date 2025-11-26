@@ -15,7 +15,7 @@ export interface AchievementResponse {
 }
 
 export async function createOcAchievement(ocId: string, body: AchievementPayload) {
-    return api.post<AchievementResponse>(endpoints.oc.achievements(ocId), body, {
+    return api.post<AchievementResponse>(endpoints.oc.clubAchievement(ocId), body, {
         path: { ocId }
     });
 }
@@ -34,7 +34,7 @@ export async function updateOcAchievement(
     body: AchievementPayload
 ) {
     return api.patch(
-        endpoints.oc.achievementById(ocId, achievementId),
+        endpoints.oc.clubAchievementById(ocId, achievementId),
         body,
         { path: { ocId, achievementId } }
     );
@@ -42,7 +42,7 @@ export async function updateOcAchievement(
 
 export async function deleteOcAchievement(ocId: string, achievementId: string) {
     return api.delete(
-        endpoints.oc.achievementById(ocId, achievementId),
+        endpoints.oc.clubAchievementById(ocId, achievementId),
         { path: { ocId, achievementId } }
     );
 }
