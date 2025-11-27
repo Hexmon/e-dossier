@@ -49,8 +49,11 @@ export default function DisciplineRecordsPage() {
     );
 
     const [activeTab, setActiveTab] = useState(0);
+    const [savedData, setSavedData] = useState<DisciplineRow[][]>(semesters.map(() => []));
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<DisciplineRow | null>(null);
+    const [displayCumulative, setDisplayCumulative] = useState<string[]>([]);
+
 
     const defaultRow = {
         serialNo: "",
@@ -63,38 +66,73 @@ export default function DisciplineRecordsPage() {
         cumulative: "",
     };
 
-    const { control, handleSubmit, register, reset, setValue } = useForm<DisciplineForm>({
+    const { control, handleSubmit, register, watch, reset, setValue } = useForm<DisciplineForm>({
         defaultValues: {
             records: [{ ...defaultRow }],
         },
     });
 
-    const watchedRecords = useWatch({ control, name: "records" });
+    // keep stable reference to fields
+    const { fields, append, remove } = useFieldArray({ control, name: "records" });
 
+    // watch records for cumulative calculation
+    const watchedRecords = useWatch({ control, name: "records" }) || [];
+
+    // compute cumulative totals based on savedData base for active tab
     useEffect(() => {
         if (!watchedRecords) return;
 
-        let total = 0;
+        let baseCumulative = 0;
+        const prevRows = savedData[activeTab];
+
+        if (prevRows?.length > 0) {
+            const last = prevRows[prevRows.length - 1];
+            baseCumulative = Number(last.cumulative) || 0;
+        }
+
+        let total = baseCumulative;
+
+        const newDisplay = [] as string[];
 
         watchedRecords.forEach((row, index) => {
             const neg = Number(row.negativePts || 0);
             total += neg;
-            setValue(`records.${index}.cumulative`, total.toString());
+
+            // Update RHF internal cumulative (no flicker since displayed value is separate)
+            setValue(`records.${index}.cumulative`, total.toString(), { shouldDirty: false });
+
+            // Store stable displayed cumulative (empty for >=0)
+            newDisplay[index] = total < 0 ? String(total) : "";
         });
 
-    }, [JSON.stringify(watchedRecords)]);
+        setDisplayCumulative(newDisplay);
+    }, [JSON.stringify(watchedRecords), activeTab, savedData]);
 
-    const { fields, append, remove } = useFieldArray({
-        control,
-        name: "records",
-    });
 
-    const [savedData, setSavedData] = useState<DisciplineRow[][]>(
-        semesters.map(() => [])
-    );
+    // hide cumulative in UI when non-negative (keep form value present but show empty in input)
+    useEffect(() => {
+        const subscription = watch((values, { name }) => {
+            // avoid reacting to direct cumulative changes to prevent loops
+            if (name?.includes("cumulative")) return;
+
+            values.records?.forEach((record, idx) => {
+                const cumRaw = record?.cumulative;
+                const cumNum = Number(cumRaw ?? 0);
+
+                // If cumulative is non-negative, set to string but UI will decide showing
+                // we keep the value in form for correctness but will render empty if >=0
+                setValue(`records.${idx}.cumulative`, String(cumNum));
+            });
+        });
+
+        return () => subscription.unsubscribe();
+    }, [watch, setValue]);
 
     const handleEdit = (row: DisciplineRow) => {
-        if (!row.id) return toast.error("Record missing ID");
+        if (!row.id) {
+            toast.error("Record missing ID");
+            return;
+        }
         setEditingId(row.id);
         setEditForm({ ...row });
     };
@@ -108,21 +146,13 @@ export default function DisciplineRecordsPage() {
         if (!selectedCadet?.ocId || !editingId || !editForm) return;
 
         const payload = {
-            punishmentAwarded: editForm.punishmentAwarded,
-            pointsDelta: Number(editForm.negativePts),
+            punishment: editForm.punishmentAwarded,
+            points: Number(editForm.negativePts),
         };
 
         try {
             await updateDisciplineRecord(selectedCadet.ocId, editingId, payload);
-
-            setSavedData((prev) => {
-                const updated = [...prev];
-                updated[activeTab] = updated[activeTab].map((r) =>
-                    r.id === editingId ? { ...editForm } : r
-                );
-                return updated;
-            });
-
+            await fetchRecords();
             toast.success("Record updated successfully!");
             handleCancel();
         } catch {
@@ -131,20 +161,20 @@ export default function DisciplineRecordsPage() {
     };
 
     const handleDelete = async (row: DisciplineRow) => {
-        if (!selectedCadet?.ocId || !row.id) return;
+        const { ocId } = selectedCadet || {};
+        const recordId = row?.id;
+
+        if (!ocId || !recordId) {
+            toast.error("Cadet or record ID is missing.");
+            return;
+        }
 
         toast.warning("Are you sure?", {
             action: {
                 label: "Delete",
                 onClick: async () => {
-                    await deleteDisciplineRecord(selectedCadet.ocId, row.id);
-                    setSavedData((prev) => {
-                        const updated = [...prev];
-                        updated[activeTab] = updated[activeTab].filter(
-                            (r) => r.id !== row.id
-                        );
-                        return updated;
-                    });
+                    await deleteDisciplineRecord(ocId, recordId);
+                    await fetchRecords();
                     toast.success("Record deleted");
                 },
             },
@@ -183,17 +213,22 @@ export default function DisciplineRecordsPage() {
         const grouped = semesters.map(() => [] as DisciplineRow[]);
 
         for (const rec of records) {
-            const semIndex = rec.semester - 1;
+            const semIndex = Math.max(0, (rec.semester || 1) - 1);
+            const prevRows = grouped[semIndex];
+            const prevCumulative = prevRows.length ? Number(prevRows[prevRows.length - 1].cumulative) || 0 : 0;
+            const pointsDelta = Number(rec.pointsDelta ?? 0);
+            const newCumulative = prevCumulative + pointsDelta;
+
             grouped[semIndex].push({
                 id: rec.id,
-                serialNo: String(grouped[semIndex].length + 1),
+                serialNo: String(prevRows.length + 1),
                 dateOfOffence: rec.dateOfOffence?.split("T")[0] ?? "-",
                 offence: rec.offence ?? "-",
                 punishmentAwarded: rec.punishmentAwarded ?? "-",
                 dateOfAward: rec.awardedOn?.split("T")[0] ?? "-",
                 byWhomAwarded: rec.awardedBy ?? "-",
-                negativePts: String(rec.pointsDelta ?? ""),
-                cumulative: String(rec.pointsCumulative ?? ""),
+                negativePts: String(rec.pointsDelta ?? "0"),
+                cumulative: String(newCumulative),
             });
         }
 
@@ -202,8 +237,10 @@ export default function DisciplineRecordsPage() {
 
     useEffect(() => {
         fetchRecords();
-    }, [selectedCadet]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedCadet?.ocId]);
 
+    // ----------------------------- RENDER --------------------------------
     return (
         <DashboardLayout
             title="Discipline Records"
@@ -220,7 +257,9 @@ export default function DisciplineRecordsPage() {
                 />
 
                 {selectedCadet && (
-                    <SelectedCadetTable selectedCadet={selectedCadet} />
+                    <div className="hidden md:flex sticky top-16 z-40 mb-6">
+                        <SelectedCadetTable selectedCadet={selectedCadet} />
+                    </div>
                 )}
 
                 <DossierTab
@@ -297,6 +336,7 @@ export default function DisciplineRecordsPage() {
                                             <tbody>
                                                 {savedData[activeTab].map((row, index) => {
                                                     const isEditing = editingId === row.id;
+                                                    const cumulativeValue = watch(`records.${index}.cumulative`);
 
                                                     return (
                                                         <tr key={row.id || index}>
@@ -308,7 +348,7 @@ export default function DisciplineRecordsPage() {
                                                                 {isEditing ? (
                                                                     <Input
                                                                         type="date"
-                                                                        value={editForm?.dateOfOffence || ""}
+                                                                        value={Number(cumulativeValue) < 0 ? cumulativeValue : ""}
                                                                         onChange={(e) =>
                                                                             setEditForm((prev) =>
                                                                                 prev ? { ...prev, dateOfOffence: e.target.value } : prev
@@ -451,52 +491,61 @@ export default function DisciplineRecordsPage() {
                                             </thead>
 
                                             <tbody>
-                                                {fields.map((field, index) => (
-                                                    <tr key={field.id}>
-                                                        {/* Serial No */}
-                                                        <td className="p-2 border text-center">
-                                                            <Input
-                                                                value={index + 1}
-                                                                disabled
-                                                                className="text-center bg-gray-100 cursor-not-allowed"
-                                                            />
-                                                        </td>
+                                                {fields.map((field, index) => {
+                                                    const cumulativeValue = watch(`records.${index}.cumulative`);
 
-                                                        {Object.keys(defaultRow)
-                                                            .filter((key) => key !== "serialNo")
-                                                            .map((key) => (
-                                                                <td key={key} className="p-2 border">
+                                                    return (
+                                                        <tr key={field.id}>
+                                                            {/* Serial No */}
+                                                            <td className="p-2 border text-center">
+                                                                <Input disabled className="bg-gray-100 text-center cursor-not-allowed" value={displayCumulative[index] ?? ""}
+                                                                />
 
-                                                                    {key === "cumulative" ? (
-                                                                        <Input
-                                                                            {...register(`records.${index}.cumulative` as const)}
-                                                                            disabled
-                                                                            className="bg-gray-100 text-center cursor-not-allowed"
-                                                                        />
-                                                                    ) : (
-                                                                        <Input
-                                                                            {...register(`records.${index}.${key}` as const)}
-                                                                            type={key.includes("date") ? "date" : "text"}
-                                                                        />
-                                                                    )}
+                                                            </td>
 
-                                                                </td>
-                                                            ))}
+                                                            {Object.keys(defaultRow)
+                                                                .filter((key) => key !== "serialNo")
+                                                                .map((key) => (
+                                                                    <td key={key} className="p-2 border">
+                                                                        {key === "cumulative" ? (
+                                                                            <Input
+                                                                                {...register(`records.${index}.cumulative`)}
+                                                                                disabled
+                                                                                value={
+                                                                                    cumulativeValue !== undefined && Number(cumulativeValue) < 0
+                                                                                        ? String(cumulativeValue)
+                                                                                        : ""
+                                                                                }
+                                                                                className="bg-gray-100 text-center cursor-not-allowed"
+                                                                            />
+                                                                        ) : (
+                                                                            <Input
+                                                                                {...register(
+                                                                                    `records.${index}.${key as keyof typeof defaultRow}`
+                                                                                )}
+                                                                                type={key.includes("date") ? "date" : "text"}
+                                                                            />
+                                                                        )}
+                                                                    </td>
+                                                                ))}
 
-                                                        {/* Remove button */}
-                                                        <td className="p-2 border text-center">
-                                                            <Button
-                                                                type="button"
-                                                                variant="destructive"
-                                                                size="sm"
-                                                                onClick={() => remove(index)}
-                                                            >
-                                                                Remove
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                            {/* Remove button (RIGHT ALIGNED, NO SHIFTING) */}
+                                                            <td className="p-2 border text-center whitespace-nowrap">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="destructive"
+                                                                    size="sm"
+                                                                    onClick={() => remove(index)}
+                                                                    className="w-full"
+                                                                >
+                                                                    Remove
+                                                                </Button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
+
                                         </table>
                                     </div>
 
