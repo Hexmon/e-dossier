@@ -15,6 +15,9 @@ export const counsellingWarningKind = pgEnum('counselling_warning_kind', [
     'OTHER',
 ]);
 
+export const campSemesterKind = pgEnum('camp_semester_kind', ['SEM5', 'SEM6A', 'SEM6B']);
+export const campReviewRoleKind = pgEnum('camp_review_role_kind', ['OIC', 'PLATOON_COMMANDER', 'HOAT']);
+
 export type CreditForExcellenceEntry = {
     cat: string;
     marks: number;
@@ -330,6 +333,74 @@ export const ocSpecialAchievementInFiring = pgTable('oc_special_achievement_in_f
     achievement: text('achievement').notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
+
+// === OC Camps (training) ====================================================
+export const trainingCamps = pgTable('training_camps', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 120 }).notNull(),
+    semester: campSemesterKind('semester').notNull(),
+    maxTotalMarks: integer('max_total_marks').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    uqNameSemester: uniqueIndex('uq_training_camp_name_semester').on(t.name, t.semester),
+}));
+
+export const ocCamps = pgTable('oc_camps', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    trainingCampId: uuid('training_camp_id')
+        .notNull()
+        .references(() => trainingCamps.id, { onDelete: 'restrict' }),
+    year: integer('year'),
+    totalMarksScored: numeric('total_marks_scored', { mode: 'number' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (t) => ({
+    uqOcCamp: uniqueIndex('uq_oc_camp_per_template').on(t.ocId, t.trainingCampId),
+}));
+
+export const trainingCampActivities = pgTable('training_camp_activities', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    trainingCampId: uuid('training_camp_id')
+        .notNull()
+        .references(() => trainingCamps.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 160 }).notNull(),
+    defaultMaxMarks: integer('default_max_marks').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ocCampActivityScores = pgTable('oc_camp_activity_scores', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocCampId: uuid('oc_camp_id').notNull().references(() => ocCamps.id, { onDelete: 'cascade' }),
+    trainingCampActivityId: uuid('training_camp_activity_id')
+        .notNull()
+        .references(() => trainingCampActivities.id, { onDelete: 'restrict' }),
+    maxMarks: integer('max_marks').notNull(),
+    marksScored: integer('marks_scored').notNull(),
+    remark: text('remark'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqActivityPerCamp: uniqueIndex('uq_oc_camp_activity').on(t.ocCampId, t.trainingCampActivityId),
+    marksWithinBounds: { check: sql`CHECK (${t.marksScored.name} <= ${t.maxMarks.name} AND ${t.marksScored.name} >= 0)` },
+}));
+
+export const ocCampReviews = pgTable('oc_camp_reviews', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocCampId: uuid('oc_camp_id').notNull().references(() => ocCamps.id, { onDelete: 'cascade' }),
+    role: campReviewRoleKind('role').notNull(),
+    sectionTitle: varchar('section_title', { length: 200 }).notNull(),
+    reviewText: text('review_text').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqReviewRole: uniqueIndex('uq_oc_camp_review_role').on(t.ocCampId, t.role),
+}));
 
 export const ocObstacleTraining = pgTable('oc_obstacle_training', {
     id: uuid('id').primaryKey().defaultRandom(),
