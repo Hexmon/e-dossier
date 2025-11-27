@@ -25,6 +25,7 @@ import {
     listSpecialAchievementsInFiring,
     SpecialAchievementInFiringRecord,
     updateSpecialAchievementInFiring,
+    deleteSpecialAchievementInFiring,
 } from "@/app/lib/api/specialAchievementInFiringApi";
 
 import {
@@ -35,10 +36,9 @@ import {
     WeaponTrainingUpdate,
 } from "@/app/lib/api/weaponTrainingApi";
 import WeaponTrainingTable from "@/components/wpnTrg/WeaponTrainingTable";
+import AchievementsForm from "@/components/wpnTrg/AchievementsForm";
 
-/**
- * Page-level types for form
- */
+
 interface Row {
     subject: string;
     maxMarks: number;
@@ -47,7 +47,7 @@ interface Row {
 
 interface TermData {
     records: Row[];
-    achievements: string[];
+    achievements: { value: string }[];
 }
 
 const termPrefill: Row[] = [
@@ -56,7 +56,7 @@ const termPrefill: Row[] = [
     { subject: "5.56 MM INSAS LMG Firing", maxMarks: 40, obtained: "" },
 ];
 
-const achievementPrefill = ["", "", "", "", "", ""];
+const achievementPrefill: { value: string }[] = [];
 
 export default function WpnTrgPage() {
     const terms = ["III TERM", "IV TERM", "V TERM", "VI TERM"];
@@ -87,14 +87,11 @@ export default function WpnTrgPage() {
                 const ach = await listSpecialAchievementsInFiring(ocId);
                 setAchievementRecords(ach.items || []);
 
-                const filled = (ach.items || []).map(a => a.achievement);
-                const padded = filled.concat(
-                    Array(achievementPrefill.length - filled.length).fill("")
-                );
+                const filled = (ach.items || []).map(a => ({ value: a.achievement }));
 
                 reset({
                     records: termPrefill,
-                    achievements: padded,
+                    achievements: filled,
                 });
 
                 setIsEditingAchievements(false);
@@ -154,7 +151,7 @@ export default function WpnTrgPage() {
                 maxMarks: r.maxMarks,
                 marksObtained: Number(r.obtained) || 0,
             }));
-            
+
             for (const p of payloads) {
                 const { subject, maxMarks, marksObtained } = p;
                 const existing = weaponTrainingRecords.find((r) => r.semester === apiTermNumber && r.subject === subject);
@@ -186,29 +183,34 @@ export default function WpnTrgPage() {
     useEffect(() => {
         if (!weaponTrainingRecords) return;
         const merged = buildMergedRecordsForSemester(apiTermNumber);
-        // preserve achievements mapping already computed
-        const filled = (achievementRecords || []).map(a => a.achievement);
-        const padded = filled.concat(Array(achievementPrefill.length - filled.length).fill(""));
-        reset({ records: merged, achievements: padded });
+        const filled = (achievementRecords || []).map(a => ({ value: a.achievement }));
+        reset({ records: merged, achievements: filled });
     }, [weaponTrainingRecords, activeTab, reset, achievementRecords]);
 
 
     const onSubmitAchievements = async (formData: TermData) => {
         try {
             const existing = achievementRecords;
-            const formList = formData.achievements.filter(a => a.trim().length !== 0);
 
-            // update existing
+            const formList = formData.achievements.filter(a => a.value.trim().length !== 0);
+
             for (let i = 0; i < existing.length; i++) {
-                await updateSpecialAchievementInFiring(ocId!, existing[i].id, {
-                    achievement: formList[i] || "",
-                });
+                const dbRecord = existing[i];
+                const formItem = formList[i];
+
+                if (formItem) {
+                    await updateSpecialAchievementInFiring(ocId!, dbRecord.id, {
+                        achievement: formItem.value,
+                    });
+                } else {
+                    await deleteSpecialAchievementInFiring(ocId!, dbRecord.id);
+                }
             }
 
-            // create new
             for (let i = existing.length; i < formList.length; i++) {
+                const formItem = formList[i];
                 await createSpecialAchievementInFiring(ocId!, {
-                    achievement: formList[i],
+                    achievement: formItem.value,
                 });
             }
 
@@ -287,12 +289,12 @@ export default function WpnTrgPage() {
                                             type="button"
                                             onClick={() => {
                                                 setActiveTab(index);
-                                                // reset inputs when switching term to merged backend values
+
                                                 const sem = index + 3;
                                                 const merged = buildMergedRecordsForSemester(sem);
-                                                const filled = (achievementRecords || []).map(a => a.achievement);
-                                                const padded = filled.concat(Array(achievementPrefill.length - filled.length).fill(""));
-                                                reset({ records: merged, achievements: padded });
+                                                const filled = (achievementRecords || []).map(a => ({ value: a.achievement }));
+
+                                                reset({ records: merged, achievements: filled });
                                             }}
                                             className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
                                         >
@@ -324,11 +326,11 @@ export default function WpnTrgPage() {
                                                     type="button"
                                                     variant="outline"
                                                     onClick={async () => {
-                                                        // revert form to server merged state and exit edit mode
+                                                        // revert form to server merged state and exit edit mode 
                                                         const merged = buildMergedRecordsForSemester(apiTermNumber);
-                                                        const filled = (achievementRecords || []).map(a => a.achievement);
-                                                        const padded = filled.concat(Array(achievementPrefill.length - filled.length).fill(""));
-                                                        reset({ records: merged, achievements: padded });
+                                                        const filled = (achievementRecords || []).map(a => ({ value: a.achievement }));
+
+                                                        reset({ records: merged, achievements: filled });
                                                         setIsEditingRecords(false);
                                                     }}
                                                     disabled={isSavingRecords}
@@ -370,50 +372,41 @@ export default function WpnTrgPage() {
                                 </div>
 
                                 {/* Achievements */}
-                                <form onSubmit={handleSubmit(onSubmitAchievements)}>
-                                    <div className="mt-6">
-                                        <h2 className="font-semibold underline mb-2">Special Achievements in Firing</h2>
+                                <AchievementsForm
+                                    control={control}
+                                    register={register}
+                                    onSubmit={handleSubmit(onSubmitAchievements)}
+                                    onReset={() => {
+                                        const filled = (achievementRecords || []).map(a => ({ value: a.achievement }));
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            {(watch("achievements") || []).map((_, i) => (
-                                                <Input
-                                                    key={i}
-                                                    disabled={!isEditingAchievements}
-                                                    {...register(`achievements.${i}` as const)}
-                                                    placeholder={`Achievement ${i + 1}`}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
+                                        reset({ records: termPrefill, achievements: filled });
+                                        setIsEditingAchievements(false);
+                                    }}
+                                    onLastItemDeleted={async () => {
 
-                                    {/* Info Section */}
-                                    <div className="mt-6 border rounded-lg p-4 bg-gray-50 flex justify-center">
-                                        <div>
-                                            <div className="flex justify-center">
-                                                <h2 className="font-semibold underline mb-2">Special Achievement Like</h2>
-                                            </div>
-                                            <p className="text-sm leading-relaxed">
-                                                Best in WT, Best Firer, Participation in National Games (if applicable)
-                                            </p>
-                                        </div>
-                                    </div>
+                                        await onSubmitAchievements({ ...watch(), achievements: [] });
 
-                                    {/* SINGLE BUTTON BELOW THE SECTION */}
-                                    <div className="flex justify-center gap-3 mt-6">
-                                        <Button
-                                            type="submit"
-                                            className={isEditingAchievements ? "bg-green-600 text-white" : "bg-blue-600 text-white"}
-                                            onClick={(e) => {
-                                                if (!isEditingAchievements) {
-                                                    e.preventDefault();  // prevent accidental save
-                                                    setIsEditingAchievements(true);
-                                                }
-                                            }}
-                                        >
-                                            {isEditingAchievements ? "Save" : "Edit"}
-                                        </Button>
-                                    </div>
-                                </form>
+                                        reset({ records: termPrefill, achievements: [] });
+                                        setIsEditingAchievements(false);
+                                    }}
+                                    disabled={!isEditingAchievements}
+                                />
+
+                                <div className="flex justify-center gap-3 mt-6">
+                                    <Button
+                                        type="button"
+                                        onClick={() => {
+                                            const current = watch("achievements");
+                                            if (!current || current.length === 0) {
+                                                setValue("achievements", [{ value: "" }]);
+                                            }
+                                            setIsEditingAchievements(true);
+                                        }}
+                                        className={!isEditingAchievements ? "bg-blue-600 text-white" : "hidden"}
+                                    >
+                                        Edit Achievements
+                                    </Button>
+                                </div>
                             </CardContent>
                         </Card>
                     </TabsContent>

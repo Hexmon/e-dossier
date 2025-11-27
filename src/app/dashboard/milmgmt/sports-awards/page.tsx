@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -60,6 +60,29 @@ export default function SportsGamesPage() {
                 : p;
         }), []);
 
+    const mergeMotivationWithSaved = useCallback((prefill: Row[], saved: Row[]) => {
+        const savedMap = new Map<string, Row>();
+        // Use Map to ensure we get the latest saved record for each activity
+        saved.forEach(s => {
+            if (s.activity) savedMap.set(s.activity, s);
+        });
+
+        return prefill.map((p) => {
+            const { activity, string, maxMarks, obtained } = p;
+            const found = savedMap.get(activity || "");
+            return found
+                ? {
+                    id: found.id,
+                    ocId: found.ocId,
+                    activity: found.activity ?? activity,
+                    string: found.string ?? string ?? "",
+                    maxMarks: found.maxMarks ?? maxMarks,
+                    obtained: found.obtained ?? obtained ?? "",
+                }
+                : p;
+        });
+    }, []);
+
     const safeSetSavedData = useCallback((updater: (prev: SemesterData[]) => SemesterData[]) => setSavedData((prev) => updater(prev)), []);
 
     const upsertSportsRows = useCallback(async (ocId: string, semesterNumber: number, term: "spring" | "autumn", rows: Row[]) => {
@@ -77,7 +100,7 @@ export default function SportsGamesPage() {
     const upsertMotivationRows = useCallback(async (ocId: string, semesterNumber: number, rows: Row[]) => {
         for (const r of rows) {
             const { id, activity, string, maxMarks, obtained } = r;
-            const payload = { fieldName: activity, motivationTitle: string, maxMarks: Number(maxMarks), marksObtained: Number(obtained || 0) };
+            const payload = { fieldName: activity, motivationTitle: string || "-", maxMarks: Number(maxMarks), marksObtained: Number(obtained || 0) };
             if (id) {
                 await updateMotivationAward(ocId, String(id), payload);
             } else if (String(activity || "").trim() !== "") {
@@ -86,64 +109,137 @@ export default function SportsGamesPage() {
         }
     }, []);
 
-    const loadSavedData = useCallback(async (ocId: string) => {
-        try {
-            const [sportsRes, motRes] = await Promise.all([listSportsAndGames(ocId), getMotivationAwards(ocId)]);
-            const sportsItems = sportsRes.items ?? [];
-            const motivationItems = motRes ?? [];
+    const isLoadingRef = useRef(false);
 
-            const grouped = buildEmptyState();
+    const loadSavedData = useCallback(
+        async (ocId: string) => {
+            if (isLoadingRef.current) return;
+            isLoadingRef.current = true;
+            try {
+                const [sportsRes, motRes] = await Promise.all([
+                    listSportsAndGames(ocId),
+                    getMotivationAwards(ocId),
+                ]);
 
-            for (const item of sportsItems) {
-                const { id, ocId, semester, term, sport, maxMarks, marksObtained } = item;
-                const idx = Math.max(0, (Number(semester) || 1) - 1);
-                const target = term === "autumn" ? grouped[idx].autumn : grouped[idx].spring;
-                if (!target.some((s) => s.id === id)) {
-                    target.push({
-                        id: id,
-                        ocId: ocId,
-                        term: term,
-                        activity: sport,
-                        string: "",
-                        maxMarks: maxMarks,
-                        obtained: String(marksObtained),
-                    });
+                const sportsItems = sportsRes.items ?? [];
+                const motivationItems = motRes ?? [];
+
+                const grouped = buildEmptyState();
+
+                for (const item of sportsItems) {
+                    const {
+                        id,
+                        ocId,
+                        semester,
+                        term,
+                        sport,
+                        maxMarks,
+                        marksObtained,
+                    } = item;
+
+                    const idx = Math.max(0, (Number(semester) || 1) - 1);
+
+                    const target =
+                        term === "autumn"
+                            ? grouped[idx].autumn
+                            : grouped[idx].spring;
+
+                    // Avoid duplicates
+                    if (!target.some((s) => s.id === id)) {
+                        target.push({
+                            id,
+                            ocId,
+                            term,
+                            activity: sport ?? "-",
+                            string: "",
+                            maxMarks: maxMarks ?? "",
+                            obtained:
+                                marksObtained !== undefined
+                                    ? String(marksObtained)
+                                    : "",
+                        });
+                    }
                 }
-            }
 
-            for (const item of motivationItems) {
-                const { id, ocId, semester, fieldName, motivationTitle, maxMarks, marksObtained } = item;
-                const idx = Math.max(0, (Number(semester) || 1) - 1);
-                if (!grouped[idx].motivation.some((m) => m.id === id)) {
-                    grouped[idx].motivation.push({
-                        id: id,
-                        ocId: ocId,
-                        term: "motivation",
-                        activity: fieldName,
-                        string: motivationTitle,
-                        maxMarks: maxMarks,
-                        obtained: String(marksObtained),
-                    });
+                for (const item of motivationItems) {
+                    const {
+                        id,
+                        ocId,
+                        semester,
+                        fieldName,
+                        motivationTitle,
+                        maxMarks,
+                        marksObtained,
+                    } = item;
+
+                    const idx = Math.max(0, (Number(semester) || 1) - 1);
+
+                    if (!grouped[idx].motivation.some((m) => m.id === id)) {
+                        grouped[idx].motivation.push({
+                            id,
+                            ocId,
+                            term: "motivation",
+                            activity: fieldName ?? "-",
+                            string: motivationTitle ?? "-",
+                            maxMarks: maxMarks ?? "",
+                            obtained:
+                                marksObtained !== undefined
+                                    ? String(marksObtained)
+                                    : "",
+                        });
+                    }
                 }
+                setSavedData(grouped);
+
+                const current =
+                    grouped[activeTab] ?? {
+                        spring: [],
+                        autumn: [],
+                        motivation: [],
+                    };
+
+                reset({
+                    spring: mergePrefillWithSaved(
+                        springPrefill,
+                        current.spring ?? []
+                    ),
+                    autumn: mergePrefillWithSaved(
+                        autumnPrefill,
+                        current.autumn ?? []
+                    ),
+                    motivation: mergeMotivationWithSaved(
+                        motivationPrefill,
+                        current.motivation ?? []
+                    ),
+                });
+                return grouped;
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to load saved Sports & Awards data");
+                return savedData;
             }
+            finally {
+                isLoadingRef.current = false;
+            }
+        },
+        [
+            activeTab,
+            buildEmptyState,
+            mergePrefillWithSaved,
+            mergeMotivationWithSaved,
+            reset,
+            savedData,
+            springPrefill,
+            autumnPrefill,
+            motivationPrefill,
+        ]
+    );
 
-            setSavedData(grouped);
-
-            const current = grouped[activeTab] ?? { spring: [], autumn: [], motivation: [] };
-            reset({
-                spring: mergePrefillWithSaved(springPrefill, current.spring ?? []),
-                autumn: mergePrefillWithSaved(autumnPrefill, current.autumn ?? []),
-                motivation: mergePrefillWithSaved(motivationPrefill, current.motivation ?? []),
-            });
-        } catch (err) {
-            toast.error("Failed to load saved Sports & Awards data");
-        }
-    }, [activeTab, buildEmptyState, mergePrefillWithSaved, reset]);
 
     useEffect(() => {
         if (!selectedCadet?.ocId) return;
         loadSavedData(selectedCadet.ocId);
-    }, [selectedCadet?.ocId, loadSavedData]);
+    }, [selectedCadet?.ocId]);
 
     useEffect(() => {
         const current = savedData[activeTab];
@@ -151,9 +247,11 @@ export default function SportsGamesPage() {
         reset({
             spring: mergePrefillWithSaved(springPrefill, current.spring ?? []),
             autumn: mergePrefillWithSaved(autumnPrefill, current.autumn ?? []),
-            motivation: mergePrefillWithSaved(motivationPrefill, current.motivation ?? []),
+            motivation: mergeMotivationWithSaved(motivationPrefill, current.motivation ?? []),
         });
-    }, [activeTab, savedData, mergePrefillWithSaved, reset]);
+    }, [activeTab, savedData, mergePrefillWithSaved, mergeMotivationWithSaved, reset]);
+
+
 
     const submitTerm = useCallback(async (termKey: "spring" | "autumn" | "motivation") => {
         if (!selectedCadet?.ocId) return toast.error("No cadet selected");
@@ -161,9 +259,8 @@ export default function SportsGamesPage() {
         const semesterNumber = activeTab + 1;
 
         // Validate obtained <= maxMarks for all rows in this term before saving
-        const rowsForValidation = getValues(termKey) ?? [];
-        for (let i = 0; i < rowsForValidation.length; i++) {
-            const r = rowsForValidation[i] as any;
+        const rows = getValues(termKey) ?? [];
+        for (let r of rows) {
             const max = Number(r?.maxMarks ?? 0);
             const obtained = Number(r?.obtained ?? 0);
             if (!Number.isNaN(max) && !Number.isNaN(obtained) && obtained > max) {
@@ -174,21 +271,32 @@ export default function SportsGamesPage() {
 
         setIsSaving(true);
         try {
-            const rows = getValues(termKey) ?? [];
             if (termKey === "motivation") {
                 await upsertMotivationRows(ocId, semesterNumber, rows);
             } else {
                 await upsertSportsRows(ocId, semesterNumber, termKey, rows);
             }
-            await loadSavedData(ocId);
+            safeSetSavedData(prev => {
+                const copy = prev.map(s => ({ spring: [...s.spring], autumn: [...s.autumn], motivation: [...s.motivation] }));
+                copy[activeTab] = { ...copy[activeTab], [termKey]: [...rows] };
+                return copy;
+            });
+
+            reset({
+                spring: mergePrefillWithSaved(springPrefill, termKey === "spring" ? rows : savedData[activeTab].spring),
+                autumn: mergePrefillWithSaved(autumnPrefill, termKey === "autumn" ? rows : savedData[activeTab].autumn),
+                motivation: mergeMotivationWithSaved(motivationPrefill, termKey === "motivation" ? rows : savedData[activeTab].motivation),
+            });
+
             setEditing((s) => ({ ...s, [termKey]: false }));
             toast.success(`${termKey[0].toUpperCase() + termKey.slice(1)} term saved!`);
+            // loadSavedData(ocId);
         } catch (err) {
             toast.error(`Failed to save ${termKey}`);
         } finally {
             setIsSaving(false);
         }
-    }, [activeTab, getValues, loadSavedData, selectedCadet?.ocId, upsertMotivationRows, upsertSportsRows]);
+    }, [activeTab, getValues, selectedCadet?.ocId, upsertMotivationRows, upsertSportsRows, safeSetSavedData, reset, mergePrefillWithSaved, mergeMotivationWithSaved, savedData, loadSavedData]);
 
 
     const handleRowUpdated = useCallback((term: keyof SemesterData, updatedRow: Row) => {
@@ -207,6 +315,9 @@ export default function SportsGamesPage() {
         });
     }, [activeTab, safeSetSavedData]);
 
+
+
+
     const memoizedSpringRows = useMemo(() => springPrefill, []);
     const memoizedAutumnRows = useMemo(() => autumnPrefill, []);
     const memoizedMotivationRows = useMemo(() => motivationPrefill, []);
@@ -214,6 +325,8 @@ export default function SportsGamesPage() {
     const memoizedSavedSpringRows = useMemo(() => savedData[activeTab]?.spring ?? [], [savedData, activeTab]);
     const memoizedSavedAutumnRows = useMemo(() => savedData[activeTab]?.autumn ?? [], [savedData, activeTab]);
     const memoizedSavedMotivationRows = useMemo(() => savedData[activeTab]?.motivation ?? [], [savedData, activeTab]);
+
+
 
     return (
         <DashboardLayout title="Assessment: Sports / Games & Motivation Awards" description="Enter marks for sports and motivation awards.">
@@ -290,7 +403,16 @@ export default function SportsGamesPage() {
                                             <>
                                                 <Button type="button" className="bg-green-600" onClick={handleSubmit(() => submitTerm("motivation"))} disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</Button>
                                                 <Button type="button" variant="outline" onClick={async () => { if (!selectedCadet?.ocId) return; await loadSavedData(selectedCadet.ocId); setEditing(s => ({ ...s, motivation: false })); }} disabled={isSaving}>Cancel Edit</Button>
-                                                <Button type="button" variant="outline" onClick={() => reset({ motivation: motivationPrefill })} disabled={isSaving}>Reset</Button>
+                                                <Button type="button" variant="outline" onClick={() => {
+                                                    reset({
+                                                        motivation: motivationPrefill.map(row => ({
+                                                            ...row,
+                                                            obtained: row.obtained || "-",   // ensure hyphen
+                                                            maxMarks: row.maxMarks ?? 0,
+                                                            string: row.string || "-"
+                                                        }))
+                                                    })
+                                                }} disabled={isSaving}>Reset</Button>
                                             </>
                                         ) : (
                                             <Button type="button" onClick={() => setEditing(s => ({ ...s, motivation: true }))} disabled={isSaving}>Edit Motivation Table</Button>
