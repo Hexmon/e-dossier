@@ -34,6 +34,7 @@ import {
     saveCounsellingRecords,
 } from "@/app/lib/api/counsellingApi";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 export default function CounsellingWarningPage() {
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
@@ -78,8 +79,8 @@ export default function CounsellingWarningPage() {
             );
 
             setSavedData(grouped);
-        } catch (err) {
-            console.error("Fetch failed", err);
+        } catch (err: any) {
+            toast.error("Fetch failed: " + err.message);
         }
     };
 
@@ -94,13 +95,16 @@ export default function CounsellingWarningPage() {
             return;
         }
 
-        const payload = data.records.map((r, idx) => ({
-            term: semestersCounselling[activeTab],
-            reason: r.reason,
-            warningType: r.warningType,
-            date: r.date,
-            warningBy: r.warningBy,
-        }));
+        const payload = data.records.map((r) => {
+            const { reason, warningType, date, warningBy } = r;
+            return {
+                term: semestersCounselling[activeTab],
+                reason,
+                warningType,
+                date,
+                warningBy,
+            };
+        });
 
         try {
             const saved = await saveCounsellingRecords(selectedCadet.ocId, payload);
@@ -126,8 +130,8 @@ export default function CounsellingWarningPage() {
             });
 
             reset({ records: [{ ...counsellingDefaultRow }] });
-        } catch (err) {
-            console.error("Save error", err);
+        } catch (err: any) {
+            toast.error("Save error: " + err.message);
         }
     };
 
@@ -144,8 +148,8 @@ export default function CounsellingWarningPage() {
                 }));
                 return next;
             });
-        } catch (err) {
-            console.error("Delete failed", err);
+        } catch (err: any) {
+            toast.error("Delete failed: " + err.message);
         }
     };
 
