@@ -1,46 +1,48 @@
-export type LveRow = {
-    id: string;
+/** Local types for this page */
+export type HkeRow = {
+    id?: string;
     serialNo?: string;
     term: string;
-    lveDetails: string;
+    hike: string;
     fromDate: string;
     toDate: string;
     remarks: string;
 };
 
-export type LveFormRow = {
-    lveDetails: string;
+export type HkeFormRow = {
+    hike: string;
     fromDate: string;
     toDate: string;
     remarks: string;
 };
 
-export type LveFormData = {
-    records: LveFormRow[];
+export type HkeFormData = {
+    records: HkeFormRow[];
 };
 
-export interface LeaveRow {
+export interface HikeRow {
     id: string | null;
     semester: number;
     reason: string;
-    type: "LEAVE" | "OVERSTAY" | "HIKE" | "DETENTION";
+    type: "HIKE" | "LEAVE" | "OVERSTAY" | "DETENTION";
     dateFrom: string;
     dateTo: string;
     remark: string;
 }
 
-export interface LeaveFormValues {
-    leaveRows: LeaveRow[];
+export interface HikeFormValues {
+    hikeRows: HikeRow[];
 }
 
-export const defaultLeaveRows: LeaveRow[] = [
+export const defaultHikeRows: HikeRow[] = [
     {
         id: null,
         semester: 1,
         reason: "",
-        type: "LEAVE",
+        type: "HIKE",
         dateFrom: "",
         dateTo: "",
         remark: "",
     },
 ];
+

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
@@ -10,100 +9,119 @@ import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 
 import DossierTab from "@/components/Tabs/DossierTab";
+
+import { useForm, useFieldArray, FormProvider, useFormContext } from "react-hook-form";
+
+import {
+    DetentionFormValues,
+    defaultDetentionRows,
+    DetentionRow,
+} from "@/types/detention";
+
+import DetentionForm from "@/components/detention/DetentionForm";
+import { useDetentionActions } from "@/hooks/useDetentionActions";
+
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
-
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-
-import { Shield, ChevronDown } from "lucide-react";
-import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { DetentionFormData, DetentionFormRow, DetentionRow } from "@/types/detention";
 import { semesters } from "@/constants/app.constants";
 
-const defaultFormRow: DetentionFormRow = {
-    reason: "",
-    fromDate: "",
-    toDate: "",
-    remarks: "",
-};
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
-export default function DetentionPageLocal() {
+import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, ChevronDown } from "lucide-react";
+
+import { updateOcDetentionRecord } from "@/app/lib/api/detentionApi";
+import { toast } from "sonner";
+
+export default function DetentionPage() {
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
 
-    const [activeTab, setActiveTab] = useState<number>(0);
-    const [savedData, setSavedData] = useState<DetentionRow[][]>(semesters.map(() => []));
-    const [editingRowId, setEditingRowId] = useState<string | null>(null);
-    const [editingValues, setEditingValues] = useState<Partial<DetentionRow> | null>(null);
-
-    const { control, handleSubmit, register, reset } = useForm<DetentionFormData>({
-        defaultValues: { records: [{ ...defaultFormRow }] },
+    const methods = useForm<DetentionFormValues>({
+        defaultValues: { detentionRows: defaultDetentionRows },
     });
 
-    const { fields, append, remove, replace } = useFieldArray({
+    return (
+        <DashboardLayout
+            title="Detention Records"
+            description="Manage Detention records"
+        >
+            <main className="p-6">
+                <BreadcrumbNav
+                    paths={[
+                        { label: "Dashboard", href: "/dashboard" },
+                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Detention Records" },
+                    ]}
+                />
+
+                {selectedCadet && (
+                    <div className="hidden md:flex sticky top-16 z-40 mb-6">
+                        <SelectedCadetTable selectedCadet={selectedCadet} />
+                    </div>
+                )}
+
+                <FormProvider {...methods}>
+                    <InnerDetentionPage selectedCadet={selectedCadet} />
+                </FormProvider>
+            </main>
+        </DashboardLayout>
+    );
+}
+
+/* Inner Component */
+function InnerDetentionPage({ selectedCadet }: { selectedCadet: any }) {
+    const { control, register, setValue, handleSubmit } =
+        useFormContext<DetentionFormValues>();
+
+    const { fields, append, remove } = useFieldArray({
         control,
-        name: "records",
+        name: "detentionRows",
     });
 
-    useEffect(() => {
-        const saved = localStorage.getItem("detention_local_v1");
-        if (saved) {
-            try {
-                const parsed: DetentionRow[][] = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length === semesters.length) {
-                    setSavedData(parsed);
-                }
-            } catch {
-            }
-        }
-    }, []);
+    const {
+        submitDetention,
+        fetchDetention,
+        deleteSavedDetention,
+    } = useDetentionActions(selectedCadet);
+
+    const [activeTab, setActiveTab] = useState<number>(0);
+    const [savedData, setSavedData] = useState<DetentionRow[][]>(
+        semesters.map(() => [])
+    );
+
+    const [editingRowId, setEditingRowId] = useState<string | null>(null);
+    const [editingValues, setEditingValues] = useState<Partial<DetentionRow> | null>(
+        null
+    );
+
+    const [refreshFlag, setRefreshFlag] = useState(0);
 
     useEffect(() => {
-        try {
-            localStorage.setItem("detention_local_v1", JSON.stringify(savedData));
-        } catch {
-        }
-    }, [savedData]);
+        if (!selectedCadet) return;
 
-    const onSubmit = (data: DetentionFormData) => {
-        const payload: DetentionRow[] = data.records.map((r) => ({
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            serialNo: "",
-            term: semesters[activeTab],
-            reason: r.reason,
-            fromDate: r.fromDate,
-            toDate: r.toDate,
-            remarks: r.remarks,
-        }));
+        const load = async () => {
+            const items = await fetchDetention();
+            const grouped = semesters.map((_, idx) =>
+                items.filter((x) => Number(x.semester) === idx + 1)
+            );
+            setSavedData(grouped);
+        };
 
-        setSavedData((prev) => {
-            const next = [...prev];
-            next[activeTab] = [...next[activeTab], ...payload];
-            next[activeTab] = next[activeTab].map((row, i) => ({ ...row, serialNo: String(i + 1) }));
-            return next;
-        });
-
-        reset({ records: [{ ...defaultFormRow }] });
-        replace([{ ...defaultFormRow }]);
-        setEditingRowId(null);
-        setEditingValues(null);
-    };
-
-    const handleDelete = (index: number) => {
-        setSavedData((prev) => {
-            const next = [...prev];
-            next[activeTab] = next[activeTab].filter((_, i) => i !== index);
-            next[activeTab] = next[activeTab].map((r, i) => ({ ...r, serialNo: String(i + 1) }));
-            return next;
-        });
-        setEditingRowId(null);
-        setEditingValues(null);
-    };
+        load();
+    }, [selectedCadet, refreshFlag]);
 
     const beginEdit = (row: DetentionRow) => {
-        setEditingRowId(row.id);
+        setEditingRowId(row.id ?? null);
         setEditingValues({ ...row });
+    };
+
+    const setEditingField = (field: keyof DetentionRow, value: any) => {
+        setEditingValues((prev) => ({ ...(prev ?? {}), [field]: value }));
     };
 
     const cancelEdit = () => {
@@ -111,258 +129,119 @@ export default function DetentionPageLocal() {
         setEditingValues(null);
     };
 
-    const saveEdit = (rowIndex: number) => {
-        if (!editingValues) return;
-        setSavedData((prev) => {
-            const next = [...prev];
-            const updated: DetentionRow = {
-                ...next[activeTab][rowIndex],
-                reason: editingValues.reason ?? "",
-                fromDate: editingValues.fromDate ?? "",
-                toDate: editingValues.toDate ?? "",
-                remarks: editingValues.remarks ?? "",
-            };
-            next[activeTab][rowIndex] = updated;
-            return next;
-        });
-        cancelEdit();
+    const saveInlineEdit = async (rowIndex: number) => {
+        if (!editingValues || !editingValues.id) return;
+
+        try {
+            await updateOcDetentionRecord(selectedCadet.ocId, editingValues.id, {
+                semester: editingValues.semester,
+                reason: editingValues.reason,
+                type: "DETENTION",
+                dateFrom: editingValues.dateFrom,
+                dateTo: editingValues.dateTo,
+                remark: editingValues.remark,
+            });
+
+            toast.success("Detention record updated");
+            cancelEdit();
+            setRefreshFlag((f) => f + 1);
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update detention record");
+        }
     };
 
-    const setEditingField = (field: keyof DetentionRow, value: any) => {
-        setEditingValues((prev) => ({ ...(prev ?? {}), [field]: value }));
+    const handleDeleteSaved = async (index: number) => {
+        const row = savedData[activeTab][index];
+        if (!row || !row.id) return;
+
+        const ok = await deleteSavedDetention(row.id);
+        if (!ok) return;
+
+        setRefreshFlag((f) => f + 1);
     };
+
+    const handleNewSubmit = handleSubmit(async () => {
+        await submitDetention();
+        toast.success("New detention records saved");
+        setRefreshFlag((f) => f + 1);
+    });
 
     return (
-        <DashboardLayout
-            title="Record Of Detention During Term Break/ Mid Term Break"
-            description="Record of Detention During Term Break / Mid Term Break (local demo)."
+        <DossierTab
+            tabs={dossierTabs}
+            defaultValue="detention-record"
+            extraTabs={
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <TabsTrigger value="miltrg" className="flex items-center gap-2">
+                            <Shield className="h-4 w-4" /> Mil-Trg
+                            <ChevronDown className="h-4 w-4" />
+                        </TabsTrigger>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                        {militaryTrainingCards.map((card) => (
+                            <DropdownMenuItem key={card.to} asChild>
+                                <a href={card.to} className="flex items-center gap-2">
+                                    <card.icon className={`h-4 w-4 ${card.color}`} />
+                                    {card.title}
+                                </a>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            }
         >
-            <main className="p-6">
-                <BreadcrumbNav
-                    paths={[
-                        { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
-                        { label: "Detention Record" },
-                    ]}
-                />
+            <TabsContent value="detention-record" className="space-y-6">
+                <Card className="max-w-6xl mx-auto p-6 shadow bg-white">
+                    <CardHeader>
+                        <CardTitle className="text-lg font-semibold text-center">
+                            RECORD OF DETENTION : ALL TERMS
+                        </CardTitle>
+                    </CardHeader>
 
-                {selectedCadet && (
-                    <div className="hidden md:flex sticky top-16 z-40">
-                        <SelectedCadetTable selectedCadet={selectedCadet} />
-                    </div>
-                )}
+                    <CardContent>
+                        {/* Term Tabs */}
+                        <div className="flex justify-center mb-6 space-x-2">
+                            {semesters.map((term, idx) => (
+                                <button
+                                    key={term}
+                                    onClick={() => {
+                                        setActiveTab(idx);
+                                        cancelEdit();
+                                    }}
+                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-gray-200 text-gray-700"
+                                        }`}
+                                >
+                                    {term}
+                                </button>
+                            ))}
+                        </div>
 
-                <DossierTab
-                    tabs={dossierTabs}
-                    defaultValue="detention"
-                    extraTabs={
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <TabsTrigger value="mil-trg" className="flex items-center gap-2">
-                                    <Shield className="h-4 w-4" />
-                                    Mil-Trg
-                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                </TabsTrigger>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                {militaryTrainingCards.map((card) => (
-                                    <DropdownMenuItem key={card.to} asChild>
-                                        <a href={card.to} className="flex items-center gap-2">
-                                            <card.icon className={`h-4 w-4 ${card.color}`} />
-                                            <span>{card.title}</span>
-                                        </a>
-                                    </DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    }
-                >
-                    <TabsContent value="detention">
-                        <section className="p-6">
-                            <Card className="max-w-6xl mx-auto p-6 shadow bg-white">
-                                <CardHeader>
-                                    <CardTitle className="text-lg font-semibold text-center">
-                                        Record Of Detention During Term Break/ Mid Term Break
-                                    </CardTitle>
-                                </CardHeader>
-
-                                <CardContent>
-                                    {/* Term Tabs */}
-                                    <div className="flex justify-center mb-6 space-x-2">
-                                        {semesters.map((term, idx) => (
-                                            <button
-                                                key={term}
-                                                onClick={() => {
-                                                    setActiveTab(idx);
-                                                    cancelEdit();
-                                                }}
-                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-gray-200 text-gray-700"
-                                                    }`}
-                                            >
-                                                {term}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {/* Saved Records Table (View) */}
-                                    <div className="overflow-x-auto border rounded-lg shadow mb-6">
-                                        {savedData[activeTab].length === 0 ? (
-                                            <p className="text-center p-4 text-gray-500">No saved records for this term.</p>
-                                        ) : (
-                                            <table className="w-full border text-sm">
-                                                <thead className="bg-gray-100">
-                                                    <tr>
-                                                        <th className="p-2 border text-center">S No</th>
-                                                        <th className="p-2 border">Reason</th>
-                                                        <th className="p-2 border">From</th>
-                                                        <th className="p-2 border">To</th>
-                                                        <th className="p-2 border">Remarks</th>
-                                                        <th className="p-2 border text-center">Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {savedData[activeTab].map((row, i) => {
-                                                        const isEditing = editingRowId === row.id;
-                                                        return (
-                                                            <tr key={row.id}>
-                                                                <td className="p-2 border text-center">
-                                                                    <Input value={String(i + 1)} disabled className="bg-gray-100 text-center" />
-                                                                </td>
-
-                                                                {/* Reason */}
-                                                                <td className="p-2 border">
-                                                                    {isEditing ? (
-                                                                        <Input
-                                                                            value={editingValues?.reason ?? ""}
-                                                                            onChange={(e) => setEditingField("reason", (e.target as HTMLInputElement).value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <div>{row.reason}</div>
-                                                                    )}
-                                                                </td>
-
-                                                                {/* From */}
-                                                                <td className="p-2 border">
-                                                                    {isEditing ? (
-                                                                        <Input
-                                                                            type="date"
-                                                                            value={editingValues?.fromDate ?? ""}
-                                                                            onChange={(e) => setEditingField("fromDate", (e.target as HTMLInputElement).value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <div>{row.fromDate}</div>
-                                                                    )}
-                                                                </td>
-
-                                                                {/* To */}
-                                                                <td className="p-2 border">
-                                                                    {isEditing ? (
-                                                                        <Input
-                                                                            type="date"
-                                                                            value={editingValues?.toDate ?? ""}
-                                                                            onChange={(e) => setEditingField("toDate", (e.target as HTMLInputElement).value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <div>{row.toDate}</div>
-                                                                    )}
-                                                                </td>
-
-                                                                {/* Remarks */}
-                                                                <td className="p-2 border">
-                                                                    {isEditing ? (
-                                                                        <Input
-                                                                            value={editingValues?.remarks ?? ""}
-                                                                            onChange={(e) => setEditingField("remarks", (e.target as HTMLInputElement).value)}
-                                                                        />
-                                                                    ) : (
-                                                                        <div>{row.remarks}</div>
-                                                                    )}
-                                                                </td>
-
-                                                                {/* Action */}
-                                                                <td className="p-2 border text-center">
-                                                                    {isEditing ? (
-                                                                        <div className="flex items-center justify-center gap-2">
-                                                                            <Button size="sm" onClick={() => saveEdit(i)}>Save</Button>
-                                                                            <Button size="sm" variant="outline" onClick={cancelEdit}>Cancel</Button>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="flex items-center justify-center gap-2">
-                                                                            <Button size="sm" onClick={() => beginEdit(row)}>Edit</Button>
-                                                                            <Button size="sm" variant="destructive" onClick={() => handleDelete(i)}>Delete</Button>
-                                                                        </div>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        )}
-                                    </div>
-
-                                    {/* Form Table for adding new rows */}
-                                    <form onSubmit={handleSubmit(onSubmit)}>
-                                        <div className="overflow-x-auto border rounded-lg shadow">
-                                            <table className="w-full border text-sm">
-                                                <thead className="bg-gray-100">
-                                                    <tr>
-                                                        <th className="p-2 border text-center">S No</th>
-                                                        <th className="p-2 border">Reason</th>
-                                                        <th className="p-2 border">From</th>
-                                                        <th className="p-2 border">To</th>
-                                                        <th className="p-2 border">Remarks</th>
-                                                        <th className="p-2 border text-center">Action</th>
-                                                    </tr>
-                                                </thead>
-
-                                                <tbody>
-                                                    {fields.map((field, idx) => (
-                                                        <tr key={field.id}>
-                                                            <td className="p-2 border text-center">
-                                                                <Input value={String(idx + 1)} disabled className="bg-gray-100 text-center" />
-                                                            </td>
-
-                                                            <td className="p-2 border">
-                                                                <Input {...register(`records.${idx}.reason`)} />
-                                                            </td>
-
-                                                            <td className="p-2 border">
-                                                                <Input type="date" {...register(`records.${idx}.fromDate`)} />
-                                                            </td>
-
-                                                            <td className="p-2 border">
-                                                                <Input type="date" {...register(`records.${idx}.toDate`)} />
-                                                            </td>
-
-                                                            <td className="p-2 border">
-                                                                <Input {...register(`records.${idx}.remarks`)} />
-                                                            </td>
-
-                                                            <td className="p-2 border text-center">
-                                                                <Button type="button" size="sm" variant="destructive" onClick={() => remove(idx)}>Remove</Button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        <div className="mt-4 flex justify-center gap-4">
-                                            <Button type="button" onClick={() => append({ ...defaultFormRow })}>+ Add Row</Button>
-                                            <Button type="submit" className="bg-green-600 hover:bg-green-700">Submit</Button>
-                                            <Button type="button" variant="outline" onClick={() => replace([{ ...defaultFormRow }])}>Reset</Button>
-                                        </div>
-                                    </form>
-
-                                </CardContent>
-                            </Card>
-                        </section>
-                    </TabsContent>
-                </DossierTab>
-            </main>
-        </DashboardLayout>
+                        <DetentionForm
+                            register={register}
+                            fields={fields}
+                            append={append}
+                            remove={remove}
+                            savedRows={savedData[activeTab].filter(
+                                (row) => row.type === "DETENTION"
+                            )}
+                            onEditRow={beginEdit}
+                            onDeleteSaved={handleDeleteSaved}
+                            editingRowId={editingRowId}
+                            editingValues={editingValues}
+                            setEditingField={setEditingField}
+                            saveInlineEdit={saveInlineEdit}
+                            cancelInlineEdit={cancelEdit}
+                            onSubmit={handleNewSubmit}
+                            onReset={() => setValue("detentionRows", defaultDetentionRows)}
+                        />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </DossierTab>
     );
 }
