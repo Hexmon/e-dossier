@@ -230,6 +230,7 @@ export const speedMarchUpdateSchema = speedMarchCreateSchema.partial();
 export const creditForExcellenceItemSchema = z.object({
     cat: z.string().min(1),
     marks: z.coerce.number(),
+    remarks: z.string().optional(),
 });
 export const creditForExcellenceCreateSchema = z.object({
     semester: Semester,
