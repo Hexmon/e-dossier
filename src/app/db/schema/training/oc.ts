@@ -445,6 +445,66 @@ export const ocDrill = pgTable('oc_drill', {
 }));
 
 // ---------------------------------------------------------------------------
+// OLQ (Officer Like Qualities)
+// ---------------------------------------------------------------------------
+export const ocOlqCategories = pgTable('oc_olq_category', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: varchar('code', { length: 50 }).notNull(),
+    title: varchar('title', { length: 255 }).notNull(),
+    description: text('description'),
+    displayOrder: integer('display_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqCategoryCode: uniqueIndex('uq_olq_category_code').on(t.code),
+}));
+
+export const ocOlqSubtitles = pgTable('oc_olq_subtitle', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    categoryId: uuid('category_id')
+        .notNull()
+        .references(() => ocOlqCategories.id, { onDelete: 'cascade' }),
+    subtitle: varchar('subtitle', { length: 255 }).notNull(),
+    maxMarks: integer('max_marks').notNull().default(20),
+    displayOrder: integer('display_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqSubtitlePerCategory: uniqueIndex('uq_olq_subtitle_per_category').on(t.categoryId, t.subtitle),
+}));
+
+export const ocOlq = pgTable('oc_olq', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    totalMarks: integer('total_marks'),
+    remarks: text('remarks'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqOcSemester: uniqueIndex('uq_oc_olq_semester').on(t.ocId, t.semester),
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+}));
+
+export const ocOlqScores = pgTable('oc_olq_score', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocOlqId: uuid('oc_olq_id')
+        .notNull()
+        .references(() => ocOlq.id, { onDelete: 'cascade' }),
+    subtitleId: uuid('subtitle_id')
+        .notNull()
+        .references(() => ocOlqSubtitles.id, { onDelete: 'restrict' }),
+    marksScored: integer('marks_scored').notNull().default(0),
+}, (t) => ({
+    uqScorePerSubtitle: uniqueIndex('uq_olq_score_per_subtitle').on(t.ocOlqId, t.subtitleId),
+    marksNonNegative: { check: sql`CHECK (${t.marksScored.name} >= 0)` },
+}));
+
+// ---------------------------------------------------------------------------
 // oc_credit_for_excellence (CFE)
 // ---------------------------------------------------------------------------
 export const ocCreditForExcellence = pgTable('oc_credit_for_excellence', {
