@@ -1,4 +1,5 @@
 import { db } from '@/app/db/client';
+import { ApiError } from '@/app/lib/http';
 import {
     ocPersonal, ocFamilyMembers, ocEducation, ocAchievements,
     ocAutobiography, ocSsbReports, ocSsbPoints,
@@ -19,10 +20,17 @@ import {
     ocRecordingLeaveHikeDetention,
     ocSpecialAchievementInClubs,
     ocCreditForExcellence,
+    campSemesterKind,
+    campReviewRoleKind,
+    trainingCamps,
+    ocCamps,
+    trainingCampActivities,
+    ocCampActivityScores,
+    ocCampReviews,
 } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
-import { and, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
+import { and, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 
 type ListOpts = {
     q?: string;
@@ -1256,4 +1264,360 @@ export async function deleteCounselling(
         .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId)))
         .returning();
     return row ?? null;
+}
+
+// ---- Camps ------------------------------------------------------------------
+type CampSemester = (typeof campSemesterKind.enumValues)[number];
+type CampReviewRole = (typeof campReviewRoleKind.enumValues)[number];
+
+export type OcCampWithDetails = {
+    ocCampId: string;
+    trainingCampId: string;
+    campName: string;
+    semester: CampSemester;
+    maxTotalMarks: number;
+    totalMarksScored: number | null;
+    reviews?: Array<{
+        id: string;
+        role: CampReviewRole;
+        sectionTitle: string;
+        reviewText: string;
+    }>;
+    activities?: Array<{
+        id: string;
+        name: string;
+        maxMarks: number;
+        marksScored: number;
+        remark: string | null;
+    }>;
+};
+
+type GetOcCampsOptions = {
+    ocId: string;
+    semester?: CampSemester;
+    campName?: string;
+    includeReviews?: boolean;
+    includeActivities?: boolean;
+    reviewRole?: CampReviewRole;
+    activityName?: string;
+};
+
+type GetOcCampMarksOptions = {
+    ocId: string;
+    semester?: CampSemester;
+    campName?: string;
+    activityName?: string;
+};
+
+type GetOcCampTotalsOptions = {
+    ocId: string;
+    semester?: CampSemester;
+};
+
+const campActivityTotals = db
+    .select({
+        ocCampId: ocCampActivityScores.ocCampId,
+        totalMarksScored: sql<number>`SUM(${ocCampActivityScores.marksScored})`,
+    })
+    .from(ocCampActivityScores)
+    .groupBy(ocCampActivityScores.ocCampId)
+    .as('camp_activity_totals');
+
+export async function getOcCamps(options: GetOcCampsOptions) {
+    const { ocId, semester, campName, includeReviews, includeActivities, reviewRole, activityName } = options;
+    const wh: any[] = [eq(ocCamps.ocId, ocId)];
+    if (semester) wh.push(eq(trainingCamps.semester, semester));
+    if (campName) wh.push(eq(trainingCamps.name, campName));
+
+    const baseRows = await db
+        .select({
+            ocCampId: ocCamps.id,
+            trainingCampId: trainingCamps.id,
+            campName: trainingCamps.name,
+            semester: trainingCamps.semester,
+            maxTotalMarks: trainingCamps.maxTotalMarks,
+            totalMarksScored: sql<number | null>`COALESCE(${campActivityTotals.totalMarksScored}, ${ocCamps.totalMarksScored})`,
+        })
+        .from(ocCamps)
+        .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
+        .leftJoin(campActivityTotals, eq(campActivityTotals.ocCampId, ocCamps.id))
+        .where(wh.length ? and(...wh) : undefined)
+        .orderBy(trainingCamps.semester, trainingCamps.name);
+
+    if (!baseRows.length) return { camps: [] as OcCampWithDetails[], grandTotalMarksScored: 0 };
+
+    const ocCampIds = baseRows.map((r) => r.ocCampId);
+    let reviewsByCamp: Record<string, NonNullable<OcCampWithDetails['reviews']>> = {};
+    let activitiesByCamp: Record<string, NonNullable<OcCampWithDetails['activities']>> = {};
+
+    if (includeReviews) {
+        const reviewWh: any[] = [inArray(ocCampReviews.ocCampId, ocCampIds)];
+        if (reviewRole) reviewWh.push(eq(ocCampReviews.role, reviewRole));
+        const reviewRows = await db
+            .select({
+                id: ocCampReviews.id,
+                ocCampId: ocCampReviews.ocCampId,
+                role: ocCampReviews.role,
+                sectionTitle: ocCampReviews.sectionTitle,
+                reviewText: ocCampReviews.reviewText,
+            })
+            .from(ocCampReviews)
+            .where(reviewWh.length ? and(...reviewWh) : undefined);
+        reviewsByCamp = reviewRows.reduce<Record<string, typeof reviewRows>>((acc, row) => {
+            (acc[row.ocCampId] ||= []).push(row);
+            return acc;
+        }, {});
+    }
+
+    if (includeActivities) {
+        const actWh: any[] = [inArray(ocCampActivityScores.ocCampId, ocCampIds)];
+        if (activityName) actWh.push(eq(trainingCampActivities.name, activityName));
+
+        const activityRows = await db
+            .select({
+                id: ocCampActivityScores.id,
+                ocCampId: ocCampActivityScores.ocCampId,
+                name: trainingCampActivities.name,
+                maxMarks: ocCampActivityScores.maxMarks,
+                marksScored: ocCampActivityScores.marksScored,
+                remark: ocCampActivityScores.remark,
+            })
+            .from(ocCampActivityScores)
+            .innerJoin(trainingCampActivities, eq(trainingCampActivities.id, ocCampActivityScores.trainingCampActivityId))
+            .where(actWh.length ? and(...actWh) : undefined)
+            .orderBy(trainingCampActivities.sortOrder, trainingCampActivities.name);
+
+        activitiesByCamp = activityRows.reduce<Record<string, typeof activityRows>>((acc, row) => {
+            (acc[row.ocCampId] ||= []).push(row);
+            return acc;
+        }, {});
+    }
+
+    const camps: OcCampWithDetails[] = baseRows.map((row) => ({
+        ...row,
+        reviews: includeReviews ? reviewsByCamp[row.ocCampId] ?? [] : undefined,
+        activities: includeActivities ? activitiesByCamp[row.ocCampId] ?? [] : undefined,
+    }));
+
+    const grandTotalMarksScored = camps.reduce((acc, c) => acc + (c.totalMarksScored ?? 0), 0);
+    return { camps, grandTotalMarksScored };
+}
+
+export async function getOcCampMarks(options: GetOcCampMarksOptions) {
+    const { ocId, semester, campName, activityName } = options;
+    const wh: any[] = [eq(ocCamps.ocId, ocId)];
+    if (semester) wh.push(eq(trainingCamps.semester, semester));
+    if (campName) wh.push(eq(trainingCamps.name, campName));
+    if (activityName) wh.push(eq(trainingCampActivities.name, activityName));
+
+    const rows = await db
+        .select({
+            ocCampId: ocCamps.id,
+            trainingCampId: trainingCamps.id,
+            campName: trainingCamps.name,
+            semester: trainingCamps.semester,
+            activityName: trainingCampActivities.name,
+            maxMarks: ocCampActivityScores.maxMarks,
+            marksScored: ocCampActivityScores.marksScored,
+            remark: ocCampActivityScores.remark,
+            campTotalMarks: sql<number | null>`COALESCE(${campActivityTotals.totalMarksScored}, ${ocCamps.totalMarksScored})`,
+        })
+        .from(ocCampActivityScores)
+        .innerJoin(ocCamps, eq(ocCamps.id, ocCampActivityScores.ocCampId))
+        .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
+        .innerJoin(trainingCampActivities, eq(trainingCampActivities.id, ocCampActivityScores.trainingCampActivityId))
+        .leftJoin(campActivityTotals, eq(campActivityTotals.ocCampId, ocCampActivityScores.ocCampId))
+        .where(wh.length ? and(...wh) : undefined)
+        .orderBy(trainingCamps.semester, trainingCamps.name, trainingCampActivities.sortOrder, trainingCampActivities.name);
+
+    return rows;
+}
+
+export async function getOcCampTotals(options: GetOcCampTotalsOptions) {
+    const { ocId, semester } = options;
+    const wh: any[] = [eq(ocCamps.ocId, ocId)];
+    if (semester) wh.push(eq(trainingCamps.semester, semester));
+
+    const rows = await db
+        .select({
+            ocCampId: ocCamps.id,
+            trainingCampId: trainingCamps.id,
+            campName: trainingCamps.name,
+            semester: trainingCamps.semester,
+            maxTotalMarks: trainingCamps.maxTotalMarks,
+            totalMarksScored: sql<number | null>`COALESCE(${campActivityTotals.totalMarksScored}, ${ocCamps.totalMarksScored})`,
+        })
+        .from(ocCamps)
+        .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
+        .leftJoin(campActivityTotals, eq(campActivityTotals.ocCampId, ocCamps.id))
+        .where(wh.length ? and(...wh) : undefined)
+        .orderBy(trainingCamps.semester, trainingCamps.name);
+
+    const grandTotalMarksScored = rows.reduce((acc, r) => acc + (r.totalMarksScored ?? 0), 0);
+    return { items: rows, grandTotalMarksScored };
+}
+
+export async function upsertOcCamp(
+    ocId: string,
+    trainingCampId: string,
+    data: Partial<typeof ocCamps.$inferInsert> = {},
+) {
+    const [campTemplate] = await db
+        .select({ id: trainingCamps.id })
+        .from(trainingCamps)
+        .where(eq(trainingCamps.id, trainingCampId))
+        .limit(1);
+    if (!campTemplate) throw new ApiError(404, 'Training camp not found', 'not_found');
+
+    const [existing] = await db
+        .select()
+        .from(ocCamps)
+        .where(and(eq(ocCamps.ocId, ocId), eq(ocCamps.trainingCampId, trainingCampId)))
+        .limit(1);
+
+    if (existing) {
+        const [row] = await db
+            .update(ocCamps)
+            .set({ ...data, updatedAt: new Date() })
+            .where(eq(ocCamps.id, existing.id))
+            .returning();
+        return row;
+    }
+
+    const [row] = await db.insert(ocCamps).values({ ocId, trainingCampId, ...data }).returning();
+    return row;
+}
+
+export async function upsertOcCampReview(
+    ocCampId: string,
+    role: CampReviewRole,
+    payload: Omit<typeof ocCampReviews.$inferInsert, 'id' | 'ocCampId' | 'role' | 'createdAt' | 'updatedAt'>,
+) {
+    const [existing] = await db
+        .select()
+        .from(ocCampReviews)
+        .where(and(eq(ocCampReviews.ocCampId, ocCampId), eq(ocCampReviews.role, role)))
+        .limit(1);
+
+    if (existing) {
+        const [row] = await db
+            .update(ocCampReviews)
+            .set({ ...payload, updatedAt: new Date() })
+            .where(eq(ocCampReviews.id, existing.id))
+            .returning();
+        return row;
+    }
+
+    const [row] = await db
+        .insert(ocCampReviews)
+        .values({ ocCampId, role, ...payload })
+        .returning();
+    return row;
+}
+
+export async function upsertOcCampActivityScore(
+    ocCampId: string,
+    trainingCampActivityId: string,
+    payload: { marksScored: number; remark?: string | null; maxMarks?: number },
+) {
+    const [activity] = await db
+        .select({
+            id: trainingCampActivities.id,
+            trainingCampId: trainingCampActivities.trainingCampId,
+            defaultMaxMarks: trainingCampActivities.defaultMaxMarks,
+        })
+        .from(trainingCampActivities)
+        .where(eq(trainingCampActivities.id, trainingCampActivityId))
+        .limit(1);
+    if (!activity) throw new ApiError(404, 'Training camp activity not found', 'not_found');
+
+    const [ocCamp] = await db
+        .select({
+            id: ocCamps.id,
+            trainingCampId: ocCamps.trainingCampId,
+        })
+        .from(ocCamps)
+        .where(eq(ocCamps.id, ocCampId))
+        .limit(1);
+    if (!ocCamp) throw new ApiError(404, 'OC camp not found', 'not_found');
+    if (ocCamp.trainingCampId !== activity.trainingCampId) {
+        throw new ApiError(400, 'Activity does not belong to this camp', 'bad_request');
+    }
+
+    const [existing] = await db
+        .select()
+        .from(ocCampActivityScores)
+        .where(
+            and(
+                eq(ocCampActivityScores.ocCampId, ocCampId),
+                eq(ocCampActivityScores.trainingCampActivityId, trainingCampActivityId),
+            ),
+        )
+        .limit(1);
+
+    const maxMarks = payload.maxMarks ?? existing?.maxMarks ?? activity.defaultMaxMarks;
+    if (maxMarks === undefined || maxMarks === null) {
+        throw new ApiError(400, 'maxMarks is required', 'bad_request');
+    }
+    if (payload.marksScored > maxMarks) {
+        throw new ApiError(400, 'marksScored cannot exceed maxMarks', 'bad_request', {
+            marksScored: payload.marksScored,
+            maxMarks,
+        });
+    }
+    if (payload.marksScored < 0) {
+        throw new ApiError(400, 'marksScored cannot be negative', 'bad_request');
+    }
+
+    const payloadBase = {
+        ocCampId,
+        trainingCampActivityId,
+        maxMarks,
+        marksScored: payload.marksScored,
+        remark: payload.remark !== undefined ? payload.remark : existing?.remark ?? null,
+    };
+
+    if (existing) {
+        const [row] = await db
+            .update(ocCampActivityScores)
+            .set({ ...payloadBase, updatedAt: new Date() })
+            .where(eq(ocCampActivityScores.id, existing.id))
+            .returning();
+        return row;
+    }
+
+    const [row] = await db.insert(ocCampActivityScores).values(payloadBase).returning();
+    return row;
+}
+
+export async function deleteOcCamp(ocCampId: string) {
+    const [row] = await db.delete(ocCamps).where(eq(ocCamps.id, ocCampId)).returning();
+    return row ?? null;
+}
+
+export async function deleteOcCampReview(id: string) {
+    const [row] = await db.delete(ocCampReviews).where(eq(ocCampReviews.id, id)).returning();
+    return row ?? null;
+}
+
+export async function deleteOcCampActivityScore(id: string) {
+    const [row] = await db.delete(ocCampActivityScores).where(eq(ocCampActivityScores.id, id)).returning();
+    return row ?? null;
+}
+
+export async function recomputeOcCampTotal(ocCampId: string) {
+    const [agg] = await db
+        .select({
+            total: sql<number | null>`SUM(${ocCampActivityScores.marksScored})`,
+        })
+        .from(ocCampActivityScores)
+        .where(eq(ocCampActivityScores.ocCampId, ocCampId));
+
+    const total = agg?.total ?? null;
+    const [row] = await db
+        .update(ocCamps)
+        .set({ totalMarksScored: total, updatedAt: new Date() })
+        .where(eq(ocCamps.id, ocCampId))
+        .returning();
+    return row;
 }
