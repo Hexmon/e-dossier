@@ -300,7 +300,7 @@ export const counsellingCreateSchema = z.object({
     semester: Semester,
     reason: z.string().min(1),
     natureOfWarning: CounsellingWarningKind,
-    date: z.coerce.date(),
+    date: z.coerce.date().transform((date) => date.toISOString()),
     warnedBy: z.string().min(1),
 });
 export const counsellingUpdateSchema = counsellingCreateSchema.partial();

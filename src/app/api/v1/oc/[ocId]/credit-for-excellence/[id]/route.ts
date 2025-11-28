@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, ctx: any) {
 
 export async function PATCH(req: NextRequest, ctx: any) {
     try {
-        await mustBeAdmin(req);
+        await mustBeAuthed(req);
         const { ocId } = await parseParam(ctx, OcIdParam);
         await ensureOcExists(ocId);
         const { id } = await parseParam(ctx, IdSchema);

@@ -58,12 +58,13 @@ export default function CounsellingWarningPage() {
         name: "records",
     });
 
-    // Load saved data for cadet
-    const fetchRecords = async () => {
-        if (!selectedCadet?.ocId) return;
+
+    const fetchRecords = async (ocId?: string) => {
+        const effectiveOcId = ocId ?? selectedCadet?.ocId;
+        if (!effectiveOcId) return;
 
         try {
-            const data = await getCounsellingRecords(selectedCadet.ocId);
+            const data = await getCounsellingRecords(effectiveOcId);
 
             // group by term index
             const grouped = semestersCounselling.map(() => [] as CounsellingRow[]);
@@ -85,10 +86,12 @@ export default function CounsellingWarningPage() {
     };
 
     useEffect(() => {
-        fetchRecords();
-    }, [selectedCadet]);
+        if (!selectedCadet?.ocId) return;
+        fetchRecords(selectedCadet.ocId);
 
-    // Submit new rows to selected term
+    }, [selectedCadet?.ocId]);
+
+
     const onSubmit = async (data: CounsellingFormData) => {
         if (!selectedCadet?.ocId) {
             alert("Please select a cadet first");
@@ -109,15 +112,18 @@ export default function CounsellingWarningPage() {
         try {
             const saved = await saveCounsellingRecords(selectedCadet.ocId, payload);
 
-            const newRows: CounsellingRow[] = saved.map((r: any, i: number) => ({
-                id: r.id,
-                serialNo: "",
-                term: r.term,
-                reason: r.reason,
-                warningType: r.warningType,
-                date: r.date,
-                warningBy: r.warningBy,
-            }));
+            const newRows: CounsellingRow[] = saved.map((r: any, i: number) => {
+                const { id, reason, warningType, date, warningBy } = r;
+                return {
+                    id: id,
+                    serialNo: "",
+                    term: semestersCounselling[activeTab],
+                    reason: reason,
+                    warningType: warningType,
+                    date: date,
+                    warningBy: warningBy,
+                };
+            });
 
             setSavedData((prev) => {
                 const next = [...prev];
@@ -137,7 +143,15 @@ export default function CounsellingWarningPage() {
 
     const handleDelete = async (row: CounsellingRow, index: number) => {
         try {
-            if (row.id) await deleteCounsellingRecord(row.id);
+            if (!selectedCadet?.ocId) {
+                toast.error("Please select a cadet first");
+                return;
+            }
+
+            if (row.id) await deleteCounsellingRecord(selectedCadet.ocId, row.id);
+
+            // After backend delete, refresh from source of truth
+            await fetchRecords(selectedCadet.ocId);
 
             setSavedData((prev) => {
                 const next = [...prev];
