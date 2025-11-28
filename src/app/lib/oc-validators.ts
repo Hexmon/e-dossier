@@ -5,6 +5,8 @@ export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);
 export const SeniorSemester = z.coerce.number().int().min(4).max(6);
 export const TermKind = z.enum(['spring', 'autumn']);
+export const CampSemesterKind = z.enum(['SEM5', 'SEM6A', 'SEM6B']);
+export const CampReviewRoleKind = z.enum(['OIC', 'PLATOON_COMMANDER', 'HOAT']);
 
 export const personalUpsertSchema = z.object({
     visibleIdentMarks: z.string().optional(),
@@ -302,3 +304,38 @@ export const counsellingCreateSchema = z.object({
     warnedBy: z.string().min(1),
 });
 export const counsellingUpdateSchema = counsellingCreateSchema.partial();
+
+// --- Camps -------------------------------------------------------------------
+const BoolString = z.enum(['true', 'false']).transform((v) => v === 'true');
+
+export const campReviewSchema = z.object({
+    role: CampReviewRoleKind,
+    sectionTitle: z.string().min(1),
+    reviewText: z.string().min(1),
+});
+
+export const campActivityScoreSchema = z.object({
+    trainingCampActivityId: z.string().uuid(),
+    marksScored: z.coerce.number().int().min(0),
+    remark: z.string().nullable().optional(),
+});
+
+export const ocCampUpsertSchema = z.object({
+    trainingCampId: z.string().uuid(),
+    year: z.coerce.number().int().optional(),
+    reviews: z.array(campReviewSchema).optional(),
+    activities: z.array(campActivityScoreSchema).optional(),
+});
+
+export const ocCampUpdateSchema = ocCampUpsertSchema.extend({
+    ocCampId: z.string().uuid().optional(),
+});
+
+export const ocCampQuerySchema = z.object({
+    semester: CampSemesterKind.optional(),
+    campName: z.string().optional(),
+    withReviews: BoolString.optional(),
+    withActivities: BoolString.optional(),
+    reviewRole: CampReviewRoleKind.optional(),
+    activityName: z.string().optional(),
+});

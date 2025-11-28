@@ -68,9 +68,17 @@ export const endpoints = {
         clubDetls: (ocId: string) => `/api/v1/oc/${ocId}/clubs`,
         clubDetlsById: (ocId: string, clubDtlId: string) =>
             `/api/v1/oc/${ocId}/clubs/${clubDtlId}`,
-        counselling: (ocId: string) => `/api/v1/oc/${ocId}/counselling`,
-        counsellingById: (ocId: string, counsellingId: string) =>
-            `/api/v1/oc/${ocId}/counselling/${counsellingId}`,
+        drill: (ocId: string) => `/api/v1/oc/${ocId}/drill`,
+        drillById: (ocId: string, drillId: string) => `/api/v1/oc/${ocId}/drill/${drillId}`,
+        clubAchievement: (ocId: string) => `/api/v1/oc/${ocId}/club-achievements`,
+        clubAchievementById: (ocId: string, achId: string) => `/api/v1/oc/${ocId}/club-achievements/${achId}`,
+        leaveRecord: (ocId: string) => `/api/v1/oc/${ocId}/recording-leave-hike-detention`,
+        leaveRecordById: (ocId: string, recordId: string) => `/api/v1/oc/${ocId}/recording-leave-hike-detention/${recordId}`,
+        olq: (ocId: string) => `/api/v1/oc/${ocId}/olq`,
+        olqBySemester: (ocId: string, semester: number) =>
+            `/api/v1/oc/${ocId}/olq?semester=${semester}&includeCategories=true`,
+        olqDeleteSemester: (ocId: string, semester: number) =>
+            `/api/v1/oc/${ocId}/olq?semester=${semester}`,
     },
     course: {
         all: "/api/v1/courses"
