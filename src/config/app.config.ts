@@ -432,10 +432,10 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "bg-yellow-700"
   },
   {
-    title: "Assessment",
+    title: "OLQ Assessment",
     description: "Conduct, manage, and review assessments",
     icon: FileText,
-    to: "",
+    to: "/dashboard/milmgmt/olq-assessment",
     color: "bg-green-500"
   },
   {
@@ -1239,7 +1239,7 @@ export const dossierTabs = [
     icon: Footprints,
   },
   {
-    value:"leave-record",
+    value: "leave-record",
     title: "Leave Records",
     icon: Calendar,
   },
@@ -1247,6 +1247,11 @@ export const dossierTabs = [
     value: "detention",
     title: "Detention",
     icon: Ban,
+  },
+  {
+    value: "olq-assessment",
+    title: "OLQ Assessment",
+    icon: FileText,
   },
 ];
 
@@ -1333,18 +1338,18 @@ export const getTypeColor = (type: string) => {
 };
 
 export const ratingMap: Record<number, string> = {
-    9: "OS",
-    8: "WAA",
-    7: "AA",
-    6: "JAA",
-    5: "HA",
-    4: "LA",
-    3: "JBA",
-    2: "BA",
-    1: "WBA",
-    0: "Poor",
+  9: "OS",
+  8: "WAA",
+  7: "AA",
+  6: "JAA",
+  5: "HA",
+  4: "LA",
+  3: "JBA",
+  2: "BA",
+  1: "WBA",
+  0: "Poor",
 };
 
 export const reverseRatingMap: Record<string, number> = Object.fromEntries(
-    Object.entries(ratingMap).map(([k, v]) => [v, Number(k)])
+  Object.entries(ratingMap).map(([k, v]) => [v, Number(k)])
 );

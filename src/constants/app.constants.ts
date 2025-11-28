@@ -274,3 +274,76 @@ export const termColumns: Record<
   2: { timing: "timing30Label", distance: "distance30" },
 };
 
+export const GRADE_BRACKETS = [
+  { key: "outstanding", label: "Outstanding Avg", min: 270, max: 300, rangeLabel: "(300–270)" },
+  { key: "well_above", label: "Well Above Avg", min: 240, max: 269, rangeLabel: "(269–240)" },
+  { key: "above", label: "Above Avg", min: 210, max: 239, rangeLabel: "(239–210)" },
+  { key: "just_above", label: "Just Above Avg", min: 180, max: 209, rangeLabel: "(209–180)" },
+  { key: "high_avg", label: "High Avg", min: 150, max: 179, rangeLabel: "(179–150)" },
+  { key: "low_avg", label: "Low Avg", min: 120, max: 149, rangeLabel: "(149–120)" },
+  { key: "just_below", label: "Just Below Avg", min: 90, max: 119, rangeLabel: "(119–90)" },
+  { key: "below", label: "Below Avg", min: 60, max: 89, rangeLabel: "(89–60)" },
+  { key: "well_below", label: "Well Below Avg", min: 30, max: 59, rangeLabel: "(59–30)" },
+  { key: "poor", label: "Poor", min: 0, max: 29, rangeLabel: "(29–0)" },
+];
+
+export const OLQ_GROUPS = {
+  "PLG & ORG": [
+    "Effective Intelligence",
+    "Reasoning Ability",
+    "Org Ability",
+    "Power of Expression"
+  ],
+  "Social Adjustment": [
+    "Social Adaptability",
+    "Cooperation",
+    "Sense of Responsibility"
+  ],
+  "Social Effectiveness": [
+    "Initiative",
+    "Self-Confidence",
+    "Speed of Decision",
+    "Ability to Influence the Gp",
+    "Liveliness"
+  ],
+  "Dynamic": [
+    "Determination",
+    "Courage",
+    "Stamina"
+  ]
+};
+
+// /constants/olq.constants.ts
+// Deterministic IDs (slugified). Replace these ids with real UUIDs later if needed.
+
+function slugify(s: string) {
+  return s.toLowerCase().replace(/\s+/g, "_").replace(/[^\w_]/g, "");
+}
+
+export const OLQ_STRUCTURE = {
+  "PLG & ORG": [
+    { id: slugify("PLG & ORG" + "_" + "Effective Intelligence"), name: "Effective Intelligence" },
+    { id: slugify("PLG & ORG" + "_" + "Reasoning Ability"), name: "Reasoning Ability" },
+    { id: slugify("PLG & ORG" + "_" + "Org Ability"), name: "Org Ability" },
+    { id: slugify("PLG & ORG" + "_" + "Power of Expression"), name: "Power of Expression" },
+  ],
+  "Social Adjustment": [
+    { id: slugify("Social Adjustment" + "_" + "Social Adaptability"), name: "Social Adaptability" },
+    { id: slugify("Social Adjustment" + "_" + "Cooperation"), name: "Cooperation" },
+    { id: slugify("Social Adjustment" + "_" + "Sense of Responsibility"), name: "Sense of Responsibility" },
+  ],
+  "Social Effectiveness": [
+    { id: slugify("Social Effectiveness" + "_" + "Initiative"), name: "Initiative" },
+    { id: slugify("Social Effectiveness" + "_" + "Self-Confidence"), name: "Self-Confidence" },
+    { id: slugify("Social Effectiveness" + "_" + "Speed of Decision"), name: "Speed of Decision" },
+    { id: slugify("Social Effectiveness" + "_" + "Ability to Influence the Gp"), name: "Ability to Influence the Gp" },
+    { id: slugify("Social Effectiveness" + "_" + "Liveliness"), name: "Liveliness" },
+  ],
+  "Dynamic": [
+    { id: slugify("Dynamic" + "_" + "Determination"), name: "Determination" },
+    { id: slugify("Dynamic" + "_" + "Courage"), name: "Courage" },
+    { id: slugify("Dynamic" + "_" + "Stamina"), name: "Stamina" },
+  ],
+} as const;
+
+export const OLQ_REMARKS = Object.keys(OLQ_STRUCTURE);
