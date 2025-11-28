@@ -68,6 +68,9 @@ export const endpoints = {
         clubDetls: (ocId: string) => `/api/v1/oc/${ocId}/clubs`,
         clubDetlsById: (ocId: string, clubDtlId: string) =>
             `/api/v1/oc/${ocId}/clubs/${clubDtlId}`,
+        counselling: (ocId: string) => `/api/v1/oc/${ocId}/counselling`,
+        counsellingById: (ocId: string, counsellingId: string) =>
+            `/api/v1/oc/${ocId}/counselling/${counsellingId}`,
     },
     course: {
         all: "/api/v1/courses"
