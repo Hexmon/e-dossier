@@ -12,6 +12,20 @@ import {
     listCreditForExcellence,
 } from '@/app/db/queries/oc';
 
+interface MotivationRecord {
+    obstacle: string;
+    strategy: string;
+    progress: string;
+    reflection: string;
+}
+
+interface SavedDataState {
+    motivation: {
+        records: MotivationRecord[];
+    };
+}
+
+
 export async function GET(req: NextRequest, ctx: any) {
     try {
         await mustBeAuthed(req);

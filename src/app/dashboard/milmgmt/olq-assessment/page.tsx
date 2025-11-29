@@ -1,42 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { useForm, FormProvider } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
-
 import DossierTab from "@/components/Tabs/DossierTab";
-import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
-import OLQForm from "@/components/olq/OLQForm";
-import OLQView from "@/components/olq/OLQView";
-import { OlqFormValues } from "@/types/olq";
-import { useOlqActions } from "@/hooks/useOlqActions";
+import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, ChevronDown } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger as InnerTabsTrigger, TabsContent as InnerTabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger as InnerTabTrigger, TabsContent as InnerTabContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { GRADE_BRACKETS, OLQ_STRUCTURE } from "@/constants/app.constants";
 import { toast } from "sonner";
 
-function buildInitialValues() {
-    const flat: Record<string, any> = {};
-    Object.values(OLQ_STRUCTURE).forEach((arr) => {
-        arr.forEach((s) => (flat[s.id] = ""));
-    });
-    return flat;
-}
+import OLQForm from "@/components/olq/OLQForm";
+import OLQView from "@/components/olq/OLQView";
+
+import { useOlqActions } from "@/hooks/useOlqActions";
+import { GRADE_BRACKETS } from "@/constants/app.constants";
+
+type OlqFormValues = Record<string, any>;
+
+const TERMS = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 
 export default function OLQPage() {
     const selectedCadet = useSelector((s: RootState) => s.cadet.selectedCadet);
-    const methods = useForm<OlqFormValues>({ defaultValues: buildInitialValues() });
+
+    // react-hook-form
+    const methods = useForm<OlqFormValues>({
+        defaultValues: {},
+    });
 
     return (
         <DashboardLayout title="OLQ Assessment" description="OLQ assessment">
@@ -60,120 +60,180 @@ export default function OLQPage() {
 }
 
 function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
-    const { register, reset, getValues, setValue, handleSubmit } = useFormContext<OlqFormValues>();
-    const { fetchOlq, submitOlq, updateOlq, deleteOlqForSemester } = useOlqActions(selectedCadet);
+    const { register, reset, getValues, handleSubmit, setValue } = useForm<OlqFormValues>();
 
-    const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
-    const [activeSem, setActiveSem] = useState<number>(0);
+    const { fetchCategories, fetchSemester, createRecord, updateRecord, deleteSemester } = useOlqActions(selectedCadet);
+
+    const [activeSemIndex, setActiveSemIndex] = useState<number>(0);
     const [activeInnerTab, setActiveInnerTab] = useState<"input" | "view">("input");
+
+    const [structure, setStructure] = useState<Record<string, any[]>>({});
+    const [loadingStructure, setLoadingStructure] = useState<boolean>(true);
+
+    const [serverRecordsPerSem, setServerRecordsPerSem] = useState<Record<number, any[]>>({});
     const [submissions, setSubmissions] = useState<(any | null)[]>(Array(6).fill(null));
-    const [serverRecordsMap, setServerRecordsMap] = useState<Record<number, any[]>>({});
-    const [refreshFlag, setRefreshFlag] = useState(0);
+    const [refreshFlag, setRefreshFlag] = useState<number>(0);
+    const [loadingSemester, setLoadingSemester] = useState<boolean>(false);
 
     useEffect(() => {
         if (!selectedCadet) return;
-        const load = async () => {
-            const sem = activeSem + 1;
-            const items = await fetchOlq(sem);
-            setServerRecordsMap((prev) => ({ ...prev, [sem]: items }));
-            if (items && items.length) {
+
+        let mounted = true;
+        (async () => {
+            setLoadingStructure(true);
+            try {
+                const categories = await fetchCategories();
+                if (!mounted) return;
+
+                const mapped: Record<string, any[]> = {};
+                categories.forEach((cat: any) => {
+                    mapped[cat.title] = (cat.subtitles ?? []).map((sub: any) => ({
+                        id: sub.id,
+                        subtitle: sub.subtitle,
+                        maxMarks: sub.maxMarks,
+                        displayOrder: sub.displayOrder,
+                        categoryId: cat.id,
+                    }));
+                });
+
+                setStructure(mapped);
+
+                const flatInit: any = {};
+                Object.values(mapped).flat().forEach((s: any) => (flatInit[s.id] = ""));
+                reset(flatInit);
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to load OLQ categories");
+            } finally {
+                if (mounted) setLoadingStructure(false);
+            }
+        })();
+
+        return () => { mounted = false; };
+    }, [selectedCadet]);
+
+    useEffect(() => {
+        if (!selectedCadet) return;
+        if (!Object.keys(structure).length) return;
+
+        let mounted = true;
+        (async () => {
+            setLoadingSemester(true);
+            const semester = activeSemIndex + 1;
+            try {
+                const items = await fetchSemester(semester);
+                console.log("🔵 RAW SEMESTER RESPONSE:", items);
+                if (!mounted) return;
+
+                setServerRecordsPerSem(prev => ({ ...prev, [semester]: items }));
+
+                console.log("🔥 Backend OLQ semester data:", items);
+
                 const marks: Record<string, number> = {};
                 let total = 0;
-                items.forEach((rec: any) => {
-                    (rec.scores || []).forEach((s: any) => {
+
+                (items || []).forEach((cat: any) => {
+                    (cat.subtitles || []).forEach((s: any) => {
                         const m = Number(s.marksScored) || 0;
                         marks[s.subtitleId] = m;
                         total += m;
                     });
                 });
-                const GRADE_BRACKETS = (await import("@/constants/app.constants")).GRADE_BRACKETS;
-                const match = GRADE_BRACKETS.find((b: any) => total >= b.min && total <= b.max);
-                const bracketKey = match ? match.key : "poor";
-                setSubmissions((prev: any) => { const cp = [...prev]; cp[activeSem] = { marks, total, bracketKey }; return cp; });
+
+                const bracket = (GRADE_BRACKETS.find(b => total >= b.min && total <= b.max) || { key: "poor" }).key;
+                setSubmissions(prev => { const cp = [...prev]; cp[activeSemIndex] = { marks, total, bracketKey: bracket }; return cp; });
+
                 const flatInit: any = {};
-                Object.values(OLQ_STRUCTURE).flat().forEach((s: any) => flatInit[s.id] = "");
-                items.forEach((rec: any) => {
-                    (rec.scores || []).forEach((sc: any) => {
-                        flatInit[sc.subtitleId] = sc.marksScored ?? "";
+                Object.values(structure).flat().forEach((s: any) => flatInit[s.id] = "");
+                (items || []).forEach((cat: any) => {
+                    (cat.subtitles || []).forEach((s: any) => {
+                        flatInit[s.subtitleId] = s.marksScored ?? "";
                     });
                 });
                 reset(flatInit);
-            } else {
-                setSubmissions((prev: any) => { const cp = [...prev]; cp[activeSem] = null; return cp; });
-                const flatInit: any = {};
-                Object.values(OLQ_STRUCTURE).flat().forEach((s: any) => flatInit[s.id] = "");
-                reset(flatInit);
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to load semester OLQ records");
+            } finally {
+                if (mounted) setLoadingSemester(false);
             }
-        };
-        load();
-    }, [selectedCadet, activeSem, refreshFlag]);
+        })();
 
-    const clearForm = () => {
+        return () => { mounted = false; };
+    }, [selectedCadet, structure, activeSemIndex, refreshFlag]);
+
+    const clearForm = useCallback(() => {
         const flatInit: any = {};
-        Object.values(OLQ_STRUCTURE).flat().forEach((s: any) => flatInit[s.id] = "");
+        Object.values(structure).flat().forEach((s: any) => (flatInit[s.id] = ""));
         reset(flatInit);
-        setSubmissions((prev: any) => { const cp = [...prev]; cp[activeSem] = null; return cp; });
+        setSubmissions(prev => { const cp = [...prev]; cp[activeSemIndex] = null; return cp; });
         setActiveInnerTab("input");
+    }, [structure, activeSemIndex, reset]);
+
+    const findExistingRecordForCategory = (items: any[], categorySubIds: string[]) => {
+        if (!items || !items.length) return undefined;
+        return items.find((r: any) => (r.scores || []).some((s: any) => categorySubIds.includes(s.subtitleId)));
     };
 
-    const onSubmit = handleSubmit(async (vals: any) => {
-        const sem = activeSem + 1;
-        const perRemarkPayloads: any[] = [];
+    const onSubmit = handleSubmit(async (vals) => {
+        if (!selectedCadet) { toast.error("No cadet selected"); return; }
+        const semester = activeSemIndex + 1;
+        const itemsForSem = serverRecordsPerSem[semester] ?? [];
 
-        for (const [remark, subtitles] of Object.entries(OLQ_STRUCTURE)) {
-            const scores = subtitles.map((s: any) => ({
-                subtitleId: s.id,
-                marksScored: Number(vals[s.id] || 0),
-            }));
-
-            perRemarkPayloads.push({
-                semester: sem,
-                remarks: remark,
-                scores,
-            });
-        }
-
-        const existing = serverRecordsMap[sem] ?? [];
-
-        for (const payload of perRemarkPayloads) {
-            const existingRec = existing.find((r: any) => String(r.remarks) === String(payload.remarks));
-            if (existingRec) {
-                const existingIds = (existingRec.scores || []).map((s: any) => s.subtitleId);
-                const postedIds = payload.scores.map((s: any) => s.subtitleId);
-                const deleteSubtitleIds = existingIds.filter((id: any) => !postedIds.includes(id));
-                const updatePayload = {
-                    ...payload,
-                    deleteSubtitleIds: deleteSubtitleIds.length ? deleteSubtitleIds : undefined,
-                };
-                await updateOlq(sem, updatePayload);
-            } else {
-                await createOcOlqRecordWrapper(payload);
-            }
-        }
-
-        setRefreshFlag((f) => f + 1);
-        setActiveInnerTab("view");
-        toast.success("OLQ saved");
-    });
-
-    const createOcOlqRecordWrapper = async (payload: any) => {
-        const { createOcOlqRecord } = await import("@/app/lib/api/olqApi");
-        if (!selectedCadet?.ocId) { toast.error("No cadet selected"); return; }
+        const categories = Object.entries(structure);
         try {
-            await createOcOlqRecord(selectedCadet.ocId, payload);
+            for (const [title, subtitles] of categories) {
+                const subIds = subtitles.map((s: any) => s.id);
+                const scores = subtitles.map((s: any) => ({
+                    subtitleId: s.id,
+                    marksScored: Number(vals[s.id] ?? 0)
+                }));
+
+                const hasAny = scores.some(sc => sc.marksScored > 0);
+                if (!hasAny) {
+                    continue;
+                }
+
+                const existing = findExistingRecordForCategory(itemsForSem, subIds);
+
+                if (existing) {
+                    const existingIds = (existing.scores || []).map((s: any) => s.subtitleId);
+                    const postedIds = scores.map(s => s.subtitleId);
+                    const deleteSubtitleIds = existingIds.filter((id: string) => !postedIds.includes(id));
+                    const payload: any = { semester, scores };
+                    if (deleteSubtitleIds.length) payload.deleteSubtitleIds = deleteSubtitleIds;
+                    await updateRecord(payload);
+                } else {
+                    const payload = { semester, scores };
+                    await createRecord(payload);
+                }
+            }
+
+            toast.success("OLQ records saved");
+            setActiveInnerTab("view");
+            setRefreshFlag(f => f + 1);
         } catch (err) {
             console.error(err);
+            toast.error("Failed to save OLQ");
+        }
+    });
+
+    const handleDeleteSemester = async () => {
+        const ok = await deleteSemester(activeSemIndex + 1);
+        if (ok) {
+            // clear local form + view
+            const flatInit: any = {};
+            Object.values(structure).flat().forEach((s: any) => flatInit[s.id] = "");
+            reset(flatInit);
+            setSubmissions(prev => { const cp = [...prev]; cp[activeSemIndex] = null; return cp; });
+            setRefreshFlag(f => f + 1);
         }
     };
 
-    const deleteSemester = async () => {
-        const ok = await deleteOlqForSemester(activeSem + 1);
-        if (ok) {
-            setRefreshFlag(f => f + 1);
-            reset(Object.values(OLQ_STRUCTURE).flat().reduce((acc: any, s: any) => { acc[s.id] = ""; return acc; }, {}));
-            setSubmissions((prev: any) => { const cp = [...prev]; cp[activeSem] = null; return cp; });
-        }
-    };
+    // UI: loading guard
+    if (!selectedCadet) {
+        return null;
+    }
 
     return (
         <DossierTab
@@ -184,12 +244,11 @@ function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
                     <DropdownMenuTrigger asChild>
                         <TabsTrigger value="mil-trg"><Shield className="h-4 w-4" /> Mil-Trg</TabsTrigger>
                     </DropdownMenuTrigger>
+
                     <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
                         {militaryTrainingCards.map(card => (
                             <DropdownMenuItem key={card.to} asChild>
-                                <a href={card.to} className="flex items-center gap-2">
-                                    <card.icon className={`h-4 w-4 ${card.color}`} />{card.title}
-                                </a>
+                                <a href={card.to} className="flex items-center gap-2"><card.icon className={`h-4 w-4 ${card.color}`} />{card.title}</a>
                             </DropdownMenuItem>
                         ))}
                     </DropdownMenuContent>
@@ -199,53 +258,65 @@ function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
             <TabsContent value="olq-assessment">
                 <Card className="shadow-lg rounded-xl p-6">
                     <div className="flex justify-center mb-6 space-x-2">
-                        {["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"].map((sem, idx) => (
-                            <button key={sem}
+                        {TERMS.map((t, idx) => (
+                            <button
+                                key={t}
                                 type="button"
-                                onClick={() => { setActiveSem(idx); setActiveInnerTab("input"); }}
-                                className={`px-4 py-2 rounded-t-lg font-medium ${activeSem === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
-                            >
-                                {sem}
-                            </button>
+                                onClick={() => { setActiveSemIndex(idx); setActiveInnerTab("input"); }}
+                                className={`px-4 py-2 rounded-t-lg font-medium ${activeSemIndex === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                            >{t}</button>
                         ))}
                     </div>
 
                     <Tabs value={activeInnerTab} onValueChange={(v: any) => setActiveInnerTab(v)}>
                         <TabsList className="mb-4">
-                            <InnerTabsTrigger value="input">Input</InnerTabsTrigger>
-                            <InnerTabsTrigger value="view">View</InnerTabsTrigger>
+                            <InnerTabTrigger value="input">Input</InnerTabTrigger>
+                            <InnerTabTrigger value="view">View</InnerTabTrigger>
                         </TabsList>
 
-                        <InnerTabsContent value="input">
+                        <InnerTabContent value="input">
                             <Card className="shadow-lg rounded-xl p-6">
                                 <CardHeader><CardTitle>OLQ Input Form</CardTitle></CardHeader>
                                 <CardContent>
-                                    <OLQForm
-                                        register={register}
-                                        structure={OLQ_STRUCTURE}
-                                        onSubmit={onSubmit}
-                                        onClear={clearForm}
-                                        onDeleteSemester={deleteSemester}
-                                        onReset={() => reset(Object.values(OLQ_STRUCTURE).flat().reduce((acc: any, s: any) => { acc[s.id] = ""; return acc; }, {}))}
-                                        showDelete={true}
-                                    />
+                                    {loadingStructure ? (
+                                        <p className="text-center py-6">Loading categories...</p>
+                                    ) : (
+                                        <OLQForm
+                                            register={register}
+                                            structure={structure}
+                                            onSubmit={onSubmit}
+                                            onClear={clearForm}
+                                            showDelete={true}
+                                            onDeleteSemester={handleDeleteSemester}
+                                            onReset={() => {
+                                                const flatInit: any = {};
+                                                Object.values(structure).flat().forEach((s: any) => flatInit[s.id] = "");
+                                                reset(flatInit);
+                                            }}
+                                        />
+                                    )}
                                 </CardContent>
                             </Card>
-                        </InnerTabsContent>
+                        </InnerTabContent>
 
-                        <InnerTabsContent value="view">
+                        <InnerTabContent value="view">
                             <Card className="shadow-lg rounded-xl p-6">
                                 <CardHeader><CardTitle>OLQ Result</CardTitle></CardHeader>
                                 <CardContent>
-                                    <OLQView
-                                        structure={OLQ_STRUCTURE}
-                                        submission={submissions[activeSem]}
-                                        onEdit={() => setActiveInnerTab("input")}
-                                        onDeleteSemester={deleteSemester}
-                                    />
+                                    {loadingSemester ? (
+                                        <p className="text-center py-6">Loading results...</p>
+                                    ) : (
+                                        <OLQView structure={structure} submission={submissions[activeSemIndex]} />
+                                    )}
+
+                                    {/* Edit & Delete controls inside view tab */}
+                                    <div className="mt-4 flex justify-center gap-4">
+                                        <Button onClick={() => setActiveInnerTab("input")}>Edit Scores</Button>
+                                        {/* <Button variant="destructive" onClick={handleDeleteSemester}>Delete Semester</Button> */}
+                                    </div>
                                 </CardContent>
                             </Card>
-                        </InnerTabsContent>
+                        </InnerTabContent>
                     </Tabs>
                 </Card>
             </TabsContent>

@@ -1,61 +1,144 @@
-// NOTE: These are placeholders. Replace with your real API calls / endpoints.
-
+import { api } from "@/app/lib/apiClient";
+import { endpoints } from "@/constants/endpoints";
 import type { CounsellingRow } from "@/types/counselling";
+import { semestersCounselling, warningTypes } from "@/constants/app.constants";
 
-/**
- * Simulated API. In production replace with actual fetch/axios calls.
- */
-const FAKE_DB_KEY = "fakeCounsellingDb"; // localStorage key used for demo
+// Helper: map semester (1-6) <-> term label ("I TERM", ...)
+function termFromSemester(semester: number | null | undefined): string {
+    if (!semester) return "";
+    return semestersCounselling[semester - 1] ?? "";
+}
 
-async function readLocal() {
-    if (typeof window === "undefined") return [];
+function semesterFromTerm(term: string): number | null {
+    const idx = semestersCounselling.indexOf(term);
+    if (idx === -1) return null;
+    return idx + 1;
+}
+
+// Helper: map backend enum -> UI label
+function uiWarningFromServer(nature: string | null | undefined): string {
+    if (!nature) return "";
+
+    switch (nature.toUpperCase()) {
+        case "RELEGATION":
+            return "Relegation";
+        case "WITHDRAWAL":
+            return "Withdrawal";
+        case "OTHER":
+        default:
+            // Title-case fallback
+            return nature.charAt(0) + nature.slice(1).toLowerCase();
+    }
+}
+
+// Helper: map UI label -> backend enum
+function serverWarningFromUi(type: string | null | undefined): "RELEGATION" | "WITHDRAWAL" | "OTHER" {
+    if (!type) return "OTHER";
+    const upper = type.toUpperCase();
+
+    if (upper.startsWith("RELEG")) return "RELEGATION";
+    if (upper.startsWith("WITHD")) return "WITHDRAWAL";
+
+    return "OTHER";
+}
+
+
+interface BackendCounsellingRow {
+    id: string;
+    semester: number;
+    reason: string;
+    natureOfWarning: string;
+    date: string; // ISO date string
+    warnedBy: string;
+}
+
+function mapBackendToUi(row: BackendCounsellingRow, serialNo = ""): CounsellingRow {
+    return {
+        id: row.id,
+        serialNo,
+        term: termFromSemester(row.semester),
+        reason: row.reason,
+        warningType: uiWarningFromServer(row.natureOfWarning),
+        date: row.date,
+        warningBy: row.warnedBy,
+    };
+}
+
+
+export async function getCounsellingRecords(ocId: string): Promise<CounsellingRow[]> {
     try {
-        const raw = localStorage.getItem(FAKE_DB_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch {
+        const response: any = await api.get(endpoints.oc.counselling(ocId));
+
+        let rows: BackendCounsellingRow[] = [];
+
+        if (Array.isArray(response?.items)) {
+            rows = response.items as BackendCounsellingRow[];
+        } else if (Array.isArray(response)) {
+            rows = response as BackendCounsellingRow[];
+        } else if (Array.isArray(response?.data)) {
+            rows = response.data as BackendCounsellingRow[];
+        }
+
+        return rows.map((row, index) => mapBackendToUi(row, String(index + 1)));
+    } catch (error) {
+        console.error("Failed to fetch counselling records:", error);
         return [];
     }
 }
 
-async function writeLocal(records: any[]) {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(FAKE_DB_KEY, JSON.stringify(records));
+
+export async function saveCounsellingRecords(ocId: string, payload: any[]): Promise<CounsellingRow[]> {
+    const results: CounsellingRow[] = [];
+
+    for (const record of payload) {
+        const semester = semesterFromTerm(record.term);
+
+        if (!semester) {
+            throw new Error(`Invalid term: ${record.term}`);
+        }
+
+        const body = {
+            semester,
+            reason: record.reason,
+            natureOfWarning: serverWarningFromUi(record.warningType),
+            date: record.date,
+            warnedBy: record.warningBy,
+        };
+
+        const res: any = await api.post(endpoints.oc.counselling(ocId), body);
+        const row: BackendCounsellingRow = (res?.data ?? res) as BackendCounsellingRow;
+        results.push(mapBackendToUi(row));
+    }
+
+    return results;
 }
 
-/**
- * Get records for a cadet (returns array of CounsellingRow-like objects)
- */
-export async function getCounsellingRecords(ocId: string) {
-    // Replace with: return fetch(`/api/counselling?ocId=${ocId}`).then(r => r.json());
-    const all = await readLocal();
-    // simple filter by ocId if stored that way (demo ignores ocId)
-    return all;
+
+export async function updateCounsellingRecord(
+    ocId: string,
+    id: string,
+    updates: Partial<CounsellingRow>,
+): Promise<CounsellingRow> {
+    const body: any = {};
+
+    if (updates.term !== undefined) {
+        const semester = semesterFromTerm(updates.term);
+        if (!semester) throw new Error(`Invalid term: ${updates.term}`);
+        body.semester = semester;
+    }
+    if (updates.reason !== undefined) body.reason = updates.reason;
+    if (updates.warningType !== undefined)
+        body.natureOfWarning = serverWarningFromUi(updates.warningType);
+    if (updates.date !== undefined) body.date = updates.date;
+    if (updates.warningBy !== undefined) body.warnedBy = updates.warningBy;
+
+    const res: any = await api.patch(endpoints.oc.counsellingById(ocId, id), body);
+    const row: BackendCounsellingRow = (res?.data ?? res) as BackendCounsellingRow;
+    return mapBackendToUi(row);
 }
 
-/**
- * Save multiple records (payload array of {term,reason,warningType,date,warningBy})
- * Return saved records (with generated ids).
- */
-export async function saveCounsellingRecords(ocId: string, payload: any[]) {
-    // Replace with real POST request
-    const all = await readLocal();
-    const next = [...all];
-    payload.forEach((p) => {
-        next.push({
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            ...p,
-        });
-    });
-    await writeLocal(next);
-    return payload.map((p, i) => ({ id: next[next.length - payload.length + i].id, ...p }));
-}
 
-/**
- * Delete by id
- */
-export async function deleteCounsellingRecord(id: string) {
-    const all = await readLocal();
-    const next = all.filter((r) => r.id !== id);
-    await writeLocal(next);
-    return true;
+export async function deleteCounsellingRecord(ocId: string, id: string, opts: { hard?: boolean } = {}) {
+    const query = opts.hard ? { hard: true } : undefined;
+    await api.delete(endpoints.oc.counsellingById(ocId, id), { query });
 }
