@@ -1,81 +1,86 @@
+// /hooks/useOlqActions.ts
 "use client";
 
-import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import {
+    listOlqCategories,
+    listOlqRecords,
     createOcOlqRecord,
-    listOcOlqRecords,
     updateOcOlqRecord,
-    deleteOcOlqRecordsForSemester,
-    OlqPayload,
+    deleteOcOlqSemester,
 } from "@/app/lib/api/olqApi";
-import { OlqFormValues } from "@/types/olq";
 
 /**
- * Hook returns CRUD actions for OLQ. Caller supplies selectedCadet.
+ * Hook that wraps olq API functions and returns small helpers.
+ * selectedCadet: object that contains ocId
  */
 export const useOlqActions = (selectedCadet: any) => {
-    const { getValues, setValue } = useFormContext<OlqFormValues>();
+    const ocId = selectedCadet?.ocId;
 
-    const submitOlq = async (semester: number, perRemarkPayloads: OlqPayload[]) => {
-        if (!selectedCadet?.ocId) {
-            toast.error("No cadet selected");
-            return;
-        }
-
-        try {
-            for (const payload of perRemarkPayloads) {
-                // backend: POST for create, PATCH for update — we will call create if no server id present
-                // The page will call create or update depending on server state; this helper just posts payloads using POST if no serverId found.
-                // But we keep generic: if payload contains an id field or server gives indication use updateOcOlqRecord
-                await createOcOlqRecord(selectedCadet.ocId, payload);
-            }
-            toast.success("OLQ records saved!");
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to save OLQ records");
-        }
-    };
-
-    const fetchOlq = async (semester: number) => {
-        if (!selectedCadet?.ocId) return [];
-        const res = await listOcOlqRecords(selectedCadet.ocId, semester);
+    const fetchCategories = async () => {
+        if (!ocId) return [];
+        const res = await listOlqCategories(ocId);
+        console.log("🟣 RAW SEMESTER RESPONSE:", res);
+        console.log("🟢 (OLD) res.items:", res.items);
         return res.items ?? [];
     };
 
-    const updateOlq = async (semester: number, payload: OlqPayload & { deleteSubtitleIds?: string[] }) => {
-        if (!selectedCadet?.ocId) {
-            toast.error("No cadet selected");
-            return false;
-        }
+    const fetchSemester = async (semester: number) => {
+        if (!ocId) return [];
+        console.log(`🔵 Fetching OLQ semester records for ocId=${ocId}, semester=${semester}`);
 
+        const res = await listOlqRecords(ocId, semester);
+
+        console.log("🟣 RAW SEMESTER RESPONSE:", res);
+        console.log("🟢 (OLD) res.items:", res.items);
+        const categories = res?.data?.categories ?? [];
+        console.log("🟢 EXTRACTED categories from res.data.categories:", categories);
+
+        return categories;
+    };
+
+    const createRecord = async (payload: { semester: number; scores: { subtitleId: string; marksScored: number }[] }) => {
+        if (!ocId) { toast.error("No cadet selected"); return null; }
         try {
-            await updateOcOlqRecord(selectedCadet.ocId, payload);
-            toast.success("OLQ updated");
+            const res = await createOcOlqRecord(ocId, payload);
+            return res;
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to create OLQ record");
+            throw err;
+        }
+    };
+
+    const updateRecord = async (payload: { semester: number; scores: { subtitleId: string; marksScored: number }[]; deleteSubtitleIds?: string[] }) => {
+        if (!ocId) { toast.error("No cadet selected"); return null; }
+        try {
+            const res = await updateOcOlqRecord(ocId, payload);
+            return res;
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update OLQ record");
+            throw err;
+        }
+    };
+
+    const deleteSemester = async (semester: number) => {
+        if (!ocId) { toast.error("No cadet selected"); return false; }
+        try {
+            await deleteOcOlqSemester(ocId, semester);
+            toast.success("OLQ semester deleted");
             return true;
         } catch (err) {
             console.error(err);
-            toast.error("Failed to update OLQ");
+            toast.error("Failed to delete semester");
             return false;
         }
     };
 
-    const deleteOlqForSemester = async (semester: number) => {
-        if (!selectedCadet?.ocId) {
-            toast.error("No cadet selected");
-            return false;
-        }
-
-        try {
-            await deleteOcOlqRecordsForSemester(selectedCadet.ocId, semester);
-            toast.success("OLQ records deleted for semester");
-            return true;
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to delete OLQ records");
-            return false;
-        }
+    return {
+        fetchCategories,
+        fetchSemester,
+        createRecord,
+        updateRecord,
+        deleteSemester,
     };
-
-    return { submitOlq, fetchOlq, updateOlq, deleteOlqForSemester };
 };
