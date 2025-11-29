@@ -41,7 +41,7 @@ export default function MilitaryTrainingPage() {
   const selectedCadet = useSelector(
     (state: RootState) => state.cadet.selectedCadet
   );
-
+console.log("Selected Cadet in MilTrg Page:", selectedCadet);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");

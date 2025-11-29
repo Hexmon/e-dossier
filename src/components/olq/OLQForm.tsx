@@ -1,49 +1,53 @@
+// /components/olq/OLQForm.tsx
 "use client";
 
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { UseFormRegister, FieldValues } from "react-hook-form";
-import { OlqSubtitle } from "@/types/olq";
+import { UseFormRegister } from "react-hook-form";
 
-interface Props<T extends FieldValues> {
-    register: UseFormRegister<T>;
-    structure: Record<string, readonly OlqSubtitle[]>;
-    onSubmit: (e?: any) => void;
+/**
+ * structure: Record<string, Subtitle[]> where Subtitle is backend subtitle object:
+ *   { id: string, subtitle: string, maxMarks?: number }
+ */
+interface Props {
+    register: UseFormRegister<any>;
+    structure: Record<string, any[]>;
+    onSubmit: () => void;
     onClear: () => void;
-    onDeleteSemester?: () => void;
-    onReset?: () => void;
     showDelete?: boolean;
+    onReset?: () => void;
+    onDeleteSemester?: () => void;
 }
 
-export default function OLQForm<T extends FieldValues>({
-    register,
-    structure,
-    onSubmit,
-    onClear,
-    onDeleteSemester,
-    onReset,
-    showDelete = false,
-}: Props<T>) {
+export default function OLQForm({ register, structure, onSubmit, onClear, showDelete = false, onReset, onDeleteSemester }: Props) {
     return (
-        <form onSubmit={onSubmit} className="space-y-6">
-            {Object.entries(structure).map(([remark, subtitles]) => (
-                <div key={remark} className="border rounded p-4">
-                    <h3 className="font-semibold mb-3">{remark}</h3>
+        <form
+            onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+            className="space-y-6"
+        >
+            {Object.entries(structure).map(([title, subtitles]) => (
+                <div key={title} className="border rounded p-4">
+                    <h3 className="font-semibold mb-3">{title}</h3>
+
                     <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            {subtitles.map((s) => (
-                                <div key={s.id} className="p-2 rounded bg-gray-50 border">{s.name}</div>
+                            {subtitles.map((s: any) => (
+                                <div key={s.id} className="p-2 rounded bg-gray-50 border">
+                                    {s.subtitle}
+                                </div>
                             ))}
                         </div>
 
-                        <div className="space-y-2">
-                            {subtitles.map((s) => (
+                        <div className="space-y-3">
+                            {subtitles.map((s: any) => (
                                 <Input
                                     key={s.id}
                                     type="number"
-                                    {...register(s.id as any)}
+                                    min={0}
+                                    max={s.maxMarks ?? 100}
                                     placeholder="Marks"
+                                    {...register(s.id)}
                                 />
                             ))}
                         </div>
@@ -53,8 +57,13 @@ export default function OLQForm<T extends FieldValues>({
 
             <div className="flex justify-center gap-4">
                 <Button type="submit" className="w-40">Submit</Button>
-                {/* <Button type="button" variant="outline" onClick={onClear} className="w-40">Clear</Button> */}
-                <Button type="button" variant="ghost" onClick={onReset} className="w-40">Reset</Button>
+                <Button type="button" variant="outline" className="w-40" onClick={onClear}>Clear</Button>
+                {/* {onReset && (
+                    <Button type="button" variant="ghost" className="w-40" onClick={onReset}>Reset Form</Button>
+                )}
+                {showDelete && onDeleteSemester && (
+                    <Button type="button" variant="destructive" className="w-40" onClick={onDeleteSemester}>Delete Semester</Button>
+                )} */}
             </div>
         </form>
     );

@@ -1,8 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth, requireAdmin } from '@/app/lib/authz';
-import { parseParam, ensureOcExists } from '../../../_checks';
-import { OcIdParam } from '@/app/lib/oc-validators';
 import {
     olqCategoryCreateSchema,
     olqCategoryQuerySchema,
@@ -15,8 +13,6 @@ import {
 export async function GET(req: NextRequest, ctx: any) {
     try {
         await requireAuth(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
-        await ensureOcExists(ocId);
 
         const sp = new URL(req.url).searchParams;
         const qp = olqCategoryQuerySchema.parse({
@@ -37,8 +33,6 @@ export async function GET(req: NextRequest, ctx: any) {
 export async function POST(req: NextRequest, ctx: any) {
     try {
         await requireAdmin(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
-        await ensureOcExists(ocId);
 
         const dto = olqCategoryCreateSchema.parse(await req.json());
         const row = await createOlqCategory({
