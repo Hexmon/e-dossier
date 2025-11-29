@@ -2,8 +2,6 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth, requireAdmin } from '@/app/lib/authz';
-import { parseParam, ensureOcExists } from '../../../../../_checks';
-import { OcIdParam } from '@/app/lib/oc-validators';
 import {
     olqCategoryUpdateSchema,
     olqCategoryQuerySchema,
@@ -19,8 +17,6 @@ const CategoryIdParam = z.object({ categoryId: z.string().uuid() });
 export async function GET(req: NextRequest, ctx: any) {
     try {
         await requireAuth(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
-        await ensureOcExists(ocId);
         const { categoryId } = CategoryIdParam.parse(await ctx.params);
         const sp = new URL(req.url).searchParams;
         const qp = olqCategoryQuerySchema.parse({
@@ -38,8 +34,6 @@ export async function GET(req: NextRequest, ctx: any) {
 export async function PATCH(req: NextRequest, ctx: any) {
     try {
         await requireAdmin(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
-        await ensureOcExists(ocId);
         const { categoryId } = CategoryIdParam.parse(await ctx.params);
         const dto = olqCategoryUpdateSchema.parse(await req.json());
         const row = await updateOlqCategory(categoryId, { ...dto });
@@ -53,8 +47,6 @@ export async function PATCH(req: NextRequest, ctx: any) {
 export async function DELETE(req: NextRequest, ctx: any) {
     try {
         await requireAdmin(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
-        await ensureOcExists(ocId);
         const { categoryId } = CategoryIdParam.parse(await ctx.params);
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteOlqCategory(categoryId, { hard: body?.hard === true });

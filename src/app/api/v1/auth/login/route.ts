@@ -21,6 +21,7 @@ import {
   logLoginFailure,
   logAccountLocked,
 } from '@/lib/audit-log';
+import { generateCsrfToken, setCsrfCookie } from '@/lib/csrf';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.EXPOSE_TOKENS_IN_DEV === 'true';
 
@@ -268,6 +269,8 @@ export async function POST(req: NextRequest) {
       pwd_at: cred.passwordUpdatedAt ? new Date(cred.passwordUpdatedAt).toISOString() : null,
     });
 
+    const csrfToken = IS_DEV ? await generateCsrfToken() : undefined;
+
     const res = json.ok({
       user: { id: apt.userId, username: apt.username },
       active_appointment: {
@@ -281,9 +284,10 @@ export async function POST(req: NextRequest) {
       token_type: 'Bearer',
       // keep a sane default (15m) unless you really want a huge TTL
       expires_in: Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900),
-      ...(IS_DEV ? { access_token: access } : {}),
+      ...(IS_DEV ? { access_token: access, csrf_token: csrfToken } : {}),
     });
     setAccessCookie(res, access);
+    if (csrfToken) setCsrfCookie(res, csrfToken);
     return res;
   } catch (err) {
     return handleApiError(err);
