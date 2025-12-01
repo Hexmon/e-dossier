@@ -87,8 +87,8 @@ export default function SportsGamesPage() {
 
     const upsertSportsRows = useCallback(async (ocId: string, semesterNumber: number, term: "spring" | "autumn", rows: Row[]) => {
         for (const r of rows) {
-            const { id, activity, maxMarks, obtained } = r;
-            const payload = { sport: activity, maxMarks: Number(maxMarks), marksObtained: Number(obtained || 0) };
+            const { id, activity, string, maxMarks, obtained } = r;
+            const payload = { sport: activity, sportsStrings: string || "", maxMarks: Number(maxMarks), marksObtained: Number(obtained || 0) };
             if (id) {
                 await updateSportsAndGames(ocId, String(id), payload);
             } else if (String(activity || "").trim() !== "") {
@@ -151,7 +151,7 @@ export default function SportsGamesPage() {
                             ocId,
                             term,
                             activity: sport ?? "-",
-                            string: "",
+                            string: item.sportsStrings ?? "",
                             maxMarks: maxMarks ?? "",
                             obtained:
                                 marksObtained !== undefined
