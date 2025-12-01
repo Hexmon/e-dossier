@@ -373,6 +373,7 @@ export const trainingCampActivities = pgTable('training_camp_activities', {
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const ocCampActivityScores = pgTable('oc_camp_activity_scores', {
