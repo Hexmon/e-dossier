@@ -78,6 +78,7 @@ export interface SportsGamePayload {
     sport: string;
     maxMarks: number;
     marksObtained: number;
+    sportsStrings?: string;
 }
 
 export async function saveSportsGame(

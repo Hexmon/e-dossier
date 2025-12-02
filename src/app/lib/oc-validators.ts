@@ -196,6 +196,7 @@ export const sportsAndGamesCreateSchema = z.object({
     sport: z.string().min(1),
     maxMarks: z.coerce.number(),
     marksObtained: z.coerce.number(),
+    sportsStrings: z.string().optional(),
 });
 export const sportsAndGamesUpdateSchema = sportsAndGamesCreateSchema.partial();
 

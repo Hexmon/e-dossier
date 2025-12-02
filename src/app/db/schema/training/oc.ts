@@ -310,6 +310,7 @@ export const ocSportsAndGames = pgTable('oc_sports_and_games', {
     sport: varchar('sport', { length: 160 }).notNull(),
     maxMarks: numeric('max_marks').notNull(),
     marksObtained: numeric('marks_obtained').notNull(),
+    sportsStrings: text('sports_strings'),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
@@ -372,6 +373,7 @@ export const trainingCampActivities = pgTable('training_camp_activities', {
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const ocCampActivityScores = pgTable('oc_camp_activity_scores', {
