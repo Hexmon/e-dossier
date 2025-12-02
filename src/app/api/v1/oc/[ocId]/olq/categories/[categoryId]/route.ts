@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, ctx: any) {
 
         const row = await getOlqCategory(categoryId, qp.includeSubtitles ?? false);
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');
-        return json.ok({ category: row });
+        return json.ok({ message: 'OLQ category retrieved successfully.', category: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = olqCategoryUpdateSchema.parse(await req.json());
         const row = await updateOlqCategory(categoryId, { ...dto });
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');
-        return json.ok({ category: row });
+        return json.ok({ message: 'OLQ category updated successfully.', category: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -51,7 +51,7 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteOlqCategory(categoryId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');
-        return json.ok({ deleted: row.id, hardDeleted: body?.hard === true });
+        return json.ok({ message: 'OLQ category deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
         return handleApiError(err);
     }

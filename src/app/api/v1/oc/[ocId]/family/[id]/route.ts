@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await getFamily(ocId, id);
         if (!row) throw new ApiError(404, 'Family member not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Family member retrieved successfully.', data: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = familyUpdateSchema.parse(await req.json());
         const row = await updateFamily(ocId, id, dto);
         if (!row) throw new ApiError(404, 'Family member not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Family member updated successfully.', data: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -35,6 +35,6 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await deleteFamily(ocId, id);
         if (!row) throw new ApiError(404, 'Family member not found', 'not_found');
-        return json.ok({ message: 'Deleted', id: row.id });
+        return json.ok({ message: 'Family member deleted successfully.', id: row.id });
     } catch (err) { return handleApiError(err); }
 }

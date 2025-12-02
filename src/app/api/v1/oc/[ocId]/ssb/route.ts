@@ -16,14 +16,14 @@ type SsbPointRow = {
     authorName: string | null;
 };
 
-export type SsbReportResponse = {
+type SsbReportResponse = {
     positives: { note: string; by: string }[];
     negatives: { note: string; by: string }[];
     predictiveRating: number;
     scopeForImprovement: string;
 };
 
-export function mapSsbDbToResponse(report: SsbReportRow, points: SsbPointRow[]): SsbReportResponse {
+function mapSsbDbToResponse(report: SsbReportRow, points: SsbPointRow[]): SsbReportResponse {
     const positives: SsbReportResponse['positives'] = [];
     const negatives: SsbReportResponse['negatives'] = [];
 
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
 
         const body = mapSsbDbToResponse(report, points);
-        return json.ok(body);
+        return json.ok({ message: 'SSB report retrieved successfully.', ...body });
     } catch (err) {
         return handleApiError(err);
     }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, ctx: any) {
         const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
         const body = mapSsbDbToResponse(report, points);
 
-        return json.created(body);
+        return json.created({ message: 'SSB report created successfully.', ...body });
     } catch (err) {
         return handleApiError(err);
     }
@@ -119,7 +119,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
         const body = mapSsbDbToResponse(report, points);
 
-        return json.ok(body);
+        return json.ok({ message: 'SSB report updated successfully.', ...body });
     } catch (err) {
         return handleApiError(err);
     }
@@ -129,6 +129,6 @@ export async function DELETE(req: NextRequest, ctx: any) {
     try {
         await mustBeAdmin(req);
         const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
-        return json.ok({ deleted: await deleteSsbReport(ocId) });
+        return json.ok({ message: 'SSB report deleted successfully.', deleted: await deleteSsbReport(ocId) });
     } catch (err) { return handleApiError(err); }
 }

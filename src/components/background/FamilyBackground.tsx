@@ -288,7 +288,7 @@ export default function FamilyBackground({ ocId }: Props) {
                                 age: "",
                                 occupation: "",
                                 education: "",
-                                mobileNo: "",
+                                mobile: "",
                             })
                         }
                     >
@@ -301,3 +301,4 @@ export default function FamilyBackground({ ocId }: Props) {
         </div>
     );
 }
+

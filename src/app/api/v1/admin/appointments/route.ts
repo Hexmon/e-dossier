@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
             .limit(qp.limit ?? 100)
             .offset(qp.offset ?? 0);
 
-        return json.ok({ data: rows });
+        return json.ok({ message: 'Appointments retrieved successfully.', data: rows });
     } catch (err) {
         return handleApiError(err);
     }
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
             })
             .returning();
 
-        return json.created({ data: row });
+        return json.created({ message: 'Appointment created successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }

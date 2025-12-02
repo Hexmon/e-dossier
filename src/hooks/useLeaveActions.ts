@@ -46,8 +46,8 @@ export const useLeaveActions = (selectedCadet: any) => {
                 if (id) {
                     await updateOcLeaveRecord(selectedCadet.ocId, id, payload);
                 } else {
-                    const created = await createOcLeaveRecord(selectedCadet.ocId, payload);
-                    setValue(`leaveRows.${i}.id`, created.id);
+                    const created: any = await createOcLeaveRecord(selectedCadet.ocId, payload);
+                    setValue(`leaveRows.${i}.id`, created?.id);
                 }
             }
 

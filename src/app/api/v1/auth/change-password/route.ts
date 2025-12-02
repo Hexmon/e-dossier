@@ -28,13 +28,13 @@ export async function POST(req: NextRequest) {
     try {
       raw = await req.json();
     } catch {
-      return json.badRequest('invalid_json', { message: 'Request body must be valid JSON.' });
+      return json.badRequest('Invalid JSON body.', { message: 'Request body must be valid JSON.' });
     }
 
     // 3) Shape/format validation
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
-      return json.badRequest('invalid_request', { details: parsed.error.format() });
+      return json.badRequest('Validation failed.', { details: parsed.error.format() });
     }
     const { userId: targetIdRaw, newPassword, currentPassword } = parsed.data;
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     //    - Non-admin can only change their own password.
     const targetUserId = callerIsAdmin && targetIdRaw ? targetIdRaw : callerId;
     if (!callerIsAdmin && targetIdRaw && targetIdRaw !== callerId) {
-      throw new ApiError(403, 'Forbidden: cannot change another user’s password', 'forbidden');
+      throw new ApiError(403, "Forbidden: cannot change another user's password.", 'forbidden');
     }
 
     // 5) Load target user (must not be soft-deleted)
@@ -76,14 +76,13 @@ export async function POST(req: NextRequest) {
 
     if (mustVerifyCurrent) {
       if (!currentPassword) {
-        throw new ApiError(400, 'currentPassword is required', 'bad_request');
+        throw new ApiError(400, 'currentPassword is required.', 'bad_request');
       }
       if (!cred?.passwordHash) {
-        // No credentials row exists but user is trying to verify → treat as invalid credentials
-        throw new ApiError(401, 'invalid_credentials', 'NO_CREDENTIALS');
+        throw new ApiError(401, 'Invalid credentials.', 'NO_CREDENTIALS');
       }
       const ok = await argon2.verify(cred.passwordHash, currentPassword);
-      if (!ok) throw new ApiError(401, 'invalid_credentials', 'BAD_PASSWORD');
+      if (!ok) throw new ApiError(401, 'Invalid credentials.', 'BAD_PASSWORD');
     }
 
     // 8) Hash & upsert new password
@@ -104,14 +103,10 @@ export async function POST(req: NextRequest) {
         },
       });
 
-    // 9) Optional: ensure the user isn’t deactivated (don’t auto-activate silently)
-    // If you DO want to auto-reactivate on change, uncomment:
-    // await db.update(users).set({ isActive: true, deactivatedAt: null }).where(eq(users.id, targetUserId));
-
     return json.ok({
       message: callerIsAdmin && targetUserId !== callerId
-        ? 'Password reset successfully for target user'
-        : 'Password changed successfully',
+        ? 'Password reset successfully for target user.'
+        : 'Password changed successfully.',
       userId: targetUserId,
     });
   } catch (err) {

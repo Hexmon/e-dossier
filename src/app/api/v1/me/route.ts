@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
       .from(users)
       .where(eq(users.id, principal.userId));
 
-    if (!u) return json.notFound('User not found');
-    return json.ok({ user: u, roles: principal.roles, apt: principal.apt ?? null });
+    if (!u) return json.notFound('User not found.');
+    return json.ok({ message: 'User retrieved successfully.', user: u, roles: principal.roles, apt: principal.apt ?? null });
   } catch (err) {
     return handleApiError(err);
   }

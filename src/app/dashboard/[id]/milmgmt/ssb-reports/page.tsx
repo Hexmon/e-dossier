@@ -132,7 +132,7 @@ export default function SSBReportPage() {
                     negativeTraits: saved?.negatives.map(n => ({ trait: n.note })),
                     positiveBy: saved?.positives[0]?.by || "",
                     negativeBy: saved?.negatives[0]?.by || "",
-                    rating: ratingMap[saved.predictiveRating] || "",
+                    rating: saved ? ratingMap[saved.predictiveRating] || "" : "",
                     improvement: saved?.scopeForImprovement
                 });
             }

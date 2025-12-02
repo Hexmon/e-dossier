@@ -5,11 +5,12 @@ import { json } from '@/app/lib/http';
 export async function GET(_req: NextRequest) {
     try {
         return json.ok({
+            message: 'Health check passed.',
             service: 'api',
             uptime_sec: Math.floor(process.uptime()),
             ts: new Date().toISOString(),
         });
     } catch (err) {
-        return json.serverError('Health check failed');
+        return json.serverError('Health check failed.');
     }
 }

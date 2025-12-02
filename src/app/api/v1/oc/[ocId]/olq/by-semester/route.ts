@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, ctx: any) {
             categoryId: qp.categoryId,
             subtitleId: qp.subtitleId,
         });
-        return json.ok({ items, count: items.length });
+        return json.ok({ message: 'OLQ records for semester retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }

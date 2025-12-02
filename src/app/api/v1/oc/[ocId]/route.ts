@@ -27,7 +27,7 @@ export async function GET(_: NextRequest, ctx: { params: Promise<{ ocId: string 
         const { ocId } = await OcParam.parseAsync(await ctx.params);
         const [row] = await db.select().from(ocCadets).where(eq(ocCadets.id, ocId)).limit(1);
         if (!row) throw new ApiError(404, 'OC not found', 'not_found');
-        return json.ok({ oc: row });
+        return json.ok({ message: 'OC retrieved successfully.', oc: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ ocId: str
         const dto = updateSchema.parse(await req.json());
         const [row] = await db.update(ocCadets).set(dto).where(eq(ocCadets.id, ocId)).returning();
         if (!row) throw new ApiError(404, 'OC not found', 'not_found');
-        return json.ok({ oc: row });
+        return json.ok({ message: 'OC updated successfully.', oc: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -48,6 +48,6 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ ocId: st
         const { ocId } = await OcParam.parseAsync(await ctx.params);
         const [row] = await db.delete(ocCadets).where(eq(ocCadets.id, ocId)).returning({ id: ocCadets.id });
         if (!row) throw new ApiError(404, 'OC not found', 'not_found');
-        return json.ok({ message: 'Deleted', id: row.id });
+        return json.ok({ message: 'OC deleted successfully.', id: row.id });
     } catch (err) { return handleApiError(err); }
 }

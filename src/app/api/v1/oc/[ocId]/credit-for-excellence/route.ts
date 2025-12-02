@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, ctx: any) {
             offset: sp.get('offset') ?? undefined,
         });
         const rows = await listCreditForExcellence(ocId, qp.limit ?? 100, qp.offset ?? 0);
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Credit for excellence records retrieved successfully.', items: rows, count: rows.length });
     } catch (err) {
         return handleApiError(err);
     }
@@ -53,12 +53,12 @@ export async function POST(req: NextRequest, ctx: any) {
         if (Array.isArray(body)) {
             const items = creditForExcellenceCreateSchema.array().parse(body);
             const rows = await createManyCreditForExcellence(ocId, items);
-            return json.created({ items: rows, count: rows.length });
+            return json.created({ message: 'Credit for excellence records created successfully.', items: rows, count: rows.length });
         }
 
         const dto = creditForExcellenceCreateSchema.parse(body);
         const row = await createCreditForExcellence(ocId, dto);
-        return json.created({ data: row });
+        return json.created({ message: 'Credit for excellence record created successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }

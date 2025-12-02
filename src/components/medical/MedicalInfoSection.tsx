@@ -61,7 +61,7 @@ export default function MedicalInfoSection({
             const formatted = data.map((item) => ({
                 id: item.id,
                 term: semesters[item.semester - 1],
-                date: (item.date ?? item.examDate ?? "").split("T")[0],
+                date: ( ((item as any).date ?? item.examDate ?? "") || "" ).split("T")[0],
                 age: String(item.age ?? ""),
                 height: String(item.heightCm ?? ""),
                 ibw: String(item.ibwKg ?? ""),
@@ -78,9 +78,11 @@ export default function MedicalInfoSection({
             if (formatted.length > 0) {
 
                 const hasDetails =
-                    formatted[0].medicalHistory ||
-                    formatted[0].medicalIssues ||
-                    formatted[0].allergies;
+                    Boolean(
+                        formatted[0].medicalHistory ||
+                        formatted[0].medicalIssues ||
+                        formatted[0].allergies
+                    );
 
                 setDetailsDisabled(hasDetails);
 
@@ -182,15 +184,19 @@ export default function MedicalInfoSection({
     const handleDelete = (row: MedInfoRow) => {
         if (!row.id || !selectedCadet?.ocId) return toast.error("Invalid record");
 
-        toast.warning("Are you sure you want to delete this record?", {
-            action: {
-                label: "Delete",
-                onClick: async () => {
-                    try {
-                        await deleteMedicalInfo(selectedCadet.ocId, row.id);
+            toast.warning("Are you sure you want to delete this record?", {
+                action: {
+                    label: "Delete",
+                    onClick: async () => {
+                        if (!row.id) {
+                            toast.error("Invalid record");
+                            return;
+                        }
+                        try {
+                            await deleteMedicalInfo(selectedCadet.ocId, row.id as string);
 
-                        setSavedMedInfo(prev => prev.filter(r => r.id !== row.id));
-                        toast.success("Record deleted");
+                            setSavedMedInfo(prev => prev.filter(r => r.id !== row.id));
+                            toast.success("Record deleted");
                     } catch {
                         toast.error("Failed to delete record");
                     }
@@ -198,6 +204,7 @@ export default function MedicalInfoSection({
             },
             cancel: {
                 label: "Cancel",
+                onClick: () => {},
             },
         });
     };
@@ -372,7 +379,7 @@ export default function MedicalInfoSection({
                                         {["date", "age", "height", "ibw", "abw", "overw", "bmi", "chest"].map((f) => (
                                             <td key={f} className="border p-2">
                                                 <Input
-                                                    {...register(`medInfo.${i}.${f}` as const)}
+                                                    {...register(`medInfo.${i}.${f}` as any)}
                                                     type={f === "date" ? "date" : "text"}
                                                 />
                                             </td>

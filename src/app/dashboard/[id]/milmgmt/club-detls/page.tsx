@@ -84,7 +84,11 @@ export default function ClubDetailsAndDrillPage() {
     );
 }
 
-function InnerClubDrillPage({ selectedCadet }) {
+function InnerClubDrillPage({
+    selectedCadet,
+}: {
+    selectedCadet: RootState['cadet']['selectedCadet'];
+}) {
     const {
         control,
         register,
@@ -115,7 +119,7 @@ function InnerClubDrillPage({ selectedCadet }) {
             if (!items) return;
 
             const mapped = defaultClubRows.map(row => {
-                const found = items.find(x => x.semester === romanToNumber[row.semester]);
+                const found = items.find((x: any) => x.semester === romanToNumber[row.semester]);
                 return {
                     id: found?.id ?? null,
                     semester: row.semester,
@@ -132,15 +136,15 @@ function InnerClubDrillPage({ selectedCadet }) {
             if (!items) return;
 
             const mapped = defaultDrillRows.map(row => {
-                const api = items.find(x => x.semester === romanToNumber[row.semester]);
+                const api = items.find((x: any) => x.semester === romanToNumber[row.semester]);
                 return {
-                    id: api?.id ?? null,
+                    id: api?.id ?? undefined,
                     semester: row.semester,
-                    maxMks: api?.maxMarks ?? "",
-                    m1: api?.m1Marks ?? "",
-                    m2: api?.m2Marks ?? "",
-                    a1c1: api?.a1c1Marks ?? "",
-                    a2c2: api?.a2c2Marks ?? "",
+                    maxMks: (api?.maxMarks ?? "") as number | "",
+                    m1: (api?.m1Marks ?? "") as number | "",
+                    m2: (api?.m2Marks ?? "") as number | "",
+                    a1c1: (api?.a1c1Marks ?? "") as number | "",
+                    a2c2: (api?.a2c2Marks ?? "") as number | "",
                     remarks: api?.remark ?? ""
                 };
             });

@@ -135,7 +135,7 @@ export default function AutobiographySection({ selectedCadet }: { selectedCadet:
                                 {i + 1}. {field.charAt(0).toUpperCase() + field.slice(1)}
                             </label>
                             <Textarea
-                                {...register(field)}
+                                {...register(field as any)}
                                 rows={4}
                                 disabled={!isEditing}
                                 className="w-full"

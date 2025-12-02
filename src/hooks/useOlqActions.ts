@@ -19,16 +19,30 @@ export const useOlqActions = (selectedCadet: any) => {
 
     const fetchCategories = async () => {
         if (!ocId) return [];
+<<<<<<< HEAD
         const res = await listOlqCategories(ocId);
         return res.items ?? [];
+=======
+        const res: any = await listOlqCategories(ocId);
+        console.log("🟣 RAW SEMESTER RESPONSE:", res);
+        console.log("🟢 (OLD) res.items:", res.items);
+        return res?.items ?? res ?? [];
+>>>>>>> origin/master
     };
 
     const fetchSemester = async (semester: number) => {
         if (!ocId) return [];
 
-        const res = await listOlqRecords(ocId, semester);
+        const res: any = await listOlqRecords(ocId, semester);
 
+<<<<<<< HEAD
         const categories = res?.data?.categories ?? [];
+=======
+        console.log("🟣 RAW SEMESTER RESPONSE:", res);
+        console.log("🟢 (OLD) res.items:", res.items);
+        const categories = res?.data?.categories ?? res?.items ?? [];
+        console.log("🟢 EXTRACTED categories from res.data.categories:", categories);
+>>>>>>> origin/master
 
         return categories;
     };

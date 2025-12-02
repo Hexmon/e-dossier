@@ -18,8 +18,8 @@ export async function GET(req: NextRequest) {
         const scopeType = (url.searchParams.get('scopeType') || 'GLOBAL') as 'GLOBAL' | 'PLATOON';
         const scopeId = url.searchParams.get('scopeId');
 
-        if (!positionKey) return json.badRequest('positionKey is required');
-        if (scopeType === 'PLATOON' && !scopeId) return json.badRequest('scopeId required for PLATOON');
+        if (!positionKey) return json.badRequest('positionKey is required.');
+        if (scopeType === 'PLATOON' && !scopeId) return json.badRequest('scopeId required for PLATOON.');
 
         const [pos] = await db
             .select({ id: positions.id })
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
             .where(eq(positions.key, positionKey))
             .limit(1);
 
-        if (!pos) return json.badRequest('Unknown positionKey');
+        if (!pos) return json.badRequest('Unknown positionKey.');
 
         // Active window: starts_at <= now AND (ends_at IS NULL OR ends_at >= now)
         const now = new Date();
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
             ))
             .limit(1);
 
-        return json.ok({ holder: rows[0] ?? null });
+        return json.ok({ message: 'Active holder retrieved successfully.', holder: rows[0] ?? null });
     } catch (err) {
         return handleApiError(err);
     }

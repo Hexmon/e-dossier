@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
             .orderBy(asc(positions.key));
 
         if (!includePlatoons) {
-            return json.ok({ data: posRows });
+            return json.ok({ message: 'Positions retrieved successfully.', data: posRows });
         }
 
         // 2) fetch all active platoons once
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
             return p;
         });
 
-        return json.ok({ data });
+        return json.ok({ message: 'Positions retrieved successfully.', data });
     } catch (err) {
         return handleApiError(err);
     }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const parsed = positionCreateSchema.safeParse(body);
         if (!parsed.success) {
-            return json.badRequest('Validation failed', { issues: parsed.error.flatten() });
+            return json.badRequest('Validation failed.', { issues: parsed.error.flatten() });
         }
 
         const key = parsed.data.key.trim();
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
             .limit(1);
 
         if (keyExists) {
-            return json.conflict('Position key already exists', { field: 'key', value: key });
+            return json.conflict('Position key already exists.', { field: 'key', value: key });
         }
 
         // 2) displayName (only if provided)
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
                 .limit(1);
 
             if (nameExists) {
-                return json.conflict('Display name already exists', { field: 'displayName', value: displayName });
+                return json.conflict('Display name already exists.', { field: 'displayName', value: displayName });
             }
         }
 
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
             })
             .returning();
 
-        return json.created({ data: row });
+        return json.created({ message: 'Position created successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }

@@ -15,7 +15,7 @@ export async function GET(_: NextRequest, ctx: { params: Promise<{ courseId: str
         // Do a proper select instead in your real code.
         const row = await updateOffering(offeringId, {});
         if (!row) throw new ApiError(404, 'Offering not found', 'not_found');
-        return json.ok({ offering: row });
+        return json.ok({ message: 'Course offering retrieved successfully.', offering: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ courseId:
             await replaceOfferingInstructors(offeringId, body.instructors);
         }
 
-        return json.ok({ offering: updated });
+        return json.ok({ message: 'Course offering updated successfully.', offering: updated });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -47,6 +47,6 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ courseId
         const { offeringId } = Param.parse(await ctx.params);
         const row = await softDeleteOffering(offeringId);
         if (!row) throw new ApiError(404, 'Offering not found', 'not_found');
-        return json.ok({ message: 'Offering soft-deleted', id: row.id });
+        return json.ok({ message: 'Offering soft-deleted.', id: row.id });
     } catch (err) { return handleApiError(err); }
 }

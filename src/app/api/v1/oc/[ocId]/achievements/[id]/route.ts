@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await getAchievement(ocId, id);
         if (!row) throw new ApiError(404, 'Achievement not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Achievement retrieved successfully.', data: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = achieveUpdateSchema.parse(await req.json());
         const row = await updateAchievement(ocId, id, dto);
         if (!row) throw new ApiError(404, 'Achievement not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Achievement updated successfully.', data: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -35,6 +35,6 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await deleteAchievement(ocId, id);
         if (!row) throw new ApiError(404, 'Achievement not found', 'not_found');
-        return json.ok({ message: 'Deleted', id: row.id });
+        return json.ok({ message: 'Achievement deleted successfully.', id: row.id });
     } catch (err) { return handleApiError(err); }
 }

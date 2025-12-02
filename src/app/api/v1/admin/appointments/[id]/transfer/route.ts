@@ -43,7 +43,7 @@ export async function POST(
         });
 
         return json.ok({
-            message: 'Appointment transferred',
+            message: 'Appointment transferred successfully.',
             ended_appointment: result.ended,
             new_appointment: result.next,
             transfer_audit: result.audit,
