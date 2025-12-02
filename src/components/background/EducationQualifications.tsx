@@ -1,60 +1,39 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-import {
-    getEducationDetails,
-    saveEducationDetails,
-    updateEducationRecord,
-    deleteEducationRecord,
-    EducationItem,
-    EducationUI,
-    EducationRecordResponse,
-} from "@/app/lib/api/educationApi";
-import { Qualification } from "@/types/background-detls";
+import { EducationUI, EducationItem } from "@/app/lib/api/educationApi";
+import { useEducation } from "@/hooks/useEducation";
+import { FormValues, Props } from "@/types/educational-qual";
 
-export default function EducationQualifications({ selectedCadet }: { selectedCadet: any }) {
-    const [savedEducation, setSavedEducation] = useState<EducationItem[]>([]);
-    const [editingEduId, setEditingEduId] = useState<string | null>(null);
-    const [editEduForm, setEditEduForm] = useState<EducationUI | null>(null);
+export default function EducationQualifications({ ocId }: Props) {
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState<EducationUI | null>(null);
 
-    // ---------------------------
-    // FETCH EDUCATION DATA
-    // ---------------------------
-    const fetchEducationData = useCallback(async () => {
-        if (!selectedCadet?.ocId) return;
-
-        try {
-            const data = await getEducationDetails(selectedCadet.ocId);
-            if (Array.isArray(data)) {
-                const formatted = data.map((item: EducationRecordResponse) => ({
-                    id: item.id,
-                    qualification: item.level || "",
-                    school: item.schoolOrCollege || "",
-                    subs: item.subjects || "",
-                    board: item.boardOrUniv || "",
-                    marks: item.totalPercent ? item.totalPercent.toString() : "",
-                    grade: "",
-                }));
-                setSavedEducation(formatted);
-            }
-        } catch (err) {
-            toast.error("Failed to fetch education details");
-        }
-    }, [selectedCadet?.ocId]);
+    // ---------------------------------------------------------
+    // HOOK FOR API OPERATIONS
+    // ---------------------------------------------------------
+    const {
+        education,
+        setEducation,
+        fetchEducation,
+        saveEducation,
+        updateEducation,
+        deleteEducation,
+    } = useEducation(ocId);
 
     useEffect(() => {
-        fetchEducationData();
-    }, [fetchEducationData]);
+        fetchEducation();
+    }, [fetchEducation]);
 
-    // ---------------------------
-    // ADD FORM - RHF
-    // ---------------------------
-    const qualificationForm = useForm<{ qualifications: Qualification[] }>({
+    // ---------------------------------------------------------
+    // ADD FORM — RHF
+    // ---------------------------------------------------------
+    const qualificationForm = useForm<FormValues>({
         defaultValues: {
             qualifications: [
                 { qualification: "", school: "", subs: "", board: "", marks: "", grade: "" },
@@ -67,13 +46,14 @@ export default function EducationQualifications({ selectedCadet }: { selectedCad
         name: "qualifications",
     });
 
-    const submitQualifications = async (data: { qualifications: Qualification[] }) => {
-        if (!selectedCadet?.ocId) {
-            return toast.error("No cadet selected");
-        }
+    // step 1 — declare allowed keys
+    const columns = ["qualification", "school", "subs", "board", "marks", "grade"] as const;
+    type ColumnKey = typeof columns[number];
 
+
+    const submitQualifications = async ({ qualifications }: FormValues) => {
         try {
-            const payload = data.qualifications.map((q) => ({
+            const payload = qualifications.map((q) => ({
                 level: q.qualification,
                 school: q.school,
                 board: q.board,
@@ -81,134 +61,142 @@ export default function EducationQualifications({ selectedCadet }: { selectedCad
                 percentage: q.marks ? Number(q.marks) : 0,
             }));
 
-            const responses = await saveEducationDetails(selectedCadet.ocId, payload);
+            const saved = await saveEducation(payload);
 
-            if (responses.length > 0) {
+            if (saved && saved.length > 0) {
                 toast.success("Education details saved!");
-                await fetchEducationData(); // REFRESH FROM BACKEND
+                fetchEducation();
             }
-        } catch (err) {
+        } catch {
             toast.error("Failed to save qualifications");
         }
     };
 
-    // ---------------------------
+    // ---------------------------------------------------------
     // EDIT HANDLERS
-    // ---------------------------
-    const handleEdit = (row: EducationUI) => {
-        setEditingEduId(row.id);
-        setEditEduForm({ ...row });
+    // ---------------------------------------------------------
+    const startEdit = (row: EducationUI) => {
+        setEditingId(row.id);
+        setEditForm({ ...row });
     };
 
-    const handleCancelEdit = () => {
-        setEditingEduId(null);
-        setEditEduForm(null);
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditForm(null);
     };
 
-    const handleChange = (field: keyof EducationUI, value: any) => {
-        setEditEduForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+    const changeEdit = <K extends keyof EducationUI>(key: K, value: EducationUI[K]) => {
+        setEditForm((prev) => (prev ? { ...prev, [key]: value } : prev));
     };
 
-    const handleSave = async () => {
-        if (!selectedCadet?.ocId || !editingEduId || !editEduForm)
-            return toast.error("Invalid operation");
+    const saveEdit = async () => {
+        if (!editingId || !editForm) return toast.error("Invalid edit");
 
         try {
-            await updateEducationRecord(selectedCadet.ocId, editingEduId, {
-                totalPercent: editEduForm.marks ? Number(editEduForm.marks) : 0,
+            await updateEducation(editingId, {
+                totalPercent: editForm.marks ? Number(editForm.marks) : 0,
             });
 
             toast.success("Record updated!");
 
-            await fetchEducationData(); // REFRESH FROM BACKEND
-
-            setEditingEduId(null);
-            setEditEduForm(null);
+            fetchEducation();
+            cancelEdit();
         } catch {
             toast.error("Failed to update");
         }
     };
 
-    // ---------------------------
-    // DELETE HANDLER
-    // ---------------------------
-    const handleDelete = async (row: EducationUI) => {
-        if (!selectedCadet?.ocId || !row.id)
-            return toast.error("Invalid record");
+    const removeRow = async (row: EducationUI) => {
+        const { id } = row;
 
         try {
-            await deleteEducationRecord(selectedCadet.ocId, row.id);
-
+            await deleteEducation(id);
             toast.success("Deleted successfully!");
-            await fetchEducationData();
+            fetchEducation();
         } catch {
             toast.error("Failed to delete");
         }
     };
 
+    // ---------------------------------------------------------
+    // UI
+    // ---------------------------------------------------------
     return (
         <div>
-            {/* SAVED EDUCATION TABLE */}
+            {/* ---------------- SAVED EDUCATION TABLE ---------------- */}
             <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-                {savedEducation.length === 0 ? (
+                {education.length === 0 ? (
                     <p className="text-center p-4 text-gray-500">No educational qualifications saved yet.</p>
                 ) : (
                     <table className="min-w-full text-sm border border-gray-300">
                         <thead className="bg-gray-100">
                             <tr>
                                 {["S.No", "Qualification", "School", "Subs", "Board", "Marks", "Grade", "Action"].map(
-                                    (head) => (
-                                        <th key={head} className="border px-4 py-2 text-center bg-gray-300">
-                                            {head}
-                                        </th>
-                                    )
+                                    (head) => {
+                                        return (
+                                            <th key={head} className="border px-4 py-2 text-center bg-gray-300">
+                                                {head}
+                                            </th>
+                                        );
+                                    }
                                 )}
                             </tr>
                         </thead>
 
                         <tbody>
-                            {savedEducation.map((row, idx) => {
-                                const isEditing = editingEduId === row.id;
+                            {education.map((row, index) => {
+                                const { id, qualification, school, subs, board, marks, grade } = row;
+                                const isEditing = editingId === id;
+
                                 return (
-                                    <tr key={row.id}>
-                                        <td className="border px-4 py-2 text-center">{idx + 1}</td>
+                                    <tr key={id}>
+                                        <td className="border px-4 py-2 text-center">{index + 1}</td>
 
                                         {/* QUALIFICATION */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
                                                 <Input
-                                                    value={editEduForm?.qualification}
-                                                    onChange={(e) => handleChange("qualification", e.target.value)}
+                                                    value={editForm?.qualification || ""}
+                                                    onChange={(e) => changeEdit("qualification", e.target.value)}
                                                 />
                                             ) : (
-                                                row.qualification
+                                                qualification
                                             )}
                                         </td>
 
                                         {/* SCHOOL */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
-                                                <Input value={editEduForm?.school} onChange={(e) => handleChange("school", e.target.value)} />
+                                                <Input
+                                                    value={editForm?.school || ""}
+                                                    onChange={(e) => changeEdit("school", e.target.value)}
+                                                />
                                             ) : (
-                                                row.school
+                                                school
                                             )}
                                         </td>
 
-                                        {/* SUBJECT */}
+                                        {/* SUBJECTS */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
-                                                <Input value={editEduForm?.subs} onChange={(e) => handleChange("subs", e.target.value)} />
+                                                <Input
+                                                    value={editForm?.subs || ""}
+                                                    onChange={(e) => changeEdit("subs", e.target.value)}
+                                                />
                                             ) : (
-                                                row.subs
+                                                subs
                                             )}
                                         </td>
 
                                         {/* BOARD */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
-                                                <Input value={editEduForm?.board} onChange={(e) => handleChange("board", e.target.value)} />
+                                                <Input
+                                                    value={editForm?.board || ""}
+                                                    onChange={(e) => changeEdit("board", e.target.value)}
+                                                />
                                             ) : (
-                                                row.board
+                                                board
                                             )}
                                         </td>
 
@@ -217,38 +205,41 @@ export default function EducationQualifications({ selectedCadet }: { selectedCad
                                             {isEditing ? (
                                                 <Input
                                                     type="number"
-                                                    value={editEduForm?.marks}
-                                                    onChange={(e) => handleChange("marks", e.target.value)}
+                                                    value={editForm?.marks || ""}
+                                                    onChange={(e) => changeEdit("marks", e.target.value)}
                                                 />
                                             ) : (
-                                                row.marks
+                                                marks
                                             )}
                                         </td>
 
                                         {/* GRADE */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
-                                                <Input value={editEduForm?.grade} onChange={(e) => handleChange("grade", e.target.value)} />
+                                                <Input
+                                                    value={editForm?.grade || ""}
+                                                    onChange={(e) => changeEdit("grade", e.target.value)}
+                                                />
                                             ) : (
-                                                row.grade
+                                                grade
                                             )}
                                         </td>
 
-                                        {/* ACTION BUTTONS */}
+                                        {/* ACTIONS */}
                                         <td className="border px-4 py-2 text-center space-x-2">
                                             {!isEditing ? (
                                                 <>
-                                                    <Button size="sm" variant="outline" onClick={() => handleEdit(row)}>
+                                                    <Button size="sm" variant="outline" onClick={() => startEdit(row)}>
                                                         Edit
                                                     </Button>
-                                                    <Button size="sm" variant="destructive" onClick={() => handleDelete(row)}>
+                                                    <Button size="sm" variant="destructive" onClick={() => removeRow(row)}>
                                                         Delete
                                                     </Button>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Button size="sm" onClick={handleSave}>Save</Button>
-                                                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                                                    <Button size="sm" onClick={saveEdit}>Save</Button>
+                                                    <Button size="sm" variant="outline" onClick={cancelEdit}>
                                                         Cancel
                                                     </Button>
                                                 </>
@@ -262,43 +253,50 @@ export default function EducationQualifications({ selectedCadet }: { selectedCad
                 )}
             </div>
 
-            {/* ADD NEW EDUCATION FORM */}
+            {/* ---------------- ADD NEW QUALIFICATIONS FORM ---------------- */}
             <form onSubmit={qualificationForm.handleSubmit(submitQualifications)}>
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm border border-gray-300">
                         <thead className="bg-gray-100">
                             <tr>
-                                {["S.No", "Qualification", "School", "Subs", "Board", "Marks", "Grade", "Action"].map(
-                                    (head) => (
+                                {["S.No", "Qualification", "School", "Subs", "Board", "Marks", "Grade", "Action"].map((head) => {
+                                    return (
                                         <th key={head} className="border px-4 py-2 bg-gray-300">
                                             {head}
                                         </th>
-                                    )
-                                )}
+                                    );
+                                })}
                             </tr>
                         </thead>
 
                         <tbody>
-                            {fields.map((item, idx) => (
-                                <tr key={item.id}>
-                                    <td className="border px-4 py-2 text-center">{idx + 1}</td>
+                            {fields.map((row, index) => {
+                                const {id} = row;
+                                return (
+                                    <tr key={id}>
+                                        <td className="border px-4 py-2 text-center">{index + 1}</td>
 
-                                    {["qualification", "school", "subs", "board", "marks", "grade"].map((field) => (
-                                        <td key={field} className="border px-4 py-2">
-                                            <Input
-                                                {...qualificationForm.register(`qualifications.${idx}.${field}`)}
-                                                placeholder={field}
-                                            />
+                                        {columns.map((field: ColumnKey) => {
+                                            return (
+                                                <td key={field} className="border px-4 py-2">
+                                                    <Input
+                                                        {...qualificationForm.register(
+                                                            `qualifications.${index}.${field}` as const
+                                                        )}
+                                                        placeholder={field}
+                                                    />
+                                                </td>
+                                            );
+                                        })}
+
+                                        <td className="border px-4 py-2 text-center">
+                                            <Button variant="destructive" type="button" onClick={() => remove(index)}>
+                                                Remove
+                                            </Button>
                                         </td>
-                                    ))}
-
-                                    <td className="border px-4 py-2 text-center">
-                                        <Button variant="destructive" type="button" onClick={() => remove(idx)}>
-                                            Remove
-                                        </Button>
-                                    </td>
-                                </tr>
-                            ))}
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -306,7 +304,16 @@ export default function EducationQualifications({ selectedCadet }: { selectedCad
                 <div className="flex justify-center gap-2 mt-4">
                     <Button
                         type="button"
-                        onClick={() => append({ qualification: "", school: "", subs: "", board: "", marks: "", grade: "" })}
+                        onClick={() =>
+                            append({
+                                qualification: "",
+                                school: "",
+                                subs: "",
+                                board: "",
+                                marks: "",
+                                grade: "",
+                            })
+                        }
                     >
                         Add Qualification
                     </Button>

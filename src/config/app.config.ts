@@ -286,7 +286,7 @@ type TrainingCard = {
   title: string;
   description: string;
   icon: LucideIcon;
-  to: string;
+  to: ((id: string) => string);
   color: string;
 };
 
@@ -295,161 +295,161 @@ export const militaryTrainingCards: TrainingCard[] = [
     title: "Dossier Snapshot",
     description: "Quickly view and analyze OC details",
     icon: Camera,
-    to: "/dashboard/milmgmt/dossier-snapshot",
+    to: (id: string) => `/dashboard/${id}/milmgmt/dossier-snapshot`,
     color: "bg-blue-600"
   },
   {
     title: "Dossier Filling",
     description: "Maintain detailed dossier filling records",
     icon: FileText,
-    to: "/dashboard/milmgmt/dossier-filling",
+    to: (id: string) => `/dashboard/${id}/milmgmt/dossier-filling`,
     color: "bg-green-600"
   },
   {
     title: "Dossier Inspection",
     description: "Track and review dossier inspection sheets",
     icon: ClipboardCheck,
-    to: "/dashboard/milmgmt/dossier-insp",
+    to: (id: string) => `/dashboard/${id}/milmgmt/dossier-insp`,
     color: "bg-blue-600"
   },
   {
     title: "Personal Particulars",
     description: "Record and manage cadet personal particulars",
     icon: User,
-    to: "/dashboard/milmgmt/pers-particulars",
+    to: (id: string) => `/dashboard/${id}/milmgmt/pers-particulars`,
     color: "bg-indigo-600"
   },
   {
     title: "Background Details",
     description: "Capture cadet family and background information",
     icon: FileSearch,
-    to: "/dashboard/milmgmt/background-detls",
+    to: (id: string) => `/dashboard/${id}/milmgmt/background-detls`,
     color: "bg-cyan-600"
   },
   {
     title: "SSB Reports",
     description: "Capture cadet reports information",
     icon: FileText,
-    to: "/dashboard/milmgmt/ssb-reports",
+    to: (id: string) => `/dashboard/${id}/milmgmt/ssb-reports`,
     color: "bg-cyan-600",
   },
   {
     title: "Medical Records",
     description: "Manage cadet health and medical documentation",
     icon: HeartPulse,
-    to: "/dashboard/milmgmt/med-record",
+    to: (id: string) => `/dashboard/${id}/milmgmt/med-record`,
     color: "bg-red-600"
   },
   {
     title: "Discipline Records",
     description: "Log disciplinary actions and observations",
     icon: ShieldAlert,
-    to: "/dashboard/milmgmt/discip-records",
+    to: (id: string) => `/dashboard/${id}/milmgmt/discip-records`,
     color: "bg-yellow-600"
   },
   {
     title: "Parent Communication",
     description: "Record communication with parents and guardians",
     icon: Phone,
-    to: "/dashboard/milmgmt/comn-parents",
+    to: (id: string) => `/dashboard/${id}/milmgmt/comn-parents`,
     color: "bg-teal-600"
   },
   {
     title: "PT & Swimming Tests",
     description: "Track cadet PT and swimming test performance",
     icon: Dumbbell,
-    to: "/dashboard/milmgmt/pt-swimming",
+    to: (id: string) => `/dashboard/${id}/milmgmt/pt-swimming`,
     color: "bg-orange-600"
   },
   {
     title: "Sports & Motivation Awards",
     description: "Manage cadet sports achievements and motivation awards",
     icon: Trophy,
-    to: "/dashboard/milmgmt/sports-awards",
+    to: (id: string) => `/dashboard/${id}/milmgmt/sports-awards`,
     color: "bg-yellow-600"
   },
   {
     title: "Weapon Training",
     description: "Record weapon training performance",
     icon: Target,
-    to: "/dashboard/milmgmt/wpn-trg",
+    to: (id: string) => `/dashboard/${id}/milmgmt/wpn-trg`,
     color: "bg-gray-700"
   },
   {
     title: "Obstacle Training",
     description: "Maintain obstacle course training records",
     icon: Mountain,
-    to: "/dashboard/milmgmt/obstacle-trg",
+    to: (id: string) => `/dashboard/${id}/milmgmt/obstacle-trg`,
     color: "bg-pink-600"
   },
   {
     title: "Speed March / Runs",
     description: "Track cadet march and run-back timings",
     icon: Timer,
-    to: "/dashboard/milmgmt/speed-march",
+    to: (id: string) => `/dashboard/${id}/milmgmt/speed-march`,
     color: "bg-purple-600"
   },
   {
     title: "Camps",
     description: "Maintain participation and performance in camps",
     icon: Tent,
-    to: "/dashboard/milmgmt/camps",
+    to: (id: string) => `/dashboard/${id}/milmgmt/camps`,
     color: "bg-green-700"
   },
   {
     title: "Club Details",
     description: "Record cadet participation in clubs and activities",
     icon: BookMarked,
-    to: "/dashboard/milmgmt/club-detls",
+    to: (id: string) => `/dashboard/${id}/milmgmt/club-detls`,
     color: "bg-blue-700"
   },
   {
     title: "Leave Records",
     description: "Manage and track cadet leave history",
     icon: Calendar,
-    to: "/dashboard/milmgmt/leave-record",
+    to: (id: string) => `/dashboard/${id}/milmgmt/leave-record`,
     color: "bg-indigo-700"
   },
   {
     title: "Hikes",
     description: "Track participation and performance in hikes",
     icon: Footprints,
-    to: "/dashboard/milmgmt/hikes",
+    to: (id: string) => `/dashboard/${id}/milmgmt/hikes`,
     color: "bg-emerald-600"
   },
   {
     title: "Detention",
     description: "Record and manage detention instances",
     icon: Ban,
-    to: "/dashboard/milmgmt/detention",
+    to: (id: string) => `/dashboard/${id}/milmgmt/detention`,
     color: "bg-red-700"
   },
   {
     title: "Counselling",
     description: "Document cadet counselling sessions",
     icon: MessageSquare,
-    to: "/dashboard/milmgmt/counselling",
+    to: (id: string) => `/dashboard/${id}/milmgmt/counselling`,
     color: "bg-yellow-700"
   },
   {
     title: "OLQ Assessment",
     description: "Conduct, manage, and review assessments",
     icon: FileText,
-    to: "/dashboard/milmgmt/olq-assessment",
+    to: (id: string) => `/dashboard/${id}/milmgmt/olq-assessment`,
     color: "bg-green-500"
   },
   {
     title: "Interview",
     description: "Schedule and manage candidate interviews",
     icon: UserCheck,
-    to: "",
+    to: (id: string) => `/dashboard/${id}/milmgmt/interview`,
     color: "bg-orange-500"
   },
   {
     title: "Credit for Excellence",
     description: "Manage cadet CFE scores and evaluation records",
     icon: FileBadge,
-    to: "/dashboard/milmgmt/credit-excellence",
+    to: (id: string) => `/dashboard/${id}/milmgmt/credit-excellence`,
     color: "bg-violet-600"
   }
 
