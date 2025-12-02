@@ -237,7 +237,6 @@ export default function DisciplineRecordsPage() {
 
     useEffect(() => {
         fetchRecords();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCadet?.ocId]);
 
     // ----------------------------- RENDER --------------------------------

@@ -308,8 +308,8 @@ export const ocSportsAndGames = pgTable('oc_sports_and_games', {
     semester: integer('semester').notNull(),
     term: termKind('term').notNull(),
     sport: varchar('sport', { length: 160 }).notNull(),
-    maxMarks: numeric('max_marks').notNull(),
-    marksObtained: numeric('marks_obtained').notNull(),
+    maxMarks: numeric('max_marks', { mode: 'number' }).notNull(),
+    marksObtained: numeric('marks_obtained', { mode: 'number' }).notNull(),
     sportsStrings: text('sports_strings'),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
@@ -321,8 +321,8 @@ export const ocWeaponTraining = pgTable('oc_weapon_training', {
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
     subject: varchar('subject', { length: 200 }).notNull(),
     semester: integer('semester').notNull(),
-    maxMarks: numeric('max_marks').notNull(),
-    marksObtained: numeric('marks_obtained').notNull(),
+    maxMarks: numeric('max_marks', { mode: 'number' }).notNull(),
+    marksObtained: numeric('marks_obtained', { mode: 'number' }).notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
@@ -409,7 +409,7 @@ export const ocObstacleTraining = pgTable('oc_obstacle_training', {
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
     semester: integer('semester').notNull(),
     obstacle: varchar('obstacle', { length: 160 }).notNull(),
-    marksObtained: numeric('marks_obtained').notNull(),
+    marksObtained: numeric('marks_obtained', { mode: 'number' }).notNull(),
     remark: text('remark'),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
@@ -422,7 +422,7 @@ export const ocSpeedMarch = pgTable('oc_speed_march', {
     semester: integer('semester').notNull(),
     test: varchar('test', { length: 160 }).notNull(),
     timings: varchar('timings', { length: 64 }).notNull(),
-    marks: numeric('marks').notNull(),
+    marks: numeric('marks', { mode: 'number' }).notNull(),
     remark: text('remark'),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({

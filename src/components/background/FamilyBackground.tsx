@@ -55,7 +55,7 @@ export default function FamilyBackground({ selectedCadet }: Props) {
                     age: "",
                     occupation: "",
                     education: "",
-                    mobileNo: ""
+                    mobile: ""
                 },
             ],
         },
@@ -231,11 +231,11 @@ export default function FamilyBackground({ selectedCadet }: Props) {
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
                                                 <Input
-                                                    value={editForm?.mobileNo || ""}
-                                                    onChange={e => handleChangeEdit("mobileNo", e.target.value)}
+                                                    value={editForm?.mobile || ""}
+                                                    onChange={e => handleChangeEdit("mobile", e.target.value)}
                                                 />
                                             ) : (
-                                                m.mobileNo
+                                                m.mobile
                                             )}
                                         </td>
 
@@ -303,11 +303,11 @@ export default function FamilyBackground({ selectedCadet }: Props) {
                                 <tr key={field.id}>
                                     <td className="border px-4 py-2 text-center">{idx + 1}</td>
 
-                                    {["name", "relation", "age", "occupation", "education", "mobileNo"].map(
+                                    {["name", "relation", "age", "occupation", "education", "mobile"].map(
                                         col => (
                                             <td key={col} className="border px-4 py-2">
                                                 <Input
-                                                    {...familyForm.register(`family.${idx}.${col}` as const)}
+                                                    {...familyForm.register(`family.${idx}.${col}` as any)}
                                                     placeholder={col}
                                                 />
                                             </td>
@@ -339,7 +339,7 @@ export default function FamilyBackground({ selectedCadet }: Props) {
                                 age: "",
                                 occupation: "",
                                 education: "",
-                                mobileNo: "",
+                                mobile: "",
                             })
                         }
                     >

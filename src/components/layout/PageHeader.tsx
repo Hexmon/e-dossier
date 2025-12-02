@@ -18,9 +18,10 @@ import { useEffect, useState } from "react";
 interface PageHeaderProps {
   title: string;
   description?: string;
+  onLogout?: () => void;
 }
 
-export function PageHeader({ title, description }: PageHeaderProps) {
+export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
 
   const [data, setData] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,6 +81,10 @@ export function PageHeader({ title, description }: PageHeaderProps) {
 
   const handleLogout = async () => {
     const ok = await logout();
+    if (onLogout) {
+      onLogout();
+      return;
+    }
     if (ok) {
       router.push("/login");
     }

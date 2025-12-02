@@ -22,6 +22,8 @@ export const POS = {
 
 export const SCOPE = {
   GLOBAL: 'GLOBAL',
+  WING: 'WING',
+  SQUADRON: 'SQUADRON',
   PLATOON: 'PLATOON',
 } as const;
 
