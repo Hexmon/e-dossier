@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const sp = new URL(req.url).searchParams;
         const qp = listQuerySchema.parse({ limit: sp.get('limit') ?? undefined, offset: sp.get('offset') ?? undefined });
         const rows = await listFamily(ocId, qp.limit ?? 100, qp.offset ?? 0);
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Family members retrieved successfully.', items: rows, count: rows.length });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -21,6 +21,6 @@ export async function POST(req: NextRequest, ctx: any) {
         const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
         const dto = familyCreateSchema.parse(await req.json());
         const row = await createFamily(ocId, dto);
-        return json.created({ data: row });
+        return json.created({ message: 'Family member created successfully.', data: row });
     } catch (err) { return handleApiError(err); }
 }

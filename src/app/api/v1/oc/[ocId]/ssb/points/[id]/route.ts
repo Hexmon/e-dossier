@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const report = await getSsbReport(ocId); if (!report) throw new ApiError(404, 'SSB report not found', 'not_found');
         const row = await getSsbPoint(report.id, id); if (!row) throw new ApiError(404, 'Point not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'SSB point retrieved successfully.', data: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const report = await getSsbReport(ocId); if (!report) throw new ApiError(404, 'SSB report not found', 'not_found');
         const dto = ssbPointUpdateSchema.parse(await req.json());
         const row = await updateSsbPoint(report.id, id, dto); if (!row) throw new ApiError(404, 'Point not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'SSB point updated successfully.', data: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -35,6 +35,6 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const report = await getSsbReport(ocId); if (!report) throw new ApiError(404, 'SSB report not found', 'not_found');
         const row = await deleteSsbPoint(report.id, id); if (!row) throw new ApiError(404, 'Point not found', 'not_found');
-        return json.ok({ message: 'Deleted', id: row.id });
+        return json.ok({ message: 'SSB point deleted successfully.', id: row.id });
     } catch (err) { return handleApiError(err); }
 }

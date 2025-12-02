@@ -32,10 +32,10 @@ export async function POST(req: NextRequest) {
             .limit(1);
 
         if (!course) {
-            return json.badRequest('Invalid courseId (course not found)');
+            return json.badRequest('Course not found.');
         }
         if (course.deletedAt) {
-            return json.badRequest('Invalid courseId (course is deleted)');
+            return json.badRequest('Course is deleted.');
         }
 
         let platoonId: string | null = null;
@@ -45,8 +45,8 @@ export async function POST(req: NextRequest) {
                 .from(platoons)
                 .where(eq(platoons.id, body.platoonId))
                 .limit(1);
-            if (!pl) return json.badRequest('Invalid platoonId (platoon not found)');
-            if (pl.deletedAt) return json.badRequest('Invalid platoonId (platoon is deleted)');
+            if (!pl) return json.badRequest('Platoon not found.');
+            if (pl.deletedAt) return json.badRequest('Platoon is deleted.');
             platoonId = pl.id;
         }
 
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
                 createdAt: ocCadets.createdAt,
             });
 
-        return json.created({ oc: row });
+        return json.created({ message: 'OC created successfully.', oc: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -199,14 +199,14 @@ export async function GET(req: NextRequest) {
         // if NO full toggle + NO per-section includes → basic list (old behavior)
         if (!wantFullToggle && !anySectionIncluded) {
             const items = await listOCsBasic(opts);
-            return json.ok({ items, count: items.length });
+            return json.ok({ message: 'OCs retrieved successfully.', items, count: items.length });
         }
 
         // If full toggle but no explicit flags → return everything exactly as before
         // (?full=true or ?include=all, but no personal=/delegations=/include=personal, etc.)
         if (wantFullToggle && !anyExplicit) {
             const items = await listOCsFull(opts);
-            return json.ok({ items, count: items.length });
+            return json.ok({ message: 'OCs retrieved successfully.', items, count: items.length });
         }
 
         // Otherwise: load full and trim to only requested sections
@@ -250,7 +250,7 @@ export async function GET(req: NextRequest) {
             return out;
         });
 
-        return json.ok({ items, count: items.length });
+        return json.ok({ message: 'OCs retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }

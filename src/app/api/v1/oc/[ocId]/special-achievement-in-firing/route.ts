@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, ctx: any) {
             offset: sp.get('offset') ?? undefined,
         });
         const rows = await listSpecialAchievementInFiring(ocId, qp.limit ?? 100, qp.offset ?? 0);
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Special achievements in firing retrieved successfully.', items: rows, count: rows.length });
     } catch (err) {
         return handleApiError(err);
     }
@@ -28,9 +28,8 @@ export async function POST(req: NextRequest, ctx: any) {
         await ensureOcExists(ocId);
         const dto = specialAchievementInFiringCreateSchema.parse(await req.json());
         const row = await createSpecialAchievementInFiring(ocId, dto);
-        return json.created({ data: row });
+        return json.created({ message: 'Special achievement in firing created successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
-

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, ctx: any) {
         if (!row || row.ocId !== ocId) {
             throw new ApiError(404, 'OLQ record not found', 'not_found');
         }
-        return json.ok({ data: row });
+        return json.ok({ message: 'OLQ record retrieved successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }

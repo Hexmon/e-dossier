@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
             includeDeleted: qp.includeDeleted === 'true',
             limit: qp.limit, offset: qp.offset,
         });
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Subjects retrieved successfully.', items: rows, count: rows.length });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -43,9 +43,9 @@ export async function POST(req: NextRequest) {
                 description: body.description ?? null,
             })
             .returning();
-        return json.created({ subject: row });
+        return json.created({ message: 'Subject created successfully.', subject: row });
     } catch (err: any) {
-        if (err?.code === '23505') return json.conflict('Subject code already exists');
+        if (err?.code === '23505') return json.conflict('Subject code already exists.');
         return handleApiError(err);
     }
 }

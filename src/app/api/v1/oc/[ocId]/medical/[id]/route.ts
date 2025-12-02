@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
         const { id } = await parseParam(ctx, IdSchema);
         const row = await getMedical(ocId, id); if (!row) throw new ApiError(404, 'Medical record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Medical record retrieved successfully.', data: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const dto = medicalUpdateSchema.parse(await req.json());
         const row = await updateMedical(ocId, id, dto); if (!row) throw new ApiError(404, 'Medical record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Medical record updated successfully.', data: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -32,6 +32,6 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
         const { id } = await parseParam(ctx, IdSchema);
         const row = await deleteMedical(ocId, id); if (!row) throw new ApiError(404, 'Medical record not found', 'not_found');
-        return json.ok({ message: 'Deleted', id: row.id });
+        return json.ok({ message: 'Medical record deleted successfully.', id: row.id });
     } catch (err) { return handleApiError(err); }
 }

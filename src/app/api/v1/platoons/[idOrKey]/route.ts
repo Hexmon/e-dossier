@@ -56,7 +56,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .where(whereForIdKeyName(idOrKey, true))
       .limit(1);
 
-    if (!existing) return json.notFound('Platoon not found');
+    if (!existing) return json.notFound('Platoon not found.');
 
     // 🔒 Uniqueness checks when changing key or name (ignore soft-deleted, exclude self)
     if (key || name) {
@@ -85,7 +85,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             upKey && dup.key === upKey ? 'key' :
               lcName && dup.name?.toLowerCase() === lcName ? 'name' :
                 'key_or_name';
-          return json.conflict(`Platoon ${by} already exists`, { [by]: by === 'key' ? upKey : name?.trim() });
+          return json.conflict(`Platoon ${by} already exists.`, { [by]: by === 'key' ? upKey : name?.trim() });
         }
       }
     }
@@ -112,7 +112,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         deletedAt: platoons.deletedAt,
       });
 
-    return json.ok({ platoon: updated });
+    return json.ok({ message: 'Platoon updated successfully.', platoon: updated });
   } catch (err) {
     return handleApiError(err);
   }
@@ -128,7 +128,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ idOrKey:
     await requireAdmin(req);
     const rawIdOrKey = await (ctx as any).params;
     const idOrKey = decodeURIComponent((rawIdOrKey ?? '')).trim();
-    if (!idOrKey) throw new ApiError(400, 'idOrKey path param is required', 'bad_request');
+    if (!idOrKey) throw new ApiError(400, 'idOrKey path param is required.', 'bad_request');
 
     // Find even if already soft-deleted (so we can hard-delete it)
     const [existing] = await db
@@ -142,7 +142,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ idOrKey:
       .where(whereForIdKeyName(idOrKey, true))
       .limit(1);
 
-    if (!existing) throw new ApiError(404, 'Platoon not found', 'not_found');
+    if (!existing) throw new ApiError(404, 'Platoon not found.', 'not_found');
 
     const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
 
@@ -154,7 +154,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ idOrKey:
         .returning({ id: platoons.id, key: platoons.key, name: platoons.name });
 
       return json.ok({
-        message: 'Platoon hard-deleted',
+        message: 'Platoon hard-deleted.',
         platoon: gone,
       });
     }
@@ -173,14 +173,14 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ idOrKey:
 
     if (updated) {
       return json.ok({
-        message: 'Platoon soft-deleted',
+        message: 'Platoon soft-deleted.',
         platoon: updated,
       });
     }
 
     // Already soft-deleted – return current state
     return json.ok({
-      message: 'Platoon already soft-deleted',
+      message: 'Platoon already soft-deleted.',
       platoon: {
         id: existing.id,
         key: existing.key,

@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         });
 
         const rows = await listUsersWithActiveAppointments(qp as UserListQuery);
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Users retrieved successfully.', items: rows, count: rows.length });
     } catch (err) {
         return handleApiError(err);
     }
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         const parsed = userCreateSchema.safeParse(body);
         if (!parsed.success) {
             const issues = parsed.error.flatten();
-            return json.badRequest('Validation failed', { issues });
+            return json.badRequest('Validation failed.', { issues });
         }
         const d = parsed.data;
         const username = d.username.trim();
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
             if (hit.email === email) conflicts.push({ field: 'email', message: `Email "${email}" is already registered.` });
             if (hit.phone === phone) conflicts.push({ field: 'phone', message: `Phone "${phone}" is already registered.` });
 
-            return json.conflict('Unique constraint violated', {
+            return json.conflict('Unique constraint violated.', {
                 fields: conflicts.map(c => c.field),
                 messages: conflicts.map(c => c.message),
             });
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
                 .onConflictDoNothing();
         }
 
-        return json.created({ user: u });
+        return json.created({ message: 'User created successfully.', user: u });
     } catch (err) {
         // ---- DB race fallback: map index/detail to friendly messages ----
         const e = err as PgErr;
@@ -147,12 +147,12 @@ export async function POST(req: NextRequest) {
 
             // If we couldn't detect the specific field, provide a generic message
             if (fields.length === 0) {
-                return json.conflict('Unique constraint violated', {
+                return json.conflict('Unique constraint violated.', {
                     detail: 'Duplicate username/email/phone.',
                 });
             }
 
-            return json.conflict('Unique constraint violated', {
+            return json.conflict('Unique constraint violated.', {
                 fields,
                 messages,
                 detail: e?.detail ?? e?.cause?.detail,
