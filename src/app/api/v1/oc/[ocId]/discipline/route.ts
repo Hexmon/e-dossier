@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const sp = new URL(req.url).searchParams;
         const qp = listQuerySchema.parse({ limit: sp.get('limit') ?? undefined, offset: sp.get('offset') ?? undefined });
         const rows = await listDiscipline(ocId, qp.limit ?? 100, qp.offset ?? 0);
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Discipline records retrieved successfully.', items: rows, count: rows.length });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -20,6 +20,6 @@ export async function POST(req: NextRequest, ctx: any) {
         await mustBeAuthed(req);
         const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
         const dto = disciplineCreateSchema.parse(await req.json());
-        return json.created({ data: await createDiscipline(ocId, dto) });
+        return json.created({ message: 'Discipline record created successfully.', data: await createDiscipline(ocId, dto) });
     } catch (err) { return handleApiError(err); }
 }

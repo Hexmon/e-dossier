@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
             .where(where.length ? and(...where) : undefined)
             .orderBy(platoons.key);
 
-        return json.ok({ items: rows });
+        return json.ok({ message: 'Platoons retrieved successfully.', items: rows });
     } catch (err) {
         return handleApiError(err);
     }
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const parsed = platoonCreateSchema.safeParse(body);
         if (!parsed.success) {
-            return json.badRequest('Validation failed', { issues: parsed.error.flatten() });
+            return json.badRequest('Validation failed.', { issues: parsed.error.flatten() });
         }
 
         const data = parsed.data;
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
         if (conflict) {
             const by = conflict.key === upKey ? 'key' : 'name';
-            return json.conflict(`Platoon ${by} already exists`, { [by]: by === 'key' ? upKey : data.name.trim() });
+            return json.conflict(`Platoon ${by} already exists.`, { [by]: by === 'key' ? upKey : data.name.trim() });
         }
 
         const [row] = await db
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
                 updatedAt: platoons.updatedAt,
             });
 
-        return json.created({ platoon: row });
+        return json.created({ message: 'Platoon created successfully.', platoon: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -120,7 +120,7 @@ export async function DELETE(req: NextRequest) {
             .where(isNull(platoons.deletedAt))
             .returning({ id: platoons.id });
 
-        return json.ok({ message: 'All platoons soft-deleted', count: deleted.length });
+        return json.ok({ message: 'All platoons soft-deleted.', count: deleted.length });
     } catch (err) {
         return handleApiError(err);
     }

@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ courseId: s
         const sp = new URL(req.url).searchParams;
         const semester = sp.get('semester') ? Number(sp.get('semester')) : undefined;
         const rows = await listCourseOfferings(courseId, semester);
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Course offerings retrieved successfully.', items: rows, count: rows.length });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -79,9 +79,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ courseId: 
             await replaceOfferingInstructors(offering.id, body.instructors);
         }
 
-        return json.created({ offeringId: offering.id });
+        return json.created({ message: 'Course offering created successfully.', offeringId: offering.id });
     } catch (err: any) {
-        if (err?.code === "23505") return json.conflict("Subject already offered for this course/semester");
+        if (err?.code === "23505") return json.conflict("Subject already offered for this course/semester.");
         return handleApiError(err);
     }
 }

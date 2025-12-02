@@ -85,7 +85,7 @@ export async function deleteAchievementRecord(ocId: string, achId: string) {
     return api.delete(endpoints.oc.achievementById(ocId, achId));
 }
 
-export async function saveAchievements(ocId:string, achievements: string) {
+export async function saveAchievements(ocId: string, achievements: AchievementRecords[]) {
     const responses = [];
 
     for (const record of achievements) {

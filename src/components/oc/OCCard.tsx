@@ -8,7 +8,7 @@ interface OCListItemProps {
   name: string;
   course: string;
   platoon?: string | null;
-  status: "active" | "inactive" | "disabled";
+  status: "active" | "inactive" | "disabled" | "suspended";
   onClick?: () => void;
   children?: React.ReactNode;
 }

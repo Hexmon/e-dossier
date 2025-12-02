@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await getObstacleTraining(ocId, id);
         if (!row) throw new ApiError(404, 'Obstacle training record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Obstacle training record retrieved successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = obstacleTrainingUpdateSchema.parse(await req.json());
         const row = await updateObstacleTraining(ocId, id, dto);
         if (!row) throw new ApiError(404, 'Obstacle training record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Obstacle training record updated successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -45,11 +45,10 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const row = await deleteObstacleTraining(ocId, id, { hard });
         if (!row) throw new ApiError(404, 'Obstacle training record not found', 'not_found');
         return json.ok({
-            message: hard ? 'Obstacle training record hard-deleted' : 'Obstacle training record soft-deleted',
+            message: hard ? 'Obstacle training record hard-deleted.' : 'Obstacle training record soft-deleted.',
             id: row.id,
         });
     } catch (err) {
         return handleApiError(err);
     }
 }
-

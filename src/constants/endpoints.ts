@@ -1,4 +1,5 @@
 import { platoons } from "@/app/db"
+import { get } from "http"
 import { string } from "zod"
 
 export const baseURL = 'http://localhost:3000'
@@ -22,6 +23,7 @@ export const endpoints = {
     oc: {
         list: "/api/v1/oc",
         create: "/api/v1/oc",
+        getById: (ocId: string) => `/api/v1/oc/${ocId}`,
         update: (ocId: string) => `/api/v1/oc/${ocId}`,
         delete: (ocId: string) => `/api/v1/oc/${ocId}`,
         personal: (ocId: string) => `/api/v1/oc/${ocId}/personal`,

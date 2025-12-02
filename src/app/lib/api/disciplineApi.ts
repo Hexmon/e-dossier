@@ -27,7 +27,7 @@ export interface DisciplineResponse {
 }
 
 function toISODateString(v?: string | Date | null) {
-    if (!v && v !== 0) return undefined;
+    if (!v) return undefined;
     if (typeof v === "string") {
         const parsed = new Date(v);
         if (Number.isNaN(parsed.getTime())) return undefined;

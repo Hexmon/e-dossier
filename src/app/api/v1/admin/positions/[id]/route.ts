@@ -18,7 +18,7 @@ export async function GET(_: NextRequest, ctx: { params: Promise<{ id: string }>
       .limit(1);
 
     if (!row) throw new ApiError(404, 'Position not found');
-    return json.ok({ data: row });
+    return json.ok({ message: 'Position retrieved successfully.', data: row });
   } catch (err) {
     return handleApiError(err);
   }
@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
       if (conflictByName) {
         // 409 with a clear field-level hint
-        return json.conflict('Display name already exists', {
+        return json.conflict('Display name already exists.', {
           field: 'displayName',
           value: parsed.data.displayName.trim(),
         });
@@ -73,7 +73,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       .returning();
 
     if (!row) throw new ApiError(404, 'Position not found');
-    return json.ok({ data: row });
+    return json.ok({ message: 'Position updated successfully.', data: row });
   } catch (err) {
     return handleApiError(err);
   }
@@ -89,7 +89,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     const [row] = await db.delete(positions).where(eq(positions.id, rawId)).returning();
     if (!row) throw new ApiError(404, 'Position not found');
 
-    return json.ok({ message: 'Deleted', data: row });
+    return json.ok({ message: 'Position deleted successfully.', data: row });
   } catch (err) {
     return handleApiError(err);
   }
