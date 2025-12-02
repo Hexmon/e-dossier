@@ -16,14 +16,14 @@ type SsbPointRow = {
     authorName: string | null;
 };
 
-export type SsbReportResponse = {
+type SsbReportResponse = {
     positives: { note: string; by: string }[];
     negatives: { note: string; by: string }[];
     predictiveRating: number;
     scopeForImprovement: string;
 };
 
-export function mapSsbDbToResponse(report: SsbReportRow, points: SsbPointRow[]): SsbReportResponse {
+function mapSsbDbToResponse(report: SsbReportRow, points: SsbPointRow[]): SsbReportResponse {
     const positives: SsbReportResponse['positives'] = [];
     const negatives: SsbReportResponse['negatives'] = [];
 

@@ -47,8 +47,8 @@ export const useHikeActions = (selectedCadet: any) => {
                 if (id) {
                     await updateOcHikeRecord(selectedCadet.ocId, id, payload);
                 } else {
-                    const created = await createOcHikeRecord(selectedCadet.ocId, payload);
-                    setValue(`hikeRows.${i}.id`, created.id);
+                    const created: any = await createOcHikeRecord(selectedCadet.ocId, payload);
+                    setValue(`hikeRows.${i}.id`, created?.id);
                 }
             }
 

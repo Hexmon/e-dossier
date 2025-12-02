@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
@@ -23,7 +23,7 @@ import { loginUser } from "@/app/lib/api/authApi";
 import Image from "next/image";
 import { LoginForm } from "../../../types/login";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOcCorner = searchParams.get("role") === "oc";
@@ -286,5 +286,13 @@ const platoonCommanders = useMemo(() => {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

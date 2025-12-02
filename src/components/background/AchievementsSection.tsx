@@ -49,7 +49,7 @@ export default function AchievementsSection({ selectedCadet }: { selectedCadet: 
     // -------------------------------
     const achievementForm = useForm<{ achievements: Achievement[] }>({
         defaultValues: {
-            achievements: [{ event: "", year: "", level: "", prize: "" }],
+            achievements: [{ id: "", event: "", year: 0, level: "", prize: "" }],
         },
     });
 
@@ -84,7 +84,7 @@ export default function AchievementsSection({ selectedCadet }: { selectedCadet: 
     // EDIT HANDLERS
     // -------------------------------
     const handleEdit = (row: Achievement) => {
-        setEditingId(row.id);
+        setEditingId(row.id ?? null);
         setEditForm({ ...row });
     };
 
@@ -104,7 +104,7 @@ export default function AchievementsSection({ selectedCadet }: { selectedCadet: 
         try {
             await updateAchievementRecord(selectedCadet.ocId, editingId, {
                 event: editForm.event,
-                year: editForm.year,
+                year: editForm.year ? Number(editForm.year) : undefined,
                 level: editForm.level,
                 prize: editForm.prize,
             });
@@ -263,7 +263,7 @@ export default function AchievementsSection({ selectedCadet }: { selectedCadet: 
                                     {["event", "year", "level", "prize"].map((field) => (
                                         <td key={field} className="border px-4 py-2">
                                             <Input
-                                                {...achievementForm.register(`achievements.${idx}.${field}`)}
+                                                {...achievementForm.register(`achievements.${idx}.${field}` as any)}
                                                 placeholder={field}
                                             />
                                         </td>

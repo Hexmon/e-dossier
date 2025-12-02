@@ -1,12 +1,12 @@
 // src\app\db\schema\auth\rbac.ts
-import { pgTable, uuid, varchar, text, primaryKey} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, primaryKey } from 'drizzle-orm/pg-core';
 import { positions } from './positions';
 
-// export const roles = pgTable('roles', {
-//   id: uuid('id').primaryKey().defaultRandom(),
-//   key: varchar('key', { length: 64 }).notNull(),          // 'admin','guest','commandant',...
-//   description: text('description'),
-// });
+export const roles = pgTable('roles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: varchar('key', { length: 64 }).notNull(),          // 'admin','guest','commandant',...
+  description: text('description'),
+});
 
 export const permissions = pgTable('permissions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -21,12 +21,12 @@ export const positionPermissions = pgTable('position_permissions', {
   pk: primaryKey({ columns: [t.positionId, t.permissionId] }),
 }));
 
-// export const rolePermissions = pgTable('role_permissions', {
-//   roleId: uuid('role_id').notNull().references(() => roles.id, { onDelete: 'cascade' }),
-//   permissionId: uuid('permission_id').notNull().references(() => permissions.id, { onDelete: 'cascade' }),
-// }, (t) => ({
-//   pk: primaryKey({ columns: [t.roleId, t.permissionId] }),
-// }));
+export const rolePermissions = pgTable('role_permissions', {
+  roleId: uuid('role_id').notNull().references(() => roles.id, { onDelete: 'cascade' }),
+  permissionId: uuid('permission_id').notNull().references(() => permissions.id, { onDelete: 'cascade' }),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.roleId, t.permissionId] }),
+}));
 
 // export const userRoles = pgTable('user_roles', {
 //   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),

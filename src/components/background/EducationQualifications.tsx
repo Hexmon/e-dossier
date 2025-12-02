@@ -286,7 +286,7 @@ export default function EducationQualifications({ selectedCadet }: { selectedCad
                                     {["qualification", "school", "subs", "board", "marks", "grade"].map((field) => (
                                         <td key={field} className="border px-4 py-2">
                                             <Input
-                                                {...qualificationForm.register(`qualifications.${idx}.${field}`)}
+                                                {...qualificationForm.register(`qualifications.${idx}.${field}` as any)}
                                                 placeholder={field}
                                             />
                                         </td>

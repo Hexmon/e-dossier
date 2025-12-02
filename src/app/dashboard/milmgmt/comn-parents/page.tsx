@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { deleteParentComm, getParentComms, saveParentComms, updateParentComm } from "@/app/lib/api/parentComnApi";
+import { deleteParentComm, getParentComms, saveParentComms, updateParentComm, ParentCommPayload } from "@/app/lib/api/parentComnApi";
 import { ParentCommForm, ParentCommRow } from "@/types/comn-partents";
 import { toast } from "sonner";
 
@@ -97,7 +97,7 @@ export default function ParentCommnPage() {
             return;
         }
 
-        const payloads = data.records.map((row) => ({
+        const payloads: ParentCommPayload[] = data.records.map((row) => ({
             semester: activeTab + 1,
             mode: "LETTER",
             refNo: row.letterNo,
@@ -392,7 +392,7 @@ export default function ParentCommnPage() {
                                                             .map((key) => (
                                                                 <td key={key} className="p-2 border">
                                                                     <Input
-                                                                        {...register(`records.${index}.${key}` as const)}
+                                                                        {...register(`records.${index}.${key}` as any)}
                                                                         type={key.includes("date") ? "date" : "text"}
                                                                     />
                                                                 </td>

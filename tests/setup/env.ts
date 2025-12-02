@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
 if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = 'test';
+  (process.env as any).NODE_ENV = 'test';
 }
 

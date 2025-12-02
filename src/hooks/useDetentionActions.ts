@@ -43,8 +43,8 @@ export const useDetentionActions = (selectedCadet: any) => {
                 if (id) {
                     await updateOcDetentionRecord(selectedCadet.ocId, id, payload);
                 } else {
-                    const created = await createOcDetentionRecord(selectedCadet.ocId, payload);
-                    setValue(`detentionRows.${i}.id`, created.id);
+                    const created: any = await createOcDetentionRecord(selectedCadet.ocId, payload);
+                    setValue(`detentionRows.${i}.id`, created?.id);
                 }
             }
 

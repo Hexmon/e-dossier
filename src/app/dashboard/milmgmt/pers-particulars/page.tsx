@@ -37,10 +37,6 @@ import { fetchCourseById } from "@/app/lib/api/courseApi";
 import { toast } from "sonner";
 import { dsFieldMap } from "@/constants/app.constants";
 
-interface PersonalData {
-    [key: string]: string | boolean;
-}
-
 export default function PersParticularsPage() {
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
 
@@ -109,18 +105,23 @@ export default function PersParticularsPage() {
     }, [selectedCadet]);
 
     /** ---------- Save ---------- **/
-    const onSubmit = async (data: PersonalData) => {
+    const onSubmit = async (data: OCPersonalRecord) => {
         if (!selectedCadet?.ocId) return toast.error("No cadet selected");
 
         try {
             let payload: any;
 
             if (!savedData) {
+                const swimmerFlag =
+                    (data as any).swimmer === true ||
+                    (data as any).swimmer === "on" ||
+                    (data as any).swimmer === "true";
+
                 payload = {
                     ...data,
                     pi: data.pl,
                     bloodGroup: data.bloodGp,
-                    swimmer: data.swimmer === true || data.swimmer === "on",
+                    swimmer: swimmerFlag,
                 };
             }
 
@@ -229,7 +230,7 @@ export default function PersParticularsPage() {
                                                         {field}
                                                     </label>
                                                     <Input
-                                                        {...register(field)}
+                                                        {...register(field as any)}
                                                         type={field === "dob" ? "date" : "text"}
                                                         disabled={!isEditing}
                                                     />
@@ -269,7 +270,7 @@ export default function PersParticularsPage() {
                                                     {field === "govtFinancialAssistance" ? (
                                                         <input
                                                             type="checkbox"
-                                                            {...register(field)}
+                                                            {...register(field as any)}
                                                             disabled={!isEditing}
                                                         />
                                                     ) : null}
@@ -277,7 +278,7 @@ export default function PersParticularsPage() {
                                                     {field === "monthlyIncome" ? (
                                                         <Input
                                                             type="number"
-                                                            {...register(field, { valueAsNumber: true })}
+                                                            {...register(field as any, { valueAsNumber: true })}
                                                             disabled={!isEditing}
                                                         />
                                                     ) : null}
@@ -286,7 +287,7 @@ export default function PersParticularsPage() {
                                                         field !== "monthlyIncome" ? (
                                                         <Input
                                                             type="text"
-                                                            {...register(field)}
+                                                            {...register(field as any)}
                                                             disabled={!isEditing}
                                                         />
                                                     ) : null}
@@ -317,7 +318,7 @@ export default function PersParticularsPage() {
                                             ].map(field => (
                                                 <div key={field}>
                                                     <label className="text-sm font-medium capitalize">{field}</label>
-                                                    <Input {...register(field)} disabled={!isEditing} />
+                                                    <Input {...register(field as any)} disabled={!isEditing} />
                                                 </div>
                                             ))}
                                         </CardContent>
@@ -333,7 +334,7 @@ export default function PersParticularsPage() {
                                             {["games", "hobbies", "languages"].map(field => (
                                                 <div key={field}>
                                                     <label className="text-sm font-medium capitalize">{field}</label>
-                                                    <Input {...register(field)} disabled={!isEditing} />
+                                                    <Input {...register(field as any)} disabled={!isEditing} />
                                                 </div>
                                             ))}
 
