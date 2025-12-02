@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await getClub(ocId, id);
         if (!row) throw new ApiError(404, 'Club record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Club record retrieved successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = clubUpdateSchema.parse(await req.json());
         const row = await updateClub(ocId, id, dto);
         if (!row) throw new ApiError(404, 'Club record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Club record updated successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -45,7 +45,7 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const row = await deleteClub(ocId, id, { hard });
         if (!row) throw new ApiError(404, 'Club record not found', 'not_found');
         return json.ok({
-            message: hard ? 'Club record hard-deleted' : 'Club record soft-deleted',
+            message: hard ? 'Club record hard-deleted.' : 'Club record soft-deleted.',
             id: row.id,
         });
     } catch (err) {

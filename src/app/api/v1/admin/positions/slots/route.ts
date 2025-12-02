@@ -162,7 +162,7 @@ export async function GET(req: NextRequest) {
           : null,
       }));
 
-    return json.ok({ count: slots.length, slots });
+    return json.ok({ message: 'Position slots retrieved successfully.', count: slots.length, slots });
   } catch (err) {
     return handleApiError(err);
   }

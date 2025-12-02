@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
             includeDeleted: qp.includeDeleted ?? false,
         });
 
-        return json.ok({ items, count: items.length });
+        return json.ok({ message: 'Training camps retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
             semester: dto.semester,
             maxTotalMarks: dto.maxTotalMarks,
         });
-        return json.created({ trainingCamp: row });
+        return json.created({ message: 'Training camp created successfully.', trainingCamp: row });
     } catch (err) {
         return handleApiError(err);
     }

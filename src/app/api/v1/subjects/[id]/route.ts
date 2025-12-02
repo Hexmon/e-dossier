@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         const { id } = Id.parse(await ctx.params);
         const [row] = await db.select().from(subjects).where(eq(subjects.id, id)).limit(1);
         if (!row) throw new ApiError(404, 'Subject not found', 'not_found');
-        return json.ok({ subject: row });
+        return json.ok({ message: 'Subject retrieved successfully.', subject: row });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -32,9 +32,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
         const [row] = await db.update(subjects).set(patch).where(eq(subjects.id, id)).returning();
         if (!row) throw new ApiError(404, 'Subject not found', 'not_found');
-        return json.ok({ subject: row });
+        return json.ok({ message: 'Subject updated successfully.', subject: row });
     } catch (err: any) {
-        if (err?.code === '23505') return json.conflict('Subject code already exists');
+        if (err?.code === '23505') return json.conflict('Subject code already exists.');
         return handleApiError(err);
     }
 }
@@ -49,6 +49,6 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
             .where(eq(subjects.id, id))
             .returning({ id: subjects.id });
         if (!row) throw new ApiError(404, 'Subject not found', 'not_found');
-        return json.ok({ message: 'Subject soft-deleted', id: row.id });
+        return json.ok({ message: 'Subject soft-deleted.', id: row.id });
     } catch (err) { return handleApiError(err); }
 }

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await getClubAchievement(ocId, id);
         if (!row) throw new ApiError(404, 'Club achievement not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Club achievement retrieved successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = clubAchievementUpdateSchema.parse(await req.json());
         const row = await updateClubAchievement(ocId, id, dto);
         if (!row) throw new ApiError(404, 'Club achievement not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Club achievement updated successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -45,7 +45,7 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const row = await deleteClubAchievement(ocId, id, { hard });
         if (!row) throw new ApiError(404, 'Club achievement not found', 'not_found');
         return json.ok({
-            message: hard ? 'Club achievement hard-deleted' : 'Club achievement soft-deleted',
+            message: hard ? 'Club achievement hard-deleted.' : 'Club achievement soft-deleted.',
             id: row.id,
         });
     } catch (err) {

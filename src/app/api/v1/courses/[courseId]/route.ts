@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ courseId: s
             offerings = await listCourseOfferings(courseId, sem);
         }
 
-        return json.ok({ course, offerings });
+        return json.ok({ message: 'Course retrieved successfully.', course, offerings });
     } catch (err) {
         return handleApiError(err);
     }
@@ -51,9 +51,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ courseId:
 
         const row = await updateCourse(courseId, patch);
         if (!row) throw new ApiError(404, 'Course not found', 'not_found');
-        return json.ok({ course: row });
+        return json.ok({ message: 'Course updated successfully.', course: row });
     } catch (err: any) {
-        if (err?.code === '23505') return json.conflict('Course code already exists');
+        if (err?.code === '23505') return json.conflict('Course code already exists.');
         return handleApiError(err);
     }
 }
@@ -64,7 +64,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ courseId
         const { courseId } = Param.parse(await ctx.params);
         const row = await softDeleteCourse(courseId);
         if (!row) throw new ApiError(404, 'Course not found', 'not_found');
-        return json.ok({ message: 'Course soft-deleted', id: row.id });
+        return json.ok({ message: 'Course soft-deleted.', id: row.id });
     } catch (err) {
         return handleApiError(err);
     }

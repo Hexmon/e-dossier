@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, ctx: any) {
 
         const row = await getTrainingCamp(campId, qp.includeActivities ?? false, qp.includeDeleted ?? false);
         if (!row) throw new ApiError(404, 'Training camp not found', 'not_found');
-        return json.ok({ trainingCamp: row });
+        return json.ok({ message: 'Training camp retrieved successfully.', trainingCamp: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = trainingCampUpdateSchema.parse(await req.json());
         const row = await updateTrainingCamp(campId, { ...dto });
         if (!row) throw new ApiError(404, 'Training camp not found', 'not_found');
-        return json.ok({ trainingCamp: row });
+        return json.ok({ message: 'Training camp updated successfully.', trainingCamp: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -51,7 +51,7 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteTrainingCamp(campId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Training camp not found', 'not_found');
-        return json.ok({ deleted: row.id, hardDeleted: body?.hard === true });
+        return json.ok({ message: 'Training camp deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
         return handleApiError(err);
     }

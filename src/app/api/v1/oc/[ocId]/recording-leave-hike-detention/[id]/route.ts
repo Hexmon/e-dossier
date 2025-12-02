@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await getRecordingLeaveHikeDetention(ocId, id);
         if (!row) throw new ApiError(404, 'Record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Leave/hike/detention record retrieved successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = recordingLeaveHikeDetentionUpdateSchema.parse(await req.json());
         const row = await updateRecordingLeaveHikeDetention(ocId, id, dto);
         if (!row) throw new ApiError(404, 'Record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Leave/hike/detention record updated successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -52,7 +52,7 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const row = await deleteRecordingLeaveHikeDetention(ocId, id, { hard });
         if (!row) throw new ApiError(404, 'Record not found', 'not_found');
         return json.ok({
-            message: hard ? 'Record hard-deleted' : 'Record soft-deleted',
+            message: hard ? 'Leave/hike/detention record hard-deleted.' : 'Leave/hike/detention record soft-deleted.',
             id: row.id,
         });
     } catch (err) {

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest, ctx: any) {
         });
 
         const activities = await listTrainingCampActivities(campId, { includeDeleted: qp.includeDeleted ?? false });
-        return json.ok({ items: activities, count: activities.length });
+        return json.ok({ message: 'Training camp activities retrieved successfully.', items: activities, count: activities.length });
     } catch (err) {
         return handleApiError(err);
     }
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, ctx: any) {
             defaultMaxMarks: dto.defaultMaxMarks,
             sortOrder: dto.sortOrder ?? 0,
         });
-        return json.created({ activity: row });
+        return json.created({ message: 'Training camp activity created successfully.', activity: row });
     } catch (err) {
         return handleApiError(err);
     }

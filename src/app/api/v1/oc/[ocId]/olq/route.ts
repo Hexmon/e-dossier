@@ -36,7 +36,7 @@ export async function GET(req: NextRequest, ctx: any) {
         if (qp.subtitleId) {
             const score = await getOlqScore(ocId, qp.semester, qp.subtitleId);
             if (!score) throw new ApiError(404, 'OLQ score not found', 'not_found');
-            return json.ok({ data: score });
+            return json.ok({ message: 'OLQ score retrieved successfully.', data: score });
         }
 
         const sheet = await getOlqSheet({
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest, ctx: any) {
             subtitleId: qp.subtitleId,
         });
         if (!sheet) throw new ApiError(404, 'OLQ record not found', 'not_found');
-        return json.ok({ data: sheet });
+        return json.ok({ message: 'OLQ record retrieved successfully.', data: sheet });
     } catch (err) {
         return handleApiError(err);
     }
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest, ctx: any) {
             includeCategories: true,
         });
 
-        return json.created({ data: sheet });
+        return json.created({ message: 'OLQ record created successfully.', data: sheet });
     } catch (err) {
         return handleApiError(err);
     }
@@ -104,7 +104,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
             includeCategories: true,
         });
 
-        return json.ok({ data: sheet });
+        return json.ok({ message: 'OLQ record updated successfully.', data: sheet });
     } catch (err) {
         return handleApiError(err);
     }
@@ -129,11 +129,11 @@ export async function DELETE(req: NextRequest, ctx: any) {
             const deleted = await deleteOlqScore(sheet.id, dto.subtitleId);
             if (!deleted) throw new ApiError(404, 'OLQ score not found', 'not_found');
             await recomputeOlqTotal(sheet.id);
-            return json.ok({ deletedScore: dto.subtitleId });
+            return json.ok({ message: 'OLQ score deleted successfully.', deletedScore: dto.subtitleId });
         }
 
         await deleteOlqHeader(ocId, dto.semester);
-        return json.ok({ deleted: true });
+        return json.ok({ message: 'OLQ record deleted successfully.', deleted: true });
     } catch (err) {
         return handleApiError(err);
     }

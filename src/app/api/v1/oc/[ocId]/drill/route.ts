@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, ctx: any) {
             offset: sp.get('offset') ?? undefined,
         });
         const rows = await listDrill(ocId, qp.limit ?? 100, qp.offset ?? 0);
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Drill records retrieved successfully.', items: rows, count: rows.length });
     } catch (err) {
         return handleApiError(err);
     }
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, ctx: any) {
         await ensureOcExists(ocId);
         const dto = drillCreateSchema.parse(await req.json());
         const row = await createDrill(ocId, dto);
-        return json.created({ data: row });
+        return json.created({ message: 'Drill record created successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }

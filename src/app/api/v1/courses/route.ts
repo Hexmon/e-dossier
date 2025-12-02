@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
             includeDeleted: qp.includeDeleted === 'true',
             limit: qp.limit, offset: qp.offset,
         });
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Courses retrieved successfully.', items: rows, count: rows.length });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -30,9 +30,9 @@ export async function POST(req: NextRequest) {
         // enforce unique code
         // (uq index already exists; we handle conflict error format)
         const row = await createCourse({ code, title, notes });
-        return json.created({ course: row });
+        return json.created({ message: 'Course created successfully.', course: row });
     } catch (err: any) {
-        if (err?.code === '23505') return json.conflict('Course code already exists');
+        if (err?.code === '23505') return json.conflict('Course code already exists.');
         return handleApiError(err);
     }
 }

@@ -8,10 +8,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { userId: adminUserId } = await requireAdmin(req);
     const { id } = await params;
     await deleteSignupRequest({ requestId: id, adminUserId });
-    return json.ok({ message: 'Deleted' });
+    return json.ok({ message: 'Signup request deleted successfully.' });
   } catch (err: any) {
-    if (err?.message === 'request_not_found') return json.notFound('Request not found');
-    if (err?.message === 'cannot_delete_pending') return json.badRequest('Cannot delete a pending request');
+    if (err?.message === 'request_not_found') return json.notFound('Request not found.');
+    if (err?.message === 'cannot_delete_pending') return json.badRequest('Cannot delete a pending request.');
     return handleApiError(err);
   }
 }

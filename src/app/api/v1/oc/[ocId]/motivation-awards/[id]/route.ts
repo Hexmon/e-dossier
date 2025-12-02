@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await getMotivationAward(ocId, id);
         if (!row) throw new ApiError(404, 'Motivation award not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Motivation award retrieved successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = motivationAwardUpdateSchema.parse(await req.json());
         const row = await updateMotivationAward(ocId, id, dto);
         if (!row) throw new ApiError(404, 'Motivation award not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Motivation award updated successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -45,11 +45,10 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const row = await deleteMotivationAward(ocId, id, { hard });
         if (!row) throw new ApiError(404, 'Motivation award not found', 'not_found');
         return json.ok({
-            message: hard ? 'Motivation award hard-deleted' : 'Motivation award soft-deleted',
+            message: hard ? 'Motivation award hard-deleted.' : 'Motivation award soft-deleted.',
             id: row.id,
         });
     } catch (err) {
         return handleApiError(err);
     }
 }
-

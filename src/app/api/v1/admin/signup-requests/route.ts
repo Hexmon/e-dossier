@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = (searchParams.get('status') ?? 'pending') as 'pending' | 'approved' | 'rejected' | 'cancelled';
     const rows = await listSignupRequests(status);
-    return json.ok({ items: rows });
+    return json.ok({ message: 'Signup requests retrieved successfully.', items: rows });
   } catch (err) {
     return handleApiError(err);
   }

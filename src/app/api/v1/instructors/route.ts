@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
             includeDeleted: qp.includeDeleted === 'true',
             limit: qp.limit, offset: qp.offset,
         });
-        return json.ok({ items: rows, count: rows.length });
+        return json.ok({ message: 'Instructors retrieved successfully.', items: rows, count: rows.length });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -40,6 +40,6 @@ export async function POST(req: NextRequest) {
                 notes: body.notes ?? null,
             })
             .returning();
-        return json.created({ instructor: row });
+        return json.created({ message: 'Instructor created successfully.', instructor: row });
     } catch (err) { return handleApiError(err); }
 }

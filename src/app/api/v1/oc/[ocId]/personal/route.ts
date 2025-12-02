@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, ctx: any) {
         // SECURITY FIX: Proper authorization check to prevent IDOR
         await authorizeOcAccess(req, ocId);
 
-        return json.ok({ data: await getPersonal(ocId) });
+        return json.ok({ message: 'Personal details retrieved successfully.', data: await getPersonal(ocId) });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, ctx: any) {
         const existing = await getPersonal(ocId);
         if (existing) throw new ApiError(409, 'Personal particulars already exist. Use PATCH (admin).', 'conflict');
         const saved = await upsertPersonal(ocId, dto);
-        return json.created({ data: saved });
+        return json.created({ message: 'Personal details created successfully.', data: saved });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
         const dto = personalUpsertSchema.partial().parse(await req.json());
         const saved = await upsertPersonal(ocId, dto);
-        return json.ok({ data: saved });
+        return json.ok({ message: 'Personal details updated successfully.', data: saved });
     } catch (err) { return handleApiError(err); }
 }
 
@@ -47,6 +47,6 @@ export async function DELETE(req: NextRequest, ctx: any) {
     try {
         await mustBeAdmin(req);
         const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
-        return json.ok({ deleted: await deletePersonal(ocId) });
+        return json.ok({ message: 'Personal details deleted successfully.', deleted: await deletePersonal(ocId) });
     } catch (err) { return handleApiError(err); }
 }
