@@ -19,6 +19,13 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
+export interface SsbPayload {
+  positives: SsbNote[];
+  negatives: SsbNote[];
+  predictiveRating: number;
+  scopeForImprovement: string;
+}
+
 export async function saveSsbReport(
   ocId: string,
   report: SsbReport

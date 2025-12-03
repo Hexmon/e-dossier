@@ -276,7 +276,6 @@ export default function EducationQualifications({ ocId }: Props) {
                                     <tr key={id}>
                                         <td className="border px-4 py-2 text-center">{index + 1}</td>
 
-<<<<<<< HEAD
                                         {columns.map((field: ColumnKey) => {
                                             return (
                                                 <td key={field} className="border px-4 py-2">
@@ -294,14 +293,6 @@ export default function EducationQualifications({ ocId }: Props) {
                                             <Button variant="destructive" type="button" onClick={() => remove(index)}>
                                                 Remove
                                             </Button>
-=======
-                                    {["qualification", "school", "subs", "board", "marks", "grade"].map((field) => (
-                                        <td key={field} className="border px-4 py-2">
-                                            <Input
-                                                {...qualificationForm.register(`qualifications.${idx}.${field}` as any)}
-                                                placeholder={field}
-                                            />
->>>>>>> origin/master
                                         </td>
                                     </tr>
                                 );
