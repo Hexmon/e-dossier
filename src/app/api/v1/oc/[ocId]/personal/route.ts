@@ -5,9 +5,9 @@ import { OcIdParam, personalUpsertSchema } from '@/app/lib/oc-validators';
 import { getPersonal, upsertPersonal, deletePersonal } from '@/app/db/queries/oc';
 import { authorizeOcAccess } from '@/lib/authorization';
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         // SECURITY FIX: Proper authorization check to prevent IDOR
@@ -17,9 +17,9 @@ export async function GET(req: NextRequest, ctx: any) {
     } catch (err) { return handleApiError(err); }
 }
 
-export async function POST(req: NextRequest, ctx: any) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         // SECURITY FIX: Proper authorization check to prevent IDOR
@@ -33,20 +33,20 @@ export async function POST(req: NextRequest, ctx: any) {
     } catch (err) { return handleApiError(err); }
 }
 
-export async function PATCH(req: NextRequest, ctx: any) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAdmin(req);
-        const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
+        const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const dto = personalUpsertSchema.partial().parse(await req.json());
         const saved = await upsertPersonal(ocId, dto);
         return json.ok({ message: 'Personal details updated successfully.', data: saved });
     } catch (err) { return handleApiError(err); }
 }
 
-export async function DELETE(req: NextRequest, ctx: any) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAdmin(req);
-        const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
+        const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         return json.ok({ message: 'Personal details deleted successfully.', deleted: await deletePersonal(ocId) });
     } catch (err) { return handleApiError(err); }
 }

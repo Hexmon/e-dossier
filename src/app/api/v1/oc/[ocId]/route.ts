@@ -21,20 +21,20 @@ async function requireAdminForWrite(req: NextRequest) {
     if (!hasAdminRole(roles)) throw new ApiError(403, 'Admin privileges required', 'forbidden');
 }
 
-export async function GET(_: NextRequest, ctx: { params: Promise<{ ocId: string }> }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(_);
-        const { ocId } = await OcParam.parseAsync(await ctx.params);
+        const { ocId } = await OcParam.parseAsync(await params);
         const [row] = await db.select().from(ocCadets).where(eq(ocCadets.id, ocId)).limit(1);
         if (!row) throw new ApiError(404, 'OC not found', 'not_found');
         return json.ok({ message: 'OC retrieved successfully.', oc: row });
     } catch (err) { return handleApiError(err); }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ ocId: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAdminForWrite(req);
-        const { ocId } = await OcParam.parseAsync(await ctx.params);
+        const { ocId } = await OcParam.parseAsync(await params);
         const dto = updateSchema.parse(await req.json());
         const [row] = await db.update(ocCadets).set(dto).where(eq(ocCadets.id, ocId)).returning();
         if (!row) throw new ApiError(404, 'OC not found', 'not_found');
@@ -42,10 +42,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ ocId: str
     } catch (err) { return handleApiError(err); }
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ ocId: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAdminForWrite(req);
-        const { ocId } = await OcParam.parseAsync(await ctx.params);
+        const { ocId } = await OcParam.parseAsync(await params);
         const [row] = await db.delete(ocCadets).where(eq(ocCadets.id, ocId)).returning({ id: ocCadets.id });
         if (!row) throw new ApiError(404, 'OC not found', 'not_found');
         return json.ok({ message: 'OC deleted successfully.', id: row.id });

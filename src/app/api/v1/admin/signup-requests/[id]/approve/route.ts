@@ -12,12 +12,12 @@ import { IdSchema } from '@/app/lib/apiClient';
  */
 export async function POST(
     req: NextRequest,
-    ctx: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId: adminId } = await requireAdmin(req);
 
-        const { id: raw } = await (ctx as any).params;
+        const { id: raw } = await params;
         const { id } = IdSchema.parse({ id: decodeURIComponent((raw ?? '')).trim() });
 
         // Validate body

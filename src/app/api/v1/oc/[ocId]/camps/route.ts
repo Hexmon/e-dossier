@@ -76,10 +76,10 @@ async function loadAllCamps(ocId: string) {
     });
 }
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const sp = new URL(req.url).searchParams;
@@ -108,10 +108,10 @@ export async function GET(req: NextRequest, ctx: any) {
     }
 }
 
-export async function POST(req: NextRequest, ctx: any) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
         const dto = ocCampUpsertSchema.parse(await req.json());
         const { trainingCampId, year, reviews, activities } = dto || {}
@@ -144,10 +144,10 @@ export async function POST(req: NextRequest, ctx: any) {
     }
 }
 
-export async function PUT(req: NextRequest, ctx: any) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const dto = ocCampUpdateSchema.parse(await req.json());
@@ -188,10 +188,10 @@ export async function PUT(req: NextRequest, ctx: any) {
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: any) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const body = (await req.json().catch(() => ({}))) as Record<string, string | undefined>;

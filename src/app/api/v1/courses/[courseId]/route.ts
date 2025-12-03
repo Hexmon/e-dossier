@@ -8,10 +8,10 @@ import { courseUpdateSchema } from '@/app/lib/validators.courses';
 
 const Param = z.object({ courseId: z.string().uuid() });
 
-export async function GET(req: NextRequest, ctx: { params: Promise<{ courseId: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
         await requireAuth(req);
-        const { courseId } = Param.parse(await ctx.params);
+        const { courseId } = Param.parse(await params);
 
         const sp = new URL(req.url).searchParams;
         const expandSubjects = (sp.get('expand') || '').includes('subjects');
@@ -37,10 +37,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ courseId: s
     }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ courseId: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
         await requireAdmin(req);
-        const { courseId } = Param.parse(await ctx.params);
+        const { courseId } = Param.parse(await params);
 
         const body = courseUpdateSchema.parse(await req.json());
         const patch: any = {};
@@ -58,10 +58,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ courseId:
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ courseId: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
         await requireAdmin(req);
-        const { courseId } = Param.parse(await ctx.params);
+        const { courseId } = Param.parse(await params);
         const row = await softDeleteCourse(courseId);
         if (!row) throw new ApiError(404, 'Course not found', 'not_found');
         return json.ok({ message: 'Course soft-deleted.', id: row.id });

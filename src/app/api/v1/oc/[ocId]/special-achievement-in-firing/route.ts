@@ -4,10 +4,10 @@ import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam, listQuerySchema, specialAchievementInFiringCreateSchema } from '@/app/lib/oc-validators';
 import { listSpecialAchievementInFiring, createSpecialAchievementInFiring } from '@/app/db/queries/oc';
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
         const sp = new URL(req.url).searchParams;
         const qp = listQuerySchema.parse({
@@ -21,10 +21,10 @@ export async function GET(req: NextRequest, ctx: any) {
     }
 }
 
-export async function POST(req: NextRequest, ctx: any) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
         const dto = specialAchievementInFiringCreateSchema.parse(await req.json());
         const row = await createSpecialAchievementInFiring(ocId, dto);

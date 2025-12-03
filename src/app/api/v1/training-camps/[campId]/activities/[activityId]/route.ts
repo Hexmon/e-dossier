@@ -11,10 +11,10 @@ import {
     deleteTrainingCampActivity,
 } from '@/app/db/queries/trainingCamps';
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
-        const { activityId } = trainingCampActivityParam.parse(await ctx.params);
+        const { activityId } = trainingCampActivityParam.parse(await params);
         const row = await getTrainingCampActivity(activityId);
         if (!row) throw new ApiError(404, 'Training camp activity not found', 'not_found');
         return json.ok({ message: 'Training camp activity retrieved successfully.', activity: row });
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest, ctx: any) {
     }
 }
 
-export async function PATCH(req: NextRequest, ctx: any) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAdmin(req);
-        const { activityId } = trainingCampActivityParam.parse(await ctx.params);
+        const { activityId } = trainingCampActivityParam.parse(await params);
         const dto = trainingCampActivityUpdateSchema.parse(await req.json());
         const row = await updateTrainingCampActivity(activityId, { ...dto });
         if (!row) throw new ApiError(404, 'Training camp activity not found', 'not_found');
@@ -36,10 +36,10 @@ export async function PATCH(req: NextRequest, ctx: any) {
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: any) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAdmin(req);
-        const { activityId } = trainingCampActivityParam.parse(await ctx.params);
+        const { activityId } = trainingCampActivityParam.parse(await params);
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteTrainingCampActivity(activityId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Training camp activity not found', 'not_found');

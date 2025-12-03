@@ -7,10 +7,10 @@ import { updateOffering, replaceOfferingInstructors, softDeleteOffering } from '
 
 const Param = z.object({ courseId: z.string().uuid(), offeringId: z.string().uuid() });
 
-export async function GET(_: NextRequest, ctx: { params: Promise<{ courseId: string; offeringId: string }> }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
         await requireAuth(_);
-        const { offeringId } = Param.parse(await ctx.params);
+        const { offeringId } = Param.parse(await params);
         // For brevity, reuse updateOffering with no patch to read?
         // Do a proper select instead in your real code.
         const row = await updateOffering(offeringId, {});
@@ -19,10 +19,10 @@ export async function GET(_: NextRequest, ctx: { params: Promise<{ courseId: str
     } catch (err) { return handleApiError(err); }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ courseId: string; offeringId: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
         await requireAdmin(req);
-        const { offeringId } = Param.parse(await ctx.params);
+        const { offeringId } = Param.parse(await params);
         const body = offeringUpdateSchema.parse(await req.json());
 
         const patch: any = {};
@@ -41,10 +41,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ courseId:
     } catch (err) { return handleApiError(err); }
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ courseId: string; offeringId: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
         await requireAdmin(req);
-        const { offeringId } = Param.parse(await ctx.params);
+        const { offeringId } = Param.parse(await params);
         const row = await softDeleteOffering(offeringId);
         if (!row) throw new ApiError(404, 'Offering not found', 'not_found');
         return json.ok({ message: 'Offering soft-deleted.', id: row.id });

@@ -18,10 +18,10 @@ import {
     recomputeOlqTotal,
 } from '@/app/db/queries/olq';
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const sp = new URL(req.url).searchParams;
@@ -53,10 +53,10 @@ export async function GET(req: NextRequest, ctx: any) {
     }
 }
 
-export async function POST(req: NextRequest, ctx: any) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const raw = await req.json();
@@ -81,10 +81,10 @@ export async function POST(req: NextRequest, ctx: any) {
     }
 }
 
-export async function PATCH(req: NextRequest, ctx: any) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const raw = await req.json();
@@ -110,10 +110,10 @@ export async function PATCH(req: NextRequest, ctx: any) {
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: any) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const dto = olqDeleteSchema.parse(await req.json());

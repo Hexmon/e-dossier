@@ -48,10 +48,10 @@ function mapSsbDbToResponse(report: SsbReportRow, points: SsbPointRow[]): SsbRep
     };
 }
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const report = (await getSsbReport(ocId)) as SsbReportRow;
@@ -64,10 +64,10 @@ export async function GET(req: NextRequest, ctx: any) {
     }
 }
 
-export async function POST(req: NextRequest, ctx: any) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const dto = ssbReportFullSchema.parse(await req.json());
@@ -89,10 +89,10 @@ export async function POST(req: NextRequest, ctx: any) {
     }
 }
 
-export async function PATCH(req: NextRequest, ctx: any) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAdmin(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const existing = (await getSsbReport(ocId)) as SsbReportRow;
@@ -125,10 +125,10 @@ export async function PATCH(req: NextRequest, ctx: any) {
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: any) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAdmin(req);
-        const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
+        const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         return json.ok({ message: 'SSB report deleted successfully.', deleted: await deleteSsbReport(ocId) });
     } catch (err) { return handleApiError(err); }
 }
