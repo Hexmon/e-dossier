@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ChevronUp, ChevronDown, Search } from "lucide-react";
 
 // Core type definitions
-export interface TableColumn<T = any> {
+export interface TableColumn<T = unknown> {
     key: keyof T | string;
     label: string;
     type?: 'text' | 'number' | 'date' | 'status' | 'custom';
@@ -300,7 +300,7 @@ export function UniversalTable<T extends Record<string, any>>({
                                     />
                                 </th>
                             )}
-                            {columns.map((column) => (
+                            {columns.map((column) => ( 
                                 <th
                                     key={String(column.key)}
                                     className={`px-3 py-2 ${column.className || ''} ${column.sortable && features.sorting ? 'cursor-pointer hover:bg-muted/70' : ''

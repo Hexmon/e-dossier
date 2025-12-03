@@ -32,6 +32,7 @@ import {
     deleteCounsellingRecord,
     getCounsellingRecords,
     saveCounsellingRecords,
+    updateCounsellingRecord,
 } from "@/app/lib/api/counsellingApi";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -40,6 +41,10 @@ export default function CounsellingWarningPage() {
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
 
     const [activeTab, setActiveTab] = useState<number>(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [editingRowIdx, setEditingRowIdx] = useState<number | null>(null);
+    const [editingValues, setEditingValues] = useState<Partial<CounsellingRow> | null>(null);
+    const [isEditingInline, setIsEditingInline] = useState(false);
 
     // Six-term saved array
     const [savedData, setSavedData] = useState<CounsellingRow[][]>(
@@ -164,6 +169,51 @@ export default function CounsellingWarningPage() {
             });
         } catch (err: any) {
             toast.error("Delete failed: " + err.message);
+        }
+    };
+
+    const handleEditRow = async (index: number) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+
+        const rows = savedData[activeTab] || [];
+        const rowToEdit = rows[index];
+
+        if (!rowToEdit || !rowToEdit.id) {
+            toast.error("Invalid record to edit");
+            return;
+        }
+
+        try {
+            const updatedRow = await updateCounsellingRecord(
+                selectedCadet.ocId,
+                rowToEdit.id,
+                editingValues || {
+                    reason: rowToEdit.reason,
+                    warningType: rowToEdit.warningType,
+                    date: rowToEdit.date,
+                    warningBy: rowToEdit.warningBy,
+                }
+            );
+
+            // Update local state
+            setSavedData((prev) => {
+                const next = [...prev];
+                next[activeTab] = next[activeTab].map((r, i) =>
+                    i === index ? { ...updatedRow, serialNo: String(i + 1) } : r
+                );
+                return next;
+            });
+
+            toast.success("Record updated successfully");
+        } catch (err: any) {
+            toast.error("Update failed: " + err.message);
+        } finally {
+            setEditingRowIdx(null);
+            setEditingValues(null);
+            setIsEditingInline(false);
         }
     };
 

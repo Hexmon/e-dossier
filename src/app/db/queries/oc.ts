@@ -1314,15 +1314,6 @@ type GetOcCampTotalsOptions = {
     semester?: CampSemester;
 };
 
-const campActivityTotals = db
-    .select({
-        ocCampId: ocCampActivityScores.ocCampId,
-        totalMarksScored: sql<number>`SUM(${ocCampActivityScores.marksScored})`,
-    })
-    .from(ocCampActivityScores)
-    .groupBy(ocCampActivityScores.ocCampId)
-    .as('camp_activity_totals');
-
 export async function getOcCamps(options: GetOcCampsOptions) {
     const { ocId, semester, campName, includeReviews, includeActivities, reviewRole, activityName } = options;
     const wh: any[] = [eq(ocCamps.ocId, ocId)];
@@ -1336,15 +1327,45 @@ export async function getOcCamps(options: GetOcCampsOptions) {
             campName: trainingCamps.name,
             semester: trainingCamps.semester,
             maxTotalMarks: trainingCamps.maxTotalMarks,
-            totalMarksScored: sql<number | null>`COALESCE(${campActivityTotals.totalMarksScored}, ${ocCamps.totalMarksScored})`,
+            totalMarksScored: sql<number | null>`COALESCE((
+                SELECT SUM(${ocCampActivityScores.marksScored})
+                FROM ${ocCampActivityScores}
+                WHERE ${eq(ocCampActivityScores.ocCampId, ocCamps.id)}
+            ), ${ocCamps.totalMarksScored})`,
         })
         .from(ocCamps)
         .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
-        .leftJoin(campActivityTotals, eq(campActivityTotals.ocCampId, ocCamps.id))
         .where(wh.length ? and(...wh) : undefined)
         .orderBy(trainingCamps.semester, trainingCamps.name);
 
-    if (!baseRows.length) return { camps: [] as OcCampWithDetails[], grandTotalMarksScored: 0 };
+    if (!baseRows.length) {
+        let activities: Array<{ id: string, name: string, maxMarks: number }> = [];
+        if (semester) {
+            let campNameToUse = campName;
+            if (semester === "SEM5") {
+                campNameToUse = "EX SURAKSHA";
+            }
+            if (campNameToUse) {
+                const [tc] = await db
+                    .select({ id: trainingCamps.id })
+                    .from(trainingCamps)
+                    .where(and(eq(trainingCamps.semester, semester), eq(trainingCamps.name, campNameToUse)))
+                    .limit(1);
+                if (tc) {
+                    activities = await db
+                        .select({
+                            id: trainingCampActivities.id,
+                            name: trainingCampActivities.name,
+                            maxMarks: trainingCampActivities.defaultMaxMarks,
+                        })
+                        .from(trainingCampActivities)
+                        .where(eq(trainingCampActivities.trainingCampId, tc.id))
+                        .orderBy(trainingCampActivities.sortOrder);
+                }
+            }
+        }
+        return { camps: [] as OcCampWithDetails[], grandTotalMarksScored: 0, activities };
+    }
 
     const ocCampIds = baseRows.map((r) => r.ocCampId);
     let reviewsByCamp: Record<string, NonNullable<OcCampWithDetails['reviews']>> = {};
@@ -1420,13 +1441,16 @@ export async function getOcCampMarks(options: GetOcCampMarksOptions) {
             maxMarks: ocCampActivityScores.maxMarks,
             marksScored: ocCampActivityScores.marksScored,
             remark: ocCampActivityScores.remark,
-            campTotalMarks: sql<number | null>`COALESCE(${campActivityTotals.totalMarksScored}, ${ocCamps.totalMarksScored})`,
+            campTotalMarks: sql<number | null>`COALESCE((
+                SELECT SUM(${ocCampActivityScores.marksScored})
+                FROM ${ocCampActivityScores}
+                WHERE ${eq(ocCampActivityScores.ocCampId, ocCamps.id)}
+            ), ${ocCamps.totalMarksScored})`,
         })
         .from(ocCampActivityScores)
         .innerJoin(ocCamps, eq(ocCamps.id, ocCampActivityScores.ocCampId))
         .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
         .innerJoin(trainingCampActivities, eq(trainingCampActivities.id, ocCampActivityScores.trainingCampActivityId))
-        .leftJoin(campActivityTotals, eq(campActivityTotals.ocCampId, ocCampActivityScores.ocCampId))
         .where(wh.length ? and(...wh) : undefined)
         .orderBy(trainingCamps.semester, trainingCamps.name, trainingCampActivities.sortOrder, trainingCampActivities.name);
 
@@ -1445,11 +1469,14 @@ export async function getOcCampTotals(options: GetOcCampTotalsOptions) {
             campName: trainingCamps.name,
             semester: trainingCamps.semester,
             maxTotalMarks: trainingCamps.maxTotalMarks,
-            totalMarksScored: sql<number | null>`COALESCE(${campActivityTotals.totalMarksScored}, ${ocCamps.totalMarksScored})`,
+            totalMarksScored: sql<number | null>`COALESCE((
+                SELECT SUM(${ocCampActivityScores.marksScored})
+                FROM ${ocCampActivityScores}
+                WHERE ${eq(ocCampActivityScores.ocCampId, ocCamps.id)}
+            ), ${ocCamps.totalMarksScored})`,
         })
         .from(ocCamps)
         .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
-        .leftJoin(campActivityTotals, eq(campActivityTotals.ocCampId, ocCamps.id))
         .where(wh.length ? and(...wh) : undefined)
         .orderBy(trainingCamps.semester, trainingCamps.name);
 
@@ -1457,17 +1484,95 @@ export async function getOcCampTotals(options: GetOcCampTotalsOptions) {
     return { items: rows, grandTotalMarksScored };
 }
 
+type CampTypeInfo = {
+    name: string;
+    semester: "SEM5" | "SEM6A";
+    maxTotalMarks: number;
+    activities: Array<{ name: string; maxMarks: number }>;
+};
+
+// 👇 EXPORT this so it can be used in useCampPage
+export const CAMP_TYPE_UUIDS: Record<string, CampTypeInfo> = {
+    // V TERM tab (SEM5) - EX SURAKSHA camp with its activities and max marks
+    "550e8400-e29b-41d4-a716-446655440000": {
+        name: "EX SURAKSHA",
+        semester: "SEM5",
+        maxTotalMarks: 300,
+        activities: [
+            { name: "Physical Fitness", maxMarks: 50 },
+            { name: "Weapon Training", maxMarks: 50 },
+            { name: "Tactical Training", maxMarks: 100 },
+            { name: "Leadership", maxMarks: 50 },
+            { name: "Navigation", maxMarks: 50 },
+        ],
+    },
+    // VI TERM tab (SEM6A) - EX VAJRA camp
+    "550e8400-e29b-41d4-a716-446655440001": {
+        name: "EX VAJRA",
+        semester: "SEM6A",
+        maxTotalMarks: 300,
+        activities: [
+            { name: "Physical Fitness", maxMarks: 50 },
+            { name: "Weapon Training", maxMarks: 50 },
+            { name: "Tactical Training", maxMarks: 100 },
+            { name: "Leadership", maxMarks: 50 },
+            { name: "Navigation", maxMarks: 50 },
+        ],
+    },
+    // VI TERM tab (SEM6A) - TECHNO TAC CAMP
+    "550e8400-e29b-41d4-a716-446655440002": {
+        name: "TECHNO TAC CAMP",
+        semester: "SEM6A",
+        maxTotalMarks: 300,
+        activities: [
+            { name: "Physical Fitness", maxMarks: 50 },
+            { name: "Weapon Training", maxMarks: 50 },
+            { name: "Tactical Training", maxMarks: 100 },
+            { name: "Leadership", maxMarks: 50 },
+            { name: "Navigation", maxMarks: 50 },
+        ],
+    },
+};
+
 export async function upsertOcCamp(
     ocId: string,
     trainingCampId: string,
     data: Partial<typeof ocCamps.$inferInsert> = {},
 ) {
+    // Check if training camp exists, create it if not
     const [campTemplate] = await db
         .select({ id: trainingCamps.id })
         .from(trainingCamps)
         .where(eq(trainingCamps.id, trainingCampId))
         .limit(1);
-    if (!campTemplate) throw new ApiError(404, 'Training camp not found', 'not_found');
+
+    if (!campTemplate) {
+        // Create the training camp based on the UUID mapping
+        // Map camp UUIDs to V & VI term tabs with their respective activities and max marks
+
+
+
+        const campInfo: CampTypeInfo | undefined = CAMP_TYPE_UUIDS[trainingCampId];
+        if (campInfo) {
+            await db.insert(trainingCamps).values({
+                id: trainingCampId,
+                name: campInfo.name,
+                semester: campInfo.semester,
+                maxTotalMarks: campInfo.maxTotalMarks,
+            }).onConflictDoNothing();
+
+            // Create activities for the camp
+            for (let i = 0; i < campInfo.activities.length; i++) {
+                const activity = campInfo.activities[i];
+                await db.insert(trainingCampActivities).values({
+                    trainingCampId,
+                    name: activity.name,
+                    defaultMaxMarks: activity.maxMarks,
+                    sortOrder: i + 1,
+                }).onConflictDoNothing();
+            }
+        }
+    }
 
     const [existing] = await db
         .select()

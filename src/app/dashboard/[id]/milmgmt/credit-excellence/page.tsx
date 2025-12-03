@@ -20,15 +20,15 @@ import { RootState } from "@/store";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { catOptions, semestersCfe } from "@/constants/app.constants";
 import { cfeFormData, cfeRow, defaultRow } from "@/types/cfe";
-import { createCreditForExcellence, getCreditForExcellence, listCreditForExcellence, updateCreditForExcellence, CfeItem, CfeRecord } from "@/app/lib/api/cfeApi";
+import { createCreditForExcellence, getCreditForExcellence, listCreditForExcellence, updateCreditForExcellence, deleteCreditForExcellence, CfeItem, CfeRecord } from "@/app/lib/api/cfeApi";
 
 export default function CFEFormPage() {
     const [activeTab, setActiveTab] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(false);
 
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [isEditingInline, setIsEditingInline] = useState(false);
     const [editingRowIdx, setEditingRowIdx] = useState<number | null>(null);
-    const [editingSemester, setEditingSemester] = useState<number | null>(null);
+    const [editingValues, setEditingValues] = useState<{ cat: string; mks: string; remarks: string }>({ cat: '', mks: '', remarks: '' });
 
     const [savedData, setSavedData] = useState<cfeRow[][]>(semestersCfe.map(() => []));
     const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
@@ -93,6 +93,8 @@ export default function CFEFormPage() {
         return;
     }
 
+    setIsLoading(true);
+
     const newItems: CfeItem[] = data.records
         .filter(r => r.cat && r.mks)
         .map(r => {
@@ -109,85 +111,130 @@ export default function CFEFormPage() {
         return;
     }
 
-    try {
-        if (editingId && editingRowIdx !== null && editingSemester !== null) {
-            const currentSaved = savedData[editingSemester] || [];
+   try {
+    // Build the full list of items to save (existing + new)
+    const existingRows = savedData[activeTab] || [];
 
-            const allItems: CfeItem[] = currentSaved.map((r) => {
-                const { cat, mks, remarks } = r;
-                return {
-                    cat,
-                    marks: Number(mks) || 0,
-                    remarks,
-                };
-            });
+    const existingItems: CfeItem[] = existingRows.map((r) => {
+        const { cat, mks, remarks } = r;
+        return {
+            cat,
+            marks: Number(mks) || 0,
+            remarks,
+        };
+    });
 
-            const localIdx = editingRowIdx; 
-            allItems.splice(localIdx, 1, ...newItems);
+    // Adding new rows → append to existing items
+    const finalItems = [...existingItems, ...newItems];
 
-            await updateCreditForExcellence(selectedCadet.ocId, editingId, {
-                semester: editingSemester + 1,
-                data: allItems,
-                remark: "",
-            });
-            toast.success("Updated successfully");
-        } else {
-            const existingRows = savedData[activeTab] || [];
-            const existingItems: CfeItem[] = existingRows.map((r) => {
-                const { cat, mks, remarks } = r;
-                return {
-                    cat,
-                    marks: Number(mks) || 0,
-                    remarks,
-                };
-            });
+    // Final payload for createCreditForExcellence API
+    const payload = {
+        semester: activeTab + 1,
+        data: finalItems,
+        remark: "",
+    };
 
-            const mergedItems = [...existingItems, ...newItems];
+    // Always use create API
+    await createCreditForExcellence(selectedCadet.ocId, [payload]);
 
-            const payload = {
-                semester: activeTab + 1,
-                data: mergedItems,
-                remark: "",
-            };
-            await createCreditForExcellence(selectedCadet.ocId, [payload]);
-            toast.success("Saved successfully");
-        }
+    toast.success("Data saved successfully");
 
-        // Refresh and clear
-        await fetchCfeData(selectedCadet.ocId);
-        reset({ records: [{ ...defaultRow }] });
-        setEditingId(null);
-        setEditingRowIdx(null);
-        setEditingSemester(null);
-    } catch (error) {
-        toast.error("Failed to save data");
-    }
-};
+    // Refresh and clear states
+    await fetchCfeData(selectedCadet.ocId);
+    reset({ records: [{ ...defaultRow }] });
+} catch (error) {
+    toast.error("Failed to save data");
+}};
 
-    const handleEditSavedRow = (index: number) => {
+
+    const handleStartInlineEdit = (index: number) => {
         const rows = savedData[activeTab] || [];
         const rowToEdit = rows[index];
         if (!rowToEdit) return;
 
-        const recordId = (rowToEdit as any).id;
-        setEditingId(recordId || null);
         setEditingRowIdx(index);
-        setEditingSemester(activeTab);
-
-        
-        setValue("records", [{
-            serialNo: "1",
+        setEditingValues({
             cat: rowToEdit.cat,
             mks: rowToEdit.mks,
             remarks: rowToEdit.remarks
-        }]);
+        });
+        setIsEditingInline(true);
     };
 
-    const handleCancelEdit = () => {
-        reset({ records: [{ ...defaultRow }] });
-        setEditingId(null);
+    const handleSaveInlineEdit = async (index: number) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const existingRows = savedData[activeTab] || [];
+            const existingItems: CfeItem[] = existingRows.map((r) => ({
+                cat: r.cat,
+                marks: Number(r.mks) || 0,
+                remarks: r.remarks,
+            }));
+
+            // Replace the edited row
+            existingItems[index] = {
+                cat: editingValues.cat,
+                marks: Number(editingValues.mks) || 0,
+                remarks: editingValues.remarks,
+            };
+
+            const payload = {
+                semester: activeTab + 1,
+                data: existingItems,
+                remark: "",
+            };
+
+            await createCreditForExcellence(selectedCadet.ocId, [payload]);
+
+            toast.success("Row updated successfully");
+
+            await fetchCfeData(selectedCadet.ocId);
+            setIsEditingInline(false);
+            setEditingRowIdx(null);
+            setEditingValues({ cat: '', mks: '', remarks: '' });
+        } catch (error) {
+            toast.error("Failed to update row");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCancelInlineEdit = () => {
+        setIsEditingInline(false);
         setEditingRowIdx(null);
-        setEditingSemester(null);
+        setEditingValues({ cat: '', mks: '', remarks: '' });
+    };
+
+    const handleDeleteRow = async (index: number) => {
+        if (!selectedCadet?.ocId) {
+            toast.error("No cadet selected");
+            return;
+        }
+
+        const rows = savedData[activeTab] || [];
+        const rowToDelete = rows[index];
+        if (!rowToDelete?.id) {
+            toast.error("Invalid row to delete");
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            await deleteCreditForExcellence(selectedCadet.ocId, rowToDelete.id);
+            toast.success("Row deleted successfully");
+            await fetchCfeData(selectedCadet.ocId);
+        } catch (error) {
+            toast.error("Failed to delete row");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -289,7 +336,7 @@ export default function CFEFormPage() {
                                             </thead>
                                             <tbody>
                                                 {savedData[activeTab].map((row, idx) => {
-                                                    const isEditing = editingSemester === activeTab && editingRowIdx === idx;
+                                                    const isEditing = isEditingInline && editingRowIdx === idx;
                                                     return (
                                                         <tr key={`${activeTab}-${idx}`}>
                                                             <td className="p-2 border text-center">
@@ -306,13 +353,10 @@ export default function CFEFormPage() {
                                                             <td className="p-2 border">
                                                                 {isEditing ? (
                                                                     <Select
+                                                                        value={editingValues.cat}
                                                                         onValueChange={(value) =>
-                                                                            setValue(`records.0.cat`, value, {
-                                                                                shouldDirty: true,
-                                                                                shouldValidate: true,
-                                                                            })
+                                                                            setEditingValues(prev => ({ ...prev, cat: value }))
                                                                         }
-                                                                        defaultValue={row.cat}
                                                                     >
                                                                         <SelectTrigger className="w-full h-8">
                                                                             <SelectValue placeholder="Select category..." />
@@ -336,7 +380,8 @@ export default function CFEFormPage() {
                                                             <td className="p-2 border text-center">
                                                                 {isEditing ? (
                                                                     <Input
-                                                                        {...register(`records.0.mks` as const)}
+                                                                        value={editingValues.mks}
+                                                                        onChange={(e) => setEditingValues(prev => ({ ...prev, mks: e.target.value }))}
                                                                         type="text"
                                                                         className="h-8"
                                                                     />
@@ -347,7 +392,8 @@ export default function CFEFormPage() {
                                                             <td className="p-2 border">
                                                                 {isEditing ? (
                                                                     <Input
-                                                                        {...register(`records.0.remarks` as const)}
+                                                                        value={editingValues.remarks}
+                                                                        onChange={(e) => setEditingValues(prev => ({ ...prev, remarks: e.target.value }))}
                                                                         type="text"
                                                                         className="h-8"
                                                                     />
@@ -361,27 +407,29 @@ export default function CFEFormPage() {
                                                                         <Button
                                                                             size="sm"
                                                                             className="bg-green-600 hover:bg-green-700"
-                                                                            onClick={handleSubmit(onSubmit)}
+                                                                            onClick={() => handleSaveInlineEdit(idx)}
                                                                         >
                                                                             Save
                                                                         </Button>
                                                                         <Button
                                                                             size="sm"
                                                                             variant="outline"
-                                                                            onClick={handleCancelEdit}
+                                                                            onClick={handleCancelInlineEdit}
                                                                         >
                                                                             Cancel
                                                                         </Button>
                                                                     </div>
                                                                 ) : (
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        onClick={() => handleEditSavedRow(idx)}
-                                                                        disabled={editingRowIdx !== null}
-                                                                    >
-                                                                        Edit
-                                                                    </Button>
+                                                                    <div className="flex gap-2 justify-center">
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            onClick={() => handleStartInlineEdit(idx)}
+                                                                            disabled={isEditingInline}
+                                                                        >
+                                                                            Edit
+                                                                        </Button>
+                                                                    </div>
                                                                 )}
                                                             </td>
                                                         </tr>
@@ -394,7 +442,7 @@ export default function CFEFormPage() {
 
                                 {/* Input form (dynamic rows) */}
                                 <form onSubmit={handleSubmit(onSubmit)}>
-                                    <div className="overflow-x-auto border rounded-lg shadow">
+                                    <div className={`overflow-x-auto border rounded-lg shadow ${isEditingInline ? 'opacity-50 pointer-events-none' : ''}`}>
                                         <table className="w-full border text-sm">
                                             <thead className="bg-gray-100">
                                                 <tr>
@@ -468,18 +516,19 @@ export default function CFEFormPage() {
 
                                     {/* Row controls */}
                                     <div className="mt-4 flex justify-center gap-3">
-                                        <Button type="button" onClick={() => append({ ...defaultRow })}>
+                                        <Button type="button" onClick={() => append({ ...defaultRow })} disabled={isEditingInline}>
                                             + Add Row
                                         </Button>
 
-                                        <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                                            {editingId ? "Update" : "Submit"}
+                                        <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isLoading || isEditingInline}>
+                                            {isLoading ? "Saving..." : "Submit"}
                                         </Button>
 
                                         <Button
                                             type="button"
                                             variant="outline"
                                             onClick={() => reset({ records: [{ ...defaultRow }] })}
+                                            disabled={isEditingInline}
                                         >
                                             Reset
                                         </Button>
