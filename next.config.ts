@@ -2,13 +2,15 @@ import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
 
+// In production, keep a strict policy but allow the small set of inline/runtime
+// scripts Next.js injects and the Vercel Live toolbar in preview deployments.
 const CSP_PROD = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'unsafe-inline' blob: data: https://vercel.live",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' https://vercel.live wss://vercel.live",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
