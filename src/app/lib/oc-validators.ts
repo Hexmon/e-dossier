@@ -285,12 +285,14 @@ export const clubAchievementCreateSchema = z.object({
 export const clubAchievementUpdateSchema = clubAchievementCreateSchema.partial();
 
 // --- Recording of leave / hike / detention -------------------------------------
+const toDateString = (d: Date) => d.toISOString().slice(0, 10);
+
 export const recordingLeaveHikeDetentionCreateSchema = z.object({
     semester: Semester,
     reason: z.string().min(1),
     type: LeaveRecordType,
-    dateFrom: z.coerce.date(),
-    dateTo: z.coerce.date(),
+    dateFrom: z.coerce.date().transform(toDateString),
+    dateTo: z.coerce.date().transform(toDateString),
     remark: z.string().optional(),
 });
 export const recordingLeaveHikeDetentionUpdateSchema =

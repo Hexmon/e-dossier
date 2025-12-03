@@ -86,7 +86,7 @@ export async function GET(
     const row = await selectEnrichedUserById(id);
     if (!row) throw new ApiError(404, 'User not found', 'not_found');
 
-    return json.ok({ user: row });
+    return json.ok({ message: 'User retrieved successfully.', user: row });
   } catch (err) {
     return handleApiError(err);
   }
@@ -108,7 +108,7 @@ export async function PATCH(
     const body = await req.json();
     const parsed = userUpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return json.badRequest('Validation failed', { issues: parsed.error.flatten() });
+      return json.badRequest('Validation failed.', { issues: parsed.error.flatten() });
     }
     const d = parsed.data;
 
@@ -158,12 +158,12 @@ export async function PATCH(
 
     // Return enriched row (with active appointment info)
     const enriched = await selectEnrichedUserById(id);
-    return json.ok({ user: enriched });
+    return json.ok({ message: 'User updated successfully.', user: enriched });
   } catch (err) {
     const e = err as PgErr;
     const code = e?.code ?? e?.cause?.code;
     if (code === '23505') {
-      return json.conflict('Unique constraint violated', {
+      return json.conflict('Unique constraint violated.', {
         detail: (e?.detail ?? e?.cause?.detail) || 'username/email/phone',
       });
     }
@@ -198,7 +198,7 @@ export async function DELETE(
       );
 
     if (count > 0) {
-      return json.conflict('Cannot delete user who has active appointments', {
+      return json.conflict('Cannot delete user who has active appointments.', {
         activeAppointments: count,
         hint: 'End or transfer all active appointments before deleting this user.',
       });
@@ -210,7 +210,7 @@ export async function DELETE(
       // Hard delete
       const deleted = await db.delete(users).where(eq(users.id, id)).returning({ id: users.id });
       if (!deleted.length) throw new ApiError(404, 'User not found', 'not_found');
-      return json.ok({ message: 'User hard-deleted', id: deleted[0].id });
+      return json.ok({ message: 'User hard-deleted.', id: deleted[0].id });
     }
 
     // Soft delete
@@ -226,7 +226,7 @@ export async function DELETE(
       .returning({ id: users.id });
 
     if (!u) throw new ApiError(404, 'User not found', 'not_found');
-    return json.ok({ message: 'User soft-deleted', id: u.id });
+    return json.ok({ message: 'User soft-deleted.', id: u.id });
   } catch (err) {
     return handleApiError(err);
   }

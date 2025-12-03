@@ -1,9 +1,7 @@
+// app/dashboard/[id]/milmgmt/background-detls/page.tsx
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
-
+import { useParams } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
@@ -14,21 +12,24 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 import { Shield, ChevronDown } from "lucide-react";
 
-import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import DossierTab from "@/components/Tabs/DossierTab";
+import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
+import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 
 import FamilyBackground from "@/components/background/FamilyBackground";
 import EducationQualifications from "@/components/background/EducationQualifications";
 import AchievementsSection from "@/components/background/AchievementsSection";
 import AutobiographySection from "@/components/background/AutobiographySection";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useOcPersonal } from "@/hooks/useOcPersonal";
 
 export default function BackgroundDetlsPage() {
-    const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    const { cadet } = useOcPersonal(ocId);
 
     return (
         <DashboardLayout
@@ -36,16 +37,25 @@ export default function BackgroundDetlsPage() {
             description="Maintain and review cadets' background information, including family, education, and prior experiences."
         >
             <main className="flex-1 p-6">
-
                 <BreadcrumbNav
                     paths={[
                         { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Dossier", href: `/dashboard/${ocId}/milmgmt` },
                         { label: "Background Details" },
                     ]}
                 />
 
-                {selectedCadet && <SelectedCadetTable selectedCadet={selectedCadet} />}
+                {cadet && (
+                    <SelectedCadetTable
+                        selectedCadet={{
+                            name: cadet.name ?? "",
+                            courseName: cadet.courseName ?? "",
+                            ocNumber: cadet.ocNumber ?? "",
+                            ocId: cadet.ocId ?? "",
+                            course: cadet.course ?? "",
+                        }}
+                    />
+                )}
 
                 <DossierTab
                     tabs={dossierTabs}
@@ -53,21 +63,25 @@ export default function BackgroundDetlsPage() {
                     extraTabs={
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <TabsTrigger value="background-detls" className="flex items-center gap-2">
+                                <button className="flex items-center gap-2">
                                     <Shield className="h-4 w-4" />
                                     Mil-Trg
                                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                </TabsTrigger>
+                                </button>
                             </DropdownMenuTrigger>
+
                             <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                                {militaryTrainingCards.map((card) => (
-                                    <DropdownMenuItem key={card.to} asChild>
-                                        <a href={card.to} className="flex items-center gap-2 w-full">
-                                            <card.icon className={`h-4 w-4 ${card.color}`} />
-                                            <span>{card.title}</span>
-                                        </a>
-                                    </DropdownMenuItem>
-                                ))}
+                                {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                                    const link = to(ocId);
+                                    return (
+                                        <DropdownMenuItem key={title} asChild>
+                                            <a href={link} className="flex items-center gap-2">
+                                                <Icon className={`h-4 w-4 ${color}`} />
+                                                {title}
+                                            </a>
+                                        </DropdownMenuItem>
+                                    );
+                                })}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     }
@@ -81,19 +95,19 @@ export default function BackgroundDetlsPage() {
                             </TabsList>
 
                             <TabsContent value="family-bgrnd">
-                                <FamilyBackground selectedCadet={selectedCadet} />
+                                <FamilyBackground ocId={ocId} cadet={cadet} />
                             </TabsContent>
 
                             <TabsContent value="edn-qlf">
-                                <EducationQualifications selectedCadet={selectedCadet} />
+                                <EducationQualifications ocId={ocId} cadet={cadet} />
                             </TabsContent>
 
                             <TabsContent value="achievements">
-                                <AchievementsSection selectedCadet={selectedCadet} />
+                                <AchievementsSection ocId={ocId} cadet={cadet} />
                             </TabsContent>
 
                             <TabsContent value="auto-bio">
-                                <AutobiographySection selectedCadet={selectedCadet} />
+                                <AutobiographySection ocId={ocId} cadet={cadet} />
                             </TabsContent>
                         </Tabs>
                     }

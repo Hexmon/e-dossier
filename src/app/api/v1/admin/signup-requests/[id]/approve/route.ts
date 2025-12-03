@@ -28,7 +28,7 @@ export async function POST(
         const result = await approveSignupRequest(id, dto, adminId);
 
         return json.ok({
-            message: 'Signup request approved',
+            message: 'Signup request approved successfully.',
             appointment: result.appointment,
             granted_roles: result.appointment, // [{ id, key }]
         });

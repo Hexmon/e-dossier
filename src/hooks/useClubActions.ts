@@ -53,8 +53,8 @@ export const useClubActions = (selectedCadet: any) => {
 
     const fetchClub = async () => {
         if (!selectedCadet?.ocId) return [];
-        const res = await getOcClubs(selectedCadet.ocId);
-        return res?.items ?? [];
+        const res: any = await getOcClubs(selectedCadet.ocId);
+        return res?.items ?? res ?? [];
     };
 
     return { submitClub, fetchClub };

@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
             .limit(1);
 
         if (!row) throw new ApiError(404, 'Appointment not found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Appointment retrieved successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -86,7 +86,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
             .returning();
 
         if (!row) throw new ApiError(404, 'Appointment not found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Appointment updated successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -104,7 +104,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
             .returning();
 
         if (!row) throw new ApiError(404, 'Appointment not found');
-        return json.ok({ message: 'Soft-deleted', data: row });
+        return json.ok({ message: 'Appointment soft-deleted.', data: row });
     } catch (err) {
         return handleApiError(err);
     }

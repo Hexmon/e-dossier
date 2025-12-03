@@ -38,13 +38,13 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = signupSchema.safeParse(body);
-    if (!parsed.success) return json.badRequest('Validation failed', { issues: parsed.error.flatten() });
+    if (!parsed.success) return json.badRequest('Validation failed.', { issues: parsed.error.flatten() });
 
     const { username, name, email, phone, rank, password, note } = parsed?.data ?? {};
 
     const conflicts = await preflightConflicts(username, email, phone);
     if (conflicts.length) {
-      return json.badRequest('Already in use', { conflicts });
+      return json.badRequest('Already in use.', { conflicts });
     }
 
     // 1) Create disabled user
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const e = err as PgError;
-    if (e?.code === '23505') return json.badRequest('Username / email / phone already in use');
+    if (e?.code === '23505') return json.badRequest('Username / email / phone already in use.');
     return handleApiError(err);
   }
 }

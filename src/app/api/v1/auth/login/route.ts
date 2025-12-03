@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return json.badRequest('invalid_json', { message: 'Request body must be valid JSON.' });
+      return json.badRequest('Invalid JSON body.', { message: 'Request body must be valid JSON.' });
     }
 
     // 1) Explicit missing-field check (before Zod)
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (missing.length) {
-      return json.badRequest('missing_fields', {
+      return json.badRequest('Missing required fields.', {
         missing,
         hint: 'Provide: appointmentId (uuid), username (non-empty), password (min 8 chars).',
       });
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     // 2) Zod validation (shape/format)
     const parsed = LoginBody.safeParse(b);
     if (!parsed.success) {
-      return json.badRequest('invalid_request', { details: parsed.error.format() });
+      return json.badRequest('Validation failed.', { details: parsed.error.format() });
     }
 
     const { appointmentId, platoonId, username, password } = parsed.data;

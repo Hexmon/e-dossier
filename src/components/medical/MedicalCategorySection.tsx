@@ -124,7 +124,7 @@ export default function MedicalCategorySection({
 
     // --------------------------- EDIT ---------------------------
     const handleEdit = (row: MedCatRow) => {
-        setEditingId(row.id);
+        setEditingId(row.id ?? null);
         setEditForm({ ...row });
     };
 
@@ -176,7 +176,7 @@ export default function MedicalCategorySection({
                 label: "Delete",
                 onClick: async () => {
                     try {
-                        await deleteMedicalCategory(selectedCadet.ocId, row.id);
+                        await deleteMedicalCategory(selectedCadet.ocId, row.id as string);
 
                         toast.success("MED CAT deleted!");
                         await fetchMedicalCategory();
@@ -187,6 +187,7 @@ export default function MedicalCategorySection({
             },
             cancel: {
                 label: "Cancel",
+                onClick: () => {},
             },
         });
     };
@@ -366,7 +367,7 @@ export default function MedicalCategorySection({
                                             .map((key) => (
                                                 <td key={key} className="border p-2">
                                                     <Input
-                                                        {...register(`records.${index}.${key}` as const)}
+                                                        {...register(`records.${index}.${key}` as any)}
                                                         type={["date", "catFrom", "catTo", "mhFrom", "mhTo"].includes(key) ? "date" : "text"}
                                                         className={` h-7 text-xs px-2 ${["date", "catFrom", "catTo", "mhFrom", "mhTo"].includes(key) ? "w-[90px]" : "w-full"}`}
                                                     />

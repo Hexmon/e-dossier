@@ -78,7 +78,6 @@ export default function SpeedMarchPage() {
     useEffect(() => {
         if (!selectedCadet?.ocId) return;
         fetchSaved(selectedCadet.ocId);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCadet?.ocId, activeTab]);
 
     const onSubmit = async (formData: TermData) => {

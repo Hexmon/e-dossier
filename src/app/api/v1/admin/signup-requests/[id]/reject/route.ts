@@ -25,7 +25,7 @@ export async function POST(
     // Perform rejection (DB + audit inside the query helper)
     await rejectSignupRequest({ requestId: id, adminUserId, reason: dto.reason });
 
-    return json.ok({ message: 'Signup request rejected' });
+    return json.ok({ message: 'Signup request rejected successfully.' });
   } catch (err) {
     return handleApiError(err);
   }

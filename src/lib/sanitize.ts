@@ -52,7 +52,7 @@ export function sanitizeHtml(
     ? SANITIZE_CONFIG.BASIC 
     : SANITIZE_CONFIG.RICH;
   
-  return DOMPurify.sanitize(input, config);
+  return DOMPurify.sanitize(input, config as any) as unknown as string;
 }
 
 /**

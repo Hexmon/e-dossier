@@ -102,7 +102,7 @@ export async function GET(req: NextRequest, ctx: any) {
             activityName: qp.activityName,
         });
 
-        return json.ok(result);
+        return json.ok({ message: 'OC camps retrieved successfully.', ...result });
     } catch (err) {
         return handleApiError(err);
     }
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest, ctx: any) {
         await recomputeOcCampTotal(ocCamp.id);
         const { camps, grandTotalMarksScored } = await loadAllCamps(ocId);
 
-        return json.created({ camps, grandTotalMarksScored });
+        return json.created({ message: 'OC camp created or updated successfully.', camps, grandTotalMarksScored });
     } catch (err) {
         return handleApiError(err);
     }
@@ -182,7 +182,7 @@ export async function PUT(req: NextRequest, ctx: any) {
         await recomputeOcCampTotal(ocCamp.id);
         const { camps, grandTotalMarksScored } = await loadAllCamps(ocId);
 
-        return json.ok({ camps, grandTotalMarksScored });
+        return json.ok({ message: 'OC camp updated successfully.', camps, grandTotalMarksScored });
     } catch (err) {
         return handleApiError(err);
     }
@@ -215,7 +215,7 @@ export async function DELETE(req: NextRequest, ctx: any) {
         }
 
         const { camps, grandTotalMarksScored } = await loadAllCamps(ocId);
-        return json.ok({ camps, grandTotalMarksScored });
+        return json.ok({ message: 'OC camp data deleted successfully.', camps, grandTotalMarksScored });
     } catch (err) {
         return handleApiError(err);
     }

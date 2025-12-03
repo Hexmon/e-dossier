@@ -58,12 +58,12 @@ export function hasScopeAccess(
   
   // WING scope has access to WING, SQUADRON, and PLATOON
   if (userScope.type === SCOPE.WING) {
-    return [SCOPE.WING, SCOPE.SQUADRON, SCOPE.PLATOON].includes(requiredScope.type);
+    return [SCOPE.WING, SCOPE.SQUADRON, SCOPE.PLATOON].includes(requiredScope.type as any);
   }
   
   // SQUADRON scope has access to SQUADRON and PLATOON
   if (userScope.type === SCOPE.SQUADRON) {
-    return [SCOPE.SQUADRON, SCOPE.PLATOON].includes(requiredScope.type);
+    return [SCOPE.SQUADRON, SCOPE.PLATOON].includes(requiredScope.type as any);
   }
   
   // PLATOON scope only has access to specific PLATOON
@@ -111,7 +111,7 @@ export async function authorizeOcAccess(
   req: NextRequest,
   ocId: string
 ): Promise<AuthContext> {
-  const context = await requireAuth(req);
+  const context = await requireAuth(req) as AuthContext;
   
   // Admin can access any OC record
   if (isAdmin(context)) {
@@ -155,7 +155,7 @@ export async function authorizeAppointmentAccess(
   req: NextRequest,
   appointmentId: string
 ): Promise<AuthContext> {
-  const context = await requireAuth(req);
+  const context = await requireAuth(req) as AuthContext;
   
   // Admin can access any appointment
   if (isAdmin(context)) {

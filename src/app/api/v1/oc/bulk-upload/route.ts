@@ -403,7 +403,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const res = json.ok({ success, failed: errors.length, errors });
+    const res = json.ok({ message: 'Bulk upload processed successfully.', success, failed: errors.length, errors });
     res.headers.set('X-RateLimit-Limit', rate.limit.toString());
     res.headers.set('X-RateLimit-Remaining', rate.remaining.toString());
     res.headers.set('X-RateLimit-Reset', rate.reset.toString());

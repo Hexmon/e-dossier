@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, ctx: any) {
             categoryId: qp.categoryId,
             isActive: qp.isActive,
         });
-        return json.ok({ items, count: items.length });
+        return json.ok({ message: 'OLQ subtitles retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, ctx: any) {
             displayOrder: dto.displayOrder ?? 0,
             isActive: dto.isActive ?? true,
         });
-        return json.created({ subtitle: row });
+        return json.created({ message: 'OLQ subtitle created successfully.', subtitle: row });
     } catch (err) {
         return handleApiError(err);
     }

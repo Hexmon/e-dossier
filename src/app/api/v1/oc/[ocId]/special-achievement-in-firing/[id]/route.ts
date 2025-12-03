@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, ctx: any) {
         const { id } = await parseParam(ctx, IdSchema);
         const row = await getSpecialAchievementInFiring(ocId, id);
         if (!row) throw new ApiError(404, 'Special achievement record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Special achievement in firing retrieved successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         const dto = specialAchievementInFiringUpdateSchema.parse(await req.json());
         const row = await updateSpecialAchievementInFiring(ocId, id, dto);
         if (!row) throw new ApiError(404, 'Special achievement record not found', 'not_found');
-        return json.ok({ data: row });
+        return json.ok({ message: 'Special achievement in firing updated successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
@@ -45,11 +45,10 @@ export async function DELETE(req: NextRequest, ctx: any) {
         const row = await deleteSpecialAchievementInFiring(ocId, id, { hard });
         if (!row) throw new ApiError(404, 'Special achievement record not found', 'not_found');
         return json.ok({
-            message: hard ? 'Special achievement record hard-deleted' : 'Special achievement record soft-deleted',
+            message: hard ? 'Special achievement in firing hard-deleted.' : 'Special achievement in firing soft-deleted.',
             id: row.id,
         });
     } catch (err) {
         return handleApiError(err);
     }
 }
-

@@ -19,12 +19,12 @@ export async function GET(req: NextRequest) {
         const username = normalize(raw);
 
         if (!username || username.length < 3 || username.length > 64 || !/^[a-z0-9._-]+$/.test(username)) {
-            throw new ApiError(400, 'Invalid username', 'USERNAME_RULES', {
+            throw new ApiError(400, 'Invalid username.', 'USERNAME_RULES', {
                 rules: '3–64 chars; lowercase letters, digits, dot, underscore, hyphen',
             });
         }
         if (RESERVED.has(username)) {
-            return json.ok({ username, assigned: true, available: false, reason: 'reserved', suggestions: suggest(username) });
+            return json.ok({ message: 'Username check completed.', username, assigned: true, available: false, reason: 'reserved', suggestions: suggest(username) });
         }
 
         const taken = await db
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
             .limit(1);
 
         const assigned = taken.length > 0;
-        return json.ok({ username, assigned, available: !assigned, suggestions: assigned ? suggest(username) : [] });
+        return json.ok({ message: 'Username check completed.', username, assigned, available: !assigned, suggestions: assigned ? suggest(username) : [] });
     } catch (err) {
         return handleApiError(err);
     }

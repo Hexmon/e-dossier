@@ -185,11 +185,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(_req: NextRequest) {
   // TODO: fetch real roles from your DB
-  return NextResponse.json({ ok: true, roles: [] });
+  return NextResponse.json({ ok: true, message: 'Roles retrieved successfully.', roles: [] }, { status: 200 });
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
   // TODO: validate & create role
-  return NextResponse.json({ ok: true, created: body }, { status: 201 });
+  return NextResponse.json({ ok: true, message: 'Role created successfully.', created: body }, { status: 201 });
 }
