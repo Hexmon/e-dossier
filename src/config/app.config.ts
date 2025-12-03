@@ -1253,6 +1253,11 @@ export const dossierTabs = [
     title: "OLQ Assessment",
     icon: FileText,
   },
+  {
+    value: "camps",
+    title: "Camp Records",
+    icon: Tent,
+  },
 ];
 
 export const backgroundTabs = [

@@ -162,6 +162,8 @@ export const romanToNumber: Record<string, number> = {
 
 export const terms = ["IV TERM", "V TERM", "VI TERM"];
 
+export const term = ['V TERM', 'VI TERM'];
+
 export const obstaclePrefill: ObstacleRow[] = [
   { obstacle: "EX (15 Mks)", obtained: "", remark: "" },
   { obstacle: "Good (12 Mks)", obtained: "", remark: "" },
@@ -347,3 +349,10 @@ export const OLQ_STRUCTURE = {
 } as const;
 
 export const OLQ_REMARKS = Object.keys(OLQ_STRUCTURE);
+
+// Camp UUID constants - these should match the training_camps table in the database
+// export const CAMP_TYPE_IDENTIFIERS = {
+//   "V TERM": "550e8400-e29b-41d4-a716-446655440000", // SEM5 - EX SURAKSHA camp UUID
+//   "VI TERM EX VAJRA": "550e8400-e29b-41d4-a716-446655440001", // SEM6A - EX VAJRA camp UUID
+//   "VI TERM TECHNO TAC CAMP": "550e8400-e29b-41d4-a716-446655440002", // SEM6A - TECHNO TAC CAMP camp UUID
+// }

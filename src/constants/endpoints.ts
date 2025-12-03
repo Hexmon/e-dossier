@@ -79,6 +79,8 @@ export const endpoints = {
         leaveRecordById: (ocId: string, recordId: string) => `/api/v1/oc/${ocId}/recording-leave-hike-detention/${recordId}`,
         olq: (ocId: string) => `/api/v1/oc/${ocId}/olq`,
         olqCategories: (ocId: string) => `/api/v1/oc/${ocId}/olq/categories?includeSubtitles=true&isActive=true`,
+        camps: (ocId: string) => `/api/v1/oc/${ocId}/camps`,
+        campsById: (ocId: string, campId: string) => `/api/v1/oc/${ocId}/camps/${campId}`,
     },
     course: {
         all: "/api/v1/courses"
