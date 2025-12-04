@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # App dependencies (package.json + pnpm-lock.yaml in repo root)
+  - package-ecosystem: "npm"
+    directory: "/"          # Root where package.json and pnpm-lock.yaml live
+    schedule:
+      interval: "weekly"    # Check for new versions once a week
+    open-pull-requests-limit: 5
+
+  # GitHub Actions used in workflows (if/when you add them)
+  - package-ecosystem: "github-actions"
+    directory: "/"          # Must be "/" so Dependabot scans .github/workflows
+    schedule:
+      interval: "weekly"
