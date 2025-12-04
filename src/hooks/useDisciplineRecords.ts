@@ -8,6 +8,7 @@ import {
     saveDisciplineRecords,
     updateDisciplineRecord,
     deleteDisciplineRecord,
+    DisciplinePayloadClient,
 } from "@/app/lib/api/disciplineApi";
 
 import type { DisciplineRow as RawDisciplineRow, DisciplineForm } from "@/types/dicp-records";
@@ -110,16 +111,16 @@ export function useDisciplineRecords(ocId: string, semestersCount = 6) {
         async (id: string, payload: Partial<RawDisciplineRow>) => {
             if (!ocId) return null;
             try {
-                const body: Record<string, unknown> = {
-                    punishmentAwarded: payload.punishmentAwarded ?? undefined,
-                    pointsDelta: payload.pointsDelta !== undefined ? Number(payload.pointsDelta) : undefined,
-                    awardedOn: payload.awardedOn ?? undefined,
-                    awardedBy: payload.awardedBy ?? undefined,
-                    dateOfOffence: payload.dateOfOffence ?? undefined,
-                    offence: payload.offence ?? undefined,
+                const body: Partial<DisciplinePayloadClient> = {
+                    punishmentAwarded: payload.punishmentAwarded,
+                    pointsDelta: payload.negativePts !== undefined ? Number(payload.negativePts) : undefined,
+                    awardedOn: payload.dateOfAward,
+                    awardedBy: payload.byWhomAwarded,
+                    dateOfOffence: payload.dateOfOffence,
+                    offence: payload.offence,
                 };
 
-                const resp = await updateDisciplineRecord(ocId, id, body);;
+                const resp = await updateDisciplineRecord(ocId, id, body);
 
                 if (!resp) {
                     toast.error("Failed to update record");
@@ -143,7 +144,7 @@ export function useDisciplineRecords(ocId: string, semestersCount = 6) {
             if (!ocId) return false;
             try {
                 const resp = await deleteDisciplineRecord(ocId, id);
-                if (!resp?.ok) {
+                if (!resp) {
                     toast.error("Failed to delete");
                     return false;
                 }

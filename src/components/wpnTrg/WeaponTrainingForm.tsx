@@ -33,8 +33,12 @@ export default function WeaponTrainingForm({
     disabled = false,
     formMethods,
 }: Props) {
-    const methods = formMethods ?? useForm<FormValues>({ defaultValues: { records: inputPrefill } });
-    const { register, handleSubmit, reset, watch } = methods;
+    const internalMethods = useForm<FormValues>({
+        defaultValues: { records: inputPrefill },
+    });
+
+    const methods = formMethods ?? internalMethods;
+    const { register, handleSubmit, reset } = methods;
 
     const merged = useMemo(() => {
         return inputPrefill.map((pref) => {
@@ -50,8 +54,6 @@ export default function WeaponTrainingForm({
     useEffect(() => {
         reset({ records: merged });
     }, [merged, reset]);
-
-    const watched = watch("records");
 
     return (
         <form onSubmit={handleSubmit(onSave)}>

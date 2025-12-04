@@ -74,7 +74,10 @@ export default function MedicalInfoFormComponent({ onSubmit, disabled, defaultVa
                     abw: "",
                     overw: "",
                     bmi: "",
-                    chest: ""
+                    chest: "",
+                    medicalHistory: "",
+                    medicalIssues: "",
+                    allergies: "",
                 })}>
                     + Add Row
                 </Button>

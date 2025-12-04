@@ -56,7 +56,7 @@ export default function MedicalInfoSection({
             const formatted = data.map((item) => ({
                 id: item.id,
                 term: semesters[item.semester - 1],
-                date: ((item.date ?? item.examDate ?? "") || "").split("T")[0],
+                date: ((item.examDate ?? "") || "").split("T")[0],
                 age: String(item.age ?? ""),
                 height: String(item.heightCm ?? ""),
                 ibw: String(item.ibwKg ?? ""),
@@ -178,6 +178,7 @@ export default function MedicalInfoSection({
             action: {
                 label: "Delete",
                 onClick: async () => {
+                    if (!row.id) return toast.error("Cannot delete a record without an ID.");
                     try {
                         await deleteMedicalInfo(selectedCadet.ocId, row.id);
 
@@ -188,7 +189,11 @@ export default function MedicalInfoSection({
                     }
                 },
             },
-            cancel: { label: "Cancel" },
+            cancel: {
+                label: "Cancel",
+                onClick: () => {
+                },
+            },
         });
     };
 
@@ -235,7 +240,7 @@ export default function MedicalInfoSection({
                     disabled={detailsDisabled}
                     defaultValues={{
                         medInfo: [
-                            { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "" }
+                            { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "", medicalHistory: "", medicalIssues: "", allergies: "" }
                         ],
                         medicalHistory: savedMedInfo[0]?.medicalHistory ?? "",
                         medicalIssues: savedMedInfo[0]?.medicalIssues ?? "",

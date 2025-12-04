@@ -147,7 +147,7 @@ function InnerClubDrillPage({
                 const found = items.find((x: any) => x.semester === romanToNumber[row.semester]);
                 const { clubName, specialAchievement, remark, id } = found || {};
                 return {
-                    id: id ?? null,
+                    id: id ?? undefined,
                     semester: row.semester,
                     clubName: clubName ?? "",
                     splAchievement: specialAchievement ?? "",
@@ -175,16 +175,24 @@ function InnerClubDrillPage({
                     remark
                 } = api || {};
 
-                return {
-                    id: id ?? null,
-                    semester: row.semester,
-                    maxMks: maxMarks ?? "",
-                    m1: m1Marks ?? "",
-                    m2: m2Marks ?? "",
-                    a1c1: a1c1Marks ?? "",
-                    a2c2: a2c2Marks ?? "",
-                    remarks: remark ?? ""
+                const toNumOrEmpty = (val: any): number | "" => {
+                    if (val === null || val === undefined || val === "") return "";
+                    const num = Number(val);
+                    return isNaN(num) ? "" : num;
                 };
+
+                return {
+                    id: id ?? undefined,
+                    semester: row.semester,
+
+                    maxMks: toNumOrEmpty(maxMarks),
+                    m1: toNumOrEmpty(m1Marks),
+                    m2: toNumOrEmpty(m2Marks),
+                    a1c1: toNumOrEmpty(a1c1Marks),
+                    a2c2: toNumOrEmpty(a2c2Marks),
+
+                    remarks: remark ?? ""
+                }
             });
 
             setValue("drillRows", mapped);

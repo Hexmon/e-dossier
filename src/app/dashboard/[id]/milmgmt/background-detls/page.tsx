@@ -105,7 +105,7 @@ export default function BackgroundDetlsPage() {
                             </TabsContent>
 
                             <TabsContent value="achievements">
-                                <AchievementsSection ocId={ocId} cadet={cadet} />
+                                <AchievementsSection ocId={ocId} />
                             </TabsContent>
 
                             <TabsContent value="auto-bio">

@@ -45,8 +45,11 @@ export default function SpeedMarchForm({
     disabled = false,
     formMethods,
 }: Props) {
-    const methods =
-        formMethods ?? useForm<FormValues>({ defaultValues: { records: inputPrefill } });
+    const internalMethods = useForm<FormValues>({
+        defaultValues: { records: inputPrefill },
+    });
+
+    const methods = formMethods ?? internalMethods;
 
     const { register, handleSubmit, reset } = methods;
 

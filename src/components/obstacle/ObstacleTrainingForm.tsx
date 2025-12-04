@@ -39,7 +39,11 @@ export default function ObstacleTrainingForm({
     disabled = false,
     formMethods,
 }: Props) {
-    const methods = formMethods ?? useForm<TermData>({ defaultValues: { records: inputPrefill } });
+    const internalMethods = useForm<TermData>({
+        defaultValues: { records: inputPrefill },
+    });
+
+    const methods = formMethods ?? internalMethods;
     const { register, handleSubmit, reset, watch } = methods;
 
     // merged: map prefill -> latest saved record for same obstacle & semester
@@ -48,7 +52,7 @@ export default function ObstacleTrainingForm({
             const { obstacle: prefObstacle, obtained: prefObtained = "", remark: prefRemark = "", id: prefId } = pref;
             const match = [...savedRecords]
                 .reverse()
-                .find((r) => (r.subject ?? r.obstacle ?? "") === (prefObstacle ?? "") && Number(r.semester ?? 0) === Number(semesterNumber));
+                .find((r) => (r.obstacle ?? "") === (prefObstacle ?? "") && Number(r.semester ?? 0) === Number(semesterNumber));
             const obstacle = prefObstacle ?? "-";
             const obtained = match ? String(match.marksObtained ?? "") : String(prefObtained ?? "");
             const remark = match ? String(match.remark ?? "") : String(prefRemark ?? "");

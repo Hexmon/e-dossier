@@ -50,6 +50,7 @@ export default function FinalPerformancePage() {
                 <DossierTab
                     tabs={dossierTabs}
                     defaultValue="final-performance"
+                    ocId={ocId}
                     extraTabs={
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -63,9 +64,10 @@ export default function FinalPerformancePage() {
                                 {militaryTrainingCards.map((card) => {
                                     const { to, color, title } = card;
                                     if (!to) return null;
+                                    const href = to(ocId);
                                     return (
-                                        <DropdownMenuItem key={to} asChild>
-                                            <a href={to} className="flex items-center gap-2">
+                                        <DropdownMenuItem key={title} asChild>
+                                            <a href={href} className="flex items-center gap-2">
                                                 <card.icon className={`h-4 w-4 ${color}`} />
                                                 <span>{title}</span>
                                             </a>

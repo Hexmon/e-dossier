@@ -83,13 +83,13 @@ export function useMedicalCategory(ocId: string) {
             try {
                 const body = {
                     date: payload.date || "",
-                    mosAndDiagnostics: payload.mosAndDiagnostics || payload.diagnosis || "",
+                    mosAndDiagnostics: payload.diagnosis || "",
                     catFrom: payload.catFrom || "",
                     catTo: payload.catTo || "",
                     mhFrom: payload.mhFrom || "",
                     mhTo: payload.mhTo || "",
                     absence: payload.absence || "",
-                    platoonCommanderName: payload.platoonCommanderName || payload.piCdrInitial || "",
+                    platoonCommanderName: payload.piCdrInitial || "",
                 };
 
                 await updateMedicalCategory(ocId, id, body);

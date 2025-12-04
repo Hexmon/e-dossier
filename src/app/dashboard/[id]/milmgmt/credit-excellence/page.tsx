@@ -74,7 +74,7 @@ export default function CFEFormPage() {
     };
 
     // replace an entire semester payload (used by inline-edit save)
-    const handleReplaceSemester = async (semesterIndex: number, items: { cat: string; marks: number; remarks: string }[]) => {
+    const handleReplaceSemester = async (semesterIndex: number, items: { cat: string; marks: number; remarks?: string }[]) => {
         await replaceSemesterPayload(semesterIndex, items);
     };
 

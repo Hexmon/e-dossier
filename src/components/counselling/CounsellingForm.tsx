@@ -37,7 +37,7 @@ export default function CounsellingForm({ onSubmit, semLabel }: Props) {
         for (let i = 0; i < fields.length; i += 1) {
             setValue(`records.${i}.term`, semLabel ?? "", { shouldDirty: true });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, [semLabel]);
 
     const addRow = () =>

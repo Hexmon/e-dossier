@@ -36,7 +36,7 @@ export default function FamilyBackground({ ocId }: Props) {
     const familyForm = useForm<FormValues>({
         defaultValues: {
             family: [
-                { name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" },
+                { name: "", relation: "", age: "", occupation: "", education: "", mobile: "" },
             ],
         },
     });
@@ -127,7 +127,7 @@ export default function FamilyBackground({ ocId }: Props) {
 
                         <tbody>
                             {family.map((member, index) => {
-                                const { id, name, relation, age, occupation, education, mobileNo } = member;
+                                const { id, name, relation, age, occupation, education, mobile } = member;
                                 const isEditing = editingId === id;
 
                                 return (
@@ -199,11 +199,11 @@ export default function FamilyBackground({ ocId }: Props) {
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
                                                 <Input
-                                                    value={editForm?.mobileNo || ""}
-                                                    onChange={(e) => changeEdit("mobileNo", e.target.value)}
+                                                    value={editForm?.mobile || ""}
+                                                    onChange={(e) => changeEdit("mobile", e.target.value)}
                                                 />
                                             ) : (
-                                                mobileNo
+                                                mobile
                                             )}
                                         </td>
 
@@ -257,16 +257,42 @@ export default function FamilyBackground({ ocId }: Props) {
                             {fields.map((item, index) => (
                                 <tr key={item.id}>
                                     <td className="border px-4 py-2 text-center">{index + 1}</td>
-
-                                    {["name", "relation", "age", "occupation", "education", "mobileNo"].map((field) => (
-                                        <td key={field} className="border px-4 py-2">
-                                            <Input
-                                                {...familyForm.register(`family.${index}.${field}`)}
-                                                placeholder={field}
-                                            />
-                                        </td>
-                                    ))}
-
+                                    <td className="border px-4 py-2">
+                                        <Input
+                                            {...familyForm.register(`family.${index}.name`)}
+                                            placeholder="name"
+                                        />
+                                    </td>
+                                    <td className="border px-4 py-2">
+                                        <Input
+                                            {...familyForm.register(`family.${index}.relation`)}
+                                            placeholder="relation"
+                                        />
+                                    </td>
+                                    <td className="border px-4 py-2">
+                                        <Input
+                                            {...familyForm.register(`family.${index}.age`)}
+                                            placeholder="age"
+                                        />
+                                    </td>
+                                    <td className="border px-4 py-2">
+                                        <Input
+                                            {...familyForm.register(`family.${index}.occupation`)}
+                                            placeholder="occupation"
+                                        />
+                                    </td>
+                                    <td className="border px-4 py-2">
+                                        <Input
+                                            {...familyForm.register(`family.${index}.education`)}
+                                            placeholder="education"
+                                        />
+                                    </td>
+                                    <td className="border px-4 py-2">
+                                        <Input
+                                            {...familyForm.register(`family.${index}.mobile`)}
+                                            placeholder="mobile"
+                                        />
+                                    </td>
                                     <td className="border px-4 py-2 text-center">
                                         <Button variant="destructive" type="button" onClick={() => remove(index)}>
                                             Remove

@@ -29,6 +29,9 @@ export default function DisciplineForm({ onSubmit }: Props) {
         byWhomAwarded: "",
         negativePts: "",
         cumulative: "",
+        awardedOn: "",
+        awardedBy: "",
+        pointsDelta: 0,
     };
 
     const form = useForm<DisciplineFormType>({

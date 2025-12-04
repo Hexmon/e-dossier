@@ -23,7 +23,9 @@ import { Shield, ChevronDown, Link } from "lucide-react";
 import { useOcPersonal } from "@/hooks/useOcPersonal";
 import { semesters as SEMESTERS_CONST } from "@/constants/app.constants";
 
-import type { DisciplineForm as DisciplineFormType, DisciplineRow } from "@/types/dicp-records";
+import type { DisciplineForm as DisciplineFormType} from "@/types/dicp-records";
+import { DisciplineRow } from "@/hooks/useDisciplineRecords";
+
 import { useDisciplineRecords } from "@/hooks/useDisciplineRecords";
 import DisciplineTable from "@/components/discipline/DisciplineTable";
 import DisciplineForm from "@/components/discipline/DisciplineForm";
@@ -94,7 +96,7 @@ export default function DisciplineRecordsPage() {
     });
     };
 
-    const handleDelete = async (row: DisciplineRow) => {
+    const handleDelete = async (row: DisciplineRow): Promise<void> => {
         if (!row.id) return;
         await deleteRecord(row.id);
     };

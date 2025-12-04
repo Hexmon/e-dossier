@@ -11,15 +11,10 @@ import {
     deleteParentComm,
 } from "@/app/lib/api/parentComnApi";
 
-export type ParentCommPayload = {
-    semester: number;
-    mode: string;
-    refNo?: string | null;
-    date?: string | null;
-    subject?: string | null;
-    brief?: string | null;
-    platoonCommanderName?: string | null;
-};
+import type { ParentCommPayload as ApiPayload } from "@/app/lib/api/parentComnApi";
+
+
+export type ParentCommPayload = ApiPayload;
 
 export type ParentCommRow = {
     id?: string;
@@ -58,7 +53,7 @@ export function useParentComms(ocId: string, semestersCount = 6) {
                     id: rec.id,
                     serialNo,
                     letterNo: rec.refNo ?? "-",
-                    date: (rec.date ?? "").split?.("T")?.[0] ?? "-",
+                    date: rec.date?.split?.("T")?.[0] ?? "-",
                     teleCorres: rec.subject ?? "-",
                     briefContents: rec.brief ?? "-",
                     sigPICdr: rec.platoonCommanderName ?? "-",
@@ -69,7 +64,6 @@ export function useParentComms(ocId: string, semestersCount = 6) {
             setGrouped(groups);
         } catch (err) {
             toast.error("Failed to load parent communications");
-            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -78,18 +72,30 @@ export function useParentComms(ocId: string, semestersCount = 6) {
     const save = useCallback(
         async (semester: number, payloads: ParentCommPayload[]) => {
             if (!ocId) return null;
+
             try {
-                const resp = await saveParentComms(ocId, payloads);
+               
+                const apiPayloads: ApiPayload[] = payloads.map((p) => ({
+                    semester,
+                    mode: p.mode as ApiPayload["mode"], // enforce exact API type
+                    refNo: p.refNo ?? "",
+                    date: p.date ?? "",
+                    subject: p.subject ?? "",
+                    brief: p.brief ?? "",
+                    platoonCommanderName: p.platoonCommanderName ?? "",
+                }));
+
+                const resp = await saveParentComms(ocId, apiPayloads);
                 if (!resp) {
                     toast.error("Failed to save parent communications");
                     return null;
                 }
+
                 toast.success("Saved successfully");
                 await fetch();
                 return resp;
             } catch (err) {
                 toast.error("Failed to save parent communications");
-                console.error(err);
                 return null;
             }
         },
@@ -100,17 +106,27 @@ export function useParentComms(ocId: string, semestersCount = 6) {
         async (id: string, payload: Partial<ParentCommPayload>) => {
             if (!ocId) return null;
             try {
-                const resp = await updateParentComm(ocId, id, payload);
+                const apiPayload: Partial<ApiPayload> = {
+                    semester: payload.semester,
+                    mode: payload.mode as ApiPayload["mode"],
+                    refNo: payload.refNo ?? "",
+                    date: payload.date ?? "",
+                    subject: payload.subject ?? "",
+                    brief: payload.brief ?? "",
+                    platoonCommanderName: payload.platoonCommanderName ?? "",
+                };
+
+                const resp = await updateParentComm(ocId, id, apiPayload);
                 if (!resp) {
                     toast.error("Failed to update record");
                     return null;
                 }
+
                 toast.success("Record updated");
                 await fetch();
                 return resp;
             } catch (err) {
                 toast.error("Failed to update record");
-                console.error(err);
                 return null;
             }
         },
@@ -126,12 +142,12 @@ export function useParentComms(ocId: string, semestersCount = 6) {
                     toast.error("Failed to delete record");
                     return null;
                 }
+
                 toast.success("Deleted");
                 await fetch();
                 return resp;
             } catch (err) {
                 toast.error("Failed to delete record");
-                console.error(err);
                 return null;
             }
         },

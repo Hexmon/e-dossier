@@ -24,6 +24,7 @@ export default function CfeForm({ onSubmit, semIndex, existingRows }: Props) {
                     cat: "",
                     mks: "",
                     remarks: "",
+                    serialNo: "",
                 },
             ],
         },
@@ -43,6 +44,7 @@ export default function CfeForm({ onSubmit, semIndex, existingRows }: Props) {
             cat: "",
             mks: "",
             remarks: "",
+            serialNo: "",
         });
 
     return (

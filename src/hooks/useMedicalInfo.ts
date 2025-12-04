@@ -48,7 +48,7 @@ export function useMedicalInfo(ocId: string) {
             const normalized: MedInfoRow[] = (Array.isArray(data) ? data : []).map((item) => ({
                 id: item.id,
                 term: item.semester ? `TERM ${item.semester}` : "TERM -",
-                date: (item.date ?? item.examDate ?? "").split("T")[0] ?? "",
+                date: (item.examDate ? item.examDate.split("T")[0] : ""),
                 age: String(item.age ?? ""),
                 height: String(item.heightCm ?? ""),
                 ibw: String(item.ibwKg ?? ""),

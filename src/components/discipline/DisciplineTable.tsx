@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { DisciplineRow as HookRow } from "@/hooks/useDisciplineRecords";
+import { DisciplineRow } from "@/types/dicp-records";
+
 
 interface Props {
     rows: HookRow[] | undefined;

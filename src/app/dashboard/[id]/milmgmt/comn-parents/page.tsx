@@ -56,11 +56,11 @@ export default function ParentCommnPage() {
         const payloads: ParentCommPayload[] = data.records.map((r) => ({
             semester: activeTab + 1,
             mode: "LETTER",
-            refNo: r.letterNo ?? null,
-            date: r.date ?? null,
-            subject: r.teleCorres ?? null,
-            brief: r.briefContents ?? null,
-            platoonCommanderName: r.sigPICdr ?? null,
+            refNo: r.letterNo ?? "",
+            date: r.date ?? "",
+            subject: r.teleCorres ?? "",
+            brief: r.briefContents ?? "",
+            platoonCommanderName: r.sigPICdr ?? "",
         }));
 
         await save(activeTab + 1, payloads);
@@ -191,11 +191,11 @@ export default function ParentCommnPage() {
                                             const payloads: ParentCommPayload[] = formData.records.map((r) => ({
                                                 semester: activeTab + 1,
                                                 mode: "LETTER",
-                                                refNo: r.letterNo ?? null,
-                                                date: r.date ?? null,
-                                                subject: r.teleCorres ?? null,
-                                                brief: r.briefContents ?? null,
-                                                platoonCommanderName: r.sigPICdr ?? null,
+                                                refNo: r.letterNo ?? "",
+                                                date: r.date ?? "",
+                                                subject: r.teleCorres ?? "",
+                                                brief: r.briefContents ?? "",
+                                                platoonCommanderName: r.sigPICdr ?? "",
                                             }));
                                             await save(activeTab + 1, payloads);
                                         }}
