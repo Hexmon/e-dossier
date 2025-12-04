@@ -451,6 +451,20 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: FileBadge,
     to: (id: string) => `/dashboard/${id}/milmgmt/credit-excellence`,
     color: "bg-violet-600"
+  },
+  {
+    title: "Semester Record",
+    description: "Manage cadet semester records",
+    icon: FileText,
+    to: (id: string) => `/dashboard/${id}/milmgmt/semester-record`,
+    color: "bg-green-700"
+  },
+  {
+    title: "Final Performance",
+    description: "Manage cadet final performance records",
+    icon: Medal,
+    to: (id: string) => `/dashboard/${id}/milmgmt/final-performance`,
+    color: "bg-yellow-700"
   }
 
 ];
@@ -1252,6 +1266,22 @@ export const dossierTabs = [
     value: "olq-assessment",
     title: "OLQ Assessment",
     icon: FileText,
+  },
+  {
+    value: "camps",
+    title: "Camps",
+    icon: Tent,
+
+  },
+  {
+    value: "semester-record",
+    title: "Semester Record",
+    icon: Book,
+  },
+  {
+    value: "final-performance",
+    title: "Final Performance",
+    icon: Medal,
   },
 ];
 
