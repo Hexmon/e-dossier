@@ -22,7 +22,7 @@ export interface ApiResponse<T = any> {
 export interface AutoBioPayload {
     generalSelf: string;
     proficiencySports: string;
-    achievementsNote: string;
+    achievementsNote?: string;
     areasToWork: string;
     additionalInfo: string;
     filledOn: string;

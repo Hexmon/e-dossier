@@ -26,34 +26,36 @@ export default function OLQForm({ register, structure, onSubmit, onClear, showDe
             onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
             className="space-y-6"
         >
-            {Object.entries(structure).map(([title, subtitles]) => (
-                <div key={title} className="border rounded p-4">
-                    <h3 className="font-semibold mb-3">{title}</h3>
+            {Object.entries(structure).map(([title, subtitles]) => {
+                return (
+                    <div key={title} className="border rounded p-4">
+                        <h3 className="font-semibold mb-3">{title}</h3>
 
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            {subtitles.map((s: any) => (
-                                <div key={s.id} className="p-2 rounded bg-gray-50 border">
-                                    {s.subtitle}
-                                </div>
-                            ))}
-                        </div>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                {subtitles.map((s: any) => (
+                                    <div key={s.id} className="p-2 rounded bg-gray-50 border">
+                                        {s.subtitle}
+                                    </div>
+                                ))}
+                            </div>
 
-                        <div className="space-y-3">
-                            {subtitles.map((s: any) => (
-                                <Input
-                                    key={s.id}
-                                    type="number"
-                                    min={0}
-                                    max={s.maxMarks ?? 100}
-                                    placeholder="Marks"
-                                    {...register(s.id)}
-                                />
-                            ))}
+                            <div className="space-y-3">
+                                {subtitles.map((s: any) => (
+                                    <Input
+                                        key={s.id}
+                                        type="number"
+                                        min={0}
+                                        max={s.maxMarks ?? 100}
+                                        placeholder="Marks"
+                                        {...register(s.id)}
+                                    />
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
-            ))}
+                )
+            })}
 
             <div className="flex justify-center gap-4">
                 <Button type="submit" className="w-40">Submit</Button>

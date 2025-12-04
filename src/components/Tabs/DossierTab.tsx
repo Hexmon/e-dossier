@@ -21,6 +21,7 @@ interface DossierTabsProps {
   children: React.ReactNode;
   extraTabs?: React.ReactNode;
   nestedTabs?: React.ReactNode;
+  ocId: string;
 }
 
 export default function DossierTab({
@@ -29,6 +30,7 @@ export default function DossierTab({
   children,
   extraTabs,
   nestedTabs,
+  ocId,
 }: DossierTabsProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const pathname = usePathname();
@@ -70,18 +72,22 @@ export default function DossierTab({
 
               {isMilTrgTab && extraTabs && dropdownOpen && (
                 <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-96 rounded-md shadow-lg bg-white border max-h-64 overflow-y-auto">
-                  {militaryTrainingCards.map((card) => (
-                    <Link
-                      key={card.to}
-                      href={card.to}
-                      className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 w-full"
-                    >
-                      <card.icon className={`h-4 w-4 ${card.color}`} />
-                      <span>{card.title}</span>
-                    </Link>
-                  ))}
+                  {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                    const href = to(ocId);
+                    return (
+                      <Link
+                        key={title}
+                        href={href}
+                        className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 w-full"
+                      >
+                        <Icon className={`h-4 w-4 ${color}`} />
+                        <span>{title}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
+
             </>
           );
 

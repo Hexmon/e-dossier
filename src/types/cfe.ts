@@ -1,4 +1,5 @@
 export type cfeRow = {
+    id?: string;
     serialNo: string;
     cat: string;
     mks: string;

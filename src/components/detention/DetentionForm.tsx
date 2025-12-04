@@ -8,7 +8,7 @@ import {
     UseFieldArrayRemove,
     UseFormRegister,
 } from "react-hook-form";
-import {  DetentionFormValues, DetentionRow } from "@/types/detention";
+import { DetentionFormValues, DetentionRow } from "@/types/detention";
 
 interface Props {
     register: UseFormRegister<DetentionFormValues>;
@@ -22,12 +22,15 @@ interface Props {
 
     editingRowId: string | null;
     editingValues: Partial<DetentionRow> | null;
-    setEditingField: (field: keyof DetentionRow, value: any) => void;
+    setEditingField: <K extends keyof DetentionRow>(
+        field: K,
+        value: DetentionRow[K]
+    ) => void;
     saveInlineEdit: (i: number) => void;
     cancelInlineEdit: () => void;
 
-    onSubmit: any;
-    onReset: any;
+    onSubmit: (e?: React.BaseSyntheticEvent) => void;
+    onReset: () => void;
 }
 
 export default function DetentionForm({
@@ -70,10 +73,11 @@ export default function DetentionForm({
 
                         <tbody>
                             {savedRows.map((row, i) => {
+                                const { id } = row;
                                 const isEditing = editingRowId === row.id;
 
                                 return (
-                                    <tr key={row.id}>
+                                    <tr key={id}>
                                         <td className="p-2 border text-center">{i + 1}</td>
 
                                         <td className="p-2 border">
@@ -157,26 +161,28 @@ export default function DetentionForm({
                         </tr>
                     </thead>
                     <tbody>
-                        {fields.map((field, i) => (
-                            <tr key={field.id}>
-                                <td className="p-2 border">{i + 1}</td>
-                                <td className="p-2 border">
-                                    <Input {...register(`detentionRows.${i}.reason`)} />
-                                </td>
-                                <td className="p-2 border">
-                                    <Input type="date" {...register(`detentionRows.${i}.dateFrom`)} />
-                                </td>
-                                <td className="p-2 border">
-                                    <Input type="date" {...register(`detentionRows.${i}.dateTo`)} />
-                                </td>
-                                <td className="p-2 border">
-                                    <Input {...register(`detentionRows.${i}.remark`)} />
-                                </td>
-                                <td className="p-2 border text-center">
-                                    <Button variant="destructive" onClick={() => remove(i)}>Remove</Button>
-                                </td>
-                            </tr>
-                        ))}
+                        {fields.map((field, i) => {
+                            return (
+                                <tr key={field.id}>
+                                    <td className="p-2 border">{i + 1}</td>
+                                    <td className="p-2 border">
+                                        <Input {...register(`detentionRows.${i}.reason`)} />
+                                    </td>
+                                    <td className="p-2 border">
+                                        <Input type="date" {...register(`detentionRows.${i}.dateFrom`)} />
+                                    </td>
+                                    <td className="p-2 border">
+                                        <Input type="date" {...register(`detentionRows.${i}.dateTo`)} />
+                                    </td>
+                                    <td className="p-2 border">
+                                        <Input {...register(`detentionRows.${i}.remark`)} />
+                                    </td>
+                                    <td className="p-2 border text-center">
+                                        <Button variant="destructive" onClick={() => remove(i)}>Remove</Button>
+                                    </td>
+                                </tr>
+                            )
+                        })}
                     </tbody>
                 </table>
 

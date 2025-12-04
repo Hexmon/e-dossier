@@ -3,6 +3,7 @@ import { api } from "../apiClient";
 import { endpoints } from "@/constants/endpoints";
 
 export interface AchievementRecords {
+    id?: string;
     event: string;
     year: number;
     level: string;

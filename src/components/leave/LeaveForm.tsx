@@ -21,12 +21,12 @@ interface Props {
     onDeleteSaved: (i: number) => void;
     editingRowId: string | null;
     editingValues: Partial<LeaveRow> | null;
-    setEditingField: (field: keyof LeaveRow, value: any) => void;
+    setEditingField: <K extends keyof LeaveRow>(field: K, value: LeaveRow[K]) => void;
     saveInlineEdit: (index: number) => void;
     cancelInlineEdit: () => void;
 
-    onSubmit?: (e?: any) => void;
-    onReset?: () => void;
+    onSubmit: (e?: React.BaseSyntheticEvent) => void;
+    onReset: () => void;
 }
 
 export default function LeaveForm({
@@ -70,10 +70,11 @@ export default function LeaveForm({
 
                         <tbody>
                             {savedRows.map((row, i) => {
-                                const isEditing = editingRowId === row.id;
+                                const { id } = row;
+                                const isEditing = editingRowId === id;
 
                                 return (
-                                    <tr key={row.id}>
+                                    <tr key={id}>
                                         <td className="p-2 border text-center">
                                             <Input
                                                 value={String(i + 1)}
@@ -195,44 +196,47 @@ export default function LeaveForm({
                         </thead>
 
                         <tbody>
-                            {fields.map((field, i) => (
-                                <tr key={field.id}>
-                                    <td className="p-2 border text-center">
-                                        <Input
-                                            value={String(i + 1)}
-                                            disabled
-                                            className="bg-gray-100 text-center"
-                                        />
-                                    </td>
+                            {fields.map((field, i) => {
+                                const { id } = field;
+                                return (
+                                    <tr key={id}>
+                                        <td className="p-2 border text-center">
+                                            <Input
+                                                value={String(i + 1)}
+                                                disabled
+                                                className="bg-gray-100 text-center"
+                                            />
+                                        </td>
 
-                                    <td className="p-2 border">
-                                        <Input {...register(`leaveRows.${i}.reason`)} />
-                                    </td>
+                                        <td className="p-2 border">
+                                            <Input {...register(`leaveRows.${i}.reason`)} />
+                                        </td>
 
-                                    <td className="p-2 border">
-                                        <Input type="date" {...register(`leaveRows.${i}.dateFrom`)} />
-                                    </td>
+                                        <td className="p-2 border">
+                                            <Input type="date" {...register(`leaveRows.${i}.dateFrom`)} />
+                                        </td>
 
-                                    <td className="p-2 border">
-                                        <Input type="date" {...register(`leaveRows.${i}.dateTo`)} />
-                                    </td>
+                                        <td className="p-2 border">
+                                            <Input type="date" {...register(`leaveRows.${i}.dateTo`)} />
+                                        </td>
 
-                                    <td className="p-2 border">
-                                        <Input {...register(`leaveRows.${i}.remark`)} />
-                                    </td>
+                                        <td className="p-2 border">
+                                            <Input {...register(`leaveRows.${i}.remark`)} />
+                                        </td>
 
-                                    <td className="p-2 border text-center">
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="destructive"
-                                            onClick={() => remove(i)}
-                                        >
-                                            Remove
-                                        </Button>
-                                    </td>
-                                </tr>
-                            ))}
+                                        <td className="p-2 border text-center">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="destructive"
+                                                onClick={() => remove(i)}
+                                            >
+                                                Remove
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </table>
                 </div>

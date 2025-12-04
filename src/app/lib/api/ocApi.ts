@@ -332,3 +332,17 @@ export async function bulkValidateOCs(
     { baseURL }
   );
 }
+
+/** Fetch OC by ID  */
+export async function fetchOCById(ocId: string): Promise<OCListRow | null> {
+  try {
+    const res = await api.get<{ oc: OCListRow }>(
+      endpoints.oc.getById(ocId),
+      { baseURL }
+    );
+    return res.oc;
+  } catch (err) {
+    console.error("Failed to fetch OC by id:", err);
+    return null;
+  }
+}

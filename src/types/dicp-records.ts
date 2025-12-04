@@ -8,6 +8,9 @@ export interface DisciplineRow {
     byWhomAwarded: string;
     negativePts: string;
     cumulative: string;
+    awardedOn: string;
+    awardedBy: string;
+    pointsDelta: number;
 }
 
 export interface DisciplineForm {
