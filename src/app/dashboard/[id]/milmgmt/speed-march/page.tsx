@@ -1,188 +1,233 @@
+// app/(dashboard)/[id]/speed-march-runback/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { TermData, Row } from "@/types/speedMarchRunback";
-import { tablePrefill, termColumns, terms } from "@/constants/app.constants";
-import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import DossierTab from "@/components/Tabs/DossierTab";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Settings, Shield } from "lucide-react";
+import { Shield, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { createSpeedMarch, listSpeedMarch, updateSpeedMarch } from "@/app/lib/api/speedMarchApi";
+
+import { tablePrefill, terms as termsConst, termColumns } from "@/constants/app.constants";
+import { useOcDetails } from "@/hooks/useOcDetails";
+import { Button } from "@/components/ui/button";
+import { useForm as useHookForm } from "react-hook-form";
+import { useSpeedMarch } from "@/hooks/useSpeedMarch";
+import SpeedMarchForm from "@/components/speedMarch/SpeedMarchForm";
+import Link from "next/link";
+
+/**
+ * Page-level types
+ */
+type Row = {
+    id?: string;
+    test: string;
+    timing10Label?: string;
+    distance10?: string;
+    timing20Label?: string;
+    distance20?: string;
+    timing30Label?: string;
+    distance30?: string;
+    marks?: string;
+    remark?: string;
+};
+
+type TermData = {
+    records: Row[];
+};
 
 export default function SpeedMarchPage() {
-    const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
 
-    const [isSaving, setIsSaving] = useState(false);
-    const [isEditingAll, setIsEditingAll] = useState(false);
+    // fetch cadet via hook using route param
+    const { cadet } = useOcDetails(ocId);
+    const {
+        name = "",
+        courseName = "",
+        ocNumber = "",
+        ocId: cadetOcId = ocId,
+        course = "",
+    } = cadet ?? {};
+    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course }), [name, courseName, ocNumber, cadetOcId, course]);
 
+    const terms = useMemo(() => termsConst, []);
     const [activeTab, setActiveTab] = useState<number>(0);
-    const [savedData, setSavedData] = useState<TermData[]>(
-        terms.map(() => ({ records: [] }))
-    );
+    const semesterBase = 4; // IV -> 4
+    const semesterNumber = activeTab + semesterBase;
 
-    const { register, handleSubmit, reset } = useForm<TermData>({
-        defaultValues: { records: tablePrefill },
-    });
+    // hook for server records
+    const { records, loading, loadAll, saveRecords, updateRecord, deleteRecord } = useSpeedMarch(ocId);
 
+    // editing state toggles & saving
+    const [isEditingAll, setIsEditingAll] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
+    // shared form methods (optional to pass to form)
+    const formMethods = useHookForm<TermData>({ defaultValues: { records: tablePrefill } });
 
-    const fetchSaved = async (ocId?: string | null) => {
-        if (!ocId) return;
-        try {
-            const res = await listSpeedMarch(ocId);
-            const items = res.items || [];
-
-            const newSaved = terms.map((_, idx) => {
-                const sem = idx + 4;
-                const rows = tablePrefill.map((pref) => {                 
-                    const {id,test,timing10Label,timing20Label,timing30Label,distance10,distance20,distance30,marks,remark} = pref;                 
-                    const found = (items as any[]).find((it) => Number(it.semester) === sem && it.test === test);                 
-                    return {
-                        id: found?.id ?? id,                 
-                        test: test,
-                        timing10Label: timing10Label,
-                        distance10: sem === 4 ? (found?.timings ?? "") : distance10,                 
-                        timing20Label: timing20Label,
-                        distance20: sem === 5 ? (found?.timings ?? "") : distance20,                 
-                        timing30Label: timing30Label,
-                        distance30: sem === 6 ? (found?.timings ?? "") : distance30,                 
-                        marks: String(found?.marks ?? marks),                 
-                        remark: found?.remark ?? remark ?? "",                 
-                    };                 
-                });                 
-                return { records: rows } as TermData;
-            });
-
-            setSavedData(newSaved);
-            const current = newSaved[activeTab];
-            reset({ records: (current?.records && current.records.length) ? current.records : tablePrefill });
-
-        } catch (err) {
-            toast.error("Failed to load speed march records");
-        }
-    };
-
+    // load snapshot when ocId changes
     useEffect(() => {
-        if (!selectedCadet?.ocId) return;
-        fetchSaved(selectedCadet.ocId);
-    }, [selectedCadet?.ocId, activeTab]);
+        if (!ocId) return;
+        void loadAll();
+    }, [ocId, loadAll]);
 
-    const onSubmit = async (formData: TermData) => {
-        if (!selectedCadet?.ocId) {
-            toast.error("No cadet selected");
-            return;
-        }
-        const ocId = selectedCadet.ocId;
-        const semester = activeTab + 4;
-        setIsSaving(true);
-        try {
-            const existing = savedData[activeTab]?.records || [];
-            for (let i = 0; i < (formData.records || []).length; i++) {
-                const r = formData.records[i] as any;
-                const timingKey = termColumns[activeTab].distance; // measured value
-                const timingsRaw = r[timingKey];
-                const timings = timingsRaw !== undefined && timingsRaw !== null ? String(timingsRaw).trim() : "";
-                const marks = Number(tablePrefill[i].marks);
-                const remark = r.remark ? String(r.remark).trim() : undefined;
+    // compute merged prefills for the semester (prefill + latest saved)
+    const mergedForSemester = useMemo(() => {
+        const savedForSem = (records ?? []).filter((r) => Number(r.semester ?? 0) === Number(semesterNumber));
+        return tablePrefill.map((p) => {
+            const {
+                id: prefId,
+                test: prefTest,
+                timing10Label: prefT10 = "",
+                distance10: prefD10 = "",
+                timing20Label: prefT20 = "",
+                distance20: prefD20 = "",
+                timing30Label: prefT30 = "",
+                distance30: prefD30 = "",
+                marks: prefMarks = "",
+                remark: prefRemark = "",
+            } = p;
+            const latest = [...savedForSem].slice().reverse().find((s) => (s.test ?? "") === (prefTest ?? ""));
+            const id = latest?.id ?? prefId;
+            const test = prefTest ?? "-";
+            const timing10Label = prefT10 ?? "";
+            const distance10 = latest && Number(latest.semester) === semesterNumber ? (latest.timings ?? "") : prefD10 ?? "";
+            const timing20Label = prefT20 ?? "";
+            const distance20 = latest && Number(latest.semester) === semesterNumber ? (latest.timings ?? "") : prefD20 ?? "";
+            const timing30Label = prefT30 ?? "";
+            const distance30 = latest && Number(latest.semester) === semesterNumber ? (latest.timings ?? "") : prefD30 ?? "";
+            const marks = String(latest?.marks ?? prefMarks ?? "");
+            const remark = String(latest?.remark ?? prefRemark ?? "");
+            return {
+                id,
+                test,
+                timing10Label,
+                distance10,
+                timing20Label,
+                distance20,
+                timing30Label,
+                distance30,
+                marks,
+                remark,
+            } as Row;
+        });
+    }, [records, semesterNumber]);
 
-                const matched = existing.find((ex) => ex.test === tablePrefill[i].test && ex.id);
-                if (matched && matched.id) {
-                    const payload: any = {};
-                    if (timings !== "") payload.timings = timings;
-                    if (!Number.isNaN(marks)) payload.marks = marks;
-                    if (remark) payload.remark = remark;
-
-                    if (Object.keys(payload).length > 0) {
-                        await updateSpeedMarch(ocId, matched.id, payload);
-                    }
-                } else {
-                    if (timings === "") continue;
-                    await createSpeedMarch(ocId, { semester, test: tablePrefill[i].test, timings, marks, remark });
-                }
+    // Save handler called by form
+    const handleSaveTerm = useCallback(
+        async (formData: TermData) => {
+            if (!ocId) {
+                toast.error("No cadet selected");
+                return;
             }
 
-            await fetchSaved(ocId);
-            setIsEditingAll(false);
-            toast.success("Speed march saved");
-        } catch (err) {
-            toast.error("Failed to save speed march. Try again.");
-        } finally {
-            setIsSaving(false);
-        }
-    };
+            setIsSaving(true);
+            try {
+                const payloads = formData.records.slice(0, tablePrefill.length).map((r, idx) => {
+                    const { id = undefined, test = "" } = r;
 
+                    const distanceField = termColumns[activeTab]?.distance ?? "distance10";
+                    const timingsRaw = (r as any)[distanceField];
 
+                    const timings = timingsRaw !== undefined && timingsRaw !== null
+                        ? String(timingsRaw).trim()
+                        : "";
 
-    const handleTabChange = (idx: number) => {
-        setActiveTab(idx);
-        reset({ records: tablePrefill });
+                    if (timings === "") {
+                        return null; // prevents backend error
+                    }
+
+                    const marks = Number(String(r.marks ?? tablePrefill[idx].marks ?? "0"));
+                    const remark = r.remark ? String(r.remark).trim() : undefined;
+
+                    return {
+                        id,
+                        semester: semesterNumber,
+                        test,
+                        timings,
+                        marks,
+                        remark,
+                    };
+                }).filter(Boolean);
+
+                const cleanedPayloads = payloads.filter((p): p is NonNullable<typeof p> => p !== null);
+
+                const ok = await saveRecords(
+                    cleanedPayloads.map((p) => ({
+                        id: p.id,
+                        semester: p.semester,
+                        test: p.test,
+                        timings: p.timings,
+                        marks: p.marks,
+                        remark: p.remark,
+                    }))
+                );
+
+                if (!ok) throw new Error("save failed");
+
+                // refresh server snapshot
+                await loadAll();
+                setIsEditingAll(false);
+                toast.success("Speed march saved");
+            } catch (err) {
+                console.error("handleSaveTerm", err);
+                toast.error("Failed to save speed march");
+            } finally {
+                setIsSaving(false);
+            }
+        },
+        [ocId, activeTab, semesterNumber, saveRecords, loadAll]
+    );
+
+    // Handle tab change
+    const handleTabChange = (index: number) => {
+        setActiveTab(index);
+        setIsEditingAll(false);
+        void loadAll();
     };
 
     return (
-        <DashboardLayout
-            title="Assessment: Speed March / Run Back"
-            description="Timing standards and marks for Speed March and Run Back."
-        >
+        <DashboardLayout title="Assessment: Speed March / Run Back" description="Timing standards and marks for Speed March and Run Back.">
             <main className="p-6">
+                <BreadcrumbNav paths={[{ label: "Dashboard", href: "/dashboard" }, { label: "Dossier", href: `/dashboard/${ocId}/milmgmt` }, { label: "Speed March-Run Back" }]} />
 
-                {/* Breadcrumb */}
-                <BreadcrumbNav
-                    paths={[
-                        { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
-                        { label: "Speed March-Run Back" },
-                    ]}
-                />
-
-                {/* Sticky cadet table */}
                 {selectedCadet && (
                     <div className="hidden md:flex sticky top-16 z-40 mb-6">
                         <SelectedCadetTable selectedCadet={selectedCadet} />
                     </div>
                 )}
 
-                <DossierTab
-                    tabs={dossierTabs}
-                    defaultValue="speed-march"
-                    extraTabs={
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <TabsTrigger value="dossier-insp" className="flex items-center gap-2" >
-                                    <Shield className="h-4 w-4" />
-                                    Mil-Trg
-                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                </TabsTrigger>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                {militaryTrainingCards.map((card) =>{
-                                    const { to, color, title } = card;
-                                    if (!to) return null;
-                                    return (
-                                    <DropdownMenuItem key={to} asChild>
-                                        <a href={to} className="flex items-center gap-2">
-                                            <card.icon className={`h-4 w-4 ${color}`} />
-                                            <span>{title}</span>
-                                        </a>
+                <DossierTab tabs={dossierTabs} defaultValue="speed-march" ocId={ocId} extraTabs={
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="flex items-center gap-2">
+                                <Shield className="h-4 w-4" /> Mil-Trg <ChevronDown className="h-4 w-4" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                            {militaryTrainingCards.map((card) => {
+                                const link = card.to(ocId);
+                                return (
+                                    <DropdownMenuItem key={card.title} asChild>
+                                        <Link href={link} className="flex items-center gap-2">
+                                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                                            {card.title}
+                                        </Link>
                                     </DropdownMenuItem>
-                                    );
-                                })}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    }
-                >
+                                );
+                            })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                }>
                     <TabsContent value="speed-march">
                         <Card className="max-w-7xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
                             <CardHeader>
@@ -192,111 +237,43 @@ export default function SpeedMarchPage() {
                             </CardHeader>
 
                             <CardContent>
-
-                                {/* Tabs */}
                                 <div className="flex justify-center mb-6 space-x-2">
-                                    {terms.map((term, idx) => (
-                                        <button
-                                            key={term}
-                                            onClick={() => handleTabChange(idx)}
-                                            className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
-                                                ? "bg-blue-600 text-white"
-                                                : "bg-gray-200 text-gray-700"
-                                                }`}
-                                        >
-                                            {term}
-                                        </button>
-                                    ))}
+                                    {terms.map((term, idx) => {
+                                        return (
+                                            <button
+                                                key={term}
+                                                type="button"
+                                                onClick={() => handleTabChange(idx)}
+                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                            >
+                                                {term}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
-                                {/* Editable Form */}
-                                <form onSubmit={handleSubmit(onSubmit)}>
-                                    <div className="overflow-x-auto border rounded-lg shadow">
-                                        <table className="w-full border text-sm">
-                                            <thead className="bg-gray-100">
-                                                <tr>
-                                                    <th className="p-2 border">Test</th>
-                                                    <th className="p-2 border">Timings</th>
-                                                    <th className="p-2 border">
-                                                        {activeTab === 0 ? "10 KM" : activeTab === 1 ? "20 KM" : "30 KM"}
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {tablePrefill.map((row, i) => {
-                                                    const { test, id } = row;
-                                                    return (
-                                                        <tr key={id || `${test}-${i}`}>
-                                                            <td className="p-2 border">{test}</td>
-
-                                                            <td className="p-2 border">
-                                                                <Input
-                                                                    {...register(`records.${i}.${termColumns[activeTab].timing}`)}
-                                                                    defaultValue={row[termColumns[activeTab].timing]}
-                                                                    disabled={!isEditingAll}
-                                                                />
-                                                            </td>
-
-                                                            <td className="p-2 border">
-                                                                <Input
-                                                                    {...register(`records.${i}.${termColumns[activeTab].distance}`)}
-                                                                    defaultValue={row[termColumns[activeTab].distance]}
-                                                                    disabled={!isEditingAll}
-                                                                />
-                                                            </td>
-                                                        </tr>
-                                                    )
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <div>
-                                        <div className="flex justify-center gap-3 mt-6">
-                                            {isEditingAll ? (
-                                                <>
-                                                    <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
-                                                        {isSaving ? "Saving..." : "Save"}
-                                                    </Button>
-
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={async () => {
-                                                            if (!selectedCadet?.ocId) return;
-                                                            await fetchSaved(selectedCadet.ocId);
-                                                            setIsEditingAll(false);
-                                                        }}
-                                                        disabled={isSaving}
-                                                    >
-                                                        Cancel Edit
-                                                    </Button>
-
-                                                    <Button type="button" variant="outline" onClick={() => reset({ records: tablePrefill })} disabled={isSaving}>
-                                                        Reset
-                                                    </Button>
-                                                </>
-                                            ) : null}
-                                        </div>
-                                    </div>
-                                </form>
+                                <SpeedMarchForm
+                                    semesterNumber={semesterNumber}
+                                    inputPrefill={mergedForSemester}
+                                    savedRecords={records}
+                                    onSave={handleSaveTerm}
+                                    isEditing={isEditingAll}
+                                    onCancelEdit={() => setIsEditingAll(false)}
+                                    formMethods={formMethods}
+                                />
 
                                 <div className="flex justify-center mb-4">
-                                    {!isEditingAll && (
-                                        <Button
-                                            type="button"
-                                            onClick={() => setIsEditingAll(true)}
-                                            disabled={isSaving}
-                                        >
+                                    {!isEditingAll ? (
+                                        <Button type="button" onClick={() => setIsEditingAll(true)} disabled={isSaving}>
                                             Edit Table
                                         </Button>
-                                    )}
+                                    ) : null}
                                 </div>
                             </CardContent>
                         </Card>
                     </TabsContent>
                 </DossierTab>
             </main>
-        </DashboardLayout >
+        </DashboardLayout>
     );
 }

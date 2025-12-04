@@ -22,13 +22,35 @@ import { semesters } from "@/constants/app.constants";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, ChevronDown } from "lucide-react";
+import { Shield, ChevronDown, Link } from "lucide-react";
 
 import { updateOcHikeRecord } from "@/app/lib/api/hikeApi";
 import { toast } from "sonner";
+import { useOcDetails } from "@/hooks/useOcDetails";
+import { useParams } from "next/navigation";
 
 export default function HikePage() {
-    const selectedCadet = useSelector((s: RootState) => s.cadet.selectedCadet);
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // Load cadet data via hook (no redux)
+    const { cadet } = useOcDetails(ocId);
+
+    const {
+        name = "",
+        courseName = "",
+        ocNumber = "",
+        ocId: cadetOcId = ocId,
+        course = "",
+    } = cadet ?? {};
+
+    const selectedCadet = {
+        name,
+        courseName,
+        ocNumber,
+        ocId: cadetOcId,
+        course,
+    };
 
     const methods = useForm<HikeFormValues>({
         defaultValues: { hikeRows: defaultHikeRows },
@@ -40,7 +62,7 @@ export default function HikePage() {
                 <BreadcrumbNav
                     paths={[
                         { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Dossier", href: `/dashboard/${id}/milmgmt` },
                         { label: "Hike Records" },
                     ]}
                 />
@@ -52,7 +74,7 @@ export default function HikePage() {
                 )}
 
                 <FormProvider {...methods}>
-                    <InnerHikePage selectedCadet={selectedCadet} />
+                    <InnerHikePage selectedCadet={selectedCadet} ocId={ocId} />
                 </FormProvider>
             </main>
         </DashboardLayout>
@@ -60,7 +82,7 @@ export default function HikePage() {
 }
 
 /* Inner component */
-function InnerHikePage({ selectedCadet }: { selectedCadet: any }) {
+function InnerHikePage({ selectedCadet, ocId }: { selectedCadet: RootState['cadet']['selectedCadet']; ocId: string; }) {
     const { control, register, setValue, handleSubmit } = useFormContext<HikeFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "hikeRows" });
 
@@ -71,7 +93,7 @@ function InnerHikePage({ selectedCadet }: { selectedCadet: any }) {
 
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [editingValues, setEditingValues] = useState<Partial<HikeRow> | null>(null);
-    
+
 
     const [refreshFlag, setRefreshFlag] = useState(0);
 
@@ -105,7 +127,7 @@ function InnerHikePage({ selectedCadet }: { selectedCadet: any }) {
         if (!editingValues || !editingValues.id) return;
 
         try {
-            await updateOcHikeRecord(selectedCadet.ocId, editingValues.id, {
+            await updateOcHikeRecord(ocId, editingValues.id, {
                 semester: editingValues.semester,
                 reason: editingValues.reason,
                 type: "HIKE",
@@ -143,7 +165,8 @@ function InnerHikePage({ selectedCadet }: { selectedCadet: any }) {
     return (
         <DossierTab
             tabs={dossierTabs}
-            defaultValue="hike-record"
+            defaultValue="hikes"
+            ocId={ocId}
             extraTabs={
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -154,19 +177,22 @@ function InnerHikePage({ selectedCadet }: { selectedCadet: any }) {
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                        {militaryTrainingCards.map((card) => (
-                            <DropdownMenuItem key={card.to} asChild>
-                                <a href={card.to} className="flex items-center gap-2">
-                                    <card.icon className={`h-4 w-4 ${card.color}`} />
-                                    {card.title}
-                                </a>
-                            </DropdownMenuItem>
-                        ))}
+                        {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                            const link = to(ocId);
+                            return (
+                                <DropdownMenuItem key={title} asChild>
+                                    <Link href={link} className="flex items-center gap-2">
+                                        <Icon className={`h-4 w-4 ${color}`} />
+                                        {title}
+                                    </Link>
+                                </DropdownMenuItem>
+                            );
+                        })}
                     </DropdownMenuContent>
                 </DropdownMenu>
             }
         >
-            <TabsContent value="hike-record" className="space-y-6">
+            <TabsContent value="hikes" className="space-y-6">
                 <Card className="max-w-6xl mx-auto p-6 shadow bg-white">
                     <CardHeader>
                         <CardTitle className="text-lg font-semibold text-center">RECORD OF HIKE : ALL TERMS</CardTitle>

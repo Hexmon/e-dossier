@@ -1,282 +1,155 @@
+// app/(dashboard)/[id]/obstacle-trg/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
+import { useForm } from "react-hook-form";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Row, TermData } from "@/types/obstacleTrg";
-import { obstaclePrefill, terms } from "@/constants/app.constants";
-import { TabsContent } from "@radix-ui/react-tabs";
 import DossierTab from "@/components/Tabs/DossierTab";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Settings, Shield } from "lucide-react";
-import { TabsTrigger } from "@/components/ui/tabs";
+import { Shield, ChevronDown, Link } from "lucide-react";
 import { toast } from "sonner";
-import { createObstacleTraining, listObstacleTraining, updateObstacleTraining } from "@/app/lib/api/obstacleTrainingApi";
 
+import ObstacleTrainingForm from "@/components/obstacle/ObstacleTrainingForm";
+import { obstaclePrefill, terms } from "@/constants/app.constants";
+import { useOcDetails } from "@/hooks/useOcDetails";
+import { useObstacleTraining } from "@/hooks/useObstacleTraining";
+import { Button } from "@/components/ui/button";
+import { Row as ObstacleRow, TermData } from "@/types/obstacleTrg";
 
+type Row = { id?: string; obstacle: string; obtained?: string; remark?: string };
 
 export default function ObstacleTrgPage() {
-    const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
 
-    const [editingId, setEditingId] = useState<string | null | undefined>(null);
-    const [editForm, setEditForm] = useState<Row | null>(null);
-
+    // fetch cadet via hook (route param)
+    const { cadet } = useOcDetails(ocId);
+    const {
+        name = "",
+        courseName = "",
+        ocNumber = "",
+        ocId: cadetOcId = ocId,
+        course = "",
+    } = cadet ?? {};
+    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course }), [name, courseName, ocNumber, cadetOcId, course]);
 
     const [activeTab, setActiveTab] = useState<number>(0);
-    const [savedData, setSavedData] = useState<TermData[]>(
-        terms.map(() => ({ records: [] }))
-    );
-    const [isSaving, setIsSaving] = useState(false);
+    const semesterApiBase = 4; // IV -> 4
+    const semesterNumber = activeTab + semesterApiBase;
+
+    // hook for server records
+    const { records, loading, loadAll, saveRecords, updateRecord, deleteRecord } = useObstacleTraining(ocId);
+
+    // local state for editing toggle
     const [isEditingAll, setIsEditingAll] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
-    const { register, handleSubmit, reset, control } = useForm<TermData>({
-        defaultValues: { records: obstaclePrefill },
-    });
-
-    const watchedRecords = useWatch({ control, name: "records" });
-    const totalMarks = watchedRecords?.reduce(
-        (sum, r) => sum + (parseFloat(r.obtained) || 0),
-        0
-    );
-
-
-
-
-    const fetchSaved = async (ocId?: string | null) => {
+    // load snapshot when ocId changes
+    useEffect(() => {
         if (!ocId) return;
-        try {
-            const res = await listObstacleTraining(ocId);
-            const items = res.items || [];
+        loadAll();
+    }, [ocId, loadAll]);
 
-            const newSaved = terms.map((_, idx) => {
-                const sem = idx + 4; // IV -> 4, V -> 5, VI -> 6
-                const rows = items
-                    .filter((it) => Number(it.semester) === sem)
-                    .map((it) => {
-                        const { id, obstacle, marksObtained, remark } = it;
-                        return {
-                            id: id,
-                            obstacle: obstacle,
-                            obtained: String(marksObtained ?? ""),
-                            remark: remark ?? "",
-                        };
-                    });
-                return { records: rows } as TermData;
+    // form methods used by form component if parent wants shared control
+    const formMethods = useForm<TermData>({ defaultValues: { records: obstaclePrefill } });
+
+    const mergedForSemester = useMemo(() => {
+        const savedForSem = (records ?? []).filter((r) => Number(r.semester ?? 0) === Number(semesterNumber));
+        return obstaclePrefill.map((p) => {
+            const { obstacle: prefObstacle, obtained: prefObtained = "", remark: prefRemark = "", id: prefId } = p as Row;
+            const latest = [...savedForSem].slice().reverse().find((s) => (s.obstacle ?? "") === (prefObstacle ?? ""));
+            const obstacle = prefObstacle ?? "-";
+            const obtained = latest ? String(latest.marksObtained ?? "") : String(prefObtained ?? "");
+            const remark = latest ? String(latest.remark ?? "") : String(prefRemark ?? "");
+            const id = latest ? latest.id : prefId;
+            return { id, obstacle, obtained, remark };
+        });
+    }, [records, semesterNumber]);
+
+    // save handler for whole term (called by form submit)
+    const handleSaveTerm = useCallback(
+        async (formData: TermData) => {
+            if (!ocId) {
+                toast.error("No cadet selected");
+                return;
+            }
+            const payloads = formData.records.slice(0, obstaclePrefill.length).map((r) => {
+                const { id, obstacle = "", obtained = "", remark = "" } = r;
+                return {
+                    id,
+                    semester: semesterNumber,
+                    obstacle: obstacle ?? "",
+                    marksObtained: Number(obtained ?? 0),
+                    remark: remark ?? undefined,
+                };
             });
 
-            setSavedData(newSaved);
-            // For the current term, populate the fixed prefill rows with the latest saved values per obstacle
-            const current = newSaved[activeTab] ?? { records: [] };
-            if (current && current.records.length) {
-                const latestByObstacle = new Map<string, any>();
-                // keep the last occurrence for each obstacle
-                for (const r of current.records) {
-                    if (r && r.obstacle) latestByObstacle.set(r.obstacle, r);
-                }
-
-                const merged = obstaclePrefill.map((p) => {
-                    const { id,obstacle, obtained, remark } = p;
-                    const found = latestByObstacle.get(obstacle);
-                    return found
-                        ? { id: found.id, obstacle: found.obstacle ?? obstacle, obtained: found.obtained ?? obtained, remark: found.remark ?? remark }
-                        : p;
-                });
-
-                reset({ records: merged });
-            } else {
-                reset({ records: obstaclePrefill });
+            setIsSaving(true);
+            try {
+                const ok = await saveRecords(payloads);
+                if (!ok) throw new Error("save failed");
+                setIsEditingAll(false);
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to save obstacle training");
+            } finally {
+                setIsSaving(false);
             }
-        } catch (err) {
-            toast.error("Failed to load obstacle training records");
-        }
-    };
+        },
+        [ocId, saveRecords, semesterNumber]
+    );
 
-    const onSubmit = async (formData: TermData) => {
-        if (!selectedCadet?.ocId) {
-            toast.error("No cadet selected");
-            return;
-        }
-
-        const ocId = selectedCadet.ocId;
-        const semester = activeTab + 4; // terms are IV/V/VI
-
-        const payloads = formData.records.slice(0, obstaclePrefill.length).map((r) => {
-            const { id, obstacle, obtained, remark } = r;
-            return {
-                id: id,
-                semester: semester,
-                obstacle: obstacle,
-                marksObtained: Number(obtained) || 0,
-                remark: remark || undefined,
-            };
-        });
-
-        setIsSaving(true);
-
-        try {
-            for (const p of payloads) {
-                await createObstacleTraining(ocId, p);
-            }
-
-            // Refresh from server to keep client and server in sync
-            await fetchSaved(ocId);
-            setIsEditingAll(false);
-
-            toast.success(`Data saved for ${terms[activeTab]}!`);
-        } catch (err) {
-            toast.error("Failed to save obstacle training. Try again.");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
+    // when switching tab, reload snapshot + reset editing
     const handleTabChange = (index: number) => {
         setActiveTab(index);
-
-        const term = savedData[index] ?? { records: [] };
-        if (term.records && term.records.length) {
-            const { records } = term;
-            const latestByObstacle = new Map<string, any>();
-            for (const r of records) {
-                if (r && r.obstacle) latestByObstacle.set(r.obstacle, r);
-            }
-
-            const merged = obstaclePrefill.map((p) => {
-                const { id, obstacle, obtained, remark } = p;
-                const found = latestByObstacle.get(obstacle);
-                return found
-                    ? { ...p, id: found.id, obtained: found.obtained ?? obtained, remark: found.remark ?? remark }
-                    : p;
-            });
-
-            reset({ records: merged });
-        } else {
-            reset({ records: obstaclePrefill });
-        }
+        setIsEditingAll(false);
+        void loadAll();
     };
-
-    useEffect(() => {
-        // Fetch saved rows when cadet or activeTab changes
-        if (!selectedCadet?.ocId) return;
-        fetchSaved(selectedCadet.ocId);
-    }, [selectedCadet?.ocId, activeTab]);
-
-    const handleEditObstacle = (record: Row) => {
-        const { id } = record;
-        if (!selectedCadet?.ocId) {
-            toast.error("No cadet selected");
-            return;
-        }
-
-        setEditingId(id);
-        setEditForm({ ...record });
-    };
-
-
-    const handleCancelObstacleEdit = () => {
-        setEditingId(null);
-        setEditForm(null);
-    };
-    const handleChangeObstacle = (field: keyof Row, value: any) => {
-        setEditForm(prev => prev ? { ...prev, [field]: value } : prev);
-    };
-
-    const handleSaveObstacle = async () => {
-        const { obtained, remark } = editForm || {};
-        if (!selectedCadet?.ocId || !editingId || !editForm || !obtained || !remark) {
-            toast.error("Invalid operation");
-            return;
-        }
-
-        try {
-            await updateObstacleTraining(selectedCadet.ocId, editingId, {
-                marksObtained: Number(obtained),
-                remark: remark,
-            });
-
-            setSavedData(prev => {
-                const updated = [...prev];
-                const idx = updated[activeTab].records.findIndex(r => r.id === editingId);
-                if (idx >= 0) updated[activeTab].records[idx] = editForm;
-                return updated;
-            });
-
-            toast.success("Record updated");
-            setEditingId(null);
-            setEditForm(null);
-        } catch (err) {
-            toast.error("Failed to update record");
-        }
-    };
-
-
 
     return (
-        <DashboardLayout
-            title="Assessment: Obstacle Training"
-            description="Record of obstacle training performance and remarks."
-        >
+        <DashboardLayout title="Assessment: Obstacle Training" description="Record of obstacle training performance and remarks.">
             <main className="p-6">
-                {/* Breadcrumb */}
-                <BreadcrumbNav
-                    paths={[
-                        { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
-                        { label: "Obstacle Training" },
-                    ]}
-                />
+                <BreadcrumbNav paths={[{ label: "Dashboard", href: "/dashboard" }, { label: "Dossier", href: `/dashboard/${ocId}/milmgmt` }, { label: "Obstacle Training" }]} />
 
-                {/* Selected Cadet */}
                 {selectedCadet && (
                     <div className="hidden md:flex sticky top-16 z-40 mb-6">
                         <SelectedCadetTable selectedCadet={selectedCadet} />
                     </div>
                 )}
-                <DossierTab
-                    tabs={dossierTabs}
-                    defaultValue="obstacle-trg"
-                    extraTabs={
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <TabsTrigger value="dossier-insp" className="flex items-center gap-2" >
-                                    <Shield className="h-4 w-4" />
-                                    Mil-Trg
-                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                </TabsTrigger>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                {militaryTrainingCards.map((card) => {
-                                    const { to,color,title } = card;
-                                    if (!to) return null;
-                                    return (
-                                        <DropdownMenuItem key={to} asChild>
-                                            <a href={to} className="flex items-center gap-2">
-                                                <card.icon className={`h-4 w-4 ${color}`} />
-                                                <span>{title}</span>
-                                            </a>
-                                        </DropdownMenuItem>
-                                    );
-                                })}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    }
-                >
+
+                <DossierTab tabs={dossierTabs} defaultValue="obstacle-trg" ocId={ocId} extraTabs={
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="flex items-center gap-2">
+                                <Shield className="h-4 w-4" /> Mil-Trg <ChevronDown className="h-4 w-4" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                            {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                                const link = to(ocId);
+                                return (
+                                    <DropdownMenuItem key={title} asChild>
+                                        <Link href={link} className="flex items-center gap-2">
+                                            <Icon className={`h-4 w-4 ${color}`} />
+                                            {title}
+                                        </Link>
+                                    </DropdownMenuItem>
+                                );
+                            })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                }>
                     <TabsContent value="obstacle-trg">
                         <Card className="max-w-5xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
                             <CardHeader>
-                                <CardTitle className="text-lg font-semibold text-center text-primary">
-                                    OBSTACLE TRAINING
-                                </CardTitle>
+                                <CardTitle className="text-lg font-semibold text-center text-primary">OBSTACLE TRAINING</CardTitle>
                             </CardHeader>
 
                             <CardContent>
@@ -286,11 +159,9 @@ export default function ObstacleTrgPage() {
                                         return (
                                             <button
                                                 key={term}
+                                                type="button"
                                                 onClick={() => handleTabChange(idx)}
-                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-gray-200 text-gray-700"
-                                                    }`}
+                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
                                             >
                                                 {term}
                                             </button>
@@ -298,107 +169,30 @@ export default function ObstacleTrgPage() {
                                     })}
                                 </div>
 
-                                {/* Form */}
-                                <form onSubmit={handleSubmit(onSubmit)}>
-                                    <div className="overflow-x-auto border rounded-lg shadow">
-                                        <table className="w-full border text-sm">
-                                            <thead className="bg-gray-100 text-left">
-                                                <tr>
-                                                    <th className="p-2 border">No</th>
-                                                    <th className="p-2 border">Obstacle</th>
-                                                    <th className="p-2 border">Marks Obtained</th>
-                                                    <th className="p-2 border">Remarks</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(watchedRecords ?? obstaclePrefill).map((row, i) => {
-                                                    const { id, obstacle } = row;
-                                                    return (
-                                                        <tr key={id || `${obstacle || 'row'}-${i}`}>
-                                                            <td className="p-2 border text-center">{i + 1}</td>
-                                                            <td className="p-2 border">{obstacle}</td>
-                                                            <td className="p-2 border">
-                                                                <Input
-                                                                    {...register(`records.${i}.obtained`)}
-                                                                    type="number"
-                                                                    placeholder="Marks"
-                                                                    disabled={!isEditingAll}
-                                                                />
-                                                            </td>
-                                                            <td className="p-2 border">
-                                                                <Input
-                                                                    {...register(`records.${i}.remark`)}
-                                                                    type="text"
-                                                                    placeholder="Remark"
-                                                                    disabled={!isEditingAll}
-                                                                />
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                                {/* Total row */}
-                                                <tr className="font-semibold bg-gray-50">
-                                                    <td className="p-2 border text-center">{(watchedRecords?.length ?? obstaclePrefill.length) + 1}</td>
-                                                    <td className="p-2 border">Total</td>
-                                                    <td className="p-2 border text-center">{totalMarks}</td>
-                                                    <td className="p-2 border text-center">—</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                {/* Form component */}
+                                <ObstacleTrainingForm
+                                    semesterNumber={semesterNumber}
+                                    inputPrefill={mergedForSemester}
+                                    savedRecords={records}
+                                    onSave={handleSaveTerm}
+                                    isEditing={isEditingAll}
+                                    onCancelEdit={() => setIsEditingAll(false)}
+                                    formMethods={formMethods}
+                                />
 
-                                    <div className="flex justify-center gap-3 mt-6">
-                                        {isEditingAll ? (
-                                            <>
-                                                <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
-                                                    {isSaving ? "Saving..." : "Save "}
-                                                </Button>
-
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    onClick={async () => {
-                                                        // revert form to server state and exit edit mode
-                                                        if (!selectedCadet?.ocId) return;
-                                                        await fetchSaved(selectedCadet.ocId);
-                                                        setIsEditingAll(false);
-                                                    }}
-                                                    disabled={isSaving}
-                                                >
-                                                    Cancel 
-                                                </Button>
-
-                                                <Button type="button" variant="outline" onClick={() => reset({ records: obstaclePrefill })} disabled={isSaving}>
-                                                    Reset 
-                                                </Button>
-                                            </>
-                                        ) : null}
-                                    </div>
-                                </form>
-
-                                {/* Edit Table button is intentionally outside the form to avoid accidental submits */}
+                                {/* Edit / Save toggle (outside form to avoid accidental submits) */}
                                 <div className="flex justify-center mb-4">
-                                    {!isEditingAll && (
-                                        <Button
-                                            type="button"
-                                            onClick={() => setIsEditingAll(true)}
-                                            disabled={isSaving}
-                                        >
-                                            Edit 
+                                    {!isEditingAll ? (
+                                        <Button type="button" onClick={() => setIsEditingAll(true)} disabled={isSaving}>
+                                            Edit
                                         </Button>
-                                    )}
+                                    ) : null}
                                 </div>
                             </CardContent>
                         </Card>
                     </TabsContent>
-                    <TabsContent value="mil-trg">
-                        <div className="text-center py-12">
-                            <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                            <h3 className="text-xl font-semibold">Military Training Section</h3>
-                        </div>
-                    </TabsContent>
                 </DossierTab>
             </main>
-        </DashboardLayout >
+        </DashboardLayout>
     );
 }

@@ -11,7 +11,8 @@ import {
   CheckCircle,
   CalendarDays,
   Trophy,
-  FileBadge
+  FileBadge,
+  NotebookPen
 } from "lucide-react";
 
 
@@ -1282,6 +1283,16 @@ export const dossierTabs = [
     value: "final-performance",
     title: "Final Performance",
     icon: Medal,
+  },
+  {
+    value: "dossier-snapshot",
+    title: "Dossier Snapshot",
+    icon: ClipboardList,
+  },
+  {
+    value: "dossier-filling",
+    title: "Dossier Filling",
+    icon: NotebookPen,
   },
 ];
 

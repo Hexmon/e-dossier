@@ -25,13 +25,36 @@ import OLQView from "@/components/olq/OLQView";
 
 import { useOlqActions } from "@/hooks/useOlqActions";
 import { GRADE_BRACKETS } from "@/constants/app.constants";
+import { useOcDetails } from "@/hooks/useOcDetails";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 
 type OlqFormValues = Record<string, any>;
 
 const TERMS = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 
 export default function OLQPage() {
-    const selectedCadet = useSelector((s: RootState) => s.cadet.selectedCadet);
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // Load cadet data via hook (no redux)
+    const { cadet } = useOcDetails(ocId);
+
+    const {
+        name = "",
+        courseName = "",
+        ocNumber = "",
+        ocId: cadetOcId = ocId,
+        course = "",
+    } = cadet ?? {};
+
+    const selectedCadet = {
+        name,
+        courseName,
+        ocNumber,
+        ocId: cadetOcId,
+        course,
+    };
 
     // react-hook-form
     const methods = useForm<OlqFormValues>({
@@ -44,7 +67,7 @@ export default function OLQPage() {
                 <BreadcrumbNav
                     paths={[
                         { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Dossier", href: `/dashboard/${id}/milmgmt` },
                         { label: "OLQ Assessment" },
                     ]}
                 />
@@ -52,14 +75,14 @@ export default function OLQPage() {
                 {selectedCadet && <SelectedCadetTable selectedCadet={selectedCadet} />}
 
                 <FormProvider {...methods}>
-                    <InnerOLQPage selectedCadet={selectedCadet} />
+                    <InnerOLQPage selectedCadet={selectedCadet} ocId={ocId} />
                 </FormProvider>
             </main>
         </DashboardLayout>
     );
 }
 
-function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
+function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: RootState['cadet']['selectedCadet']; ocId: string; }) {
     const { register, reset, getValues, handleSubmit, setValue } = useForm<OlqFormValues>();
 
     const { fetchCategories, fetchSemester, createRecord, updateRecord, deleteSemester } = useOlqActions(selectedCadet);
@@ -122,13 +145,9 @@ function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
             const semester = activeSemIndex + 1;
             try {
                 const items = await fetchSemester(semester);
-                console.log("🔵 RAW SEMESTER RESPONSE:", items);
                 if (!mounted) return;
 
                 setServerRecordsPerSem(prev => ({ ...prev, [semester]: items }));
-
-                console.log("🔥 Backend OLQ semester data:", items);
-
                 const marks: Record<string, number> = {};
                 let total = 0;
 
@@ -152,8 +171,6 @@ function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
                 });
                 reset(flatInit);
             } catch (err) {
-                console.error(err);
-                toast.error("Failed to load semester OLQ records");
             } finally {
                 if (mounted) setLoadingSemester(false);
             }
@@ -221,7 +238,6 @@ function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
     const handleDeleteSemester = async () => {
         const ok = await deleteSemester(activeSemIndex + 1);
         if (ok) {
-            // clear local form + view
             const flatInit: any = {};
             Object.values(structure).flat().forEach((s: any) => flatInit[s.id] = "");
             reset(flatInit);
@@ -239,6 +255,7 @@ function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
         <DossierTab
             tabs={dossierTabs}
             defaultValue="olq-assessment"
+            ocId={ocId}
             extraTabs={
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -246,11 +263,17 @@ function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                        {militaryTrainingCards.map(card => (
-                            <DropdownMenuItem key={card.to} asChild>
-                                <a href={card.to} className="flex items-center gap-2"><card.icon className={`h-4 w-4 ${card.color}`} />{card.title}</a>
-                            </DropdownMenuItem>
-                        ))}
+                        {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                            const link = to(ocId);
+                            return (
+                                <DropdownMenuItem key={title} asChild>
+                                    <Link href={link} className="flex items-center gap-2">
+                                        <Icon className={`h-4 w-4 ${color}`} />
+                                        {title}
+                                    </Link>
+                                </DropdownMenuItem>
+                            );
+                        })}
                     </DropdownMenuContent>
                 </DropdownMenu>
             }
@@ -258,14 +281,16 @@ function InnerOLQPage({ selectedCadet }: { selectedCadet: any }) {
             <TabsContent value="olq-assessment">
                 <Card className="shadow-lg rounded-xl p-6">
                     <div className="flex justify-center mb-6 space-x-2">
-                        {TERMS.map((t, idx) => (
-                            <button
-                                key={t}
-                                type="button"
-                                onClick={() => { setActiveSemIndex(idx); setActiveInnerTab("input"); }}
-                                className={`px-4 py-2 rounded-t-lg font-medium ${activeSemIndex === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
-                            >{t}</button>
-                        ))}
+                        {TERMS.map((t, idx) => {
+                            return (
+                                <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => { setActiveSemIndex(idx); setActiveInnerTab("input"); }}
+                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeSemIndex === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                >{t}</button>
+                            )
+                        })}
                     </div>
 
                     <Tabs value={activeInnerTab} onValueChange={(v: any) => setActiveInnerTab(v)}>

@@ -1,220 +1,91 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
+import { useParams } from "next/navigation";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
-
 import DossierTab from "@/components/Tabs/DossierTab";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Shield, ChevronDown, Link } from "lucide-react";
+import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 
-import { Shield, ChevronDown } from "lucide-react";
+import { useOcDetails } from "@/hooks/useOcDetails";
+import { semestersCounselling } from "@/constants/app.constants";
+import { useCounsellingRecords } from "@/hooks/useCounsellingRecords";
+import CounsellingTable from "@/components/counselling/CounsellingTable";
+import CounsellingForm from "@/components/counselling/CounsellingForm";
+import { CounsellingFormData } from "@/types/counselling";
 
-import {
-    counsellingDefaultRow,
-    CounsellingFormData,
-    CounsellingRow,
-} from "@/types/counselling";
-
-import { semestersCounselling, warningTypes } from "@/constants/app.constants";
-
-import {
-    deleteCounsellingRecord,
-    getCounsellingRecords,
-    saveCounsellingRecords,
-    updateCounsellingRecord,
-} from "@/app/lib/api/counsellingApi";
-import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
 
 export default function CounsellingWarningPage() {
-    const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+    // route param
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // cadet data via hook (no redux)
+    const { cadet } = useOcDetails(ocId);
+
+    const {
+        name = "",
+        courseName = "",
+        ocNumber = "",
+        ocId: cadetOcId = ocId,
+        course = "",
+    } = cadet ?? {};
+
+    const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
+
+    // semesters fallback (use provided constant)
+    const semesters =
+        Array.isArray(semestersCounselling) && semestersCounselling.length > 0
+            ? semestersCounselling
+            : ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
+
+    // Hook for counselling data
+    const {
+        groupedBySemester,
+        loading,
+        fetchAll,
+        saveRecords,
+        updateRecord,
+        deleteRecord,
+    } = useCounsellingRecords(ocId, semesters.length);
 
     const [activeTab, setActiveTab] = useState<number>(0);
-    const [isLoading, setIsLoading] = useState(false);
-    const [editingRowIdx, setEditingRowIdx] = useState<number | null>(null);
-    const [editingValues, setEditingValues] = useState<Partial<CounsellingRow> | null>(null);
-    const [isEditingInline, setIsEditingInline] = useState(false);
-
-    // Six-term saved array
-    const [savedData, setSavedData] = useState<CounsellingRow[][]>(
-        semestersCounselling.map(() => [])
-    );
-
-    const { control, handleSubmit, register, setValue, reset, watch } =
-        useForm<CounsellingFormData>({
-            defaultValues: {
-                records: [{ ...counsellingDefaultRow }],
-            },
-        });
-
-    const { fields, append, remove } = useFieldArray({
-        control,
-        name: "records",
-    });
-
-
-    const fetchRecords = async (ocId?: string) => {
-        const effectiveOcId = ocId ?? selectedCadet?.ocId;
-        if (!effectiveOcId) return;
-
-        try {
-            const data = await getCounsellingRecords(effectiveOcId);
-
-            // group by term index
-            const grouped = semestersCounselling.map(() => [] as CounsellingRow[]);
-
-            data.forEach((r: CounsellingRow) => {
-                const idx = semestersCounselling.indexOf(r.term);
-                if (idx >= 0) grouped[idx].push(r);
-            });
-
-            // fix serial numbers
-            grouped.forEach((g) =>
-                g.forEach((row, i) => (row.serialNo = String(i + 1)))
-            );
-
-            setSavedData(grouped);
-        } catch (err: any) {
-            toast.error("Fetch failed: " + err.message);
-        }
-    };
 
     useEffect(() => {
-        if (!selectedCadet?.ocId) return;
-        fetchRecords(selectedCadet.ocId);
+        if (!ocId) return;
+        fetchAll();
+    }, [ocId]);
 
-    }, [selectedCadet?.ocId]);
+    const handleSubmit = async (data: CounsellingFormData) => {
+        const termLabel = semesters[activeTab] ?? semesters[0];
 
+        const rows = data.records.map(r => ({
+            ...r,
+            term: r.term || termLabel,
+        }));
 
-    const onSubmit = async (data: CounsellingFormData) => {
-        if (!selectedCadet?.ocId) {
-            alert("Please select a cadet first");
-            return;
-        }
-
-        const payload = data.records.map((r) => {
-            const { reason, warningType, date, warningBy } = r;
-            return {
-                term: semestersCounselling[activeTab],
-                reason,
-                warningType,
-                date,
-                warningBy,
-            };
-        });
-
-        try {
-            const saved = await saveCounsellingRecords(selectedCadet.ocId, payload);
-
-            const newRows: CounsellingRow[] = saved.map((r: any, i: number) => {
-                const { id, reason, warningType, date, warningBy } = r;
-                return {
-                    id: id,
-                    serialNo: "",
-                    term: semestersCounselling[activeTab],
-                    reason: reason,
-                    warningType: warningType,
-                    date: date,
-                    warningBy: warningBy,
-                };
-            });
-
-            setSavedData((prev) => {
-                const next = [...prev];
-                next[activeTab] = [...next[activeTab], ...newRows];
-                next[activeTab] = next[activeTab].map((r, i) => ({
-                    ...r,
-                    serialNo: String(i + 1),
-                }));
-                return next;
-            });
-
-            reset({ records: [{ ...counsellingDefaultRow }] });
-        } catch (err: any) {
-            toast.error("Save error: " + err.message);
-        }
+        await saveRecords(termLabel, rows);
     };
 
-    const handleDelete = async (row: CounsellingRow, index: number) => {
-        try {
-            if (!selectedCadet?.ocId) {
-                toast.error("Please select a cadet first");
-                return;
-            }
-
-            if (row.id) await deleteCounsellingRecord(selectedCadet.ocId, row.id);
-
-            // After backend delete, refresh from source of truth
-            await fetchRecords(selectedCadet.ocId);
-
-            setSavedData((prev) => {
-                const next = [...prev];
-                next[activeTab] = next[activeTab].filter((_, i) => i !== index);
-                next[activeTab] = next[activeTab].map((r, i) => ({
-                    ...r,
-                    serialNo: String(i + 1),
-                }));
-                return next;
-            });
-        } catch (err: any) {
-            toast.error("Delete failed: " + err.message);
-        }
+    const handleEditSave = async (idToUpdate: string, payload: Partial<{ reason: string; warningType: string; date: string; warningBy: string }>) => {
+        await updateRecord(idToUpdate, payload);
     };
 
-    const handleEditRow = async (index: number) => {
-        if (!selectedCadet?.ocId) {
-            toast.error("No cadet selected");
-            return;
-        }
-
-        const rows = savedData[activeTab] || [];
-        const rowToEdit = rows[index];
-
-        if (!rowToEdit || !rowToEdit.id) {
-            toast.error("Invalid record to edit");
-            return;
-        }
-
-        try {
-            const updatedRow = await updateCounsellingRecord(
-                selectedCadet.ocId,
-                rowToEdit.id,
-                editingValues || {
-                    reason: rowToEdit.reason,
-                    warningType: rowToEdit.warningType,
-                    date: rowToEdit.date,
-                    warningBy: rowToEdit.warningBy,
-                }
-            );
-
-            // Update local state
-            setSavedData((prev) => {
-                const next = [...prev];
-                next[activeTab] = next[activeTab].map((r, i) =>
-                    i === index ? { ...updatedRow, serialNo: String(i + 1) } : r
-                );
-                return next;
-            });
-
-            toast.success("Record updated successfully");
-        } catch (err: any) {
-            toast.error("Update failed: " + err.message);
-        } finally {
-            setEditingRowIdx(null);
-            setEditingValues(null);
-            setIsEditingInline(false);
-        }
+    const handleDelete = async (idToDelete: string) => {
+        await deleteRecord(idToDelete);
     };
 
     return (
@@ -226,13 +97,13 @@ export default function CounsellingWarningPage() {
                 <BreadcrumbNav
                     paths={[
                         { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Dossier", href: `/dashboard/${ocId}/milmgmt` },
                         { label: "Counselling / Warning Record" },
                     ]}
                 />
 
                 {selectedCadet && (
-                    <div className="hidden md:flex sticky top-16 z-40">
+                    <div className="hidden md:flex sticky top-16 z-40 mb-6">
                         <SelectedCadetTable selectedCadet={selectedCadet} />
                     </div>
                 )}
@@ -240,24 +111,29 @@ export default function CounsellingWarningPage() {
                 <DossierTab
                     tabs={dossierTabs}
                     defaultValue="counselling"
+                    ocId={ocId}
                     extraTabs={
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <TabsTrigger value="mil-trg" className="flex items-center gap-2">
+                                <button className="flex items-center gap-2">
                                     <Shield className="h-4 w-4" />
                                     Mil-Trg
                                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                </TabsTrigger>
+                                </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                {militaryTrainingCards.map((card) => (
-                                    <DropdownMenuItem key={card.to} asChild>
-                                        <a href={card.to} className="flex items-center gap-2">
-                                            <card.icon className={`h-4 w-4 ${card.color}`} />
-                                            <span>{card.title}</span>
-                                        </a>
-                                    </DropdownMenuItem>
-                                ))}
+
+                            <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                                {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                                    const link = to(ocId);
+                                    return (
+                                        <DropdownMenuItem key={title} asChild>
+                                            <Link href={link} className="flex items-center gap-2">
+                                                <Icon className={`h-4 w-4 ${color}`} />
+                                                {title}
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    );
+                                })}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     }
@@ -272,201 +148,32 @@ export default function CounsellingWarningPage() {
                                 </CardHeader>
 
                                 <CardContent>
-                                    {/* Tabs for terms */}
                                     <div className="flex justify-center mb-6 space-x-2">
-                                        {semestersCounselling.map((term, idx) => (
-                                            <button
-                                                key={term}
-                                                onClick={() => setActiveTab(idx)}
-                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-gray-200 text-gray-700"
-                                                    }`}
-                                            >
-                                                {term}
-                                            </button>
-                                        ))}
+                                        {semesters.map((term, idx) => {
+                                            return (
+                                                <button
+                                                    key={term}
+                                                    type="button"
+                                                    onClick={() => setActiveTab(idx)}
+                                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                                                        }`}
+                                                >
+                                                    {term}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
 
-                                    {/* Saved Records Table */}
-                                    <div className="overflow-x-auto border rounded-lg shadow mb-6">
-                                        {savedData[activeTab].length === 0 ? (
-                                            <p className="text-center p-4 text-gray-500">
-                                                No saved records for this term.
-                                            </p>
-                                        ) : (
-                                            <table className="w-full border text-sm">
-                                                <thead className="bg-gray-100">
-                                                    <tr>
-                                                        <th className="p-2 border text-center">S No</th>
-                                                        <th className="p-2 border">Reason (Attach copy)</th>
-                                                        <th className="p-2 border">
-                                                            Nature of Warning <br /> (Relegation / Withdrawal)
-                                                        </th>
-                                                        <th className="p-2 border">Date</th>
-                                                        <th className="p-2 border">Warning by (Rk & Name)</th>
-                                                        <th className="p-2 border text-center">Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {savedData[activeTab].map((row, i) => (
-                                                        <tr key={row.id ?? i}>
-                                                            <td className="p-2 border text-center">
-                                                                {row.serialNo}
-                                                            </td>
-                                                            <td className="p-2 border">{row.reason}</td>
-                                                            <td className="p-2 border">{row.warningType}</td>
-                                                            <td className="p-2 border">{row.date}</td>
-                                                            <td className="p-2 border">{row.warningBy}</td>
-                                                            <td className="p-2 border text-center">
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="destructive"
-                                                                    onClick={() =>
-                                                                        handleDelete(row, i)
-                                                                    }
-                                                                >
-                                                                    Delete
-                                                                </Button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        )}
+                                    <CounsellingTable
+                                        rows={groupedBySemester[activeTab] ?? []}
+                                        loading={loading}
+                                        onEditSave={handleEditSave}
+                                        onDelete={handleDelete}
+                                    />
+
+                                    <div className="mt-6">
+                                        <CounsellingForm onSubmit={handleSubmit} semLabel={semesters[activeTab] ?? semesters[0]} />
                                     </div>
-
-                                    {/* Input Form */}
-                                    <form onSubmit={handleSubmit(onSubmit)}>
-                                        <div className="overflow-x-auto border rounded-lg shadow">
-                                            <table className="w-full border text-sm">
-                                                <thead className="bg-gray-100">
-                                                    <tr>
-                                                        <th className="p-2 border text-center">S No</th>
-                                                        <th className="p-2 border">Reason (Attach copy)</th>
-                                                        <th className="p-2 border">
-                                                            Nature of Warning <br /> (Relegation / Withdrawal)
-                                                        </th>
-                                                        <th className="p-2 border">Date</th>
-                                                        <th className="p-2 border">
-                                                            Warning by (Rk & Name)
-                                                        </th>
-                                                        <th className="p-2 border text-center">Action</th>
-                                                    </tr>
-                                                </thead>
-
-                                                <tbody>
-                                                    {fields.map((field, idx) => (
-                                                        <tr key={field.id}>
-                                                            <td className="p-2 border text-center">
-                                                                <Input
-                                                                    value={String(idx + 1)}
-                                                                    disabled
-                                                                    className="bg-gray-100 text-center"
-                                                                />
-                                                            </td>
-
-                                                            <td className="p-2 border">
-                                                                <Input
-                                                                    {...register(
-                                                                        `records.${idx}.reason`
-                                                                    )}
-                                                                />
-                                                            </td>
-
-                                                            <td className="p-2 border">
-                                                                <Select
-                                                                    value={watch(
-                                                                        `records.${idx}.warningType`
-                                                                    )}
-                                                                    onValueChange={(v) =>
-                                                                        setValue(
-                                                                            `records.${idx}.warningType`,
-                                                                            v
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue placeholder="Select" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {warningTypes.map((t) => (
-                                                                            <SelectItem
-                                                                                value={t}
-                                                                                key={t}
-                                                                            >
-                                                                                {t}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </td>
-
-                                                            <td className="p-2 border">
-                                                                <Input
-                                                                    type="date"
-                                                                    {...register(
-                                                                        `records.${idx}.date`
-                                                                    )}
-                                                                />
-                                                            </td>
-
-                                                            <td className="p-2 border">
-                                                                <Input
-                                                                    {...register(
-                                                                        `records.${idx}.warningBy`
-                                                                    )}
-                                                                />
-                                                            </td>
-
-                                                            <td className="p-2 border text-center">
-                                                                <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    variant="destructive"
-                                                                    onClick={() =>
-                                                                        remove(idx)
-                                                                    }
-                                                                >
-                                                                    Remove
-                                                                </Button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        <div className="mt-4 flex justify-center gap-4">
-                                            <Button
-                                                type="button"
-                                                onClick={() =>
-                                                    append({ ...counsellingDefaultRow })
-                                                }
-                                            >
-                                                + Add Row
-                                            </Button>
-
-                                            <Button
-                                                type="submit"
-                                                className="bg-green-600 hover:bg-green-700"
-                                            >
-                                                Submit
-                                            </Button>
-
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() =>
-                                                    reset({
-                                                        records: [{ ...counsellingDefaultRow }],
-                                                    })
-                                                }
-                                            >
-                                                Reset
-                                            </Button>
-                                        </div>
-                                    </form>
                                 </CardContent>
                             </Card>
                         </section>
