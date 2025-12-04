@@ -14,10 +14,10 @@ import {
 
 const CategoryIdParam = z.object({ categoryId: z.string().uuid() });
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
-        const { categoryId } = CategoryIdParam.parse(await ctx.params);
+        const { categoryId } = CategoryIdParam.parse(await params);
         const sp = new URL(req.url).searchParams;
         const qp = olqCategoryQuerySchema.parse({
             includeSubtitles: sp.get('includeSubtitles') ?? undefined,
@@ -31,10 +31,10 @@ export async function GET(req: NextRequest, ctx: any) {
     }
 }
 
-export async function PATCH(req: NextRequest, ctx: any) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAdmin(req);
-        const { categoryId } = CategoryIdParam.parse(await ctx.params);
+        const { categoryId } = CategoryIdParam.parse(await params);
         const dto = olqCategoryUpdateSchema.parse(await req.json());
         const row = await updateOlqCategory(categoryId, { ...dto });
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');
@@ -44,10 +44,10 @@ export async function PATCH(req: NextRequest, ctx: any) {
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: any) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAdmin(req);
-        const { categoryId } = CategoryIdParam.parse(await ctx.params);
+        const { categoryId } = CategoryIdParam.parse(await params);
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteOlqCategory(categoryId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');

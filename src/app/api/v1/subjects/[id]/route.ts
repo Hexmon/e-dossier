@@ -9,20 +9,20 @@ import { eq } from 'drizzle-orm';
 
 const Id = z.object({ id: z.string().uuid() });
 
-export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await requireAuth(req);
-        const { id } = Id.parse(await ctx.params);
+        const { id } = Id.parse(await params);
         const [row] = await db.select().from(subjects).where(eq(subjects.id, id)).limit(1);
         if (!row) throw new ApiError(404, 'Subject not found', 'not_found');
         return json.ok({ message: 'Subject retrieved successfully.', subject: row });
     } catch (err) { return handleApiError(err); }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await requireAdmin(req);
-        const { id } = Id.parse(await ctx.params);
+        const { id } = Id.parse(await params);
         const body = subjectUpdateSchema.parse(await req.json());
 
         const patch: any = {};
@@ -39,10 +39,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await requireAdmin(req);
-        const { id } = Id.parse(await ctx.params);
+        const { id } = Id.parse(await params);
         const [row] = await db
             .update(subjects)
             .set({ deletedAt: new Date() })

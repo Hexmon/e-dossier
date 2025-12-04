@@ -123,11 +123,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
  * - Soft delete by default (sets deleted_at = now)
  * - Hard delete with ?hard=true
  */
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ idOrKey: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
   try {
     await requireAdmin(req);
-    const rawIdOrKey = await (ctx as any).params;
-    const idOrKey = decodeURIComponent((rawIdOrKey ?? '')).trim();
+    const { idOrKey: rawIdOrKey } = await params;   // ✅ destructure the string
+    const idOrKey = decodeURIComponent(rawIdOrKey || '').trim();
     if (!idOrKey) throw new ApiError(400, 'idOrKey path param is required.', 'bad_request');
 
     // Find even if already soft-deleted (so we can hard-delete it)

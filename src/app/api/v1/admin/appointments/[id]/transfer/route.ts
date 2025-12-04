@@ -2,19 +2,18 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAdmin } from '@/app/lib/authz';
-import { z } from 'zod';
 import { appointmentTransferBody } from '@/app/lib/validators';
 import { transferAppointment } from '@/app/db/queries/appointment-transfer';
 import { IdSchema } from '@/app/lib/apiClient';
 
 export async function POST(
     req: NextRequest,
-    ctx: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId: adminId } = await requireAdmin(req);
 
-        const { id: raw } = await (ctx as any).params;
+        const { id: raw } = await params;
         const { id } = IdSchema.parse({ id: decodeURIComponent((raw ?? '')).trim() });
 
         // Parse body safely

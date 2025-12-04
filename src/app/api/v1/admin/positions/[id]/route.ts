@@ -6,9 +6,9 @@ import { requireAdmin } from '@/app/lib/authz';
 import { positionUpdateSchema } from '@/app/lib/validators';
 import { and, eq, ne} from 'drizzle-orm';
 
-export async function GET(_: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: routeId } = await ctx.params;
+    const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
 
     const [row] = await db
@@ -24,11 +24,11 @@ export async function GET(_: NextRequest, ctx: { params: Promise<{ id: string }>
   }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin(req);
 
-    const { id: routeId } = await ctx.params;
+    const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
 
     const body = await req.json();
@@ -79,11 +79,11 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin(req);
 
-    const { id: routeId } = await ctx.params;
+    const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
 
     const [row] = await db.delete(positions).where(eq(positions.id, rawId)).returning();

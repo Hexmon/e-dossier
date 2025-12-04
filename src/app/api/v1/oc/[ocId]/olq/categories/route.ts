@@ -10,7 +10,7 @@ import {
     listOlqCategories,
 } from '@/app/db/queries/olq';
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
 
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, ctx: any) {
     }
 }
 
-export async function POST(req: NextRequest, ctx: any) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAdmin(req);
 
