@@ -24,6 +24,7 @@ import AchievementsSection from "@/components/background/AchievementsSection";
 import AutobiographySection from "@/components/background/AutobiographySection";
 
 import { useOcPersonal } from "@/hooks/useOcPersonal";
+import Link from "next/link";
 
 export default function BackgroundDetlsPage() {
     const { id } = useParams();
@@ -60,6 +61,7 @@ export default function BackgroundDetlsPage() {
                 <DossierTab
                     tabs={dossierTabs}
                     defaultValue="background-detls"
+                    ocId={ocId}
                     extraTabs={
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -75,10 +77,10 @@ export default function BackgroundDetlsPage() {
                                     const link = to(ocId);
                                     return (
                                         <DropdownMenuItem key={title} asChild>
-                                            <a href={link} className="flex items-center gap-2">
+                                            <Link href={link} className="flex items-center gap-2">
                                                 <Icon className={`h-4 w-4 ${color}`} />
                                                 {title}
-                                            </a>
+                                            </Link>
                                         </DropdownMenuItem>
                                     );
                                 })}

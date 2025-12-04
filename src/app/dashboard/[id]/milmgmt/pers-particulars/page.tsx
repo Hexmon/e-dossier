@@ -8,7 +8,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 
-import { Shield, Settings } from "lucide-react";
+import { Shield, Settings, Link } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -204,6 +204,7 @@ export default function PersParticularsPage() {
                 <DossierTab
                     tabs={dossierTabs}
                     defaultValue="pers-particulars"
+                    ocId={ocId}
                     extraTabs={
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -218,10 +219,10 @@ export default function PersParticularsPage() {
 
                                     return (
                                         <DropdownMenuItem key={card.title} asChild>
-                                            <a href={link} className="flex items-center gap-2">
+                                            <Link href={link} className="flex items-center gap-2">
                                                 <card.icon className={`h-4 w-4 ${card.color}`} />
                                                 {card.title}
-                                            </a>
+                                            </Link>
                                         </DropdownMenuItem>
                                     );
                                 })}

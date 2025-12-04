@@ -44,9 +44,32 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 import { Shield, ChevronDown } from "lucide-react";
 import DossierTab from "@/components/Tabs/DossierTab";
+import { useOcDetails } from "@/hooks/useOcDetails";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 
 export default function ClubDetailsAndDrillPage() {
-    const selectedCadet = useSelector((s: RootState) => s.cadet.selectedCadet);
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // Load cadet data via hook (no redux)
+    const { cadet } = useOcDetails(ocId);
+
+    const {
+        name = "",
+        courseName = "",
+        ocNumber = "",
+        ocId: cadetOcId = ocId,
+        course = "",
+    } = cadet ?? {};
+
+    const selectedCadet = {
+        name,
+        courseName,
+        ocNumber,
+        ocId: cadetOcId,
+        course,
+    };
 
     const methods = useForm<FormValues>({
         defaultValues: {
@@ -65,19 +88,19 @@ export default function ClubDetailsAndDrillPage() {
                 <BreadcrumbNav
                     paths={[
                         { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Dossier", href: `/dashboard/${id}/milmgmt` },
                         { label: "Club Details" }
                     ]}
                 />
 
-                {selectedCadet && (
+                {cadet && (
                     <div className="hidden md:flex sticky top-16 z-40 mb-6">
                         <SelectedCadetTable selectedCadet={selectedCadet} />
                     </div>
                 )}
 
                 <FormProvider {...methods}>
-                    <InnerClubDrillPage selectedCadet={selectedCadet} />
+                    <InnerClubDrillPage selectedCadet={selectedCadet} ocId={ocId} />
                 </FormProvider>
             </main>
         </DashboardLayout>
@@ -86,8 +109,10 @@ export default function ClubDetailsAndDrillPage() {
 
 function InnerClubDrillPage({
     selectedCadet,
+    ocId,
 }: {
     selectedCadet: RootState['cadet']['selectedCadet'];
+    ocId: string;
 }) {
     const {
         control,
@@ -120,12 +145,13 @@ function InnerClubDrillPage({
 
             const mapped = defaultClubRows.map(row => {
                 const found = items.find((x: any) => x.semester === romanToNumber[row.semester]);
+                const { clubName, specialAchievement, remark, id } = found || {};
                 return {
-                    id: found?.id ?? null,
+                    id: id ?? null,
                     semester: row.semester,
-                    clubName: found?.clubName ?? "",
-                    splAchievement: found?.specialAchievement ?? "",
-                    remarks: found?.remark ?? ""
+                    clubName: clubName ?? "",
+                    splAchievement: specialAchievement ?? "",
+                    remarks: remark ?? ""
                 };
             });
 
@@ -136,16 +162,28 @@ function InnerClubDrillPage({
             if (!items) return;
 
             const mapped = defaultDrillRows.map(row => {
-                const api = items.find((x: any) => x.semester === romanToNumber[row.semester]);
+                const numSemester = romanToNumber[row.semester];
+                const api = items.find((x: any) => x.semester === numSemester);
+
+                const {
+                    id,
+                    maxMarks,
+                    m1Marks,
+                    m2Marks,
+                    a1c1Marks,
+                    a2c2Marks,
+                    remark
+                } = api || {};
+
                 return {
-                    id: api?.id ?? undefined,
+                    id: id ?? null,
                     semester: row.semester,
-                    maxMks: (api?.maxMarks ?? "") as number | "",
-                    m1: (api?.m1Marks ?? "") as number | "",
-                    m2: (api?.m2Marks ?? "") as number | "",
-                    a1c1: (api?.a1c1Marks ?? "") as number | "",
-                    a2c2: (api?.a2c2Marks ?? "") as number | "",
-                    remarks: api?.remark ?? ""
+                    maxMks: maxMarks ?? "",
+                    m1: m1Marks ?? "",
+                    m2: m2Marks ?? "",
+                    a1c1: a1c1Marks ?? "",
+                    a2c2: a2c2Marks ?? "",
+                    remarks: remark ?? ""
                 };
             });
 
@@ -162,25 +200,32 @@ function InnerClubDrillPage({
         <DossierTab
             tabs={dossierTabs}
             defaultValue="club-detls"
+            ocId={ocId}
             extraTabs={
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <TabsTrigger value="miltrg" className="flex items-center gap-2">
-                            <Shield className="h-4 w-4" /> Mil-Trg
-                            <ChevronDown className="h-4 w-4" />
-                        </TabsTrigger>
-                    </DropdownMenuTrigger>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="flex items-center gap-2">
+                                <Shield className="h-4 w-4" />
+                                Mil-Trg
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                        </DropdownMenuTrigger>
 
-                    <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                        {militaryTrainingCards.map(card => (
-                            <DropdownMenuItem key={card.to} asChild>
-                                <a href={card.to} className="flex items-center gap-2">
-                                    <card.icon className={`h-4 w-4 ${card.color}`} />
-                                    {card.title}
-                                </a>
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
+                        <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
+                            {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                                const link = to(ocId);
+                                return (
+                                    <DropdownMenuItem key={title} asChild>
+                                        <Link href={link} className="flex items-center gap-2">
+                                            <Icon className={`h-4 w-4 ${color}`} />
+                                            {title}
+                                        </Link>
+                                    </DropdownMenuItem>
+                                );
+                            })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </DropdownMenu>
             }
         >

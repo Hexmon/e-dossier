@@ -39,44 +39,47 @@ export default function ClubForm({
                     </thead>
 
                     <tbody>
-                        {fields.map((f, idx) => (
-                            <tr key={f.id ?? idx}>
+                        {fields.map((f, idx) => {
+                            const { id} = f;
+                            return (
+                                <tr key={id ?? idx}>
 
-                                <input type="hidden"
-                                    {...register(`clubRows.${idx}.id` as const)}
-                                />
-
-                                <td className="border p-2">
-                                    <Input
-                                        {...register(`clubRows.${idx}.semester` as const)}
-                                        readOnly
-                                        disabled
-                                        className="bg-gray-100 cursor-not-allowed"
+                                    <input type="hidden"
+                                        {...register(`clubRows.${idx}.id` as const)}
                                     />
-                                </td>
 
-                                <td className="border p-2">
-                                    <Input
-                                        {...register(`clubRows.${idx}.clubName` as const)}
-                                        disabled={disabled}
-                                    />
-                                </td>
+                                    <td className="border p-2">
+                                        <Input
+                                            {...register(`clubRows.${idx}.semester` as const)}
+                                            readOnly
+                                            disabled
+                                            className="bg-gray-100 cursor-not-allowed"
+                                        />
+                                    </td>
 
-                                <td className="border p-2">
-                                    <Input
-                                        {...register(`clubRows.${idx}.splAchievement` as const)}
-                                        disabled={disabled}
-                                    />
-                                </td>
+                                    <td className="border p-2">
+                                        <Input
+                                            {...register(`clubRows.${idx}.clubName` as const)}
+                                            disabled={disabled}
+                                        />
+                                    </td>
 
-                                <td className="border p-2">
-                                    <Input
-                                        {...register(`clubRows.${idx}.remarks` as const)}
-                                        disabled={disabled}
-                                    />
-                                </td>
-                            </tr>
-                        ))}
+                                    <td className="border p-2">
+                                        <Input
+                                            {...register(`clubRows.${idx}.splAchievement` as const)}
+                                            disabled={disabled}
+                                        />
+                                    </td>
+
+                                    <td className="border p-2">
+                                        <Input
+                                            {...register(`clubRows.${idx}.remarks` as const)}
+                                            disabled={disabled}
+                                        />
+                                    </td>
+                                </tr>
+                            )
+                        })}
                     </tbody>
                 </table>
             </div>

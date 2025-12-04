@@ -33,13 +33,35 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, ChevronDown } from "lucide-react";
+import { Shield, ChevronDown, Link } from "lucide-react";
 
 import { updateOcDetentionRecord } from "@/app/lib/api/detentionApi";
 import { toast } from "sonner";
+import { useOcDetails } from "@/hooks/useOcDetails";
+import { useParams } from "next/navigation";
 
 export default function DetentionPage() {
-    const selectedCadet = useSelector((state: RootState) => state.cadet.selectedCadet);
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // Load cadet data via hook (no redux)
+    const { cadet } = useOcDetails(ocId);
+
+    const {
+        name = "",
+        courseName = "",
+        ocNumber = "",
+        ocId: cadetOcId = ocId,
+        course = "",
+    } = cadet ?? {};
+
+    const selectedCadet = {
+        name,
+        courseName,
+        ocNumber,
+        ocId: cadetOcId,
+        course,
+    };
 
     const methods = useForm<DetentionFormValues>({
         defaultValues: { detentionRows: defaultDetentionRows },
@@ -54,7 +76,7 @@ export default function DetentionPage() {
                 <BreadcrumbNav
                     paths={[
                         { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Dossier", href: `/dashboard/${id}/milmgmt` },
                         { label: "Detention Records" },
                     ]}
                 />
@@ -66,7 +88,7 @@ export default function DetentionPage() {
                 )}
 
                 <FormProvider {...methods}>
-                    <InnerDetentionPage selectedCadet={selectedCadet} />
+                    <InnerDetentionPage selectedCadet={selectedCadet} ocId={ocId}/>
                 </FormProvider>
             </main>
         </DashboardLayout>
@@ -74,7 +96,7 @@ export default function DetentionPage() {
 }
 
 /* Inner Component */
-function InnerDetentionPage({ selectedCadet }: { selectedCadet: any }) {
+function InnerDetentionPage({ selectedCadet, ocId }: { selectedCadet: RootState['cadet']['selectedCadet']; ocId: string; }) {
     const { control, register, setValue, handleSubmit } =
         useFormContext<DetentionFormValues>();
 
@@ -133,7 +155,7 @@ function InnerDetentionPage({ selectedCadet }: { selectedCadet: any }) {
         if (!editingValues || !editingValues.id) return;
 
         try {
-            await updateOcDetentionRecord(selectedCadet.ocId, editingValues.id, {
+            await updateOcDetentionRecord(ocId, editingValues.id, {
                 semester: editingValues.semester,
                 reason: editingValues.reason,
                 type: "DETENTION",
@@ -170,7 +192,8 @@ function InnerDetentionPage({ selectedCadet }: { selectedCadet: any }) {
     return (
         <DossierTab
             tabs={dossierTabs}
-            defaultValue="detention-record"
+            defaultValue="detention"
+            ocId={ocId}
             extraTabs={
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -181,19 +204,22 @@ function InnerDetentionPage({ selectedCadet }: { selectedCadet: any }) {
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                        {militaryTrainingCards.map((card) => (
-                            <DropdownMenuItem key={card.to} asChild>
-                                <a href={card.to} className="flex items-center gap-2">
-                                    <card.icon className={`h-4 w-4 ${card.color}`} />
-                                    {card.title}
-                                </a>
-                            </DropdownMenuItem>
-                        ))}
+                        {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                            const link = to(ocId);
+                            return (
+                                <DropdownMenuItem key={title} asChild>
+                                    <Link href={link} className="flex items-center gap-2">
+                                        <Icon className={`h-4 w-4 ${color}`} />
+                                        {title}
+                                    </Link>
+                                </DropdownMenuItem>
+                            );
+                        })}
                     </DropdownMenuContent>
                 </DropdownMenu>
             }
         >
-            <TabsContent value="detention-record" className="space-y-6">
+            <TabsContent value="detention" className="space-y-6">
                 <Card className="max-w-6xl mx-auto p-6 shadow bg-white">
                     <CardHeader>
                         <CardTitle className="text-lg font-semibold text-center">
@@ -212,8 +238,8 @@ function InnerDetentionPage({ selectedCadet }: { selectedCadet: any }) {
                                         cancelEdit();
                                     }}
                                     className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-gray-200 text-gray-700"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-gray-200 text-gray-700"
                                         }`}
                                 >
                                     {term}

@@ -10,6 +10,7 @@ interface Props {
     savedRows: SemesterRow[];
     register: any;
     disabled?: boolean;
+    onRowUpdated?: (row: SemesterRow, index: number) => void;
 }
 
 export default function SportsGamesTable({
@@ -19,15 +20,12 @@ export default function SportsGamesTable({
     savedRows,
     register,
     disabled = false,
+    onRowUpdated,
 }: Props) {
-
     return (
         <div className="mb-10">
             <h2 className="font-semibold text-md mb-2 underline">{title}</h2>
 
-            {/* Saved rows removed — backend values are shown in the editable inputs below via form reset */}
-
-            {/* ==================== INPUT TABLE ==================== */}
             <div className="overflow-x-auto border rounded-lg shadow">
                 <table className="w-full border text-sm">
                     <thead className="bg-gray-100">
@@ -40,37 +38,83 @@ export default function SportsGamesTable({
                     </thead>
 
                     <tbody>
-                        {rows.map((row, index) => (
-                            <tr key={index}>
-                                <td className="p-2 border">{row.activity}</td>
+                        {rows.map((prefillRow, index) => {
+                            const saved = savedRows[index] ?? {};
+                            const row: SemesterRow = {
+                                ...prefillRow,
+                                ...saved,
+                                activity: saved.activity ?? prefillRow.activity,
+                                string: saved.string ?? prefillRow.string ?? "",
+                                maxMarks:
+                                    saved.maxMarks ??
+                                    prefillRow.maxMarks ??
+                                    "",
+                                obtained:
+                                    saved.obtained ??
+                                    prefillRow.obtained ??
+                                    "",
+                            };
 
-                                <td className="p-2 border">
-                                    <Input
-                                        {...register(`${termKey}.${index}.string`)}
-                                        defaultValue={row.string}
-                                        disabled={disabled}
-                                    />
-                                </td>
+                            const stringField = register(`${termKey}.${index}.string`);
+                            const maxField = register(`${termKey}.${index}.maxMarks`);
+                            const obtainedField = register(`${termKey}.${index}.obtained`);
 
-                                <td className="p-2 border">
-                                    <Input
-                                        {...register(`${termKey}.${index}.maxMarks`)}
-                                        type="number"
-                                        defaultValue={row.maxMarks}
-                                        disabled={disabled}
-                                    />
-                                </td>
+                            return (
+                                <tr key={index}>
+                                    <td className="p-2 border">{row.activity ?? "-"}</td>
 
-                                <td className="p-2 border">
-                                    <Input
-                                        {...register(`${termKey}.${index}.obtained`)}
-                                        type="number"
-                                        defaultValue={row.obtained}
-                                        disabled={disabled}
-                                    />
-                                </td>
-                            </tr>
-                        ))}
+                                    {/* STRING */}
+                                    <td className="p-2 border">
+                                        <Input
+                                            {...stringField}
+                                            defaultValue={row.string}
+                                            disabled={disabled}
+                                            onChange={(e) => {
+                                                stringField.onChange(e);
+                                                onRowUpdated?.(
+                                                    { ...row, string: e.target.value },
+                                                    index
+                                                );
+                                            }}
+                                        />
+                                    </td>
+
+                                    {/* MAX MARKS */}
+                                    <td className="p-2 border">
+                                        <Input
+                                            {...maxField}
+                                            type="number"
+                                            defaultValue={row.maxMarks}
+                                            disabled={disabled}
+                                            onChange={(e) => {
+                                                maxField.onChange(e);
+                                                onRowUpdated?.(
+                                                    { ...row, maxMarks: e.target.value },
+                                                    index
+                                                );
+                                            }}
+                                        />
+                                    </td>
+
+                                    {/* OBTAINED */}
+                                    <td className="p-2 border">
+                                        <Input
+                                            {...obtainedField}
+                                            type="number"
+                                            defaultValue={row.obtained}
+                                            disabled={disabled}
+                                            onChange={(e) => {
+                                                obtainedField.onChange(e);
+                                                onRowUpdated?.(
+                                                    { ...row, obtained: e.target.value },
+                                                    index
+                                                );
+                                            }}
+                                        />
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

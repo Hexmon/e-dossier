@@ -25,9 +25,32 @@ import { Shield, ChevronDown } from "lucide-react";
 
 import { updateOcLeaveRecord } from "@/app/lib/api/leaveApi";
 import { toast } from "sonner";
+import { useParams } from "next/navigation";
+import { useOcDetails } from "@/hooks/useOcDetails";
+import Link from "next/link";
 
 export default function LeavePage() {
-    const selectedCadet = useSelector((s: RootState) => s.cadet.selectedCadet);
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // Load cadet data via hook (no redux)
+    const { cadet } = useOcDetails(ocId);
+
+    const {
+        name = "",
+        courseName = "",
+        ocNumber = "",
+        ocId: cadetOcId = ocId,
+        course = "",
+    } = cadet ?? {};
+
+    const selectedCadet = {
+        name,
+        courseName,
+        ocNumber,
+        ocId: cadetOcId,
+        course,
+    };
 
     const methods = useForm<LeaveFormValues>({
         defaultValues: { leaveRows: defaultLeaveRows },
@@ -42,7 +65,7 @@ export default function LeavePage() {
                 <BreadcrumbNav
                     paths={[
                         { label: "Dashboard", href: "/dashboard" },
-                        { label: "Dossier", href: "/dashboard/milmgmt" },
+                        { label: "Dossier", href: `/dashboard/${id}/milmgmt` },
                         { label: "Leave Records" },
                     ]}
                 />
@@ -54,7 +77,7 @@ export default function LeavePage() {
                 )}
 
                 <FormProvider {...methods}>
-                    <InnerLeavePage selectedCadet={selectedCadet} />
+                    <InnerLeavePage selectedCadet={selectedCadet} ocId={ocId} />
                 </FormProvider>
             </main>
         </DashboardLayout>
@@ -65,7 +88,7 @@ export default function LeavePage() {
 // INNER PAGE (with DossierTab present)
 // -----------------------------------------------------------
 
-function InnerLeavePage({ selectedCadet }: { selectedCadet: any }) {
+function InnerLeavePage({ selectedCadet, ocId }: { selectedCadet: RootState['cadet']['selectedCadet']; ocId: string; }) {
     const { control, register, setValue, handleSubmit } = useFormContext<LeaveFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "leaveRows" });
 
@@ -126,7 +149,7 @@ function InnerLeavePage({ selectedCadet }: { selectedCadet: any }) {
         if (!editingValues || !editingValues.id) return;
 
         try {
-            await updateOcLeaveRecord(selectedCadet.ocId, editingValues.id, {
+            await updateOcLeaveRecord(ocId, editingValues.id, {
                 semester: editingValues.semester,
                 reason: editingValues.reason,
                 type: "LEAVE",
@@ -156,6 +179,7 @@ function InnerLeavePage({ selectedCadet }: { selectedCadet: any }) {
         <DossierTab
             tabs={dossierTabs}
             defaultValue="leave-record"
+            ocId={ocId}
             extraTabs={
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -166,14 +190,17 @@ function InnerLeavePage({ selectedCadet }: { selectedCadet: any }) {
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent className="w-96 max-h-64 overflow-y-auto">
-                        {militaryTrainingCards.map((card) => (
-                            <DropdownMenuItem key={card.to} asChild>
-                                <a href={card.to} className="flex items-center gap-2">
-                                    <card.icon className={`h-4 w-4 ${card.color}`} />
-                                    {card.title}
-                                </a>
-                            </DropdownMenuItem>
-                        ))}
+                        {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                            const link = to(ocId);
+                            return (
+                                <DropdownMenuItem key={title} asChild>
+                                    <Link href={link} className="flex items-center gap-2">
+                                        <Icon className={`h-4 w-4 ${color}`} />
+                                        {title}
+                                    </Link>
+                                </DropdownMenuItem>
+                            );
+                        })}
                     </DropdownMenuContent>
                 </DropdownMenu>
             }
@@ -189,19 +216,21 @@ function InnerLeavePage({ selectedCadet }: { selectedCadet: any }) {
                     <CardContent>
                         {/* Term Tabs */}
                         <div className="flex justify-center mb-6 space-x-2">
-                            {semesters.map((term, idx) => (
-                                <button
-                                    key={term}
-                                    onClick={() => {
-                                        setActiveTab(idx);
-                                        cancelEdit();
-                                    }}
-                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-                                        }`}
-                                >
-                                    {term}
-                                </button>
-                            ))}
+                            {semesters.map((term, idx) => {
+                                return (
+                                    <button
+                                        key={term}
+                                        onClick={() => {
+                                            setActiveTab(idx);
+                                            cancelEdit();
+                                        }}
+                                        className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                                            }`}
+                                    >
+                                        {term}
+                                    </button>
+                                )
+                            })}
                         </div>
 
                         <LeaveForm
