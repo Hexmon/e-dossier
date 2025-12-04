@@ -9,10 +9,10 @@ import { requireAuth, requireAdmin } from '@/app/lib/authz';
 import { appointmentUpdateSchema } from '@/app/lib/validators';
 import { and, eq, sql } from 'drizzle-orm';
 
-export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await requireAuth(req);
-        const { id } = await ctx.params;
+        const { id } = await params;
 
         const [row] = await db
             .select({
@@ -48,10 +48,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await requireAdmin(req);
-        const { id } = await ctx.params;
+        const { id } = await params;
         const body = await req.json();
         const parsed = appointmentUpdateSchema.safeParse(body);
         if (!parsed.success) throw new ApiError(400, 'Validation failed', 'bad_request', parsed.error.flatten());
@@ -92,10 +92,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await requireAdmin(req);
-        const { id } = await ctx.params;
+        const { id } = await params;
         // Soft delete by setting deleted_at = now()
         const [row] = await db
             .update(appointments)

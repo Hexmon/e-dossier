@@ -13,10 +13,10 @@ import {
     deleteTrainingCamp,
 } from '@/app/db/queries/trainingCamps';
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
-        const { campId } = trainingCampParam.parse(await ctx.params);
+        const { campId } = trainingCampParam.parse(await params);
         const sp = new URL(req.url).searchParams;
         const qp = trainingCampQuerySchema.parse({
             includeActivities: sp.get('includeActivities') ?? undefined,
@@ -31,10 +31,10 @@ export async function GET(req: NextRequest, ctx: any) {
     }
 }
 
-export async function PATCH(req: NextRequest, ctx: any) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAdmin(req);
-        const { campId } = trainingCampParam.parse(await ctx.params);
+        const { campId } = trainingCampParam.parse(await params);
         const dto = trainingCampUpdateSchema.parse(await req.json());
         const row = await updateTrainingCamp(campId, { ...dto });
         if (!row) throw new ApiError(404, 'Training camp not found', 'not_found');
@@ -44,10 +44,10 @@ export async function PATCH(req: NextRequest, ctx: any) {
     }
 }
 
-export async function DELETE(req: NextRequest, ctx: any) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAdmin(req);
-        const { campId } = trainingCampParam.parse(await ctx.params);
+        const { campId } = trainingCampParam.parse(await params);
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteTrainingCamp(campId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Training camp not found', 'not_found');

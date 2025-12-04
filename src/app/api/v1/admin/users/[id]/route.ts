@@ -74,12 +74,12 @@ async function selectEnrichedUserById(id: string) {
 
 export async function GET(
   req: NextRequest,
-  ctx: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin(req);
 
-    const { id: raw } = await (ctx as any).params;
+    const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
     const { id } = IdSchema.parse({ id: rawId });
 
@@ -96,12 +96,12 @@ export async function GET(
 // body: userUpdateSchema (password optional; restore toggles soft-delete)
 export async function PATCH(
   req: NextRequest,
-  ctx: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin(req);
 
-    const { id: raw } = await (ctx as any).params;
+    const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
     const { id } = IdSchema.parse({ id: rawId });
 
@@ -175,13 +175,13 @@ export async function PATCH(
 // Soft-delete by default; hard delete with ?hard=true
 export async function DELETE(
   req: NextRequest,
-  ctx: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin(req);
 
     // Await params once (Next.js App Router dynamic API requirement)
-    const { id: raw } = await (ctx as any).params;
+    const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
     const { id } = IdSchema.parse({ id: rawId });
 

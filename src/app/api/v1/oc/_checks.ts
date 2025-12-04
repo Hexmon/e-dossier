@@ -19,10 +19,10 @@ export async function mustBeAdmin(req: NextRequest) {
 }
 
 export async function parseParam<T extends z.ZodTypeAny>(
-    ctx: { params: { [k: string]: string } } | { params: Promise<{ [k: string]: string }> },
+    { params }: { params: { [k: string]: string } } | { params: Promise<{ [k: string]: string }> },
     schema: T
 ): Promise<z.infer<T>> {
-    const raw = await (ctx as any).params;
+    const raw = await params;
     // FIX: coerce to string before trim to avoid TS error
     const normalized = Object.fromEntries(
         Object.entries(raw).map(([k, v]) => [k, decodeURIComponent(String(v ?? '').trim())])

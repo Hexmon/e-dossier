@@ -12,10 +12,10 @@ import { courses } from '@/app/db/schema/training/courses';
 
 const Param = z.object({ courseId: z.string().uuid() });
 
-export async function GET(req: NextRequest, ctx: { params: Promise<{ courseId: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
         await requireAuth(req);
-        const { courseId } = Param.parse(await ctx.params);
+        const { courseId } = Param.parse(await params);
         const sp = new URL(req.url).searchParams;
         const semester = sp.get('semester') ? Number(sp.get('semester')) : undefined;
         const rows = await listCourseOfferings(courseId, semester);
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ courseId: s
     } catch (err) { return handleApiError(err); }
 }
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ courseId: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
         await requireAdmin(req);
-        const { courseId } = Param.parse(await ctx.params);
+        const { courseId } = Param.parse(await params);
         const body = offeringCreateSchema.parse(await req.json());
 
         // ❗ Ensure course exists and is NOT soft-deleted

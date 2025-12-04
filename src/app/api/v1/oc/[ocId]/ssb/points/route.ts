@@ -4,10 +4,10 @@ import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../
 import { OcIdParam, listQuerySchema, ssbPointCreateSchema } from '@/app/lib/oc-validators';
 import { getSsbReport, listSsbPoints, createSsbPoint } from '@/app/db/queries/oc';
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
+        const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const report = await getSsbReport(ocId);
         if (!report) return json.ok({ items: [], count: 0 });
         const sp = new URL(req.url).searchParams;
@@ -17,10 +17,10 @@ export async function GET(req: NextRequest, ctx: any) {
     } catch (err) { return handleApiError(err); }
 }
 
-export async function POST(req: NextRequest, ctx: any) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
-        const { ocId } = await parseParam(ctx, OcIdParam); await ensureOcExists(ocId);
+        const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const report = await getSsbReport(ocId);
         if (!report) throw new ApiError(400, 'Create SSB report first', 'bad_request');
         const dto = ssbPointCreateSchema.parse(await req.json());

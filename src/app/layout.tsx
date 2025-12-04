@@ -2,10 +2,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { Providers } from "@/components/providers/Providers";
 import { Toaster } from "sonner";
-import GlobalLoader from "@/components/GlobalLoader";
 
 const queryClient = new QueryClient();
 

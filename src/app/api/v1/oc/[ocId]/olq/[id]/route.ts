@@ -9,12 +9,12 @@ import { getOlqById } from '@/app/db/queries/olq';
 const IdParam = z.object({ id: z.string().uuid() });
 const BoolString = z.enum(['true', 'false']).transform((v) => v === 'true');
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
-        const { id } = IdParam.parse(await ctx.params);
+        const { id } = IdParam.parse({params});
         const sp = new URL(req.url).searchParams;
         const includeCategories = BoolString.optional().parse(sp.get('includeCategories') ?? undefined) ?? true;
 

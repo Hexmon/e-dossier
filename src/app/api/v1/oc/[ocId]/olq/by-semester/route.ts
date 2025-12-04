@@ -6,10 +6,10 @@ import { OcIdParam } from '@/app/lib/oc-validators';
 import { olqBySemesterQuerySchema } from '@/app/lib/olq-validators';
 import { listOlqBySemester } from '@/app/db/queries/olq';
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
-        const { ocId } = await parseParam(ctx, OcIdParam);
+        const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
         const sp = new URL(req.url).searchParams;
