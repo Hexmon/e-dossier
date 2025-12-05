@@ -69,8 +69,8 @@ importers:
         specifier: ^17.2.1
         version: 17.2.3
       drizzle-orm:
-        specifier: ^0.44.4
-        version: 0.44.7(@types/pg@8.15.6)(@upstash/redis@1.35.6)(pg@8.16.3)
+        specifier: ^0.45.0
+        version: 0.45.0(@types/pg@8.15.6)(@upstash/redis@1.35.6)(pg@8.16.3)
       isomorphic-dompurify:
         specifier: ^2.30.0
         version: 2.31.0
@@ -2069,8 +2069,8 @@ packages:
     resolution: {integrity: sha512-/B4e/4pwnx25QwD5xXgdpo1S+077a2VZdosXbItE/oNmUgQwZydGDz9qJYmnQl/b+5IX0rLfwRhrPnroGtrg8Q==}
     hasBin: true
 
-  drizzle-orm@0.44.7:
-    resolution: {integrity: sha512-quIpnYznjU9lHshEOAYLoZ9s3jweleHlZIAWR/jX9gAWNg/JhQ1wj0KGRf7/Zm+obRrYd9GjPVJg790QY9N5AQ==}
+  drizzle-orm@0.45.0:
+    resolution: {integrity: sha512-lyd9VRk3SXKRjV/gQckQzmJgkoYMvVG3A2JAV0vh3L+Lwk+v9+rK5Gj0H22y+ZBmxsrRBgJ5/RbQCN7DWd1dtQ==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -2888,6 +2888,7 @@ packages:
   next@15.4.7:
     resolution: {integrity: sha512-OcqRugwF7n7mC8OSYjvsZhhG1AYSvulor1EIUsIkbbEbf1qoE5EbH36Swj8WhF4cHqmDgkiam3z1c1W0J1Wifg==}
     engines: {node: ^18.18.0 || ^19.8.0 || >= 20.0.0}
+    deprecated: This version has a security vulnerability. Please upgrade to a patched version. See https://nextjs.org/blog/CVE-2025-66478 for more details.
     hasBin: true
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
@@ -5317,7 +5318,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.7(@types/pg@8.15.6)(@upstash/redis@1.35.6)(pg@8.16.3):
+  drizzle-orm@0.45.0(@types/pg@8.15.6)(@upstash/redis@1.35.6)(pg@8.16.3):
     optionalDependencies:
       '@types/pg': 8.15.6
       '@upstash/redis': 1.35.6
