@@ -4,7 +4,7 @@ import { endpoints } from "@/constants/endpoints";
 /** Shape of one parent communication record */
 export interface ParentCommPayload {
     semester: number;
-    mode: "LETTER" | "PHONE" | "EMAIL" | "IN_PERSON" | "OTHER"; // z.enum(...) in backend schema
+    mode: "LETTER" | "PHONE" | "EMAIL" | "IN_PERSON" | "OTHER";
     refNo?: string | null;
     date: string; // YYYY-MM-DD
     subject: string;

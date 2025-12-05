@@ -21,6 +21,7 @@ export default function CfeForm({ onSubmit, semIndex, existingRows }: Props) {
         defaultValues: {
             records: [
                 {
+                    serialNo: "1",
                     cat: "",
                     mks: "",
                     remarks: "",
@@ -40,6 +41,7 @@ export default function CfeForm({ onSubmit, semIndex, existingRows }: Props) {
 
     const addRow = () =>
         append({
+            serialNo: String(fields.length + 1),
             cat: "",
             mks: "",
             remarks: "",

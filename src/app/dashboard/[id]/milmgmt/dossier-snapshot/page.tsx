@@ -65,7 +65,7 @@ export default function DossierSnapshotPage() {
           </div>
         )}
 
-        <DossierTab tabs={dossierTabs} defaultValue="dossier-snapshot">
+        <DossierTab tabs={dossierTabs} defaultValue="dossier-snapshot" ocId={ocId}>
           <TabsContent value="dossier-snapshot">
             <section className="p-6">
               <Card className="max-w-5xl mx-auto shadow-lg rounded-2xl">

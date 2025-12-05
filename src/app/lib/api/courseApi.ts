@@ -4,7 +4,7 @@ import { baseURL, endpoints } from "@/constants/endpoints";
 
 // Response shape from your backend
 export type GetCoursesResponse = {
-    items: Course[];
+    items: CourseResponse[];
     total?: number;
 };
 

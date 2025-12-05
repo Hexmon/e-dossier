@@ -12,11 +12,12 @@ import { Shield, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import ParentCommForm, { ParentCommFormData } from "@/components/parent/ParentCommForm";
-import { useParentComms, ParentCommPayload, ParentCommRow } from "@/hooks/useParentComms";
+import { useParentComms, ParentCommRow } from "@/hooks/useParentComms";
 import { useOcPersonal } from "@/hooks/useOcPersonal";
 import ParentCommTable from "@/components/parent/ParentCommTable";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Link from "next/link";
+import { ParentCommPayload } from "@/app/lib/api/parentComnApi";
 
 export default function ParentCommnPage() {
     const { id } = useParams();
@@ -57,9 +58,9 @@ export default function ParentCommnPage() {
             semester: activeTab + 1,
             mode: "LETTER",
             refNo: r.letterNo ?? null,
-            date: r.date ?? null,
-            subject: r.teleCorres ?? null,
-            brief: r.briefContents ?? null,
+            date: r.date ?? "",
+            subject: r.teleCorres ?? "",
+            brief: r.briefContents ?? "",
             platoonCommanderName: r.sigPICdr ?? null,
         }));
 
@@ -187,14 +188,13 @@ export default function ParentCommnPage() {
                                     {/* Input Form */}
                                     <ParentCommForm
                                         onSubmit={async (formData) => {
-                                            // onSubmit will send payloads for the activeTab semester
                                             const payloads: ParentCommPayload[] = formData.records.map((r) => ({
                                                 semester: activeTab + 1,
                                                 mode: "LETTER",
                                                 refNo: r.letterNo ?? null,
-                                                date: r.date ?? null,
-                                                subject: r.teleCorres ?? null,
-                                                brief: r.briefContents ?? null,
+                                                date: r.date ?? "",
+                                                subject: r.teleCorres ?? "",
+                                                brief: r.briefContents ?? "",
                                                 platoonCommanderName: r.sigPICdr ?? null,
                                             }));
                                             await save(activeTab + 1, payloads);

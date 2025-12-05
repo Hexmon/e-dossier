@@ -143,7 +143,7 @@ export function useDisciplineRecords(ocId: string, semestersCount = 6) {
             if (!ocId) return false;
             try {
                 const resp = await deleteDisciplineRecord(ocId, id);
-                if (!resp?.ok) {
+                if (!resp) {
                     toast.error("Failed to delete");
                     return false;
                 }

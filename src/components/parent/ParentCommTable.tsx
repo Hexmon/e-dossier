@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import type { ParentCommRow, ParentCommPayload } from "@/hooks/useParentComms";
+import type { ParentCommRow } from "@/hooks/useParentComms";
+import { ParentCommPayload } from "@/app/lib/api/parentComnApi";
 
 interface Props {
     rows: ParentCommRow[] | undefined;
@@ -37,11 +38,11 @@ export default function ParentCommTable({ rows, loading, onEditSave, onDelete }:
         if (!editingId || !editForm) return;
 
         await onEditSave(editingId, {
-            refNo: editForm.letterNo || null,
-            date: editForm.date || null,
-            subject: editForm.teleCorres || null,
-            brief: editForm.briefContents || null,
-            platoonCommanderName: editForm.sigPICdr || null,
+            refNo: editForm.letterNo || undefined,
+            date: editForm.date || undefined,
+            subject: editForm.teleCorres || undefined,
+            brief: editForm.briefContents || undefined,
+            platoonCommanderName: editForm.sigPICdr || undefined,
         });
 
         cancelEdit();

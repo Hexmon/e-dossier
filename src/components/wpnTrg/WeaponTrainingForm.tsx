@@ -19,7 +19,7 @@ type FormValues = {
 interface Props {
     semesterNumber: number;
     inputPrefill: Row[];
-    savedRecords: WeaponTrainingRecord[]; // from hook
+    savedRecords: WeaponTrainingRecord[];
     onSave: (values: FormValues) => Promise<void>;
     disabled?: boolean;
     formMethods?: UseFormReturn<FormValues>;
@@ -33,20 +33,41 @@ export default function WeaponTrainingForm({
     disabled = false,
     formMethods,
 }: Props) {
-    const methods = formMethods ?? useForm<FormValues>({ defaultValues: { records: inputPrefill } });
+    /** ALWAYS call hook at top-level */
+    const internalForm = useForm<FormValues>({
+        defaultValues: { records: inputPrefill },
+    });
+
+    const methods = formMethods ?? internalForm;
+
     const { register, handleSubmit, reset, watch } = methods;
 
-    const merged = useMemo(() => {
+    /**
+     * Merged values:
+     * - Prefill values
+     * - Latest saved record override
+     */
+    const merged = useMemo<Row[]>(() => {
         return inputPrefill.map((pref) => {
-            const match = [...savedRecords].reverse().find((s) => s.subject === pref.subject && s.semester === semesterNumber);
+            const match = [...savedRecords]
+                .reverse()
+                .find(
+                    (s) =>
+                        s.subject === pref.subject &&
+                        Number(s.semester) === Number(semesterNumber)
+                );
+
             return {
                 subject: pref.subject ?? "-",
                 maxMarks: pref.maxMarks ?? 0,
-                obtained: match ? String(match.marksObtained ?? "") : String(pref.obtained ?? ""),
+                obtained: match
+                    ? String(match.marksObtained ?? "")
+                    : String(pref.obtained ?? ""),
             };
         });
     }, [inputPrefill, savedRecords, semesterNumber]);
 
+    /** Sync form on merged change */
     useEffect(() => {
         reset({ records: merged });
     }, [merged, reset]);
@@ -67,15 +88,21 @@ export default function WeaponTrainingForm({
 
                     <tbody>
                         {merged.map((row, idx) => {
+                            const subject = row.subject ?? "-";
+                            const maxMarks = row.maxMarks ?? 0;
+                            const obtained = row.obtained ?? "";
+
                             return (
-                                <tr key={row.subject ?? idx}>
-                                    <td className="p-2 border">{row.subject ?? "-"}</td>
+                                <tr key={subject + idx}>
+                                    <td className="p-2 border">{subject}</td>
 
                                     <td className="p-2 border">
                                         <Input
-                                            {...register(`records.${idx}.maxMarks`, { valueAsNumber: true })}
+                                            {...register(`records.${idx}.maxMarks`, {
+                                                valueAsNumber: true,
+                                            })}
                                             type="number"
-                                            defaultValue={row.maxMarks}
+                                            defaultValue={maxMarks}
                                             disabled={disabled}
                                         />
                                     </td>
@@ -84,7 +111,7 @@ export default function WeaponTrainingForm({
                                         <Input
                                             {...register(`records.${idx}.obtained`)}
                                             type="number"
-                                            defaultValue={row.obtained}
+                                            defaultValue={obtained}
                                             disabled={disabled}
                                         />
                                     </td>
@@ -95,11 +122,12 @@ export default function WeaponTrainingForm({
                 </table>
             </div>
 
-            {/* Buttons */}
+            {/* Action Buttons */}
             <div className="flex justify-center gap-3 mt-6">
                 <Button type="submit" disabled={disabled}>
                     Save Training
                 </Button>
+
                 <Button
                     type="button"
                     variant="outline"

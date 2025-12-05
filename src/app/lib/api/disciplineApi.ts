@@ -110,7 +110,7 @@ export async function getDisciplineRecords(ocId: string): Promise<DisciplineResp
 export async function updateDisciplineRecord(
     ocId: string,
     disciplineId: string,
-    payload: { points: number; punishment: string }
+    payload: Record<string, unknown>
 ) {
     return await api.patch(
         endpoints.oc.discipRec(ocId, disciplineId),

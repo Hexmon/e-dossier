@@ -1,8 +1,10 @@
 import { Qualification } from "./background-detls";
+import { Cadet } from "./cadet";
 
-export type Props = {
-    ocId: string;
-};
+interface Props {
+  ocId: string;
+  cadet: Cadet | null;
+}
 
 export type FormValues = {
     qualifications: Qualification[];

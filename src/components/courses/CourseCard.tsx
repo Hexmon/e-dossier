@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { UICourse } from "@/hooks/useCourses";
 import {
   Calendar,
   ClipboardList,
@@ -27,12 +28,11 @@ export interface Course {
 }
 
 interface CourseCardProps {
-  course: Course;
-  onView: (course: Course) => void;
-  onEdit: (course: Course) => void;
+  course: UICourse;
+  onView: (course: UICourse) => void;
+  onEdit: (course: UICourse) => void;
   onDelete: (courseId: string) => void;
 }
-
 export default function CourseCard({
   course,
   onView,
@@ -100,7 +100,7 @@ export default function CourseCard({
             variant="outline"
             size="sm"
             onClick={() => onDelete(course.id)}
-            className="flex-1 text-xs text-destructive hover:text-destructive-foreground hover:bg-destructive"
+            className="flex-1 text-xs text-destructive hover:text-destructive-foreground"
           >
             <Trash2 className="h-3 w-3 mr-1" />
             Delete

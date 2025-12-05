@@ -5,7 +5,7 @@ import { useForm, UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SpeedMarchRecord } from "@/app/lib/api/speedMarchApi";
-import { tablePrefill, termColumns } from "@/constants/app.constants";
+import { termColumns } from "@/constants/app.constants";
 
 type Row = {
     id?: string;
@@ -38,23 +38,30 @@ interface Props {
 export default function SpeedMarchForm({
     semesterNumber,
     inputPrefill,
-    savedRecords,
     onSave,
     isEditing,
     onCancelEdit,
     disabled = false,
     formMethods,
 }: Props) {
-    const methods =
-        formMethods ?? useForm<FormValues>({ defaultValues: { records: inputPrefill } });
+    /**  Always call hooks at the top level — NEVER conditionally */
+    const internalForm = useForm<FormValues>({
+        defaultValues: { records: inputPrefill },
+    });
+
+    const methods = formMethods ?? internalForm;
 
     const { register, handleSubmit, reset } = methods;
 
-    // Select correct timing + distance fields for current semester
-    const timingKey = termColumns[semesterNumber - 4].timing;
-    const distanceKey = termColumns[semesterNumber - 4].distance;
+    /** Safe timing + distance column selection */
+    const term = termColumns[semesterNumber - 4];
+    const timingKey = term?.timing as keyof Row;
+    const distanceKey = term?.distance as keyof Row;
 
-    const merged = useMemo(() => {
+    /** Protect from undefined termColumns */
+    const merged = useMemo<Row[]>(() => {
+        if (!timingKey || !distanceKey) return inputPrefill;
+
         return inputPrefill.map((pref) => ({
             ...pref,
             [timingKey]: pref[timingKey] ?? "",
@@ -62,6 +69,7 @@ export default function SpeedMarchForm({
         }));
     }, [inputPrefill, timingKey, distanceKey]);
 
+    /** Sync form values */
     useEffect(() => {
         reset({ records: merged });
     }, [merged, reset]);
@@ -88,8 +96,8 @@ export default function SpeedMarchForm({
                         {merged.map((row, i) => {
                             const id = row.id ?? `row-${i}`;
                             const test = row.test ?? "-";
-                            const timingLabel = row[timingKey] ?? "";
-                            const distanceValue = row[distanceKey] ?? "";
+                            const timingLabel = (row[timingKey] as string) ?? "";
+                            const distanceValue = (row[distanceKey] as string) ?? "";
 
                             return (
                                 <tr key={id}>

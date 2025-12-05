@@ -8,9 +8,10 @@ import { toast } from "sonner";
 
 import { EducationUI, EducationItem } from "@/app/lib/api/educationApi";
 import { useEducation } from "@/hooks/useEducation";
-import { FormValues, Props } from "@/types/educational-qual";
+import { FormValues } from "@/types/educational-qual";
+import { Props } from "@/types/family-background";
 
-export default function EducationQualifications({ ocId }: Props) {
+export default function EducationQualifications({ ocId, cadet }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<EducationUI | null>(null);
 

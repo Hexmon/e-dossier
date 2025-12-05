@@ -9,17 +9,8 @@ import {
     saveParentComms,
     updateParentComm,
     deleteParentComm,
+    ParentCommPayload,
 } from "@/app/lib/api/parentComnApi";
-
-export type ParentCommPayload = {
-    semester: number;
-    mode: string;
-    refNo?: string | null;
-    date?: string | null;
-    subject?: string | null;
-    brief?: string | null;
-    platoonCommanderName?: string | null;
-};
 
 export type ParentCommRow = {
     id?: string;

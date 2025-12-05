@@ -7,7 +7,7 @@ export interface FamilyMember {
     age?: string | number;
     occupation?: string;
     education?: string;
-    mobile?: string;
+    mobileNo?: string;
 }
 
 export interface FamilyMemberRecord extends FamilyMember {

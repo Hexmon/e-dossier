@@ -20,6 +20,7 @@ export interface MedicalInfoResponse extends MedicalInfoPayload {
     id?: string;
     createdAt?: string;
     updatedAt?: string;
+    date?: string | null;
 }
 
 export interface ApiResponse<T = any> {

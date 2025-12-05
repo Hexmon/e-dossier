@@ -19,7 +19,7 @@ export const useOlqActions = (selectedCadet: any) => {
 
     const fetchCategories = async () => {
         if (!ocId) return [];
-        const res = await listOlqCategories(ocId);
+        const res = await listOlqCategories(ocId) as { items?: any[] };
         return res.items ?? [];
     };
 

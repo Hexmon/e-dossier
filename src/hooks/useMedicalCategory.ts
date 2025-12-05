@@ -77,22 +77,11 @@ export function useMedicalCategory(ocId: string) {
 
     /** ---------------- UPDATE RECORD ---------------- **/
     const update = useCallback(
-        async (id: string, payload: Partial<MedCatRow>) => {
+        async (id: string, payload: Partial<MedCatBackendPayload>) => {
             if (!ocId) return null;
 
             try {
-                const body = {
-                    date: payload.date || "",
-                    mosAndDiagnostics: payload.mosAndDiagnostics || payload.diagnosis || "",
-                    catFrom: payload.catFrom || "",
-                    catTo: payload.catTo || "",
-                    mhFrom: payload.mhFrom || "",
-                    mhTo: payload.mhTo || "",
-                    absence: payload.absence || "",
-                    platoonCommanderName: payload.platoonCommanderName || payload.piCdrInitial || "",
-                };
-
-                await updateMedicalCategory(ocId, id, body);
+                await updateMedicalCategory(ocId, id, payload);
                 toast.success("MED CAT updated");
                 await fetch();
                 return true;

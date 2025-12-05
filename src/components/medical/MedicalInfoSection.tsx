@@ -179,7 +179,7 @@ export default function MedicalInfoSection({
                 label: "Delete",
                 onClick: async () => {
                     try {
-                        await deleteMedicalInfo(selectedCadet.ocId, row.id);
+                        await deleteMedicalInfo(selectedCadet.ocId, row.id!);
 
                         setSavedMedInfo(prev => prev.filter(r => r.id !== row.id));
                         toast.success("Record deleted");
@@ -188,7 +188,10 @@ export default function MedicalInfoSection({
                     }
                 },
             },
-            cancel: { label: "Cancel" },
+            cancel: {
+                label: "Cancel",
+                onClick: () => { }
+            },
         });
     };
 
@@ -235,7 +238,7 @@ export default function MedicalInfoSection({
                     disabled={detailsDisabled}
                     defaultValues={{
                         medInfo: [
-                            { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "" }
+                            { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "", medicalHistory: "", medicalIssues: "", allergies: "" }
                         ],
                         medicalHistory: savedMedInfo[0]?.medicalHistory ?? "",
                         medicalIssues: savedMedInfo[0]?.medicalIssues ?? "",

@@ -48,6 +48,8 @@ import { useOcDetails } from "@/hooks/useOcDetails";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
+const EMPTY = "" as const;
+
 export default function ClubDetailsAndDrillPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
@@ -176,13 +178,15 @@ function InnerClubDrillPage({
                 } = api || {};
 
                 return {
-                    id: id ?? null,
+                    id: id ?? undefined,
                     semester: row.semester,
-                    maxMks: maxMarks ?? "",
-                    m1: m1Marks ?? "",
-                    m2: m2Marks ?? "",
-                    a1c1: a1c1Marks ?? "",
-                    a2c2: a2c2Marks ?? "",
+
+                    maxMks: maxMarks != null ? Number(maxMarks) : EMPTY,
+                    m1: m1Marks != null ? Number(m1Marks) : EMPTY,
+                    m2: m2Marks != null ? Number(m2Marks) : EMPTY,
+                    a1c1: a1c1Marks != null ? Number(a1c1Marks) : EMPTY,
+                    a2c2: a2c2Marks != null ? Number(a2c2Marks) : EMPTY,
+
                     remarks: remark ?? ""
                 };
             });

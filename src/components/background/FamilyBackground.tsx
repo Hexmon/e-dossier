@@ -41,6 +41,15 @@ export default function FamilyBackground({ ocId }: Props) {
         },
     });
 
+    const familyFields: (keyof FormValues["family"][number])[] = [
+        "name",
+        "relation",
+        "age",
+        "occupation",
+        "education",
+        "mobileNo",
+    ];
+
     const { fields, append, remove } = useFieldArray({
         control: familyForm.control,
         name: "family",
@@ -258,7 +267,7 @@ export default function FamilyBackground({ ocId }: Props) {
                                 <tr key={item.id}>
                                     <td className="border px-4 py-2 text-center">{index + 1}</td>
 
-                                    {["name", "relation", "age", "occupation", "education", "mobileNo"].map((field) => (
+                                    {familyFields.map((field) => (
                                         <td key={field} className="border px-4 py-2">
                                             <Input
                                                 {...familyForm.register(`family.${index}.${field}`)}
@@ -288,7 +297,7 @@ export default function FamilyBackground({ ocId }: Props) {
                                 age: "",
                                 occupation: "",
                                 education: "",
-                                mobile: "",
+                                mobileNo: "",
                             })
                         }
                     >
