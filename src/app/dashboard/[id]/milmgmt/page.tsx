@@ -1,0 +1,111 @@
+"use client";
+
+import { use } from "react";
+import { useParams } from "next/navigation";
+
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
+import GlobalTabs from "@/components/Tabs/GlobalTabs";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
+
+import { militaryTrainingCards, miltrgTabs } from "@/config/app.config";
+import { TabsContent } from "@/components/ui/tabs";
+import { Settings } from "lucide-react";
+
+import { useOcDetails } from "@/hooks/useOcDetails";
+
+export default function MilitaryTrainingPage(props: { params: Promise<{ id: string }> }) {
+  const { id } = use(props.params);
+  const params = useParams();
+
+  const ocId = Array.isArray(params.id) ? params.id[0] : params.id || "";
+  const { cadet, loading, error } = useOcDetails(ocId);
+
+  return (
+    <DashboardLayout
+      title="Dossier"
+      description="Organize, manage, and securely store essential documents"
+    >
+      {/* Breadcrumb */}
+      <div className="flex justify-between items-center rounded-2xl mb-4">
+        <BreadcrumbNav
+          paths={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Dossier" },
+          ]}
+        />
+      </div>
+
+      {/* Cadet Info */}
+      {loading && (
+        <p className="text-center text-sm text-muted-foreground mb-4">
+          Loading cadet details...
+        </p>
+      )}
+
+      {error && (
+        <p className="text-center text-sm text-red-500 mb-4">{error}</p>
+      )}
+
+      {cadet && (
+        <div className="hidden md:flex sticky top-16 z-40 mb-6">
+          <SelectedCadetTable selectedCadet={cadet} />
+        </div>
+      )}
+
+      {/* Tabs */}
+      <GlobalTabs tabs={miltrgTabs} defaultValue="mil-trg">
+        <TabsContent value="mil-trg" className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
+            {militaryTrainingCards.map((card, index) => {
+              const Icon = card.icon;
+              const url = typeof card.to === "function" ? card.to(ocId) : card.to;
+              return (
+                <Card
+                  key={index}
+                  className="group hover:shadow-command transition-all duration-300 cursor-pointer rounded-xl shadow-lg"
+                >
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${card.color} text-white`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+
+                      <CardTitle className="text-lg group-hover:text-primary">
+                        {card.title}
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                      {card.description}
+                    </p>
+
+                    <a href={url}>
+                      <button className="w-full border rounded-md p-2 hover:bg-accent transition">
+                        Access Module →
+                      </button>
+                    </a>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <div className="text-center py-12">
+            <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">General Settings</h3>
+            <p className="text-muted-foreground">
+              Manage system roles, permissions, and more.
+            </p>
+          </div>
+        </TabsContent>
+      </GlobalTabs>
+    </DashboardLayout>
+  );
+}

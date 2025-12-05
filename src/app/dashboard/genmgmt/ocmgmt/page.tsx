@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 
 import { AppSidebar } from "@/components/AppSidebar";
@@ -10,8 +10,7 @@ import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import UploadButton, { type RawRow, type UploadedPreviewRow } from "@/components/oc/UploadButton";
 import UploadPreviewTable from "@/components/oc/UploadPreviewTable";
@@ -19,236 +18,167 @@ import OCsTable from "@/components/oc/OCsTable";
 import OCDetailsModal from "@/components/oc/OCDetailsModal";
 
 import { ocTabs } from "@/config/app.config";
-import {
-  bulkUploadOCs,
-  bulkValidateOCs,
-  createOC,
-  deleteOC,
-  fetchOCsWithCount,
-  type OCRecord,
-  type OCListRow,
-  updateOC,
-} from "@/app/lib/api/ocApi";
 import { getAllCourses } from "@/app/lib/api/courseApi";
 import { getPlatoons } from "@/app/lib/api/platoonApi";
+
 import { useDebouncedValue } from "@/app/lib/debounce";
 
-type CreateOCPayload = Omit<OCRecord, "id" | "uid" | "createdAt">;
-type BulkResult =
-  | {
-      success: number;
-      failed: number;
-      errors: Array<{ row: number; error: string }>;
-    }
-  | null;
+import { useOCUpload } from "@/hooks/useOCUpload";
+
+import type { OCRecord } from "@/app/lib/api/ocApi";
+import { useOCs } from "@/hooks/useOCs";
+import OCFilters from "@/components/genmgmt/OCFilters";
+import { OCForm } from "@/components/genmgmt/OCForm";
 
 type CourseLike = { id: string; code?: string; title?: string };
 type PlatoonLike = { id: string; name?: string };
 
 export default function OCManagementPage() {
-  const [ocList, setOcList] = useState<OCListRow[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1); // 1-based
-  const [pageSize, setPageSize] = useState(10);
-  const [loading, setLoading] = useState(false);
+  // hooks
+  const { ocList, totalCount, loading, fetchOCs, addOC, editOC, removeOC, setOcList } = useOCs();
+  const {
+    parsing,
+    setParsing,
+    uploadedPreview,
+    onParsed,
+    bulkUploading,
+    bulkResult,
+    validateResult,
+    rowValidations,
+    doBulkUpload,
+    doValidateAll,
+    doValidateRow,
+    clear: clearUpload,
+  } = useOCUpload();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editIndex, setEditIndex] = useState<number | null>(null);
-
+  // lookups
   const [courses, setCourses] = useState<CourseLike[]>([]);
   const [platoons, setPlatoons] = useState<PlatoonLike[]>([]);
 
-  // filters/search (with debounce)
-  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  const [search, setSearch] = useState<string>("");
   const [courseFilter, setCourseFilter] = useState<string>("");
   const [platoonFilter, setPlatoonFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>(""); // ACTIVE / WITHDRAWN / ...
-  const [branchFilter, setBranchFilter] = useState<string>(""); // O / E / M
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [branchFilter, setBranchFilter] = useState<string>("");
+
   const debouncedSearch = useDebouncedValue(search, 350);
 
-  // upload states
-  const [parsing, setParsing] = useState(false);
-  const [uploadedRawRows, setUploadedRawRows] = useState<RawRow[]>([]);
-  const [uploadedPreview, setUploadedPreview] = useState<UploadedPreviewRow[]>([]);
-  const [bulkUploading, setBulkUploading] = useState(false);
-  const [bulkResult, setBulkResult] = useState<BulkResult>(null);
-  const [validateResult, setValidateResult] = useState<BulkResult>(null);
-  const [rowValidations, setRowValidations] = useState<Record<number, string | "ok">>({});
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const { register, handleSubmit, reset, setValue } = useForm<Partial<OCRecord>>();
 
-  // details modal
-  const [viewOpen, setViewOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState<boolean>(false);
   const [viewId, setViewId] = useState<string | null>(null);
 
-  // initial lookups
+  type BranchType = "O" | "E" | "M";
+
+  const allowedBranches = useMemo(() => ["O", "E", "M"] as const, []);
+  const safeBranch = ((): BranchType | undefined => {
+    return (allowedBranches.includes(branchFilter as BranchType) ? (branchFilter as BranchType) : undefined);
+  })();
+
+  type StatusType = "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
+
+  const allowedStatus: StatusType[] = ["ACTIVE", "DELEGATED", "WITHDRAWN", "PASSED_OUT"];
+  const safeStatus = allowedStatus.includes(statusFilter as StatusType)
+    ? (statusFilter as StatusType)
+    : undefined;
+
   useEffect(() => {
     (async () => {
       const [c, p] = await Promise.all([getAllCourses(), getPlatoons()]);
-      setCourses((c as any)?.items || []);
-      setPlatoons(p || []);
+      setCourses(c?.items ?? []);
+      setPlatoons(p ?? []);
     })().catch(console.error);
   }, []);
 
-  // fetch OCs when filters/search or pagination change
+  // fetch table when filters change
   useEffect(() => {
-    setLoading(true);
     (async () => {
-      try {
-        const res = await fetchOCsWithCount<OCListRow>({
-          q: debouncedSearch || undefined,
-          courseId: courseFilter || undefined,
-          platoonId: platoonFilter || undefined,
-          status: (statusFilter || undefined) as any,
-          branch: (branchFilter || undefined) as any,
-          active: statusFilter === "ACTIVE" ? true : undefined,
-          limit: pageSize,
-          offset: (currentPage - 1) * pageSize,
-        });
-        setOcList(res.items || []);
-        setTotalCount(res.count || 0);
-      } catch (e) {
-        console.error("fetch OCs failed:", e);
-      } finally {
-        setLoading(false);
+      await fetchOCs({
+        q: debouncedSearch || undefined,
+        courseId: courseFilter || undefined,
+        platoonId: platoonFilter || undefined,
+        status: safeStatus,
+        branch: safeBranch,
+        active: statusFilter === "ACTIVE" ? true : undefined,
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
+      });
+    })().catch((e) => console.error("fetch failed", e));
+  }, [debouncedSearch, courseFilter, platoonFilter, statusFilter, branchFilter, currentPage, pageSize, fetchOCs, safeBranch]);
+
+  // form submit (add / edit)
+  const onSubmit: SubmitHandler<Partial<OCRecord>> = async (data) => {
+    try {
+      if (editingIndex !== null) {
+        const { id } = ocList[editingIndex];
+        await editOC(id, data);
+      } else {
+        await addOC(data as Omit<OCRecord, "id" | "uid" | "createdAt">);
       }
-    })();
-  }, [debouncedSearch, courseFilter, platoonFilter, statusFilter, branchFilter, currentPage, pageSize]);
+      reset();
+      setIsDialogOpen(false);
+      setEditingIndex(null);
+    } catch (e) {
+      console.error("save failed", e);
+    }
+  };
 
-  const onSubmit: SubmitHandler<Partial<OCRecord>> = useCallback(
-    async (data) => {
-      try {
-        if (editIndex !== null) {
-          const id = ocList[editIndex].id!;
-          const updated = await updateOC(id, data as OCRecord);
-          setOcList((prev) => prev.map((p, i) => (i === editIndex ? updated : p)));
-        } else {
-          const created = await createOC(data as CreateOCPayload);
-          setOcList((prev) => [...prev, created]);
-        }
-        reset();
-        setIsDialogOpen(false);
-        setEditIndex(null);
-      } catch (err) {
-        console.error("Save failed:", err);
-      }
-    },
-    [editIndex, ocList, reset]
-  );
+  // open edit dialog
+  const handleEdit = (index: number) => {
+    const oc = ocList[index];
+    setEditingIndex(index);
 
-  const handleEdit = useCallback(
-    async (index: number) => {
-      const oc = ocList[index];
-      setEditIndex(index);
+    setValue("name", oc.name ?? "");
+    setValue("ocNo", oc.ocNo ?? "");
+    setValue("courseId", oc.courseId ?? "");
+    setValue("branch", oc.branch ?? undefined);
+    setValue("platoonId", oc.platoonId ?? "");
+    setValue("arrivalAtUniversity", oc.arrivalAtUniversity?.slice(0, 10) ?? "");
 
-      setValue("name", oc.name || "");
-      setValue("ocNo" as any, oc.ocNo || "");
-      setValue("courseId" as any, oc.courseId || "");
-      setValue("branch" as any, (oc.branch ?? "") as any);
-      setValue("platoonId" as any, (oc.platoonId ?? "") as any);
-      setValue("arrivalAtUniversity" as any, oc.arrivalAtUniversity?.slice(0, 10) ?? "");
-      setIsDialogOpen(true);
-    },
-    [ocList, setValue]
-  );
+    setIsDialogOpen(true);
+  };
 
-  const handleDelete = useCallback(async (id: string) => {
-    await deleteOC(id);
-    setOcList((prev) => prev.filter((oc) => oc.id !== id));
-  }, []);
+  // delete
+  const handleDelete = async (id: string) => {
+    await removeOC(id);
+    fetchOCs({
+      q: debouncedSearch || undefined,
+      courseId: courseFilter || undefined,
+      platoonId: platoonFilter || undefined,
+      status: safeStatus,
+      branch: safeBranch,
+      limit: pageSize,
+      offset: (currentPage - 1) * pageSize,
+    }).catch(console.error);
+  };
 
-  const handleAddOC = useCallback(async () => {
-    setEditIndex(null);
+  const handleAdd = () => {
+    setEditingIndex(null);
     reset();
     setIsDialogOpen(true);
-  }, [reset]);
+  };
 
-  const onParsed = useCallback((raw: RawRow[], preview: UploadedPreviewRow[]) => {
-    setUploadedRawRows(raw);
-    setUploadedPreview(preview);
-    setBulkResult(null);
-    setValidateResult(null);
-    setRowValidations({});
-  }, []);
+  // upload bulk - pass a callback to re-fetch page on success
+  const handleBulkUpload = async () => {
+    await doBulkUpload(async () => {
+      await fetchOCs({
+        q: debouncedSearch || undefined,
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
+      });
+    });
+  };
 
-  const doBulkUpload = useCallback(
-    async () => {
-      if (uploadedRawRows.length === 0) return;
-      setBulkUploading(true);
-      try {
-        const data = await bulkUploadOCs(uploadedRawRows);
-        setBulkResult(data);
-
-        setLoading(true);
-        const res = await fetchOCsWithCount<OCListRow>({
-          q: debouncedSearch || undefined,
-          limit: pageSize,
-          offset: (currentPage - 1) * pageSize,
-        });
-        setOcList(res.items || []);
-        setTotalCount(res.count || 0);
-      } catch (err) {
-        console.error(err);
-        setBulkResult({
-          success: 0,
-          failed: uploadedRawRows.length,
-          errors: [{ row: 0, error: (err as Error).message }],
-        });
-      } finally {
-        setBulkUploading(false);
-        setLoading(false);
-      }
-    },
-    [uploadedRawRows, debouncedSearch, pageSize, currentPage]
-  );
-
-  const doValidateAll = useCallback(
-    async () => {
-      if (uploadedRawRows.length === 0) return;
-      try {
-        const res = await bulkValidateOCs(uploadedRawRows);
-        setValidateResult(res);
-        // map first 500 errors to rows
-        const map: Record<number, string | "ok"> = {};
-        for (const e of res.errors.slice(0, 500)) {
-          map[e.row - 1] = e.error;
-        }
-        // mark successes
-        uploadedRawRows.forEach((_, i) => {
-          if (!(i in map)) map[i] = "ok";
-        });
-        setRowValidations(map);
-      } catch (e: any) {
-        console.error("validate failed", e);
-      }
-    },
-    [uploadedRawRows]
-  );
-
-  const doValidateRow = useCallback(
-    async (rowIndex: number) => {
-      const row = uploadedRawRows[rowIndex];
-      if (!row) return;
-      try {
-        const res = await bulkValidateOCs([row]);
-        setRowValidations((prev) => ({
-          ...prev,
-          [rowIndex]: res.failed > 0 ? res.errors[0]?.error ?? "error" : "ok",
-        }));
-      } catch (e: any) {
-        setRowValidations((prev) => ({
-          ...prev,
-          [rowIndex]: e?.message ?? "error",
-        }));
-      }
-    },
-    [uploadedRawRows]
-  );
-
-  const openView = useCallback((id: string) => {
+  const openView = (id: string) => {
     setViewId(id);
     setViewOpen(true);
-  }, []);
+  };
 
   return (
     <SidebarProvider>
@@ -256,6 +186,7 @@ export default function OCManagementPage() {
         <aside>
           <AppSidebar />
         </aside>
+
         <main className="flex-1 flex flex-col">
           <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
             <PageHeader title="OC Management" description="Manage all OC details across platoons and terms" />
@@ -276,100 +207,61 @@ export default function OCManagementPage() {
               <TabsContent value="oc-mgmt" className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-foreground">OCs</h2>
+
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleAddOC}>
+                    <Button variant="outline" onClick={handleAdd}>
                       Add OC
                     </Button>
+
                     <UploadButton
                       disabled={parsing}
-                      onParsed={onParsed}
+                      onParsed={(raw: RawRow[], preview: UploadedPreviewRow[]) => {
+                        setParsing(false);
+                        onParsed(raw, preview);
+                      }}
                       onParsingStateChange={setParsing}
                       label={parsing ? "Parsing…" : "Upload CSV / Excel"}
                     />
                   </div>
                 </div>
 
-                {/* Filters */}
-                <div className="grid grid-cols-5 gap-3">
-                  <Input
-                    placeholder="Search name / TES no…"
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  />
-                  <select
-                    className="border rounded px-2 py-2"
-                    value={courseFilter}
-                    onChange={(e) => {
-                      setCourseFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <option value="">All Courses</option>
-                    {courses.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.code ?? c.title ?? c.id}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="border rounded px-2 py-2"
-                    value={platoonFilter}
-                    onChange={(e) => {
-                      setPlatoonFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <option value="">All Platoons</option>
-                    {platoons.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name ?? p.id}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="border rounded px-2 py-2"
-                    value={branchFilter}
-                    onChange={(e) => {
-                      setBranchFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <option value="">Branch</option>
-                    <option value="O">O</option>
-                    <option value="E">E</option>
-                    <option value="M">M</option>
-                  </select>
-                  <select
-                    className="border rounded px-2 py-2"
-                    value={statusFilter}
-                    onChange={(e) => {
-                      setStatusFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <option value="">Status</option>
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="DELEGATED">DELEGATED</option>
-                    <option value="WITHDRAWN">WITHDRAWN</option>
-                    <option value="PASSED_OUT">PASSED_OUT</option>
-                  </select>
-                </div>
+                <OCFilters
+                  search={search}
+                  onSearch={(val) => {
+                    setSearch(val);
+                    setCurrentPage(1);
+                  }}
+                  courseFilter={courseFilter}
+                  onCourseChange={(val) => {
+                    setCourseFilter(val);
+                    setCurrentPage(1);
+                  }}
+                  courses={courses}
+                  platoonFilter={platoonFilter}
+                  onPlatoonChange={(val) => {
+                    setPlatoonFilter(val);
+                    setCurrentPage(1);
+                  }}
+                  platoons={platoons}
+                  branchFilter={branchFilter}
+                  onBranchChange={(val) => {
+                    setBranchFilter(val);
+                    setCurrentPage(1);
+                  }}
+                  statusFilter={statusFilter}
+                  onStatusChange={(val) => {
+                    setStatusFilter(val);
+                    setCurrentPage(1);
+                  }}
+                />
 
-                {/* Latest Upload (only after file is parsed) */}
                 <UploadPreviewTable
                   rows={uploadedPreview}
                   bulkUploading={bulkUploading}
                   bulkResult={bulkResult}
-                  onBulkUpload={doBulkUpload}
+                  onBulkUpload={handleBulkUpload}
                   onClear={() => {
-                    setUploadedPreview([]);
-                    setUploadedRawRows([]);
-                    setBulkResult(null);
-                    setValidateResult(null);
-                    setRowValidations({});
+                    clearUpload();
                   }}
                   onValidateAll={doValidateAll}
                   validateResult={validateResult}
@@ -377,16 +269,16 @@ export default function OCManagementPage() {
                   rowValidations={rowValidations}
                 />
 
-                {/* All OCs */}
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="font-semibold text-lg">All OCs</h3>
                   </div>
+
                   <OCsTable
                     ocList={ocList}
                     onView={openView}
                     onEdit={handleEdit}
-                    onDelete={(id) => handleDelete(id)}
+                    onDelete={handleDelete}
                     pagination={{
                       mode: "server",
                       currentPage,
@@ -394,9 +286,7 @@ export default function OCManagementPage() {
                       totalCount,
                       onPageChange: (page, newPageSize) => {
                         setCurrentPage(page);
-                        if (newPageSize !== pageSize) {
-                          setPageSize(newPageSize);
-                        }
+                        if (newPageSize !== pageSize) setPageSize(newPageSize);
                       },
                     }}
                     loading={loading}
@@ -408,81 +298,21 @@ export default function OCManagementPage() {
         </main>
       </section>
 
-      {/* Add/Edit dialog */}
+      {/* Add / Edit dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editIndex !== null ? "Update OC" : "Add New OC"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <Label>Name</Label>
-              <Input {...register("name", { required: true })} />
-            </div>
-            <div>
-              <Label>Tes No</Label>
-              <Input {...register("ocNo" as any, { required: true })} />
-            </div>
-            <div>
-              <Label>Course</Label>
-              <select
-                {...register("courseId" as any, { required: true })}
-                className="w-full border border-input bg-background rounded-md p-2"
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Select Course
-                </option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code ?? c.title ?? c.id}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Branch</Label>
-              <Input {...register("branch" as any)} placeholder="E / M / O" />
-            </div>
-            <div>
-              <Label>Platoon</Label>
-              <select
-                {...register("platoonId" as any)}
-                className="w-full border border-input bg-background rounded-md p-2"
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Select Platoon
-                </option>
-                {platoons.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name ?? p.id}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Arrival Date</Label>
-              <Input type="date" {...register("arrivalAtUniversity" as any)} />
-            </div>
-            <div className="col-span-2 flex justify-end gap-2 mt-4">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => {
-                  setIsDialogOpen(false);
-                  reset();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">{editIndex !== null ? "Update" : "Save"}</Button>
-            </div>
-          </form>
-        </DialogContent>
+        <OCForm
+          defaultValues={{}}
+          courses={courses}
+          platoons={platoons}
+          isEditing={editingIndex !== null}
+          onCancel={() => {
+            setIsDialogOpen(false);
+            reset();
+          }}
+          onSubmit={onSubmit}
+        />
       </Dialog>
 
-      {/* View details modal */}
       <OCDetailsModal open={viewOpen} ocId={viewId} onOpenChange={setViewOpen} />
     </SidebarProvider>
   );

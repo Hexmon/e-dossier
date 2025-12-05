@@ -41,8 +41,9 @@ export default function AchievementsForm({
 
             <div className="mt-3 space-y-3">
                 {fields.map((field, i) => {
+                    const { id } = field;
                     return (
-                        <div key={field.id ?? i} className="flex items-center space-x-3">
+                        <div key={id ?? i} className="flex items-center space-x-3">
                             <div className="w-6 text-sm">{i + 1}.</div>
 
                             <input type="hidden" {...register(`achievements.${i}.id` as const)} />

@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { SubmitHandler, useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Course } from "@/components/courses/CourseCard";
+import { UICourse } from "@/hooks/useCourses";
 
-interface CourseFormModalProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (courseData: Omit<Course, "id">) => void;
-  course: Course | null;
+  onSave: (data: Omit<UICourse, "id">) => void;
+  course: UICourse | null;
   mode: "add" | "edit";
 }
 
@@ -21,13 +21,9 @@ export default function CourseFormModal({
   onSave,
   course,
   mode,
-}: CourseFormModalProps) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<Omit<Course, "id">>({
+}: Props) {
+
+  const { register, handleSubmit, reset } = useForm<Omit<UICourse, "id">>({
     defaultValues: {
       courseNo: "",
       startDate: "",
@@ -37,76 +33,55 @@ export default function CourseFormModal({
   });
 
   useEffect(() => {
-    if (course) {
-      reset(course);
-    } else {
-      reset({ courseNo: "", startDate: "", endDate: "", trgModel: 0 });
-    }
-  }, [course, reset, isOpen]);
+    reset({
+      courseNo: course?.courseNo ?? "",
+      startDate: course?.startDate ?? "",
+      endDate: course?.endDate ?? "",
+      trgModel: course?.trgModel ?? 0,
+    });
+  }, [course, reset]);
 
-  const onSubmit = (data: Omit<Course, "id">) => {
+  const submit: SubmitHandler<Omit<UICourse, "id">> = (data) => {
     onSave(data);
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>{mode === "add" ? "Add New Course" : "Edit Course"}</DialogTitle>
+          <DialogTitle>
+            {mode === "add" ? "Add Course" : "Edit Course"}
+          </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(submit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-muted-foreground">Course No</label>
-            <Input
-              {...register("courseNo", { required: "Course number is required" })}
-              placeholder="e.g. TES-50"
-            />
-            {errors.courseNo && (
-              <p className="text-xs text-red-500 mt-1">{errors.courseNo.message}</p>
-            )}
+            <label>Course No</label>
+            <Input {...register("courseNo", { required: true })} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-muted-foreground">Start Date</label>
-              <Input
-                type="date"
-                {...register("startDate", { required: "Start date is required" })}
-              />
-              {errors.startDate && (
-                <p className="text-xs text-red-500 mt-1">{errors.startDate.message}</p>
-              )}
+              <label>Start Date</label>
+              <Input type="date" {...register("startDate")} />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-muted-foreground">End Date</label>
-              <Input
-                type="date"
-                // ⬇️ removed "required" so endDate is optional
-                {...register("endDate")}
-              />
-              {errors.endDate && (
-                <p className="text-xs text-red-500 mt-1">{errors.endDate.message}</p>
-              )}
+              <label>End Date</label>
+              <Input type="date" {...register("endDate")} />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-muted-foreground">Training Model</label>
-            <Input
-              type="number"
-              {...register("trgModel", { valueAsNumber: true })}
-              placeholder="Enter training model"
-            />
+            <label>Training Model</label>
+            <Input type="number" {...register("trgModel")} />
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{mode === "add" ? "Add Course" : "Save Changes"}</Button>
+            <Button type="submit">Save</Button>
           </div>
         </form>
       </DialogContent>

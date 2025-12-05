@@ -21,12 +21,12 @@ interface Props {
     onDeleteSaved: (i: number) => void;
     editingRowId: string | null;
     editingValues: Partial<HikeRow> | null;
-    setEditingField: (field: keyof HikeRow, value: any) => void;
+    setEditingField: <K extends keyof HikeRow>(field: K, value: HikeRow[K]) => void;
     saveInlineEdit: (index: number) => void;
     cancelInlineEdit: () => void;
 
-    onSubmit?: (e?: any) => void;
-    onReset?: () => void;
+    onSubmit: (e?: React.BaseSyntheticEvent) => void;
+    onReset: () => void;
 }
 
 export default function HikeForm({

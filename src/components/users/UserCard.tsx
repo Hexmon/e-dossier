@@ -110,7 +110,7 @@ export const UserListItem = ({
               e.stopPropagation();
               onDelete?.(id);
             }}
-            className="text-xs text-destructive hover:text-destructive-foreground hover:bg-destructive"
+            className="text-xs text-destructive hover:text-destructive-foreground"
           >
             <Trash2 className="h-3 w-3 mr-1" />
             Delete

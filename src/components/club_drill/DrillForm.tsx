@@ -38,8 +38,9 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
 
                     <tbody>
                         {fields.map((f, idx) => {
+                            const { id} = f;
                             return (
-                                <tr key={f.id ?? idx}>
+                                <tr key={id ?? idx}>
                                     <input type="hidden" {...register(`drillRows.${idx}.id` as const)} />
 
                                     <td className="border p-2">

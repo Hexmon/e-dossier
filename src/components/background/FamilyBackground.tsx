@@ -1,272 +1,238 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-    getFamilyDetails,
-    saveFamilyDetails,
-    updateFamilyMember,
-    deleteFamilyMember,
-    FamilyMemberRecord,
-    FamilyMember
-} from "@/app/lib/api/familyApi";
 import { toast } from "sonner";
 
-interface Props {
-    selectedCadet: any;
-}
+import { FamilyMemberRecord } from "@/app/lib/api/familyApi";
+import { FormValues, Props } from "@/types/family-background";
+import { useFamily } from "@/hooks/useFamily";
 
-export default function FamilyBackground({ selectedCadet }: Props) {
-    const [savedFamily, setSavedFamily] = useState<FamilyMemberRecord[]>([]);
+export default function FamilyBackground({ ocId }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<FamilyMemberRecord | null>(null);
 
-    // -----------------------------
-    // FETCH FAMILY DATA
-    // -----------------------------
-    const fetchFamilyData = useCallback(async () => {
-        if (!selectedCadet?.ocId) return;
-
-        try {
-            const data = await getFamilyDetails(selectedCadet.ocId);
-            if (data.length > 0) {
-                setSavedFamily(data);
-            }
-        } catch (err) {
-            toast.error("Error loading family background data.");
-        }
-    }, [selectedCadet?.ocId]);
+    // ------------------------------------
+    // HOOK FOR API OPERATIONS
+    // ------------------------------------
+    const {
+        family,
+        setFamily,
+        fetchFamily,
+        saveFamily,
+        updateMember,
+        removeMember,
+    } = useFamily(ocId);
 
     useEffect(() => {
-        fetchFamilyData();
-    }, [fetchFamilyData]);
+        fetchFamily();
+    }, [fetchFamily]);
 
-    // -----------------------------
-    // ADD NEW FAMILY
-    // -----------------------------
-    const familyForm = useForm<{ family: FamilyMember[] }>({
+    // ------------------------------------
+    // RHF — NEW FAMILY FORM
+    // ------------------------------------
+    const familyForm = useForm<FormValues>({
         defaultValues: {
             family: [
-                {
-                    name: "",
-                    relation: "",
-                    age: "",
-                    occupation: "",
-                    education: "",
-                    mobile: ""
-                },
+                { name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" },
             ],
         },
     });
+
+    const familyFields: (keyof FormValues["family"][number])[] = [
+        "name",
+        "relation",
+        "age",
+        "occupation",
+        "education",
+        "mobileNo",
+    ];
 
     const { fields, append, remove } = useFieldArray({
         control: familyForm.control,
         name: "family",
     });
 
-    const submitFamily = async (data: { family: FamilyMember[] }) => {
-        if (!selectedCadet?.ocId) {
-            toast.error("No cadet selected");
-            return;
-        }
+    const submitFamily = async (values: FormValues) => {
+        const { family: newMembers } = values;
 
         try {
-            const responses = await saveFamilyDetails(selectedCadet.ocId, data.family);
+            const saved = await saveFamily(newMembers);
 
-            if (responses.length > 0) {
-                await fetchFamilyData();
+            if (saved && saved.length > 0) {
                 toast.success("Family details saved successfully!");
+                fetchFamily();
             }
-        } catch (err) {
-            toast.error("Unexpected error while saving family details.");
+        } catch {
+            toast.error("Error saving family details.");
         }
     };
 
-    // -----------------------------
-    // EDIT FAMILY
-    // -----------------------------
-    const handleEditFamily = (member: FamilyMemberRecord) => {
+    // ------------------------------------
+    // EDITING HANDLERS
+    // ------------------------------------
+    const startEdit = (member: FamilyMemberRecord) => {
         setEditingId(member.id);
         setEditForm({ ...member });
     };
 
-    const handleCancelEdit = () => {
+    const cancelEdit = () => {
         setEditingId(null);
         setEditForm(null);
     };
 
-    const handleChangeEdit = (field: keyof FamilyMemberRecord, value: any) => {
-        setEditForm(prev => prev ? { ...prev, [field]: value } : prev);
+    const changeEdit = <K extends keyof FamilyMemberRecord>(key: K, value: FamilyMemberRecord[K]) => {
+        setEditForm((prev) => (prev ? { ...prev, [key]: value } : prev));
     };
 
-    const handleSaveFamily = async () => {
-        if (!selectedCadet?.ocId || !editingId || !editForm) {
-            toast.error("Invalid operation");
-            return;
-        }
+    const saveEdit = async () => {
+        if (!editForm || !editingId) return toast.error("Invalid edit");
 
         try {
-            await updateFamilyMember(selectedCadet.ocId, editingId, editForm);
-
-            setSavedFamily(prev =>
-                prev.map(f => (f.id === editingId ? editForm : f))
-            );
+            await updateMember(editingId, editForm);
+            setFamily((prev) => prev.map((f) => (f.id === editingId ? editForm : f)));
 
             toast.success("Family member updated");
-            setEditingId(null);
-            setEditForm(null);
-        } catch (err) {
+            cancelEdit();
+        } catch {
             toast.error("Failed to update family member");
         }
     };
 
-    // -----------------------------
-    // DELETE FAMILY
-    // -----------------------------
-    const handleDeleteFamily = async (member: FamilyMemberRecord) => {
-        if (!selectedCadet?.ocId || !member.id) {
-            toast.error("Invalid family record");
-            return;
-        }
+    const deleteMember = async (member: FamilyMemberRecord) => {
+        const { id } = member;
 
         try {
-            await deleteFamilyMember(selectedCadet.ocId, member.id);
+            await removeMember(id);
+            setFamily((prev) => prev.filter((f) => f.id !== id));
 
-            setSavedFamily(prev => prev.filter(f => f.id !== member.id));
             toast.success("Family member deleted");
-        } catch (err) {
+        } catch {
             toast.error("Failed to delete family member");
         }
     };
 
-    // -----------------------------
-    // UI RENDER
-    // -----------------------------
+    // ------------------------------------
+    // UI
+    // ------------------------------------
     return (
         <div className="w-full">
-            {/* Saved Family Table */}
-            {savedFamily.length > 0 ? (
+
+            {/* -------------------------------- SAVED TABLE -------------------------------- */}
+            {family.length > 0 ? (
                 <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-                    <table className="min-w-full text-sm text-left border border-gray-300">
+                    <table className="min-w-full text-sm border border-gray-300">
                         <thead className="bg-gray-100">
                             <tr>
-                                {["S.No", "Name", "Relation", "Age", "Occupation", "Edn Qual", "Mobile", "Action"].map(
-                                    head => (
-                                        <th key={head} className="border px-4 py-2 !bg-gray-300 text-center">
-                                            {head}
-                                        </th>
-                                    )
-                                )}
+                                {["S.No", "Name", "Relation", "Age", "Occupation", "Edn Qual", "Mobile", "Action"].map((head) => (
+                                    <th key={head} className="border px-4 py-2 bg-gray-300 text-center">
+                                        {head}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
 
                         <tbody>
-                            {savedFamily.map((m, idx) => {
-                                const isEditing = editingId === m.id;
+                            {family.map((member, index) => {
+                                const { id, name, relation, age, occupation, education, mobileNo } = member;
+                                const isEditing = editingId === id;
 
                                 return (
-                                    <tr key={m.id}>
-                                        <td className="border px-4 py-2 text-center">{idx + 1}</td>
+                                    <tr key={id}>
+                                        <td className="border px-4 py-2 text-center">{index + 1}</td>
 
+                                        {/* NAME */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
                                                 <Input
                                                     value={editForm?.name || ""}
-                                                    onChange={e => handleChangeEdit("name", e.target.value)}
+                                                    onChange={(e) => changeEdit("name", e.target.value)}
                                                 />
                                             ) : (
-                                                m.name
+                                                name
                                             )}
                                         </td>
 
+                                        {/* RELATION */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
                                                 <Input
                                                     value={editForm?.relation || ""}
-                                                    onChange={e => handleChangeEdit("relation", e.target.value)}
+                                                    onChange={(e) => changeEdit("relation", e.target.value)}
                                                 />
                                             ) : (
-                                                m.relation
+                                                relation
                                             )}
                                         </td>
 
+                                        {/* AGE */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
                                                 <Input
                                                     type="number"
-                                                    value={String(editForm?.age || "")}
-                                                    onChange={e =>
-                                                        handleChangeEdit("age", Number(e.target.value))
-                                                    }
+                                                    value={editForm?.age || ""}
+                                                    onChange={(e) => changeEdit("age", Number(e.target.value))}
                                                 />
                                             ) : (
-                                                m.age
+                                                age
                                             )}
                                         </td>
 
+                                        {/* OCCUPATION */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
                                                 <Input
                                                     value={editForm?.occupation || ""}
-                                                    onChange={e => handleChangeEdit("occupation", e.target.value)}
+                                                    onChange={(e) => changeEdit("occupation", e.target.value)}
                                                 />
                                             ) : (
-                                                m.occupation
+                                                occupation
                                             )}
                                         </td>
 
+                                        {/* EDUCATION */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
                                                 <Input
                                                     value={editForm?.education || ""}
-                                                    onChange={e => handleChangeEdit("education", e.target.value)}
+                                                    onChange={(e) => changeEdit("education", e.target.value)}
                                                 />
                                             ) : (
-                                                m.education
+                                                education
                                             )}
                                         </td>
 
+                                        {/* MOBILE */}
                                         <td className="border px-4 py-2">
                                             {isEditing ? (
                                                 <Input
-                                                    value={editForm?.mobile || ""}
-                                                    onChange={e => handleChangeEdit("mobile", e.target.value)}
+                                                    value={editForm?.mobileNo || ""}
+                                                    onChange={(e) => changeEdit("mobileNo", e.target.value)}
                                                 />
                                             ) : (
-                                                m.mobile
+                                                mobileNo
                                             )}
                                         </td>
 
+                                        {/* ACTIONS */}
                                         <td className="border px-4 py-2 text-center space-x-2">
                                             {!isEditing ? (
                                                 <>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => handleEditFamily(m)}
-                                                    >
+                                                    <Button size="sm" variant="outline" onClick={() => startEdit(member)}>
                                                         Edit
                                                     </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="destructive"
-                                                        onClick={() => handleDeleteFamily(m)}
-                                                    >
+                                                    <Button size="sm" variant="destructive" onClick={() => deleteMember(member)}>
                                                         Delete
                                                     </Button>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Button size="sm" onClick={handleSaveFamily}>
+                                                    <Button size="sm" onClick={saveEdit}>
                                                         Save
                                                     </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={handleCancelEdit}
-                                                    >
+                                                    <Button size="sm" variant="outline" onClick={cancelEdit}>
                                                         Cancel
                                                     </Button>
                                                 </>
@@ -279,47 +245,39 @@ export default function FamilyBackground({ selectedCadet }: Props) {
                     </table>
                 </div>
             ) : (
-                <p className="text-center mb-4 text-gray-500">No family data yet.</p>
+                <p className="text-center text-gray-500">No family data yet.</p>
             )}
 
-            {/* Add New Family Section */}
+            {/* -------------------------------- ADD NEW FORM -------------------------------- */}
             <form onSubmit={familyForm.handleSubmit(submitFamily)}>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm text-left border border-gray-300">
+                    <table className="min-w-full text-sm border border-gray-300">
                         <thead className="bg-gray-100">
                             <tr>
-                                {["S.No", "Name", "Relation", "Age", "Occupation", "Edn Qual", "Mobile", "Action"].map(
-                                    head => (
-                                        <th key={head} className="border px-4 py-2 !bg-gray-300">
-                                            {head}
-                                        </th>
-                                    )
-                                )}
+                                {["S.No", "Name", "Relation", "Age", "Occupation", "Edn Qual", "Mobile", "Action"].map((head) => (
+                                    <th key={head} className="border px-4 py-2 bg-gray-300">
+                                        {head}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
 
                         <tbody>
-                            {fields.map((field, idx) => (
-                                <tr key={field.id}>
-                                    <td className="border px-4 py-2 text-center">{idx + 1}</td>
+                            {fields.map((item, index) => (
+                                <tr key={item.id}>
+                                    <td className="border px-4 py-2 text-center">{index + 1}</td>
 
-                                    {["name", "relation", "age", "occupation", "education", "mobile"].map(
-                                        col => (
-                                            <td key={col} className="border px-4 py-2">
-                                                <Input
-                                                    {...familyForm.register(`family.${idx}.${col}` as any)}
-                                                    placeholder={col}
-                                                />
-                                            </td>
-                                        )
-                                    )}
+                                    {familyFields.map((field) => (
+                                        <td key={field} className="border px-4 py-2">
+                                            <Input
+                                                {...familyForm.register(`family.${index}.${field}`)}
+                                                placeholder={field}
+                                            />
+                                        </td>
+                                    ))}
 
                                     <td className="border px-4 py-2 text-center">
-                                        <Button
-                                            variant="destructive"
-                                            type="button"
-                                            onClick={() => remove(idx)}
-                                        >
+                                        <Button variant="destructive" type="button" onClick={() => remove(index)}>
                                             Remove
                                         </Button>
                                     </td>
@@ -329,7 +287,7 @@ export default function FamilyBackground({ selectedCadet }: Props) {
                     </table>
                 </div>
 
-                <div className="mt-4 flex gap-2 justify-center">
+                <div className="mt-4 flex justify-center gap-2">
                     <Button
                         type="button"
                         onClick={() =>
@@ -339,7 +297,7 @@ export default function FamilyBackground({ selectedCadet }: Props) {
                                 age: "",
                                 occupation: "",
                                 education: "",
-                                mobile: "",
+                                mobileNo: "",
                             })
                         }
                     >
@@ -352,3 +310,4 @@ export default function FamilyBackground({ selectedCadet }: Props) {
         </div>
     );
 }
+

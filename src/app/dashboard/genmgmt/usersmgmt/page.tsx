@@ -2,124 +2,92 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
-import { fallbackUsers, ocTabs } from "@/config/app.config";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectTrigger, SelectContent, SelectValue, SelectItem } from "@/components/ui/select";
-import { UserListItem } from "@/components/users/UserCard";
-import { getAllUsers, saveUser, deleteUser, User } from "@/app/lib/api/userApi";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+
+import { ocTabs } from "@/config/app.config";
 import UserFormDialog from "@/components/users/UserFormDialog";
+import { UserListItem } from "@/components/users/UserCard";
+import { useUsers } from "@/hooks/useUsers";
+import type { User } from "@/app/lib/api/userApi";
 
 export default function UserManagement() {
-  const router = useRouter();
+  const { users, loading, fetchUsers, addUser, editUser, removeUser } = useUsers();
+
   const { register, handleSubmit, reset, setValue, watch } = useForm<User>();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const isActive = watch("isActive");
 
-  //  Fetch all users
-  const loadUsers = useCallback(async () => {
-    try {
-      const list = await getAllUsers();
-      setUsers(list);
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-      toast.error("Unable to load user list");
-      setUsers(fallbackUsers);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    fetchUsers();
+  }, [fetchUsers]);
 
-  //  Add / Edit User
-  const onSubmit = useCallback(async (data: User) => {
-    try {
-      const saved = await saveUser(data);
-      setUsers((prev) =>
-        editingUser
-          ? prev.map((u) => (u.id === saved.id ? saved : u))
-          : [...prev, saved]
-      );
-      toast.success(editingUser ? "User updated successfully" : "User added successfully");
-      setOpen(false);
-      reset();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save user");
+  /** SAVE USER */
+  const onSubmit = async (data: User) => {
+    if (editingUser && editingUser.id) {
+      await editUser(editingUser.id, data);
+      toast.success("User updated successfully");
+    } else {
+      await addUser(data);
+      toast.success("User added successfully");
     }
-  }, [editingUser, reset]);
 
-  const handleEdit = useCallback((user: User) => {
+    reset();
+    setEditingUser(null);
+    setOpen(false);
+  };
+
+  /** EDIT HANDLER */
+  const handleEdit = (user: User) => {
     setEditingUser(user);
     reset(user);
     setOpen(true);
-  }, [reset]);
+  };
 
-  const handleDelete = useCallback(async (user: User) => {
-    if (!user.id) {
-      setUsers((prev) => prev.filter((u) => u.username !== user.username));
-      return;
-    }
-    try {
-      await deleteUser(user.id);
-      setUsers((prev) => prev.filter((u) => u.id !== user.id));
-      toast.success("User deleted successfully");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete user");
-    }
-  }, []);
+  /** DELETE HANDLER */
+  const handleDelete = async (user: User) => {
+    if (!user.id) return;
+    await removeUser(user.id);
+    toast.warning("User deleted");
+  };
 
-  const handleView = useCallback((user: User) => {
+  /** VIEW HANDLER */
+  const handleView = (user: User) => {
     setSelectedUser(user);
     setViewOpen(true);
-  }, []);
-
-  const handleLogout = () => router.push("/login");
+  };
 
   return (
     <SidebarProvider>
-      <section className="min-h-screen flex w-full bg-background">
-        <aside><AppSidebar /></aside>
-        <main className="flex-1 flex flex-col">
-          <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
-            <PageHeader
-              title="User Management"
-              description="Manage user access and roles"
-            />
-          </header>
+      <section className="flex min-h-screen w-full">
+        <AppSidebar />
 
-          <section className="flex-1 p-6">
-            <nav>
-              <BreadcrumbNav
-                paths={[
-                  { label: "Dashboard", href: "/dashboard" },
-                  { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
-                  { label: "User Management" },
-                ]}
-              />
-            </nav>
+        <main className="flex-1 flex flex-col">
+          <PageHeader title="User Management" description="Manage user access and roles" />
+
+          <section className="p-6 flex-1">
+            <BreadcrumbNav
+              paths={[
+                { label: "Dashboard", href: "/dashboard" },
+                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                { label: "User Management" },
+              ]}
+            />
 
             <GlobalTabs tabs={ocTabs} defaultValue="user-mgmt">
               <TabsContent value="user-mgmt" className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-foreground">User List</h2>
+
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">User List</h2>
                   <Button
                     onClick={() => {
                       reset({ isActive: true });
@@ -132,25 +100,38 @@ export default function UserManagement() {
                 </div>
 
                 {loading ? (
-                  <p className="text-center p-4 text-muted-foreground">Loading users...</p>
+                  <p className="text-center py-4 text-muted-foreground">Loading...</p>
                 ) : (
                   <div className="divide-y border rounded-md">
-                    {users.map((user, idx) => (
-                      <UserListItem
-                        key={user.id || idx}
-                        id={user.id || idx.toString()}
-                        username={user.username}
-                        fullName={user.name}
-                        role={user.rank || "N/A"}
-                        persNo={user.email || "N/A"}
-                        rank={user.rank || "N/A"}
-                        unit={user.appointId || "N/A"}
-                        status={user.isActive ? "active" : "disabled"}
-                        onEdit={() => handleEdit(user)}
-                        onView={() => handleView(user)}
-                        onDelete={() => handleDelete(user)}
-                      />
-                    ))}
+                    {users.map((u) => {
+                      const {
+                        id = "",
+                        username = "N/A",
+                        name = "Unknown",
+                        email = "N/A",
+                        phone = "N/A",
+                        rank = "N/A",
+                        appointId = "N/A",
+                        isActive = false,
+                      } = u;
+
+                      return (
+                        <UserListItem
+                          key={id}
+                          id={id}
+                          username={username}
+                          fullName={name}
+                          persNo={email}
+                          rank={rank}
+                          unit={appointId ?? undefined}
+                          role={rank}
+                          status={isActive ? "active" : "disabled"}
+                          onEdit={() => handleEdit(u)}
+                          onView={() => handleView(u)}
+                          onDelete={() => handleDelete(u)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
@@ -159,32 +140,31 @@ export default function UserManagement() {
         </main>
       </section>
 
-      {/*  Add/Edit Dialog */}
+      {/* Add/Edit Modal */}
       <UserFormDialog
         open={open}
         onOpenChange={setOpen}
         onSubmit={handleSubmit(onSubmit)}
-        editingUser={editingUser}
         register={register}
         setValue={setValue}
-         isActive={watch("isActive") ?? true}
+        editingUser={editingUser}
+        isActive={watch("isActive") ?? true}
       />
 
-      {/*  View Dialog */}
+      {/* View Dialog */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
           </DialogHeader>
+
           {selectedUser && (
             <div className="space-y-2">
-              <p><b>Username:</b> {selectedUser.username}</p>
-              <p><b>Full Name:</b> {selectedUser.name}</p>
-              <p><b>Email:</b> {selectedUser.email}</p>
-              <p><b>Phone:</b> {selectedUser.phone}</p>
-              <p><b>Rank:</b> {selectedUser.rank}</p>
-              <p><b>Active:</b> {selectedUser.isActive ? "Yes" : "No"}</p>
-              <p><b>Created:</b> {selectedUser.createdAt && new Date(selectedUser.createdAt).toLocaleString()}</p>
+              <p><b>Name:</b> {selectedUser.name ?? "N/A"}</p>
+              <p><b>Email:</b> {selectedUser.email ?? "N/A"}</p>
+              <p><b>Phone:</b> {selectedUser.phone ?? "N/A"}</p>
+              <p><b>Rank:</b> {selectedUser.rank ?? "N/A"}</p>
+              <p><b>Status:</b> {selectedUser.isActive ? "Active" : "Disabled"}</p>
             </div>
           )}
         </DialogContent>

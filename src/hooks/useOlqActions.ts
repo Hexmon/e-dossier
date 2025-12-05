@@ -19,22 +19,16 @@ export const useOlqActions = (selectedCadet: any) => {
 
     const fetchCategories = async () => {
         if (!ocId) return [];
-        const res: any = await listOlqCategories(ocId);
-        console.log("🟣 RAW SEMESTER RESPONSE:", res);
-        console.log("🟢 (OLD) res.items:", res.items);
-        return res?.items ?? res ?? [];
+        const res = await listOlqCategories(ocId) as { items?: any[] };
+        return res.items ?? [];
     };
 
     const fetchSemester = async (semester: number) => {
         if (!ocId) return [];
-        console.log(`🔵 Fetching OLQ semester records for ocId=${ocId}, semester=${semester}`);
 
         const res: any = await listOlqRecords(ocId, semester);
 
-        console.log("🟣 RAW SEMESTER RESPONSE:", res);
-        console.log("🟢 (OLD) res.items:", res.items);
-        const categories = res?.data?.categories ?? res?.items ?? [];
-        console.log("🟢 EXTRACTED categories from res.data.categories:", categories);
+        const categories = res?.data?.categories ?? [];
 
         return categories;
     };
@@ -45,7 +39,6 @@ export const useOlqActions = (selectedCadet: any) => {
             const res = await createOcOlqRecord(ocId, payload);
             return res;
         } catch (err) {
-            console.error(err);
             toast.error("Failed to create OLQ record");
             throw err;
         }
@@ -57,7 +50,6 @@ export const useOlqActions = (selectedCadet: any) => {
             const res = await updateOcOlqRecord(ocId, payload);
             return res;
         } catch (err) {
-            console.error(err);
             toast.error("Failed to update OLQ record");
             throw err;
         }
@@ -70,7 +62,6 @@ export const useOlqActions = (selectedCadet: any) => {
             toast.success("OLQ semester deleted");
             return true;
         } catch (err) {
-            console.error(err);
             toast.error("Failed to delete semester");
             return false;
         }

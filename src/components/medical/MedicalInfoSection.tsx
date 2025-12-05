@@ -2,9 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -17,6 +14,9 @@ import {
 
 import { MedInfoRow, MedicalInfoForm } from "@/types/med-records";
 
+import MedicalInfoTable from "./MedicalInfoTable";
+import MedicalInfoFormComponent from "./MedicalInfoForm";
+
 export default function MedicalInfoSection({
     selectedCadet,
     semesters,
@@ -28,6 +28,7 @@ export default function MedicalInfoSection({
     const [savedMedInfo, setSavedMedInfo] = useState<MedInfoRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [detailsDisabled, setDetailsDisabled] = useState(false);
+
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<MedInfoRow | null>(null);
 
@@ -43,25 +44,19 @@ export default function MedicalInfoSection({
     });
 
     const { control, handleSubmit, register, reset } = form;
+    const { fields, append, remove } = useFieldArray({ control, name: "medInfo" });
 
-    const { fields, append, remove } = useFieldArray({
-        control,
-        name: "medInfo",
-    });
-
-    // --------------------------- FETCH ---------------------------
     const fetchMedicalInfo = useCallback(async () => {
         if (!selectedCadet?.ocId) return;
 
         try {
             setLoading(true);
             const data = await getMedicalInfo(selectedCadet.ocId);
-            console.log("backend medical info:", data);
 
             const formatted = data.map((item) => ({
                 id: item.id,
                 term: semesters[item.semester - 1],
-                date: ( ((item as any).date ?? item.examDate ?? "") || "" ).split("T")[0],
+                date: ((item.date ?? item.examDate ?? "") || "").split("T")[0],
                 age: String(item.age ?? ""),
                 height: String(item.heightCm ?? ""),
                 ibw: String(item.ibwKg ?? ""),
@@ -75,8 +70,8 @@ export default function MedicalInfoSection({
             }));
 
             setSavedMedInfo(formatted);
-            if (formatted.length > 0) {
 
+            if (formatted.length > 0) {
                 const hasDetails =
                     Boolean(
                         formatted[0].medicalHistory ||
@@ -95,25 +90,24 @@ export default function MedicalInfoSection({
                     allergies: formatted[0].allergies || "",
                 });
             }
-        } catch (err) {
+        } catch {
             toast.error("Failed to load medical info.");
         } finally {
             setLoading(false);
         }
-    }, [selectedCadet?.ocId, semesters]);
+    }, [selectedCadet?.ocId, semesters, reset]);
 
     useEffect(() => {
         fetchMedicalInfo();
-    }, [fetchMedicalInfo]);
+    }, []);
 
-    // --------------------------- SAVE NEW ROWS ---------------------------
     const onSubmit = async (data: MedicalInfoForm) => {
         if (!selectedCadet?.ocId) return toast.error("No cadet selected");
 
         try {
             const payload = data.medInfo.map((r) => ({
                 semester: activeTab + 1,
-                examDate: typeof r.date === "string" ? r.date : null,
+                examDate: r.date,
                 age: Number(r.age),
                 heightCm: Number(r.height),
                 ibwKg: Number(r.ibw),
@@ -128,20 +122,16 @@ export default function MedicalInfoSection({
 
             const response = await saveMedicalInfo(selectedCadet.ocId, payload);
 
-            if (response) {
-                toast.success(`Medical Info for ${semesters[activeTab]} saved`);
-                await fetchMedicalInfo();
-            }
             if (!Array.isArray(response)) return toast.error("Save failed");
 
+            toast.success(`Medical Info for ${semesters[activeTab]} saved`);
+            fetchMedicalInfo();
             reset();
-        } catch (err) {
-            console.error(err);
+        } catch {
             toast.error("Failed to save medical info.");
         }
     };
 
-    // --------------------------- EDIT HANDLERS ---------------------------
     const handleEdit = (row: MedInfoRow) => {
         setEditingId(row.id ?? null);
         setEditForm({ ...row });
@@ -182,21 +172,17 @@ export default function MedicalInfoSection({
     };
 
     const handleDelete = (row: MedInfoRow) => {
-        if (!row.id || !selectedCadet?.ocId) return toast.error("Invalid record");
+        if (!row.id || !selectedCadet?.ocId) return;
 
-            toast.warning("Are you sure you want to delete this record?", {
-                action: {
-                    label: "Delete",
-                    onClick: async () => {
-                        if (!row.id) {
-                            toast.error("Invalid record");
-                            return;
-                        }
-                        try {
-                            await deleteMedicalInfo(selectedCadet.ocId, row.id as string);
+        toast.warning("Are you sure you want to delete this record?", {
+            action: {
+                label: "Delete",
+                onClick: async () => {
+                    try {
+                        await deleteMedicalInfo(selectedCadet.ocId, row.id!);
 
-                            setSavedMedInfo(prev => prev.filter(r => r.id !== row.id));
-                            toast.success("Record deleted");
+                        setSavedMedInfo(prev => prev.filter(r => r.id !== row.id));
+                        toast.success("Record deleted");
                     } catch {
                         toast.error("Failed to delete record");
                     }
@@ -204,13 +190,11 @@ export default function MedicalInfoSection({
             },
             cancel: {
                 label: "Cancel",
-                onClick: () => {},
+                onClick: () => { }
             },
         });
     };
 
-
-    // --------------------------- RENDER ---------------------------
     return (
         <Card className="p-6 shadow-lg rounded-xl max-w-6xl mx-auto">
             <CardHeader>
@@ -220,241 +204,47 @@ export default function MedicalInfoSection({
             </CardHeader>
 
             <CardContent>
-                {/* TERM SELECTOR */}
                 <div className="flex justify-center mb-6 space-x-2">
-                    {semesters.map((s, i) => (
-                        <button
-                            key={s}
-                            onClick={() => setActiveTab(i)}
-                            className={`px-4 py-2 rounded-t-lg ${activeTab === i ? "bg-blue-600 text-white" : "bg-gray-200"
-                                }`}
-                        >
-                            {s}
-                        </button>
-                    ))}
+                    {semesters.map((s, i) => {
+                        return (
+                            <button
+                                key={s}
+                                onClick={() => setActiveTab(i)}
+                                className={`px-4 py-2 rounded-t-lg ${activeTab === i ? "bg-blue-600 text-white" : "bg-gray-200"
+                                    }`}
+                            >
+                                {s}
+                            </button>
+                        )
+                    })}
                 </div>
 
-                {/* SAVED TABLE */}
-                {loading ? (
-                    <p className="text-center">Loading...</p>
-                ) : (
-                    (() => {
-                        const filtered = savedMedInfo.filter((r) => r.term === semesters[activeTab]);
+                <MedicalInfoTable
+                    rows={savedMedInfo}
+                    semesters={semesters}
+                    activeTab={activeTab}
+                    loading={loading}
+                    editingId={editingId}
+                    editForm={editForm}
+                    onEdit={handleEdit}
+                    onChange={handleChange}
+                    onSave={handleSave}
+                    onCancel={() => { setEditingId(null); setEditForm(null); }}
+                    onDelete={handleDelete}
+                />
 
-                        if (filtered.length === 0)
-                            return <p className="text-center text-gray-500">No records yet.</p>;
-
-                        return (
-                            <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-                                <table className="w-full border text-sm">
-                                    <thead className="bg-gray-100">
-                                        <tr>
-                                            {[
-                                                "Date",
-                                                "Age",
-                                                "Height",
-                                                "IBW",
-                                                "ABW",
-                                                "Overwt",
-                                                "BMI",
-                                                "Chest",
-                                                "Action",
-                                            ].map((h) => (
-                                                <th key={h} className="border p-2 text-center">
-                                                    {h}
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-
-                                    <tbody>
-                                        {filtered.map((row) => {
-                                            const isEditing = editingId === row.id;
-
-                                            return (
-                                                <tr key={row.id}>
-                                                    {/* DATE */}
-                                                    <td className="border p-2 text-center">
-                                                        {isEditing ? (
-                                                            <Input
-                                                                type="date"
-                                                                value={editForm?.date ?? ""}
-                                                                onChange={(e) => handleChange("date", e.target.value)}
-                                                            />
-                                                        ) : (
-                                                            row.date
-                                                        )}
-                                                    </td>
-
-                                                    {/* AGE */}
-                                                    <td className="border p-2 text-center">
-                                                        {isEditing ? (
-                                                            <Input
-                                                                value={editForm?.age ?? ""}
-                                                                onChange={(e) => handleChange("age", e.target.value)}
-                                                            />
-                                                        ) : (
-                                                            row.age
-                                                        )}
-                                                    </td>
-
-                                                    {/* other columns similar */}
-                                                    {["height", "ibw", "abw", "overw", "bmi", "chest"].map((f) => (
-                                                        <td key={f} className="border p-2 text-center">
-                                                            {isEditing ? (
-                                                                <Input
-                                                                    value={(editForm as any)[f] ?? ""}
-                                                                    onChange={(e) => handleChange(f as any, e.target.value)}
-                                                                />
-                                                            ) : (
-                                                                (row as any)[f]
-                                                            )}
-                                                        </td>
-                                                    ))}
-
-                                                    {/* ACTIONS */}
-                                                    <td className="border p-2 text-center">
-                                                        {!isEditing ? (
-                                                            <>
-                                                                <Button size="sm" variant="outline" onClick={() => handleEdit(row)} className="cursor-pointer">
-                                                                    Edit
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="destructive"
-                                                                    onClick={() => handleDelete(row)}
-                                                                    className="cursor-pointer"
-                                                                >
-                                                                    Delete
-                                                                </Button>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Button size="sm" onClick={handleSave} className="cursor-pointer">
-                                                                    Save
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    onClick={() => {
-                                                                        setEditingId(null);
-                                                                        setEditForm(null);
-                                                                    }}
-                                                                    className="cursor-pointer"
-                                                                >
-                                                                    Cancel
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        );
-                    })()
-                )}
-
-                {/* ADD FORM */}
-                <form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="overflow-x-auto">
-                        <table className="w-full border text-sm">
-                            <thead>
-                                <tr>
-                                    {["Date", "Age", "Ht", "IBW", "ABW", "Overwt", "BMI", "Chest", "Action"].map(
-                                        (h) => (
-                                            <th key={h} className="border p-2">
-                                                {h}
-                                            </th>
-                                        )
-                                    )}
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {fields.map((field, i) => (
-                                    <tr key={field.id}>
-                                        {["date", "age", "height", "ibw", "abw", "overw", "bmi", "chest"].map((f) => (
-                                            <td key={f} className="border p-2">
-                                                <Input
-                                                    {...register(`medInfo.${i}.${f}` as any)}
-                                                    type={f === "date" ? "date" : "text"}
-                                                />
-                                            </td>
-                                        ))}
-
-                                        <td className="border p-2 text-center">
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => remove(i)}
-                                                className="cursor-pointer"
-                                            >
-                                                Remove
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="mt-4 flex justify-center gap-3">
-                        <Button
-                            type="button"
-                            onClick={() =>
-                                append({
-                                    date: "",
-                                    age: "",
-                                    height: "",
-                                    ibw: "",
-                                    abw: "",
-                                    overw: "",
-                                    bmi: "",
-                                    chest: "",
-                                })
-                            }
-                        >
-                            + Add Row
-                        </Button>
-
-                        <Button variant="outline" type="button" onClick={() => reset()}>
-                            Reset
-                        </Button>
-                    </div>
-
-                    {/* TEXT AREAS */}
-                    <div className="mt-6 space-y-4">
-                        <Textarea
-                            {...register("medicalHistory")}
-                            placeholder="Medical History"
-                            rows={3}
-                            disabled={detailsDisabled}
-                        />
-
-                        <Textarea
-                            {...register("medicalIssues")}
-                            placeholder="Medical Issues"
-                            rows={3}
-                            disabled={detailsDisabled}
-                        />
-
-                        <Textarea
-                            {...register("allergies")}
-                            placeholder="Allergies"
-                            rows={3}
-                            disabled={detailsDisabled}
-                        />
-                    </div>
-                    <div className="flex justify-center mt-4">
-                        <Button type="submit" className="w-64 bg-blue-600 cursor-pointer">
-                            Submit Medical Info
-                        </Button>
-                    </div>
-                </form>
+                <MedicalInfoFormComponent
+                    onSubmit={onSubmit}
+                    disabled={detailsDisabled}
+                    defaultValues={{
+                        medInfo: [
+                            { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "", medicalHistory: "", medicalIssues: "", allergies: "" }
+                        ],
+                        medicalHistory: savedMedInfo[0]?.medicalHistory ?? "",
+                        medicalIssues: savedMedInfo[0]?.medicalIssues ?? "",
+                        allergies: savedMedInfo[0]?.allergies ?? "",
+                    }}
+                />
             </CardContent>
         </Card>
     );

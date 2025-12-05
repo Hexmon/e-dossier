@@ -8,10 +8,11 @@ import { cn } from "@/lib/utils";
 interface DashboardCardProps {
     title: string;
     description: string;
-    to: string;
+    to?: string;
     icon: React.ElementType;
     color: string;
     className?: string;
+    onClick?: () => void;
 }
 
 export function DashboardCard({
@@ -21,9 +22,11 @@ export function DashboardCard({
     icon: Icon,
     color,
     className,
+    onClick,
 }: DashboardCardProps) {
     return (
         <Card
+            onClick={onClick}
             className={cn(
                 "group hover:shadow-command transition-all duration-300 cursor-pointer rounded-xl shadow-lg",
                 className
@@ -48,9 +51,15 @@ export function DashboardCard({
                     {description}
                 </p>
 
-                <Button asChild variant="outline" size="sm" className="w-full border border-blue-700">
-                    <Link href={to}>Access Module →</Link>
-                </Button>
+                {to ? (
+                    <Button asChild variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
+                        <Link href={to}>Access Module →</Link>
+                    </Button>
+                ) : (
+                    <Button variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
+                        Access Module →
+                    </Button>
+                )}
             </CardContent>
         </Card>
     );
