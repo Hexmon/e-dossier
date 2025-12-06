@@ -466,6 +466,13 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: Medal,
     to: (id: string) => `/dashboard/${id}/milmgmt/final-performance`,
     color: "bg-yellow-700"
+  },
+  {
+    title: "Physical Training",
+    description: "Manage cadet physical training records",
+    icon: Dumbbell,
+    to: (id: string) => `/dashboard/${id}/milmgmt/physical-training`,
+    color: "bg-gray-700"
   }
 
 ];
@@ -1294,6 +1301,11 @@ export const dossierTabs = [
     title: "Dossier Filling",
     icon: NotebookPen,
   },
+  {
+    value: "physical-training",
+    title: "Physical Training",
+    icon: Dumbbell,
+  }
 ];
 
 export const backgroundTabs = [
