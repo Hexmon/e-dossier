@@ -23,7 +23,8 @@ const PUBLIC_ANY: string[] = [
   '/api/v1/auth/signup',
   '/api/v1/auth/logout',   // allow clearing cookies
   '/api/v1/admin/users/check-username',
-  '/api/v1/health'
+  '/api/v1/health',
+  '/api/v1/bootstrap/super-admin',
 ];
 
 // Public only for specific methods
@@ -111,6 +112,7 @@ export async function middleware(req: NextRequest) {
       '/api/v1/auth/login',
       '/api/v1/auth/signup',
       '/api/v1/auth/logout',
+      '/api/v1/bootstrap/super-admin',
     ];
     const shouldSkipCsrf = skipCsrfPaths.some((p) => matchPrefix(pathname, p));
 
