@@ -12,10 +12,10 @@ import z from "zod";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-// Prefer an explicit API base from env; fall back to current origin (browser) or relative URLs.
+// Prefer an explicit API base from env; fall back to the fixed backend IP.
 const DEFAULT_API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : undefined);
+    "http://172.22.128.57";
 
 type Primitive = string | number | boolean | null | undefined;
 type QueryValue = Primitive | Primitive[];
@@ -180,7 +180,7 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
     // via a lightweight GET to /api/v1/health, which the middleware uses to
     // set the CSRF cookie and return the token in the X-CSRF-Token header.
     if (typeof window !== 'undefined' && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
-        await ensureCsrfToken(baseURL);
+        await ensureCsrfToken(finalBase);
 
         if (csrfToken) {
             init.headers = {

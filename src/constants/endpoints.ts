@@ -1,12 +1,4 @@
-import { platoons } from "@/app/db"
-import { get } from "http"
-import { string } from "zod"
-
-// API base: prefer env override, fall back to current origin in browser, then localhost.
-export const baseURL =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
-
+export const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://172.22.128.57"
 export const endpoints = {
     auth: {
         login: "/api/v1/auth/login",
