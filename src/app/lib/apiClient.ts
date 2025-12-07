@@ -12,6 +12,11 @@ import z from "zod";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+// Prefer an explicit API base from env; fall back to current origin (browser) or relative URLs.
+const DEFAULT_API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : undefined);
+
 type Primitive = string | number | boolean | null | undefined;
 type QueryValue = Primitive | Primitive[];
 
@@ -158,7 +163,8 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
     // Build URL
     const replaced = applyPathParams(endpoint, path);
     const qs = toQueryString(query);
-    const url = baseURL ? new URL(replaced + qs, baseURL).toString() : `${replaced}${qs}`;
+    const finalBase = baseURL || DEFAULT_API_BASE;
+    const url = finalBase ? new URL(replaced + qs, finalBase).toString() : `${replaced}${qs}`;
 
     // Build init
     const init: RequestInit = {

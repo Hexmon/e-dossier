@@ -2,7 +2,10 @@ import { platoons } from "@/app/db"
 import { get } from "http"
 import { string } from "zod"
 
-export const baseURL = 'http://localhost:3000'
+// API base: prefer env override, fall back to current origin in browser, then localhost.
+export const baseURL =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
 
 export const endpoints = {
     auth: {
