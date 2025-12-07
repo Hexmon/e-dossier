@@ -20,6 +20,7 @@ import { ChevronDown, Shield } from "lucide-react";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 
 import CampContent from "@/components/camps/CampContent";
+import { useOcDetails } from "@/hooks/useOcDetails";
 
 interface FormValues {
   campsByName: {
@@ -42,13 +43,7 @@ interface FormValues {
   };
 }
 
-const mockCadet = {
-  name: "John Doe",
-  courseName: "B.Tech",
-  ocNumber: "OC001",
-  ocId: "oc123",
-  course: "CSE",
-};
+
 
 export default function OcCampsPage() {
   // ---------------------------
@@ -57,6 +52,8 @@ export default function OcCampsPage() {
   const params = useParams();
   const paramId = params?.ocId || params?.id;
   const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
+
+  const { cadet, loading: loadingCadet } = useOcDetails(ocId);
 
   // ---------------------------
   // FORM SETUP
@@ -87,14 +84,14 @@ export default function OcCampsPage() {
             />
 
             {/* CADET TABLE */}
-            {mockCadet && (
+            {cadet && (
               <SelectedCadetTable
                 selectedCadet={{
-                  name: mockCadet.name ?? "",
-                  courseName: mockCadet.courseName ?? "",
-                  ocNumber: mockCadet.ocNumber ?? "",
-                  ocId: mockCadet.ocId ?? "",
-                  course: mockCadet.course ?? "",
+                  name: cadet.name,
+                  courseName: cadet.courseName,
+                  ocNumber: cadet.ocNumber,
+                  ocId: cadet.ocId,
+                  course: cadet.course,
                 }}
               />
             )}
