@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-LOG_FILE="/var/log/secure_postgres_setup.log"
+LOG_FILE="/var/log/edossier_db_setup.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
@@ -84,19 +84,28 @@ prompt_default() {
 validate_cidr() {
   local cidr="$1"
   if [[ ! "$cidr" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; then
-    err "APP_CIDR '$cidr' does not look like a valid IPv4 CIDR (example: 172.22.128.57/32)."
+    err "CIDR '$cidr' does not look like a valid IPv4 CIDR (example: 172.22.128.57/32)."
     exit 1
   fi
 }
 
 log "=== Secure PostgreSQL setup for e-dossier starting ==="
 
-# --- Collect inputs (with sane defaults for your case) ---
+# --- Collect inputs (defaults tuned for your project) ---
 
-prompt_required DB_NAME "DB name (e.g. e_dossier_v2)"
-prompt_required DB_USER "DB user (e.g. edossier_app)"
+prompt_default DB_NAME "DB name" "e_dossier_v2"
+prompt_default DB_USER "DB user" "edossier_app"
 prompt_secret   DB_PASS "DB password"
-prompt_required APP_CIDR "App CIDR (e.g. 172.22.128.57/32)"
+
+# Allow override via APP_CIDR env, otherwise derive from IP
+if [[ -n "${APP_CIDR:-}" ]]; then
+  log "Using APP_CIDR from env: $APP_CIDR"
+else
+  prompt_required APP_IP "Application VM IP (e.g. 172.22.128.57)"
+  APP_CIDR="${APP_IP}/32"
+  export APP_CIDR
+  log "APP_CIDR=${APP_CIDR}"
+fi
 validate_cidr "$APP_CIDR"
 
 DEFAULT_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
@@ -113,7 +122,7 @@ prompt_default BACKUP_DIR "Backup directory" "/var/backups/postgresql"
 log "Installing PostgreSQL and dependencies..."
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  postgresql postgresql-contrib postgresql-client ufw cron
+  postgresql postgresql-contrib postgresql-client ufw cron python3
 
 if [[ ! -d /etc/postgresql ]]; then
   err "/etc/postgresql not found. PostgreSQL install seems broken."
@@ -184,16 +193,16 @@ EOF
 log "Restarting PostgreSQL..."
 systemctl restart postgresql
 
-log "Waiting for PostgreSQL to become ready on ${BIND_IP}:${PG_PORT} ..."
+log "Waiting for PostgreSQL to become ready (via local socket)..."
 for i in {1..30}; do
-  if pg_isready -q -h "$BIND_IP" -p "$PG_PORT"; then
+  if sudo -u postgres pg_isready -q; then
     log "PostgreSQL is up."
     break
   fi
   sleep 1
 done
 
-if ! pg_isready -q -h "$BIND_IP" -p "$PG_PORT"; then
+if ! sudo -u postgres pg_isready -q; then
   err "PostgreSQL failed to start. Check logs under /var/log/postgresql/ or journalctl -u postgresql@${PG_VER}-main"
   exit 1
 fi
@@ -239,7 +248,6 @@ BACKUP_DIR="${BACKUP_DIR}"
 TS="\$(date +%Y%m%d%H%M%S)"
 
 pg_dump -Fc "\${DB_NAME}" > "\${BACKUP_DIR}/\${DB_NAME}_\${TS}.dump"
-
 find "\${BACKUP_DIR}" -type f -name "\${DB_NAME}_*.dump" -mtime +7 -delete
 EOF
 

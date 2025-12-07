@@ -86,23 +86,26 @@ log "=== e-dossier App VM setup starting ==="
 
 # --- Basic config ---
 
-prompt_default GIT_REPO  "Git repo URL" "$GIT_REPO_DEFAULT"
-prompt_default GIT_BRANCH "Git branch"  "$GIT_BRANCH_DEFAULT"
-prompt_default APP_PORT   "App port"    "3000"
+prompt_default GIT_REPO   "Git repo URL" "$GIT_REPO_DEFAULT"
+prompt_default GIT_BRANCH "Git branch"   "$GIT_BRANCH_DEFAULT"
+prompt_default APP_PORT   "App port"     "3000"
 
 log "DB connection details (must match DB VM setup):"
 prompt_required DB_HOST "DB host/IP (e.g. 172.22.128.56)"
 prompt_default  DB_PORT "DB port" "5432"
-prompt_required DB_NAME "DB name (e.g. e_dossier_v2)"
-prompt_required DB_USER "DB user (e.g. edossier_app)"
+prompt_default  DB_NAME "DB name" "e_dossier_v2"
+prompt_default  DB_USER "DB user" "edossier_app"
 prompt_secret   DB_PASS "DB password (same as on DB VM)"
+
+prompt_default ENABLE_UFW       "Configure UFW? (y/n)" "y"
+prompt_default RESET_DRIZZLE    "Reset drizzle/ folder & generate migrations for FRESH DB? (y/n)" "y"
 
 # --- Install system deps + Node + pnpm ---
 
-log "Installing system dependencies, Node.js, and pnpm..."
+log "Installing system dependencies, Node.js, pnpm, and psql client..."
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  ca-certificates curl git build-essential
+  ca-certificates curl git build-essential python3 postgresql-client ufw
 
 if ! command -v node >/dev/null 2>&1; then
   log "Installing Node.js 22.x from NodeSource..."
@@ -115,6 +118,9 @@ fi
 log "Enabling corepack + pnpm..."
 corepack enable
 corepack prepare pnpm@9 --activate
+
+PNPM_BIN="$(command -v pnpm || echo '/usr/local/bin/pnpm')"
+log "Using pnpm at: ${PNPM_BIN}"
 
 # --- Create app user & directory ---
 
@@ -151,9 +157,18 @@ PY
 )
 
 DATABASE_URL="postgresql://${DB_USER}:${ENCODED_DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable"
-log "Constructed DATABASE_URL (password URL-encoded)."
+log "Constructed DATABASE_URL with URL-encoded password."
 
-# --- Write .env file (using same keys you used earlier) ---
+# --- Connectivity check to DB before migrations ---
+
+log "Testing DB connectivity from App VM..."
+if ! PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; then
+  err "Cannot connect to PostgreSQL at ${DB_HOST}:${DB_PORT} as ${DB_USER}. Check DB VM, firewall, and credentials."
+  exit 1
+fi
+log "DB connectivity OK."
+
+# --- Write .env file ---
 
 log "Writing .env to $APP_DIR/.env ..."
 cat > "$APP_DIR/.env" <<EOF
@@ -182,20 +197,28 @@ ADMIN_RANK=ADMIN
 EOF
 
 chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
+chmod 640 "$APP_DIR/.env"
 
 # --- Install dependencies, generate + migrate DB, build app ---
 
 log "Installing pnpm dependencies..."
-sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && pnpm install --frozen-lockfile"
+sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && ${PNPM_BIN} install --frozen-lockfile"
 
-log "Resetting drizzle migration folder and generating fresh migrations..."
-sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && rm -rf drizzle && pnpm run db:generate"
+if [[ "${RESET_DRIZZLE,,}" == "y" ]]; then
+  log "Resetting Drizzle migrations folder (drizzle/) for a FRESH DB..."
+  sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && rm -rf drizzle"
+else
+  warn "Skipping Drizzle folder reset; will use existing migrations."
+fi
+
+log "Generating Drizzle migrations..."
+sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && ${PNPM_BIN} run db:generate"
 
 log "Running DB migrations with DATABASE_URL..."
-sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && export DATABASE_URL='${DATABASE_URL}' && pnpm run db:migrate"
+sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && export DATABASE_URL='${DATABASE_URL}' && ${PNPM_BIN} run db:migrate"
 
 log "Building Next.js app..."
-sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && pnpm run build"
+sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && ${PNPM_BIN} run build"
 
 # --- systemd unit ---
 
@@ -212,7 +235,7 @@ Type=simple
 User=${APP_USER}
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${APP_DIR}/.env
-ExecStart=/usr/local/bin/pnpm start --hostname 0.0.0.0 --port ${APP_PORT}
+ExecStart=${PNPM_BIN} start --hostname 0.0.0.0 --port ${APP_PORT}
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -229,11 +252,39 @@ systemctl enable --now edossier.service
 sleep 3
 systemctl --no-pager --full status edossier.service || true
 
+# --- UFW on App VM ---
+
+if [[ "${ENABLE_UFW,,}" == "y" ]]; then
+  log "Configuring UFW on App VM..."
+
+  UFW_STATUS=$(ufw status | head -n1 | awk '{print $2}')
+  if [[ "$UFW_STATUS" == "inactive" ]]; then
+    ufw --force default deny incoming
+    ufw --force default allow outgoing
+
+    if ufw app list 2>/dev/null | grep -q "OpenSSH"; then
+      ufw allow OpenSSH
+    else
+      ufw allow 22/tcp
+    fi
+  else
+    warn "UFW already active; will only add app port rule."
+  fi
+
+  ufw allow "${APP_PORT}"/tcp
+  ufw --force enable
+
+  log "UFW enabled. Allowed TCP port ${APP_PORT}."
+else
+  warn "UFW configuration skipped on App VM (ENABLE_UFW=${ENABLE_UFW})."
+fi
+
 log "=== e-dossier App VM setup completed ==="
 echo
 echo "If everything is OK, you should reach the app at:"
 echo "  http://$(hostname -I | awk '{print $1}'):${APP_PORT}"
 echo
-echo "If you see CSS/JS loading fine on localhost but not from outside,"
-echo "ensure your firewall / security group allows port ${APP_PORT},"
-echo "or front this with Nginx on port 80/443."
+echo "If localhost works but remote IP shows only HTML without CSS/JS:"
+echo "  - Make sure you're hitting the same host:port from another VM."
+echo "  - Confirm UFW / any external firewall allows port ${APP_PORT}."
+echo "  - Confirm Next is running in 'next start' (not dev) and CSP in next.config.ts is the version we fixed."
