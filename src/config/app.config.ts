@@ -473,6 +473,13 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: Dumbbell,
     to: (id: string) => `/dashboard/${id}/milmgmt/physical-training`,
     color: "bg-gray-700"
+  },
+  {
+    title: "Overall Assessment",
+    description: "Manage cadet overall assessment records",
+    icon: ClipboardCheck,
+    to: (id: string) => `/dashboard/${id}/milmgmt/overall-assessment`,
+    color: "bg-yellow-700"
   }
 
 ];
@@ -1305,6 +1312,11 @@ export const dossierTabs = [
     value: "physical-training",
     title: "Physical Training",
     icon: Dumbbell,
+  },
+  {
+    value: "overall-assessment",
+    title: "Overall Assessment",
+    icon: ClipboardCheck,
   }
 ];
 

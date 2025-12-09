@@ -16,9 +16,10 @@ interface FinalTableData {
   column8: string;
   column9: string;
   column10: string;
+  column11: string;
 }
 
-// Base table config – 10 columns
+// Base table config – 11 columns
 const finalTableConfig: TableConfig<FinalTableData> = {
   columns: [
     { key: "column1", label: "S.No", type: "number", sortable: true, width: "10%" },
@@ -31,6 +32,7 @@ const finalTableConfig: TableConfig<FinalTableData> = {
     { key: "column8", label: "V", sortable: false, width: "10%" },
     { key: "column9", label: "VI", sortable: false, width: "10%" },
     { key: "column10", label: "Total", sortable: false, width: "20%" },
+    { key: "column11", label: "CGPA/Percentage", sortable: false, width: "20%" },
   ]
 };
 
@@ -47,6 +49,7 @@ const initialFinalData: FinalTableData[] = [
     column8: "",
     column9: "",
     column10: "",
+    column11: "",
   },
   {
     id: "2",
@@ -60,6 +63,7 @@ const initialFinalData: FinalTableData[] = [
     column8: "",
     column9: "",
     column10: "",
+    column11: "",
   },
   {
     id: "3",
@@ -73,6 +77,7 @@ const initialFinalData: FinalTableData[] = [
     column8: "",
     column9: "",
     column10: "",
+    column11: "",
   },
   {
     id: "4",
@@ -86,6 +91,7 @@ const initialFinalData: FinalTableData[] = [
     column8: "",
     column9: "",
     column10: "",
+    column11: "",
   },
   {
     id: "5",
@@ -99,6 +105,7 @@ const initialFinalData: FinalTableData[] = [
     column8: "",
     column9: "",
     column10: "",
+    column11: "",
   },
   {
     id: "6",
@@ -112,6 +119,7 @@ const initialFinalData: FinalTableData[] = [
     column8: "",
     column9: "",
     column10: "",
+    column11: "",
   },
   {
     id: "7",
@@ -125,6 +133,7 @@ const initialFinalData: FinalTableData[] = [
     column8: "",
     column9: "",
     column10: "",
+    column11: "",
   },
   {
     id: "8",
@@ -138,12 +147,13 @@ const initialFinalData: FinalTableData[] = [
     column8: "",
     column9: "",
     column10: "",
+    column11: "",
   },
   {
     id: "9",
     column1: 9,
-    column2: "GRAND TOTAL",
-    column3: 12000, 
+    column2: "Grand Total",
+    column3: 12000,
     column4: "",
     column5: "",
     column6: "",
@@ -151,10 +161,11 @@ const initialFinalData: FinalTableData[] = [
     column8: "",
     column9: "",
     column10: "",
+    column11: "",
   },
 ];
 
-export default function FinalPerformanceRecord() {
+export default function OverallPerformance() {
   
     const [finalData, setFinalData] = useState(initialFinalData);
 
@@ -163,7 +174,7 @@ export default function FinalPerformanceRecord() {
   <div className="space-y-6">
     <Card className="p-6 rounded-2xl shadow-xl bg-white">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-center text-primary">Final Performance Record</CardTitle>
+        <CardTitle className="text-lg font-semibold text-center text-primary">Overall Performance Record</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
