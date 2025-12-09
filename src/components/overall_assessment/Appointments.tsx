@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface Appointment {
     id: string;
@@ -11,6 +12,7 @@ interface Appointment {
     from: string;
     to: string;
     remarks: string;
+    isRowEditing?: boolean;
 }
 
 export default function Appointments() {
@@ -24,6 +26,7 @@ export default function Appointments() {
             from: "",
             to: "",
             remarks: "",
+            isRowEditing: false,
         };
         setAppointmentData([...appointmentData, newAppointment]);
     };
@@ -43,12 +46,77 @@ export default function Appointments() {
         setAppointmentData(prev => prev.filter(a => a.id !== id));
     };
 
+    const handleRowEdit = (id: string) => {
+        setAppointmentData(prev =>
+            prev.map(a => {
+                if (a.id === id) {
+                    return { ...a, isRowEditing: true };
+                }
+                return a;
+            }),
+        );
+    };
+
+    const handleRowSave = (id: string) => {
+        const rowToSave = appointmentData.find(a => a.id === id);
+
+        if (!rowToSave) return;
+
+        // Check if all fields are empty
+        if (
+            !rowToSave.appointments.trim() ||
+            !rowToSave.from.trim() ||
+            !rowToSave.to.trim() ||
+            !rowToSave.remarks.trim()
+        ) {
+            toast.error("Please fill in all fields before saving");
+            return;
+        }
+
+        setAppointmentData(prev =>
+            prev.map(a => {
+                if (a.id === id) {
+                    return { ...a, isRowEditing: false };
+                }
+                return a;
+            }),
+        );
+        toast.success("Row saved successfully");
+        console.log("Row saved:", rowToSave);
+    };
+
+    const handleCancel = () => {
+        setAppointmentData(prev =>
+            prev.map(a => ({
+                ...a,
+                isRowEditing: false,
+            })),
+        );
+        setIsEditing(false);
+    };
+
     const handleEdit = () => setIsEditing(true);
+
     const handleSave = () => {
+        // Check if there are any empty rows in edit mode
+        const hasEmptyRows = appointmentData.some(
+            row =>
+                row.isRowEditing &&
+                (!row.appointments.trim() ||
+                    !row.from.trim() ||
+                    !row.to.trim() ||
+                    !row.remarks.trim())
+        );
+
+        if (hasEmptyRows) {
+            toast.error("Please fill in all fields before saving");
+            return;
+        }
+
         setIsEditing(false);
         console.log("Appointments Table saved:", appointmentData);
+        toast.success("Appointment data saved successfully");
     };
-    const handleCancel = () => setIsEditing(false);
 
     return (
         <div>
@@ -67,11 +135,11 @@ export default function Appointments() {
                     <tbody>
                         {appointmentData.length > 0 ? (
                             appointmentData.map(appointment => {
-                                const { id, appointments, from, to, remarks } = appointment;
+                                const { id, appointments, from, to, remarks, isRowEditing } = appointment;
                                 return (
                                     <tr key={id} className="hover:bg-gray-50 border-b border-gray-300">
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {isEditing ? (
+                                            {isRowEditing ? (
                                                 <Input
                                                     type="text"
                                                     value={appointments}
@@ -84,7 +152,7 @@ export default function Appointments() {
                                             )}
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {isEditing ? (
+                                            {isRowEditing ? (
                                                 <Input
                                                     type="date"
                                                     value={from}
@@ -97,7 +165,7 @@ export default function Appointments() {
                                             )}
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {isEditing ? (
+                                            {isRowEditing ? (
                                                 <Input
                                                     type="date"
                                                     value={to}
@@ -110,7 +178,7 @@ export default function Appointments() {
                                             )}
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {isEditing ? (
+                                            {isRowEditing ? (
                                                 <Input
                                                     type="text"
                                                     value={remarks}
@@ -123,14 +191,46 @@ export default function Appointments() {
                                             )}
                                         </td>
                                         {isEditing && (
-                                            <td className="border border-gray-300 px-4 py-2 text-center">
-                                                <Button
-                                                    onClick={() => handleDeleteAppointment(id)}
-                                                    variant="outline"
-                                                    className="text-red-600 border-red-600 hover:bg-red-50"
-                                                >
-                                                    Delete
-                                                </Button>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                <div className="flex gap-2 justify-center">
+                                                    {isRowEditing ? (
+                                                        <>
+                                                            <Button
+                                                                onClick={() => handleRowSave(id)}
+                                                                className="bg-blue-600 hover:bg-blue-700"
+                                                                size="sm"
+                                                            >
+                                                                Save
+                                                            </Button>
+                                                            <Button
+                                                                onClick={handleCancel}
+                                                                variant="outline"
+                                                                size="sm"
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Button
+                                                                onClick={() => handleRowEdit(id)}
+                                                                variant="outline"
+                                                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                                                size="sm"
+                                                            >
+                                                                Edit
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => handleDeleteAppointment(id)}
+                                                                variant="outline"
+                                                                className="text-red-600 border-red-600 hover:bg-red-50"
+                                                                size="sm"
+                                                            >
+                                                                Delete
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </td>
                                         )}
                                     </tr>

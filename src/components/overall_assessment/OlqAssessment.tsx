@@ -20,7 +20,8 @@ interface Row {
 }
 
 export default function OlqAssessment() {
-    const [isEditing, setIsEditing] = useState(false);
+    const [isEditingTable, setIsEditingTable] = useState(false);
+    const [isEditingObservations, setIsEditingObservations] = useState(false);
     const [observations, setObservations] = useState("");
 
     const [tableData, setTableData] = useState<Row[]>([
@@ -54,12 +55,19 @@ export default function OlqAssessment() {
         return tableData.reduce((sum, row) => sum + calculateRowTotal(row), 0);
     };
 
-    const handleEdit = () => setIsEditing(true);
-    const handleSave = () => {
-        setIsEditing(false);
+    const handleEditTable = () => setIsEditingTable(true);
+    const handleSaveTable = () => {
+        setIsEditingTable(false);
         console.log("OLQ Assessment Table saved:", tableData);
     };
-    const handleCancel = () => setIsEditing(false);
+    const handleCancelTable = () => setIsEditingTable(false);
+
+    const handleEditObservations = () => setIsEditingObservations(true);
+    const handleSaveObservations = () => {
+        setIsEditingObservations(false);
+        console.log("Observations on Moral Conduct saved:", observations);
+    };
+    const handleCancelObservations = () => setIsEditingObservations(false);
 
     return (
         <div className="space-y-6 p-6">
@@ -92,7 +100,7 @@ export default function OlqAssessment() {
                                         <tr key={factor} className="hover:bg-gray-50 border-b border-gray-300">
                                             <td className="border border-gray-300 px-4 py-2">{factor}</td>
                                             <td className="border border-gray-300 px-4 py-2">
-                                                {isEditing ? (
+                                                {isEditingTable ? (
                                                     <Input
                                                         type="number"
                                                         value={column1}
@@ -105,7 +113,7 @@ export default function OlqAssessment() {
                                                 )}
                                             </td>
                                             <td className="border border-gray-300 px-4 py-2">
-                                                {isEditing ? (
+                                                {isEditingTable ? (
                                                     <Input
                                                         type="number"
                                                         value={column2}
@@ -118,7 +126,7 @@ export default function OlqAssessment() {
                                                 )}
                                             </td>
                                             <td className="border border-gray-300 px-4 py-2">
-                                                {isEditing ? (
+                                                {isEditingTable ? (
                                                     <Input
                                                         type="number"
                                                         value={column3}
@@ -131,7 +139,7 @@ export default function OlqAssessment() {
                                                 )}
                                             </td>
                                             <td className="border border-gray-300 px-4 py-2">
-                                                {isEditing ? (
+                                                {isEditingTable ? (
                                                     <Input
                                                         type="number"
                                                         value={column4}
@@ -147,7 +155,7 @@ export default function OlqAssessment() {
                                                 {rowTotal}
                                             </td>
                                             <td className="border border-gray-300 px-4 py-2">
-                                                {isEditing ? (
+                                                {isEditingTable ? (
                                                     <Input
                                                         type="text"
                                                         value={remarks}
@@ -186,6 +194,21 @@ export default function OlqAssessment() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* OLQ Assessment Edit Buttons */}
+                    <div className="flex gap-3 justify-center mt-4">
+                        {isEditingTable ? (
+                            <>
+                                <Button variant="outline" onClick={handleCancelTable}>
+                                    Cancel
+                                </Button>
+                                <Button onClick={handleSaveTable}>Save</Button>
+                            </>
+                        ) : (
+                            <Button onClick={handleEditTable}>Edit</Button>
+                        )}
+                    </div>
+
                     <div className="mt-4">
                         <h2 className="p-2 text-lg text-left font-bold text-gray-700 underline">Observations on Moral Conduct</h2>
                         <textarea
@@ -193,21 +216,21 @@ export default function OlqAssessment() {
                             onChange={(e) => setObservations(e.target.value)}
                             placeholder="Enter observations"
                             className="w-full h-32 border border-gray-300 rounded-lg px-3 py-2"
-                            disabled={!isEditing}
+                            disabled={!isEditingObservations}
                         />
                     </div>
 
-                    {/* Edit Buttons */}
+                    {/* Observations on Moral Conduct Edit Buttons */}
                     <div className="flex gap-3 justify-center mt-4">
-                        {isEditing ? (
+                        {isEditingObservations ? (
                             <>
-                                <Button variant="outline" onClick={handleCancel}>
+                                <Button variant="outline" onClick={handleCancelObservations}>
                                     Cancel
                                 </Button>
-                                <Button onClick={handleSave}>Save</Button>
+                                <Button onClick={handleSaveObservations}>Save</Button>
                             </>
                         ) : (
-                            <Button onClick={handleEdit}>Edit</Button>
+                            <Button onClick={handleEditObservations}>Edit</Button>
                         )}
                     </div>
 

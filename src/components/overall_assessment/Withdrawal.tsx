@@ -4,11 +4,13 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface Withdrawal {
     id: string;
     dateWithdrawn: string;
     reason: string;
+    isRowEditing?: boolean;
 }
 
 export default function Withdrawal() {
@@ -20,6 +22,7 @@ export default function Withdrawal() {
             id: Date.now().toString(),
             dateWithdrawn: "",
             reason: "",
+            isRowEditing: false,
         };
         setWithdrawalData([...withdrawalData, newWithdrawal]);
     };
@@ -39,12 +42,67 @@ export default function Withdrawal() {
         setWithdrawalData(prev => prev.filter(w => w.id !== id));
     };
 
+    const handleRowEdit = (id: string) => {
+        setWithdrawalData(prev =>
+            prev.map(w => {
+                if (w.id === id) {
+                    return { ...w, isRowEditing: true };
+                }
+                return w;
+            }),
+        );
+    };
+
+    const handleRowSave = (id: string) => {
+        const rowToSave = withdrawalData.find(w => w.id === id);
+
+        if (!rowToSave) return;
+
+        // Check if both fields are empty
+        if (!rowToSave.dateWithdrawn.trim() || !rowToSave.reason.trim()) {
+            toast.error("Please fill in all fields before saving");
+            return;
+        }
+
+        setWithdrawalData(prev =>
+            prev.map(w => {
+                if (w.id === id) {
+                    return { ...w, isRowEditing: false };
+                }
+                return w;
+            }),
+        );
+        toast.success("Row saved successfully");
+        console.log("Row saved:", rowToSave);
+    };
+
+    const handleCancel = () => {
+        setWithdrawalData(prev =>
+            prev.map(w => ({
+                ...w,
+                isRowEditing: false,
+            })),
+        );
+        setIsEditing(false);
+    };
+
     const handleEdit = () => setIsEditing(true);
+    
     const handleSave = () => {
+        // Check if there are any empty rows in edit mode
+        const hasEmptyRows = withdrawalData.some(
+            row => row.isRowEditing && (!row.dateWithdrawn.trim() || !row.reason.trim())
+        );
+
+        if (hasEmptyRows) {
+            toast.error("Please fill in all fields before saving");
+            return;
+        }
+
         setIsEditing(false);
         console.log("Withdrawal Table saved:", withdrawalData);
+        toast.success("Withdrawal data saved successfully");
     };
-    const handleCancel = () => setIsEditing(false);
 
     return (
         <div>
@@ -61,11 +119,11 @@ export default function Withdrawal() {
                     <tbody>
                         {withdrawalData.length > 0 ? (
                             withdrawalData.map(withdrawal => {
-                                const { id, dateWithdrawn, reason } = withdrawal;
+                                const { id, dateWithdrawn, reason, isRowEditing } = withdrawal;
                                 return (
                                     <tr key={id} className="hover:bg-gray-50 border-b border-gray-300">
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {isEditing ? (
+                                            {isRowEditing ? (
                                                 <Input
                                                     type="date"
                                                     value={dateWithdrawn}
@@ -78,7 +136,7 @@ export default function Withdrawal() {
                                             )}
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {isEditing ? (
+                                            {isRowEditing ? (
                                                 <Input
                                                     type="text"
                                                     value={reason}
@@ -91,14 +149,46 @@ export default function Withdrawal() {
                                             )}
                                         </td>
                                         {isEditing && (
-                                            <td className="border border-gray-300 px-4 py-2 text-center">
-                                                <Button
-                                                    onClick={() => handleDeleteWithdrawal(id)}
-                                                    variant="outline"
-                                                    className="text-red-600 border-red-600 hover:bg-red-50"
-                                                >
-                                                    Delete
-                                                </Button>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                <div className="flex gap-2 justify-center">
+                                                    {isRowEditing ? (
+                                                        <>
+                                                            <Button
+                                                                onClick={() => handleRowSave(id)}
+                                                                className="bg-blue-600 hover:bg-blue-700"
+                                                                size="sm"
+                                                            >
+                                                                Save
+                                                            </Button>
+                                                            <Button
+                                                                onClick={handleCancel}
+                                                                variant="outline"
+                                                                size="sm"
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Button
+                                                                onClick={() => handleRowEdit(id)}
+                                                                variant="outline"
+                                                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                                                size="sm"
+                                                            >
+                                                                Edit
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => handleDeleteWithdrawal(id)}
+                                                                variant="outline"
+                                                                className="text-red-600 border-red-600 hover:bg-red-50"
+                                                                size="sm"
+                                                            >
+                                                                Delete
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </td>
                                         )}
                                     </tr>
@@ -137,6 +227,6 @@ export default function Withdrawal() {
                     <Button onClick={handleEdit}>Edit</Button>
                 )}
             </div>
-        </div >
+        </div>
     );
 }
