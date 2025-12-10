@@ -12,7 +12,8 @@ import {
   CalendarDays,
   Trophy,
   FileBadge,
-  NotebookPen
+  NotebookPen,
+  ChartArea
 } from "lucide-react";
 
 
@@ -480,6 +481,13 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: ClipboardCheck,
     to: (id: string) => `/dashboard/${id}/milmgmt/overall-assessment`,
     color: "bg-yellow-700"
+  },
+  {
+    title: "Performance Graph",
+    description: "Visual performance tracking and analytics",
+    icon: ChartArea,
+    to: (id: string) => `/dashboard/${id}/milmgmt/performance-graph`,
+    color: "bg-blue-700"
   }
 
 ];
@@ -1317,6 +1325,11 @@ export const dossierTabs = [
     value: "overall-assessment",
     title: "Overall Assessment",
     icon: ClipboardCheck,
+  },
+  {
+    value: "performance-graph",
+    title: "Performance Graph",
+    icon: ChartArea,
   }
 ];
 
