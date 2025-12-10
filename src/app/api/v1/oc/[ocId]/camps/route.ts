@@ -85,6 +85,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
         const sp = new URL(req.url).searchParams;
         const qp = ocCampQuerySchema.parse({
             semester: sp.get('semester') ?? undefined,
+            ocCampId: sp.get('ocCampId') ?? undefined,
             campName: sp.get('campName') ?? undefined,
             withReviews: sp.get('withReviews') ?? undefined,
             withActivities: sp.get('withActivities') ?? undefined,
@@ -94,6 +95,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
 
         const result = await getOcCamps({
             ocId,
+            ocCampId: qp.ocCampId,
             semester: qp.semester,
             campName: qp.campName ?? undefined,
             includeReviews: qp.withReviews ?? false,
