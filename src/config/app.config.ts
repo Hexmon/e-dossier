@@ -441,11 +441,18 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "bg-green-500"
   },
   {
-    title: "Interview",
+    title: "Initial Interview",
     description: "Schedule and manage candidate interviews",
     icon: UserCheck,
-    to: (id: string) => `/dashboard/${id}/milmgmt/interview`,
+    to: (id: string) => `/dashboard/${id}/milmgmt/initial-interview`,
     color: "bg-orange-500"
+  },
+  {
+    title: "Interview Terms",
+    description: "Schedule and manage candidate interviews",
+    icon: UserCheck,
+    to: (id: string) => `/dashboard/${id}/milmgmt/interview-term`,
+    color: "bg-green-500"
   },
   {
     title: "Credit for Excellence",

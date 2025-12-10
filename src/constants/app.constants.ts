@@ -351,3 +351,41 @@ export const OLQ_STRUCTURE = {
 } as const;
 
 export const OLQ_REMARKS = Object.keys(OLQ_STRUCTURE);
+
+export const pageOne = [
+  { key: "plcdr_appearance", label: "Appearance, Bg and Comm Skills." },
+  { key: "plcdr_family", label: "Family Background." },
+  { key: "plcdr_sports", label: "Proficiency in Sports." },
+  { key: "plcdr_eca", label: "Proficiency in Extra Curricular Activities (if any)." },
+  { key: "plcdr_firstImpression", label: "First Impression, Potential of OC & Motivation Level." },
+];
+
+export const pageTwo = [
+  { key: "plcdr_weakStrong", label: "Weak & Strong Areas." },
+  { key: "plcdr_devCtw", label: "Potential Areas for Devp in CTW." },
+  { key: "plcdr_anyPts", label: "Any Pts From OC." },
+  { key: "plcdr_declaration", label: "Declaration / Remarks" },
+];
+
+export const Initialrows = [
+  { key: "dy_appearance", label: "Appearance, Bg and Comm Skills." },
+  { key: "dy_firstImpression", label: "First Impression, Potential of OC & Motivation Level." },
+  { key: "dy_weakStrong", label: "Weak & Strong Areas." },
+  { key: "dy_devCtw", label: "Potential Areas for Development in CTW." },
+  { key: "dy_anyPts", label: "Any Pts from OC." },
+];
+
+export const dscoordrows = [
+  { key: "ds_appearance", label: "Appearance, Bg and Comm Skills." },
+  { key: "ds_firstImpression", label: "First Impression, Potential of OC & Motivation Level." },
+  { key: "ds_weakStrong", label: "Weak & Strong Areas." },
+  { key: "ds_devCtw", label: "Potential Areas for Development in CTW." },
+  { key: "ds_anyPts", label: "Any Pts from OC." },
+];
+
+export const cdrrows = [
+  { key: "cdr_appearance", label: "Appearance, Bg and Comm Skills." },
+  { key: "cdr_firstImpression", label: "First Impression, Potential of OC & Motivation Level." },
+  { key: "cdr_devOc", label: "Potential Areas for Development in OC." },
+  { key: "cdr_anyPts", label: "Any Pts from OC." },
+];
