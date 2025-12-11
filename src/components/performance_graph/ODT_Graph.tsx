@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useRef, useEffect, useState } from "react";
 import {
     Chart as ChartJS,
@@ -14,6 +15,8 @@ import {
     Filler,
 } from "chart.js";
 import { labels } from "@/constants/app.constants";
+import { computeAverageMarks } from "@/components/performance_graph/Data";
+
 
 ChartJS.register(
     CategoryScale,
@@ -27,10 +30,8 @@ ChartJS.register(
     Filler
 );
 
-const data = [100, 80, 60, 40, 20, 0];
 
-
-export default function OdtGraph() {
+export default function OdtGraph({ data: odtData }: { data: number[] }) {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<ChartJS<"line", number[], string>>(null);
     const [stats, setStats] = useState({
@@ -39,15 +40,18 @@ export default function OdtGraph() {
         progress: 0,
         highestTerm: "",
     });
+    const [averageData] = useState(computeAverageMarks("odt"));
+
 
     useEffect(() => {
         // Calculate stats dynamically
-        const highest = Math.max(...data);
-        const average = data.reduce((a, b) => a + b, 0) / data.length;
-        const firstValue = data[0];
-        const lastValue = data[data.length - 1];
+        const highest = Math.max(...odtData);
+        const average = odtData.reduce((a, b) => a + b, 0) / odtData.length;
+        const firstValue = odtData[0];
+        const lastValue = odtData[odtData.length - 1];
         const progress = ((lastValue - firstValue) / firstValue) * 100;
-        const highestIndex = data.indexOf(highest);
+        const highestIndex = odtData.indexOf(highest);
+
 
         setStats({
             highest: highest,
@@ -55,7 +59,8 @@ export default function OdtGraph() {
             progress: progress,
             highestTerm: labels[highestIndex],
         });
-    }, []);
+    }, [odtData]);
+
 
     useEffect(() => {
         if (chartRef.current) {
@@ -63,12 +68,20 @@ export default function OdtGraph() {
                 chartInstance.current.destroy();
             }
 
+
             const ctx = chartRef.current.getContext("2d");
+
 
             // Create gradient background
             const gradientBg = ctx?.createLinearGradient(0, 0, 0, 300);
             gradientBg?.addColorStop(0, "rgba(99, 102, 241, 0.15)");
             gradientBg?.addColorStop(1, "rgba(99, 102, 241, 0)");
+
+            // Create gradient background for average line
+            const gradientAvgBg = ctx?.createLinearGradient(0, 0, 0, 300);
+            gradientAvgBg?.addColorStop(0, "rgba(239, 68, 68, 0.15)");
+            gradientAvgBg?.addColorStop(1, "rgba(239, 68, 68, 0)");
+
 
             chartInstance.current = new ChartJS(chartRef.current, {
                 type: "line",
@@ -77,7 +90,7 @@ export default function OdtGraph() {
                     datasets: [
                         {
                             label: "ODT Score",
-                            data: data,
+                            data: odtData,
                             borderColor: "rgb(99, 102, 241)",
                             backgroundColor: gradientBg,
                             borderWidth: 3,
@@ -89,6 +102,22 @@ export default function OdtGraph() {
                             pointBorderWidth: 2,
                             pointHoverRadius: 8,
                             pointHoverBackgroundColor: "rgb(67, 56, 202)",
+                            hoverBorderWidth: 4,
+                        },
+                        {
+                            label: "Average Marks",
+                            data: averageData,
+                            borderColor: "rgb(239, 68, 68)",
+                            backgroundColor: gradientAvgBg,
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointBackgroundColor: "rgb(239, 68, 68)",
+                            pointBorderColor: "#fff",
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 8,
+                            pointHoverBackgroundColor: "rgb(220, 38, 38)",
                             hoverBorderWidth: 4,
                         },
                     ],
@@ -166,12 +195,14 @@ export default function OdtGraph() {
             });
         }
 
+
         return () => {
             if (chartInstance.current) {
                 chartInstance.current.destroy();
             }
         };
-    }, []);
+    }, [odtData, averageData]);
+
 
     return (
         <div className="w-full max-w-4xl mx-auto p-6">
@@ -186,12 +217,14 @@ export default function OdtGraph() {
                     </p>
                 </div>
 
+
                 {/* Chart Container */}
                 <div className="p-6">
                     <div className="relative w-full h-96 bg-white rounded-xl shadow-sm border border-slate-100">
                         <canvas ref={chartRef}></canvas>
                     </div>
                 </div>
+
 
                 {/* Stats Footer */}
                 <div className="grid grid-cols-3 gap-4 px-6 pb-6">

@@ -14,6 +14,7 @@ import {
     Filler,
 } from "chart.js";
 import { labels } from "@/constants/app.constants";
+import { computeAverageMarks } from "@/components/performance_graph/Data";
 
 ChartJS.register(
     CategoryScale,
@@ -27,10 +28,7 @@ ChartJS.register(
     Filler
 );
 
-const data = [30, 28, 25, 32, 35, 38];
-
-
-export default function DisciplineGraph() {
+export default function DisciplineGraph({ data: disciplineData }: { data: number[] }) {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<ChartJS<"line", number[], string>>(null);
     const [stats, setStats] = useState({
@@ -39,15 +37,16 @@ export default function DisciplineGraph() {
         progress: 0,
         highestTerm: "",
     });
+    const [averageData] = useState(computeAverageMarks("discipline"));
 
     useEffect(() => {
         // Calculate stats dynamically
-        const highest = Math.max(...data);
-        const average = data.reduce((a, b) => a + b, 0) / data.length;
-        const firstValue = data[0];
-        const lastValue = data[data.length - 1];
+        const highest = Math.max(...disciplineData);
+        const average = disciplineData.reduce((a, b) => a + b, 0) / disciplineData.length;
+        const firstValue = disciplineData[0];
+        const lastValue = disciplineData[disciplineData.length - 1];
         const progress = ((lastValue - firstValue) / firstValue) * 100;
-        const highestIndex = data.indexOf(highest);
+        const highestIndex = disciplineData.indexOf(highest);
 
         setStats({
             highest: highest,
@@ -55,7 +54,7 @@ export default function DisciplineGraph() {
             progress: progress,
             highestTerm: labels[highestIndex],
         });
-    }, []);
+    }, [disciplineData]);
 
     useEffect(() => {
         if (chartRef.current) {
@@ -70,6 +69,11 @@ export default function DisciplineGraph() {
             gradientBg?.addColorStop(0, "rgba(99, 102, 241, 0.15)");
             gradientBg?.addColorStop(1, "rgba(99, 102, 241, 0)");
 
+            // Create gradient background for average line
+            const gradientAvgBg = ctx?.createLinearGradient(0, 0, 0, 400);
+            gradientAvgBg?.addColorStop(0, "rgba(239, 68, 68, 0.15)");
+            gradientAvgBg?.addColorStop(1, "rgba(239, 68, 68, 0)");
+
             chartInstance.current = new ChartJS(chartRef.current, {
                 type: "line",
                 data: {
@@ -77,7 +81,7 @@ export default function DisciplineGraph() {
                     datasets: [
                         {
                             label: "Discipline Score",
-                            data: data,
+                            data: disciplineData,
                             borderColor: "rgb(99, 102, 241)",
                             backgroundColor: gradientBg,
                             borderWidth: 3,
@@ -89,6 +93,22 @@ export default function DisciplineGraph() {
                             pointBorderWidth: 2,
                             pointHoverRadius: 8,
                             pointHoverBackgroundColor: "rgb(67, 56, 202)",
+                            hoverBorderWidth: 4,
+                        },
+                        {
+                            label: "Average Marks",
+                            data: averageData,
+                            borderColor: "rgb(239, 68, 68)",
+                            backgroundColor: gradientAvgBg,
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointBackgroundColor: "rgb(239, 68, 68)",
+                            pointBorderColor: "#fff",
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 8,
+                            pointHoverBackgroundColor: "rgb(220, 38, 38)",
                             hoverBorderWidth: 4,
                         },
                     ],
@@ -171,7 +191,7 @@ export default function DisciplineGraph() {
                 chartInstance.current.destroy();
             }
         };
-    }, []);
+    }, [chartInstance, chartRef, disciplineData, labels, averageData]);
 
     return (
         <div className="w-full max-w-4xl mx-auto p-6">

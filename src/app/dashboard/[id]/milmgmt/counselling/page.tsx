@@ -27,7 +27,6 @@ import CounsellingTable from "@/components/counselling/CounsellingTable";
 import CounsellingForm from "@/components/counselling/CounsellingForm";
 import { CounsellingFormData } from "@/types/counselling";
 
-
 export default function CounsellingWarningPage() {
     // route param
     const { id } = useParams();
@@ -52,7 +51,7 @@ export default function CounsellingWarningPage() {
             ? semestersCounselling
             : ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 
-    // Hook for counselling data
+    // Hook for counselling data - pass semesters array instead of count
     const {
         groupedBySemester,
         loading,
@@ -60,27 +59,24 @@ export default function CounsellingWarningPage() {
         saveRecords,
         updateRecord,
         deleteRecord,
-    } = useCounsellingRecords(ocId, semesters.length);
+    } = useCounsellingRecords(ocId, semesters);
 
     const [activeTab, setActiveTab] = useState<number>(0);
 
     useEffect(() => {
         if (!ocId) return;
         fetchAll();
-    }, [ocId]);
+    }, [ocId, fetchAll]);
 
     const handleSubmit = async (data: CounsellingFormData) => {
         const termLabel = semesters[activeTab] ?? semesters[0];
-
-        const rows = data.records.map(r => ({
-            ...r,
-            term: r.term || termLabel,
-        }));
-
-        await saveRecords(termLabel, rows);
+        await saveRecords(termLabel, data.records);
     };
 
-    const handleEditSave = async (idToUpdate: string, payload: Partial<{ reason: string; warningType: string; date: string; warningBy: string }>) => {
+    const handleEditSave = async (
+        idToUpdate: string,
+        payload: Partial<{ reason: string; warningType: string; date: string; warningBy: string }>
+    ) => {
         await updateRecord(idToUpdate, payload);
     };
 
@@ -155,8 +151,11 @@ export default function CounsellingWarningPage() {
                                                     key={term}
                                                     type="button"
                                                     onClick={() => setActiveTab(idx)}
-                                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-                                                        }`}
+                                                    className={`px-4 py-2 rounded-t-lg font-medium ${
+                                                        activeTab === idx
+                                                            ? "bg-blue-600 text-white"
+                                                            : "bg-gray-200 text-gray-700"
+                                                    }`}
                                                 >
                                                     {term}
                                                 </button>
@@ -172,7 +171,10 @@ export default function CounsellingWarningPage() {
                                     />
 
                                     <div className="mt-6">
-                                        <CounsellingForm onSubmit={handleSubmit} semLabel={semesters[activeTab] ?? semesters[0]} />
+                                        <CounsellingForm
+                                            onSubmit={handleSubmit}
+                                            semLabel={semesters[activeTab] ?? semesters[0]}
+                                        />
                                     </div>
                                 </CardContent>
                             </Card>

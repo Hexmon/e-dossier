@@ -294,6 +294,13 @@ type TrainingCard = {
 
 export const militaryTrainingCards: TrainingCard[] = [
   {
+    title: "Performance Graph",
+    description: "Visual performance tracking and analytics",
+    icon: ChartArea,
+    to: (id: string) => `/dashboard/${id}/milmgmt/performance-graph`,
+    color: "bg-blue-700"
+  },
+  {
     title: "Dossier Snapshot",
     description: "Quickly view and analyze OC details",
     icon: Camera,
@@ -488,13 +495,6 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: ClipboardCheck,
     to: (id: string) => `/dashboard/${id}/milmgmt/overall-assessment`,
     color: "bg-yellow-700"
-  },
-  {
-    title: "Performance Graph",
-    description: "Visual performance tracking and analytics",
-    icon: ChartArea,
-    to: (id: string) => `/dashboard/${id}/milmgmt/performance-graph`,
-    color: "bg-blue-700"
   }
 
 ];
@@ -1209,7 +1209,7 @@ export const dossierTabs = [
   },
   {
     value: "credit-excellence",
-    title: "Speed March / Runs",
+    title: "Credit for Excellence",
     icon: FileBadge,
   },
   {

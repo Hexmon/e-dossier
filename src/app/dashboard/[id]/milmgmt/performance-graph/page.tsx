@@ -15,8 +15,9 @@ import OlqGraph from "@/components/performance_graph/OLQ_Graph";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import OdtGraph from "@/components/performance_graph/ODT_Graph";
-import DisciplineGraph from "@/components/performance_graph/Discpline";
-import MedGraph from "@/components/performance_graph/Med_Graph";
+import DisciplineGraph from "@/components/performance_graph/Discipline";
+// import MedGraph from "@/components/performance_graph/Med_Graph";
+import { data } from "@/components/performance_graph/Data";
 
 export default function PerformanceGraphPage() {
 
@@ -79,11 +80,11 @@ export default function PerformanceGraphPage() {
                                     PERFORMANCE GRAPH
                                 </CardTitle>
                             </CardHeader>
-                            <Graph />
-                            <OlqGraph />
-                            <OdtGraph />
-                            <DisciplineGraph />
-                            <MedGraph />
+                            <Graph data={data(ocId)?.academics ?? []} />
+                            <OlqGraph data={data(ocId)?.olq ?? []} />
+                            <OdtGraph data={data(ocId)?.odt ?? []} />
+                            <DisciplineGraph data={data(ocId)?.discipline ?? []} />
+                            {/* <MedGraph /> */}
                         </Card>
                     </TabsContent>
                    

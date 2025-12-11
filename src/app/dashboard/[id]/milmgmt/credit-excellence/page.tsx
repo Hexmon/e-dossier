@@ -1,4 +1,3 @@
-// app/dashboard/[id]/cfe/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -27,6 +26,7 @@ import { cfeFormData } from "@/types/cfe";
 import { useCfeRecords } from "@/hooks/useCfeRecords";
 import CfeTable from "@/components/cfe/CfeTable";
 import CfeForm from "@/components/cfe/CfeForm";
+import type { cfeRow } from "@/types/cfe";
 
 export default function CFEFormPage() {
     const { id } = useParams();
@@ -78,14 +78,35 @@ export default function CFEFormPage() {
         await replaceSemesterPayload(semesterIndex, items);
     };
 
-    const handleDelete = async (recordId: string) => {
-        await deleteRecordById(recordId);
+    // Handle delete of a specific row
+    const handleDelete = async (rowIndex: number, semesterIndex: number, allRows: cfeRow[]) => {
+        // Filter out the row at rowIndex
+        const remainingRows = allRows.filter((_, idx) => idx !== rowIndex);
+
+        // If no rows left, delete the entire record
+        if (remainingRows.length === 0) {
+            // Get the id of the record to delete
+            const recordId = allRows[0]?.id;
+            if (recordId) {
+                await deleteRecordById(recordId);
+            }
+            return;
+        }
+
+        // If rows remain, update the semester with remaining rows
+        const itemsToSave = remainingRows.map((row) => ({
+            cat: row.cat ?? "",
+            marks: Number(row.mks) || 0,
+            remarks: row.remarks ?? "",
+        }));
+
+        await replaceSemesterPayload(semesterIndex, itemsToSave);
     };
 
     return (
         <DashboardLayout
             title="Credit For Excellence (CFE)"
-            description="Manage and record cadet’s CFE scores and evaluation details."
+            description="Manage and record cadet's CFE scores and evaluation details."
         >
             <main className="flex-1 p-6">
                 <BreadcrumbNav
@@ -148,8 +169,11 @@ export default function CFEFormPage() {
                                                 key={s}
                                                 type="button"
                                                 onClick={() => setActiveTab(idx)}
-                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-                                                    }`}
+                                                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+                                                    activeTab === idx
+                                                        ? "bg-blue-600 text-white"
+                                                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                                }`}
                                             >
                                                 {s}
                                             </button>
@@ -157,19 +181,31 @@ export default function CFEFormPage() {
                                     })}
                                 </div>
 
-                                <CfeTable
-                                    rows={groups[activeTab] ?? []}
-                                    loading={loading}
-                                    onStartEdit={async (index) => {
-                                        /* table handles inline start */
-                                        return;
-                                    }}
-                                    onReplaceSemester={handleReplaceSemester}
-                                    onDelete={handleDelete}
-                                />
+                                {/* Display all existing records for selected semester */}
+                                <div className="mb-8">
+                                    <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                                        {semesters[activeTab]} - All Records
+                                    </h3>
+                                    <CfeTable
+                                        rows={groups[activeTab] ?? []}
+                                        loading={loading}
+                                        onReplaceSemester={handleReplaceSemester}
+                                        onDelete={handleDelete}
+                                        semesterIndex={activeTab}
+                                    />
+                                </div>
 
+                                {/* Form to add new records */}
                                 <div className="mt-6">
-                                    <CfeForm onSubmit={handleSubmit} semIndex={activeTab} existingRows={groups[activeTab] ?? []} />
+                                    <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                                        Add New Records for {semesters[activeTab]}
+                                    </h3>
+                                    <CfeForm
+                                        onSubmit={handleSubmit}
+                                        semIndex={activeTab}
+                                        existingRows={groups[activeTab] ?? []}
+                                        loading={loading}
+                                    />
                                 </div>
                             </CardContent>
                         </Card>
