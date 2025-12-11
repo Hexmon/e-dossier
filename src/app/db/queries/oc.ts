@@ -1294,6 +1294,7 @@ export type OcCampWithDetails = {
 
 type GetOcCampsOptions = {
     ocId: string;
+    ocCampId?: string;
     semester?: CampSemester;
     campName?: string;
     includeReviews?: boolean;
@@ -1317,15 +1318,17 @@ type GetOcCampTotalsOptions = {
 const campActivityTotals = db
     .select({
         ocCampId: ocCampActivityScores.ocCampId,
-        totalMarksScored: sql<number>`SUM(${ocCampActivityScores.marksScored})`,
+        // Alias required so the raw SUM() column can be referenced from the subquery
+        totalMarksScored: sql<number>`SUM(${ocCampActivityScores.marksScored})`.as('totalMarksScored'),
     })
     .from(ocCampActivityScores)
     .groupBy(ocCampActivityScores.ocCampId)
     .as('camp_activity_totals');
 
 export async function getOcCamps(options: GetOcCampsOptions) {
-    const { ocId, semester, campName, includeReviews, includeActivities, reviewRole, activityName } = options;
+    const { ocId, ocCampId, semester, campName, includeReviews, includeActivities, reviewRole, activityName } = options;
     const wh: any[] = [eq(ocCamps.ocId, ocId)];
+    if (ocCampId) wh.push(eq(ocCamps.id, ocCampId));
     if (semester) wh.push(eq(trainingCamps.semester, semester));
     if (campName) wh.push(eq(trainingCamps.name, campName));
 

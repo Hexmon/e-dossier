@@ -336,6 +336,7 @@ export const ocCampUpdateSchema = ocCampUpsertSchema.extend({
 
 export const ocCampQuerySchema = z.object({
     semester: CampSemesterKind.optional(),
+    ocCampId: z.string().uuid().optional(),
     campName: z.string().optional(),
     withReviews: BoolString.optional(),
     withActivities: BoolString.optional(),
