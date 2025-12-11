@@ -66,7 +66,7 @@ export default function SportsGamesPage() {
     useEffect(() => {
         if (!ocId) return;
         loadAll();
-    }, [ocId]);
+    }, [ocId, loadAll]);
 
     useEffect(() => {
         const current = savedData[activeTab];
@@ -77,7 +77,7 @@ export default function SportsGamesPage() {
             autumn: mergePrefillWithSaved(autumnPrefill, current.autumn),
             motivation: mergeMotivationWithSaved(motivationPrefill, current.motivation),
         });
-    }, [savedData, activeTab]);
+    }, [savedData, activeTab, reset]);
 
     // helpers to merge prefill with saved rows (keeps prefill order)
     const mergePrefillWithSaved = (prefill: Row[], saved: Row[]) =>
@@ -85,8 +85,19 @@ export default function SportsGamesPage() {
             const { activity } = p;
             const found = saved.find((s) => s.activity === activity);
             return found
-                ? { ...found, activity: found.activity ?? activity, string: found.string ?? p.string ?? "-", maxMarks: found.maxMarks ?? p.maxMarks, obtained: found.obtained ?? p.obtained ?? "" }
-                : { ...p, string: p.string ?? "-", maxMarks: p.maxMarks ?? 0, obtained: p.obtained ?? "" };
+                ? { 
+                    ...found, 
+                    activity: found.activity ?? activity, 
+                    string: found.string ?? p.string ?? "-", 
+                    maxMarks: found.maxMarks ?? p.maxMarks, 
+                    obtained: found.obtained ?? p.obtained ?? "" 
+                }
+                : { 
+                    ...p, 
+                    string: p.string ?? "-", 
+                    maxMarks: p.maxMarks ?? 0, 
+                    obtained: p.obtained ?? "" 
+                };
         });
 
     const mergeMotivationWithSaved = (prefill: Row[], saved: Row[]) => {
@@ -99,9 +110,52 @@ export default function SportsGamesPage() {
             const { activity } = p;
             const found = savedMap.get(activity ?? "");
             return found
-                ? { ...found, activity: found.activity ?? activity, string: found.string ?? p.string ?? "-", maxMarks: found.maxMarks ?? p.maxMarks, obtained: found.obtained ?? p.obtained ?? "" }
-                : { ...p, string: p.string ?? "-", maxMarks: p.maxMarks ?? 0, obtained: p.obtained ?? "" };
+                ? { 
+                    ...found, 
+                    activity: found.activity ?? activity, 
+                    string: found.string ?? p.string ?? "-", 
+                    maxMarks: found.maxMarks ?? p.maxMarks, 
+                    obtained: found.obtained ?? p.obtained ?? "" 
+                }
+                : { 
+                    ...p, 
+                    string: p.string ?? "-", 
+                    maxMarks: p.maxMarks ?? 0, 
+                    obtained: p.obtained ?? "" 
+                };
         });
+    };
+
+    // Validation helper
+    const validateTermRows = (rows: Row[]): boolean => {
+        for (const r of rows) {
+            const maxMarks = Number(r?.maxMarks ?? 0);
+            const obtained = Number(r?.obtained ?? 0);
+
+            // Validate max marks is not negative
+            if (!Number.isNaN(maxMarks) && maxMarks < 0) {
+                toast.error("Max Marks cannot be negative");
+                return false;
+            }
+
+            // Validate obtained marks is not negative
+            if (!Number.isNaN(obtained) && obtained < 0) {
+                toast.error("Obtained marks cannot be negative");
+                return false;
+            }
+
+            // Validate obtained <= maxMarks
+            if (!Number.isNaN(maxMarks) && !Number.isNaN(obtained) && obtained > maxMarks) {
+                toast.error("Obtained marks cannot exceed Max Marks");
+                return false;
+            }
+
+            // Validate string field for motivation (activity and string should not be empty)
+            if (r.string && String(r.string).trim() === "") {
+                // Allow empty strings, but validate if needed based on requirements
+            }
+        }
+        return true;
     };
 
     // submit a term
@@ -113,14 +167,9 @@ export default function SportsGamesPage() {
         const semesterNumber = activeTab + 1;
         const rows: Row[] = getValues(termKey) ?? [];
 
-        // validate obtained <= maxMarks
-        for (const r of rows) {
-            const max = Number(r?.maxMarks ?? 0);
-            const obtained = Number(r?.obtained ?? 0);
-            if (!Number.isNaN(max) && !Number.isNaN(obtained) && obtained > max) {
-                toast.error("Obtained marks cannot exceed Max Marks");
-                return;
-            }
+        // Validate rows
+        if (!validateTermRows(rows)) {
+            return;
         }
 
         setIsSaving(true);
@@ -169,7 +218,7 @@ export default function SportsGamesPage() {
                 return copy;
             });
         },
-        [activeTab]
+        [activeTab, setSavedData]
     );
 
     const handleRowDeleted = useCallback((term: keyof SemesterData, id: string) => {
@@ -181,7 +230,7 @@ export default function SportsGamesPage() {
         });
         // also call a hook function to remove server-side when implemented
         // removeRowLocal(activeTab, term, id);
-    }, [activeTab]);
+    }, [activeTab, setSavedData]);
 
     // memoized rows to pass to table (prefill + saved)
     const memoizedSpringRows = useMemo(() => springPrefill, []);
@@ -297,7 +346,6 @@ export default function SportsGamesPage() {
                                             handleRowUpdated("motivation", updatedRow, index)
                                         }
                                     />
-
                                     <SportsForm
                                         termKey="motivation"
                                         isSaving={isSaving}
