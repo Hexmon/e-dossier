@@ -23,6 +23,14 @@ export function useCounsellingRecords(ocId: string, semesters: string[]) {
     );
     const [loading, setLoading] = useState(false);
 
+    // Helper function to normalize warningType for backend
+    const normalizeWarningTypeForBackend = (value: string): string => {
+        const lowerValue = value.toLowerCase().trim();
+        if (lowerValue === "relegation") return "Relegation";
+        if (lowerValue === "withdrawal") return "Withdrawal";
+        return "Other";
+    };
+
     const fetchAllRobust = useCallback(async () => {
         if (!ocId) return;
         try {
@@ -30,15 +38,31 @@ export function useCounsellingRecords(ocId: string, semesters: string[]) {
             const rows = await getCounsellingRecords(ocId); // array of raw rows
 
             // convert to CounsellingRow with safe fallbacks
-            const normalized: CounsellingRow[] = (rows ?? []).map((r: any) => ({
-                id: r.id ?? undefined,
-                serialNo: "", // will be computed in groups
-                term: r.term ?? "",
-                reason: r.reason ?? "-",
-                warningType: r.warningType ?? "-",
-                date: (r.date ?? "").split?.("T")?.[0] ?? (r.date ?? ""),
-                warningBy: r.warningBy ?? "-",
-            }));
+            const normalized: CounsellingRow[] = (rows ?? []).map((r: any) => {
+                // Determine display value for warningType
+                let displayWarningType = r.warningType ?? "-";
+                
+                // If backend returns "Other", check if there's a stored original value
+                if (r.warningType === "Other" && r.warningTypeOriginal) {
+                    displayWarningType = r.warningTypeOriginal;
+                } else if (r.warningType === "Relegation") {
+                    displayWarningType = "Relegation";
+                } else if (r.warningType === "Withdrawal") {
+                    displayWarningType = "Withdrawal";
+                } else if (r.warningType === "Other") {
+                    displayWarningType = r.warningTypeOriginal || "Other";
+                }
+
+                return {
+                    id: r.id ?? undefined,
+                    serialNo: "", // will be computed in groups
+                    term: r.term ?? "",
+                    reason: r.reason ?? "-",
+                    warningType: displayWarningType,
+                    date: (r.date ?? "").split?.("T")?.[0] ?? (r.date ?? ""),
+                    warningBy: r.warningBy ?? "-",
+                };
+            });
 
             // Build final groups array aligned to semesters by matching term label
             const finalGroups: CounsellingRow[][] = Array.from({ length: semesters.length }, () => []);
@@ -74,13 +98,19 @@ export function useCounsellingRecords(ocId: string, semesters: string[]) {
             if (!ocId) return null;
             try {
                 setLoading(true);
-                const payload = payloadRows.map((r) => ({
-                    term: termLabel,
-                    reason: r.reason ?? "",
-                    warningType: r.warningType ?? "",
-                    date: r.date ?? "",
-                    warningBy: r.warningBy ?? "",
-                }));
+                const payload = payloadRows.map((r) => {
+                    const userEnteredValue = r.warningType ?? "";
+                    const normalizedType = normalizeWarningTypeForBackend(userEnteredValue);
+                    
+                    return {
+                        term: termLabel,
+                        reason: r.reason ?? "",
+                        warningType: normalizedType,
+                        warningTypeOriginal: userEnteredValue, // Always store the original user input
+                        date: r.date ?? "",
+                        warningBy: r.warningBy ?? "",
+                    };
+                });
 
                 const resp = await saveCounsellingRecords(ocId, payload);
                 if (!resp) {
@@ -107,9 +137,13 @@ export function useCounsellingRecords(ocId: string, semesters: string[]) {
             if (!ocId) return false;
             try {
                 setLoading(true);
+                const userEnteredValue = payload.warningType ?? "";
+                const normalizedType = userEnteredValue ? normalizeWarningTypeForBackend(userEnteredValue) : undefined;
+                
                 const body: Record<string, unknown> = {
                     reason: payload.reason ?? undefined,
-                    warningType: payload.warningType ?? undefined,
+                    warningType: normalizedType,
+                    warningTypeOriginal: userEnteredValue || undefined, // Store original value
                     date: payload.date ?? undefined,
                     warningBy: payload.warningBy ?? undefined,
                 };

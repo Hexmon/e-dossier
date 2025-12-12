@@ -75,7 +75,7 @@ export default function CounsellingWarningPage() {
 
     const handleEditSave = async (
         idToUpdate: string,
-        payload: Partial<{ reason: string; warningType: string; date: string; warningBy: string }>
+        payload: Partial<{ reason: string; date: string; warningBy: string }>
     ) => {
         await updateRecord(idToUpdate, payload);
     };
