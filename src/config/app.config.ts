@@ -192,14 +192,6 @@ export const dashboardCards = [
   },
 
   // {
-  //   title: "Academics",
-  //   description: "Manage academic subjects, topics, and study material",
-  //   icon: BookOpen,
-  //   to: "",
-  //   color: "bg-purple-500"
-  // },
-
-  // {
   //   title: "User Management",
   //   description: "Handle user accounts and permissions",
   //   icon: Users,
@@ -495,6 +487,13 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: ClipboardCheck,
     to: (id: string) => `/dashboard/${id}/milmgmt/overall-assessment`,
     color: "bg-yellow-700"
+    },
+  {
+    title: "Academics",
+    description: "Manage academic subjects, topics, and study material",
+    icon: BookOpen,
+    to: (id: string) => `/dashboard/${id}/milmgmt/academics`,
+    color: "bg-purple-500"
   }
 
 ];

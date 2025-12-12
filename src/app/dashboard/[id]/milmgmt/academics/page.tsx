@@ -3,12 +3,12 @@
 import React from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
-import InterviewTabs from "@/components/interview/InterviewTabs";
-import { useOcDetails } from "@/hooks/useOcDetails";
+import AcademicsTabs from "@/components/academics/AcademicsTabs";
 import { useParams } from "next/navigation";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
+import { useOcDetails } from "@/hooks/useOcDetails";
 
-export default function InterviewsPage() {
+export default function AcademicsPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
 
@@ -22,23 +22,20 @@ export default function InterviewsPage() {
         course = "",
     } = cadet ?? {};
 
-    const selectedCadet = {
-        name,
-        courseName,
-        ocNumber,
-        ocId: cadetOcId,
-        course,
-    };
+    const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
+
     return (
-        <DashboardLayout title="Initial Interview Forms" description="Record and manage interview notes">
+        <DashboardLayout title="Academics" description="Term-wise academic records">
             <main className="p-6">
-                <BreadcrumbNav paths={[{ label: "Dashboard", href: "/dashboard" }, { label: "Dossier", href: `/dashboard/${ocId}/milmgmt` }, { label: "Initial Interviews" }]} />
+                <BreadcrumbNav paths={[{ label: "Dashboard", href: "/dashboard" }, { label: "Dossier", href: `/dashboard/${ocId}/milmgmt` }, { label: "Academics" }]} />
+
                 {selectedCadet && (
                     <div className="hidden md:flex sticky top-16 z-40 mb-6">
                         <SelectedCadetTable selectedCadet={selectedCadet} />
                     </div>
                 )}
-                <InterviewTabs />
+
+                <AcademicsTabs />
             </main>
         </DashboardLayout>
     );
