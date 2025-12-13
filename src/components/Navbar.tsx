@@ -22,11 +22,11 @@ const Navbar = () => {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
             <Image
-              src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
-              alt="MCEME Logo"
-              width={89}
-              height={12}
-              className="object-contain"
+              src="/images/army_logo.jpeg"
+              alt="Army Logo"
+              width={50}
+              height={10}
+              className="object-contain "
             />
             <div className="hidden sm:block">
               <h1 className="text-lg font-semibold text-primary">MCEME</h1>
@@ -58,6 +58,14 @@ const Navbar = () => {
             <Button asChild variant="default" size="sm">
               <Link href="/signup">Sign Up</Link>
             </Button>
+
+            <Image
+              src="/images/eme_logo.jpeg"
+              alt="MCEME Logo"
+              width={50}
+              height={10}
+              className="object-contain"
+            />
           </div>
 
           {/* Mobile Menu Button */}

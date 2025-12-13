@@ -1212,6 +1212,11 @@ export const semesterTabs = [
 ];
 export const miltrgTabs = [
   {
+    value: "basic-details",
+    title: "Basic Details",
+    icon: User,
+  },
+  {
     value: "mil-trg",
     title: "Mil-Trg",
     icon: Shield,

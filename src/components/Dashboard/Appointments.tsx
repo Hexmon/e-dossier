@@ -12,43 +12,85 @@ interface Appointment {
     remarks: string;
 }
 
-// Sample data for 6 appointments with realistic military positions
+// Sample data for 10 appointments with realistic military positions
 const appointmentsData: Appointment[] = [
     {
-        appointment: 'Commanding Officer',
-        officersDetails: 'Col. Rajesh Kumar',
+        appointment: 'CMDT',
+        officersDetails: 'Lt Gen Neeraj Varshney',
         assumptionInCharge: '2024-08-15',
-        remarks: 'Transferred from Eastern Command'
+        remarks: '---'
     },
     {
-        appointment: 'Second in Command',
-        officersDetails: 'Lt. Col. Amit Sharma',
+        appointment: 'DCCI',
+        officersDetails: 'Maj Gen Puneet Kapoor',
         assumptionInCharge: '2024-09-01',
-        remarks: 'Promoted from Major'
+        remarks: '---'
     },
     {
-        appointment: 'Adjutant',
-        officersDetails: 'Maj. Priya Singh',
+        appointment: 'CDR',
+        officersDetails: 'Brig Atul Jaiswal',
         assumptionInCharge: '2024-10-10',
-        remarks: 'Regular posting'
+        remarks: '---'
     },
     {
-        appointment: 'Quartermaster',
-        officersDetails: 'Maj. Vikram Reddy',
+        appointment: 'Dy CDR',
+        officersDetails: 'Lt Col Raman',
         assumptionInCharge: '2024-07-22',
-        remarks: 'Administrative duties'
+        remarks: 'Offg.'
     },
     {
-        appointment: 'Training Officer',
-        officersDetails: 'Capt. Anil Verma',
+        appointment: 'DS CORD',
+        officersDetails: 'Lt Col Neeraj Tiwari',
         assumptionInCharge: '2024-11-05',
-        remarks: 'Specialized training background'
+        remarks: '---'
     },
     {
-        appointment: 'Intelligence Officer',
-        officersDetails: 'Capt. Neha Patel',
+        appointment: 'HOAT',
+        officersDetails: 'Maj Sourav',
         assumptionInCharge: '2024-12-01',
-        remarks: 'Security clearance verified'
+        remarks: '---'
+    },
+    {
+        appointment: 'CCO',
+        officersDetails: 'Maj Puneet',
+        assumptionInCharge: '2024-11-05',
+        remarks: '---'
+    },
+    {
+        appointment: 'Arjun Pl Cdr',
+        officersDetails: 'Capt. Praveen Singh',
+        assumptionInCharge: '2024-11-05',
+        remarks: '---'
+    },
+    {
+        appointment: 'Karna Pl Cdr',
+        officersDetails: 'Maj Puneet Yadav',
+        assumptionInCharge: '2024-11-05',
+        remarks: '---'
+    },
+    {
+        appointment: 'Chandragupt Pl Cdr',
+        officersDetails: 'Maj R Krishnan',
+        assumptionInCharge: '2024-11-05',
+        remarks: '---'
+    },
+    {
+        appointment: 'Prithviraj Pl Cdr',
+        officersDetails: 'Capt. Vaibhav Gusain',
+        assumptionInCharge: '2024-11-05',
+        remarks: '---'
+    },
+    {
+        appointment: 'Ranapratap Pl Cdr',
+        officersDetails: 'Maj AS Dhaliwal',
+        assumptionInCharge: '2024-11-05',
+        remarks: '---'
+    },
+    {
+        appointment: 'Shivaji Pl Cdr',
+        officersDetails: 'Maj SB Bundel',
+        assumptionInCharge: '2024-11-05',
+        remarks: '---'
     },
 ];
 
@@ -68,7 +110,7 @@ export default function Appointments() {
         columns: [
             {
                 key: 'appointment',
-                label: 'Appointment',
+                label: 'Appointment Name',
                 type: 'text',
                 sortable: true,
                 filterable: false,
@@ -76,7 +118,7 @@ export default function Appointments() {
             },
             {
                 key: 'officersDetails',
-                label: 'Officers Details',
+                label: 'Officer Name',
                 type: 'text',
                 sortable: true,
                 filterable: false,
@@ -84,7 +126,7 @@ export default function Appointments() {
             },
             {
                 key: 'assumptionInCharge',
-                label: 'Assumption In Charge',
+                label: 'Assumption Of Charge',
                 type: 'custom', // Changed from 'date' to 'custom'
                 sortable: true,
                 filterable: false,
