@@ -46,14 +46,14 @@ export default function GeneralManagementPage() {
               <BreadcrumbNav
                 paths={[
                   { label: "Dashboard", href: "/dashboard" },
-                  { label: "Gen Mgmt" },
+                  { label: "Admin Mgmt" },
                 ]}
               />
             </nav>
             {/* Welcome section */}
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-primary mb-2">
-                MCEME General Management
+                Admin Management
               </h2>
               <p className="text-muted-foreground">
                 Centralize and oversee administrative processes, ensuring smooth coordination of all training and institutional activities.
