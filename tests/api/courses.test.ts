@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET as getCourses, POST as postCourses } from '@/app/api/v1/courses/route';
+import { GET as getCourses, POST as postCourses } from '@/app/api/v1/admin/courses/route';
 import { makeJsonRequest } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';

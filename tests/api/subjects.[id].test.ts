@@ -3,7 +3,7 @@ import {
   GET as getSubjectById,
   PATCH as patchSubject,
   DELETE as deleteSubject,
-} from '@/app/api/v1/subjects/[id]/route';
+} from '@/app/api/v1/admin/subjects/[id]/route';
 import { makeJsonRequest } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';

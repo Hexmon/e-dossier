@@ -31,11 +31,23 @@ export const subjectUpdateSchema = subjectCreateSchema.partial().refine(
 export const instructorCreateSchema = z.object({
     // either link to an existing user OR supply external details
     userId: z.string().uuid().optional(),
-    name: z.string().trim().min(2).max(160),
+    name: z.string().trim().min(2).max(160).optional(),
     email: z.string().trim().email().max(255).optional(),
     phone: z.string().trim().max(32).optional(),
     affiliation: z.string().trim().max(160).optional(),
     notes: z.string().trim().max(2000).optional(),
+}).superRefine((data, ctx) => {
+    if (data.userId) return;
+    const missing: string[] = [];
+    if (!data.name) missing.push('name');
+    if (!data.email) missing.push('email');
+    if (!data.phone) missing.push('phone');
+    if (missing.length) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Missing required field(s): ${missing.join(', ')}`,
+        });
+    }
 });
 
 export const instructorUpdateSchema = instructorCreateSchema.partial().refine(
