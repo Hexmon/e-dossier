@@ -4,7 +4,7 @@ import { ClubRow, DrillRow } from "@/types/club-detls";
 import { Row as ObstacleRow } from "@/types/obstacleTrg";
 import { Row as SpeedRow } from "@/types/speedMarchRunback";
 import { Row as sportsRow } from "@/types/sportsAwards";
-import { Activity, Book, BookOpen, CalendarDays, FileText, GraduationCap, Home, Settings, Shield, UserCheck, Users } from "lucide-react";
+import { Book, FileText, Home, NotebookPen } from "lucide-react";
 
 export const POS = {
   COMMANDANT: 'COMMANDANT',
@@ -40,7 +40,7 @@ export const menuItems: MenuSection[] = [
   },
   {
     group: "Dossier",
-    items: [{ title: "Dossier Management", url: "/milmgmt", icon: FileText }],
+    items: [{ title: "Dossier Management", url: "/milmgmt", icon: NotebookPen }],
   },
   // {
   //   group: "User Management",

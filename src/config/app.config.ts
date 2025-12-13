@@ -447,7 +447,7 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "bg-orange-500"
   },
   {
-    title: "Interview Terms",
+    title: "Terms Interview",
     description: "Schedule and manage candidate interviews",
     icon: UserCheck,
     to: (id: string) => `/dashboard/${id}/milmgmt/interview-term`,
@@ -459,6 +459,13 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: FileBadge,
     to: (id: string) => `/dashboard/${id}/milmgmt/credit-excellence`,
     color: "bg-violet-600"
+  },
+  {
+    title: "Physical Training",
+    description: "Manage cadet physical training records",
+    icon: Dumbbell,
+    to: (id: string) => `/dashboard/${id}/milmgmt/physical-training`,
+    color: "bg-gray-700"
   },
   {
     title: "Semester Record",
@@ -475,19 +482,12 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "bg-yellow-700"
   },
   {
-    title: "Physical Training",
-    description: "Manage cadet physical training records",
-    icon: Dumbbell,
-    to: (id: string) => `/dashboard/${id}/milmgmt/physical-training`,
-    color: "bg-gray-700"
-  },
-  {
     title: "Overall Assessment",
     description: "Manage cadet overall assessment records",
     icon: ClipboardCheck,
     to: (id: string) => `/dashboard/${id}/milmgmt/overall-assessment`,
     color: "bg-yellow-700"
-    },
+  },
   {
     title: "Academics",
     description: "Manage academic subjects, topics, and study material",
@@ -1201,6 +1201,16 @@ export const miltrgTabs = [
 ];
 
 export const dossierTabs = [
+  {
+    value: "initial-interview",
+    title: "Initial Interview",
+    icon: UserCheck,
+  },
+  {
+    value: "interview-term",
+    title: "Terms Interview",
+    icon: UserCheck,
+  },
   {
     value: "speed-march",
     title: "Speed March / Runs",
