@@ -16,6 +16,7 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { Subject, SubjectCreate } from "@/app/lib/api/subjectsApi";
 import { Input } from "@/components/ui/input";
 import { ocTabs } from "@/config/app.config";
+import { toast } from "sonner";
 
 export default function SubjectManagementPage() {
     const router = useRouter();
@@ -71,13 +72,22 @@ export default function SubjectManagementPage() {
     };
 
     const handleDeleteSubject = async (id: string) => {
-        const confirmed = window.confirm("Are you sure you want to delete this subject?");
-        if (confirmed) {
-            const result = await removeSubject(id);
-            if (result) {
-                await fetchSubjects({ q: searchQuery });
-            }
-        }
+        toast("Delete Subject", {
+            description: "Are you sure you want to delete this subject?",
+            action: {
+                label: "Delete",
+                onClick: async () => {
+                    const result = await removeSubject(id);
+                    if (result) {
+                        await fetchSubjects({ q: searchQuery });
+                    }
+                },
+            },
+            cancel: {
+                label: "Cancel",
+                onClick: () => { },
+            },
+        });
     };
 
     const renderSubjectCards = () => {

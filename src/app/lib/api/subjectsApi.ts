@@ -47,9 +47,13 @@ export interface ListSubjectsParams {
 export async function listSubjects(
     params?: ListSubjectsParams
 ): Promise<{ subjects: Subject[] }> {
-    return await api.get(endpoints.admin.subjects, {
-        query: params as Record<string, string | number | boolean | undefined>,
-    });
+    const response = await api.get<{ items: Subject[]; count: number }>(
+        endpoints.admin.subjects,
+        {
+            query: params as Record<string, string | number | boolean | undefined>,
+        }
+    );
+    return { subjects: response.items || [] };
 }
 
 export async function getSubjectById(subjectId: string): Promise<Subject> {
