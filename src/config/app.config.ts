@@ -12,7 +12,8 @@ import {
   CalendarDays,
   Trophy,
   FileBadge,
-  NotebookPen
+  NotebookPen,
+  ChartArea
 } from "lucide-react";
 
 
@@ -285,6 +286,13 @@ type TrainingCard = {
 
 export const militaryTrainingCards: TrainingCard[] = [
   {
+    title: "Performance Graph",
+    description: "Visual performance tracking and analytics",
+    icon: ChartArea,
+    to: (id: string) => `/dashboard/${id}/milmgmt/performance-graph`,
+    color: "bg-blue-700"
+  },
+  {
     title: "Dossier Snapshot",
     description: "Quickly view and analyze OC details",
     icon: Camera,
@@ -473,6 +481,13 @@ export const militaryTrainingCards: TrainingCard[] = [
     to: (id: string) => `/dashboard/${id}/milmgmt/physical-training`,
     color: "bg-gray-700"
   },
+  {
+    title: "Overall Assessment",
+    description: "Manage cadet overall assessment records",
+    icon: ClipboardCheck,
+    to: (id: string) => `/dashboard/${id}/milmgmt/overall-assessment`,
+    color: "bg-yellow-700"
+    },
   {
     title: "Academics",
     description: "Manage academic subjects, topics, and study material",
@@ -1193,7 +1208,7 @@ export const dossierTabs = [
   },
   {
     value: "credit-excellence",
-    title: "Speed March / Runs",
+    title: "Credit for Excellence",
     icon: FileBadge,
   },
   {
@@ -1311,6 +1326,16 @@ export const dossierTabs = [
     value: "physical-training",
     title: "Physical Training",
     icon: Dumbbell,
+  },
+  {
+    value: "overall-assessment",
+    title: "Overall Assessment",
+    icon: ClipboardCheck,
+  },
+  {
+    value: "performance-graph",
+    title: "Performance Graph",
+    icon: ChartArea,
   }
 ];
 

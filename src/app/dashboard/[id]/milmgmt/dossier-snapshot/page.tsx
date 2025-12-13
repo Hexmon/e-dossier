@@ -24,7 +24,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useOcDetails } from "@/hooks/useOcDetails";
 
 import type { OfficerCadetForm } from "@/types/dossierSnap";
-import OfficerCadetFormComponent from "@/components/dossier/OfficerCadetForm";
+import OfficerCadetFormComponent from "@/components/dossier/OfficerCadetFormComponent";
 
 export default function DossierSnapshotPage() {
   const { id } = useParams();
@@ -74,18 +74,10 @@ export default function DossierSnapshotPage() {
                 </CardHeader>
 
                 <CardContent>
-                  {/* TABS FOR FORM + PREVIEW */}
-                  <Tabs defaultValue="dossier-snapshot" className="w-full">
-
-                    {/* === FORM TAB === */}
-                    <TabsContent value="form">
-                      <OfficerCadetFormComponent
-                        initialValues={null}
-                        onSave={(data) => setSavedData(data)}
-                      />
-                    </TabsContent>
-
-                  </Tabs>
+                  <OfficerCadetFormComponent
+                    initialValues={savedData}
+                    onSave={(data) => setSavedData(data)}
+                  />
                 </CardContent>
               </Card>
             </section>
@@ -95,4 +87,3 @@ export default function DossierSnapshotPage() {
     </DashboardLayout>
   );
 }
-

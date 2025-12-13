@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface TableData {
   id: string;
@@ -36,24 +37,24 @@ const baseTableConfig: TableConfig<TableData> = {
 
 // Table config for all semesters - same columns
 const tableConfigs: Record<string, TableConfig<TableData>> = {
-  SEM1: baseTableConfig,
-  SEM2: baseTableConfig,
-  SEM3: baseTableConfig,
-  SEM4: baseTableConfig,
-  SEM5: baseTableConfig,
-  SEM6: baseTableConfig,
+  "I TERM": baseTableConfig,
+  "II TERM": baseTableConfig,
+  "III TERM": baseTableConfig,
+  "IV TERM": baseTableConfig,
+  "V TERM": baseTableConfig,
+  "VI TERM": baseTableConfig,
 };
 
 export default function SemesterForm() {
-  const [activeSemester, setActiveSemester] = useState("SEM1");
+  const [activeSemester, setActiveSemester] = useState("I TERM");
   const [isEditingRemarks, setIsEditingRemarks] = useState(false);
   const [isEditingReviews, setIsEditingReviews] = useState(false);
 
-  const semesters = ["SEM1", "SEM2", "SEM3", "SEM4", "SEM5", "SEM6"];
+  const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 
   // Hardcoded performance data for each semester
   const semesterData: Record<string, TableData[]> = {
-    SEM1: [
+    "I TERM": [
       { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: '', column5: "" },
       { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
       { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
@@ -64,7 +65,7 @@ export default function SemesterForm() {
       { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
       { id: "9", column1: 9, column2: "TOTAL", column3: 1950, column4: "", column5: "" },
     ],
-    SEM2: [
+    "II TERM": [
       { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
       { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
       { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
@@ -75,7 +76,7 @@ export default function SemesterForm() {
       { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
       { id: "9", column1: 9, column2: "TOTAL", column3: 1950, column4: "", column5: "" },
     ],
-    SEM3: [
+    "III TERM": [
       { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
       { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
       { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
@@ -86,7 +87,7 @@ export default function SemesterForm() {
       { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
       { id: "9", column1: 9, column2: "TOTAL", column3: 1950, column4: "", column5: "" },
     ],
-    SEM4: [
+    "IV TERM": [
       { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
       { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
       { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
@@ -97,7 +98,7 @@ export default function SemesterForm() {
       { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
       { id: "9", column1: 9, column2: "TOTAL", column3: 1975, column4: "", column5: "" },
     ],
-    SEM5: [
+    "V TERM": [
       { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
       { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
       { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
@@ -108,7 +109,7 @@ export default function SemesterForm() {
       { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
       { id: "9", column1: 9, column2: "TOTAL", column3: 2075, column4: "", column5: "" },
     ],
-    SEM6: [
+    "VI TERM": [
       { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
       { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
       { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
@@ -123,30 +124,76 @@ export default function SemesterForm() {
 
   // Edited remarks for performance table by semester & rowId
   const [editedRemarks, setEditedRemarks] = useState<Record<string, Record<string, string>>>({
-    SEM1: {},
-    SEM2: {},
-    SEM3: {},
-    SEM4: {},
-    SEM5: {},
-    SEM6: {},
+    "I TERM": {},
+    "II TERM": {},
+    "III TERM": {},
+    "IV TERM": {},
+    "V TERM": {},
+    "VI TERM": {},
+  });
+
+  // Edited marks scored for performance table by semester & rowId
+  const [editedMarksScored, setEditedMarksScored] = useState<Record<string, Record<string, string>>>({
+    "I TERM": {},
+    "II TERM": {},
+    "III TERM": {},
+    "IV TERM": {},
+    "V TERM": {},
+    "VI TERM": {},
   });
 
   // Reviews data for each semester
   const [reviews, setReviews] = useState<Record<string, RemarksData>>({
-    SEM1: { pc: "", dc: "", commander: "" },
-    SEM2: { pc: "", dc: "", commander: "" },
-    SEM3: { pc: "", dc: "", commander: "" },
-    SEM4: { pc: "", dc: "", commander: "" },
-    SEM5: { pc: "", dc: "", commander: "" },
-    SEM6: { pc: "", dc: "", commander: "" },
+    "I TERM": { pc: "", dc: "", commander: "" },
+    "II TERM": { pc: "", dc: "", commander: "" },
+    "III TERM": { pc: "", dc: "", commander: "" },
+    "IV TERM": { pc: "", dc: "", commander: "" },
+    "V TERM": { pc: "", dc: "", commander: "" },
+    "VI TERM": { pc: "", dc: "", commander: "" },
   });
-
-//   const [isEditingRemarks, setIsEditingRemarks] = useState(false);
-//   const [isEditingReviews, setIsEditingReviews] = useState(false);
 
   // Handlers for remarks edits
   const handleRemarkChange = (rowId: string, value: string) => {
     setEditedRemarks((prev) => ({
+      ...prev,
+      [activeSemester]: {
+        ...prev[activeSemester],
+        [rowId]: value,
+      },
+    }));
+  };
+
+  // Handlers for marks scored edits with validation
+  const handleMarksScoreChange = (rowId: string, value: string) => {
+    const row = semesterData[activeSemester].find(r => r.id === rowId);
+    if (!row) return;
+
+    const marksValue = parseFloat(value);
+
+    // Allow empty values
+    if (value.trim() === "") {
+      setEditedMarksScored((prev) => ({
+        ...prev,
+        [activeSemester]: {
+          ...prev[activeSemester],
+          [rowId]: value,
+        },
+      }));
+      return;
+    }
+
+    // Validate marks
+    if (isNaN(marksValue) || marksValue < 0) {
+      toast.error("Marks must be a valid positive number");
+      return;
+    }
+
+    if (marksValue > row.column3) {
+      toast.error(`Marks scored cannot exceed maximum marks (${row.column3})`);
+      return;
+    }
+
+    setEditedMarksScored((prev) => ({
       ...prev,
       [activeSemester]: {
         ...prev[activeSemester],
@@ -163,6 +210,35 @@ export default function SemesterForm() {
     }));
   };
 
+  // Derived data for display: base semester data overridden by edited marks/remarks
+  const displaySemesterData: TableData[] = semesterData[activeSemester].map((row) => ({
+    ...row,
+    column4: editedMarksScored[activeSemester]?.[row.id] ?? row.column4,
+    column5: editedRemarks[activeSemester]?.[row.id] ?? row.column5,
+  }));
+
+  const handleSaveRemarks = () => {
+    // Validate all marks before saving
+    const currentEditedMarks = editedMarksScored[activeSemester];
+    const currentSemesterData = semesterData[activeSemester];
+
+    for (const [rowId, marksValue] of Object.entries(currentEditedMarks)) {
+      if (marksValue.trim() === "") continue;
+
+      const row = currentSemesterData.find(r => r.id === rowId);
+      if (!row) continue;
+
+      const marksNum = parseFloat(marksValue);
+      if (isNaN(marksNum) || marksNum < 0 || marksNum > row.column3) {
+        toast.error(`Invalid marks for row: ${row.column2}. Marks must be between 0 and ${row.column3}`);
+        return;
+      }
+    }
+
+    setIsEditingRemarks(false);
+    toast.success("Performance data saved successfully");
+  };
+
   return (
     <div className="space-y-6">
       <Card className="p-6 rounded-2xl shadow-xl bg-white">
@@ -173,10 +249,11 @@ export default function SemesterForm() {
               <button
                 key={sem}
                 onClick={() => setActiveSemester(sem)}
-                className={`px-4 py-2 rounded-t-lg font-medium ${activeSemester === sem
+                className={`px-4 py-2 rounded-t-lg font-medium ${
+                  activeSemester === sem
                     ? "bg-blue-600 text-white"
                     : "bg-gray-200 text-gray-700"
-                    }`}
+                }`}
               >
                 {sem}
               </button>
@@ -185,7 +262,9 @@ export default function SemesterForm() {
 
           {/* Performance Table */}
           <div>
-            <h2 className="text-lg font-semibold mb-4 text-center text-primary">{activeSemester} Performance Data</h2>
+            <h2 className="text-lg font-semibold mb-4 text-center text-primary">
+              {activeSemester} Performance Data
+            </h2>
             {isEditingRemarks ? (
               <div className="space-y-4">
                 <div className="overflow-x-auto border border-gray-300 rounded-lg">
@@ -195,6 +274,7 @@ export default function SemesterForm() {
                         <th className="border border-gray-300 px-4 py-2 text-left">S.No</th>
                         <th className="border border-gray-300 px-4 py-2 text-left">Subject</th>
                         <th className="border border-gray-300 px-4 py-2 text-left">Max Marks</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Marks Scored</th>
                         <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
                       </tr>
                     </thead>
@@ -204,6 +284,14 @@ export default function SemesterForm() {
                           <td className="border border-gray-300 px-4 py-2">{row.column1}</td>
                           <td className="border border-gray-300 px-4 py-2">{row.column2}</td>
                           <td className="border border-gray-300 px-4 py-2">{row.column3}</td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <Input
+                              value={editedMarksScored[activeSemester]?.[row.id] ?? row.column4}
+                              onChange={(e) => handleMarksScoreChange(row.id, e.target.value)}
+                              placeholder="Enter marks scored"
+                              className="w-full"
+                            />
+                          </td>
                           <td className="border border-gray-300 px-4 py-2">
                             <Input
                               value={editedRemarks[activeSemester]?.[row.id] ?? row.column5}
@@ -226,7 +314,7 @@ export default function SemesterForm() {
                     Cancel
                   </Button>
                   <Button
-                    onClick={() => setIsEditingRemarks(false)}
+                    onClick={handleSaveRemarks}
                   >
                     Save
                   </Button>
@@ -235,11 +323,11 @@ export default function SemesterForm() {
             ) : (
               <>
                 <UniversalTable
-                  data={semesterData[activeSemester]}
+                  data={displaySemesterData}
                   config={tableConfigs[activeSemester]}
                 />
                 <div className="flex justify-center mt-4">
-                  <Button onClick={() => setIsEditingRemarks(true)}>Edit Remarks</Button>
+                  <Button onClick={() => setIsEditingRemarks(true)}>Edit</Button>
                 </div>
               </>
             )}

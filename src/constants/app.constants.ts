@@ -164,6 +164,8 @@ export const romanToNumber: Record<string, number> = {
 
 export const terms = ["IV TERM", "V TERM", "VI TERM"];
 
+export const labels = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
+
 export const obstaclePrefill: ObstacleRow[] = [
   { obstacle: "EX (15 Mks)", obtained: "", remark: "" },
   { obstacle: "Good (12 Mks)", obtained: "", remark: "" },
