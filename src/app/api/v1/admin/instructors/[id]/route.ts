@@ -6,6 +6,7 @@ import { instructorUpdateSchema } from '@/app/lib/validators.courses';
 import { db } from '@/app/db/client';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { eq } from 'drizzle-orm';
+import { hardDeleteInstructor, softDeleteInstructor } from '@/app/db/queries/instructors';
 
 const Id = z.object({ id: z.string().uuid() });
 
@@ -34,8 +35,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     try {
         await requireAdmin(req);
         const { id } = Id.parse(await params);
-        const [row] = await db.update(instructors).set({ deletedAt: new Date() }).where(eq(instructors.id, id)).returning({ id: instructors.id });
+        const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
+        const row = hard ? await hardDeleteInstructor(id) : await softDeleteInstructor(id);
         if (!row) throw new ApiError(404, 'Instructor not found', 'not_found');
-        return json.ok({ message: 'Instructor soft-deleted.', id: row.id });
+        return json.ok({ message: hard ? 'Instructor hard-deleted.' : 'Instructor soft-deleted.', id: row.id });
     } catch (err) { return handleApiError(err); }
 }
