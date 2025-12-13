@@ -1,4 +1,3 @@
-// components/cfe/CfeForm.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -14,9 +13,10 @@ interface Props {
     onSubmit: (data: cfeFormData) => Promise<void> | void;
     semIndex: number;
     existingRows: cfeRow[];
+    loading?: boolean;
 }
 
-export default function CfeForm({ onSubmit, semIndex, existingRows }: Props) {
+export default function CfeForm({ onSubmit, semIndex, existingRows, loading = false }: Props) {
     const form = useForm<cfeFormData>({
         defaultValues: {
             records: [
@@ -33,10 +33,9 @@ export default function CfeForm({ onSubmit, semIndex, existingRows }: Props) {
     const { control, handleSubmit, register, reset, setValue, watch } = form;
     const { fields, append, remove } = useFieldArray({ control, name: "records" });
 
-    // keep the select value fallback / in sync (no term stored here)
+    // Reset form after successful submission
     useEffect(() => {
-        // nothing to sync for semIndex (we rely on parent when saving)
-        // This hook kept for parity with other forms
+        // Form is reset via reset() after submit in the page component
     }, [semIndex]);
 
     const addRow = () =>
@@ -47,8 +46,23 @@ export default function CfeForm({ onSubmit, semIndex, existingRows }: Props) {
             remarks: "",
         });
 
+    const handleFormSubmit = async (data: cfeFormData) => {
+        await onSubmit(data);
+        // Reset form after successful submission
+        reset({
+            records: [
+                {
+                    serialNo: "1",
+                    cat: "",
+                    mks: "",
+                    remarks: "",
+                },
+            ],
+        });
+    };
+
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(handleFormSubmit)}>
             <div className="overflow-x-auto border rounded-lg shadow">
                 <table className="w-full border text-sm">
                     <thead className="bg-gray-100">
@@ -98,7 +112,7 @@ export default function CfeForm({ onSubmit, semIndex, existingRows }: Props) {
                                     </td>
 
                                     <td className="p-2 border text-center">
-                                        <Button type="button" variant="destructive" size="sm" onClick={() => remove(idx)}>
+                                        <Button type="button" variant="destructive" size="sm" onClick={() => remove(idx)} disabled={loading}>
                                             Remove
                                         </Button>
                                     </td>
@@ -110,15 +124,15 @@ export default function CfeForm({ onSubmit, semIndex, existingRows }: Props) {
             </div>
 
             <div className="mt-4 flex justify-center gap-3">
-                <Button type="button" onClick={addRow}>
+                <Button type="button" onClick={addRow} disabled={loading}>
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                    Submit
+                <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={loading}>
+                    {loading ? "Submitting..." : "Submit"}
                 </Button>
 
-                <Button type="button" variant="outline" onClick={() => reset()}>
+                <Button type="button" variant="outline" onClick={() => reset()} disabled={loading}>
                     Reset
                 </Button>
             </div>

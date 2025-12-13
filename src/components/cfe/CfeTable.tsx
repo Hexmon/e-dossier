@@ -1,4 +1,3 @@
-// components/cfe/CfeTable.tsx
 "use client";
 
 import { useState } from "react";
@@ -11,21 +10,22 @@ import type { cfeRow } from "@/types/cfe";
 interface Props {
     rows: cfeRow[];
     loading: boolean;
-    onStartEdit?: (index: number) => void;
+    StartEdit?: (index: number) => void;
     onReplaceSemester?: (semesterIndex: number, items: { cat: string; marks: number; remarks?: string }[]) => Promise<void> | void;
-    onDelete: (id: string) => Promise<void> | void;
+    onDelete: (index: number, semesterIndex: number, rows: cfeRow[]) => Promise<void> | void;
+    semesterIndex: number;
 }
 
-export default function CfeTable({ rows, loading, onStartEdit, onReplaceSemester, onDelete }: Props) {
+export default function CfeTable({ rows, loading, StartEdit, onReplaceSemester, onDelete, semesterIndex }: Props) {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editValues, setEditValues] = useState<{ cat: string; mks: string; remarks: string }>({ cat: "", mks: "", remarks: "" });
 
     if (loading) {
-        return <p className="text-center">Loading...</p>;
+        return <p className="text-center text-gray-500 py-4">Loading...</p>;
     }
 
     if (!rows || rows.length === 0) {
-        return <p className="text-center text-gray-500">No submitted rows for this semester.</p>;
+        return <p className="text-center text-gray-500 py-4">No records for this semester.</p>;
     }
 
     const startEdit = (index: number) => {
@@ -36,7 +36,7 @@ export default function CfeTable({ rows, loading, onStartEdit, onReplaceSemester
             mks: row.mks ?? "",
             remarks: row.remarks ?? "",
         });
-        onStartEdit?.(index);
+        StartEdit?.(index);
     };
 
     const cancelEdit = () => {
@@ -54,10 +54,16 @@ export default function CfeTable({ rows, loading, onStartEdit, onReplaceSemester
         });
 
         if (onReplaceSemester) {
-            await onReplaceSemester(0, items); // note: consumer will call for proper semester index if required
+            await onReplaceSemester(semesterIndex, items);
         }
 
         cancelEdit();
+    };
+
+    const handleDelete = async (index: number) => {
+        // Call onDelete with the index and full rows array
+        // This allows the parent to delete only the specific row
+        await onDelete(index, semesterIndex, rows);
     };
 
     return (
@@ -77,9 +83,12 @@ export default function CfeTable({ rows, loading, onStartEdit, onReplaceSemester
                     {rows.map((row, idx) => {
                         const { id = "", serialNo = String(idx + 1), cat = "-", mks = "0", remarks = "" } = row;
                         const isEditing = editingIndex === idx;
+                        
+                        // Generate unique key combining semester index + id + array index
+                        const uniqueKey = `${semesterIndex}-${id || "new"}-${idx}`;
 
                         return (
-                            <tr key={id || `${idx}`}>
+                            <tr key={uniqueKey}>
                                 <td className="p-2 border text-center">{serialNo}</td>
 
                                 <td className="p-2 border">
@@ -120,20 +129,20 @@ export default function CfeTable({ rows, loading, onStartEdit, onReplaceSemester
                                 <td className="p-2 border text-center">
                                     {isEditing ? (
                                         <div className="flex justify-center gap-2">
-                                            <Button size="sm" className="bg-green-600" onClick={() => saveEdit(idx)}>
+                                            <Button size="sm" className="bg-green-600" onClick={() => saveEdit(idx)} disabled={loading}>
                                                 Save
                                             </Button>
-                                            <Button size="sm" variant="outline" onClick={cancelEdit}>
+                                            <Button size="sm" variant="outline" onClick={cancelEdit} disabled={loading}>
                                                 Cancel
                                             </Button>
                                         </div>
                                     ) : (
                                         <div className="flex justify-center gap-2">
-                                            <Button size="sm" variant="outline" onClick={() => startEdit(idx)}>
+                                            <Button size="sm" variant="outline" onClick={() => startEdit(idx)} disabled={loading}>
                                                 Edit
                                             </Button>
                                             {id ? (
-                                                <Button size="sm" variant="destructive" onClick={() => onDelete(id)}>
+                                                <Button size="sm" variant="destructive" onClick={() => handleDelete(idx)} disabled={loading}>
                                                     Delete
                                                 </Button>
                                             ) : null}

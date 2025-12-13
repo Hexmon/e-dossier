@@ -1,6 +1,5 @@
 "use client";
 
-
 import React, { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import MotivationAwards from "./MotivationAwards";
 import Ipet1Form from "./Ipet1Form";
 import Ipet2Form from "./Ipet2Form";
@@ -19,7 +19,6 @@ import GrandTotal from "./GrandTotal";
 import HigherTests from "./HigherTests";
 import Swimming from "./Swimming";
 import Swimming1 from "./Swimming1";
-
 
 interface PhysicalTraining {
     id: string;
@@ -31,10 +30,8 @@ interface PhysicalTraining {
     column6: number;
 }
 
-
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
 const column4Options = ["Excellent", "Good", "Satisfied"];
-
 
 export default function PhysicalForm() {
     const [activeSemester, setActiveSemester] = useState("I TERM");
@@ -96,7 +93,6 @@ export default function PhysicalForm() {
         ],
     });
 
-
     // State to track marks from all child components
     const [childComponentMarks, setChildComponentMarks] = useState<Record<string, number>>({
         ipet1Form: 0,
@@ -106,22 +102,18 @@ export default function PhysicalForm() {
         higherTests: 0,
     });
 
-
     // Auto-calc total marks (excluding "Total" row)
     const totalMarksObtained = useMemo(() => {
         const rows = semesterTableData[activeSemester] || [];
         const nonTotalRows = rows.slice(0, -1);
 
-
         return nonTotalRows.reduce((sum, row) => sum + (row.column6 || 0), 0);
     }, [semesterTableData, activeSemester]);
-
 
     // Calculate PPT Grand Total for the active semester
     const pptGrandTotal = useMemo(() => {
         return totalMarksObtained;
     }, [totalMarksObtained]);
-
 
     // Calculate the sum of all table totals
     const grandTotalMarks = useMemo(() => {
@@ -135,7 +127,6 @@ export default function PhysicalForm() {
         return total;
     }, [pptGrandTotal, childComponentMarks]);
 
-
     const handleColumn4Change = (rowId: string, value: string) => {
         setSemesterTableData((prev) => ({
             ...prev,
@@ -144,7 +135,6 @@ export default function PhysicalForm() {
             ),
         }));
     };
-
 
     const handleColumn5Change = (rowId: string, value: string) => {
         setSemesterTableData((prev) => ({
@@ -155,23 +145,61 @@ export default function PhysicalForm() {
         }));
     };
 
-
     const handleColumn6Change = (rowId: string, value: string) => {
-        const numValue = parseFloat(value) || 0;
+        const row = semesterTableData[activeSemester].find(r => r.id === rowId);
+        if (!row) return;
+
+        const numValue = parseFloat(value);
+
+        // Allow empty values
+        if (value.trim() === "") {
+            setSemesterTableData((prev) => ({
+                ...prev,
+                [activeSemester]: prev[activeSemester].map((r) =>
+                    r.id === rowId ? { ...r, column6: 0 } : r
+                ),
+            }));
+            return;
+        }
+
+        // Validate marks
+        if (isNaN(numValue) || numValue < 0) {
+            toast.error("Marks must be a valid positive number");
+            return;
+        }
+
+        if (numValue > row.column3) {
+            toast.error(`Marks scored cannot exceed maximum marks (${row.column3})`);
+            return;
+        }
+
         setSemesterTableData((prev) => ({
             ...prev,
-            [activeSemester]: prev[activeSemester].map((row) =>
-                row.id === rowId ? { ...row, column6: numValue } : row
+            [activeSemester]: prev[activeSemester].map((r) =>
+                r.id === rowId ? { ...r, column6: numValue } : r
             ),
         }));
     };
 
-
     const handleEdit = () => setIsEditing(true);
+
     const handleSave = () => {
+        // Validate all marks before saving
+        const currentTableData = semesterTableData[activeSemester];
+        const nonTotalRows = currentTableData.slice(0, -1);
+
+        for (const row of nonTotalRows) {
+            if (row.column6 > 0 && row.column6 > row.column3) {
+                toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and ${row.column3}`);
+                return;
+            }
+        }
+
         setIsEditing(false);
+        toast.success("PPT data saved successfully");
         console.log("Data saved:", semesterTableData[activeSemester]);
     };
+
     const handleCancel = () => setIsEditing(false);
 
     const handleIpet1FormMarks = useCallback((marks: number) => {
@@ -180,7 +208,6 @@ export default function PhysicalForm() {
             ipet1Form: marks,
         }));
     }, []);
-
 
     const handleIpet2FormMarks = useCallback((marks: number) => {
         setChildComponentMarks((prev) => ({
@@ -210,7 +237,6 @@ export default function PhysicalForm() {
         }));
     }, []);
 
-
     const pptMarks: Record<string, number> = {
         "I TERM": 150,
         "II TERM": 150,
@@ -220,12 +246,10 @@ export default function PhysicalForm() {
         "VI TERM": 40,
     };
 
-
     return (
         <div className="mt-4 space-y-6">
             <Card className="p-6 rounded-2xl shadow-xl bg-white">
                 <CardContent className="space-y-6">
-
 
                     {/* Semester Selector */}
                     <div className="flex justify-center mb-6 space-x-2">
@@ -242,11 +266,9 @@ export default function PhysicalForm() {
                         ))}
                     </div>
 
-
                     <h2 className="text-lg font-bold text-left text-gray-700">
                         PPT ({pptMarks[activeSemester]} marks)
                     </h2>
-
 
                     {/* Physical Training Table */}
                     <div>
@@ -263,12 +285,10 @@ export default function PhysicalForm() {
                                     </tr>
                                 </thead>
 
-
                                 <tbody>
                                     {semesterTableData[activeSemester].map((row, index, arr) => {
                                         const { id, column1, column2, column3, column4, column5, column6 } = row;
                                         const isTotalRow = index === arr.length - 1;
-
 
                                         return (
                                             <tr key={id} className={isTotalRow ? "bg-gray-100 font-semibold" : "hover:bg-gray-50 border-b border-gray-300"}>
@@ -276,16 +296,13 @@ export default function PhysicalForm() {
                                                     {isTotalRow ? "—" : column1}
                                                 </td>
 
-
                                                 <td className="border border-gray-300 px-4 py-2">
                                                     {column2}
                                                 </td>
 
-
                                                 <td className="border border-gray-300 px-4 py-2 text-center">
                                                     {isTotalRow ? semesterTableData[activeSemester].slice(0, -1).reduce((sum, r) => sum + (r.column3 || 0), 0) : column3}
                                                 </td>
-
 
                                                 {!isTotalRow ? (
                                                     <>
@@ -309,7 +326,6 @@ export default function PhysicalForm() {
                                                                 </SelectContent>
                                                             </Select>
                                                         </td>
-
 
                                                         <td className="border border-gray-300 px-4 py-2">
                                                             <Select
@@ -339,7 +355,6 @@ export default function PhysicalForm() {
                                                     </>
                                                 )}
 
-
                                                 <td className="border border-gray-300 px-4 py-2 text-center">
                                                     {isTotalRow ? totalMarksObtained : isEditing ? (
                                                         <Input
@@ -362,7 +377,6 @@ export default function PhysicalForm() {
                             </table>
                         </div>
 
-
                         {/* Buttons */}
                         <div className="flex gap-3 justify-center mt-6">
                             {isEditing ? (
@@ -377,10 +391,6 @@ export default function PhysicalForm() {
                             )}
                         </div>
 
-
-                        <MotivationAwards activeSemester={activeSemester} />
-
-
                         {activeSemester === "III TERM" && (
                             <>
                                 <Ipet1Form
@@ -389,15 +399,14 @@ export default function PhysicalForm() {
                                 />
                                 <Swimming
                                     onMarksChange={handleSwimmingMarks}
-                                    activeSemester={activeSemester} 
-                                    />
+                                    activeSemester={activeSemester}
+                                />
                                 <HigherTests
                                     onMarksChange={handleHigherTestsMarks}
                                     activeSemester={activeSemester}
                                 />
                             </>
                         )}
-
 
                         {(activeSemester === "IV TERM" ||
                             activeSemester === "V TERM" ||
@@ -420,6 +429,7 @@ export default function PhysicalForm() {
                                 </>
                             )}
 
+                        <MotivationAwards activeSemester={activeSemester} />
 
                         <GrandTotal grandTotalMarks={grandTotalMarks} />
                     </div>
