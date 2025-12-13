@@ -6,7 +6,6 @@ import { Row as SpeedRow } from "@/types/speedMarchRunback";
 import { Row as sportsRow } from "@/types/sportsAwards";
 import { Activity, Book, BookOpen, CalendarDays, FileText, GraduationCap, Home, Settings, Shield, UserCheck, Users } from "lucide-react";
 
-// src\constants\app.constants.ts
 export const POS = {
   COMMANDANT: 'COMMANDANT',
   DCCI: 'DCCI',
@@ -36,56 +35,56 @@ export const menuItems: MenuSection[] = [
     items: [{ title: "Home", url: "/dashboard", icon: Home }],
   },
   {
-    group: "Subject Management",
-    items: [{ title: "Subjects", url: "/dashboard/subjects", icon: Book }],
+    group: "Admin",
+    items: [{ title: "Admin Management", url: "/dashboard/genmgmt", icon: Book }],
   },
   {
-    group: "Instructor Management",
-    items: [{ title: "Instructors", url: "/dashboard/instructors", icon: GraduationCap }],
+    group: "Dossier",
+    items: [{ title: "Dossier Management", url: "/milmgmt", icon: FileText }],
   },
-  {
-    group: "User Management",
-    items: [{ title: "Users", url: "/dashboard/users", icon: Shield }],
-  },
-  {
-    group: "Appointment Management",
-    items: [{ title: "Appointments", url: "/dashboard/appointments", icon: CalendarDays }],
-  },
-  {
-    group: "Assessment – NSA",
-    items: [{ title: "OLQA", url: "/dashboard/olqa", icon: FileText }],
-  },
-  {
-    group: "Overall OC Details",
-    items: [{ title: "View All", url: "/dashboard/view-ocs", icon: Users }],
-  },
-  {
-    group: "Academics",
-    items: [{ title: "Coming Soon", url: "/dashboard/academics", icon: BookOpen, badge: "Soon" }],
-  },
-  {
-    group: "Physical Training & Sports",
-    items: [{ title: "Activities", url: "/dashboard/activities", icon: Activity }],
-  },
-  {
-    group: "Interview",
-    collapsible: true,
-    items: [
-      { title: "Platoon Cdr", url: "/dashboard/interview/platoon-cdr", icon: UserCheck },
-      { title: "DS Coord", url: "/dashboard/interview/ds-coord", icon: UserCheck },
-      { title: "CDR CTW", url: "/dashboard/interview/cdr-ctw", icon: UserCheck },
-      { title: "DCCI", url: "/dashboard/interview/dcci", icon: UserCheck },
-      { title: "Comdt", url: "/dashboard/interview/comdt", icon: UserCheck },
-    ],
-  },
+  // {
+  //   group: "User Management",
+  //   items: [{ title: "Users", url: "/dashboard/users", icon: Shield }],
+  // },
+  // {
+  //   group: "Appointment Management",
+  //   items: [{ title: "Appointments", url: "/dashboard/appointments", icon: CalendarDays }],
+  // },
+  // {
+  //   group: "Assessment – NSA",
+  //   items: [{ title: "OLQA", url: "/dashboard/olqa", icon: FileText }],
+  // },
+  // {
+  //   group: "Overall OC Details",
+  //   items: [{ title: "View All", url: "/dashboard/view-ocs", icon: Users }],
+  // },
+  // {
+  //   group: "Academics",
+  //   items: [{ title: "Coming Soon", url: "/dashboard/academics", icon: BookOpen, badge: "Soon" }],
+  // },
+  // {
+  //   group: "Physical Training & Sports",
+  //   items: [{ title: "Activities", url: "/dashboard/activities", icon: Activity }],
+  // },
+  // {
+  //   group: "Interview",
+  //   collapsible: true,
+  //   items: [
+  //     { title: "Platoon Cdr", url: "/dashboard/interview/platoon-cdr", icon: UserCheck },
+  //     { title: "DS Coord", url: "/dashboard/interview/ds-coord", icon: UserCheck },
+  //     { title: "CDR CTW", url: "/dashboard/interview/cdr-ctw", icon: UserCheck },
+  //     { title: "DCCI", url: "/dashboard/interview/dcci", icon: UserCheck },
+  //     { title: "Comdt", url: "/dashboard/interview/comdt", icon: UserCheck },
+  //   ],
+  // },
   {
     group: "Report Management",
     items: [{ title: "Reports", url: "/dashboard/reports", icon: FileText }],
   },
-  {
-    group: "Site Settings",
-    items: [{ title: "Configuration", url: "/dashboard/settings", icon: Settings }],
-  },
+  // {
+  //   group: "Site Settings",
+  //   items: [{ title: "Configuration", url: "/dashboard/settings", icon: Settings }],
+  // },
 ];
 
 

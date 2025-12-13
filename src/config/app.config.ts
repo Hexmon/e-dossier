@@ -1154,7 +1154,7 @@ export const courseSections = [
 ]
 
 export const managementTabs = [
-  { value: "Gen Mgmt", title: "Gen Mgmt", icon: Shield },
+  { value: "Gen Mgmt", title: "Admin Mgmt", icon: Shield },
   { value: "settings", title: "Settings", icon: Settings },
 ];
 
