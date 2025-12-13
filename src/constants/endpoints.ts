@@ -21,6 +21,12 @@ export const endpoints = {
         users: "/api/v1/admin/users",
         subjects: "/api/v1/admin/subjects",
         subjectById: (subjectId: string) => `/api/v1/admin/subjects/${subjectId}`,
+        instructors: "/api/v1/admin/instructors",
+        instructorById: (id: string) => `/api/v1/admin/instructors/${id}`,
+        courseOfferings: (courseId: string) =>
+            `/api/v1/admin/courses/${courseId}/offerings`,
+        courseOfferingById: (courseId: string, offeringId: string) =>
+            `/api/v1/admin/courses/${courseId}/offerings/${offeringId}`,
     },
     oc: {
         list: "/api/v1/oc",
@@ -85,7 +91,7 @@ export const endpoints = {
         olqCategories: (ocId: string) => `/api/v1/oc/${ocId}/olq/categories?includeSubtitles=true&isActive=true`,
     },
     course: {
-        all: "/api/v1/courses"
+        all: "/api/v1/admin/courses"
     },
     users: {
         checkUsername: "/api/v1/admin/users/check-username",

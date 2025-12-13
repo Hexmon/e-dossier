@@ -13,7 +13,8 @@ import {
   Trophy,
   FileBadge,
   NotebookPen,
-  ChartArea
+  ChartArea,
+  BookOpenCheck
 } from "lucide-react";
 
 
@@ -264,7 +265,23 @@ export const managementCard = [
     icon: CalendarDays,
     to: "/dashboard/genmgmt/appointmentmgmt",
     color: "bg-blue-500"
+  },
+  {
+    title: "Instructor Management",
+    description: "Manage instructors, roles, and assignments efficiently",
+    icon: UserCheck,
+    to: "/dashboard/genmgmt/instructors",
+    color: "bg-green-500"
+  },
+  {
+    title: "Offerings Management",
+    description: "Create, update, and manage course offerings efficiently",
+    icon: BookOpenCheck,
+    to: "/dashboard/genmgmt/offerings",
+    color: "bg-purple-500"
   }
+
+
 
 
   // {
@@ -1174,7 +1191,13 @@ export const ocTabs = [
     title: "Appointment Management",
     icon: CalendarDays,
     link: "/dashboard/genmgmt/appointmentmgmt"
-  }
+  },
+  // {
+  //   value: "instructors",
+  //   title: "Instructor Management",
+  //   icon: UserCheck,
+  //   link: "/dashboard/genmgmt/instructors",
+  // }
 
 
 ];
