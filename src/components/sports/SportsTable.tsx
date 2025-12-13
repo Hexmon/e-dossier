@@ -2,15 +2,16 @@
 
 import { Input } from "@/components/ui/input";
 import { Row as SemesterRow } from "@/types/sportsAwards";
+import { Controller } from "react-hook-form";
 
 interface Props {
     title: string;
     termKey: string;
     rows: SemesterRow[];
     savedRows: SemesterRow[];
-    register: any;
+    control: any;
     disabled?: boolean;
-    onRowUpdated?: (row: SemesterRow, index: number) => void;
+    hideStringAndMaxMarks?: boolean;
 }
 
 export default function SportsGamesTable({
@@ -18,9 +19,9 @@ export default function SportsGamesTable({
     termKey,
     rows,
     savedRows,
-    register,
+    control,
     disabled = false,
-    onRowUpdated,
+    hideStringAndMaxMarks = false,
 }: Props) {
     return (
         <div className="mb-10">
@@ -31,85 +32,61 @@ export default function SportsGamesTable({
                     <thead className="bg-gray-100">
                         <tr>
                             <th className="p-2 border">Games / Awards</th>
-                            <th className="p-2 border">String</th>
-                            <th className="p-2 border">Max Marks</th>
+                            {!hideStringAndMaxMarks && <th className="p-2 border">String</th>}
+                            {!hideStringAndMaxMarks && <th className="p-2 border">Max Marks</th>}
                             <th className="p-2 border">Obtained</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {rows.map((prefillRow, index) => {
-                            const saved = savedRows[index] ?? {};
-                            const row: SemesterRow = {
-                                ...prefillRow,
-                                ...saved,
-                                activity: saved.activity ?? prefillRow.activity,
-                                string: saved.string ?? prefillRow.string ?? "",
-                                maxMarks:
-                                    saved.maxMarks ??
-                                    prefillRow.maxMarks ??
-                                    "",
-                                obtained:
-                                    saved.obtained ??
-                                    prefillRow.obtained ??
-                                    "",
-                            };
-
-                            const stringField = register(`${termKey}.${index}.string`);
-                            const maxField = register(`${termKey}.${index}.maxMarks`);
-                            const obtainedField = register(`${termKey}.${index}.obtained`);
+                            const activity = prefillRow.activity ?? "-";
 
                             return (
-                                <tr key={index}>
-                                    <td className="p-2 border">{row.activity ?? "-"}</td>
+                                <tr key={`${termKey}-${index}`}>
+                                    <td className="p-2 border">{activity}</td>
 
-                                    {/* STRING */}
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...stringField}
-                                            defaultValue={row.string}
-                                            disabled={disabled}
-                                            onChange={(e) => {
-                                                stringField.onChange(e);
-                                                onRowUpdated?.(
-                                                    { ...row, string: e.target.value },
-                                                    index
-                                                );
-                                            }}
+                                    {/* STRING - Always Register */}
+                                    <td className={hideStringAndMaxMarks ? "hidden" : "p-2 border"}>
+                                        <Controller
+                                            name={`${termKey}.${index}.string`}
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Input
+                                                    {...field}
+                                                    disabled={disabled || hideStringAndMaxMarks}
+                                                />
+                                            )}
                                         />
                                     </td>
 
-                                    {/* MAX MARKS */}
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...maxField}
-                                            type="number"
-                                            defaultValue={row.maxMarks}
-                                            disabled={disabled}
-                                            onChange={(e) => {
-                                                maxField.onChange(e);
-                                                onRowUpdated?.(
-                                                    { ...row, maxMarks: e.target.value },
-                                                    index
-                                                );
-                                            }}
+                                    {/* MAX MARKS - Always Register */}
+                                    <td className={hideStringAndMaxMarks ? "hidden" : "p-2 border"}>
+                                        <Controller
+                                            name={`${termKey}.${index}.maxMarks`}
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Input
+                                                    {...field}
+                                                    type="number"
+                                                    disabled={disabled || hideStringAndMaxMarks}
+                                                />
+                                            )}
                                         />
                                     </td>
 
                                     {/* OBTAINED */}
                                     <td className="p-2 border">
-                                        <Input
-                                            {...obtainedField}
-                                            type="number"
-                                            defaultValue={row.obtained}
-                                            disabled={disabled}
-                                            onChange={(e) => {
-                                                obtainedField.onChange(e);
-                                                onRowUpdated?.(
-                                                    { ...row, obtained: e.target.value },
-                                                    index
-                                                );
-                                            }}
+                                        <Controller
+                                            name={`${termKey}.${index}.obtained`}
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Input
+                                                    {...field}
+                                                    type="number"
+                                                    disabled={disabled}
+                                                />
+                                            )}
                                         />
                                     </td>
                                 </tr>

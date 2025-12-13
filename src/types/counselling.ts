@@ -4,7 +4,7 @@ export type CounsellingRow = {
     term: string;
     reason: string;
     warningType: string; // Relegation | Withdrawal
-    date: string;        // ISO date string or human
+    date: string;        // ISO date string
     warningBy: string;   // Rank & Name
 };
 

@@ -11,6 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface Row {
     id: string;
@@ -28,7 +29,7 @@ interface SwimmingProps {
 }
 
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
-const column4Options = ["Excellent", "Good", "Satisfied"];
+const column4Options = ["Pass", "Fail"];
 
 export default function Swimming({ onMarksChange, activeSemester }: SwimmingProps) {
     const [isEditing, setIsEditing] = useState(false);
@@ -43,6 +44,34 @@ export default function Swimming({ onMarksChange, activeSemester }: SwimmingProp
     }, [tableData]);
 
     const handleChange = (id: string, key: keyof Row, value: string) => {
+        const row = tableData.find(r => r.id === id);
+        if (!row) return;
+
+        // Validation for column5 (Marks Scored)
+        if (key === "column5") {
+            const numValue = parseFloat(value);
+
+            // Allow empty values
+            if (value.trim() === "") {
+                setTableData(prev =>
+                    prev.map(r => (r.id === id ? { ...r, column5: 0 } : r))
+                );
+                return;
+            }
+
+            // Validate marks
+            if (isNaN(numValue) || numValue < 0) {
+                toast.error("Marks must be a valid positive number");
+                return;
+            }
+
+            if (numValue > row.maxMarks) {
+                toast.error(`Marks scored cannot exceed maximum marks (${row.maxMarks})`);
+                return;
+            }
+        }
+
+        // Regular handling for other fields
         setTableData(prev =>
             prev.map(r => {
                 if (r.id === id) {
@@ -57,10 +86,21 @@ export default function Swimming({ onMarksChange, activeSemester }: SwimmingProp
     };
 
     const handleEdit = () => setIsEditing(true);
+
     const handleSave = () => {
+        // Validate all marks before saving
+        for (const row of tableData) {
+            if (row.column5 > 0 && row.column5 > row.maxMarks) {
+                toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and ${row.maxMarks}`);
+                return;
+            }
+        }
+
         setIsEditing(false);
+        toast.success("Swimming data saved successfully");
         console.log("Swimming Table saved:", tableData);
     };
+
     const handleCancel = () => setIsEditing(false);
 
     // Call parent callback when tableTotal changes
