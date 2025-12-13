@@ -113,7 +113,7 @@ export default function Signup() {
       <article className="w-full max-w-lg relative z-10">
         <header className="text-center mb-8">
           <Image
-            src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+            src="/images/eme_logo.jpeg"
             alt="MCEME Background"
             width={122}
             height={122}

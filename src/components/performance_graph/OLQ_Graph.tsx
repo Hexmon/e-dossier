@@ -80,7 +80,7 @@ export default function OlqChart({ data: olqData }: { data: number[] }) {
         labels: labels,
         datasets: [
           {
-            label: "OLQ Score",
+            label: "Cadet OLQ Score",
             data: olqData,
             borderColor: "rgb(99, 102, 241)",
             backgroundColor: gradientBg,
@@ -96,7 +96,7 @@ export default function OlqChart({ data: olqData }: { data: number[] }) {
             hoverBorderWidth: 4,
           },
           {
-            label: "Average Marks",
+            label: "Course Average",
             data: averageData,
             borderColor: "rgb(239, 68, 68)",
             backgroundColor: gradientAvgBg,

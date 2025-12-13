@@ -80,7 +80,7 @@ export default function DisciplineChart({ data: disciplineData }: { data: number
         labels: labels,
         datasets: [
           {
-            label: "Discipline Score",
+            label: "Cadet Discipline Score",
             data: disciplineData,
             borderColor: "rgb(99, 102, 241)",
             backgroundColor: gradientBg,
@@ -96,7 +96,7 @@ export default function DisciplineChart({ data: disciplineData }: { data: number
             hoverBorderWidth: 4,
           },
           {
-            label: "Average Marks",
+            label: "Course Average",
             data: averageData,
             borderColor: "rgb(239, 68, 68)",
             backgroundColor: gradientAvgBg,
@@ -140,7 +140,7 @@ export default function DisciplineChart({ data: disciplineData }: { data: number
             borderWidth: 1,
             callbacks: {
               label: function (context: any) {
-                return `Score: ${context.parsed.y}/42`;
+                return `Score: ${context.parsed.y}/15`;
               },
             },
           },
@@ -156,8 +156,8 @@ export default function DisciplineChart({ data: disciplineData }: { data: number
           },
           y: {
             beginAtZero: true,
-            max: 42,
-            ticks: { stepSize: 14, font: { size: 11, weight: "500" as any }, color: "rgb(75,85,99)", padding: 8 },
+            max: 15,
+            ticks: { stepSize: 5, font: { size: 11, weight: "500" as any }, color: "rgb(75,85,99)", padding: 8 },
             grid: { color: "rgba(0,0,0,0.08)" },
           },
         },
@@ -178,7 +178,7 @@ export default function DisciplineChart({ data: disciplineData }: { data: number
         {/* Header */}
         <div className="bg-linear-to-r from-indigo-600 to-indigo-700 px-6 py-6">
           <h2 className="text-2xl font-bold text-white tracking-tight">⚖️ DISCIPLINE</h2>
-          <p className="text-indigo-100 text-sm mt-1">Discipline Performance Tracking</p>
+          <p className="text-indigo-100 text-sm mt-1">Discipline Performance Tracking (Negative Points)</p>
         </div>
 
         {/* Chart Container */}
@@ -192,7 +192,7 @@ export default function DisciplineChart({ data: disciplineData }: { data: number
         <div className="grid grid-cols-3 gap-4 px-6 pb-6">
           <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
             <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">Course Highest</p>
-            <p className="text-2xl font-bold text-indigo-600 mt-1">{stats.highest}/42</p>
+            <p className="text-2xl font-bold text-indigo-600 mt-1">{stats.highest}/15</p>
             <p className="text-xs text-indigo-600 mt-1">{stats.highestTerm}</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4 border border-green-100">
@@ -202,7 +202,7 @@ export default function DisciplineChart({ data: disciplineData }: { data: number
           </div>
           <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
             <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Course Lowest</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.lowest}/42</p>
+            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.lowest}/15</p>
             <p className="text-xs text-blue-600 mt-1">Term 1</p>
           </div>
         </div>

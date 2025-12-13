@@ -13,12 +13,10 @@ interface Course {
 
 // Sample data for 6 courses (TES-50 to TES-55)
 const coursesData: Course[] = [
-    { course: 'TES-50', strength: 45, currentSemester: 3 },
-    { course: 'TES-51', strength: 52, currentSemester: 2 },
-    { course: 'TES-52', strength: 38, currentSemester: 4 },
-    { course: 'TES-53', strength: 41, currentSemester: 1 },
-    { course: 'TES-54', strength: 49, currentSemester: 3 },
-    { course: 'TES-55', strength: 44, currentSemester: 2 },
+    { course: 'TES-50', strength: 27, currentSemester: 4 },
+    { course: 'TES-51', strength: 29, currentSemester: 3 },
+    { course: 'TES-52', strength: 29, currentSemester: 2 },
+    { course: 'TES-53', strength: 29, currentSemester: 1 },
 ];
 
 export default function Courses() {

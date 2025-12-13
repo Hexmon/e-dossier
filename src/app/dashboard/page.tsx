@@ -2,12 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { dashboardCards } from "@/config/app.config";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { DashboardCard } from "@/components/cards/DashboardCard";
-import { StatCard } from "@/components/cards/StatCard";
-import { stats } from "@/constants/app.constants";
-
+import Marquee from "@/components/Dashboard/Marquee";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -15,6 +11,7 @@ import OCSelectModal from "@/components/modals/OCSelectModal";
 import Courses from "@/components/Dashboard/Courses";
 import Platoons from "@/components/Dashboard/Platoons";
 import Appointments from "@/components/Dashboard/Appointments";
+import { marqueeData } from "@/components/Dashboard/MarqueeData";
 
 const DashboardPage = () => {
   const router = useRouter();
@@ -29,16 +26,28 @@ const DashboardPage = () => {
 
   const [filteredOCs, setFilteredOCs] = useState<any[]>([]);
 
+
+
   const handleCardClick = () => {
     setOpen(true);
   };
 
   return (
     <DashboardLayout title="MCEME CTW Dashboard" description="Training Management System">
-      <main className="flex-1 p-6 w-full">
-        
+
+      <main className="flex-1 p-6 w-full mt-10 overflow-x-hidden">
+
+        {/* Marquee Section - Only visible in content area with proper clipping */}
+        <div className="w-full overflow-hidden z-40 shrink-0">
+          <Marquee
+            data={marqueeData}
+            speed={15}
+            className="w-full"
+          />
+        </div>
+
         {/* Cartesian Plane Layout - 2x2 Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full max-w-full">
           {/* Top Left Quadrant */}
           <div className="w-full">
             <Courses />
@@ -54,13 +63,6 @@ const DashboardPage = () => {
             <Appointments />
           </div>
         </div>
-
-        {/* Quick Stats
-        <section className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {stats.map((item, index) => (
-            <StatCard key={index} title={item.title} value={item.value} subtitle={item.subtitle} />
-          ))}
-        </section> */}
       </main>
 
       {/* ===================== Modal ===================== */}
