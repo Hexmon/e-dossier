@@ -27,6 +27,10 @@ import {
     trainingCampActivities,
     ocCampActivityScores,
     ocCampReviews,
+    ocSemesterMarks,
+    SemesterSubjectRecord,
+    TheoryMarksRecord,
+    PracticalMarksRecord,
 } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -43,6 +47,251 @@ type ListOpts = {
 // Escape % _ \ for ILIKE
 function likeEscape(q: string) {
     return `%${q.replace(/[%_\\]/g, '\\$&')}%`;
+}
+
+type SemesterMarksRow = typeof ocSemesterMarks.$inferSelect;
+type TheoryPatch = Partial<TheoryMarksRecord>;
+type PracticalPatch = Partial<PracticalMarksRecord>;
+
+function mergeTheory(target: TheoryMarksRecord | null | undefined, patch?: TheoryPatch) {
+    if (!patch) return target ?? undefined;
+    const next: TheoryMarksRecord = { ...(target ?? {}) };
+    let changed = false;
+    for (const [key, value] of Object.entries(patch)) {
+        if (value === undefined) continue;
+        (next as any)[key] = value;
+        changed = true;
+    }
+    return changed ? next : target;
+}
+
+function mergePractical(target: PracticalMarksRecord | null | undefined, patch?: PracticalPatch) {
+    if (!patch) return target ?? undefined;
+    const next: PracticalMarksRecord = { ...(target ?? {}) };
+    let changed = false;
+    for (const [key, value] of Object.entries(patch)) {
+        if (value === undefined) continue;
+        (next as any)[key] = value;
+        changed = true;
+    }
+    return changed ? next : target;
+}
+
+function cloneSubjects(existing?: SemesterMarksRow | null) {
+    if (!existing?.subjects) return [];
+    return existing.subjects.map((subject) => ({
+        ...subject,
+        theory: subject.theory ? { ...subject.theory } : undefined,
+        practical: subject.practical ? { ...subject.practical } : undefined,
+        meta: subject.meta ? { ...subject.meta } : undefined,
+    }));
+}
+
+export async function getOcCourseInfo(ocId: string) {
+    const [row] = await db
+        .select({ id: ocCadets.id, branch: ocCadets.branch, courseId: ocCadets.courseId })
+        .from(ocCadets)
+        .where(eq(ocCadets.id, ocId))
+        .limit(1);
+    return row ?? null;
+}
+
+export async function listSemesterMarksRows(ocId: string) {
+    return db
+        .select()
+        .from(ocSemesterMarks)
+        .where(and(eq(ocSemesterMarks.ocId, ocId), isNull(ocSemesterMarks.deletedAt)))
+        .orderBy(ocSemesterMarks.semester);
+}
+
+export async function getSemesterMarksRow(ocId: string, semester: number) {
+    const [row] = await db
+        .select()
+        .from(ocSemesterMarks)
+        .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester), isNull(ocSemesterMarks.deletedAt)))
+        .limit(1);
+    return row ?? null;
+}
+
+export type SemesterSubjectUpsertInput = {
+    semesterBranchTag: 'C' | 'E' | 'M';
+    subjectBranch: 'C' | 'E' | 'M';
+    subjectCode: string;
+    subjectName: string;
+    theory?: TheoryPatch;
+    practical?: PracticalPatch;
+    meta?: SemesterSubjectRecord['meta'];
+};
+
+export type SemesterSummaryPatchInput = {
+    branchTag: 'C' | 'E' | 'M';
+    sgpa?: number | null;
+    cgpa?: number | null;
+    marksScored?: number | null;
+};
+
+export async function upsertSemesterSubjectMarks(ocId: string, semester: number, input: SemesterSubjectUpsertInput) {
+    const now = new Date();
+    return db.transaction(async (tx) => {
+        const [existing] = await tx
+            .select()
+            .from(ocSemesterMarks)
+            .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester)))
+            .limit(1);
+
+        const subjects = cloneSubjects(existing);
+        const matchKey = input.meta?.subjectId ?? input.subjectCode;
+        const idx = subjects.findIndex((subject) => {
+            if (input.meta?.subjectId && subject.meta?.subjectId === input.meta.subjectId) return true;
+            return subject.subjectCode === input.subjectCode;
+        });
+
+        const base: SemesterSubjectRecord = idx >= 0 ? { ...subjects[idx] } : {
+            subjectCode: input.subjectCode,
+            subjectName: input.subjectName,
+            branch: input.subjectBranch,
+        };
+
+        base.subjectName = input.subjectName;
+        base.branch = input.subjectBranch;
+        base.meta = {
+            ...(base.meta ?? {}),
+            ...(input.meta ?? {}),
+            deletedAt: null,
+        };
+
+        const nextTheory = mergeTheory(base.theory, input.theory);
+        if (nextTheory) base.theory = nextTheory;
+        const nextPractical = mergePractical(base.practical, input.practical);
+        if (nextPractical) base.practical = nextPractical;
+
+        if (idx >= 0) {
+            subjects[idx] = base;
+        } else {
+            subjects.push(base);
+        }
+
+        if (existing) {
+            const [updated] = await tx
+                .update(ocSemesterMarks)
+                .set({
+                    branchTag: input.semesterBranchTag,
+                    subjects,
+                    deletedAt: null,
+                    updatedAt: now,
+                })
+                .where(eq(ocSemesterMarks.id, existing.id))
+                .returning();
+            return updated;
+        }
+
+        const [created] = await tx
+            .insert(ocSemesterMarks)
+            .values({
+                ocId,
+                semester,
+                branchTag: input.semesterBranchTag,
+                subjects,
+            })
+            .returning();
+        return created;
+    });
+}
+
+export async function upsertSemesterSummary(ocId: string, semester: number, input: SemesterSummaryPatchInput) {
+    const now = new Date();
+    return db.transaction(async (tx) => {
+        const [existing] = await tx
+            .select()
+            .from(ocSemesterMarks)
+            .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester)))
+            .limit(1);
+
+        const patch: Partial<typeof ocSemesterMarks.$inferInsert> = {
+            branchTag: input.branchTag,
+            updatedAt: now,
+        };
+
+        if (input.sgpa !== undefined) patch.sgpa = input.sgpa;
+        if (input.cgpa !== undefined) patch.cgpa = input.cgpa;
+        if (input.marksScored !== undefined) patch.marksScored = input.marksScored;
+
+        if (existing) {
+            const [updated] = await tx
+                .update(ocSemesterMarks)
+                .set({ ...patch, deletedAt: null })
+                .where(eq(ocSemesterMarks.id, existing.id))
+                .returning();
+            return updated;
+        }
+
+        const [created] = await tx
+            .insert(ocSemesterMarks)
+            .values({
+                ocId,
+                semester,
+                branchTag: input.branchTag,
+                deletedAt: null,
+                subjects: [],
+                sgpa: patch.sgpa,
+                cgpa: patch.cgpa,
+                marksScored: patch.marksScored,
+            })
+            .returning();
+        return created;
+    });
+}
+
+export async function deleteSemester(ocId: string, semester: number, opts: { hard?: boolean } = {}) {
+    if (opts.hard) {
+        const [row] = await db
+            .delete(ocSemesterMarks)
+            .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester)))
+            .returning();
+        return row ?? null;
+    }
+
+    const [row] = await db
+        .update(ocSemesterMarks)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester), isNull(ocSemesterMarks.deletedAt)))
+        .returning();
+    return row ?? null;
+}
+
+export async function deleteSemesterSubject(ocId: string, semester: number, subjectCode: string, opts: { hard?: boolean } = {}) {
+    const now = new Date();
+    return db.transaction(async (tx) => {
+        const [existing] = await tx
+            .select()
+            .from(ocSemesterMarks)
+            .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester), isNull(ocSemesterMarks.deletedAt)))
+            .limit(1);
+        if (!existing) return null;
+
+        const subjects = cloneSubjects(existing);
+        const idx = subjects.findIndex((subject) => {
+            if (subject.meta?.subjectId && subject.meta.subjectId === subjectCode) return true;
+            return subject.subjectCode === subjectCode;
+        });
+        if (idx === -1) return null;
+
+        if (opts.hard) {
+            subjects.splice(idx, 1);
+        } else {
+            subjects[idx] = {
+                ...subjects[idx],
+                meta: { ...(subjects[idx].meta ?? {}), deletedAt: now.toISOString() },
+            };
+        }
+
+        const [updated] = await tx
+            .update(ocSemesterMarks)
+            .set({ subjects, updatedAt: now })
+            .where(eq(ocSemesterMarks.id, existing.id))
+            .returning();
+        return updated;
+    });
 }
 // ---- Personal ---------------------------------------------------------------
 export async function getPersonal(ocId: string) {
