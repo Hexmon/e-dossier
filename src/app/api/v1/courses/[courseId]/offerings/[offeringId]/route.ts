@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth, requireAdmin } from '@/app/lib/authz';
 import { offeringUpdateSchema } from '@/app/lib/validators.courses';
-import { updateOffering, replaceOfferingInstructors, softDeleteOffering } from '@/app/db/queries/offerings';
+import { updateOffering, replaceOfferingInstructors, softDeleteOffering, hardDeleteOffering } from '@/app/db/queries/offerings';
+import { findMissingInstructorIds } from '@/app/db/queries/instructors';
 
 const Param = z.object({ courseId: z.string().uuid(), offeringId: z.string().uuid() });
 
@@ -34,6 +35,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ co
         if (!updated) throw new ApiError(404, 'Offering not found', 'not_found');
 
         if (body.instructors) {
+            const explicitInstructorIds = body.instructors
+                .map((ins) => ins.instructorId)
+                .filter((id): id is string => Boolean(id));
+            if (explicitInstructorIds.length) {
+                const missing = await findMissingInstructorIds(explicitInstructorIds);
+                if (missing.length) {
+                    throw new ApiError(400, 'One or more instructorId values are invalid.', 'bad_request', {
+                        instructorIds: missing,
+                    });
+                }
+            }
             await replaceOfferingInstructors(offeringId, body.instructors);
         }
 
@@ -45,8 +57,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ c
     try {
         await requireAdmin(req);
         const { offeringId } = Param.parse(await params);
-        const row = await softDeleteOffering(offeringId);
+        const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
+        const row = hard ? await hardDeleteOffering(offeringId) : await softDeleteOffering(offeringId);
         if (!row) throw new ApiError(404, 'Offering not found', 'not_found');
-        return json.ok({ message: 'Offering soft-deleted.', id: row.id });
+        return json.ok({ message: hard ? 'Offering hard-deleted.' : 'Offering soft-deleted.', id: row.id });
     } catch (err) { return handleApiError(err); }
 }

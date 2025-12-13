@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth, requireAdmin } from '@/app/lib/authz';
-import { getCourse, listCourseOfferings, softDeleteCourse, updateCourse } from '@/app/db/queries/courses';
+import { getCourse, listCourseOfferings, softDeleteCourse, updateCourse, hardDeleteCourse } from '@/app/db/queries/courses';
 import { courseUpdateSchema } from '@/app/lib/validators.courses';
 
 const Param = z.object({ courseId: z.string().uuid() });
@@ -62,10 +62,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ c
     try {
         await requireAdmin(req);
         const { courseId } = Param.parse(await params);
-        const row = await softDeleteCourse(courseId);
+        const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
+        const row = hard ? await hardDeleteCourse(courseId) : await softDeleteCourse(courseId);
         if (!row) throw new ApiError(404, 'Course not found', 'not_found');
-        return json.ok({ message: 'Course soft-deleted.', id: row.id });
-    } catch (err) {
+        return json.ok({ message: hard ? 'Course hard-deleted.' : 'Course soft-deleted.', id: row.id });
+    } catch (err: any) {
+        const pgCode = err?.code ?? err?.cause?.code;
+        if (pgCode === '23503') {
+            return json.conflict('Cannot delete course because cadets are still assigned to it.', {
+                constraint: err?.constraint ?? err?.cause?.constraint,
+                detail: err?.detail ?? err?.cause?.detail,
+            });
+        }
         return handleApiError(err);
     }
 }

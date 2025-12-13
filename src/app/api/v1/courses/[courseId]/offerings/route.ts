@@ -9,6 +9,7 @@ import { subjects } from '@/app/db/schema/training/subjects';
 import { and, eq, isNull } from 'drizzle-orm';
 import { createOffering, replaceOfferingInstructors } from '@/app/db/queries/offerings';
 import { courses } from '@/app/db/schema/training/courses';
+import { findMissingInstructorIds } from '@/app/db/queries/instructors';
 
 const Param = z.object({ courseId: z.string().uuid() });
 
@@ -65,6 +66,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cou
             throw new ApiError(400, "Provide subjectId or subjectCode", "bad_request");
         }
 
+        if (body.instructors?.length) {
+            const explicitInstructorIds = body.instructors
+                .map((ins) => ins.instructorId)
+                .filter((id): id is string => Boolean(id));
+            const missing = await findMissingInstructorIds(explicitInstructorIds);
+            if (missing.length) {
+                throw new ApiError(400, 'One or more instructorId values are invalid.', 'bad_request', {
+                    instructorIds: missing,
+                });
+            }
+        }
+
         const offering = await createOffering({
             courseId,
             subjectId: subjectId!,
@@ -81,7 +94,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cou
 
         return json.created({ message: 'Course offering created successfully.', offeringId: offering.id });
     } catch (err: any) {
-        if (err?.code === "23505") return json.conflict("Subject already offered for this course/semester.");
+        const pgCode = err?.code ?? err?.cause?.code;
+        if (pgCode === "23505") {
+            return json.conflict("Subject already offered for this course/semester.", {
+                detail: err?.detail ?? err?.cause?.detail,
+            });
+        }
         return handleApiError(err);
     }
 }
