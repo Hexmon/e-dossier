@@ -80,7 +80,7 @@ export default function OdtChart({ data: odtData }: { data: number[] }) {
         labels: labels,
         datasets: [
           {
-            label: "ODT Score",
+            label: "Cadet ODT Score",
             data: odtData,
             borderColor: "rgb(99, 102, 241)",
             backgroundColor: gradientBg,
@@ -96,7 +96,7 @@ export default function OdtChart({ data: odtData }: { data: number[] }) {
             hoverBorderWidth: 4,
           },
           {
-            label: "Average Marks",
+            label: "Course Average",
             data: averageData,
             borderColor: "rgb(239, 68, 68)",
             backgroundColor: gradientAvgBg,
@@ -178,7 +178,7 @@ export default function OdtChart({ data: odtData }: { data: number[] }) {
         {/* Header */}
         <div className="bg-linear-to-r from-indigo-600 to-indigo-700 px-6 py-6">
           <h2 className="text-2xl font-bold text-white tracking-tight">📊 ODT</h2>
-          <p className="text-indigo-100 text-sm mt-1">Officer Development Training Performance Tracking</p>
+          <p className="text-indigo-100 text-sm mt-1">Out Door Training Performance Tracking</p>
         </div>
 
         {/* Chart Container */}

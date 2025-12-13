@@ -12,12 +12,12 @@ interface Platoon {
 
 // Sample data for 6 platoons with typical military strength (36-50 soldiers)
 const platoonsData: Platoon[] = [
-    { platoon: 'Arjuna Platoon', strength: 42 },
-    { platoon: 'Karna Platoon', strength: 38 },
-    { platoon: 'Bheem Platoon', strength: 45 },
-    { platoon: 'Shivaji Platoon', strength: 41 },
-    { platoon: 'Chakra Platoon', strength: 36 },
-    { platoon: 'Nakul Platoon', strength: 48 },
+    { platoon: 'Arjun ', strength: 20 },
+    { platoon: 'Karna ', strength: 19 },
+    { platoon: 'Chandragupt ', strength: 19 },
+    { platoon: 'Prithviraj ', strength: 16 },
+    { platoon: 'Ranapratap ', strength: 19 },
+    { platoon: 'Shivaji ', strength: 21 },
 ];
 
 export default function Platoons() {
@@ -26,7 +26,7 @@ export default function Platoons() {
         columns: [
             {
                 key: 'platoon',
-                label: 'Platoon',
+                label: 'Platoon Name',
                 type: 'text',
                 sortable: true,
                 filterable: false,
