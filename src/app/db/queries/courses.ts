@@ -98,13 +98,59 @@ export async function listCourseOfferings(courseId: string, semester?: number) {
             includePractical: courseOfferings.includePractical,
             theoryCredits: courseOfferings.theoryCredits,
             practicalCredits: courseOfferings.practicalCredits,
-            subjectId: subjects.id,
-            subjectCode: subjects.code,
-            subjectName: subjects.name,
-            subjectBranch: subjects.branch,
+            subject: {
+                id: subjects.id,
+                code: subjects.code,
+                name: subjects.name,
+                branch: subjects.branch,
+                hasTheory: subjects.hasTheory,
+                hasPractical: subjects.hasPractical,
+                defaultTheoryCredits: subjects.defaultTheoryCredits,
+                defaultPracticalCredits: subjects.defaultPracticalCredits,
+                description: subjects.description,
+                createdAt: subjects.createdAt,
+                updatedAt: subjects.updatedAt,
+                deletedAt: subjects.deletedAt,
+            },
         })
         .from(courseOfferings)
         .innerJoin(subjects, eq(subjects.id, courseOfferings.subjectId))
         .where(and(...wh))
         .orderBy(courseOfferings.semester);
+}
+
+export async function getCourseOffering(courseId: string, offeringId: string) {
+    const [row] = await db
+        .select({
+            id: courseOfferings.id,
+            semester: courseOfferings.semester,
+            includeTheory: courseOfferings.includeTheory,
+            includePractical: courseOfferings.includePractical,
+            theoryCredits: courseOfferings.theoryCredits,
+            practicalCredits: courseOfferings.practicalCredits,
+            subject: {
+                id: subjects.id,
+                code: subjects.code,
+                name: subjects.name,
+                branch: subjects.branch,
+                hasTheory: subjects.hasTheory,
+                hasPractical: subjects.hasPractical,
+                defaultTheoryCredits: subjects.defaultTheoryCredits,
+                defaultPracticalCredits: subjects.defaultPracticalCredits,
+                description: subjects.description,
+                createdAt: subjects.createdAt,
+                updatedAt: subjects.updatedAt,
+                deletedAt: subjects.deletedAt,
+            },
+        })
+        .from(courseOfferings)
+        .innerJoin(subjects, eq(subjects.id, courseOfferings.subjectId))
+        .where(and(
+            eq(courseOfferings.courseId, courseId),
+            eq(courseOfferings.id, offeringId),
+            isNull(courseOfferings.deletedAt),
+            isNull(subjects.deletedAt),
+        ))
+        .limit(1);
+    return row ?? null;
 }

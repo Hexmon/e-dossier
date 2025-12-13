@@ -4,17 +4,16 @@ import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth, requireAdmin } from '@/app/lib/authz';
 import { offeringUpdateSchema } from '@/app/lib/validators.courses';
 import { updateOffering, replaceOfferingInstructors, softDeleteOffering, hardDeleteOffering } from '@/app/db/queries/offerings';
+import { getCourseOffering } from '@/app/db/queries/courses';
 import { findMissingInstructorIds } from '@/app/db/queries/instructors';
 
 const Param = z.object({ courseId: z.string().uuid(), offeringId: z.string().uuid() });
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
-        await requireAuth(_);
-        const { offeringId } = Param.parse(await params);
-        // For brevity, reuse updateOffering with no patch to read?
-        // Do a proper select instead in your real code.
-        const row = await updateOffering(offeringId, {});
+        await requireAuth(req);
+        const { courseId, offeringId } = Param.parse(await params);
+        const row = await getCourseOffering(courseId, offeringId);
         if (!row) throw new ApiError(404, 'Offering not found', 'not_found');
         return json.ok({ message: 'Course offering retrieved successfully.', offering: row });
     } catch (err) { return handleApiError(err); }

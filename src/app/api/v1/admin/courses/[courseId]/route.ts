@@ -19,12 +19,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ cour
         const course = await getCourse(courseId);
         if (!course) throw new ApiError(404, 'Course not found', 'not_found');
 
-        let offerings:
-            {
-                id: string; semester: number; includeTheory: boolean; includePractical: boolean;
-                theoryCredits: number | null; practicalCredits: number | null;
-                subjectId: string; subjectCode: string; subjectName: string; subjectBranch: string;
-            }[] = [];
+        let offerings: {
+            id: string;
+            semester: number;
+            includeTheory: boolean;
+            includePractical: boolean;
+            theoryCredits: number | null;
+            practicalCredits: number | null;
+            subject: {
+                id: string;
+                code: string;
+                name: string;
+                branch: string;
+                hasTheory: boolean;
+                hasPractical: boolean;
+                defaultTheoryCredits: number | null;
+                defaultPracticalCredits: number | null;
+                description: string | null;
+                createdAt: Date | null;
+                updatedAt: Date | null;
+                deletedAt: Date | null;
+            };
+        }[] = [];
 
         if (expandSubjects) {
             const sem = sp.get('semester') ? Number(sp.get('semester')) : undefined;
