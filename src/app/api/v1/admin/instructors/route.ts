@@ -5,6 +5,8 @@ import { listQuerySchema, instructorCreateSchema } from '@/app/lib/validators.co
 import { listInstructors } from '@/app/db/queries/instructors';
 import { db } from '@/app/db/client';
 import { instructors } from '@/app/db/schema/training/instructors';
+import { users } from '@/app/db/schema/auth/users';
+import { and, eq, isNull } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
     try {
@@ -29,13 +31,37 @@ export async function POST(req: NextRequest) {
     try {
         await requireAdmin(req);
         const body = instructorCreateSchema.parse(await req.json());
+
+        let userId: string | null = null;
+        let name: string;
+        let email: string;
+        let phone: string;
+
+        if (body.userId) {
+            const [user] = await db
+                .select({ id: users.id, name: users.name, email: users.email, phone: users.phone })
+                .from(users)
+                .where(and(eq(users.id, body.userId), isNull(users.deletedAt)))
+                .limit(1);
+            if (!user) return json.badRequest('Invalid userId: user not found or inactive.');
+            userId = user.id;
+            name = user.name;
+            email = user.email;
+            phone = user.phone;
+        } else {
+            userId = null;
+            name = body.name!;
+            email = body.email!;
+            phone = body.phone!;
+        }
+
         const [row] = await db
             .insert(instructors)
             .values({
-                userId: body.userId ?? null,
-                name: body.name,
-                email: body.email ?? null,
-                phone: body.phone ?? null,
+                userId,
+                name,
+                email,
+                phone,
                 affiliation: body.affiliation ?? null,
                 notes: body.notes ?? null,
             })
