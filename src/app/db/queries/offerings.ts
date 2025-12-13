@@ -85,3 +85,11 @@ export async function softDeleteOffering(offeringId: string) {
         .returning({ id: courseOfferings.id });
     return row ?? null;
 }
+
+export async function hardDeleteOffering(offeringId: string) {
+    const [row] = await db
+        .delete(courseOfferings)
+        .where(eq(courseOfferings.id, offeringId))
+        .returning({ id: courseOfferings.id });
+    return row ?? null;
+}

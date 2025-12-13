@@ -1,5 +1,6 @@
 import { db } from '@/app/db/client';
 import { subjects } from '@/app/db/schema/training/subjects';
+import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
 import { and, eq, ilike, isNull } from 'drizzle-orm';
 
 export async function listSubjects(opts: { q?: string; branch?: 'C' | 'E' | 'M'; includeDeleted?: boolean; limit?: number; offset?: number; }) {
@@ -28,4 +29,30 @@ export async function listSubjects(opts: { q?: string; branch?: 'C' | 'E' | 'M';
         .orderBy(subjects.code)
         .limit(opts.limit ?? 100)
         .offset(opts.offset ?? 0);
+}
+
+export async function softDeleteSubject(id: string) {
+    return db.transaction(async (tx) => {
+        const now = new Date();
+        const [row] = await tx
+            .update(subjects)
+            .set({ deletedAt: now })
+            .where(eq(subjects.id, id))
+            .returning({ id: subjects.id });
+        if (!row) return null;
+
+        await tx
+            .update(courseOfferings)
+            .set({ deletedAt: now })
+            .where(eq(courseOfferings.subjectId, id));
+        return row;
+    });
+}
+
+export async function hardDeleteSubject(id: string) {
+    return db.transaction(async (tx) => {
+        await tx.delete(courseOfferings).where(eq(courseOfferings.subjectId, id));
+        const [row] = await tx.delete(subjects).where(eq(subjects.id, id)).returning({ id: subjects.id });
+        return row ?? null;
+    });
 }

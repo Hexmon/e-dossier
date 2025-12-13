@@ -62,12 +62,28 @@ export async function updateCourse(id: string, patch: Partial<typeof courses.$in
 }
 
 export async function softDeleteCourse(id: string) {
-    const [row] = await db
-        .update(courses)
-        .set({ deletedAt: new Date() })
-        .where(eq(courses.id, id))
-        .returning({ id: courses.id });
-    return row ?? null;
+    return db.transaction(async (tx) => {
+        const now = new Date();
+        const [row] = await tx
+            .update(courses)
+            .set({ deletedAt: now })
+            .where(eq(courses.id, id))
+            .returning({ id: courses.id });
+        if (!row) return null;
+        await tx
+            .update(courseOfferings)
+            .set({ deletedAt: now })
+            .where(eq(courseOfferings.courseId, id));
+        return row;
+    });
+}
+
+export async function hardDeleteCourse(id: string) {
+    return db.transaction(async (tx) => {
+        await tx.delete(courseOfferings).where(eq(courseOfferings.courseId, id));
+        const [row] = await tx.delete(courses).where(eq(courses.id, id)).returning({ id: courses.id });
+        return row ?? null;
+    });
 }
 
 export async function listCourseOfferings(courseId: string, semester?: number) {
@@ -82,13 +98,59 @@ export async function listCourseOfferings(courseId: string, semester?: number) {
             includePractical: courseOfferings.includePractical,
             theoryCredits: courseOfferings.theoryCredits,
             practicalCredits: courseOfferings.practicalCredits,
-            subjectId: subjects.id,
-            subjectCode: subjects.code,
-            subjectName: subjects.name,
-            subjectBranch: subjects.branch,
+            subject: {
+                id: subjects.id,
+                code: subjects.code,
+                name: subjects.name,
+                branch: subjects.branch,
+                hasTheory: subjects.hasTheory,
+                hasPractical: subjects.hasPractical,
+                defaultTheoryCredits: subjects.defaultTheoryCredits,
+                defaultPracticalCredits: subjects.defaultPracticalCredits,
+                description: subjects.description,
+                createdAt: subjects.createdAt,
+                updatedAt: subjects.updatedAt,
+                deletedAt: subjects.deletedAt,
+            },
         })
         .from(courseOfferings)
         .innerJoin(subjects, eq(subjects.id, courseOfferings.subjectId))
         .where(and(...wh))
         .orderBy(courseOfferings.semester);
+}
+
+export async function getCourseOffering(courseId: string, offeringId: string) {
+    const [row] = await db
+        .select({
+            id: courseOfferings.id,
+            semester: courseOfferings.semester,
+            includeTheory: courseOfferings.includeTheory,
+            includePractical: courseOfferings.includePractical,
+            theoryCredits: courseOfferings.theoryCredits,
+            practicalCredits: courseOfferings.practicalCredits,
+            subject: {
+                id: subjects.id,
+                code: subjects.code,
+                name: subjects.name,
+                branch: subjects.branch,
+                hasTheory: subjects.hasTheory,
+                hasPractical: subjects.hasPractical,
+                defaultTheoryCredits: subjects.defaultTheoryCredits,
+                defaultPracticalCredits: subjects.defaultPracticalCredits,
+                description: subjects.description,
+                createdAt: subjects.createdAt,
+                updatedAt: subjects.updatedAt,
+                deletedAt: subjects.deletedAt,
+            },
+        })
+        .from(courseOfferings)
+        .innerJoin(subjects, eq(subjects.id, courseOfferings.subjectId))
+        .where(and(
+            eq(courseOfferings.courseId, courseId),
+            eq(courseOfferings.id, offeringId),
+            isNull(courseOfferings.deletedAt),
+            isNull(subjects.deletedAt),
+        ))
+        .limit(1);
+    return row ?? null;
 }

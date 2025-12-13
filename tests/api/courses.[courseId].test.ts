@@ -3,7 +3,7 @@ import {
   GET as getCourseById,
   PATCH as patchCourse,
   DELETE as deleteCourse,
-} from '@/app/api/v1/courses/[courseId]/route';
+} from '@/app/api/v1/admin/courses/[courseId]/route';
 import { makeJsonRequest } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
@@ -90,10 +90,20 @@ describe('GET /api/v1/courses/[courseId]', () => {
         includePractical: false,
         theoryCredits: 3,
         practicalCredits: null,
-        subjectId: 'sub-1',
-        subjectCode: 'SUB-1',
-        subjectName: 'Subject 1',
-        subjectBranch: 'C',
+        subject: {
+          id: 'sub-1',
+          code: 'SUB-1',
+          name: 'Subject 1',
+          branch: 'C',
+          hasTheory: true,
+          hasPractical: false,
+          defaultTheoryCredits: 3,
+          defaultPracticalCredits: null,
+          description: null,
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+          deletedAt: null,
+        },
       },
     ]);
 
@@ -109,6 +119,7 @@ describe('GET /api/v1/courses/[courseId]', () => {
     expect(body.ok).toBe(true);
     expect(body.course.id).toBe(courseId);
     expect(body.offerings).toHaveLength(1);
+    expect(body.offerings[0].subject.name).toBe('Subject 1');
     expect(coursesQueries.listCourseOfferings).toHaveBeenCalledWith(courseId, 3);
   });
 });
@@ -241,4 +252,3 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
     expect(body.id).toBe(courseId);
   });
 });
-
