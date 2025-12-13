@@ -23,7 +23,6 @@ export type CreditForExcellenceEntry = {
     marks: number;
 };
 
-
 // === Core OC card ============================================================
 export const ocCadets = pgTable('oc_cadets', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -50,6 +49,57 @@ export const ocCadets = pgTable('oc_cadets', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export type TheoryMarksRecord = {
+    phaseTest1Marks?: number | null;
+    phaseTest2Marks?: number | null;
+    tutorial?: string | null;
+    finalMarks?: number | null;
+    grade?: string | null;
+};
+
+export type PracticalMarksRecord = {
+    finalMarks?: number | null;
+    grade?: string | null;
+    tutorial?: string | null;
+};
+
+export type SemesterSubjectRecord = {
+    subjectCode: string;
+    subjectName: string;
+    branch: 'C' | 'E' | 'M';
+    theory?: TheoryMarksRecord | null;
+    practical?: PracticalMarksRecord | null;
+    meta?: {
+        subjectId?: string | null;
+        offeringId?: string | null;
+        theoryCredits?: number | null;
+        practicalCredits?: number | null;
+        deletedAt?: string | null;
+    };
+};
+
+export const ocSemesterMarks = pgTable('oc_semester_marks', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    branchTag: varchar('branch_tag', { length: 1 }).notNull(),
+    sgpa: numeric('sgpa', { mode: 'number' }),
+    cgpa: numeric('cgpa', { mode: 'number' }),
+    marksScored: numeric('marks_scored', { mode: 'number' }),
+    subjects: jsonb('subjects')
+        .$type<SemesterSubjectRecord[]>()
+        .notNull()
+        .default(sql`'[]'::jsonb`),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqOcSemester: uniqueIndex('uq_oc_semester_marks').on(t.ocId, t.semester),
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+}));
 
 // === Pre-commission track (1 row per OC; current snapshot) ===================
 export const ocPreCommission = pgTable('oc_pre_commission', {

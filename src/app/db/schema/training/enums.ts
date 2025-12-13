@@ -6,5 +6,5 @@ export const delegationKind = pgEnum('delegation_kind',
 );
 export const ssbPointKind = pgEnum('ssb_point_kind', ['POSITIVE', 'NEGATIVE']);
 export const commModeKind = pgEnum('comm_mode_kind', ['LETTER', 'PHONE', 'EMAIL', 'IN_PERSON', 'OTHER']);
-export const ocStatusKind = pgEnum('oc_status_kind', ['ACTIVE', 'DELEGATED', 'WITHDRAWN', 'PASSED_OUT']);
+export const ocStatusKind = pgEnum('oc_status_kind', ['ACTIVE', 'DELEGATED', 'WITHDRAWN', 'PASSED_OUT', 'INACTIVE']);
 export const termKind = pgEnum('term_kind', ['spring', 'autumn']);

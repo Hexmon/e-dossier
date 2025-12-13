@@ -343,3 +343,32 @@ export const ocCampQuerySchema = z.object({
     reviewRole: CampReviewRoleKind.optional(),
     activityName: z.string().optional(),
 });
+
+// --- Academics / Semesters ---------------------------------------------------
+export const SemesterParam = z.object({ semester: Semester });
+export const SubjectIdParam = z.object({ subjectId: z.string().uuid() });
+
+export const academicSubjectPatchSchema = z.object({
+    theory: z.object({
+        phaseTest1Marks: z.coerce.number().optional(),
+        phaseTest2Marks: z.coerce.number().optional(),
+        tutorial: z.string().optional(),
+        finalMarks: z.coerce.number().optional(),
+        grade: z.string().optional(),
+    }).partial().optional(),
+    practical: z.object({
+        finalMarks: z.coerce.number().optional(),
+        grade: z.string().optional(),
+        tutorial: z.string().optional(),
+    }).partial().optional(),
+}).refine((value) => Boolean(value.theory || value.practical), {
+    message: 'No subject fields provided.',
+});
+
+export const academicSummaryPatchSchema = z.object({
+    sgpa: z.coerce.number().optional(),
+    cgpa: z.coerce.number().optional(),
+    marksScored: z.coerce.number().optional(),
+}).refine((value) => value.sgpa !== undefined || value.cgpa !== undefined || value.marksScored !== undefined, {
+    message: 'No summary fields provided.',
+});
