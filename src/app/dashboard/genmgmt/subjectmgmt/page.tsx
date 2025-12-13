@@ -1,76 +1,105 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { TabsContent } from "@/components/ui/tabs";
 import { Plus, Settings } from "lucide-react";
-import { subjects as initialSubjects, ocTabs, semesterTabs, type Subject } from "@/config/app.config";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import SubjectCard from "@/components/subjects/SubjectCard";
-import AddSubjectDialog from "@/components/subjects/AddSubjectDialog";
+import SubjectDialog from "@/components/subjects/SubjectDialog";
+import { useSubjects } from "@/hooks/useSubjects";
+import { Subject, SubjectCreate } from "@/app/lib/api/subjectsApi";
+import { Input } from "@/components/ui/input";
+import { ocTabs } from "@/config/app.config";
 
 export default function SubjectManagementPage() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
-    const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
-    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingSubject, setEditingSubject] = useState<Subject | undefined>(undefined);
+
+    const {
+        loading,
+        subjects,
+        fetchSubjects,
+        addSubject,
+        editSubject,
+        removeSubject,
+    } = useSubjects();
+
+    useEffect(() => {
+        fetchSubjects();
+    }, []);
 
     const handleLogout = () => {
         console.log("Logout clicked");
         router.push("/login");
     };
 
-    const handleAddSubject = (newSubject: Omit<Subject, "id">) => {
-        if (editingSubject) {
-            setSubjects((prev) =>
-                prev.map((subject) =>
-                    subject.id === editingSubject.id ? { ...subject, ...newSubject } : subject
-                )
-            );
-            setEditingSubject(null);
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+        fetchSubjects({ q: query });
+    };
+
+    const handleAddSubject = async (newSubject: SubjectCreate) => {
+        const editingId = editingSubject?.id;
+
+        if (editingId) {
+            const result = await editSubject(editingId, newSubject);
+            if (result) {
+                await fetchSubjects({ q: searchQuery });
+                setIsDialogOpen(false);
+                setEditingSubject(undefined);
+            }
         } else {
-            const id = Date.now().toString();
-            setSubjects((prev) => [...prev, { ...newSubject, id }]);
+            const result = await addSubject(newSubject);
+            if (result) {
+                await fetchSubjects({ q: searchQuery });
+                setIsDialogOpen(false);
+            }
         }
     };
 
-    const handleEditSubject = (id: string) => {
-        const subject = subjects.find((s) => s.id === id);
-        if (subject) {
-            setEditingSubject(subject);
-            setIsAddDialogOpen(true);
+    const handleEditSubject = (subject: Subject) => {
+        setEditingSubject(subject);
+        setIsDialogOpen(true);
+    };
+
+    const handleDeleteSubject = async (id: string) => {
+        const confirmed = window.confirm("Are you sure you want to delete this subject?");
+        if (confirmed) {
+            const result = await removeSubject(id);
+            if (result) {
+                await fetchSubjects({ q: searchQuery });
+            }
         }
     };
 
-    const handleDeleteSubject = (id: string) => {
-        setSubjects((prev) => prev.filter((subject) => subject.id !== id));
+    const renderSubjectCards = () => {
+        return subjects.map((subject) => {
+            const { id = "" } = subject;
+            return (
+                <SubjectCard
+                    key={id}
+                    subject={subject}
+                    onEdit={handleEditSubject}
+                    onDelete={handleDeleteSubject}
+                />
+            );
+        });
     };
-
-    const filteredSubjects = subjects.filter((subject) =>
-        (subject.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-        (subject.code?.toLowerCase() || "").includes(searchQuery.toLowerCase())
-    );
-
-
-    const getSemesterSubjects = (semester: string) =>
-        filteredSubjects.filter((subject) => subject.semNo === semester);
 
     return (
         <SidebarProvider>
             <div className="min-h-screen flex w-full bg-background">
-                {/* Sidebar */}
                 <AppSidebar />
 
-                {/* Main Content */}
                 <div className="flex-1 flex flex-col">
-                    {/* Header */}
                     <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
                         <PageHeader
                             title="Subject Management"
@@ -79,9 +108,7 @@ export default function SubjectManagementPage() {
                         />
                     </header>
 
-                    {/* Main Section */}
                     <main className="flex-1 p-6">
-                        {/* Breadcrumb */}
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
@@ -90,52 +117,47 @@ export default function SubjectManagementPage() {
                             ]}
                         />
 
-                        {/* Tabs */}
                         <GlobalTabs tabs={ocTabs} defaultValue="subject-mgmt">
-                            {/* Subject Management Tab */}
                             <TabsContent value="subject-mgmt" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">Subject List</h2>
 
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setIsAddDialogOpen(true)}
-                                        className="flex items-center gap-2"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        Add Subject
-                                    </Button>
+                                    <div className="flex items-center gap-4">
+                                        <Input
+                                            placeholder="Search subjects..."
+                                            value={searchQuery}
+                                            onChange={(e) => handleSearch(e.target.value)}
+                                            className="w-64"
+                                        />
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => {
+                                                setEditingSubject(undefined);
+                                                setIsDialogOpen(true);
+                                            }}
+                                            className="flex items-center gap-2"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Add Subject
+                                        </Button>
+                                    </div>
                                 </div>
 
-                                {/* Nested Tabs by Semester */}
-                                <GlobalTabs tabs={semesterTabs} defaultValue="semester-i">
-                                    {semesterTabs.map((semester) => (
-                                        <TabsContent key={semester.value} value={semester.value} className="space-y-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                {getSemesterSubjects(semester.title.split(" ")[1]).map((subject) => (
-                                                    <SubjectCard
-                                                        key={subject.id}
-                                                        id={subject.id}
-                                                        name={subject.name}
-                                                        code={subject.code}
-                                                        credits={subject.credits}
-                                                        subjectType={subject.subjectType}
-                                                        theoryPractical={subject.theoryPractical}
-                                                        onEdit={handleEditSubject}
-                                                        onDelete={handleDeleteSubject}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </TabsContent>
-                                    ))}
-                                </GlobalTabs>
+                                {loading ? (
+                                    <div className="text-center py-12">Loading...</div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {renderSubjectCards()}
+                                    </div>
+                                )}
                             </TabsContent>
 
-                            {/* Settings Tab */}
                             <TabsContent value="settings" className="space-y-6">
                                 <div className="text-center py-12">
                                     <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                                    <h3 className="text-xl font-semibold text-foreground mb-2">Subject Settings</h3>
+                                    <h3 className="text-xl font-semibold text-foreground mb-2">
+                                        Subject Settings
+                                    </h3>
                                     <p className="text-muted-foreground">
                                         Configure curriculum or semester settings here.
                                     </p>
@@ -146,15 +168,15 @@ export default function SubjectManagementPage() {
                 </div>
             </div>
 
-            {/* Add/Edit Subject Dialog */}
-            <AddSubjectDialog
-                isOpen={isAddDialogOpen}
+            <SubjectDialog
+                isOpen={isDialogOpen}
                 onOpenChange={(open) => {
-                    setIsAddDialogOpen(open);
-                    if (!open) setEditingSubject(null);
+                    setIsDialogOpen(open);
+                    if (!open) setEditingSubject(undefined);
                 }}
-                onAdd={handleAddSubject}
-                subject={editingSubject ?? undefined}
+                onSubmit={handleAddSubject}
+                subject={editingSubject}
+                isLoading={loading}
             />
         </SidebarProvider>
     );

@@ -8,6 +8,11 @@ import { beginningFields, postMidFields, specialFields } from "@/types/interview
 
 type TermVariant = "beginning" | "postmid" | "special";
 
+interface FormState {
+    isEditing: boolean;
+    isSaved: boolean;
+}
+
 export default function InterviewTermTabs() {
     const [selectedTerm, setSelectedTerm] = useState<number>(1);
 
@@ -22,6 +27,9 @@ export default function InterviewTermTabs() {
 
     const [subTab, setSubTab] = useState<Record<number, TermVariant>>(initialSub);
 
+    // Store form state for each term + variant combination
+    const [formStates, setFormStates] = useState<Record<string, FormState>>({});
+
     const form: UseFormReturn<Record<string, string>> = useForm<Record<string, string>>({
         defaultValues: {},
     });
@@ -34,7 +42,9 @@ export default function InterviewTermTabs() {
         })();
     }, [fetchAll]);
 
-    const currentVariant = subTab[selectedTerm];
+    const currentVariant = subTab[selectedTerm] ?? "beginning";
+    const stateKey = `${selectedTerm}_${currentVariant}`;
+    const currentFormState = formStates[stateKey] ?? { isEditing: true, isSaved: false };
 
     const fields =
         currentVariant === "postmid"
@@ -43,30 +53,12 @@ export default function InterviewTermTabs() {
                 ? beginningFields
                 : specialFields;
 
-    async function onSubmit(values: Record<string, string>) {
-        const prefix = `term${selectedTerm}_${currentVariant}_`;
-
-        const payloadEntries = Object.entries(values).filter(([key]) =>
-            key.startsWith(prefix)
-        );
-
-        const payload: Record<string, string> = Object.fromEntries(
-            payloadEntries.map(([key, value]) => [key, value ?? ""])
-        );
-
-        const resp = await save({
-            officer: "plcdr",
-            ...payload,
-            id: `${selectedTerm}_${currentVariant}_${Date.now()}`,
-        });
-
-        if (!resp) {
-            console.error("failed to save");
-            return;
-        }
-
-        form.reset({ ...form.getValues() });
-    }
+    const updateFormState = (updates: Partial<FormState>) => {
+        setFormStates(prev => ({
+            ...prev,
+            [stateKey]: { ...currentFormState, ...updates }
+        }));
+    };
 
     const termTabs = [1, 2, 3, 4, 5, 6];
 
@@ -79,179 +71,76 @@ export default function InterviewTermTabs() {
         6: "VI",
     };
 
+    const renderTermTabs = () => {
+        return termTabs.map((term) => {
+            const label = termLabels[term] ?? "";
+            const isActive = selectedTerm === term;
+
+            return (
+                <button
+                    key={term}
+                    type="button"
+                    onClick={() => setSelectedTerm(term)}
+                    className={`px-4 py-2 rounded-t-lg ${isActive ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                        }`}
+                >
+                    {`TERM ${label}`}
+                </button>
+            );
+        });
+    };
+
+    const renderSubTabs = () => {
+        const variants: TermVariant[] = selectedTerm === 1
+            ? ["postmid", "special"]
+            : ["beginning", "postmid", "special"];
+
+        const variantLabels: Record<TermVariant, string> = {
+            beginning: "Beginning of Term",
+            postmid: "Post Mid Term",
+            special: "Special"
+        };
+
+        return variants.map((variant) => {
+            const isActive = subTab[selectedTerm] === variant;
+            const label = variantLabels[variant] ?? "";
+
+            return (
+                <button
+                    key={variant}
+                    type="button"
+                    onClick={() => setSubTab((prev) => ({ ...prev, [selectedTerm]: variant }))}
+                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"}`}
+                >
+                    {label}
+                </button>
+            );
+        });
+    };
+
     return (
         <div className="max-w-6xl mx-auto p-6 bg-white rounded-xl shadow">
             {/* TERM TABS */}
             <div className="mb-4 flex gap-2 justify-center">
-                {termTabs.map((term) => {
-                    const label = termLabels[term];
-                    const isActive = selectedTerm === term;
-
-                    return (
-                        <button
-                            key={term}
-                            type="button"
-                            onClick={() => setSelectedTerm(term)}
-                            className={`px-4 py-2 rounded-t-lg ${isActive ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-                                }`}
-                        >
-                            {`TERM ${label}`}
-                        </button>
-                    );
-                })}
+                {renderTermTabs()}
             </div>
 
             {/* SUB-TABS */}
             <div className="flex gap-2 justify-center mb-6">
-                {selectedTerm === 1 ? (
-                    <>
-                        {/* POST MID TERM */}
-                        {(() => {
-                            const variant = "postmid" as TermVariant;
-                            const isActive = subTab[selectedTerm] === variant;
-
-                            return (
-                                <button
-                                    key="postmid"
-                                    type="button"
-                                    onClick={() =>
-                                        setSubTab((prev) => ({ ...prev, [selectedTerm]: variant }))
-                                    }
-                                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"
-                                        }`}
-                                >
-                                    Post Mid Term
-                                </button>
-                            );
-                        })()}
-
-                        {/* SPECIAL */}
-                        {(() => {
-                            const variant = "special" as TermVariant;
-                            const isActive = subTab[selectedTerm] === variant;
-
-                            return (
-                                <button
-                                    key="special"
-                                    type="button"
-                                    onClick={() =>
-                                        setSubTab((prev) => ({ ...prev, [selectedTerm]: variant }))
-                                    }
-                                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"
-                                        }`}
-                                >
-                                    Special
-                                </button>
-                            );
-                        })()}
-                    </>
-                ) : (
-                    <>
-                        {/* BEGINNING */}
-                        {(() => {
-                            const variant = "beginning" as TermVariant;
-                            const isActive = subTab[selectedTerm] === variant;
-
-                            return (
-                                <button
-                                    key="beginning"
-                                    type="button"
-                                    onClick={() =>
-                                        setSubTab((prev) => ({ ...prev, [selectedTerm]: variant }))
-                                    }
-                                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"
-                                        }`}
-                                >
-                                    Beginning of Term
-                                </button>
-                            );
-                        })()}
-
-                        {/* POST MID */}
-                        {(() => {
-                            const variant = "postmid" as TermVariant;
-                            const isActive = subTab[selectedTerm] === variant;
-
-                            return (
-                                <button
-                                    key="postmid"
-                                    type="button"
-                                    onClick={() =>
-                                        setSubTab((prev) => ({ ...prev, [selectedTerm]: variant }))
-                                    }
-                                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"
-                                        }`}
-                                >
-                                    Post Mid Term
-                                </button>
-                            );
-                        })()}
-
-                        {/* SPECIAL */}
-                        {(() => {
-                            const variant = "special" as TermVariant;
-                            const isActive = subTab[selectedTerm] === variant;
-
-                            return (
-                                <button
-                                    key="special"
-                                    type="button"
-                                    onClick={() =>
-                                        setSubTab((prev) => ({ ...prev, [selectedTerm]: variant }))
-                                    }
-                                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"
-                                        }`}
-                                >
-                                    Special
-                                </button>
-                            );
-                        })()}
-                    </>
-                )}
+                {renderSubTabs()}
             </div>
 
             {/* FORM AREA */}
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-                <TermSubForm
-                    form={form}
-                    termIndex={selectedTerm}
-                    variant={currentVariant}
-                    fields={fields}
-                />
-
-                <div className="flex justify-center gap-3 mt-6">
-                    <button type="submit" className="px-6 py-2 rounded bg-blue-600 text-white">
-                        Save
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => {
-                            const prefix = `term${selectedTerm}_${currentVariant}_`;
-
-                            const resetValues = Object.fromEntries(
-                                Object.entries(form.getValues()).map(([key, val]) => [
-                                    key,
-                                    key.startsWith(prefix) ? "" : val ?? "",
-                                ])
-                            );
-
-                            form.reset(resetValues);
-                        }}
-                        className="px-6 py-2 rounded bg-gray-200"
-                    >
-                        Reset
-                    </button>
-                </div>
-            </form>
-
-            <div className="mt-4 text-sm text-muted-foreground">
-                {loading ? (
-                    <p>Loading / Saving...</p>
-                ) : (
-                    <p>Saved records: {records.length}</p>
-                )}
-            </div>
+            <TermSubForm
+                form={form}
+                termIndex={selectedTerm}
+                variant={currentVariant}
+                fields={fields}
+                isEditing={currentFormState.isEditing}
+                isSaved={currentFormState.isSaved}
+                onSave={save}
+                updateFormState={updateFormState}
+            />
         </div>
     );
 }

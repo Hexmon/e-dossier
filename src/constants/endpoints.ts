@@ -19,6 +19,8 @@ export const endpoints = {
             `/api/v1/admin/appointments/${appointmentId}/transfer`,
 
         users: "/api/v1/admin/users",
+        subjects: "/api/v1/admin/subjects",
+        subjectById: (subjectId: string) => `/api/v1/admin/subjects/${subjectId}`,
     },
     oc: {
         list: "/api/v1/oc",
