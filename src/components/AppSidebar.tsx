@@ -255,7 +255,7 @@ export function AppSidebar() {
           </div>
 
           {/* Help Section */}
-          <div className="p-2 border-t border-border">
+          {/* <div className="p-2 border-t border-border">
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
@@ -272,7 +272,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
-          </div>
+          </div> */}
         </SidebarContent>
       </Sidebar>
 

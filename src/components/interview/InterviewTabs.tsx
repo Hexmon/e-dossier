@@ -11,7 +11,6 @@ import CdrForm from "./forms/CdrForm";
 import PLCdrCombinedForm from "./forms/PLCdrCombinedForm";
 
 interface FormWrapperFields {
-    // flexible shape: keys will be officer-prefixed (e.g. plcdr_appearance)
     [key: string]: string | boolean | undefined;
 }
 
@@ -74,7 +73,7 @@ export default function InterviewTabs() {
                 <div className="space-y-6">
                     {active === "plcdr" && (
                         <>
-                        <PLCdrCombinedForm form={form} />
+                            <PLCdrCombinedForm form={form} />
                         </>
                     )}
 
@@ -85,21 +84,8 @@ export default function InterviewTabs() {
                     {active === "cdr" && <CdrForm form={form as UseFormReturn<any>} />}
                 </div>
 
-                <div className="flex justify-center gap-3 mt-6">
-                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded">Save</button>
-                    <button
-                        type="button"
-                        onClick={() => form.reset()}
-                        className="px-6 py-2 bg-gray-200 rounded"
-                    >
-                        Reset
-                    </button>
-                </div>
             </form>
 
-            <div className="mt-6 text-sm text-muted-foreground">
-                {loading ? <p>Saving / Loading...</p> : <p>Saved records: {records.length}</p>}
-            </div>
         </div>
     );
 }

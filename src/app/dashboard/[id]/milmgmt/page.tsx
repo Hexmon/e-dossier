@@ -15,6 +15,8 @@ import { TabsContent } from "@/components/ui/tabs";
 import { Settings } from "lucide-react";
 
 import { useOcDetails } from "@/hooks/useOcDetails";
+import Marquee from "@/components/Dashboard/Marquee";
+import { marqueeData2 } from "@/components/Dashboard/MarqueeData";
 
 export default function MilitaryTrainingPage(props: { params: Promise<{ id: string }> }) {
   const { id } = use(props.params);
@@ -38,6 +40,14 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
         />
       </div>
 
+      <div className="w-full overflow-hidden z-40 shrink-0">
+          <Marquee
+            data={marqueeData2}
+            speed={25}
+            className="w-full"
+          />
+        </div>
+
       {/* Cadet Info */}
       {loading && (
         <p className="text-center text-sm text-muted-foreground mb-4">
@@ -56,10 +66,10 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
       )}
 
       {/* Tabs */}
-      <GlobalTabs tabs={miltrgTabs} defaultValue="mil-trg">
-        <TabsContent value="mil-trg" className="space-y-6">
+      <GlobalTabs tabs={miltrgTabs} defaultValue="basic-details">
+        <TabsContent value="basic-details" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
-            {militaryTrainingCards.map((card, index) => {
+            {militaryTrainingCards.slice(0, 7).map((card, index) => {
               const Icon = card.icon;
               const url = typeof card.to === "function" ? card.to(ocId) : card.to;
               return (
@@ -96,13 +106,81 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
           </div>
         </TabsContent>
 
-        <TabsContent value="settings">
-          <div className="text-center py-12">
-            <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">General Settings</h3>
-            <p className="text-muted-foreground">
-              Manage system roles, permissions, and more.
-            </p>
+        <TabsContent value="mil-trg" className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
+            {militaryTrainingCards.slice(7, 29).map((card, index) => {
+              const Icon = card.icon;
+              const url = typeof card.to === "function" ? card.to(ocId) : card.to;
+              return (
+                <Card
+                  key={index}
+                  className="group hover:shadow-command transition-all duration-300 cursor-pointer rounded-xl shadow-lg"
+                >
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${card.color} text-white`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+
+                      <CardTitle className="text-lg group-hover:text-primary">
+                        {card.title}
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                      {card.description}
+                    </p>
+
+                    <a href={url}>
+                      <button className="w-full border rounded-md p-2 hover:bg-accent transition">
+                        Access Module →
+                      </button>
+                    </a>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
+            {militaryTrainingCards.slice(29, 30).map((card, index) => {
+              const Icon = card.icon;
+              const url = typeof card.to === "function" ? card.to(ocId) : card.to;
+              return (
+                <Card
+                  key={index}
+                  className="group hover:shadow-command transition-all duration-300 cursor-pointer rounded-xl shadow-lg"
+                >
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${card.color} text-white`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+
+                      <CardTitle className="text-lg group-hover:text-primary">
+                        {card.title}
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                      {card.description}
+                    </p>
+
+                    <a href={url}>
+                      <button className="w-full border rounded-md p-2 hover:bg-accent transition">
+                        Access Module →
+                      </button>
+                    </a>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
       </GlobalTabs>

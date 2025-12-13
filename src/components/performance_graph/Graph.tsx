@@ -81,7 +81,7 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
         labels: labels,
         datasets: [
           {
-            label: "GPA Score",
+            label: "Cadet CGPA",
             data: academics,
             borderColor: "rgb(99, 102, 241)",
             backgroundColor: gradientBg,
@@ -97,7 +97,7 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
             hoverBorderWidth: 4,
           },
           {
-            label: "Average Marks",
+            label: "Course Average",
             data: averageData,
             borderColor: "rgb(239, 68, 68)",
             backgroundColor: gradientAvgBg,
@@ -184,7 +184,7 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
         {/* Header */}
         <div className="bg-linear-to-r from-indigo-600 to-indigo-700 px-6 py-6">
           <h2 className="text-2xl font-bold text-white tracking-tight">📚 ACADEMICS</h2>
-          <p className="text-indigo-100 text-sm mt-1">Academic Performance Tracking</p>
+          <p className="text-indigo-100 text-sm mt-1">Academic Performance Tracking (CGPA)</p>
         </div>
 
         {/* Chart Container */}

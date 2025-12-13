@@ -161,11 +161,11 @@ function LoginPageContent() {
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
           <Image
-            src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+            src="/images/eme_logo.jpeg"
             alt="MCEME Background"
-            width={122}
-            height={122}
-            className="h-16 w-auto mx-auto mb-4"
+            width={100}
+            height={100}
+            className="h-16 w-auto mx-auto mb-4 object-contain"
           />
           <h1 className="text-2xl font-bold text-primary-foreground">
             MCEME CTW Portal
