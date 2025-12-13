@@ -77,7 +77,7 @@ function mergePractical(target: PracticalMarksRecord | null | undefined, patch?:
     return changed ? next : target;
 }
 
-function cloneSubjects(existing?: SemesterMarksRow | null) {
+function cloneSubjects(existing?: SemesterMarksRow | null): SemesterSubjectRecord[] {
     if (!existing?.subjects) return [];
     return existing.subjects.map((subject) => ({
         ...subject,
