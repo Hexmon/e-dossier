@@ -1,194 +1,302 @@
 // src/app/db/seeds/seedAdminUser.ts
 import 'dotenv/config';
 import argon2 from 'argon2';
-import { and, or, eq, ilike, lte, gte, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { db } from '../client';
-import { users } from '../schema/auth/users';
-import { credentialsLocal } from '../schema/auth/credentials';
-// ⛔ removed: roles, userRoles
-import { positions } from '../schema/auth/positions';
+import { ARGON2_OPTS } from '../queries/auth';
 import { appointments } from '../schema/auth/appointments';
+import { credentialsLocal } from '../schema/auth/credentials';
+import { positions } from '../schema/auth/positions';
+import { users } from '../schema/auth/users';
 
-const {
-  // SUPER ADMIN
-  SUPERADMIN_USERNAME,
-  SUPERADMIN_PASSWORD,
-  SUPERADMIN_EMAIL,
-  SUPERADMIN_PHONE,
-  SUPERADMIN_NAME,
-  SUPERADMIN_RANK,
+type SeedUserInput = {
+  username: string;
+  password: string;
+  email: string;
+  phone: string;
+  name: string;
+  rank: string;
+  positionKey: 'SUPER_ADMIN' | 'ADMIN';
+};
 
-  // ADMIN
-  ADMIN_USERNAME,
-  ADMIN_PASSWORD,
-  ADMIN_EMAIL,
-  ADMIN_PHONE,
-  ADMIN_NAME,
-  ADMIN_RANK,
-} = process.env;
+type UpsertOutcome = 'created' | 'updated' | 'unchanged';
+type DbExecutor = Pick<typeof db, 'select' | 'insert' | 'update'>;
 
-function assertEnv() {
-  const missing: string[] = [];
-  if (!SUPERADMIN_USERNAME) missing.push('SUPERADMIN_USERNAME');
-  if (!SUPERADMIN_PASSWORD) missing.push('SUPERADMIN_PASSWORD');
-  if (!SUPERADMIN_EMAIL) missing.push('SUPERADMIN_EMAIL');
-  if (!ADMIN_USERNAME) missing.push('ADMIN_USERNAME');
-  if (!ADMIN_PASSWORD) missing.push('ADMIN_PASSWORD');
-  if (!ADMIN_EMAIL) missing.push('ADMIN_EMAIL');
+function validateEnv() {
+  const required = [
+    'DATABASE_URL',
+    'SUPERADMIN_USERNAME',
+    'SUPERADMIN_PASSWORD',
+    'SUPERADMIN_EMAIL',
+    'SUPERADMIN_PHONE',
+    'SUPERADMIN_NAME',
+    'SUPERADMIN_RANK',
+    'ADMIN_USERNAME',
+    'ADMIN_PASSWORD',
+    'ADMIN_EMAIL',
+    'ADMIN_PHONE',
+    'ADMIN_NAME',
+    'ADMIN_RANK',
+  ];
 
+  const missing = required.filter((key) => !process.env[key] || String(process.env[key]).trim() === '');
   if (missing.length) {
-    console.error(`Missing required env vars: ${missing.join(', ')}`);
-    process.exit(1);
+    throw new Error(`Missing required env vars: ${missing.join(', ')}`);
   }
 }
 
-async function upsertUserWithPassword(params: {
-  username: string;
-  email: string;
-  phone?: string;
-  name?: string;
-  rank?: string;
-  password: string;
-}) {
-  const uname = params.username.toLowerCase();
-  const email = params.email.toLowerCase();
+function envVal(key: string): string {
+  return String(process.env[key]).trim();
+}
 
-  let [u] = await db.select().from(users).where(ilike(users.username, uname)).limit(1);
+function titleCaseFromKey(key: string) {
+  return key
+    .toLowerCase()
+    .split('_')
+    .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part))
+    .join(' ');
+}
 
-  if (!u) {
-    [u] = await db
+async function upsertPosition(tx: DbExecutor, key: 'SUPER_ADMIN' | 'ADMIN') {
+  const displayName = titleCaseFromKey(key);
+  const desired = {
+    displayName,
+    defaultScope: 'GLOBAL' as const,
+    singleton: true,
+    description: displayName,
+  };
+
+  const [existing] = await tx.select().from(positions).where(eq(positions.key, key)).limit(1);
+  if (!existing) {
+    const [created] = await tx
+      .insert(positions)
+      .values({ key, ...desired })
+      .returning();
+    return { position: created, action: 'created' as UpsertOutcome };
+  }
+
+  const updates: Partial<typeof positions.$inferInsert> = {};
+  if (existing.displayName !== desired.displayName) updates.displayName = desired.displayName;
+  if (existing.defaultScope !== desired.defaultScope) updates.defaultScope = desired.defaultScope;
+  if (existing.singleton !== desired.singleton) updates.singleton = desired.singleton;
+  if (existing.description !== desired.description) updates.description = desired.description;
+
+  if (Object.keys(updates).length === 0) {
+    return { position: existing, action: 'unchanged' as UpsertOutcome };
+  }
+
+  const [updated] = await tx
+    .update(positions)
+    .set(updates)
+    .where(eq(positions.id, existing.id))
+    .returning();
+  return { position: updated, action: 'updated' as UpsertOutcome };
+}
+
+async function upsertUser(tx: DbExecutor, seed: SeedUserInput) {
+  const username = seed.username.trim().toLowerCase();
+  const email = seed.email.trim().toLowerCase();
+  const phone = seed.phone.trim();
+  const name = seed.name.trim();
+  const rank = seed.rank.trim();
+
+  const [byUsername] = await tx
+    .select()
+    .from(users)
+    .where(eq(sql`lower(${users.username})`, username))
+    .limit(1);
+  const [byEmail] = await tx
+    .select()
+    .from(users)
+    .where(eq(sql`lower(${users.email})`, email))
+    .limit(1);
+
+  if (byUsername && byEmail && byUsername.id !== byEmail.id) {
+    throw new Error(`Conflicting user records for username ${username} and email ${email}.`);
+  }
+
+  const existing = byUsername ?? byEmail;
+  if (!existing) {
+    const [created] = await tx
       .insert(users)
       .values({
-        username: uname,
+        username,
         email,
-        phone: params.phone ?? '+0000000000',
-        name: params.name ?? uname,
-        rank: params.rank ?? 'N/A',
+        phone,
+        name,
+        rank,
         isActive: true,
       })
       .returning();
-  } else if (!u.isActive) {
-    await db.update(users).set({ isActive: true }).where(eq(users.id, u.id));
+    return { user: created, action: 'created' as UpsertOutcome };
   }
 
-  // Set/Reset password
-  const hash = await argon2.hash(params.password, {
-    type: argon2.argon2id,
-    memoryCost: 19456,
-    timeCost: 2,
-    parallelism: 1,
-  });
+  const updates: Partial<typeof users.$inferInsert> = {};
+  if (existing.email !== email) updates.email = email;
+  if (existing.phone !== phone) updates.phone = phone;
+  if (existing.name !== name) updates.name = name;
+  if (existing.rank !== rank) updates.rank = rank;
+  if (!existing.isActive) updates.isActive = true;
+  if (existing.deletedAt) updates.deletedAt = null;
+  if (existing.deactivatedAt) updates.deactivatedAt = null;
 
-  const cred = await db.select().from(credentialsLocal).where(eq(credentialsLocal.userId, u.id)).limit(1);
-  if (cred.length) {
-    await db
-      .update(credentialsLocal)
-      .set({ passwordHash: hash, passwordAlgo: 'argon2id', passwordUpdatedAt: new Date() })
-      .where(eq(credentialsLocal.userId, u.id));
-  } else {
-    await db.insert(credentialsLocal).values({
-      userId: u.id,
+  if (Object.keys(updates).length === 0) {
+    return { user: existing, action: 'unchanged' as UpsertOutcome };
+  }
+
+  updates.updatedAt = new Date();
+
+  const [updated] = await tx
+    .update(users)
+    .set(updates)
+    .where(eq(users.id, existing.id))
+    .returning();
+  return { user: updated, action: 'updated' as UpsertOutcome };
+}
+
+async function upsertCredentials(tx: DbExecutor, userId: string, password: string): Promise<UpsertOutcome> {
+  const hash = await argon2.hash(password, ARGON2_OPTS);
+  const [cred] = await tx.select().from(credentialsLocal).where(eq(credentialsLocal.userId, userId)).limit(1);
+
+  if (!cred) {
+    await tx.insert(credentialsLocal).values({
+      userId,
       passwordHash: hash,
       passwordAlgo: 'argon2id',
       passwordUpdatedAt: new Date(),
     });
+    return 'created';
   }
 
-  return u;
+  await tx
+    .update(credentialsLocal)
+    .set({
+      passwordHash: hash,
+      passwordAlgo: 'argon2id',
+      passwordUpdatedAt: new Date(),
+    })
+    .where(eq(credentialsLocal.userId, userId));
+  return 'updated';
 }
 
-async function ensurePosition(key: string, displayName: string, defaultScope: 'GLOBAL' | 'PLATOON') {
-  let [pos] = await db.select().from(positions).where(eq(positions.key, key)).limit(1);
-  if (!pos) {
-    [pos] = await db
-      .insert(positions)
-      .values({
-        key,
-        displayName,
-        defaultScope,
-        singleton: true,
-        description: displayName,
-      })
-      .returning();
-  }
-  return pos;
-}
+async function ensureActiveAppointment(tx: DbExecutor, userId: string, positionId: string) {
+  const scopeType = 'GLOBAL' as const;
+  const scopeId: string | null = null;
 
-async function ensureActiveAppointment(userId: string, positionKey: string, scopeType: 'GLOBAL' | 'PLATOON' = 'GLOBAL') {
-  // Ensure position exists first
-  const pos = await ensurePosition(
-    positionKey,
-    positionKey.replace(/_/g, ' '),
-    positionKey === 'PLATOON_COMMANDER' ? 'PLATOON' : 'GLOBAL'
-  );
-
-  // Check if an active PRIMARY appointment already exists for this user & position
-  const now = new Date();
-  const existing = await db
-    .select({ id: appointments.id })
+  const [existing] = await tx
+    .select()
     .from(appointments)
     .where(
       and(
         eq(appointments.userId, userId),
-        eq(appointments.positionId, pos.id),
-        eq(appointments.assignment, 'PRIMARY' as any),
-        // scope: we seed GLOBAL by default; change if you need platoon-specific seed
-        eq(appointments.scopeType, scopeType as any),
+        eq(appointments.positionId, positionId),
+        eq(appointments.assignment, 'PRIMARY'),
+        eq(appointments.scopeType, scopeType),
         isNull(appointments.deletedAt),
-        lte(appointments.startsAt, now),
-        // (endsAt is null OR endsAt >= now)
-        or(isNull(appointments.endsAt), gte(appointments.endsAt, now))
+        isNull(appointments.endsAt)
       )
     )
     .limit(1);
 
-  if (!existing.length) {
-    await db
-      .insert(appointments)
-      .values({
-        userId,
-        positionId: pos.id,
-        assignment: 'PRIMARY' as any,
-        scopeType: scopeType as any,
-        scopeId: scopeType === 'PLATOON' ? null : null, // set a platoon id if you seed a platoon role
-        startsAt: new Date(),
-        endsAt: null,
-        appointedBy: userId, // bootstrap
-        reason: 'bootstrap seed',
-      })
-      .returning();
+  if (existing) {
+    const updates: Partial<typeof appointments.$inferInsert> = {};
+    if (existing.scopeId !== scopeId) updates.scopeId = scopeId;
+    if (Object.keys(updates).length === 0) {
+      return { id: existing.id, action: 'unchanged' as UpsertOutcome };
+    }
+
+    const [updated] = await tx
+      .update(appointments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(appointments.id, existing.id))
+      .returning({ id: appointments.id });
+
+    return { id: updated.id, action: 'updated' as UpsertOutcome };
   }
+
+  const [created] = await tx
+    .insert(appointments)
+    .values({
+      userId,
+      positionId,
+      assignment: 'PRIMARY',
+      scopeType,
+      scopeId,
+      startsAt: new Date(),
+      endsAt: null,
+      appointedBy: userId,
+      reason: 'bootstrap seed',
+    })
+    .returning({ id: appointments.id });
+
+  return { id: created.id, action: 'created' as UpsertOutcome };
+}
+
+async function seedSingle(tx: DbExecutor, seed: SeedUserInput) {
+  const positionRes = await upsertPosition(tx, seed.positionKey);
+  const userRes = await upsertUser(tx, seed);
+  const credentialAction = await upsertCredentials(tx, userRes.user.id, seed.password);
+  const appointmentRes = await ensureActiveAppointment(tx, userRes.user.id, positionRes.position.id);
+
+  return {
+    label: seed.positionKey,
+    user: userRes.user,
+    userAction: userRes.action,
+    positionAction: positionRes.action,
+    credentialAction,
+    appointmentAction: appointmentRes.action,
+    appointmentId: appointmentRes.id,
+  };
 }
 
 export async function seedAdminUser() {
-  assertEnv();
+  validateEnv();
 
-  // SUPER_ADMIN user + appointment
-  const superUser = await upsertUserWithPassword({
-    username: SUPERADMIN_USERNAME!,
-    email: SUPERADMIN_EMAIL!,
-    phone: SUPERADMIN_PHONE ?? '+0000000000',
-    name: SUPERADMIN_NAME ?? 'Super Admin',
-    rank: SUPERADMIN_RANK ?? 'SUPER',
-    password: SUPERADMIN_PASSWORD!,
+  const seeds = {
+    superAdmin: {
+      username: envVal('SUPERADMIN_USERNAME'),
+      password: envVal('SUPERADMIN_PASSWORD'),
+      email: envVal('SUPERADMIN_EMAIL'),
+      phone: envVal('SUPERADMIN_PHONE'),
+      name: envVal('SUPERADMIN_NAME'),
+      rank: envVal('SUPERADMIN_RANK'),
+      positionKey: 'SUPER_ADMIN' as const,
+    },
+    admin: {
+      username: envVal('ADMIN_USERNAME'),
+      password: envVal('ADMIN_PASSWORD'),
+      email: envVal('ADMIN_EMAIL'),
+      phone: envVal('ADMIN_PHONE'),
+      name: envVal('ADMIN_NAME'),
+      rank: envVal('ADMIN_RANK'),
+      positionKey: 'ADMIN' as const,
+    },
+  };
+
+  const result = await db.transaction(async (tx) => {
+    const superAdmin = await seedSingle(tx, seeds.superAdmin);
+    const admin = await seedSingle(tx, seeds.admin);
+    return { superAdmin, admin };
   });
-  // ⛔ removed: ensureAdminRole(superUser.id)
-  await ensureActiveAppointment(superUser.id, 'SUPER_ADMIN', 'GLOBAL');
 
-  // ADMIN user + appointment
-  const adminUser = await upsertUserWithPassword({
-    username: ADMIN_USERNAME!,
-    email: ADMIN_EMAIL!,
-    phone: ADMIN_PHONE ?? '+0000000001',
-    name: ADMIN_NAME ?? 'Admin',
-    rank: ADMIN_RANK ?? 'ADMIN',
-    password: ADMIN_PASSWORD!,
-  });
-  // ⛔ removed: ensureAdminRole(adminUser.id)
-  await ensureActiveAppointment(adminUser.id, 'ADMIN', 'GLOBAL');
+  console.log('Seeded admin accounts and appointments:');
+  console.log(
+    `  SUPER_ADMIN (${result.superAdmin.user.username}): user ${result.superAdmin.userAction}, credentials ${result.superAdmin.credentialAction}, position ${result.superAdmin.positionAction}, appointment ${result.superAdmin.appointmentAction} (${result.superAdmin.appointmentId})`
+  );
+  console.log(
+    `  ADMIN (${result.admin.user.username}): user ${result.admin.userAction}, credentials ${result.admin.credentialAction}, position ${result.admin.positionAction}, appointment ${result.admin.appointmentAction} (${result.admin.appointmentId})`
+  );
+}
 
-  console.log('✅ Seeded SUPER_ADMIN and ADMIN users with active appointments (position-as-authority).');
-  console.log(`   SUPER_ADMIN login: ${SUPERADMIN_USERNAME}`);
-  console.log(`   ADMIN login:       ${ADMIN_USERNAME}`);
+if (require.main === module) {
+  seedAdminUser()
+    .then(() => {
+      console.log('Done.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('Failed to seed admin users:', err);
+      process.exit(1);
+    });
 }
