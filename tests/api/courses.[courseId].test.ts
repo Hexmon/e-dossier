@@ -8,6 +8,7 @@ import { makeJsonRequest } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as coursesQueries from '@/app/db/queries/courses';
+import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
@@ -21,6 +22,30 @@ vi.mock('@/app/db/queries/courses', () => ({
   listCourseOfferings: vi.fn(async () => []),
   softDeleteCourse: vi.fn(async () => null),
   updateCourse: vi.fn(async () => null),
+  hardDeleteCourse: vi.fn(async () => null),
+}));
+
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    COURSE_CREATED: 'course.created',
+    COURSE_UPDATED: 'course.updated',
+    COURSE_DELETED: 'course.deleted',
+  },
+  AuditResourceType: {
+    COURSE: 'course',
+    OFFERING: 'course_offering',
+  },
 }));
 
 const basePath = '/api/v1/courses';
@@ -29,6 +54,7 @@ const courseId = '11111111-1111-4111-8111-111111111111';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (auditLog.createAuditLog as any).mockClear?.();
 });
 
 describe('GET /api/v1/courses/[courseId]', () => {
@@ -163,6 +189,12 @@ describe('PATCH /api/v1/courses/[courseId]', () => {
 
   it('returns 409 when updating course violates unique code constraint', async () => {
     (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.getCourse as any).mockResolvedValueOnce({
+      id: courseId,
+      code: 'TES-50',
+      title: 'Course 50',
+      notes: null,
+    });
     (coursesQueries.updateCourse as any).mockImplementationOnce(async () => {
       const err: any = new Error('duplicate');
       err.code = '23505';
@@ -185,6 +217,12 @@ describe('PATCH /api/v1/courses/[courseId]', () => {
 
   it('updates course on happy path', async () => {
     (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.getCourse as any).mockResolvedValueOnce({
+      id: courseId,
+      code: 'TES-50',
+      title: 'Old Title',
+      notes: null,
+    });
     (coursesQueries.updateCourse as any).mockResolvedValueOnce({
       id: courseId,
       code: 'TES-51',
@@ -205,6 +243,7 @@ describe('PATCH /api/v1/courses/[courseId]', () => {
     expect(body.ok).toBe(true);
     expect(body.course.id).toBe(courseId);
     expect(body.course.title).toBe('Updated Course');
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });
 
@@ -240,7 +279,10 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
 
   it('soft-deletes course on happy path', async () => {
     (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
-    (coursesQueries.softDeleteCourse as any).mockResolvedValueOnce({ id: courseId });
+    (coursesQueries.softDeleteCourse as any).mockResolvedValueOnce({
+      before: { id: courseId, code: 'TES-50' },
+      after: { id: courseId, code: 'TES-50', deletedAt: new Date().toISOString() },
+    });
 
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}` });
     const ctx = { params: Promise.resolve({ courseId }) } as any;
@@ -250,5 +292,24 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.id).toBe(courseId);
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
+  });
+
+  it('hard-deletes course when requested', async () => {
+    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.hardDeleteCourse as any).mockResolvedValueOnce({
+      before: { id: courseId, code: 'TES-50' },
+    });
+
+    const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}?hard=true` });
+    const ctx = { params: Promise.resolve({ courseId }) } as any;
+
+    const res = await deleteCourse(req as any, ctx);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.id).toBe(courseId);
+    expect(body.message).toMatch(/hard-deleted/i);
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });

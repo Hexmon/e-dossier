@@ -4,8 +4,11 @@ import { parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getOcAcademics } from '@/app/services/oc-academics';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+// NOTE: Academics mutations use services/oc-academics which already invoke createAuditLog.
+
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
@@ -22,3 +25,4 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);

@@ -5,6 +5,8 @@ import { subjects } from '@/app/db/schema/training/subjects';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { and, eq, ilike, isNull, like, sql } from 'drizzle-orm';
 
+export type CourseRow = typeof courses.$inferSelect;
+
 export async function listCourses(opts: { q?: string; includeDeleted?: boolean; limit?: number; offset?: number; }) {
     const wh: any[] = [];
     if (!opts.includeDeleted) wh.push(isNull(courses.deletedAt));
@@ -62,15 +64,16 @@ export async function updateCourse(id: string, patch: Partial<typeof courses.$in
     return row ?? null;
 }
 
-export async function softDeleteCourse(id: string) {
+export async function softDeleteCourse(id: string): Promise<{ before: CourseRow; after: CourseRow } | null> {
     return db.transaction(async (tx) => {
+        const [before] = await tx.select().from(courses).where(eq(courses.id, id)).limit(1);
+        if (!before) return null;
         const now = new Date();
-        const [row] = await tx
+        const [after] = await tx
             .update(courses)
             .set({ deletedAt: now })
             .where(eq(courses.id, id))
-            .returning({ id: courses.id });
-        if (!row) return null;
+            .returning();
         await tx
             .update(courseOfferings)
             .set({ deletedAt: now })
@@ -79,20 +82,22 @@ export async function softDeleteCourse(id: string) {
             .update(ocCadets)
             .set({ status: 'INACTIVE', updatedAt: now })
             .where(eq(ocCadets.courseId, id));
-        return row;
+        return { before, after };
     });
 }
 
-export async function hardDeleteCourse(id: string) {
+export async function hardDeleteCourse(id: string): Promise<{ before: CourseRow } | null> {
     return db.transaction(async (tx) => {
+        const [before] = await tx.select().from(courses).where(eq(courses.id, id)).limit(1);
+        if (!before) return null;
         const now = new Date();
         await tx
             .update(ocCadets)
             .set({ status: 'INACTIVE', updatedAt: now })
             .where(eq(ocCadets.courseId, id));
         await tx.delete(courseOfferings).where(eq(courseOfferings.courseId, id));
-        const [row] = await tx.delete(courses).where(eq(courses.id, id)).returning({ id: courses.id });
-        return row ?? null;
+        await tx.delete(courses).where(eq(courses.id, id));
+        return { before };
     });
 }
 

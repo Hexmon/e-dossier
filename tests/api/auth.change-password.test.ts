@@ -82,7 +82,7 @@ describe('POST /api/v1/auth/change-password', () => {
     (authz.hasAdminRole as any).mockReturnValueOnce(false);
 
     const body = {
-      userId: 'user-2',
+      userId: '5f01fd9d-11e0-43e1-bf49-bc64ebd3e49b',
       newPassword: 'NewPassword1',
       currentPassword: 'CurrentPassword1',
     };
@@ -99,14 +99,16 @@ describe('POST /api/v1/auth/change-password', () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (authz.hasAdminRole as any).mockReturnValueOnce(true);
 
-    const body = { userId: 'user-2', newPassword: 'NewPassword1' };
+    const body = {
+      userId: '5f01fd9d-11e0-43e1-bf49-bc64ebd3e49b',
+      newPassword: 'NewPassword1',
+    };
     const req = makeJsonRequest({ method: 'POST', path, body });
 
     const res = await postChangePassword(req as any);
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.ok).toBe(true);
-    expect(json.userId).toBe('user-2');
+    expect(json.userId).toBe('5f01fd9d-11e0-43e1-bf49-bc64ebd3e49b');
   });
 });
-

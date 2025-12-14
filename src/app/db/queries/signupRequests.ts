@@ -10,6 +10,7 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { positions } from '@/app/db/schema/auth/positions';
 import { auditLog } from './util.audit.ts';
+import { AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { IdSchema } from '@/app/lib/apiClient';
 
 function nullIfBlank(v?: string | null) {
@@ -168,7 +169,8 @@ async function hasActivePrimaryHolderAt(
 export async function approveSignupRequest(
   requestId: string,
   dto: ApproveDto,
-  adminId?: string | null
+  adminId?: string | null,
+  auditOptions?: { requestId?: string }
 ) {
   const { id } = IdSchema.parse({ id: requestId });
   const now = dto.startsAt ? new Date(dto.startsAt) : new Date();
@@ -253,8 +255,8 @@ export async function approveSignupRequest(
 
     await auditLog(tx, {
       actorUserId: adminId ?? null,
-      eventType: 'signup.approve',
-      resourceType: 'signup_request',
+      eventType: AuditEventType.SIGNUP_REQUEST_APPROVED,
+      resourceType: AuditResourceType.SIGNUP_REQUEST,
       resourceId: reqRow.id,
       description: 'Signup request approved and appointment assigned',
       metadata: {
@@ -263,6 +265,7 @@ export async function approveSignupRequest(
         scopeId: dto.scopeId ?? null,
         apptId: appt.id,
       },
+      requestId: auditOptions?.requestId,
     });
 
     return { appointment: appt };
@@ -274,7 +277,7 @@ export async function approveSignupRequest(
 // -----------------------------------------------------------------------------
 // Reject request (sets status, timestamps, reason, and audit)
 // -----------------------------------------------------------------------------
-export async function rejectSignupRequest(opts: { requestId: string; adminUserId: string; reason: string }) {
+export async function rejectSignupRequest(opts: { requestId: string; adminUserId: string; reason: string; auditRequestId?: string }) {
   const { id } = IdSchema.parse({ id: opts.requestId });
 
   return await db.transaction(async (tx) => {
@@ -299,11 +302,12 @@ export async function rejectSignupRequest(opts: { requestId: string; adminUserId
 
     await auditLog(tx, {
       actorUserId: opts.adminUserId,
-      eventType: 'signup.reject',
-      resourceType: 'signup_request',
+      eventType: AuditEventType.SIGNUP_REQUEST_REJECTED,
+      resourceType: AuditResourceType.SIGNUP_REQUEST,
       resourceId: id,
       description: 'Signup request rejected',
       metadata: { reason: opts.reason },
+      requestId: opts.auditRequestId,
     });
   });
 }
@@ -311,7 +315,7 @@ export async function rejectSignupRequest(opts: { requestId: string; adminUserId
 // -----------------------------------------------------------------------------
 // Delete non-pending request (cleanup) + audit
 // -----------------------------------------------------------------------------
-export async function deleteSignupRequest(opts: { requestId: string; adminUserId: string }) {
+export async function deleteSignupRequest(opts: { requestId: string; adminUserId: string; auditRequestId?: string }) {
   const { id } = IdSchema.parse({ id: opts.requestId });
 
   return await db.transaction(async (tx) => {
@@ -328,10 +332,11 @@ export async function deleteSignupRequest(opts: { requestId: string; adminUserId
 
     await auditLog(tx, {
       actorUserId: opts.adminUserId,
-      eventType: 'signup.delete_request',
-      resourceType: 'signup_request',
+      eventType: AuditEventType.SIGNUP_REQUEST_DELETED,
+      resourceType: AuditResourceType.SIGNUP_REQUEST,
       resourceId: id,
       description: 'Signup request deleted',
+      requestId: opts.auditRequestId,
     });
   });
 }

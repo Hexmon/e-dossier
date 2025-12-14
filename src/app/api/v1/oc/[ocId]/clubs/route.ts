@@ -3,8 +3,10 @@ import { json, handleApiError } from '@/app/lib/http';
 import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam, listQuerySchema, clubCreateSchema } from '@/app/lib/oc-validators';
 import { listClubs, createClub } from '@/app/db/queries/oc';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -21,15 +23,32 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
         const dto = clubCreateSchema.parse(await req.json());
         const row = await createClub(ocId, dto);
+
+        await createAuditLog({
+            actorUserId: authCtx.userId,
+            eventType: AuditEventType.OC_RECORD_CREATED,
+            resourceType: AuditResourceType.OC,
+            resourceId: ocId,
+            description: `Created club record ${row.id} for OC ${ocId}`,
+            metadata: {
+                ocId,
+                module: 'clubs',
+                recordId: row.id,
+            },
+            request: req,
+        });
         return json.created({ message: 'Club created successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

@@ -4,6 +4,7 @@ import { makeJsonRequest } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import { db } from '@/app/db/client';
+import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAdmin: vi.fn(),
@@ -17,10 +18,33 @@ vi.mock('@/app/db/client', () => ({
   },
 }));
 
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    PLATOON_CREATED: 'platoon.created',
+    PLATOON_UPDATED: 'platoon.updated',
+    PLATOON_DELETED: 'platoon.deleted',
+  },
+  AuditResourceType: {
+    PLATOON: 'platoon',
+  },
+}));
+
 const path = '/api/v1/platoons';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (auditLog.createAuditLog as any).mockClear?.();
 });
 
 describe('GET /api/v1/platoons', () => {
@@ -152,4 +176,3 @@ describe('DELETE /api/v1/platoons', () => {
     expect(body.count).toBe(2);
   });
 });
-

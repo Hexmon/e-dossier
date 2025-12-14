@@ -10,6 +10,8 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import argon2 from 'argon2';
 import { IdSchema } from '@/app/lib/apiClient';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
@@ -72,7 +74,7 @@ async function selectEnrichedUserById(id: string) {
   return rows[0] ?? null;
 }
 
-export async function GET(
+async function GETHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -94,12 +96,12 @@ export async function GET(
 
 // PATCH /api/v1/admin/users/:id (ADMIN)
 // body: userUpdateSchema (password optional; restore toggles soft-delete)
-export async function PATCH(
+async function PATCHHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin(req);
+    const adminCtx = await requireAdmin(req);
 
     const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
@@ -111,6 +113,24 @@ export async function PATCH(
       return json.badRequest('Validation failed.', { issues: parsed.error.flatten() });
     }
     const d = parsed.data;
+
+    const [previous] = await db
+      .select({
+        username: users.username,
+        name: users.name,
+        email: users.email,
+        phone: users.phone,
+        rank: users.rank,
+        appointId: users.appointId,
+        isActive: users.isActive,
+        deletedAt: users.deletedAt,
+        deactivatedAt: users.deactivatedAt,
+      })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    if (!previous) throw new ApiError(404, 'User not found', 'not_found');
 
     const updates: Partial<typeof users.$inferInsert> = {};
     if (d.username !== undefined) updates.username = d.username.trim();
@@ -137,7 +157,9 @@ export async function PATCH(
     if (!updated) throw new ApiError(404, 'User not found', 'not_found');
 
     // optional password reset
-    if (d.password) {
+    let passwordProvided = false;
+    if (typeof d.password === 'string' && d.password.length > 0) {
+      passwordProvided = true;
       const hash = await argon2.hash(d.password);
       await db
         .insert(credentialsLocal)
@@ -158,6 +180,29 @@ export async function PATCH(
 
     // Return enriched row (with active appointment info)
     const enriched = await selectEnrichedUserById(id);
+
+    const beforeSnapshot: Record<string, unknown> = {};
+    const afterSnapshot: Record<string, unknown> = {};
+    for (const key of Object.keys(updates)) {
+      (beforeSnapshot as any)[key] = (previous as any)[key];
+      (afterSnapshot as any)[key] = (updates as any)[key];
+    }
+    await createAuditLog({
+      actorUserId: adminCtx.userId,
+      eventType: AuditEventType.USER_UPDATED,
+      resourceType: AuditResourceType.USER,
+      resourceId: id,
+      description: `Updated user ${id}`,
+      metadata: {
+        userId: id,
+        changedFields: Object.keys(updates),
+        passwordReset: passwordProvided,
+      },
+      before: Object.keys(beforeSnapshot).length ? beforeSnapshot : undefined,
+      after: Object.keys(afterSnapshot).length ? afterSnapshot : undefined,
+      request: req,
+    });
+
     return json.ok({ message: 'User updated successfully.', user: enriched });
   } catch (err) {
     const e = err as PgErr;
@@ -173,12 +218,12 @@ export async function PATCH(
 
 // DELETE /api/v1/admin/users/:id (ADMIN)
 // Soft-delete by default; hard delete with ?hard=true
-export async function DELETE(
+async function DELETEHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin(req);
+    const adminCtx = await requireAdmin(req);
 
     // Await params once (Next.js App Router dynamic API requirement)
     const { id: raw } = await params;
@@ -210,6 +255,20 @@ export async function DELETE(
       // Hard delete
       const deleted = await db.delete(users).where(eq(users.id, id)).returning({ id: users.id });
       if (!deleted.length) throw new ApiError(404, 'User not found', 'not_found');
+
+      await createAuditLog({
+        actorUserId: adminCtx.userId,
+        eventType: AuditEventType.USER_DELETED,
+        resourceType: AuditResourceType.USER,
+        resourceId: deleted[0].id,
+        description: `Hard deleted user ${id}`,
+        metadata: {
+          userId: deleted[0].id,
+          hardDeleted: true,
+        },
+        request: req,
+      });
+
       return json.ok({ message: 'User hard-deleted.', id: deleted[0].id });
     }
 
@@ -226,8 +285,26 @@ export async function DELETE(
       .returning({ id: users.id });
 
     if (!u) throw new ApiError(404, 'User not found', 'not_found');
+
+    await createAuditLog({
+      actorUserId: adminCtx.userId,
+      eventType: AuditEventType.USER_DELETED,
+      resourceType: AuditResourceType.USER,
+      resourceId: u.id,
+      description: `Soft deleted user ${id}`,
+      metadata: {
+        userId: u.id,
+        hardDeleted: false,
+      },
+      request: req,
+    });
     return json.ok({ message: 'User soft-deleted.', id: u.id });
   } catch (err) {
     return handleApiError(err);
   }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+
+export const DELETE = withRouteLogging('DELETE', DELETEHandler);

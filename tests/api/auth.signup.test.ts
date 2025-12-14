@@ -6,6 +6,28 @@ import * as authQueries from '@/app/db/queries/auth';
 import * as signupRequests from '@/app/db/queries/signupRequests';
 import * as conflicts from '@/utils/preflightConflicts';
 
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'POST',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    API_REQUEST: 'api.request',
+    SIGNUP_REQUEST_CREATED: 'signup.request.created',
+  },
+  AuditResourceType: {
+    API: 'api',
+    SIGNUP_REQUEST: 'signup_request',
+  },
+}));
+
 vi.mock('@/lib/ratelimit', () => {
   const now = Date.now();
   return {
@@ -106,4 +128,3 @@ describe('POST /api/v1/auth/signup', () => {
     );
   });
 });
-

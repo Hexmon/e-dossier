@@ -1,62 +1,89 @@
-// src/lib/audit-log.ts
-// SECURITY FIX: Comprehensive audit logging for security-sensitive operations
+import { randomUUID } from 'crypto';
 import { db } from '@/app/db/client';
 import { auditLogs } from '@/app/db/schema/auth/audit';
 import { NextRequest } from 'next/server';
+import type { InferInsertModel } from 'drizzle-orm';
 
-/**
- * Audit Event Types
- */
+export type AuditOutcome = 'SUCCESS' | 'FAILURE' | 'DENIED' | 'ERROR';
+
+const requestContexts = new WeakMap<Request, RequestContext>();
+
+const ACCESS_ONLY_EVENTS = new Set(['ACCESS.REQUEST']);
+const SENSITIVE_KEYS = ['password', 'token', 'secret', 'authorization', 'cookie', 'otp', 'hash'];
+const PARTIAL_MASK_KEYS = ['email', 'phone', 'mobile'];
+
 export const AuditEventType = {
-  // Authentication Events
-  LOGIN_SUCCESS: 'auth.login.success',
-  LOGIN_FAILURE: 'auth.login.failure',
-  LOGOUT: 'auth.logout',
-  SIGNUP_REQUEST: 'auth.signup.request',
-  ACCOUNT_LOCKED: 'auth.account.locked',
-  ACCOUNT_UNLOCKED: 'auth.account.unlocked',
-  
-  // Password Events
-  PASSWORD_CHANGED: 'auth.password.changed',
-  PASSWORD_RESET_REQUESTED: 'auth.password.reset_requested',
-  PASSWORD_RESET_COMPLETED: 'auth.password.reset_completed',
-  
-  // User Management Events
-  USER_CREATED: 'user.created',
-  USER_UPDATED: 'user.updated',
-  USER_DELETED: 'user.deleted',
-  USER_ACTIVATED: 'user.activated',
-  USER_DEACTIVATED: 'user.deactivated',
-  
-  // Permission/Role Events
-  ROLE_ASSIGNED: 'permission.role.assigned',
-  ROLE_REVOKED: 'permission.role.revoked',
-  PERMISSION_GRANTED: 'permission.granted',
-  PERMISSION_REVOKED: 'permission.revoked',
-  
-  // Appointment Events
-  APPOINTMENT_CREATED: 'appointment.created',
-  APPOINTMENT_UPDATED: 'appointment.updated',
-  APPOINTMENT_DELETED: 'appointment.deleted',
-  APPOINTMENT_TRANSFERRED: 'appointment.transferred',
-  
-  // Delegation Events
-  DELEGATION_CREATED: 'delegation.created',
-  DELEGATION_REVOKED: 'delegation.revoked',
-  
-  // Data Access Events
-  SENSITIVE_DATA_ACCESSED: 'data.sensitive.accessed',
-  SENSITIVE_DATA_EXPORTED: 'data.sensitive.exported',
-  
-  // Security Events
-  UNAUTHORIZED_ACCESS_ATTEMPT: 'security.unauthorized_access',
-  CSRF_VIOLATION: 'security.csrf_violation',
-  RATE_LIMIT_EXCEEDED: 'security.rate_limit_exceeded',
+  LOGIN_SUCCESS: 'AUTH.LOGIN_SUCCESS',
+  LOGIN_FAILURE: 'AUTH.LOGIN_FAILURE',
+  LOGOUT: 'AUTH.LOGOUT',
+  SIGNUP_REQUEST: 'AUTH.SIGNUP_REQUEST',
+  ACCOUNT_LOCKED: 'AUTH.ACCOUNT_LOCKED',
+  ACCOUNT_UNLOCKED: 'AUTH.ACCOUNT_UNLOCKED',
+  PASSWORD_CHANGED: 'AUTH.PASSWORD_CHANGE',
+  PASSWORD_RESET_REQUESTED: 'AUTH.PASSWORD_RESET_REQUEST',
+  PASSWORD_RESET_COMPLETED: 'AUTH.PASSWORD_RESET_COMPLETE',
+  USER_CREATED: 'USER.CREATE',
+  USER_UPDATED: 'USER.UPDATE',
+  USER_DELETED: 'USER.DELETE',
+  USER_ACTIVATED: 'USER.STATUS_CHANGE',
+  USER_DEACTIVATED: 'USER.STATUS_CHANGE',
+  OC_CREATED: 'OC.CREATE',
+  OC_UPDATED: 'OC.UPDATE',
+  OC_DELETED: 'OC.DELETE',
+  OC_BULK_IMPORTED: 'SYSTEM.BULK_IMPORT',
+  SIGNUP_REQUEST_CREATED: 'SIGNUP.REQUEST_CREATE',
+  SIGNUP_REQUEST_APPROVED: 'SIGNUP.REQUEST_APPROVE',
+  SIGNUP_REQUEST_REJECTED: 'SIGNUP.REQUEST_REJECT',
+  SIGNUP_REQUEST_DELETED: 'SIGNUP.REQUEST_DELETE',
+  ROLE_ASSIGNED: 'USER.ROLE_ASSIGN',
+  ROLE_REVOKED: 'USER.ROLE_REVOKE',
+  PERMISSION_GRANTED: 'USER.ROLE_ASSIGN',
+  PERMISSION_REVOKED: 'USER.ROLE_REVOKE',
+  APPOINTMENT_CREATED: 'APPOINTMENT.CREATE',
+  APPOINTMENT_UPDATED: 'APPOINTMENT.UPDATE',
+  APPOINTMENT_DELETED: 'APPOINTMENT.DELETE',
+  APPOINTMENT_TRANSFERRED: 'APPOINTMENT.TRANSFER',
+  DELEGATION_CREATED: 'DELEGATION.CREATE',
+  DELEGATION_REVOKED: 'DELEGATION.DELETE',
+  SENSITIVE_DATA_ACCESSED: 'SECURITY.DATA_ACCESS',
+  SENSITIVE_DATA_EXPORTED: 'SECURITY.DATA_EXPORT',
+  UNAUTHORIZED_ACCESS_ATTEMPT: 'SECURITY.UNAUTHORIZED_ACCESS',
+  CSRF_VIOLATION: 'SECURITY.CSRF_BLOCK',
+  RATE_LIMIT_EXCEEDED: 'SECURITY.RATE_LIMIT',
+  API_REQUEST: 'ACCESS.REQUEST',
+  SUBJECT_CREATED: 'SUBJECT.CREATE',
+  SUBJECT_UPDATED: 'SUBJECT.UPDATE',
+  SUBJECT_DELETED: 'SUBJECT.DELETE',
+  COURSE_CREATED: 'COURSE.CREATE',
+  COURSE_UPDATED: 'COURSE.UPDATE',
+  COURSE_DELETED: 'COURSE.DELETE',
+  COURSE_OFFERING_CREATED: 'COURSE.OFFERING_CREATE',
+  COURSE_OFFERING_UPDATED: 'COURSE.OFFERING_UPDATE',
+  COURSE_OFFERING_DELETED: 'COURSE.OFFERING_DELETE',
+  INSTRUCTOR_CREATED: 'INSTRUCTOR.CREATE',
+  INSTRUCTOR_UPDATED: 'INSTRUCTOR.UPDATE',
+  INSTRUCTOR_DELETED: 'INSTRUCTOR.DELETE',
+  POSITION_CREATED: 'POSITION.CREATE',
+  POSITION_UPDATED: 'POSITION.UPDATE',
+  POSITION_DELETED: 'POSITION.DELETE',
+  PLATOON_CREATED: 'PLATOON.CREATE',
+  PLATOON_UPDATED: 'PLATOON.UPDATE',
+  PLATOON_DELETED: 'PLATOON.DELETE',
+  TRAINING_CAMP_CREATED: 'TRAINING_CAMP.CREATE',
+  TRAINING_CAMP_UPDATED: 'TRAINING_CAMP.UPDATE',
+  TRAINING_CAMP_DELETED: 'TRAINING_CAMP.DELETE',
+  TRAINING_CAMP_ACTIVITY_CREATED: 'TRAINING_CAMP_ACTIVITY.CREATE',
+  TRAINING_CAMP_ACTIVITY_UPDATED: 'TRAINING_CAMP_ACTIVITY.UPDATE',
+  TRAINING_CAMP_ACTIVITY_DELETED: 'TRAINING_CAMP_ACTIVITY.DELETE',
+  OC_ACADEMICS_SUMMARY_UPDATED: 'OC.ACADEMICS.SUMMARY_UPDATE',
+  OC_ACADEMICS_SUBJECT_UPDATED: 'OC.ACADEMICS.SUBJECT_UPDATE',
+  OC_ACADEMICS_SUBJECT_DELETED: 'OC.ACADEMICS.SUBJECT_DELETE',
+  OC_ACADEMICS_SEMESTER_DELETED: 'OC.ACADEMICS.SEMESTER_DELETE',
+  OC_RECORD_CREATED: 'OC.RECORD.CREATE',
+  OC_RECORD_UPDATED: 'OC.RECORD.UPDATE',
+  OC_RECORD_DELETED: 'OC.RECORD.DELETE',
 } as const;
 
-/**
- * Resource Types
- */
 export const AuditResourceType = {
   USER: 'user',
   APPOINTMENT: 'appointment',
@@ -66,77 +93,260 @@ export const AuditResourceType = {
   OC: 'oc',
   COURSE: 'course',
   OFFERING: 'course_offering',
-  SUBJECT: 'subject',
   INSTRUCTOR: 'instructor',
   PLATOON: 'platoon',
   POSITION: 'position',
   SIGNUP_REQUEST: 'signup_request',
+  TRAINING_CAMP: 'training_camp',
+  TRAINING_CAMP_ACTIVITY: 'training_camp_activity',
+  SUBJECT: 'subject',
+  OC_ACADEMICS: 'oc_academics',
+  API: 'api',
 } as const;
 
-/**
- * Extract client IP from request
- */
-function getClientIp(req: NextRequest | Request): string {
-  if ('headers' in req && typeof req.headers.get === 'function') {
-    const forwardedFor = req.headers.get('x-forwarded-for');
-    if (forwardedFor) {
-      return forwardedFor.split(',')[0].trim();
-    }
-    const realIp = req.headers.get('x-real-ip');
-    if (realIp) {
-      return realIp.trim();
-    }
-  }
-  return '127.0.0.1';
-}
+export type AuditDiff = {
+  added?: Record<string, unknown>;
+  removed?: Record<string, unknown>;
+  changed?: Record<string, { before: unknown; after: unknown }>;
+};
 
-/**
- * Extract user agent from request
- */
-function getUserAgent(req: NextRequest | Request): string | null {
-  if ('headers' in req && typeof req.headers.get === 'function') {
-    return req.headers.get('user-agent');
-  }
-  return null;
-}
-
-/**
- * Core audit logging function
- */
-export async function createAuditLog(params: {
+export type CreateAuditLogParams = {
   actorUserId?: string | null;
+  actorRoles?: string[];
+  tenantId?: string | null;
   eventType: string;
   resourceType: string;
   resourceId?: string | null;
   description?: string | null;
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | null;
   ipAddress?: string | null;
   userAgent?: string | null;
   request?: NextRequest | Request;
-}) {
-  try {
-    const ipAddress = params.ipAddress ?? (params.request ? getClientIp(params.request) : null);
-    const userAgent = params.userAgent ?? (params.request ? getUserAgent(params.request) : null);
+  method?: string | null;
+  path?: string | null;
+  statusCode?: number | null;
+  outcome?: AuditOutcome;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  diff?: AuditDiff | null;
+  changedFields?: string[] | null;
+  requestId?: string;
+  required?: boolean;
+  finalizeAccessLog?: boolean;
+  client?: Pick<typeof db, 'insert'>;
+};
 
-    await db.insert(auditLogs).values({
-      actorUserId: params.actorUserId ?? null,
+export function ensureRequestContext(req?: NextRequest | Request | null) {
+  if (!req) return null;
+  const existing = requestContexts.get(req);
+  if (existing) return existing;
+  const details = extractRequestDetails(req);
+  const ctx: RequestContext = {
+    requestId: details.requestId,
+    method: details.method,
+    pathname: details.pathname,
+    url: details.url,
+    startTime: Date.now(),
+  };
+  const inferredTenant = inferTenantFromPath(details.pathname);
+  if (inferredTenant) {
+    ctx.tenantId = inferredTenant;
+  }
+  requestContexts.set(req, ctx);
+  return ctx;
+}
+
+export function noteRequestActor(req: NextRequest | Request, actorUserId: string | null, roles?: string[]) {
+  const ctx = ensureRequestContext(req);
+  if (!ctx) return;
+  ctx.actorUserId = actorUserId ?? ctx.actorUserId ?? null;
+  if (roles?.length) ctx.actorRoles = roles;
+}
+
+export function setRequestTenant(req: NextRequest | Request, tenantId: string | null) {
+  const ctx = ensureRequestContext(req);
+  if (!ctx) return;
+  ctx.tenantId = tenantId ?? ctx.tenantId ?? null;
+}
+
+export function redactSensitiveData<T>(value: T): T {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactSensitiveData(entry)) as T;
+  }
+  if (typeof value === 'object') {
+    const output: Record<string, unknown> = {};
+    Object.entries(value as Record<string, unknown>).forEach(([key, v]) => {
+      if (SENSITIVE_KEYS.some((k) => key.toLowerCase().includes(k))) {
+        output[key] = '***REDACTED***';
+      } else if (PARTIAL_MASK_KEYS.some((k) => key.toLowerCase().includes(k)) && typeof v === 'string') {
+        output[key] = maskValue(key, v);
+      } else {
+        output[key] = redactSensitiveData(v);
+      }
+    });
+    return output as T;
+  }
+  return value;
+}
+
+export function computeDiff(
+  before?: Record<string, unknown> | null,
+  after?: Record<string, unknown> | null
+): { diff: AuditDiff | null; changedFields: string[] } {
+  if (!before && !after) return { diff: null, changedFields: [] };
+  const diff: AuditDiff = {};
+  const changedFields: string[] = [];
+  const keys = new Set<string>([
+    ...(before ? Object.keys(before) : []),
+    ...(after ? Object.keys(after) : []),
+  ]);
+
+  keys.forEach((key) => {
+    const prevVal = before ? before[key] : undefined;
+    const nextVal = after ? after[key] : undefined;
+    if (prevVal === undefined && nextVal !== undefined) {
+      diff.added = { ...(diff.added ?? {}), [key]: nextVal };
+      changedFields.push(key);
+      return;
+    }
+    if (prevVal !== undefined && nextVal === undefined) {
+      diff.removed = { ...(diff.removed ?? {}), [key]: prevVal };
+      changedFields.push(key);
+      return;
+    }
+    if (!deepEqual(prevVal, nextVal)) {
+      diff.changed = {
+        ...(diff.changed ?? {}),
+        [key]: { before: prevVal, after: nextVal },
+      };
+      changedFields.push(key);
+    }
+  });
+
+  const hasDiff = Boolean(diff.added || diff.removed || diff.changed);
+  return { diff: hasDiff ? diff : null, changedFields };
+}
+
+export async function createAuditLog(params: CreateAuditLogParams) {
+  const ctx = params.request ? ensureRequestContext(params.request) : null;
+  if (params.request && params.actorUserId !== undefined) {
+    noteRequestActor(params.request, params.actorUserId ?? null, params.actorRoles);
+  }
+
+  const details = params.request ? extractRequestDetails(params.request) : null;
+  const requestId = params.requestId ?? ctx?.requestId ?? details?.requestId ?? randomUUID();
+  if (ctx && !ctx.requestId) ctx.requestId = requestId;
+
+  const method = params.method ?? ctx?.method ?? details?.method ?? null;
+  const path = params.path ?? ctx?.pathname ?? details?.pathname ?? null;
+  const statusCode = params.statusCode ?? null;
+  const outcome: AuditOutcome = params.outcome ?? 'SUCCESS';
+  const tenantId = params.tenantId ?? ctx?.tenantId ?? null;
+
+  if (ACCESS_ONLY_EVENTS.has(params.eventType)) {
+    finalizeAccessLog(ctx ?? createSyntheticContext({ method, path, requestId }), {
+      statusCode: statusCode ?? 200,
+      outcome,
       eventType: params.eventType,
       resourceType: params.resourceType,
-      resourceId: params.resourceId ?? null,
-      description: params.description ?? null,
-      metadata: params.metadata ?? null,
-      ipAddr: ipAddress,
-      userAgent: userAgent,
+      actorUserId: params.actorUserId ?? ctx?.actorUserId ?? null,
+      tenantId,
     });
+    return;
+  }
+
+  const ipAddress = params.ipAddress ?? (params.request ? getClientIp(params.request) : null);
+  const userAgent = params.userAgent ?? (params.request ? getUserAgent(params.request) : null);
+
+  let changedFields = params.changedFields ?? undefined;
+  let diff = params.diff ?? null;
+  if (!params.diff && (params.before || params.after)) {
+    const result = computeDiff(
+      params.before ? redactSensitiveData(params.before) : null,
+      params.after ? redactSensitiveData(params.after) : null
+    );
+    diff = result.diff;
+    changedFields = result.changedFields;
+  }
+
+  const metadata = params.metadata ? redactSensitiveData(params.metadata) : undefined;
+
+  const values: InferInsertModel<typeof auditLogs> = {
+    actorUserId: params.actorUserId ?? null,
+    tenantId,
+    eventType: params.eventType,
+    resourceType: params.resourceType,
+    resourceId: params.resourceId ?? null,
+    method,
+    path,
+    statusCode,
+    outcome,
+    requestId,
+    description: params.description ?? null,
+    metadata: metadata ?? null,
+    changedFields: changedFields && changedFields.length ? changedFields : null,
+    diff: diff ?? null,
+    ipAddr: ipAddress,
+    userAgent,
+  };
+
+  try {
+    await (params.client ?? db).insert(auditLogs).values(values);
   } catch (error) {
-    // Log error but don't throw - audit logging should not break the application
-    console.error('Failed to create audit log:', error);
+    console.error('Failed to create audit log', {
+      eventType: params.eventType,
+      resourceType: params.resourceType,
+      requestId,
+      error,
+    });
+    if (params.required) {
+      throw error;
+    }
+    return;
+  }
+
+  if (params.finalizeAccessLog) {
+    finalizeAccessLog(ctx ?? createSyntheticContext({ method, path, requestId }), {
+      statusCode: statusCode ?? 200,
+      outcome,
+      actorUserId: params.actorUserId ?? ctx?.actorUserId ?? null,
+      tenantId,
+      eventType: params.eventType,
+      resourceType: params.resourceType,
+    });
   }
 }
 
-/**
- * Helper: Log successful login
- */
+export function logApiRequest(params: {
+  request: NextRequest | Request;
+  userId?: string | null;
+  roles?: string[];
+  statusCode?: number;
+  outcome?: AuditOutcome;
+  metadata?: Record<string, unknown>;
+  finalize?: boolean;
+}) {
+  const ctx = ensureRequestContext(params.request);
+  if (params.userId !== undefined) {
+    noteRequestActor(params.request, params.userId, params.roles);
+  }
+  if (ctx && params.metadata) {
+    ctx.metadata = { ...(ctx.metadata ?? {}), ...redactSensitiveData(params.metadata) };
+  }
+  if (params.finalize) {
+    finalizeAccessLog(ctx, {
+      statusCode: params.statusCode ?? 200,
+      outcome: params.outcome ?? 'SUCCESS',
+      eventType: AuditEventType.API_REQUEST,
+      resourceType: AuditResourceType.API,
+      metadata: params.metadata,
+      actorUserId: params.userId ?? ctx?.actorUserId ?? null,
+      tenantId: ctx?.tenantId ?? null,
+    });
+  }
+}
+
 export async function logLoginSuccess(params: {
   userId: string;
   username: string;
@@ -145,6 +355,7 @@ export async function logLoginSuccess(params: {
 }) {
   await createAuditLog({
     actorUserId: params.userId,
+    actorRoles: [],
     eventType: AuditEventType.LOGIN_SUCCESS,
     resourceType: AuditResourceType.USER,
     resourceId: params.userId,
@@ -153,13 +364,12 @@ export async function logLoginSuccess(params: {
       username: params.username,
       appointmentId: params.appointmentId,
     },
+    outcome: 'SUCCESS',
+    statusCode: 200,
     request: params.request,
   });
 }
 
-/**
- * Helper: Log failed login
- */
 export async function logLoginFailure(params: {
   userId?: string | null;
   username: string;
@@ -176,13 +386,13 @@ export async function logLoginFailure(params: {
       username: params.username,
       reason: params.reason,
     },
+    outcome: 'FAILURE',
+    statusCode: 401,
     request: params.request,
+    finalizeAccessLog: true,
   });
 }
 
-/**
- * Helper: Log logout
- */
 export async function logLogout(params: {
   userId: string;
   username: string;
@@ -194,16 +404,13 @@ export async function logLogout(params: {
     resourceType: AuditResourceType.USER,
     resourceId: params.userId,
     description: `User ${params.username} logged out`,
-    metadata: {
-      username: params.username,
-    },
+    metadata: { username: params.username },
+    outcome: 'SUCCESS',
+    statusCode: 204,
     request: params.request,
   });
 }
 
-/**
- * Helper: Log account locked
- */
 export async function logAccountLocked(params: {
   userId: string;
   username: string;
@@ -212,7 +419,7 @@ export async function logAccountLocked(params: {
   request: NextRequest | Request;
 }) {
   await createAuditLog({
-    actorUserId: null, // System action
+    actorUserId: null,
     eventType: AuditEventType.ACCOUNT_LOCKED,
     resourceType: AuditResourceType.USER,
     resourceId: params.userId,
@@ -222,13 +429,12 @@ export async function logAccountLocked(params: {
       failedAttempts: params.failedAttempts,
       lockedUntil: params.lockedUntil.toISOString(),
     },
+    outcome: 'DENIED',
+    statusCode: 403,
     request: params.request,
   });
 }
 
-/**
- * Helper: Log account unlocked
- */
 export async function logAccountUnlocked(params: {
   userId: string;
   username: string;
@@ -245,13 +451,11 @@ export async function logAccountUnlocked(params: {
       username: params.username,
       unlockedBy: params.unlockedBy,
     },
+    outcome: 'SUCCESS',
     request: params.request,
   });
 }
 
-/**
- * Helper: Log password change
- */
 export async function logPasswordChanged(params: {
   userId: string;
   username: string;
@@ -269,13 +473,13 @@ export async function logPasswordChanged(params: {
       changedBy: params.changedBy,
       selfChange: params.userId === params.changedBy,
     },
+    outcome: 'SUCCESS',
+    statusCode: 200,
     request: params.request,
+    required: params.userId !== params.changedBy,
   });
 }
 
-/**
- * Helper: Log user created
- */
 export async function logUserCreated(params: {
   userId: string;
   username: string;
@@ -292,18 +496,18 @@ export async function logUserCreated(params: {
       username: params.username,
       createdBy: params.createdBy,
     },
+    outcome: 'SUCCESS',
+    statusCode: 201,
     request: params.request,
+    required: true,
   });
 }
 
-/**
- * Helper: Log user updated
- */
 export async function logUserUpdated(params: {
   userId: string;
   username: string;
   updatedBy: string;
-  changes: Record<string, any>;
+  changes: Record<string, unknown>;
   request?: NextRequest | Request;
 }) {
   await createAuditLog({
@@ -315,38 +519,41 @@ export async function logUserUpdated(params: {
     metadata: {
       username: params.username,
       updatedBy: params.updatedBy,
+      changedFields: Object.keys(params.changes),
       changes: params.changes,
     },
+    changedFields: Object.keys(params.changes),
+    outcome: 'SUCCESS',
+    statusCode: 200,
     request: params.request,
   });
 }
 
-/**
- * Helper: Log user deleted
- */
 export async function logUserDeleted(params: {
   userId: string;
   username: string;
   deletedBy: string;
   request?: NextRequest | Request;
+  hard?: boolean;
 }) {
   await createAuditLog({
     actorUserId: params.deletedBy,
     eventType: AuditEventType.USER_DELETED,
     resourceType: AuditResourceType.USER,
     resourceId: params.userId,
-    description: `User ${params.username} deleted`,
+    description: `${params.hard ? 'Hard' : 'Soft'} deleted user ${params.username}`,
     metadata: {
       username: params.username,
       deletedBy: params.deletedBy,
+      hardDeleted: Boolean(params.hard),
     },
+    outcome: 'SUCCESS',
+    statusCode: 200,
     request: params.request,
+    required: true,
   });
 }
 
-/**
- * Helper: Log appointment created
- */
 export async function logAppointmentCreated(params: {
   appointmentId: string;
   userId: string;
@@ -365,16 +572,16 @@ export async function logAppointmentCreated(params: {
       positionKey: params.positionKey,
       createdBy: params.createdBy,
     },
+    outcome: 'SUCCESS',
+    statusCode: 201,
     request: params.request,
+    required: true,
   });
 }
 
-/**
- * Helper: Log appointment updated
- */
 export async function logAppointmentUpdated(params: {
   appointmentId: string;
-  changes: Record<string, any>;
+  changes: Record<string, unknown>;
   updatedBy: string;
   request?: NextRequest | Request;
 }) {
@@ -385,16 +592,16 @@ export async function logAppointmentUpdated(params: {
     resourceId: params.appointmentId,
     description: `Appointment updated`,
     metadata: {
-      changes: params.changes,
       updatedBy: params.updatedBy,
+      changes: params.changes,
     },
+    changedFields: Object.keys(params.changes),
+    outcome: 'SUCCESS',
+    statusCode: 200,
     request: params.request,
   });
 }
 
-/**
- * Helper: Log unauthorized access attempt
- */
 export async function logUnauthorizedAccess(params: {
   userId?: string | null;
   resourceType: string;
@@ -408,16 +615,14 @@ export async function logUnauthorizedAccess(params: {
     resourceType: params.resourceType,
     resourceId: params.resourceId ?? null,
     description: `Unauthorized access attempt: ${params.reason}`,
-    metadata: {
-      reason: params.reason,
-    },
+    metadata: { reason: params.reason },
+    outcome: 'DENIED',
+    statusCode: 403,
     request: params.request,
+    finalizeAccessLog: true,
   });
 }
 
-/**
- * Helper: Log CSRF violation
- */
 export async function logCsrfViolation(params: {
   userId?: string | null;
   request: NextRequest | Request;
@@ -427,13 +632,13 @@ export async function logCsrfViolation(params: {
     eventType: AuditEventType.CSRF_VIOLATION,
     resourceType: 'security',
     description: 'CSRF token validation failed',
+    outcome: 'DENIED',
+    statusCode: 403,
     request: params.request,
+    finalizeAccessLog: true,
   });
 }
 
-/**
- * Helper: Log rate limit exceeded
- */
 export async function logRateLimitExceeded(params: {
   userId?: string | null;
   limitType: string;
@@ -444,10 +649,155 @@ export async function logRateLimitExceeded(params: {
     eventType: AuditEventType.RATE_LIMIT_EXCEEDED,
     resourceType: 'security',
     description: `Rate limit exceeded: ${params.limitType}`,
-    metadata: {
-      limitType: params.limitType,
-    },
+    metadata: { limitType: params.limitType },
+    outcome: 'DENIED',
+    statusCode: 429,
     request: params.request,
+    finalizeAccessLog: true,
   });
 }
 
+type RequestContext = {
+  requestId: string;
+  method: string;
+  pathname: string;
+  url: string;
+  startTime: number;
+  actorUserId?: string | null;
+  actorRoles?: string[];
+  tenantId?: string | null;
+  accessLogged?: boolean;
+  metadata?: Record<string, unknown>;
+};
+
+type AccessLogPayload = {
+  timestamp: string;
+  requestId: string;
+  method: string;
+  path: string;
+  durationMs: number;
+  statusCode: number;
+  outcome: AuditOutcome;
+  actorUserId: string | null;
+  tenantId: string | null;
+  eventType: string;
+  resourceType: string;
+  metadata?: Record<string, unknown>;
+};
+
+function finalizeAccessLog(ctx: RequestContext | null, overrides?: Partial<AccessLogPayload>) {
+  if (!ctx || ctx.accessLogged) return;
+  ctx.accessLogged = true;
+  const durationMs = Date.now() - ctx.startTime;
+  const payload: AccessLogPayload = {
+    timestamp: new Date().toISOString(),
+    requestId: ctx.requestId,
+    method: ctx.method,
+    path: ctx.pathname,
+    durationMs,
+    statusCode: overrides?.statusCode ?? 200,
+    outcome: overrides?.outcome ?? 'SUCCESS',
+    actorUserId: overrides?.actorUserId ?? ctx.actorUserId ?? null,
+    tenantId: overrides?.tenantId ?? ctx.tenantId ?? null,
+    eventType: overrides?.eventType ?? AuditEventType.API_REQUEST,
+    resourceType: overrides?.resourceType ?? AuditResourceType.API,
+    metadata: overrides?.metadata ?? ctx.metadata,
+  };
+  console.log(JSON.stringify({ type: 'access.log', ...payload }));
+}
+
+function createSyntheticContext(opts: {
+  method: string | null;
+  path: string | null;
+  requestId: string;
+}): RequestContext {
+  return {
+    requestId: opts.requestId,
+    method: opts.method ?? 'UNKNOWN',
+    pathname: opts.path ?? '',
+    url: opts.path ?? '',
+    startTime: Date.now(),
+  };
+}
+
+function extractRequestDetails(req: NextRequest | Request) {
+  const method = req.method ?? 'UNKNOWN';
+  if ('nextUrl' in req && (req as NextRequest).nextUrl) {
+    const nextUrl = (req as NextRequest).nextUrl;
+    const pathname = nextUrl.pathname;
+    return {
+      method,
+      pathname,
+      search: nextUrl.search,
+      url: nextUrl.toString(),
+      requestId: req.headers.get('x-request-id') ?? randomUUID(),
+    };
+  }
+  try {
+    const parsed = new URL(req.url ?? '');
+    return {
+      method,
+      pathname: parsed.pathname,
+      search: parsed.search,
+      url: parsed.toString(),
+      requestId: req.headers.get('x-request-id') ?? randomUUID(),
+    };
+  } catch {
+    return {
+      method,
+      pathname: '',
+      search: '',
+      url: req.url ?? '',
+      requestId: randomUUID(),
+    };
+  }
+}
+
+function inferTenantFromPath(pathname?: string | null) {
+  if (!pathname) return null;
+  const ocMatch = pathname.match(/^\/api\/v1\/oc\/([0-9a-f-]{36})/i);
+  if (ocMatch) return ocMatch[1];
+  const platoonMatch = pathname.match(/^\/api\/v1\/platoons\/([0-9a-f-]{36})/i);
+  if (platoonMatch) return platoonMatch[1];
+  return null;
+}
+
+function getClientIp(req: NextRequest | Request): string | null {
+  if ('headers' in req && typeof req.headers.get === 'function') {
+    const forwardedFor = req.headers.get('x-forwarded-for');
+    if (forwardedFor) return forwardedFor.split(',')[0].trim();
+    const realIp = req.headers.get('x-real-ip');
+    if (realIp) return realIp.trim();
+  }
+  return null;
+}
+
+function getUserAgent(req: NextRequest | Request): string | null {
+  if ('headers' in req && typeof req.headers.get === 'function') {
+    return req.headers.get('user-agent');
+  }
+  return null;
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== 'object' || a === null || b === null) return false;
+  const aEntries = Object.entries(a as Record<string, unknown>);
+  const bEntries = Object.entries(b as Record<string, unknown>);
+  if (aEntries.length !== bEntries.length) return false;
+  return aEntries.every(([key, value]) => deepEqual(value, (b as Record<string, unknown>)[key]));
+}
+
+function maskValue(key: string, value: string) {
+  if (key.toLowerCase().includes('email')) {
+    const [local, domain] = value.split('@');
+    return `${local?.[0] ?? '*'}***@${domain ?? '***'}`;
+  }
+  if (key.toLowerCase().includes('phone') || key.toLowerCase().includes('mobile')) {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 2) return '***';
+    return `${'*'.repeat(digits.length - 2)}${digits.slice(-2)}`;
+  }
+  return '***REDACTED***';
+}

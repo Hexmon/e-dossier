@@ -5,6 +5,8 @@ import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { platoonUpdateSchema } from '@/app/lib/validators';
 import { requireAdmin } from '@/app/lib/authz';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 type PgError = { code?: string; detail?: string };
 
@@ -31,9 +33,9 @@ function whereForIdKeyName(idOrKey: string, includeDeleted = false) {
 
 // PATCH /api/v1/platoons/:idOrKey  (ADMIN)
 // body: { key?, name?, about?, restore? }
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
+async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
   try {
-    await requireAdmin(req);
+    const adminCtx = await requireAdmin(req);
     const { idOrKey } = await params;
     const body = await req.json();
     const parsed = platoonUpdateSchema.safeParse(body);
@@ -112,6 +114,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         deletedAt: platoons.deletedAt,
       });
 
+    await createAuditLog({
+      actorUserId: adminCtx.userId,
+      eventType: AuditEventType.PLATOON_UPDATED,
+      resourceType: AuditResourceType.PLATOON,
+      resourceId: updated.id,
+      description: `Updated platoon ${updated.key}`,
+      metadata: {
+        platoonId: updated.id,
+        changes: Object.keys(parsed.data),
+      },
+      before: existing,
+      after: updated,
+      changedFields: Object.keys(parsed.data),
+      request: req,
+      required: true,
+    });
     return json.ok({ message: 'Platoon updated successfully.', platoon: updated });
   } catch (err) {
     return handleApiError(err);
@@ -123,10 +141,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
  * - Soft delete by default (sets deleted_at = now)
  * - Hard delete with ?hard=true
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
+async function DELETEHandler(
+  req: NextRequest,
+  { params }: { params: Promise<{ idOrKey: string }> | { idOrKey: string } | string },
+) {
   try {
-    await requireAdmin(req);
-    const { idOrKey: rawIdOrKey } = await params;   // ✅ destructure the string
+    const adminCtx = await requireAdmin(req);
+    const resolvedParams = typeof params === 'string' ? params : await params;
+    const rawIdOrKey =
+      typeof resolvedParams === 'string' ? resolvedParams : resolvedParams?.idOrKey;
     const idOrKey = decodeURIComponent(rawIdOrKey || '').trim();
     if (!idOrKey) throw new ApiError(400, 'idOrKey path param is required.', 'bad_request');
 
@@ -153,6 +176,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         .where(eq(platoons.id, existing.id))
         .returning({ id: platoons.id, key: platoons.key, name: platoons.name });
 
+      await createAuditLog({
+        actorUserId: adminCtx.userId,
+        eventType: AuditEventType.PLATOON_DELETED,
+        resourceType: AuditResourceType.PLATOON,
+        resourceId: gone.id,
+        description: `Hard deleted platoon ${gone.key}`,
+        metadata: {
+          platoonId: gone.id,
+          hardDeleted: true,
+        },
+        before: existing,
+        after: null,
+        request: req,
+        required: true,
+      });
       return json.ok({
         message: 'Platoon hard-deleted.',
         platoon: gone,
@@ -171,6 +209,33 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         deletedAt: platoons.deletedAt,
       });
 
+    const target = updated ?? {
+      id: existing.id,
+      key: existing.key,
+      name: existing.name,
+      deletedAt: existing.deletedAt,
+    };
+
+    await createAuditLog({
+      actorUserId: adminCtx.userId,
+      eventType: AuditEventType.PLATOON_DELETED,
+      resourceType: AuditResourceType.PLATOON,
+      resourceId: target.id,
+      description: updated
+        ? `Soft deleted platoon ${target.key}`
+        : `Attempted to soft delete already deleted platoon ${target.key}`,
+      metadata: {
+        platoonId: target.id,
+        hardDeleted: false,
+        alreadyDeleted: !updated,
+      },
+      before: existing,
+      after: target,
+      changedFields: updated ? ['deletedAt'] : undefined,
+      request: req,
+      required: true,
+    });
+
     if (updated) {
       return json.ok({
         message: 'Platoon soft-deleted.',
@@ -181,14 +246,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Already soft-deleted – return current state
     return json.ok({
       message: 'Platoon already soft-deleted.',
-      platoon: {
-        id: existing.id,
-        key: existing.key,
-        name: existing.name,
-        deletedAt: existing.deletedAt,
-      },
+      platoon: target,
     });
   } catch (err) {
     return handleApiError(err);
   }
 }
+export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+
+export const DELETE = withRouteLogging('DELETE', DELETEHandler);

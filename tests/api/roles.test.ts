@@ -1,6 +1,26 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { GET as getRoles, POST as postRole } from '@/app/api/v1/roles/route';
 import { makeJsonRequest } from '../utils/next';
+
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    API_REQUEST: 'api.request',
+  },
+  AuditResourceType: {
+    API: 'api',
+  },
+}));
 
 const path = '/api/v1/roles';
 
@@ -27,4 +47,3 @@ describe('POST /api/v1/roles', () => {
     expect(json.created).toEqual(body);
   });
 });
-
