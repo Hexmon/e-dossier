@@ -64,13 +64,14 @@ export async function updateCourse(id: string, patch: Partial<typeof courses.$in
 
 export async function softDeleteCourse(id: string) {
     return db.transaction(async (tx) => {
+        const [before] = await tx.select().from(courses).where(eq(courses.id, id)).limit(1);
+        if (!before) return null;
         const now = new Date();
-        const [row] = await tx
+        const [after] = await tx
             .update(courses)
             .set({ deletedAt: now })
             .where(eq(courses.id, id))
-            .returning({ id: courses.id });
-        if (!row) return null;
+            .returning();
         await tx
             .update(courseOfferings)
             .set({ deletedAt: now })
@@ -79,20 +80,22 @@ export async function softDeleteCourse(id: string) {
             .update(ocCadets)
             .set({ status: 'INACTIVE', updatedAt: now })
             .where(eq(ocCadets.courseId, id));
-        return row;
+        return { before, after };
     });
 }
 
 export async function hardDeleteCourse(id: string) {
     return db.transaction(async (tx) => {
+        const [before] = await tx.select().from(courses).where(eq(courses.id, id)).limit(1);
+        if (!before) return null;
         const now = new Date();
         await tx
             .update(ocCadets)
             .set({ status: 'INACTIVE', updatedAt: now })
             .where(eq(ocCadets.courseId, id));
         await tx.delete(courseOfferings).where(eq(courseOfferings.courseId, id));
-        const [row] = await tx.delete(courses).where(eq(courses.id, id)).returning({ id: courses.id });
-        return row ?? null;
+        await tx.delete(courses).where(eq(courses.id, id));
+        return { before };
     });
 }
 

@@ -29,19 +29,23 @@ export async function listInstructors(opts: { q?: string; includeDeleted?: boole
 }
 
 export async function softDeleteInstructor(id: string) {
-    const [row] = await db
+    const [before] = await db.select().from(instructors).where(eq(instructors.id, id)).limit(1);
+    if (!before) return null;
+    const [after] = await db
         .update(instructors)
         .set({ deletedAt: new Date() })
         .where(eq(instructors.id, id))
-        .returning({ id: instructors.id });
-    return row ?? null;
+        .returning();
+    return after ? { before, after } : null;
 }
 
 export async function hardDeleteInstructor(id: string) {
     return db.transaction(async (tx) => {
+        const [before] = await tx.select().from(instructors).where(eq(instructors.id, id)).limit(1);
+        if (!before) return null;
         await tx.delete(courseOfferingInstructors).where(eq(courseOfferingInstructors.instructorId, id));
-        const [row] = await tx.delete(instructors).where(eq(instructors.id, id)).returning({ id: instructors.id });
-        return row ?? null;
+        await tx.delete(instructors).where(eq(instructors.id, id));
+        return { before };
     });
 }
 

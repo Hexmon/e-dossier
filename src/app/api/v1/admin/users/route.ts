@@ -8,11 +8,13 @@ import { userQuerySchema, userCreateSchema } from '@/app/lib/validators';
 import argon2 from 'argon2';
 import { listUsersWithActiveAppointments, UserListQuery } from '@/app/db/queries/users';
 import { eq, isNull, or, and } from 'drizzle-orm';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
 // GET /api/v1/admin/users (ADMIN)
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         await requireAdmin(req);
 
@@ -34,9 +36,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/v1/admin/users (ADMIN)
 // body: userCreateSchema (password optional; if provided → credentials_local)
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAdmin(req);
 
         const body = await req.json();
         const parsed = userCreateSchema.safeParse(body);
@@ -102,7 +104,8 @@ export async function POST(req: NextRequest) {
             });
 
         // optional password
-        if (d.password) {
+        const passwordProvided = Boolean(d.password);
+        if (passwordProvided) {
             const hash = await argon2.hash(d.password);
             await db
                 .insert(credentialsLocal)
@@ -113,6 +116,23 @@ export async function POST(req: NextRequest) {
                 })
                 .onConflictDoNothing();
         }
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.USER_CREATED,
+            resourceType: AuditResourceType.USER,
+            resourceId: u.id,
+            description: `Created user ${u.username}`,
+            metadata: {
+                userId: u.id,
+                username: u.username,
+                email: u.email,
+                phone: u.phone,
+                rank: u.rank,
+                passwordSet: passwordProvided,
+            },
+            request: req,
+        });
 
         return json.created({ message: 'User created successfully.', user: u });
     } catch (err) {
@@ -161,3 +181,6 @@ export async function POST(req: NextRequest) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

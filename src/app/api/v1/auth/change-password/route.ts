@@ -7,6 +7,8 @@ import { requireAuth, hasAdminRole } from '@/app/lib/authz';
 import { users } from '@/app/db/schema/auth/users';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { eq, isNull } from 'drizzle-orm';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 // Body:
 // - For self-service (non-admin): { newPassword, currentPassword }  (userId optional/ignored)
@@ -17,7 +19,7 @@ const BodySchema = z.object({
   currentPassword: z.string().min(1).optional(),
 });
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
     // 1) AuthN
     const { userId: callerId, roles } = await requireAuth(req);
@@ -28,7 +30,9 @@ export async function POST(req: NextRequest) {
     try {
       raw = await req.json();
     } catch {
-      return json.badRequest('Invalid JSON body.', { message: 'Request body must be valid JSON.' });
+      throw new ApiError(400, 'Invalid JSON body.', 'invalid_json', {
+        message: 'Request body must be valid JSON.',
+      });
     }
 
     // 3) Shape/format validation
@@ -50,6 +54,7 @@ export async function POST(req: NextRequest) {
     const [u] = await db
       .select({
         id: users.id,
+        username: users.username,
         deletedAt: users.deletedAt,
       })
       .from(users)
@@ -103,6 +108,22 @@ export async function POST(req: NextRequest) {
         },
       });
 
+    await createAuditLog({
+      actorUserId: callerId,
+      eventType: AuditEventType.PASSWORD_CHANGED,
+      resourceType: AuditResourceType.USER,
+      resourceId: targetUserId,
+      description: callerIsAdmin && targetUserId !== callerId
+        ? `Admin reset password for user ${u.username ?? targetUserId}`
+        : 'User changed password',
+      metadata: {
+        targetUserId,
+        changedBy: callerId,
+        selfChange: targetUserId === callerId,
+      },
+      request: req,
+    });
+
     return json.ok({
       message: callerIsAdmin && targetUserId !== callerId
         ? 'Password reset successfully for target user.'
@@ -113,3 +134,4 @@ export async function POST(req: NextRequest) {
     return handleApiError(err);
   }
 }
+export const POST = withRouteLogging('POST', POSTHandler);

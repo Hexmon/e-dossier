@@ -69,27 +69,30 @@ export async function replaceOfferingInstructors(offeringId: string, list: Array
 }
 
 export async function updateOffering(offeringId: string, patch: Partial<typeof courseOfferings.$inferInsert>) {
+    const [before] = await db.select().from(courseOfferings).where(eq(courseOfferings.id, offeringId)).limit(1);
+    if (!before) return null;
     const [row] = await db
         .update(courseOfferings)
         .set(patch)
         .where(eq(courseOfferings.id, offeringId))
         .returning();
-    return row ?? null;
+    return row ? { before, after: row } : null;
 }
 
 export async function softDeleteOffering(offeringId: string) {
-    const [row] = await db
+    const [before] = await db.select().from(courseOfferings).where(eq(courseOfferings.id, offeringId)).limit(1);
+    if (!before) return null;
+    const [after] = await db
         .update(courseOfferings)
         .set({ deletedAt: new Date() })
         .where(eq(courseOfferings.id, offeringId))
-        .returning({ id: courseOfferings.id });
-    return row ?? null;
+        .returning();
+    return after ? { before, after } : null;
 }
 
 export async function hardDeleteOffering(offeringId: string) {
-    const [row] = await db
-        .delete(courseOfferings)
-        .where(eq(courseOfferings.id, offeringId))
-        .returning({ id: courseOfferings.id });
-    return row ?? null;
+    const [before] = await db.select().from(courseOfferings).where(eq(courseOfferings.id, offeringId)).limit(1);
+    if (!before) return null;
+    await db.delete(courseOfferings).where(eq(courseOfferings.id, offeringId));
+    return { before };
 }

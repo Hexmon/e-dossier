@@ -7,8 +7,10 @@ import { db } from '@/app/db/client';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { users } from '@/app/db/schema/auth/users';
 import { and, eq, isNull } from 'drizzle-orm';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
@@ -27,9 +29,9 @@ export async function GET(req: NextRequest) {
     } catch (err) { return handleApiError(err); }
 }
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAdmin(req);
         const body = instructorCreateSchema.parse(await req.json());
 
         let userId: string | null = null;
@@ -66,6 +68,29 @@ export async function POST(req: NextRequest) {
                 notes: body.notes ?? null,
             })
             .returning();
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.INSTRUCTOR_CREATED,
+            resourceType: AuditResourceType.INSTRUCTOR,
+            resourceId: row.id,
+            description: `Created instructor ${row.name}`,
+            metadata: {
+                instructorId: row.id,
+                linkedUserId: row.userId,
+                hasLinkedUser: Boolean(row.userId),
+                email: row.email,
+                phone: row.phone,
+                affiliation: row.affiliation ?? null,
+            },
+            after: row,
+            request: req,
+            required: true,
+        });
+
         return json.created({ message: 'Instructor created successfully.', instructor: row });
     } catch (err) { return handleApiError(err); }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

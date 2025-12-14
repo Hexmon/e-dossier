@@ -9,8 +9,10 @@ import {
     createOlqSubtitle,
     listOlqSubtitles,
 } from '@/app/db/queries/olq';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
 
@@ -30,9 +32,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAdmin(req);
 
         const dto = olqSubtitleCreateSchema.parse(await req.json());
         const row = await createOlqSubtitle({
@@ -42,8 +44,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ocI
             displayOrder: dto.displayOrder ?? 0,
             isActive: dto.isActive ?? true,
         });
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.OC_RECORD_CREATED,
+            resourceType: AuditResourceType.OC,
+            resourceId: null,
+            description: `Created OLQ subtitle ${row.id}`,
+            metadata: {
+                module: 'olq_subtitles',
+                subtitleId: row.id,
+                categoryId: dto.categoryId,
+            },
+            request: req,
+        });
         return json.created({ message: 'OLQ subtitle created successfully.', subtitle: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);
