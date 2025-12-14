@@ -6,8 +6,10 @@ import { requireAdmin } from '@/app/lib/authz';
 import { positionCreateSchema } from '@/app/lib/validators';
 import { asc, eq, isNull } from 'drizzle-orm';
 import { platoons } from '@/app/db/schema/auth/platoons';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         const url = new URL(req.url);
         const includePlatoons =
@@ -62,9 +64,9 @@ export async function GET(req: NextRequest) {
 }
 
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAdmin(req);
 
         const body = await req.json();
         const parsed = positionCreateSchema.safeParse(body);
@@ -111,8 +113,29 @@ export async function POST(req: NextRequest) {
             })
             .returning();
 
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.POSITION_CREATED,
+            resourceType: AuditResourceType.POSITION,
+            resourceId: row.id,
+            description: `Created position ${row.key}`,
+            metadata: {
+                positionId: row.id,
+                key: row.key,
+                displayName: row.displayName,
+                defaultScope: row.defaultScope,
+                singleton: row.singleton,
+            },
+            after: row,
+            request: req,
+            required: true,
+        });
+
         return json.created({ message: 'Position created successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

@@ -9,6 +9,7 @@ import { appointments } from '@/app/db/schema/auth/appointments';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq, and, isNull } from 'drizzle-orm';
 import { SCOPE } from '@/constants/app.constants';
+import { setRequestTenant } from '@/lib/audit-log';
 
 /**
  * Authorization context from JWT
@@ -112,6 +113,7 @@ export async function authorizeOcAccess(
   ocId: string
 ): Promise<AuthContext> {
   const context = await requireAuth(req) as AuthContext;
+  setRequestTenant(req, ocId);
   
   // Admin can access any OC record
   if (isAdmin(context)) {
@@ -305,4 +307,3 @@ export function canDelete(context: AuthContext): boolean {
   // Only admin can delete
   return isAdmin(context);
 }
-

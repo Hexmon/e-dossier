@@ -46,9 +46,11 @@ vi.mock('@/app/db/client', () => {
   return { db: { select } };
 });
 
+const appointmentId = '11111111-1111-4111-8111-111111111111';
+
 vi.mock('@/app/db/queries/appointments', () => ({
   getActiveAppointmentWithHolder: vi.fn(async () => ({
-    id: 'apt-1',
+    id: appointmentId,
     userId: 'user-1',
     username: 'testuser',
     positionKey: 'ADMIN',
@@ -66,9 +68,26 @@ vi.mock('@/app/db/queries/account-lockout', () => ({
 }));
 
 vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
   logLoginSuccess: vi.fn(async () => {}),
   logLoginFailure: vi.fn(async () => {}),
   logAccountLocked: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'POST',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    API_REQUEST: 'api.request',
+  },
+  AuditResourceType: {
+    API: 'api',
+  },
 }));
 
 vi.mock('@/app/lib/jwt', () => ({
@@ -86,7 +105,7 @@ vi.mock('argon2', () => ({
 }));
 
 const loginBody = {
-  appointmentId: 'apt-1',
+  appointmentId,
   username: 'testuser',
   password: 'password123',
 };
@@ -153,7 +172,7 @@ describe('POST /api/v1/auth/login', () => {
 
   it('logs in successfully with valid credentials and active appointment', async () => {
     (appointmentsQueries.getActiveAppointmentWithHolder as any).mockResolvedValueOnce({
-      id: 'apt-1',
+      id: appointmentId,
       userId: 'user-1',
       username: 'testuser',
       positionKey: 'ADMIN',
@@ -184,4 +203,3 @@ describe('POST /api/v1/auth/login', () => {
     expect(auditLog.logLoginSuccess).toHaveBeenCalled();
   });
 });
-

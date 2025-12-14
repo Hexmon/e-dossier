@@ -4,8 +4,11 @@ import { parseParam, ensureOcExists, mustBeAdmin } from '../../../_checks';
 import { OcIdParam, SemesterParam, academicSummaryPatchSchema } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getOcAcademicSemester, updateOcAcademicSummary, deleteOcAcademicSemester } from '@/app/services/oc-academics';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
+// NOTE: update/delete helpers call createAuditLog internally (see services/oc-academics).
+
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
@@ -18,14 +21,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
+async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        await mustBeAdmin(req);
+        const adminCtx = await mustBeAdmin(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
         const dto = academicSummaryPatchSchema.parse(await req.json());
-        const data = await updateOcAcademicSummary(ocId, semester, dto);
+        const data = await updateOcAcademicSummary(ocId, semester, dto, {
+            actorUserId: adminCtx?.userId,
+            actorRoles: adminCtx?.roles,
+            request: req,
+        });
         return json.ok({
             message: 'Academic summary updated successfully.',
             data,
@@ -35,14 +42,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ oc
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
+async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        await mustBeAdmin(req);
+        const adminCtx = await mustBeAdmin(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
         const hard = new URL(req.url).searchParams.get('hard') === 'true';
-        const result = await deleteOcAcademicSemester(ocId, semester, { hard });
+        const result = await deleteOcAcademicSemester(ocId, semester, { hard }, {
+            actorUserId: adminCtx?.userId,
+            actorRoles: adminCtx?.roles,
+            request: req,
+        });
         return json.ok({
             message: hard ? 'Academic semester hard-deleted.' : 'Academic semester soft-deleted.',
             ...result,
@@ -51,3 +62,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ o
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+
+export const DELETE = withRouteLogging('DELETE', DELETEHandler);

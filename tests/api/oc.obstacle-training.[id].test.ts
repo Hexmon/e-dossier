@@ -5,6 +5,7 @@ import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as ocChecks from '@/app/api/v1/oc/_checks';
 import * as ocQueries from '@/app/db/queries/oc';
+import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
@@ -23,11 +24,36 @@ vi.mock('@/app/db/queries/oc', () => ({
   deleteObstacleTraining: vi.fn(async () => null),
 }));
 
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    OC_RECORD_CREATED: 'oc.record.created',
+    OC_RECORD_UPDATED: 'oc.record.updated',
+    OC_RECORD_DELETED: 'oc.record.deleted',
+  },
+  AuditResourceType: {
+    OC: 'oc',
+  },
+}));
+
 const basePath = '/api/v1/oc';
 const ocId = '11111111-1111-4111-8111-111111111111';
 const id = '22222222-2222-4222-8222-222222222222';
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  (auditLog.createAuditLog as any).mockClear?.();
+});
 
 describe('GET /api/v1/oc/:ocId/obstacle-training/:id', () => {
   it('returns 401 when authentication fails', async () => { (ocChecks.mustBeAuthed as any).mockRejectedValueOnce(new ApiError(401, 'Unauthorized', 'unauthorized')); const req = makeJsonRequest({ method: 'GET', path: `${basePath}/${ocId}/obstacle-training/${id}` }); const ctx = { params: { ocId, id } } as any; const res = await getObstacleTrainingRoute(req as any, ctx); expect(res.status).toBe(401); const body = await res.json(); expect(body.ok).toBe(false); expect(body.error).toBe('unauthorized'); });
@@ -68,4 +94,3 @@ describe('DELETE /api/v1/oc/:ocId/obstacle-training/:id', () => {
 
   it('returns 200 with hard-delete message on happy path', async () => { (ocChecks.mustBeAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] }); (ocChecks.parseParam as any).mockResolvedValueOnce({ ocId }).mockResolvedValueOnce({ id }); (ocChecks.ensureOcExists as any).mockResolvedValueOnce(undefined); (ocQueries.deleteObstacleTraining as any).mockResolvedValueOnce({ id }); const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${ocId}/obstacle-training/${id}?hard=true` }); const ctx = { params: { ocId, id } } as any; const res = await deleteObstacleTrainingRoute(req as any, ctx); expect(res.status).toBe(200); const body = await res.json(); expect(body.ok).toBe(true); expect(body.id).toBe(id); expect(body.message).toMatch(/hard-deleted/); });
 });
-

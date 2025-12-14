@@ -8,8 +8,10 @@ import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth, requireAdmin } from '@/app/lib/authz';
 import { appointmentUpdateSchema } from '@/app/lib/validators';
 import { and, eq, sql } from 'drizzle-orm';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await requireAuth(req);
         const { id } = await params;
@@ -48,9 +50,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAdmin(req);
         const { id } = await params;
         const body = await req.json();
         const parsed = appointmentUpdateSchema.safeParse(body);
@@ -71,6 +73,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             if (!pl) throw new ApiError(400, 'Invalid platoon scopeId');
         }
 
+        const [previous] = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);
+        if (!previous) throw new ApiError(404, 'Appointment not found');
+
         const [row] = await db
             .update(appointments)
             .set({
@@ -86,17 +91,38 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             .returning();
 
         if (!row) throw new ApiError(404, 'Appointment not found');
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.APPOINTMENT_UPDATED,
+            resourceType: AuditResourceType.APPOINTMENT,
+            resourceId: row.id,
+            description: `Updated appointment ${row.id}`,
+            metadata: {
+                appointmentId: row.id,
+                userId: row.userId,
+                changes: Object.keys(p),
+            },
+            before: previous,
+            after: row,
+            changedFields: Object.keys(p),
+            request: req,
+            required: true,
+        });
         return json.ok({ message: 'Appointment updated successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAdmin(req);
         const { id } = await params;
         // Soft delete by setting deleted_at = now()
+        const [previous] = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);
+        if (!previous) throw new ApiError(404, 'Appointment not found');
+
         const [row] = await db
             .update(appointments)
             .set({ deletedAt: sql`now()` })
@@ -104,8 +130,31 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
             .returning();
 
         if (!row) throw new ApiError(404, 'Appointment not found');
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.APPOINTMENT_DELETED,
+            resourceType: AuditResourceType.APPOINTMENT,
+            resourceId: row.id,
+            description: `Soft deleted appointment ${row.id}`,
+            metadata: {
+                appointmentId: row.id,
+                userId: row.userId,
+                softDeleted: true,
+            },
+            before: previous,
+            after: row,
+            changedFields: ['deletedAt'],
+            request: req,
+            required: true,
+        });
         return json.ok({ message: 'Appointment soft-deleted.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+
+export const DELETE = withRouteLogging('DELETE', DELETEHandler);

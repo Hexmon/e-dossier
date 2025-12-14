@@ -5,6 +5,7 @@ import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as instructorQueries from '@/app/db/queries/instructors';
 import { db } from '@/app/db/client';
+import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
@@ -49,10 +50,33 @@ vi.mock('@/app/db/client', () => {
   return { db: { insert, select } };
 });
 
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    INSTRUCTOR_CREATED: 'instructor.created',
+    INSTRUCTOR_UPDATED: 'instructor.updated',
+    INSTRUCTOR_DELETED: 'instructor.deleted',
+  },
+  AuditResourceType: {
+    INSTRUCTOR: 'instructor',
+  },
+}));
+
 const path = '/api/v1/admin/instructors';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (auditLog.createAuditLog as any).mockClear?.();
 });
 
 describe('GET /api/v1/admin/instructors', () => {
@@ -189,5 +213,6 @@ describe('POST /api/v1/admin/instructors', () => {
     expect(body.ok).toBe(true);
     expect(body.instructor.id).toBe('inst-1');
     expect(body.instructor.name).toBe('Instructor One');
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });

@@ -5,8 +5,11 @@ import { parseParam, ensureOcExists } from '../../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { olqBySemesterQuerySchema } from '@/app/lib/olq-validators';
 import { listOlqBySemester } from '@/app/db/queries/olq';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+// NOTE: Read-only endpoint – rely on requireAuth -> logApiRequest for createAuditLog coverage.
+
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -31,3 +34,4 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);

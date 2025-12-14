@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { verifyAccessJWT } from '@/app/lib/jwt';
 import { ApiError } from '@/app/lib/http';
+import { requireAuth as internalRequireAuth } from '@/app/lib/authz';
 
 export type Principal = {
   userId: string;
@@ -14,19 +14,14 @@ export type Principal = {
  * Throws ApiError(401/403) on failure.
  */
 export async function requireAuth(req: NextRequest): Promise<Principal> {
-  const token = req.cookies.get('access_token')?.value;
-  if (!token) throw new ApiError(401, 'Missing access token');
-
-  try {
-    const payload = await verifyAccessJWT(token);
-    const sub = payload.sub as string | undefined;
-    if (!sub) throw new ApiError(401, 'Invalid token (no subject)');
-    const roles = (payload.roles as string[] | undefined) ?? [];
-
-    return { userId: sub, roles, apt: payload.apt, pwd_at: (payload as any).pwd_at ?? null };
-  } catch {
-    throw new ApiError(401, 'Invalid or expired token');
-  }
+  const ctx = await internalRequireAuth(req);
+  if (!ctx.userId) throw new ApiError(401, 'Invalid token (no subject)');
+  return {
+    userId: ctx.userId,
+    roles: ctx.roles,
+    apt: ctx.claims?.apt,
+    pwd_at: (ctx.claims as any)?.pwd_at ?? null,
+  };
 }
 
 /**

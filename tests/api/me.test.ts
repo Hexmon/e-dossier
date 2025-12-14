@@ -5,6 +5,26 @@ import { ApiError } from '@/app/lib/http';
 import * as guard from '@/app/lib/guard';
 import { db } from '@/app/db/client';
 
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    API_REQUEST: 'api.request',
+  },
+  AuditResourceType: {
+    USER: 'user',
+  },
+}));
+
 vi.mock('@/app/lib/guard', () => ({
   requireAuth: vi.fn(),
 }));
@@ -79,4 +99,3 @@ describe('GET /api/v1/me', () => {
     expect(body.apt).toEqual({ id: 'apt-1', position: 'ADMIN' });
   });
 });
-

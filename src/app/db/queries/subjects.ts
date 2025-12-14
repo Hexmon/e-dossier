@@ -33,26 +33,37 @@ export async function listSubjects(opts: { q?: string; branch?: 'C' | 'E' | 'M';
 
 export async function softDeleteSubject(id: string) {
     return db.transaction(async (tx) => {
+        const [before] = await tx
+            .select()
+            .from(subjects)
+            .where(eq(subjects.id, id))
+            .limit(1);
+        if (!before) return null;
         const now = new Date();
-        const [row] = await tx
+        const [after] = await tx
             .update(subjects)
             .set({ deletedAt: now })
             .where(eq(subjects.id, id))
-            .returning({ id: subjects.id });
-        if (!row) return null;
+            .returning();
 
         await tx
             .update(courseOfferings)
             .set({ deletedAt: now })
             .where(eq(courseOfferings.subjectId, id));
-        return row;
+        return { before, after };
     });
 }
 
 export async function hardDeleteSubject(id: string) {
     return db.transaction(async (tx) => {
+        const [before] = await tx
+            .select()
+            .from(subjects)
+            .where(eq(subjects.id, id))
+            .limit(1);
+        if (!before) return null;
         await tx.delete(courseOfferings).where(eq(courseOfferings.subjectId, id));
-        const [row] = await tx.delete(subjects).where(eq(subjects.id, id)).returning({ id: subjects.id });
-        return row ?? null;
+        await tx.delete(subjects).where(eq(subjects.id, id));
+        return { before };
     });
 }
