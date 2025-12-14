@@ -5,6 +5,8 @@ import { subjects } from '@/app/db/schema/training/subjects';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { and, eq, ilike, isNull, like, sql } from 'drizzle-orm';
 
+export type CourseRow = typeof courses.$inferSelect;
+
 export async function listCourses(opts: { q?: string; includeDeleted?: boolean; limit?: number; offset?: number; }) {
     const wh: any[] = [];
     if (!opts.includeDeleted) wh.push(isNull(courses.deletedAt));
@@ -62,7 +64,7 @@ export async function updateCourse(id: string, patch: Partial<typeof courses.$in
     return row ?? null;
 }
 
-export async function softDeleteCourse(id: string) {
+export async function softDeleteCourse(id: string): Promise<{ before: CourseRow; after: CourseRow } | null> {
     return db.transaction(async (tx) => {
         const [before] = await tx.select().from(courses).where(eq(courses.id, id)).limit(1);
         if (!before) return null;
@@ -84,7 +86,7 @@ export async function softDeleteCourse(id: string) {
     });
 }
 
-export async function hardDeleteCourse(id: string) {
+export async function hardDeleteCourse(id: string): Promise<{ before: CourseRow } | null> {
     return db.transaction(async (tx) => {
         const [before] = await tx.select().from(courses).where(eq(courses.id, id)).limit(1);
         if (!before) return null;

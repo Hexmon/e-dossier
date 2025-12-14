@@ -3,6 +3,8 @@ import { instructors } from '@/app/db/schema/training/instructors';
 import { courseOfferingInstructors } from '@/app/db/schema/training/courseOfferings';
 import { and, eq, ilike, inArray, isNull } from 'drizzle-orm';
 
+export type InstructorRow = typeof instructors.$inferSelect;
+
 export async function listInstructors(opts: { q?: string; includeDeleted?: boolean; limit?: number; offset?: number; }) {
     const wh: any[] = [];
     if (opts.q) wh.push(ilike(instructors.name, `%${opts.q}%`));
@@ -28,7 +30,7 @@ export async function listInstructors(opts: { q?: string; includeDeleted?: boole
         .offset(opts.offset ?? 0);
 }
 
-export async function softDeleteInstructor(id: string) {
+export async function softDeleteInstructor(id: string): Promise<{ before: InstructorRow; after: InstructorRow } | null> {
     const [before] = await db.select().from(instructors).where(eq(instructors.id, id)).limit(1);
     if (!before) return null;
     const [after] = await db
@@ -39,7 +41,7 @@ export async function softDeleteInstructor(id: string) {
     return after ? { before, after } : null;
 }
 
-export async function hardDeleteInstructor(id: string) {
+export async function hardDeleteInstructor(id: string): Promise<{ before: InstructorRow } | null> {
     return db.transaction(async (tx) => {
         const [before] = await tx.select().from(instructors).where(eq(instructors.id, id)).limit(1);
         if (!before) return null;

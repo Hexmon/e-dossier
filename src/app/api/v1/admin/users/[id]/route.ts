@@ -157,8 +157,9 @@ async function PATCHHandler(
     if (!updated) throw new ApiError(404, 'User not found', 'not_found');
 
     // optional password reset
-    const passwordProvided = Boolean(d.password);
-    if (passwordProvided) {
+    let passwordProvided = false;
+    if (typeof d.password === 'string' && d.password.length > 0) {
+      passwordProvided = true;
       const hash = await argon2.hash(d.password);
       await db
         .insert(credentialsLocal)

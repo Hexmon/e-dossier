@@ -14,7 +14,7 @@ async function fetchAuditLogs(searchParams: SearchParams) {
     }
   });
   if (!params.has('limit')) params.set('limit', '50');
-  const headersList = headers();
+  const headersList = await headers();
   const protocol = headersList.get('x-forwarded-proto') ?? 'http';
   const host = headersList.get('x-forwarded-host') ?? headersList.get('host');
   const origin = host ? `${protocol}://${host}` : '';
@@ -29,13 +29,18 @@ async function fetchAuditLogs(searchParams: SearchParams) {
   return res.json();
 }
 
-export default async function AuditLogsPage({ searchParams }: { searchParams?: SearchParams }) {
-  const data = await fetchAuditLogs(searchParams ?? {});
+export default async function AuditLogsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<SearchParams>;
+}) {
+  const resolvedSearch = (await searchParams) ?? {};
+  const data = await fetchAuditLogs(resolvedSearch);
   const filters = {
-    actorUserId: (searchParams?.actorUserId as string) ?? '',
-    resourceType: (searchParams?.resourceType as string) ?? '',
-    requestId: (searchParams?.requestId as string) ?? '',
-    eventType: (searchParams?.eventType as string) ?? '',
+    actorUserId: (resolvedSearch?.actorUserId as string) ?? '',
+    resourceType: (resolvedSearch?.resourceType as string) ?? '',
+    requestId: (resolvedSearch?.requestId as string) ?? '',
+    eventType: (resolvedSearch?.eventType as string) ?? '',
   };
 
   return (

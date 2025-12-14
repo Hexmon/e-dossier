@@ -36,7 +36,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
             metadata: {
                 ocId,
                 module: 'autobiography',
-                recordId: saved?.id ?? null,
+                recordId: ocId,
             },
             request: req,
         });
@@ -60,7 +60,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
             metadata: {
                 ocId,
                 module: 'autobiography',
-                recordId: saved?.id ?? null,
+                recordId: ocId,
                 changes: Object.keys(dto),
             },
             request: req,
@@ -84,7 +84,7 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
             metadata: {
                 ocId,
                 module: 'autobiography',
-                recordId: deleted?.id ?? null,
+                recordId: ocId,
                 hardDeleted: true,
             },
             request: req,

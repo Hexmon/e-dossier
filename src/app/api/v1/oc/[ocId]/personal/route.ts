@@ -41,7 +41,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
             metadata: {
                 ocId,
                 module: 'personal',
-                recordId: saved?.id ?? null,
+                recordId: ocId,
             },
             before: existing,
             after: saved ?? null,
@@ -69,7 +69,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
             metadata: {
                 ocId,
                 module: 'personal',
-                recordId: saved?.id ?? null,
+                recordId: ocId,
                 changes: Object.keys(dto),
             },
             before: previous,
@@ -97,7 +97,7 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
             metadata: {
                 ocId,
                 module: 'personal',
-                recordId: deleted?.id ?? null,
+                recordId: ocId,
                 hardDeleted: true,
             },
             before: deleted ?? null,

@@ -7,6 +7,7 @@ import { db } from '@/app/db/client';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { eq } from 'drizzle-orm';
 import { hardDeleteInstructor, softDeleteInstructor } from '@/app/db/queries/instructors';
+import type { InstructorRow } from '@/app/db/queries/instructors';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
 
@@ -52,15 +53,22 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
     } catch (err) { return handleApiError(err); }
 }
 
+type InstructorDeleteResult =
+    | { before: InstructorRow; after: InstructorRow }
+    | { before: InstructorRow };
+
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const adminCtx = await requireAdmin(req);
         const { id } = Id.parse(await params);
         const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
-        const result = hard ? await hardDeleteInstructor(id) : await softDeleteInstructor(id);
+        const result = (hard ? await hardDeleteInstructor(id) : await softDeleteInstructor(id)) as InstructorDeleteResult | null;
         if (!result) throw new ApiError(404, 'Instructor not found', 'not_found');
-        const before = result.before;
-        const after = 'after' in result ? result.after ?? null : null;
+        const before: InstructorRow = result.before;
+        let after: InstructorRow | null = null;
+        if ('after' in result) {
+            after = result.after ?? null;
+        }
 
         await createAuditLog({
             actorUserId: adminCtx.userId,

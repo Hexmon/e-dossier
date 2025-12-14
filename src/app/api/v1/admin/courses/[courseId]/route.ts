@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth, requireAdmin } from '@/app/lib/authz';
 import { getCourse, listCourseOfferings, softDeleteCourse, updateCourse, hardDeleteCourse } from '@/app/db/queries/courses';
+import type { CourseRow } from '@/app/db/queries/courses';
 import { courseUpdateSchema } from '@/app/lib/validators.courses';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
@@ -96,15 +97,22 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ co
     }
 }
 
+type CourseDeleteResult =
+    | { before: CourseRow; after: CourseRow }
+    | { before: CourseRow };
+
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
         const adminCtx = await requireAdmin(req);
         const { courseId } = Param.parse(await params);
         const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
-        const result = hard ? await hardDeleteCourse(courseId) : await softDeleteCourse(courseId);
+        const result = (hard ? await hardDeleteCourse(courseId) : await softDeleteCourse(courseId)) as CourseDeleteResult | null;
         if (!result) throw new ApiError(404, 'Course not found', 'not_found');
-        const before = 'before' in result ? result.before : null;
-        const after = 'after' in result ? result.after : null;
+        const before: CourseRow = result.before;
+        let after: CourseRow | null = null;
+        if ('after' in result) {
+            after = result.after ?? null;
+        }
         const resourceId = after?.id ?? before?.id ?? courseId;
 
         await createAuditLog({

@@ -2,10 +2,15 @@ import { NextRequest } from 'next/server';
 import { ApiError } from '@/app/lib/http';
 import { ensureRequestContext, logApiRequest } from '@/lib/audit-log';
 
-type HandlerContext = { params?: any } | Record<string, unknown> | undefined;
-type RouteHandler<TContext extends HandlerContext = HandlerContext> = (
+type RouteParams = Record<string, string | string[] | undefined>;
+
+export type RouteContext<TParams = RouteParams> = {
+  params: Promise<TParams>;
+};
+
+type RouteHandler<TParams = undefined> = (
   req: NextRequest,
-  context: TContext
+  context: RouteContext<TParams>
 ) => Promise<Response> | Response;
 
 function inferOutcome(status: number) {
@@ -14,11 +19,14 @@ function inferOutcome(status: number) {
   return 'SUCCESS';
 }
 
-export function withRouteLogging<TContext extends HandlerContext = HandlerContext>(
+export function withRouteLogging<TParams = undefined>(
   _method: string,
-  handler: RouteHandler<TContext>
-) {
-  return async function route(request: NextRequest, context: TContext): Promise<Response> {
+  handler: RouteHandler<TParams>
+): RouteHandler<TParams> {
+  return async function route(
+    request: NextRequest,
+    context: RouteContext<TParams>
+  ): Promise<Response> {
     const ctx = ensureRequestContext(request);
     const requestIdHeader = request.headers.get('x-request-id');
 

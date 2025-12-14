@@ -104,8 +104,9 @@ async function POSTHandler(req: NextRequest) {
             });
 
         // optional password
-        const passwordProvided = Boolean(d.password);
-        if (passwordProvided) {
+        let passwordProvided = false;
+        if (typeof d.password === 'string' && d.password.length > 0) {
+            passwordProvided = true;
             const hash = await argon2.hash(d.password);
             await db
                 .insert(credentialsLocal)

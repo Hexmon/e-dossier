@@ -3,6 +3,8 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { courseOfferings, courseOfferingInstructors } from '@/app/db/schema/training/courseOfferings';
 
+export type OfferingRow = typeof courseOfferings.$inferSelect;
+
 export async function createOffering(opts: {
     courseId: string; subjectId: string; semester: number;
     includeTheory?: boolean; includePractical?: boolean;
@@ -68,7 +70,10 @@ export async function replaceOfferingInstructors(offeringId: string, list: Array
     return results;
 }
 
-export async function updateOffering(offeringId: string, patch: Partial<typeof courseOfferings.$inferInsert>) {
+export async function updateOffering(
+    offeringId: string,
+    patch: Partial<typeof courseOfferings.$inferInsert>
+): Promise<{ before: OfferingRow; after: OfferingRow } | null> {
     const [before] = await db.select().from(courseOfferings).where(eq(courseOfferings.id, offeringId)).limit(1);
     if (!before) return null;
     const [row] = await db
@@ -79,7 +84,9 @@ export async function updateOffering(offeringId: string, patch: Partial<typeof c
     return row ? { before, after: row } : null;
 }
 
-export async function softDeleteOffering(offeringId: string) {
+export async function softDeleteOffering(
+    offeringId: string
+): Promise<{ before: OfferingRow; after: OfferingRow } | null> {
     const [before] = await db.select().from(courseOfferings).where(eq(courseOfferings.id, offeringId)).limit(1);
     if (!before) return null;
     const [after] = await db
@@ -90,7 +97,7 @@ export async function softDeleteOffering(offeringId: string) {
     return after ? { before, after } : null;
 }
 
-export async function hardDeleteOffering(offeringId: string) {
+export async function hardDeleteOffering(offeringId: string): Promise<{ before: OfferingRow } | null> {
     const [before] = await db.select().from(courseOfferings).where(eq(courseOfferings.id, offeringId)).limit(1);
     if (!before) return null;
     await db.delete(courseOfferings).where(eq(courseOfferings.id, offeringId));

@@ -87,7 +87,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
                 ocId,
                 module: 'olq',
                 semester: dto.semester,
-                scoreCount: dto.scores.length,
+                scoreCount: dto.scores?.length ?? 0,
             },
             request: req,
         });

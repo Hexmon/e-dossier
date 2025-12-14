@@ -77,15 +77,30 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ co
     } catch (err) { return handleApiError(err); }
 }
 
+type OfferingIdentifiers = {
+    id: string;
+    courseId: string | null;
+    subjectId: string | null;
+};
+
+type OfferingDeleteResult =
+    | { before: OfferingIdentifiers; after: OfferingIdentifiers }
+    | { before: OfferingIdentifiers };
+
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
         const adminCtx = await requireAdmin(req);
         const { offeringId } = Param.parse(await params);
         const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
-        const result = hard ? await hardDeleteOffering(offeringId) : await softDeleteOffering(offeringId);
+        const result = (hard
+            ? await hardDeleteOffering(offeringId)
+            : await softDeleteOffering(offeringId)) as OfferingDeleteResult | null;
         if (!result) throw new ApiError(404, 'Offering not found', 'not_found');
-        const before = result.before;
-        const after = 'after' in result ? result.after ?? null : null;
+        const before: OfferingIdentifiers = result.before;
+        let after: OfferingIdentifiers | null = null;
+        if ('after' in result) {
+            after = result.after ?? null;
+        }
         const resourceId = after?.id ?? before.id;
 
         await createAuditLog({
