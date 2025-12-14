@@ -85,6 +85,8 @@ export const appointmentUpdateSchema = z.object({
   endsAt: z.coerce.date().nullable().optional(),
   reason: z.string().nullable().optional(),
   deletedAt: z.coerce.date().nullable().optional(),
+  username: z.string().trim().min(3).max(64).optional(),
+  positionName: z.string().trim().min(1).max(128).optional(),
 });
 
 export const appointmentTransferBody = z.object({
