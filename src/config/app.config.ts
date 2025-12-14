@@ -1374,6 +1374,11 @@ export const dossierTabs = [
     value: "performance-graph",
     title: "Performance Graph",
     icon: ChartArea,
+  },
+  {
+    value: "academics",
+    title: "Academics",
+    icon: BookOpen,
   }
 ];
 

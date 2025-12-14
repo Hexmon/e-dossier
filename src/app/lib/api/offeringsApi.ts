@@ -8,6 +8,21 @@ export interface OfferingInstructor {
     instructorEmail?: string;
 }
 
+export interface Subject {
+    id: string;
+    code: string;
+    name: string;
+    branch: string;
+    hasTheory: boolean;
+    hasPractical: boolean;
+    defaultTheoryCredits: number;
+    defaultPracticalCredits: number;
+    description?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    deletedAt?: string | null;
+}
+
 export interface Offering {
     id?: string;
     courseId: string;
@@ -18,6 +33,7 @@ export interface Offering {
     theoryCredits: number;
     practicalCredits: number | null;
     instructors: OfferingInstructor[];
+    subject?: Subject; // Add the full subject object
     subjectCode?: string;
     subjectName?: string;
     createdAt?: string;
@@ -60,20 +76,7 @@ interface BackendOfferingResponse {
     includePractical: boolean;
     theoryCredits: number;
     practicalCredits: number | null;
-    subject?: {
-        id: string;
-        code: string;
-        name: string;
-        branch: string;
-        hasTheory: boolean;
-        hasPractical: boolean;
-        defaultTheoryCredits: number;
-        defaultPracticalCredits: number;
-        description?: string;
-        createdAt?: string;
-        updatedAt?: string;
-        deletedAt?: string | null;
-    };
+    subject?: Subject;
     instructors?: OfferingInstructor[];
     createdAt?: string;
     updatedAt?: string;
@@ -108,6 +111,7 @@ function mapBackendOfferingToOffering(
         theoryCredits,
         practicalCredits,
         instructors,
+        subject, // Keep the full subject object
         subjectCode: subject?.code || "",
         subjectName: subject?.name || "",
         createdAt,
@@ -148,11 +152,16 @@ export async function createOffering(
     courseId: string,
     payload: OfferingCreate
 ): Promise<Offering> {
-    const res = await api.post<{ offering: BackendOfferingResponse }, OfferingCreate>(
+    const res = await api.post<{ offeringId: string }, OfferingCreate>(
         endpoints.admin.courseOfferings(courseId),
         payload
     );
-    return mapBackendOfferingToOffering(res.offering, courseId);
+
+    if (res.offeringId) {
+        return await getOfferingById(courseId, res.offeringId);
+    }
+
+    throw new Error("Failed to create offering: No offeringId returned");
 }
 
 export async function updateOffering(
