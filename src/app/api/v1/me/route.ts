@@ -9,6 +9,18 @@ import { withRouteLogging } from '@/lib/withRouteLogging';
 
 async function GETHandler(req: NextRequest) {
   try {
+    const cookieHeader = req.headers.get('cookie') ?? '';
+    const cookieNames = cookieHeader
+      ? cookieHeader
+          .split(';')
+          .map((c) => c.split('=')[0]?.trim())
+          .filter(Boolean)
+      : [];
+    console.info('/api/v1/me incoming cookies', {
+      hasCookie: !!cookieHeader,
+      cookieNames,
+    });
+
     const principal = await requireAuth(req);
 
     const [u] = await db
