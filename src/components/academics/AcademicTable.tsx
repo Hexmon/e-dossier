@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useAcademics } from "@/hooks/useAcademics";
+import { toast } from "sonner";
 
 export type AcademicRow = {
     subjectId: string;
@@ -199,7 +200,7 @@ export default function AcademicTable({
         });
 
         if (!gpaSuccess) {
-            alert("Failed to update semester GPA");
+            toast.error("Failed to update semester GPA");
             return;
         }
 
@@ -249,13 +250,13 @@ export default function AcademicTable({
 
             const success = await updateSubjectMarks(semester, row.subjectId, marks);
             if (!success) {
-                alert(`Failed to update subject: ${row.subject}`);
+                toast.error(`Failed to update subject: ${row.subject}`);
                 return;
             }
         }
 
         setIsSaved(true);
-        alert("Data saved successfully!");
+        toast.success("Data saved successfully!");
     };
 
     const handleEdit = () => {
