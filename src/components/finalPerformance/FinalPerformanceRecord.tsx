@@ -18,6 +18,15 @@ interface FinalTableData {
   column10: string;
 }
 
+interface SemesterMarksData {
+  SEM1: Record<string, string>;
+  SEM2: Record<string, string>;
+  SEM3: Record<string, string>;
+  SEM4: Record<string, string>;
+  SEM5: Record<string, string>;
+  SEM6: Record<string, string>;
+}
+
 // Base table config – 10 columns
 const finalTableConfig: TableConfig<FinalTableData> = {
   columns: [
@@ -142,21 +151,8 @@ const initialFinalData: FinalTableData[] = [
   {
     id: "9",
     column1: 9,
-    column2: "Total",
-    column3: 12000,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-  {
-    id: "10",
-    column1: 10,
     column2: "GRAND TOTAL",
-    column3: 12000, 
+    column3: 12000,
     column4: "",
     column5: "",
     column6: "",
@@ -167,23 +163,63 @@ const initialFinalData: FinalTableData[] = [
   },
 ];
 
-export default function FinalPerformanceRecord() {
-  
-    const [finalData, setFinalData] = useState(initialFinalData);
+interface FinalPerformanceRecordProps {
+  semesterMarksData?: SemesterMarksData;
+}
 
+export default function FinalPerformanceRecord({ semesterMarksData }: FinalPerformanceRecordProps) {
+  const [finalData, setFinalData] = useState(initialFinalData);
+
+  // Map semester marks to final table columns
+  useEffect(() => {
+    if (semesterMarksData) {
+      const updatedData = initialFinalData.map((row) => ({
+        ...row,
+        column4: semesterMarksData.SEM1?.[row.id] || "",
+        column5: semesterMarksData.SEM2?.[row.id] || "",
+        column6: semesterMarksData.SEM3?.[row.id] || "",
+        column7: semesterMarksData.SEM4?.[row.id] || "",
+        column8: semesterMarksData.SEM5?.[row.id] || "",
+        column9: semesterMarksData.SEM6?.[row.id] || "",
+        column10: calculateTotal(
+          semesterMarksData.SEM1?.[row.id],
+          semesterMarksData.SEM2?.[row.id],
+          semesterMarksData.SEM3?.[row.id],
+          semesterMarksData.SEM4?.[row.id],
+          semesterMarksData.SEM5?.[row.id],
+          semesterMarksData.SEM6?.[row.id]
+        ),
+      }));
+      setFinalData(updatedData);
+    }
+  }, [semesterMarksData]);
+
+  // Calculate total across semesters
+  const calculateTotal = (...marks: (string | undefined)[]): string => {
+    const validMarks = marks
+      .filter((m) => m !== undefined && m !== "")
+      .map((m) => parseFloat(m || "0"))
+      .filter((m) => !isNaN(m));
+
+    if (validMarks.length === 0) return "";
+    const total = validMarks.reduce((sum, mark) => sum + mark, 0);
+    return total.toString();
+  };
 
   return (
-  <div className="space-y-6">
-    <Card className="p-6 rounded-2xl shadow-xl bg-white">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-center text-primary">Final Performance Record</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <UniversalTable data={finalData} config={finalTableConfig} />
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
+    <div className="space-y-6">
+      <Card className="p-6 rounded-2xl shadow-xl bg-white">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-center text-primary">
+            Final Performance Record
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <UniversalTable data={finalData} config={finalTableConfig} />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

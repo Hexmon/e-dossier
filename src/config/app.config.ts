@@ -12,7 +12,9 @@ import {
   CalendarDays,
   Trophy,
   FileBadge,
-  NotebookPen
+  NotebookPen,
+  ChartArea,
+  BookOpenCheck
 } from "lucide-react";
 
 
@@ -191,14 +193,6 @@ export const dashboardCards = [
   },
 
   // {
-  //   title: "Academics",
-  //   description: "Manage academic subjects, topics, and study material",
-  //   icon: BookOpen,
-  //   to: "",
-  //   color: "bg-purple-500"
-  // },
-
-  // {
   //   title: "User Management",
   //   description: "Handle user accounts and permissions",
   //   icon: Users,
@@ -271,7 +265,23 @@ export const managementCard = [
     icon: CalendarDays,
     to: "/dashboard/genmgmt/appointmentmgmt",
     color: "bg-blue-500"
+  },
+  {
+    title: "Instructor Management",
+    description: "Manage instructors, roles, and assignments efficiently",
+    icon: UserCheck,
+    to: "/dashboard/genmgmt/instructors",
+    color: "bg-green-500"
+  },
+  {
+    title: "Offerings Management",
+    description: "Create, update, and manage course offerings efficiently",
+    icon: BookOpenCheck,
+    to: "/dashboard/genmgmt/offerings",
+    color: "bg-purple-500"
   }
+
+
 
 
   // {
@@ -292,6 +302,13 @@ type TrainingCard = {
 };
 
 export const militaryTrainingCards: TrainingCard[] = [
+  {
+    title: "Performance Graph",
+    description: "Visual performance tracking and analytics",
+    icon: ChartArea,
+    to: (id: string) => `/dashboard/${id}/milmgmt/performance-graph`,
+    color: "bg-blue-700"
+  },
   {
     title: "Dossier Snapshot",
     description: "Quickly view and analyze OC details",
@@ -440,11 +457,18 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "bg-green-500"
   },
   {
-    title: "Interview",
+    title: "Initial Interview",
     description: "Schedule and manage candidate interviews",
     icon: UserCheck,
-    to: (id: string) => `/dashboard/${id}/milmgmt/interview`,
+    to: (id: string) => `/dashboard/${id}/milmgmt/initial-interview`,
     color: "bg-orange-500"
+  },
+  {
+    title: "Terms Interview",
+    description: "Schedule and manage candidate interviews",
+    icon: UserCheck,
+    to: (id: string) => `/dashboard/${id}/milmgmt/interview-term`,
+    color: "bg-green-500"
   },
   {
     title: "Credit for Excellence",
@@ -452,6 +476,13 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: FileBadge,
     to: (id: string) => `/dashboard/${id}/milmgmt/credit-excellence`,
     color: "bg-violet-600"
+  },
+  {
+    title: "Physical Training",
+    description: "Manage cadet physical training records",
+    icon: Dumbbell,
+    to: (id: string) => `/dashboard/${id}/milmgmt/physical-training`,
+    color: "bg-gray-700"
   },
   {
     title: "Semester Record",
@@ -468,11 +499,18 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "bg-yellow-700"
   },
   {
-    title: "Physical Training",
-    description: "Manage cadet physical training records",
-    icon: Dumbbell,
-    to: (id: string) => `/dashboard/${id}/milmgmt/physical-training`,
-    color: "bg-gray-700"
+    title: "Overall Assessment",
+    description: "Manage cadet overall assessment records",
+    icon: ClipboardCheck,
+    to: (id: string) => `/dashboard/${id}/milmgmt/overall-assessment`,
+    color: "bg-yellow-700"
+  },
+  {
+    title: "Academics",
+    description: "Manage academic subjects, topics, and study material",
+    icon: BookOpen,
+    to: (id: string) => `/dashboard/${id}/milmgmt/academics`,
+    color: "bg-purple-500"
   }
 
 ];
@@ -1133,7 +1171,7 @@ export const courseSections = [
 ]
 
 export const managementTabs = [
-  { value: "Gen Mgmt", title: "Gen Mgmt", icon: Shield },
+  { value: "Gen Mgmt", title: "Admin Mgmt", icon: Shield },
   { value: "settings", title: "Settings", icon: Settings },
 ];
 
@@ -1153,7 +1191,13 @@ export const ocTabs = [
     title: "Appointment Management",
     icon: CalendarDays,
     link: "/dashboard/genmgmt/appointmentmgmt"
-  }
+  },
+  // {
+  //   value: "instructors",
+  //   title: "Instructor Management",
+  //   icon: UserCheck,
+  //   link: "/dashboard/genmgmt/instructors",
+  // }
 
 
 ];
@@ -1168,6 +1212,11 @@ export const semesterTabs = [
 ];
 export const miltrgTabs = [
   {
+    value: "basic-details",
+    title: "Basic Details",
+    icon: User,
+  },
+  {
     value: "mil-trg",
     title: "Mil-Trg",
     icon: Shield,
@@ -1181,13 +1230,23 @@ export const miltrgTabs = [
 
 export const dossierTabs = [
   {
+    value: "initial-interview",
+    title: "Initial Interview",
+    icon: UserCheck,
+  },
+  {
+    value: "interview-term",
+    title: "Terms Interview",
+    icon: UserCheck,
+  },
+  {
     value: "speed-march",
     title: "Speed March / Runs",
     icon: Timer,
   },
   {
     value: "credit-excellence",
-    title: "Speed March / Runs",
+    title: "Credit for Excellence",
     icon: FileBadge,
   },
   {
@@ -1305,6 +1364,21 @@ export const dossierTabs = [
     value: "physical-training",
     title: "Physical Training",
     icon: Dumbbell,
+  },
+  {
+    value: "overall-assessment",
+    title: "Overall Assessment",
+    icon: ClipboardCheck,
+  },
+  {
+    value: "performance-graph",
+    title: "Performance Graph",
+    icon: ChartArea,
+  },
+  {
+    value: "academics",
+    title: "Academics",
+    icon: BookOpen,
   }
 ];
 

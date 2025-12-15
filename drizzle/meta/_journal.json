@@ -36,6 +36,27 @@
       "when": 1764064022632,
       "tag": "0004_odd_angel",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1765617600000,
+      "tag": "0005_oc_semester_marks",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1765618200000,
+      "tag": "0006_add_inactive_oc_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1765659997000,
+      "tag": "0007_audit_log_upgrade",
+      "breakpoints": true
     }
   ]
 }

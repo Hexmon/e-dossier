@@ -9,6 +9,8 @@ import { eq } from 'drizzle-orm';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { listOCsBasic, listOCsFull } from '@/app/db/queries/oc';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 // --- Create OC (token required; no admin) -------------------------------
 const createSchema = z.object({
@@ -20,9 +22,9 @@ const createSchema = z.object({
     arrivalAtUniversity: z.coerce.date(),
 });
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
         const body = createSchema.parse(await req.json());
 
         const [course] = await db
@@ -76,13 +78,31 @@ export async function POST(req: NextRequest) {
                 createdAt: ocCadets.createdAt,
             });
 
+        await createAuditLog({
+            actorUserId: authCtx.userId,
+            eventType: AuditEventType.OC_CREATED,
+            resourceType: AuditResourceType.OC,
+            resourceId: row.id,
+            description: `Created OC ${row.ocNo}`,
+            metadata: {
+                ocId: row.id,
+                name: row.name,
+                ocNo: row.ocNo,
+                uid: row.uid,
+                courseId: row.courseId,
+                branch: row.branch,
+                platoonId: row.platoonId,
+                arrivalAtUniversity: row.arrivalAtUniversity,
+            },
+            request: req,
+        });
         return json.created({ message: 'OC created successfully.', oc: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
@@ -255,3 +275,6 @@ export async function GET(req: NextRequest) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

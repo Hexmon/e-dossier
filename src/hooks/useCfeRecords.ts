@@ -20,6 +20,9 @@ import type { cfeRow } from "@/types/cfe";
  * - semestersCount: number of semester buckets
  *
  * groups: cfeRow[][] where index = semesterIndex (semester-1)
+ * 
+ * KEY FIX: saveSemesterPayload now MERGES existing records with new ones
+ * instead of replacing them. This ensures old records are preserved.
  */
 export function useCfeRecords(ocId: string, semestersCount = 6) {
     const [groups, setGroups] = useState<cfeRow[][]>(Array.from({ length: semestersCount }, () => []));
@@ -65,8 +68,17 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
     }, [ocId, semestersCount]);
 
     /**
-     * Save new records for a semester by appending to existing payloads and sending create API.
-     * dataRows: array of { cat, mks, remarks } coming from the form.
+     * Save new records for a semester by MERGING with existing records
+     * dataRows: array of { cat, mks, remarks } coming from the form
+     * 
+     * KEY FIX: This function now:
+     * 1. Gets all existing records for the semester from 'groups' state
+     * 2. Converts them to CfeItem format
+     * 3. Combines existing items + new items
+     * 4. Sends the complete merged list to the backend
+     * 5. Calls fetchAll() to refresh all data
+     * 
+     * Result: All previous records are preserved + new ones are added
      */
     const saveSemesterPayload = useCallback(
         async (semesterIndex: number, dataRows: Array<{ cat: string; mks: string; remarks?: string }>) => {
@@ -75,7 +87,7 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
             try {
                 const semester = semesterIndex + 1;
 
-                // transform form rows to CfeItem
+                // Transform NEW form rows to CfeItem
                 const newItems: CfeItem[] = dataRows
                     .filter((r) => r.cat && r.mks)
                     .map((r) => ({ cat: r.cat, marks: Number(r.mks) || 0, remarks: r.remarks ?? "" }));
@@ -85,9 +97,24 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
                     return null;
                 }
 
-                const payload = { semester, data: newItems, remark: "" };
+                // Get EXISTING records for this semester from state
+                const existingRows = groups[semesterIndex] ?? [];
 
-                // Create single record (API expects array of payloads)
+                // Convert existing cfeRow[] to CfeItem[]
+                const existingItems: CfeItem[] = existingRows
+                    .map((row) => ({
+                        cat: row.cat ?? "",
+                        marks: Number(row.mks) || 0,
+                        remarks: row.remarks ?? "",
+                    }));
+
+                // MERGE: Combine existing items with new items
+                // This preserves all previous records while adding new ones
+                const allItems: CfeItem[] = [...existingItems, ...newItems];
+
+                // Send the complete merged list to backend
+                const payload = { semester, data: allItems, remark: "" };
+
                 const resp = await createCreditForExcellence(ocId, [payload]);
 
                 if (!resp) {
@@ -105,12 +132,15 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
                 setLoading(false);
             }
         },
-        [ocId, fetchAll]
+        [ocId, groups, fetchAll]  // Added 'groups' to dependencies so we get fresh existing data
     );
 
     /**
      * Replace entire semester's items with given items (used by inline edit)
      * items param: array of { cat, marks, remarks }
+     * 
+     * This completely replaces all records for a semester with the provided items.
+     * Used when user edits existing records in the table.
      */
     const replaceSemesterPayload = useCallback(
         async (semesterIndex: number, items: Array<{ cat: string; marks: number; remarks?: string }>) => {
@@ -118,9 +148,17 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
             setLoading(true);
             try {
                 const semester = semesterIndex + 1;
-                const payload = { semester, data: items.map((it) => ({ cat: it.cat, marks: Number(it.marks) || 0, remarks: it.remarks ?? "" })), remark: "" };
+                const payload = {
+                    semester,
+                    data: items.map((it) => ({
+                        cat: it.cat,
+                        marks: Number(it.marks) || 0,
+                        remarks: it.remarks ?? "",
+                    })),
+                    remark: "",
+                };
 
-                // We will call createCreditForExcellence with one payload to overwrite current semester (backend behavior in your app previously used create to replace).
+                // Create with the complete set of items for this semester
                 const resp = await createCreditForExcellence(ocId, [payload]);
 
                 if (!resp) {

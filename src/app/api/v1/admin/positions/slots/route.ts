@@ -7,8 +7,10 @@ import { appointments } from '@/app/db/schema/auth/appointments';
 import { users } from '@/app/db/schema/auth/users';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, or, eq, isNull, lte, gte, inArray, sql } from 'drizzle-orm';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   try {
     const url = new URL(req.url);
 
@@ -162,8 +164,23 @@ export async function GET(req: NextRequest) {
           : null,
       }));
 
+    await createAuditLog({
+      actorUserId: null,
+      eventType: AuditEventType.API_REQUEST,
+      resourceType: AuditResourceType.POSITION,
+      resourceId: null,
+      description: 'Listed position slots',
+      metadata: {
+        count: slots.length,
+        onlyAvailable,
+        positionKeys: positionKeys.length ? positionKeys : undefined,
+        platoonKeys: platoonKeys.length ? platoonKeys : undefined,
+      },
+      request: req,
+    });
     return json.ok({ message: 'Position slots retrieved successfully.', count: slots.length, slots });
   } catch (err) {
     return handleApiError(err);
   }
 }
+export const GET = withRouteLogging('GET', GETHandler);

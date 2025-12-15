@@ -61,6 +61,14 @@ function isPublic(pathname: string, method: string) {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method.toUpperCase();
+  const requestHeaders = new Headers(req.headers);
+  const requestId = requestHeaders.get('x-request-id') ?? crypto.randomUUID();
+  requestHeaders.set('x-request-id', requestId);
+
+  const attachRequestId = (response: NextResponse) => {
+    response.headers.set('x-request-id', requestId);
+    return response;
+  };
 
   // SECURITY FIX: Rate Limiting for API requests
   // Apply rate limiting to all API endpoints
@@ -74,7 +82,7 @@ export async function middleware(req: NextRequest) {
     if (!rateLimitResult.success) {
       // NOTE: Audit logging moved to API routes (Edge Runtime limitation)
       // Rate limit exceeded
-      return new NextResponse(
+      return attachRequestId(new NextResponse(
         JSON.stringify({
           status: 429,
           ok: false,
@@ -90,17 +98,17 @@ export async function middleware(req: NextRequest) {
             'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
           },
         }
-      );
+      ));
     }
   }
 
   // SECURITY FIX: CSRF Protection for state-changing requests
   // Generate CSRF token for GET requests (safe methods)
   if (method === 'GET' && pathname.startsWith(PROTECTED_PREFIX)) {
-    const response = NextResponse.next();
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
     const csrfToken = await generateCsrfToken();
     setCsrfCookie(response, csrfToken);
-    return response;
+    return attachRequestId(response);
   }
 
   // Validate CSRF token for state-changing requests (POST, PUT, PATCH, DELETE)
@@ -118,7 +126,7 @@ export async function middleware(req: NextRequest) {
 
     if (!shouldSkipCsrf && !(await validateCsrfToken(req))) {
       // NOTE: Audit logging moved to API routes (Edge Runtime limitation)
-      return json.forbidden('Invalid or missing CSRF token');
+      return attachRequestId(json.forbidden('Invalid or missing CSRF token'));
     }
   }
 
@@ -130,10 +138,10 @@ export async function middleware(req: NextRequest) {
   const token = cookieToken || bearerToken;
 
   if (!token) {
-    return json.unauthorized('Missing access token');
+    return attachRequestId(json.unauthorized('Missing access token'));
   }
 
-  return NextResponse.next();
+  return attachRequestId(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 
 export const config = {

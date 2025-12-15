@@ -3,11 +3,13 @@ import {
   GET as getInstructor,
   PATCH as patchInstructor,
   DELETE as deleteInstructor,
-} from '@/app/api/v1/instructors/[id]/route';
+} from '@/app/api/v1/admin/instructors/[id]/route';
 import { makeJsonRequest } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import { db } from '@/app/db/client';
+import * as instructorQueries from '@/app/db/queries/instructors';
+import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
@@ -21,14 +23,42 @@ vi.mock('@/app/db/client', () => ({
   },
 }));
 
-const basePath = '/api/v1/instructors';
+vi.mock('@/app/db/queries/instructors', () => ({
+  softDeleteInstructor: vi.fn(),
+  hardDeleteInstructor: vi.fn(),
+}));
+
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    INSTRUCTOR_CREATED: 'instructor.created',
+    INSTRUCTOR_UPDATED: 'instructor.updated',
+    INSTRUCTOR_DELETED: 'instructor.deleted',
+  },
+  AuditResourceType: {
+    INSTRUCTOR: 'instructor',
+  },
+}));
+
+const basePath = '/api/v1/admin/instructors';
 const instructorId = '11111111-1111-4111-8111-111111111111';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (auditLog.createAuditLog as any).mockClear?.();
 });
 
-describe('GET /api/v1/instructors/[id]', () => {
+describe('GET /api/v1/admin/instructors/[id]', () => {
   it('returns 401 when auth fails', async () => {
     (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
@@ -86,7 +116,7 @@ describe('GET /api/v1/instructors/[id]', () => {
   });
 });
 
-describe('PATCH /api/v1/instructors/[id]', () => {
+describe('PATCH /api/v1/admin/instructors/[id]', () => {
   it('returns 403 when user lacks admin role', async () => {
     (authz.requireAdmin as any).mockRejectedValueOnce(
       new ApiError(403, 'Admin privileges required', 'forbidden'),
@@ -121,6 +151,13 @@ describe('PATCH /api/v1/instructors/[id]', () => {
 
   it('returns 409 when update violates unique constraint', async () => {
     (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (db.select as any).mockImplementationOnce(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{ id: instructorId, name: 'Instructor One' }],
+        }),
+      }),
+    }));
     (db.update as any).mockImplementationOnce(() => ({
       set: () => ({
         where: () => ({
@@ -147,6 +184,13 @@ describe('PATCH /api/v1/instructors/[id]', () => {
 
   it('updates instructor on happy path', async () => {
     (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (db.select as any).mockImplementationOnce(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{ id: instructorId, name: 'Instructor One' }],
+        }),
+      }),
+    }));
     (db.update as any).mockImplementationOnce(() => ({
       set: () => ({
         where: () => ({
@@ -165,10 +209,11 @@ describe('PATCH /api/v1/instructors/[id]', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.instructor.name).toBe('Updated Name');
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });
 
-describe('DELETE /api/v1/instructors/[id]', () => {
+describe('DELETE /api/v1/admin/instructors/[id]', () => {
   it('returns 401 when not authenticated as admin', async () => {
     (authz.requireAdmin as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
@@ -184,9 +229,7 @@ describe('DELETE /api/v1/instructors/[id]', () => {
 
   it('returns 404 when instructor to delete is not found', async () => {
     (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
-    (db.update as any).mockImplementationOnce(() => ({
-      set: () => ({ where: () => ({ returning: async () => [] }) }),
-    }));
+    (instructorQueries.softDeleteInstructor as any).mockResolvedValueOnce(null);
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${instructorId}` });
     const ctx = { params: Promise.resolve({ id: instructorId }) } as any;
     const res = await deleteInstructor(req as any, ctx);
@@ -198,9 +241,10 @@ describe('DELETE /api/v1/instructors/[id]', () => {
 
   it('soft-deletes instructor on happy path', async () => {
     (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
-    (db.update as any).mockImplementationOnce(() => ({
-      set: () => ({ where: () => ({ returning: async () => [{ id: instructorId }] }) }),
-    }));
+    (instructorQueries.softDeleteInstructor as any).mockResolvedValueOnce({
+      before: { id: instructorId },
+      after: { id: instructorId, deletedAt: new Date().toISOString() },
+    });
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${instructorId}` });
     const ctx = { params: Promise.resolve({ id: instructorId }) } as any;
     const res = await deleteInstructor(req as any, ctx);
@@ -208,6 +252,23 @@ describe('DELETE /api/v1/instructors/[id]', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.id).toBe(instructorId);
+    expect(instructorQueries.softDeleteInstructor).toHaveBeenCalledWith(instructorId);
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
+  });
+
+  it('hard-deletes instructor when ?hard=true', async () => {
+    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (instructorQueries.hardDeleteInstructor as any).mockResolvedValueOnce({
+      before: { id: instructorId },
+    });
+    const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${instructorId}?hard=true` });
+    const ctx = { params: Promise.resolve({ id: instructorId }) } as any;
+    const res = await deleteInstructor(req as any, ctx);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.id).toBe(instructorId);
+    expect(instructorQueries.hardDeleteInstructor).toHaveBeenCalledWith(instructorId);
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });
-

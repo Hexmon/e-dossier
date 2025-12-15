@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useParams } from "next/navigation";
 
@@ -14,12 +14,11 @@ import DossierTab from "@/components/Tabs/DossierTab";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Shield, ChevronDown } from "lucide-react";
 
 import { springPrefill, autumnPrefill, motivationPrefill } from "@/constants/app.constants";
-import { useOcPersonal } from "@/hooks/useOcPersonal";
 import { useSportsAwards } from "@/hooks/useSportsAwards";
 import { toast } from "sonner";
 
@@ -43,21 +42,60 @@ export default function SportsGamesPage() {
     // hook for saved data / apis
     const {
         savedData,
-        setSavedData,
         loading: loadingSaved,
         loadAll,
         upsertSportsRows,
         upsertMotivationRows,
-        removeRowLocal,
     } = useSportsAwards(ocId, semesters.length);
 
+    // helpers to merge prefill with saved rows (keeps prefill order)
+    const mergePrefillWithSaved = (prefill: Row[], saved: Row[]) =>
+        prefill.map((p) => {
+            const { activity } = p;
+            const found = saved.find((s) => s.activity === activity);
+            return found
+                ? { 
+                    id: found.id,
+                    ocId: found.ocId,
+                    term: found.term,
+                    activity: found.activity ?? activity, 
+                    string: found.string ?? p.string ?? "", 
+                    maxMarks: found.maxMarks ?? p.maxMarks ?? "", 
+                    obtained: found.obtained ?? p.obtained ?? "" 
+                }
+                : { 
+                    id: p.id,
+                    ocId: p.ocId,
+                    term: p.term,
+                    activity: p.activity ?? "-",
+                    string: p.string ?? "", 
+                    maxMarks: p.maxMarks ?? "", 
+                    obtained: p.obtained ?? "" 
+                };
+        });
+
+    // Create stable default values
+    const getDefaultValues = (): SemesterData => {
+        const current = savedData[activeTab];
+        if (!current) {
+            return {
+                spring: springPrefill,
+                autumn: autumnPrefill,
+                motivation: motivationPrefill,
+            };
+        }
+
+        return {
+            spring: mergePrefillWithSaved(springPrefill, current.spring),
+            autumn: mergePrefillWithSaved(autumnPrefill, current.autumn),
+            motivation: mergePrefillWithSaved(motivationPrefill, current.motivation),
+        };
+    };
+
     // form
-    const { register, handleSubmit, reset, getValues } = useForm<SemesterData>({
-        defaultValues: {
-            spring: springPrefill,
-            autumn: autumnPrefill,
-            motivation: motivationPrefill,
-        },
+    const { control, handleSubmit, reset, getValues } = useForm<SemesterData>({
+        mode: "onChange",
+        defaultValues: getDefaultValues(),
     });
 
     const [isSaving, setIsSaving] = useState(false);
@@ -66,46 +104,36 @@ export default function SportsGamesPage() {
     useEffect(() => {
         if (!ocId) return;
         loadAll();
-    }, [ocId]);
+    }, [ocId, loadAll]);
 
+    // Reset form when activeTab or savedData changes
     useEffect(() => {
-        const current = savedData[activeTab];
-        if (!current) return;
+        reset(getDefaultValues());
+    }, [activeTab, savedData, reset]);
 
-        reset({
-            spring: mergePrefillWithSaved(springPrefill, current.spring),
-            autumn: mergePrefillWithSaved(autumnPrefill, current.autumn),
-            motivation: mergeMotivationWithSaved(motivationPrefill, current.motivation),
-        });
-    }, [savedData, activeTab]);
+    // Validation helper
+    const validateTermRows = (rows: Row[], isMotivation: boolean = false): boolean => {
+        for (const r of rows) {
+            const obtained = Number(r?.obtained ?? 0);
+            const maxMarks = Number(r?.maxMarks ?? 0);
 
-    // helpers to merge prefill with saved rows (keeps prefill order)
-    const mergePrefillWithSaved = (prefill: Row[], saved: Row[]) =>
-        prefill.map((p) => {
-            const { activity } = p;
-            const found = saved.find((s) => s.activity === activity);
-            return found
-                ? { ...found, activity: found.activity ?? activity, string: found.string ?? p.string ?? "-", maxMarks: found.maxMarks ?? p.maxMarks, obtained: found.obtained ?? p.obtained ?? "" }
-                : { ...p, string: p.string ?? "-", maxMarks: p.maxMarks ?? 0, obtained: p.obtained ?? "" };
-        });
+            // Validate obtained marks is not negative
+            if (!Number.isNaN(obtained) && obtained < 0) {
+                toast.error("Obtained marks cannot be negative");
+                return false;
+            }
 
-    const mergeMotivationWithSaved = (prefill: Row[], saved: Row[]) => {
-        const savedMap = new Map<string, Row>();
-        saved.forEach((s) => {
-            if (s.activity) savedMap.set(s.activity, s);
-        });
-
-        return prefill.map((p) => {
-            const { activity } = p;
-            const found = savedMap.get(activity ?? "");
-            return found
-                ? { ...found, activity: found.activity ?? activity, string: found.string ?? p.string ?? "-", maxMarks: found.maxMarks ?? p.maxMarks, obtained: found.obtained ?? p.obtained ?? "" }
-                : { ...p, string: p.string ?? "-", maxMarks: p.maxMarks ?? 0, obtained: p.obtained ?? "" };
-        });
+            // Validate obtained <= maxMarks (only for sports, not motivation)
+            if (!isMotivation && !Number.isNaN(maxMarks) && !Number.isNaN(obtained) && obtained > maxMarks) {
+                toast.error("Obtained marks cannot exceed Max Marks");
+                return false;
+            }
+        }
+        return true;
     };
 
     // submit a term
-    const submitTerm = useCallback(async (termKey: "spring" | "autumn" | "motivation") => {
+    const submitTerm = async (termKey: "spring" | "autumn" | "motivation") => {
         if (!ocId) {
             toast.error("No cadet selected");
             return;
@@ -113,14 +141,9 @@ export default function SportsGamesPage() {
         const semesterNumber = activeTab + 1;
         const rows: Row[] = getValues(termKey) ?? [];
 
-        // validate obtained <= maxMarks
-        for (const r of rows) {
-            const max = Number(r?.maxMarks ?? 0);
-            const obtained = Number(r?.obtained ?? 0);
-            if (!Number.isNaN(max) && !Number.isNaN(obtained) && obtained > max) {
-                toast.error("Obtained marks cannot exceed Max Marks");
-                return;
-            }
+        // Validate rows
+        if (!validateTermRows(rows, termKey === "motivation")) {
+            return;
         }
 
         setIsSaving(true);
@@ -131,13 +154,8 @@ export default function SportsGamesPage() {
                 await upsertSportsRows(semesterNumber, termKey, rows);
             }
 
-            // locally update savedData snapshot
-            setSavedData((prev) => {
-                const copy = prev.map((s) => ({ spring: [...s.spring], autumn: [...s.autumn], motivation: [...s.motivation] }));
-                copy[activeTab] = { ...copy[activeTab], [termKey]: [...rows] } as SemesterData;
-                return copy;
-            });
-
+            toast.success(`${termKey.charAt(0).toUpperCase() + termKey.slice(1)} term saved successfully`);
+            await loadAll();
             setEditing((s) => ({ ...s, [termKey]: false }));
         } catch (err) {
             console.error(err);
@@ -145,43 +163,23 @@ export default function SportsGamesPage() {
         } finally {
             setIsSaving(false);
         }
-    }, [activeTab, getValues, ocId, upsertMotivationRows, upsertSportsRows, setSavedData]);
+    };
 
-    // local update/delete handlers (table can call these)
-    const handleRowUpdated = useCallback(
-        (term: keyof SemesterData, updatedRow: Row, index: number) => {
-            setSavedData(prev => {
-                const copy = prev.map(s => ({
-                    spring: [...s.spring],
-                    autumn: [...s.autumn],
-                    motivation: [...s.motivation]
-                }));
+    const handleCancel = async (termKey: "spring" | "autumn" | "motivation") => {
+        if (!ocId) return;
+        await loadAll();
+        setEditing((s) => ({ ...s, [termKey]: false }));
+    };
 
-                // Update the target row by index
-                const termRows = [...copy[activeTab][term]];
-                termRows[index] = { ...termRows[index], ...updatedRow };
+    const handleReset = (termKey: "spring" | "autumn" | "motivation") => {
+        const resetData: SemesterData = {
+            spring: termKey === "spring" ? springPrefill : mergePrefillWithSaved(springPrefill, savedData[activeTab]?.spring ?? []),
+            autumn: termKey === "autumn" ? autumnPrefill : mergePrefillWithSaved(autumnPrefill, savedData[activeTab]?.autumn ?? []),
+            motivation: termKey === "motivation" ? motivationPrefill : mergePrefillWithSaved(motivationPrefill, savedData[activeTab]?.motivation ?? []),
+        };
 
-                copy[activeTab] = {
-                    ...copy[activeTab],
-                    [term]: termRows
-                };
-
-                return copy;
-            });
-        },
-        [activeTab]
-    );
-
-    const handleRowDeleted = useCallback((term: keyof SemesterData, id: string) => {
-        // optimistic update; the hook's API remove should be wired if you want server delete too
-        setSavedData((prev) => {
-            const copy = prev.map((s) => ({ spring: [...s.spring], autumn: [...s.autumn], motivation: [...s.motivation] }));
-            copy[activeTab] = { ...copy[activeTab], [term]: copy[activeTab][term].filter((r) => r.id !== id) } as SemesterData;
-            return copy;
-        });
-        // also call a hook function to remove server-side when implemented
-        // removeRowLocal(activeTab, term, id);
-    }, [activeTab]);
+        reset(resetData);
+    };
 
     // memoized rows to pass to table (prefill + saved)
     const memoizedSpringRows = useMemo(() => springPrefill, []);
@@ -245,19 +243,22 @@ export default function SportsGamesPage() {
                                         termKey="spring"
                                         rows={memoizedSpringRows}
                                         savedRows={memoSavedSpring}
-                                        register={register}
+                                        control={control}
                                         disabled={!editing.spring}
-                                        onRowUpdated={(updatedRow, index) =>
-                                            handleRowUpdated("spring", updatedRow, index)
-                                        }
                                     />
                                     <SportsForm
                                         termKey="spring"
                                         isSaving={isSaving}
                                         editing={editing.spring}
-                                        onSave={() => (editing.spring ? handleSubmit(() => submitTerm("spring"))() : setEditing((s) => ({ ...s, spring: true })))}
-                                        onCancel={async () => { if (!ocId) return; await loadAll(); setEditing((s) => ({ ...s, spring: false })); }}
-                                        onReset={() => reset({ spring: springPrefill })}
+                                        onSave={() => {
+                                            if (editing.spring) {
+                                                submitTerm("spring");
+                                            } else {
+                                                setEditing((s) => ({ ...s, spring: true }));
+                                            }
+                                        }}
+                                        onCancel={() => handleCancel("spring")}
+                                        onReset={() => handleReset("spring")}
                                     />
                                 </div>
 
@@ -268,19 +269,22 @@ export default function SportsGamesPage() {
                                         termKey="autumn"
                                         rows={memoizedAutumnRows}
                                         savedRows={memoSavedAutumn}
-                                        register={register}
+                                        control={control}
                                         disabled={!editing.autumn}
-                                        onRowUpdated={(updatedRow, index) =>
-                                            handleRowUpdated("autumn", updatedRow, index)
-                                        }
                                     />
                                     <SportsForm
                                         termKey="autumn"
                                         isSaving={isSaving}
                                         editing={editing.autumn}
-                                        onSave={() => (editing.autumn ? handleSubmit(() => submitTerm("autumn"))() : setEditing((s) => ({ ...s, autumn: true })))}
-                                        onCancel={async () => { if (!ocId) return; await loadAll(); setEditing((s) => ({ ...s, autumn: false })); }}
-                                        onReset={() => reset({ autumn: autumnPrefill })}
+                                        onSave={() => {
+                                            if (editing.autumn) {
+                                                submitTerm("autumn");
+                                            } else {
+                                                setEditing((s) => ({ ...s, autumn: true }));
+                                            }
+                                        }}
+                                        onCancel={() => handleCancel("autumn")}
+                                        onReset={() => handleReset("autumn")}
                                     />
                                 </div>
 
@@ -291,28 +295,23 @@ export default function SportsGamesPage() {
                                         termKey="motivation"
                                         rows={memoizedMotivationRows}
                                         savedRows={memoSavedMotivation}
-                                        register={register}
+                                        control={control}
                                         disabled={!editing.motivation}
-                                        onRowUpdated={(updatedRow, index) =>
-                                            handleRowUpdated("motivation", updatedRow, index)
-                                        }
+                                        hideStringAndMaxMarks={true}
                                     />
-
                                     <SportsForm
                                         termKey="motivation"
                                         isSaving={isSaving}
                                         editing={editing.motivation}
-                                        onSave={() =>
-                                            editing.motivation
-                                                ? handleSubmit(() => submitTerm("motivation"))()
-                                                : setEditing((s) => ({ ...s, motivation: true }))
-                                        }
-                                        onCancel={async () => {
-                                            if (!ocId) return;
-                                            await loadAll();
-                                            setEditing((s) => ({ ...s, motivation: false }));
+                                        onSave={() => {
+                                            if (editing.motivation) {
+                                                submitTerm("motivation");
+                                            } else {
+                                                setEditing((s) => ({ ...s, motivation: true }));
+                                            }
                                         }}
-                                        onReset={() => reset({ motivation: motivationPrefill })}
+                                        onCancel={() => handleCancel("motivation")}
+                                        onReset={() => handleReset("motivation")}
                                     />
                                 </div>
                             </CardContent>

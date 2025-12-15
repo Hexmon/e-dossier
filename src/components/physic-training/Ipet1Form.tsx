@@ -11,6 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface TableRow {
     id: string;
@@ -28,7 +29,7 @@ interface Ipet1FormProps {
 }
 
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
-const column4Options = ["Excellent", "Good", "Satisfied"];
+const column4Options = ["Pass", "Fail"];
 
 export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormProps) {
     const [isEditing, setIsEditing] = useState(false);
@@ -57,13 +58,47 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
     };
 
     const handleColumn5Change = (rowId: string, value: string) => {
-        const numValue = parseFloat(value) || 0;
-        setTableData((prev) => prev.map((row) => (row.id === rowId ? { ...row, column5: numValue } : row)));
+        const row = tableData.find(r => r.id === rowId);
+        if (!row) return;
+
+        const numValue = parseFloat(value);
+
+        // Allow empty values
+        if (value.trim() === "") {
+            setTableData((prev) => prev.map((r) => (r.id === rowId ? { ...r, column5: 0 } : r)));
+            return;
+        }
+
+        // Validate marks
+        if (isNaN(numValue) || numValue < 0) {
+            toast.error("Marks must be a valid positive number");
+            return;
+        }
+
+        if (numValue > row.maxMarks) {
+            toast.error(`Marks scored cannot exceed maximum marks (${row.maxMarks})`);
+            return;
+        }
+
+        setTableData((prev) => prev.map((r) => (r.id === rowId ? { ...r, column5: numValue } : r)));
     };
 
     useEffect(() => {
         onMarksChange(tableTotal);
     }, [tableTotal, onMarksChange]);
+
+    const handleSave = () => {
+        // Validate all marks before saving
+        for (const row of tableData) {
+            if (row.column5 > 0 && row.column5 > row.maxMarks) {
+                toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and ${row.maxMarks}`);
+                return;
+            }
+        }
+
+        setIsEditing(false);
+        toast.success("IPET data saved successfully");
+    };
 
     return (
         <div className="mt-3 space-y-6">
@@ -182,7 +217,7 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
                     {isEditing ? (
                         <>
                             <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-                            <Button onClick={() => setIsEditing(false)}>Save</Button>
+                            <Button onClick={handleSave}>Save</Button>
                         </>
                     ) : (
                         <Button onClick={() => setIsEditing(true)}>Edit</Button>

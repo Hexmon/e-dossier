@@ -3,6 +3,8 @@ import { json, handleApiError } from '@/app/lib/http';
 import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam, ssbReportFullSchema } from '@/app/lib/oc-validators';
 import { getSsbReport, deleteSsbReport, listSsbPoints, upsertSsbReportWithPoints } from '@/app/db/queries/oc';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 type SsbReportRow = {
     id: string;
@@ -48,7 +50,7 @@ function mapSsbDbToResponse(report: SsbReportRow, points: SsbPointRow[]): SsbRep
     };
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -64,9 +66,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -83,15 +85,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ocI
         const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
         const body = mapSsbDbToResponse(report, points);
 
+        await createAuditLog({
+            actorUserId: authCtx.userId,
+            eventType: AuditEventType.OC_RECORD_CREATED,
+            resourceType: AuditResourceType.OC,
+            resourceId: ocId,
+            description: `Created SSB report for OC ${ocId}`,
+            metadata: {
+                ocId,
+                module: 'ssb',
+                positives: dto.positives.length,
+                negatives: dto.negatives.length,
+                predictiveRating: dto.predictiveRating,
+            },
+            request: req,
+        });
         return json.created({ message: 'SSB report created successfully.', ...body });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAdmin(req);
+        const adminCtx = await mustBeAdmin(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -119,16 +136,54 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ oc
         const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
         const body = mapSsbDbToResponse(report, points);
 
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.OC_RECORD_UPDATED,
+            resourceType: AuditResourceType.OC,
+            resourceId: ocId,
+            description: `Updated SSB report for OC ${ocId}`,
+            metadata: {
+                ocId,
+                module: 'ssb',
+                changes: Object.keys(dto),
+                positives: merged.positives.length,
+                negatives: merged.negatives.length,
+            },
+            request: req,
+        });
         return json.ok({ message: 'SSB report updated successfully.', ...body });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAdmin(req);
+        const adminCtx = await mustBeAdmin(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
-        return json.ok({ message: 'SSB report deleted successfully.', deleted: await deleteSsbReport(ocId) });
+        const deleted = await deleteSsbReport(ocId);
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.OC_RECORD_DELETED,
+            resourceType: AuditResourceType.OC,
+            resourceId: ocId,
+            description: `Deleted SSB report for OC ${ocId}`,
+            metadata: {
+                ocId,
+                module: 'ssb',
+                recordId: deleted?.id ?? null,
+                hardDeleted: true,
+            },
+            request: req,
+        });
+        return json.ok({ message: 'SSB report deleted successfully.', deleted });
     } catch (err) { return handleApiError(err); }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);
+
+export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+
+export const DELETE = withRouteLogging('DELETE', DELETEHandler);

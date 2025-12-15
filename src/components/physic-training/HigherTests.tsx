@@ -11,6 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface Row {
     id: string;
@@ -28,7 +29,7 @@ interface HigherTestsProps {
 }
 
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
-const column4Options = ["Excellent", "Good", "Satisfied"];
+const column4Options = ["Pass", "Fail"];
 
 export default function HigherTests({ onMarksChange, activeSemester }: HigherTestsProps) {
     const [isEditing, setIsEditing] = useState(false);
@@ -45,6 +46,34 @@ export default function HigherTests({ onMarksChange, activeSemester }: HigherTes
     }, [tableData]);
 
     const handleChange = (id: string, key: keyof Row, value: string) => {
+        const row = tableData.find(r => r.id === id);
+        if (!row) return;
+
+        // Validation for column5 (Marks Scored)
+        if (key === "column5") {
+            const numValue = parseFloat(value);
+
+            // Allow empty values
+            if (value.trim() === "") {
+                setTableData(prev =>
+                    prev.map(r => (r.id === id ? { ...r, column5: 0 } : r))
+                );
+                return;
+            }
+
+            // Validate marks
+            if (isNaN(numValue) || numValue < 0) {
+                toast.error("Marks must be a valid positive number");
+                return;
+            }
+
+            if (numValue > row.maxMarks) {
+                toast.error(`Marks scored cannot exceed maximum marks (${row.maxMarks})`);
+                return;
+            }
+        }
+
+        // Regular handling for other fields
         setTableData(prev =>
             prev.map(r => {
                 if (r.id === id) {

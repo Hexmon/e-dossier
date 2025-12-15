@@ -9,6 +9,8 @@ import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { checkApiRateLimit, getClientIp, getRateLimitHeaders } from '@/lib/ratelimit';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 // ---------- Body ----------
 const BodySchema = z.object({
@@ -127,9 +129,9 @@ async function existsPersonalField<K extends keyof typeof ocPersonal['_']['colum
 }
 
 // ---------- Handler ----------
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
-    await requireAuth(req);
+    const authCtx = await requireAuth(req);
 
     // Rate limit
     const ip = getClientIp(req);
@@ -142,6 +144,13 @@ export async function POST(req: NextRequest) {
 
     const errors: Array<{ row: number; error: string }> = [];
     let success = 0;
+    const createdRecords: Array<{
+      ocId: string;
+      ocNo: string;
+      courseId: string;
+      platoonId: string | null;
+      arrivalAtUniversity: Date;
+    }> = [];
 
     // In-file duplicate guards (so we also catch duplicates within the uploaded file)
     const seenOcNo = new Set<string>();      // <--- TES No / OC No in-file uniqueness
@@ -337,7 +346,7 @@ export async function POST(req: NextRequest) {
 
       // --- Insert (single transaction per row) ---
       try {
-        await db.transaction(async (tx) => {
+        const inserted = await db.transaction(async (tx) => {
           const uid = `UID-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
           const [oc] = await tx
             .insert(ocCadets)
@@ -391,7 +400,16 @@ export async function POST(req: NextRequest) {
             swimmer: swimmer,
             languages: languages ? String(languages) : undefined,
           });
+
+          return {
+            ocId: oc.id,
+            ocNo,
+            courseId,
+            platoonId: platoonId ?? null,
+            arrivalAtUniversity,
+          };
         });
+        createdRecords.push(inserted);
         success += 1;
       } catch (e: any) {
         console.error('[oc/bulk-upload] failed row', i + 1, e);
@@ -403,6 +421,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    await createAuditLog({
+      actorUserId: authCtx.userId,
+      eventType: AuditEventType.OC_BULK_IMPORTED,
+      resourceType: AuditResourceType.OC,
+      resourceId: null,
+      description: `Bulk uploaded ${success} OC records (${errors.length} failed)`,
+      metadata: {
+        success,
+        failed: errors.length,
+        created: createdRecords.map((record) => ({
+          ocId: record.ocId,
+          ocNo: record.ocNo,
+          courseId: record.courseId,
+          platoonId: record.platoonId,
+          arrivalAtUniversity: record.arrivalAtUniversity.toISOString(),
+        })),
+        errorSamples: errors.slice(0, 25),
+      },
+      request: req,
+    });
+
     const res = json.ok({ message: 'Bulk upload processed successfully.', success, failed: errors.length, errors });
     res.headers.set('X-RateLimit-Limit', rate.limit.toString());
     res.headers.set('X-RateLimit-Remaining', rate.remaining.toString());
@@ -412,3 +451,4 @@ export async function POST(req: NextRequest) {
     return handleApiError(err);
   }
 }
+export const POST = withRouteLogging('POST', POSTHandler);

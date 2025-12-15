@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { dashboardCards } from "@/config/app.config";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { DashboardCard } from "@/components/cards/DashboardCard";
-import { StatCard } from "@/components/cards/StatCard";
-import { stats } from "@/constants/app.constants";
-
+import Marquee from "@/components/Dashboard/Marquee";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import OCSelectModal from "@/components/modals/OCSelectModal";
+import Courses from "@/components/Dashboard/Courses";
+import Platoons from "@/components/Dashboard/Platoons";
+import Appointments from "@/components/Dashboard/Appointments";
+import { marqueeData } from "@/components/Dashboard/MarqueeData";
 
 const DashboardPage = () => {
   const router = useRouter();
@@ -26,39 +26,43 @@ const DashboardPage = () => {
 
   const [filteredOCs, setFilteredOCs] = useState<any[]>([]);
 
+
+
   const handleCardClick = () => {
     setOpen(true);
   };
 
   return (
     <DashboardLayout title="MCEME CTW Dashboard" description="Training Management System">
-      <main className="flex-1 p-6">
 
-        {/* Dashboard Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
-          {dashboardCards.map((card, index) => {
-            const IconComponent = card.icon;
+      <main className="flex-1 p-6 w-full mt-10 overflow-x-hidden">
 
-            return (
-              <DashboardCard
-                key={index}
-                title={card.title}
-                description={card.description}
-                icon={IconComponent}
-                color={card.color}
-                onClick={card.title === "Dossier" ? handleCardClick : undefined}
-                to={card.title === "Dossier" ? undefined : card.to}
-              />
-            );
-          })}
-        </section>
+        {/* Marquee Section - Only visible in content area with proper clipping */}
+        <div className="w-full overflow-hidden z-40 shrink-0">
+          <Marquee
+            data={marqueeData}
+            speed={15}
+            className="w-full"
+          />
+        </div>
 
-        {/* Quick Stats */}
-        <section className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {stats.map((item, index) => (
-            <StatCard key={index} title={item.title} value={item.value} subtitle={item.subtitle} />
-          ))}
-        </section>
+        {/* Cartesian Plane Layout - 2x2 Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full max-w-full">
+          {/* Top Left Quadrant */}
+          <div className="w-full">
+            <Courses />
+          </div>
+
+          {/* Top Right Quadrant */}
+          <div className="w-full">
+            <Platoons />
+          </div>
+
+          {/* Bottom Spanning Both Columns */}
+          <div className="w-full lg:col-span-2 mt-2">
+            <Appointments />
+          </div>
+        </div>
       </main>
 
       {/* ===================== Modal ===================== */}

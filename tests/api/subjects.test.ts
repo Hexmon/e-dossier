@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET as getSubjects, POST as postSubject } from '@/app/api/v1/subjects/route';
+import { GET as getSubjects, POST as postSubject } from '@/app/api/v1/admin/subjects/route';
 import { makeJsonRequest } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as subjectQueries from '@/app/db/queries/subjects';
 import { db } from '@/app/db/client';
+import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
@@ -37,10 +38,33 @@ vi.mock('@/app/db/client', () => {
   return { db: { insert } };
 });
 
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    SUBJECT_CREATED: 'subject.created',
+    SUBJECT_UPDATED: 'subject.updated',
+    SUBJECT_DELETED: 'subject.deleted',
+  },
+  AuditResourceType: {
+    SUBJECT: 'subject',
+  },
+}));
+
 const path = '/api/v1/subjects';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (auditLog.createAuditLog as any).mockClear?.();
 });
 
 describe('GET /api/v1/subjects', () => {
@@ -199,6 +223,6 @@ describe('POST /api/v1/subjects', () => {
     expect(body.ok).toBe(true);
     expect(body.subject.id).toBe('sub-1');
     expect(body.subject.code).toBe('SUB-1');
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });
-

@@ -11,6 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface TableRow {
     id: string;
@@ -21,13 +22,14 @@ interface TableRow {
     column4: string;
     column5: number;
 }
+
 interface Ipet2FormProps {
     onMarksChange: (marks: number) => void;
     activeSemester: string;
 }
 
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
-const column4Options = ["Excellent", "Good", "Satisfied"];
+const column4Options = ["Pass", "Fail"];
 
 export default function Ipet2Form({ onMarksChange, activeSemester }: Ipet2FormProps) {
     const [isEditing, setIsEditing] = useState(false);
@@ -70,17 +72,51 @@ export default function Ipet2Form({ onMarksChange, activeSemester }: Ipet2FormPr
     };
 
     const handleColumn5Change = (rowId: string, value: string) => {
-        const numValue = parseFloat(value) || 0;
+        const row = tableData.find(r => r.id === rowId);
+        if (!row) return;
+
+        const numValue = parseFloat(value);
+
+        // Allow empty values
+        if (value.trim() === "") {
+            setTableData((prev) =>
+                prev.map((r) => (r.id === rowId ? { ...r, column5: 0 } : r))
+            );
+            return;
+        }
+
+        // Validate marks
+        if (isNaN(numValue) || numValue < 0) {
+            toast.error("Marks must be a valid positive number");
+            return;
+        }
+
+        if (numValue > row.maxMarks) {
+            toast.error(`Marks scored cannot exceed maximum marks (${row.maxMarks})`);
+            return;
+        }
+
         setTableData((prev) =>
-            prev.map((row) => (row.id === rowId ? { ...row, column5: numValue } : row))
+            prev.map((r) => (r.id === rowId ? { ...r, column5: numValue } : r))
         );
     };
-
-    
 
     useEffect(() => {
         onMarksChange(totalMarksScored);
     }, [totalMarksScored, onMarksChange]);
+
+    const handleSave = () => {
+        // Validate all marks before saving
+        for (const row of tableData) {
+            if (row.column5 > 0 && row.column5 > row.maxMarks) {
+                toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and ${row.maxMarks}`);
+                return;
+            }
+        }
+
+        setIsEditing(false);
+        toast.success("IPET data saved successfully");
+    };
 
     return (
         <div className="mt-3 space-y-6">
@@ -134,48 +170,48 @@ export default function Ipet2Form({ onMarksChange, activeSemester }: Ipet2FormPr
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {column3Options.map((option) => (
-                                                    <SelectItem key={option} value={option}>
-                                                        {option}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </td>
+                                                        <SelectItem key={option} value={option}>
+                                                            {option}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </td>
 
-                                    {/* Status */}
-                                    <td className="border border-gray-300 px-4 py-2">
-                                        <Select
-                                            value={column4}
-                                            onValueChange={(value) => handleColumn4Change(id, value)}
-                                            disabled={!isEditing}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select status" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {column4Options.map((option) => (
-                                                    <SelectItem key={option} value={option}>
-                                                        {option}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </td>
+                                        {/* Status */}
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            <Select
+                                                value={column4}
+                                                onValueChange={(value) => handleColumn4Change(id, value)}
+                                                disabled={!isEditing}
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {column4Options.map((option) => (
+                                                        <SelectItem key={option} value={option}>
+                                                            {option}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </td>
 
-                                    {/* Marks Scored */}
-                                    <td className="border border-gray-300 px-4 py-2">
-                                        {isEditing ? (
-                                            <Input
-                                                type="number"
-                                                value={column5}
-                                                onChange={(e) => handleColumn5Change(id, e.target.value)}
-                                                className="w-full"
-                                            />
-                                        ) : (
-                                            <span>{column5 || "-"}</span>
-                                        )}
-                                    </td>
-                                </tr>
+                                        {/* Marks Scored */}
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            {isEditing ? (
+                                                <Input
+                                                    type="number"
+                                                    value={column5}
+                                                    onChange={(e) => handleColumn5Change(id, e.target.value)}
+                                                    className="w-full"
+                                                />
+                                            ) : (
+                                                <span>{column5 || "-"}</span>
+                                            )}
+                                        </td>
+                                    </tr>
                                 );
                             })}
 
@@ -212,7 +248,7 @@ export default function Ipet2Form({ onMarksChange, activeSemester }: Ipet2FormPr
                             <Button variant="outline" onClick={() => setIsEditing(false)}>
                                 Cancel
                             </Button>
-                            <Button onClick={() => setIsEditing(false)}>Save</Button>
+                            <Button onClick={handleSave}>Save</Button>
                         </>
                     ) : (
                         <Button onClick={() => setIsEditing(true)}>Edit</Button>

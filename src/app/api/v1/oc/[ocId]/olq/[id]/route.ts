@@ -5,11 +5,14 @@ import { requireAuth } from '@/app/lib/authz';
 import { parseParam, ensureOcExists } from '../../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { getOlqById } from '@/app/db/queries/olq';
+import { withRouteLogging } from '@/lib/withRouteLogging';
+
+// NOTE: Read-only view; createAuditLog is already invoked globally via requireAuth/logApiRequest.
 
 const IdParam = z.object({ id: z.string().uuid() });
 const BoolString = z.enum(['true', 'false']).transform((v) => v === 'true');
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -27,3 +30,4 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);

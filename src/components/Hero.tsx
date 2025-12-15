@@ -54,11 +54,11 @@ const Hero = () => {
               <CardContent className="p-6 text-center">
                 <div className="mb-4">
                   <Image
-                    src="/images/commander-placeholder.jpg"
+                    src="/images/brigadier_logo.jpeg"
                     alt="Brig Atul Jaiswal"
                     width={96}
                     height={96}
-                    className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-accent"
+                    className="w-26 h-26 rounded-full mx-auto object-fill border-4 border-accent"
                   />
                 </div>
                 <h3 className="text-xl font-semibold mb-1">Brig Atul Jaiswal</h3>

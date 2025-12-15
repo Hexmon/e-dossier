@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+const nonEmptyPartial = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>) =>
+    schema.partial().superRefine((val, ctx) => {
+        if (!Object.values(val).some((value) => value !== undefined)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'At least one field must be provided',
+            });
+        }
+    });
+
 export const OcIdParam = z.object({ ocId: z.string().uuid() });
 export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);
@@ -188,7 +198,7 @@ export const motivationAwardCreateSchema = z.object({
     maxMarks: z.coerce.number(),
     marksObtained: z.coerce.number(),
 });
-export const motivationAwardUpdateSchema = motivationAwardCreateSchema.partial();
+export const motivationAwardUpdateSchema = nonEmptyPartial(motivationAwardCreateSchema);
 
 export const sportsAndGamesCreateSchema = z.object({
     semester: Semester,
@@ -198,7 +208,7 @@ export const sportsAndGamesCreateSchema = z.object({
     marksObtained: z.coerce.number(),
     sportsStrings: z.string().optional(),
 });
-export const sportsAndGamesUpdateSchema = sportsAndGamesCreateSchema.partial();
+export const sportsAndGamesUpdateSchema = nonEmptyPartial(sportsAndGamesCreateSchema);
 
 export const weaponTrainingCreateSchema = z.object({
     subject: z.string().min(1),
@@ -206,12 +216,12 @@ export const weaponTrainingCreateSchema = z.object({
     maxMarks: z.coerce.number(),
     marksObtained: z.coerce.number(),
 });
-export const weaponTrainingUpdateSchema = weaponTrainingCreateSchema.partial();
+export const weaponTrainingUpdateSchema = nonEmptyPartial(weaponTrainingCreateSchema);
 
 export const specialAchievementInFiringCreateSchema = z.object({
     achievement: z.string().min(1),
 });
-export const specialAchievementInFiringUpdateSchema = specialAchievementInFiringCreateSchema.partial();
+export const specialAchievementInFiringUpdateSchema = nonEmptyPartial(specialAchievementInFiringCreateSchema);
 
 export const obstacleTrainingCreateSchema = z.object({
     semester: SeniorSemester,
@@ -219,7 +229,7 @@ export const obstacleTrainingCreateSchema = z.object({
     marksObtained: z.coerce.number(),
     remark: z.string().optional(),
 }); 
-export const obstacleTrainingUpdateSchema = obstacleTrainingCreateSchema.partial();
+export const obstacleTrainingUpdateSchema = nonEmptyPartial(obstacleTrainingCreateSchema);
 
 export const speedMarchCreateSchema = z.object({
     semester: SeniorSemester,
@@ -228,7 +238,7 @@ export const speedMarchCreateSchema = z.object({
     marks: z.coerce.number(),
     remark: z.string().optional(),
 });
-export const speedMarchUpdateSchema = speedMarchCreateSchema.partial();
+export const speedMarchUpdateSchema = nonEmptyPartial(speedMarchCreateSchema);
 
 export const creditForExcellenceItemSchema = z.object({
     cat: z.string().min(1),
@@ -336,9 +346,39 @@ export const ocCampUpdateSchema = ocCampUpsertSchema.extend({
 
 export const ocCampQuerySchema = z.object({
     semester: CampSemesterKind.optional(),
+    ocCampId: z.string().uuid().optional(),
     campName: z.string().optional(),
     withReviews: BoolString.optional(),
     withActivities: BoolString.optional(),
     reviewRole: CampReviewRoleKind.optional(),
     activityName: z.string().optional(),
+});
+
+// --- Academics / Semesters ---------------------------------------------------
+export const SemesterParam = z.object({ semester: Semester });
+export const SubjectIdParam = z.object({ subjectId: z.string().uuid() });
+
+export const academicSubjectPatchSchema = z.object({
+    theory: z.object({
+        phaseTest1Marks: z.coerce.number().optional(),
+        phaseTest2Marks: z.coerce.number().optional(),
+        tutorial: z.string().optional(),
+        finalMarks: z.coerce.number().optional(),
+        grade: z.string().optional(),
+    }).partial().optional(),
+    practical: z.object({
+        finalMarks: z.coerce.number().optional(),
+        grade: z.string().optional(),
+        tutorial: z.string().optional(),
+    }).partial().optional(),
+}).refine((value) => Boolean(value.theory || value.practical), {
+    message: 'No subject fields provided.',
+});
+
+export const academicSummaryPatchSchema = z.object({
+    sgpa: z.coerce.number().optional(),
+    cgpa: z.coerce.number().optional(),
+    marksScored: z.coerce.number().optional(),
+}).refine((value) => value.sgpa !== undefined || value.cgpa !== undefined || value.marksScored !== undefined, {
+    message: 'No summary fields provided.',
 });

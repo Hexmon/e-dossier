@@ -20,6 +20,8 @@ import {
 } from '@/app/db/queries/oc';
 import { db } from '@/app/db/client';
 import { ocCamps, ocCampActivityScores, ocCampReviews } from '@/app/db/schema/training/oc';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 async function assertOcCampOwnedByOc(ocCampId: string, ocId: string) {
     const [row] = await db
@@ -76,7 +78,7 @@ async function loadAllCamps(ocId: string) {
     });
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -85,6 +87,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
         const sp = new URL(req.url).searchParams;
         const qp = ocCampQuerySchema.parse({
             semester: sp.get('semester') ?? undefined,
+            ocCampId: sp.get('ocCampId') ?? undefined,
             campName: sp.get('campName') ?? undefined,
             withReviews: sp.get('withReviews') ?? undefined,
             withActivities: sp.get('withActivities') ?? undefined,
@@ -94,6 +97,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
 
         const result = await getOcCamps({
             ocId,
+            ocCampId: qp.ocCampId,
             semester: qp.semester,
             campName: qp.campName ?? undefined,
             includeReviews: qp.withReviews ?? false,
@@ -108,9 +112,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
         const dto = ocCampUpsertSchema.parse(await req.json());
@@ -138,15 +142,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ocI
         await recomputeOcCampTotal(ocCamp.id);
         const { camps, grandTotalMarksScored } = await loadAllCamps(ocId);
 
+        await createAuditLog({
+            actorUserId: authCtx.userId,
+            eventType: AuditEventType.OC_RECORD_CREATED,
+            resourceType: AuditResourceType.OC,
+            resourceId: ocId,
+            description: `Upserted camp ${ocCamp.id} for OC ${ocId}`,
+            metadata: {
+                ocId,
+                module: 'camps',
+                ocCampId: ocCamp.id,
+                trainingCampId: ocCamp.trainingCampId,
+                year: ocCamp.year ?? null,
+                addedReviews: reviews?.length ?? 0,
+                addedActivities: activities?.length ?? 0,
+                action: 'create_or_update',
+            },
+            request: req,
+        });
+
         return json.created({ message: 'OC camp created or updated successfully.', camps, grandTotalMarksScored });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -182,15 +205,33 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ ocId
         await recomputeOcCampTotal(ocCamp.id);
         const { camps, grandTotalMarksScored } = await loadAllCamps(ocId);
 
+        await createAuditLog({
+            actorUserId: authCtx.userId,
+            eventType: AuditEventType.OC_RECORD_UPDATED,
+            resourceType: AuditResourceType.OC,
+            resourceId: ocId,
+            description: `Updated camp ${ocCamp.id} for OC ${ocId}`,
+            metadata: {
+                ocId,
+                module: 'camps',
+                ocCampId: ocCamp.id,
+                trainingCampId: ocCamp.trainingCampId,
+                year: dto.year ?? null,
+                reviewUpdates: dto.reviews?.length ?? 0,
+                activityUpdates: dto.activities?.length ?? 0,
+            },
+            request: req,
+        });
+
         return json.ok({ message: 'OC camp updated successfully.', camps, grandTotalMarksScored });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -199,24 +240,49 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ o
         const reviewId = body.reviewId;
         const activityScoreId = body.activityScoreId;
 
+        let deletedMeta: Record<string, any> | null = null;
         if (ocCampId) {
             await assertOcCampOwnedByOc(ocCampId, ocId);
             await deleteOcCamp(ocCampId);
+            deletedMeta = { target: 'camp', ocCampId };
         } else if (reviewId) {
             const parentCampId = await getParentCampIdFromReview(reviewId, ocId);
             await deleteOcCampReview(reviewId);
             await recomputeOcCampTotal(parentCampId);
+            deletedMeta = { target: 'camp_review', reviewId, ocCampId: parentCampId };
         } else if (activityScoreId) {
             const parentCampId = await getParentCampIdFromActivityScore(activityScoreId, ocId);
             await deleteOcCampActivityScore(activityScoreId);
             await recomputeOcCampTotal(parentCampId);
+            deletedMeta = { target: 'camp_activity', activityScoreId, ocCampId: parentCampId };
         } else {
             throw new ApiError(400, 'Specify ocCampId, reviewId or activityScoreId', 'bad_request');
         }
 
         const { camps, grandTotalMarksScored } = await loadAllCamps(ocId);
+
+        await createAuditLog({
+            actorUserId: authCtx.userId,
+            eventType: AuditEventType.OC_RECORD_DELETED,
+            resourceType: AuditResourceType.OC,
+            resourceId: ocId,
+            description: `Deleted camp data for OC ${ocId}`,
+            metadata: {
+                ocId,
+                module: 'camps',
+                ...(deletedMeta ?? {}),
+            },
+            request: req,
+        });
         return json.ok({ message: 'OC camp data deleted successfully.', camps, grandTotalMarksScored });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);
+
+export const PUT = withRouteLogging('PUT', PUTHandler);
+
+export const DELETE = withRouteLogging('DELETE', DELETEHandler);

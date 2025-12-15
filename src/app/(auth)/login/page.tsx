@@ -64,10 +64,22 @@ function LoginPageContent() {
     fetchAppointments();
   }, []);
 
+  const uniqueAppointmentNames = useMemo(() => {
+    const set = new Set<string>();
+
+    appointments.forEach(({ positionName }) => {
+      if (!set.has(positionName)) {
+        set.add(positionName);
+      }
+    });
+
+    return Array.from(set);
+  }, [appointments]);
+
   // Filter platoon commanders directly from appointments
-const platoonCommanders = useMemo(() => {
-  return appointments.filter((a) => a.positionName === "Platoon Commander");
-}, [appointments]);
+  const platoonCommanders = useMemo(() => {
+    return appointments.filter((a) => a.positionName === "Platoon Commander");
+  }, [appointments]);
 
   const onSubmit = async (data: LoginForm) => {
     if (!data.username || !data.password || !data.appointment) {
@@ -124,7 +136,11 @@ const platoonCommanders = useMemo(() => {
 
   const handlePlatoonChange = (value: string) => {
     setValue("platoon", value);
-    const selectedPlatoon = platoonCommanders.find((p) => p.username === value);
+
+    const selectedPlatoon = platoonCommanders.find(
+      ({ platoonName }) => platoonName === value
+    );
+
     const autoUsername = selectedPlatoon?.username || "";
     setValue("username", autoUsername);
   };
@@ -145,11 +161,11 @@ const platoonCommanders = useMemo(() => {
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
           <Image
-            src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+            src="/images/eme_logo.jpeg"
             alt="MCEME Background"
-            width={122}
-            height={122}
-            className="h-16 w-auto mx-auto mb-4"
+            width={100}
+            height={100}
+            className="h-16 w-auto mx-auto mb-4 object-contain"
           />
           <h1 className="text-2xl font-bold text-primary-foreground">
             MCEME CTW Portal
@@ -192,9 +208,9 @@ const platoonCommanders = useMemo(() => {
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {(appointments ?? []).map(({id, positionName}) => (
-                        <SelectItem key={id} value={positionName}>
-                          {positionName}
+                      {uniqueAppointmentNames.map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -213,17 +229,11 @@ const platoonCommanders = useMemo(() => {
                         <SelectValue placeholder="Select your platoon" />
                       </SelectTrigger>
                       <SelectContent>
-                        {platoonCommanders.map((cmdr) => {
-                          const {id, username} = cmdr || {}
-                          return (
-                          <SelectItem
-                            key={id ?? 0}
-                            value={username ?? ""}
-                          >
-                            {username ?? ""}
+                        {platoonCommanders.map(({ id, platoonName }) => (
+                          <SelectItem key={id} value={platoonName ?? ""}>
+                            {platoonName ?? ""}
                           </SelectItem>
-                        )
-                        })}
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

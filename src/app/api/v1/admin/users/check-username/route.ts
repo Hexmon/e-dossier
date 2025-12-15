@@ -3,6 +3,8 @@ import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { and, isNull, eq } from 'drizzle-orm';
 import { ApiError, handleApiError, json } from '@/app/lib/http';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 const RESERVED = new Set(['admin', 'root', 'system', 'support', 'help', 'null', 'undefined']);
 const normalize = (u: string) => u.trim().toLowerCase();
@@ -13,7 +15,7 @@ function suggest(u: string): string[] {
     return Array.from(new Set(picks)).filter((s) => s && !RESERVED.has(s) && s !== u).slice(0, 3);
 }
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         const raw = req.nextUrl.searchParams.get('username') ?? '';
         const username = normalize(raw);
@@ -34,8 +36,23 @@ export async function GET(req: NextRequest) {
             .limit(1);
 
         const assigned = taken.length > 0;
-        return json.ok({ message: 'Username check completed.', username, assigned, available: !assigned, suggestions: assigned ? suggest(username) : [] });
+        const response = { message: 'Username check completed.', username, assigned, available: !assigned, suggestions: assigned ? suggest(username) : [] };
+
+        await createAuditLog({
+            actorUserId: null,
+            eventType: AuditEventType.API_REQUEST,
+            resourceType: AuditResourceType.USER,
+            resourceId: null,
+            description: 'Checked username availability',
+            metadata: {
+                username,
+                assigned,
+            },
+            request: req,
+        });
+        return json.ok(response);
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);

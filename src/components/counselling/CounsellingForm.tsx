@@ -28,7 +28,7 @@ export default function CounsellingForm({ onSubmit, semLabel }: Props) {
         },
     });
 
-    const { control, handleSubmit, register, reset, setValue, watch } = form;
+    const { control, handleSubmit, register, reset, setValue } = form;
     const { fields, append, remove } = useFieldArray({ control, name: "records" });
 
     // keep term in sync with semLabel for new rows
@@ -78,22 +78,7 @@ export default function CounsellingForm({ onSubmit, semLabel }: Props) {
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Select
-                                            value={watch(`records.${idx}.warningType`) || ""}
-                                            onValueChange={(value) => setValue(`records.${idx}.warningType`, value)}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Relegation / Withdrawal" />
-                                            </SelectTrigger>
-
-                                            <SelectContent>
-                                                {warningTypes.map((w) => (
-                                                    <SelectItem key={w} value={w}>
-                                                        {w}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Input {...register(`records.${idx}.warningType`)} />
                                     </td>
 
                                     <td className="p-2 border">

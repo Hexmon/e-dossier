@@ -4,9 +4,8 @@ import { ClubRow, DrillRow } from "@/types/club-detls";
 import { Row as ObstacleRow } from "@/types/obstacleTrg";
 import { Row as SpeedRow } from "@/types/speedMarchRunback";
 import { Row as sportsRow } from "@/types/sportsAwards";
-import { Activity, Book, BookOpen, CalendarDays, FileText, GraduationCap, Home, Settings, Shield, UserCheck, Users } from "lucide-react";
+import { Book, FileText, Home, NotebookPen } from "lucide-react";
 
-// src\constants\app.constants.ts
 export const POS = {
   COMMANDANT: 'COMMANDANT',
   DCCI: 'DCCI',
@@ -36,56 +35,56 @@ export const menuItems: MenuSection[] = [
     items: [{ title: "Home", url: "/dashboard", icon: Home }],
   },
   {
-    group: "Subject Management",
-    items: [{ title: "Subjects", url: "/dashboard/subjects", icon: Book }],
+    group: "Admin",
+    items: [{ title: "Admin Management", url: "/dashboard/genmgmt", icon: Book }],
   },
   {
-    group: "Instructor Management",
-    items: [{ title: "Instructors", url: "/dashboard/instructors", icon: GraduationCap }],
+    group: "Dossier",
+    items: [{ title: "Dossier Management", url: "/milmgmt", icon: NotebookPen }],
   },
-  {
-    group: "User Management",
-    items: [{ title: "Users", url: "/dashboard/users", icon: Shield }],
-  },
-  {
-    group: "Appointment Management",
-    items: [{ title: "Appointments", url: "/dashboard/appointments", icon: CalendarDays }],
-  },
-  {
-    group: "Assessment – NSA",
-    items: [{ title: "OLQA", url: "/dashboard/olqa", icon: FileText }],
-  },
-  {
-    group: "Overall OC Details",
-    items: [{ title: "View All", url: "/dashboard/view-ocs", icon: Users }],
-  },
-  {
-    group: "Academics",
-    items: [{ title: "Coming Soon", url: "/dashboard/academics", icon: BookOpen, badge: "Soon" }],
-  },
-  {
-    group: "Physical Training & Sports",
-    items: [{ title: "Activities", url: "/dashboard/activities", icon: Activity }],
-  },
-  {
-    group: "Interview",
-    collapsible: true,
-    items: [
-      { title: "Platoon Cdr", url: "/dashboard/interview/platoon-cdr", icon: UserCheck },
-      { title: "DS Coord", url: "/dashboard/interview/ds-coord", icon: UserCheck },
-      { title: "CDR CTW", url: "/dashboard/interview/cdr-ctw", icon: UserCheck },
-      { title: "DCCI", url: "/dashboard/interview/dcci", icon: UserCheck },
-      { title: "Comdt", url: "/dashboard/interview/comdt", icon: UserCheck },
-    ],
-  },
+  // {
+  //   group: "User Management",
+  //   items: [{ title: "Users", url: "/dashboard/users", icon: Shield }],
+  // },
+  // {
+  //   group: "Appointment Management",
+  //   items: [{ title: "Appointments", url: "/dashboard/appointments", icon: CalendarDays }],
+  // },
+  // {
+  //   group: "Assessment – NSA",
+  //   items: [{ title: "OLQA", url: "/dashboard/olqa", icon: FileText }],
+  // },
+  // {
+  //   group: "Overall OC Details",
+  //   items: [{ title: "View All", url: "/dashboard/view-ocs", icon: Users }],
+  // },
+  // {
+  //   group: "Academics",
+  //   items: [{ title: "Coming Soon", url: "/dashboard/academics", icon: BookOpen, badge: "Soon" }],
+  // },
+  // {
+  //   group: "Physical Training & Sports",
+  //   items: [{ title: "Activities", url: "/dashboard/activities", icon: Activity }],
+  // },
+  // {
+  //   group: "Interview",
+  //   collapsible: true,
+  //   items: [
+  //     { title: "Platoon Cdr", url: "/dashboard/interview/platoon-cdr", icon: UserCheck },
+  //     { title: "DS Coord", url: "/dashboard/interview/ds-coord", icon: UserCheck },
+  //     { title: "CDR CTW", url: "/dashboard/interview/cdr-ctw", icon: UserCheck },
+  //     { title: "DCCI", url: "/dashboard/interview/dcci", icon: UserCheck },
+  //     { title: "Comdt", url: "/dashboard/interview/comdt", icon: UserCheck },
+  //   ],
+  // },
   {
     group: "Report Management",
     items: [{ title: "Reports", url: "/dashboard/reports", icon: FileText }],
   },
-  {
-    group: "Site Settings",
-    items: [{ title: "Configuration", url: "/dashboard/settings", icon: Settings }],
-  },
+  // {
+  //   group: "Site Settings",
+  //   items: [{ title: "Configuration", url: "/dashboard/settings", icon: Settings }],
+  // },
 ];
 
 
@@ -163,6 +162,8 @@ export const romanToNumber: Record<string, number> = {
 };
 
 export const terms = ["IV TERM", "V TERM", "VI TERM"];
+
+export const labels = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 
 export const obstaclePrefill: ObstacleRow[] = [
   { obstacle: "EX (15 Mks)", obtained: "", remark: "" },
@@ -349,3 +350,41 @@ export const OLQ_STRUCTURE = {
 } as const;
 
 export const OLQ_REMARKS = Object.keys(OLQ_STRUCTURE);
+
+export const pageOne = [
+  { key: "plcdr_appearance", label: "Appearance, Bg and Comm Skills." },
+  { key: "plcdr_family", label: "Family Background." },
+  { key: "plcdr_sports", label: "Proficiency in Sports." },
+  { key: "plcdr_eca", label: "Proficiency in Extra Curricular Activities (if any)." },
+  { key: "plcdr_firstImpression", label: "First Impression, Potential of OC & Motivation Level." },
+];
+
+export const pageTwo = [
+  { key: "plcdr_weakStrong", label: "Weak & Strong Areas." },
+  { key: "plcdr_devCtw", label: "Potential Areas for Devp in CTW." },
+  { key: "plcdr_anyPts", label: "Any Pts From OC." },
+  { key: "plcdr_declaration", label: "Declaration / Remarks" },
+];
+
+export const Initialrows = [
+  { key: "dy_appearance", label: "Appearance, Bg and Comm Skills." },
+  { key: "dy_firstImpression", label: "First Impression, Potential of OC & Motivation Level." },
+  { key: "dy_weakStrong", label: "Weak & Strong Areas." },
+  { key: "dy_devCtw", label: "Potential Areas for Development in CTW." },
+  { key: "dy_anyPts", label: "Any Pts from OC." },
+];
+
+export const dscoordrows = [
+  { key: "ds_appearance", label: "Appearance, Bg and Comm Skills." },
+  { key: "ds_firstImpression", label: "First Impression, Potential of OC & Motivation Level." },
+  { key: "ds_weakStrong", label: "Weak & Strong Areas." },
+  { key: "ds_devCtw", label: "Potential Areas for Development in CTW." },
+  { key: "ds_anyPts", label: "Any Pts from OC." },
+];
+
+export const cdrrows = [
+  { key: "cdr_appearance", label: "Appearance, Bg and Comm Skills." },
+  { key: "cdr_firstImpression", label: "First Impression, Potential of OC & Motivation Level." },
+  { key: "cdr_devOc", label: "Potential Areas for Development in OC." },
+  { key: "cdr_anyPts", label: "Any Pts from OC." },
+];

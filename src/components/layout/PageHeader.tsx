@@ -21,6 +21,20 @@ interface PageHeaderProps {
   onLogout?: () => void;
 }
 
+const getInitials = (name: string): string => {
+  if (!name || typeof name !== "string") return "PC";
+
+  const parts = name.trim().split(/\s+/);
+
+  if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+
+  const firstInitial = parts[0][0];
+  const lastInitial = parts[parts.length - 1][0];
+  return (firstInitial + lastInitial).toUpperCase();
+};
+
 export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
 
   const [data, setData] = useState<MeResponse | null>(null);
@@ -74,7 +88,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
 
   const {
     id = "",
-    position ="",
+    position = "",
   } = apt as any;
 
   const router = useRouter();
@@ -89,6 +103,8 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
       router.push("/login");
     }
   };
+
+  const initials = getInitials(name);
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
@@ -112,7 +128,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    PC
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
               </Button>

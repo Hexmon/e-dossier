@@ -14,8 +14,9 @@ export async function mustBeAuthed(req: NextRequest) {
 }
 
 export async function mustBeAdmin(req: NextRequest) {
-    const { roles } = await requireAuth(req);
-    if (!hasAdminRole(roles)) throw new ApiError(403, 'Admin privileges required', 'forbidden');
+    const ctx = await requireAuth(req);
+    if (!hasAdminRole(ctx.roles)) throw new ApiError(403, 'Admin privileges required', 'forbidden');
+    return ctx;
 }
 
 export async function parseParam<T extends z.ZodTypeAny>(

@@ -1,6 +1,9 @@
 import { db } from '@/app/db/client';
 import { instructors } from '@/app/db/schema/training/instructors';
-import { and, eq, ilike, isNull } from 'drizzle-orm';
+import { courseOfferingInstructors } from '@/app/db/schema/training/courseOfferings';
+import { and, eq, ilike, inArray, isNull } from 'drizzle-orm';
+
+export type InstructorRow = typeof instructors.$inferSelect;
 
 export async function listInstructors(opts: { q?: string; includeDeleted?: boolean; limit?: number; offset?: number; }) {
     const wh: any[] = [];
@@ -25,4 +28,37 @@ export async function listInstructors(opts: { q?: string; includeDeleted?: boole
         .orderBy(instructors.name)
         .limit(opts.limit ?? 100)
         .offset(opts.offset ?? 0);
+}
+
+export async function softDeleteInstructor(id: string): Promise<{ before: InstructorRow; after: InstructorRow } | null> {
+    const [before] = await db.select().from(instructors).where(eq(instructors.id, id)).limit(1);
+    if (!before) return null;
+    const [after] = await db
+        .update(instructors)
+        .set({ deletedAt: new Date() })
+        .where(eq(instructors.id, id))
+        .returning();
+    return after ? { before, after } : null;
+}
+
+export async function hardDeleteInstructor(id: string): Promise<{ before: InstructorRow } | null> {
+    return db.transaction(async (tx) => {
+        const [before] = await tx.select().from(instructors).where(eq(instructors.id, id)).limit(1);
+        if (!before) return null;
+        await tx.delete(courseOfferingInstructors).where(eq(courseOfferingInstructors.instructorId, id));
+        await tx.delete(instructors).where(eq(instructors.id, id));
+        return { before };
+    });
+}
+
+export async function findMissingInstructorIds(ids: string[]) {
+    if (!ids.length) return [];
+    const unique = Array.from(new Set(ids));
+    const conditions = [inArray(instructors.id, unique), isNull(instructors.deletedAt)];
+    const rows = await db
+        .select({ id: instructors.id })
+        .from(instructors)
+        .where(and(...conditions));
+    const found = new Set(rows.map((r) => r.id));
+    return unique.filter((id) => !found.has(id));
 }
