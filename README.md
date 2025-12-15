@@ -20,3 +20,7 @@ ADMIN_EMAIL=admin@example.com
 ADMIN_PHONE=+910000000001
 ADMIN_NAME=Admin
 ADMIN_RANK=ADMIN
+
+## Seeding admin accounts
+
+With the above env vars set (or in a .env file), run `pnpm seed:admins` to create/update the SUPER_ADMIN and ADMIN users, their credentials, positions, and active appointments.
