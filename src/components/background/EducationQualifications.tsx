@@ -318,7 +318,7 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                     >
                         Add Qualification
                     </Button>
-                    <Button type="submit">Save</Button>
+                    <Button type="submit" className="bg-[#40ba4d]">Save</Button>
                 </div>
             </form>
         </div>

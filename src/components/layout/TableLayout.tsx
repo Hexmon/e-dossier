@@ -45,6 +45,15 @@ export interface TableConfig<T = any> {
         hover?: boolean;
         className?: string;
     };
+    theme?: {
+        variant?: 'default' | 'dark' | 'blue' | 'green' | 'custom';
+        headerBg?: string;
+        rowBg?: string;
+        rowAltBg?: string;
+        borderColor?: string;
+        textColor?: string;
+        headerTextColor?: string;
+    };
     pagination?: {
         /**
          * Number of rows per page. Defaults to 10.
@@ -102,10 +111,51 @@ export function UniversalTable<T extends Record<string, any>>({
         actions = [],
         features = {},
         styling = {},
+        theme = {},
         pagination = {},
         emptyState = {},
         loading = false,
     } = config;
+
+    const themePresets = {
+        default: {
+            headerBg: 'bg-muted/50',
+            rowBg: 'bg-background',
+            rowAltBg: 'bg-muted/20',
+            borderColor: 'border-border/50',
+            textColor: 'text-foreground',
+            headerTextColor: 'text-foreground',
+        },
+        dark: {
+            headerBg: 'bg-slate-800',
+            rowBg: 'bg-slate-700',
+            rowAltBg: 'bg-slate-800/50',
+            borderColor: 'border-slate-700',
+            textColor: 'text-slate-100',
+            headerTextColor: 'text-slate-900',
+        },
+        blue: {
+            headerBg: 'bg-blue-100',
+            rowBg: 'bg-blue-50',
+            rowAltBg: 'bg-white',
+            borderColor: 'border-blue-200',
+            textColor: 'text-slate-900 ',
+            headerTextColor: 'text-blue-900',
+        },
+        green: {
+            headerBg: 'bg-emerald-100',
+            rowBg: 'bg-emerald-400',
+            rowAltBg: 'bg-emerald-100',
+            borderColor: 'border-emerald-200',
+            textColor: 'text-slate-900',
+            headerTextColor: 'text-emerald-900',
+        },
+        custom: theme,
+    };
+
+    const activeTheme = theme.variant
+        ? themePresets[theme.variant]
+        : themePresets.default;
 
     const isServerPagination = pagination.mode === 'server';
 
@@ -283,8 +333,8 @@ export function UniversalTable<T extends Record<string, any>>({
 
             {/* Table */}
             <div className={tableClasses}>
-                <table className="min-w-full text-sm">
-                    <thead className="bg-muted/50">
+                <table className="min-w-full text-sm ">
+                    <thead className={`text-left ${activeTheme.headerTextColor}`}>
                         <tr className="text-left">
                             {features.selection && (
                                 <th className="px-3 py-2 w-12">
@@ -335,7 +385,7 @@ export function UniversalTable<T extends Record<string, any>>({
                             )}
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={activeTheme.textColor}>
                         {paginatedData.length === 0 ? (
                             <tr>
                                 <td colSpan={columns.length + (actions.length > 0 ? 1 : 0) + (features.selection ? 1 : 0)}
@@ -347,8 +397,11 @@ export function UniversalTable<T extends Record<string, any>>({
                             paginatedData.map((row, index) => (
                                 <tr
                                     key={index}
-                                    className={`border-t border-border/50 ${styling.hover ? 'hover:bg-muted/30' : ''
-                                        } ${styling.striped && index % 2 === 1 ? 'bg-muted/20' : ''}`}
+                                    className={`border-t ${activeTheme.borderColor} ${styling.hover ? 'hover:opacity-90' : ''
+                                        } ${styling.striped && index % 2 === 1
+                                            ? activeTheme.rowAltBg
+                                            : activeTheme.rowBg
+                                        }`}
                                 >
                                     {features.selection && (
                                         <td className="px-3 py-2">

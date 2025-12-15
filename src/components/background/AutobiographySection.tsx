@@ -111,7 +111,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
     return (
         <Card className="shadow-lg rounded-2xl border border-border w-full max-w-4xl mx-auto">
             <CardHeader>
-                <CardTitle className="text-xl font-bold text-center uppercase text-primary">
+                <CardTitle className="text-xl font-bold text-center uppercase text-[#1677ff]">
                     Confidential – Autobiography Form
                 </CardTitle>
             </CardHeader>
@@ -167,7 +167,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="w-[200px]"
+                                    className="w-[200px] hover:bg-destructive hover:text-white"
                                     onClick={() => {
                                         fetchAutoBio();
                                         setIsEditing(false);
@@ -176,7 +176,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                                     Cancel
                                 </Button>
 
-                                <Button type="submit" className="w-[200px]">
+                                <Button type="submit" className="w-[200px] bg-[#40ba4d]">
                                     Save
                                 </Button>
                             </>

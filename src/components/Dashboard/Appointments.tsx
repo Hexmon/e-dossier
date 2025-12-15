@@ -15,7 +15,7 @@ interface Appointment {
 // Sample data for 10 appointments with realistic military positions
 const appointmentsData: Appointment[] = [
     {
-        appointment: 'CMDT',
+        appointment: 'COMDT',
         officersDetails: 'Lt Gen Neeraj Varshney',
         assumptionInCharge: '2024-08-15',
         remarks: '---'
@@ -142,6 +142,9 @@ export default function Appointments() {
                 width: '30%',
             },
         ],
+        theme: {
+            variant: "blue"
+        },
         styling: {
             compact: false,
             bordered: true,
@@ -151,10 +154,10 @@ export default function Appointments() {
     };
 
     return (
-        <div className="container mx-auto py-8">
-            <Card>
+        <div className="container mx-auto py-2">
+            <Card className='shadow-xl'>
                 <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-gray-800">Appointments</CardTitle>
+                    <CardTitle className="text-2xl font-semibold text-white bg-[#1677ff] p-2 rounded">Appointments</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <UniversalTable<Appointment>

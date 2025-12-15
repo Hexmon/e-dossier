@@ -106,7 +106,7 @@ export default function CourseManagement() {
               <TabsContent value="course-mgmt">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Course Sections</h2>
-                  <Button onClick={handleAdd}>Add Course</Button>
+                  <Button onClick={handleAdd} className="bg-[#40ba4d]">Add Course</Button>
                 </div>
 
                 {loading ? (

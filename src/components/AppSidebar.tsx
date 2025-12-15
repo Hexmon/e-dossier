@@ -111,15 +111,15 @@ export function AppSidebar() {
           <div className="p-4 border-b border-border">
             <div className="flex items-center gap-3">
               <Image
-                src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+                src="/images/eme_logo.jpeg"
                 alt="MCEME Logo"
-                width={8}
-                height={8}
+                width={18}
+                height={18}
                 className="h-8 w-8 object-contain rounded"
               />
               {!collapsed && (
                 <div>
-                  <h3 className="font-semibold text-primary">MCEME CTW</h3>
+                  <h3 className="font-semibold text-[#1677ff]">MCEME CTW</h3>
                   <p className="text-xs text-muted-foreground">Dashboard</p>
                 </div>
               )}
@@ -129,7 +129,7 @@ export function AppSidebar() {
           {/* User Role Badge */}
           {!collapsed && (
             <div className="p-4 border-b border-border">
-              <Badge variant="secondary" className="w-full justify-center">
+              <Badge className="w-full justify-center bg-[#1677ff]">
                 <Shield className="h-3 w-3 mr-1" />
                 {position}
               </Badge>
@@ -167,7 +167,7 @@ export function AppSidebar() {
                                 <Link
                                   href={item.url}
                                   className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
-                                      ? "bg-accent text-primary"
+                                      ? "bg-[#1677ff] text-white"
                                       : "hover:bg-accent/50"
                                     }`}
                                 >
@@ -205,7 +205,7 @@ export function AppSidebar() {
                               <SidebarMenuButton
                                 onClick={(e) => handleMenuItemClick(item, e)}
                                 className={`flex items-center gap-2 ${isActive(item.url)
-                                    ? "bg-accent text-primary"
+                                    ? "bg-[#1677ff] text-white"
                                     : ""
                                   }`}
                               >
@@ -226,7 +226,7 @@ export function AppSidebar() {
                                 <Link
                                   href={item.url}
                                   className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
-                                      ? "bg-accent text-primary"
+                                      ? "bg-[#1677ff] text-white"
                                       : "hover:bg-accent/50"
                                     }`}
                                 >

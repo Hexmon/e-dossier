@@ -255,7 +255,7 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
                     >
                         Add Achievement
                     </Button>
-                    <Button type="submit">Save</Button>
+                    <Button type="submit" className="bg-[#40ba4d]">Save</Button>
                 </div>
             </form>
         </div>

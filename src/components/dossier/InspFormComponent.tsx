@@ -125,10 +125,10 @@ export default function InspFormComponent() {
                             </div>
 
                             <div className="flex justify-center gap-2">
-                                <Button variant="outline" type="button" onClick={() => reset()}>
+                                <Button variant="outline" type="button" className="hover:bg-destructive hover:text-white" onClick={() => reset()}>
                                     Reset
                                 </Button>
-                                <Button type="submit">Save</Button>
+                                <Button type="submit" className="bg-[#40ba4d]">Save</Button>
                             </div>
                         </form>
                     </TabsContent>

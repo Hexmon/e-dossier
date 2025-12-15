@@ -85,7 +85,7 @@ export const endpoints = {
         olqCategories: (ocId: string) => `/api/v1/oc/${ocId}/olq/categories?includeSubtitles=true&isActive=true`,
     },
     course: {
-        all: "/api/v1/courses"
+        all: "/api/v1/admin/courses"
     },
     users: {
         checkUsername: "/api/v1/admin/users/check-username",
