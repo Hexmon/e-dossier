@@ -45,6 +45,9 @@ export default function Platoons() {
             striped: true,
             hover: true,
         },
+        theme: {
+            variant: 'green',
+        },
     };
 
     return (

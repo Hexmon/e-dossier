@@ -147,7 +147,10 @@ export default function Appointments() {
             bordered: true,
             striped: true,
             hover: true,
-        }
+        },
+        theme: {
+            variant: 'vibrant',
+        },
     };
 
     return (
@@ -157,10 +160,7 @@ export default function Appointments() {
                     <CardTitle className="text-2xl font-bold text-gray-800">Appointments</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <UniversalTable<Appointment>
-                        data={appointmentsData}
-                        config={tableConfig}
-                    />
+                    <UniversalTable<Appointment> data={appointmentsData} config={tableConfig} />
                 </CardContent>
             </Card>
         </div>

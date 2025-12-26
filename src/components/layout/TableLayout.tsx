@@ -45,6 +45,15 @@ export interface TableConfig<T = any> {
         hover?: boolean;
         className?: string;
     };
+    theme?: {
+        variant?: 'default' | 'dark' | 'blue' | 'green' | 'purple' | 'vibrant' | 'minimalist' | 'custom';
+        headerBg?: string;
+        rowBg?: string;
+        rowAltBg?: string;
+        borderColor?: string;
+        textColor?: string;
+        headerTextColor?: string;
+    };
     pagination?: {
         /**
          * Number of rows per page. Defaults to 10.
@@ -102,10 +111,75 @@ export function UniversalTable<T extends Record<string, any>>({
         actions = [],
         features = {},
         styling = {},
+        theme = {},
         pagination = {},
         emptyState = {},
         loading = false,
     } = config;
+
+    const themePresets = {
+        default: {
+            headerBg: 'bg-muted/50',
+            rowBg: 'bg-background',
+            rowAltBg: 'bg-muted/20',
+            borderColor: 'border-border/50',
+            textColor: 'text-foreground',
+            headerTextColor: 'text-foreground',
+        },
+        dark: {
+            headerBg: 'bg-slate-800',
+            rowBg: 'bg-slate-900',
+            rowAltBg: 'bg-slate-800/50',
+            borderColor: 'border-slate-700',
+            textColor: 'text-slate-100',
+            headerTextColor: 'text-slate-100',
+        },
+        blue: {
+            headerBg: 'bg-blue-100',
+            rowBg: 'bg-white',
+            rowAltBg: 'bg-blue-50',
+            borderColor: 'border-blue-200',
+            textColor: 'text-slate-900',
+            headerTextColor: 'text-blue-900',
+        },
+        green: {
+            headerBg: 'bg-emerald-100',
+            rowBg: 'bg-white',
+            rowAltBg: 'bg-emerald-50',
+            borderColor: 'border-emerald-200',
+            textColor: 'text-slate-900',
+            headerTextColor: 'text-emerald-900',
+        },
+        purple: {
+            headerBg: 'bg-purple-100',
+            rowBg: 'bg-white',
+            rowAltBg: 'bg-purple-50',
+            borderColor: 'border-purple-200',
+            textColor: 'text-slate-900',
+            headerTextColor: 'text-purple-900',
+        },
+        vibrant: {
+            headerBg: 'bg-gradient-to-r from-indigo-600 to-indigo-700 dark:from-indigo-600 dark:to-indigo-700',
+            rowBg: 'bg-white dark:bg-slate-900',
+            rowAltBg: 'bg-indigo-50/40 dark:bg-indigo-950/20',
+            borderColor: 'border-indigo-200/40 dark:border-indigo-700/30',
+            textColor: 'text-slate-800 dark:text-slate-100',
+            headerTextColor: 'text-white font-semibold',
+        },
+        minimalist: {
+            headerBg: 'bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800',
+            rowBg: 'bg-white dark:bg-slate-950',
+            rowAltBg: 'bg-slate-50/50 dark:bg-slate-900/30',
+            borderColor: 'border-slate-200/60 dark:border-slate-700/40',
+            textColor: 'text-slate-700 dark:text-slate-300',
+            headerTextColor: 'text-slate-900 dark:text-slate-50 font-semibold',
+        },
+        custom: theme, // Use custom theme values directly
+    };
+
+    const activeTheme = theme.variant
+        ? themePresets[theme.variant]
+        : themePresets.default;
 
     const isServerPagination = pagination.mode === 'server';
 
@@ -248,7 +322,7 @@ export function UniversalTable<T extends Record<string, any>>({
     };
 
     const tableClasses = [
-        'rounded-md border border-border/50 overflow-hidden',
+        'rounded-md border overflow-hidden',
         styling.className,
     ].filter(Boolean).join(' ');
 
@@ -283,9 +357,9 @@ export function UniversalTable<T extends Record<string, any>>({
 
             {/* Table */}
             <div className={tableClasses}>
-                <table className="min-w-full text-sm">
-                    <thead className="bg-muted/50">
-                        <tr className="text-left">
+                <table className={`min-w-full text-sm ${activeTheme.borderColor}`}>
+                    <thead className={activeTheme.headerBg}>
+                        <tr className={`text-left ${activeTheme.headerTextColor}`}>
                             {features.selection && (
                                 <th className="px-3 py-2 w-12">
                                     <input
@@ -303,7 +377,7 @@ export function UniversalTable<T extends Record<string, any>>({
                             {columns.map((column) => (
                                 <th
                                     key={String(column.key)}
-                                    className={`px-3 py-2 ${column.className || ''} ${column.sortable && features.sorting ? 'cursor-pointer hover:bg-muted/70' : ''
+                                    className={`px-3 py-2 ${column.className || ''} ${column.sortable && features.sorting ? 'cursor-pointer hover:bg-muted/70' : activeTheme.headerBg
                                         }`}
                                     style={{ width: column.width }}
                                     onClick={() => column.sortable && handleSort(String(column.key))}
@@ -335,7 +409,7 @@ export function UniversalTable<T extends Record<string, any>>({
                             )}
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={activeTheme.rowBg}>
                         {paginatedData.length === 0 ? (
                             <tr>
                                 <td colSpan={columns.length + (actions.length > 0 ? 1 : 0) + (features.selection ? 1 : 0)}
@@ -347,8 +421,8 @@ export function UniversalTable<T extends Record<string, any>>({
                             paginatedData.map((row, index) => (
                                 <tr
                                     key={index}
-                                    className={`border-t border-border/50 ${styling.hover ? 'hover:bg-muted/30' : ''
-                                        } ${styling.striped && index % 2 === 1 ? 'bg-muted/20' : ''}`}
+                                    className={`border-t ${activeTheme.borderColor} ${styling.hover ? 'hover:bg-muted/30' : ''
+                                        } ${styling.striped && index % 2 === 1 ? activeTheme.rowAltBg : ''}`}
                                 >
                                     {features.selection && (
                                         <td className="px-3 py-2">

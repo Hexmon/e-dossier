@@ -50,7 +50,10 @@ export default function Courses() {
             bordered: true,
             striped: true,
             hover: true,
-        }
+        },
+        theme: {
+            variant: 'blue',
+        },
     };
 
     return (
