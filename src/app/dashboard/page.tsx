@@ -35,7 +35,7 @@ const DashboardPage = () => {
   return (
     <DashboardLayout title="MCEME CTW Dashboard" description="Training Management System">
 
-      <main className="flex-1 p-6 w-full mt-10 overflow-x-hidden">
+      <main className="flex-1 p-6 w-full mt-2 overflow-x-hidden">
 
         {/* Marquee Section - Only visible in content area with proper clipping */}
         <div className="w-full overflow-hidden z-40 shrink-0">
@@ -47,15 +47,19 @@ const DashboardPage = () => {
         </div>
 
         {/* Cartesian Plane Layout - 2x2 Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full max-w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
           {/* Top Left Quadrant */}
           <div className="w-full">
-            <Courses />
+            <div className="min-w-[400px]">
+              <Courses />
+            </div>
           </div>
 
           {/* Top Right Quadrant */}
           <div className="w-full">
-            <Platoons />
+            <div className="min-w-[400px]">
+              <Platoons />
+            </div>
           </div>
 
           {/* Bottom Spanning Both Columns */}

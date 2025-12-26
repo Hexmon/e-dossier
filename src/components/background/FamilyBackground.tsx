@@ -304,7 +304,7 @@ export default function FamilyBackground({ ocId }: Props) {
                         Add Member
                     </Button>
 
-                    <Button type="submit">Save</Button>
+                    <Button type="submit" className="bg-[#40ba4d]">Save</Button>
                 </div>
             </form>
         </div>

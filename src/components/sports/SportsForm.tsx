@@ -28,7 +28,7 @@ export default function SportsForm({
                 <>
                     <Button
                         type="button"
-                        className="bg-green-600"
+                        className="bg-[#40ba4d]"
                         onClick={onSave}
                         disabled={isSaving}
                     >
@@ -47,6 +47,7 @@ export default function SportsForm({
                     <Button
                         type="button"
                         variant="outline"
+                        className="hover:bg-destructive hover:text-white"
                         onClick={onReset}
                         disabled={isSaving}
                     >

@@ -112,10 +112,10 @@ export default function OCSelectModal({
                                     <li
                                         key={oc.id}
                                         onMouseDown={() => handleSelectOC(oc)}
-                                        className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                                        className="px-3 py-2 text-sm cursor-pointer hover:bg-[#1677ff] hover:text-white"
                                     >
                                         <div className="font-medium">{oc.name}</div>
-                                        <div className="text-xs text-muted-foreground">{oc.ocNo}</div>
+                                        <div className="text-xs text-muted-foreground hover:text-white">{oc.ocNo}</div>
                                     </li>
                                 ))}
                         </ul>

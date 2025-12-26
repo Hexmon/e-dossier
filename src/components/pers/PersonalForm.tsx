@@ -245,7 +245,7 @@ export default function PersonalForm({
                     <>
                         <Button
                             variant="outline"
-                            className="w-[200px]"
+                            className="w-[200px] hover:bg-destructive hover:text-white"
                             type="button"
                             onClick={() => {
                                 reset(savedData ?? ({} as OCPersonalRecord));
@@ -255,7 +255,7 @@ export default function PersonalForm({
                             Cancel
                         </Button>
 
-                        <Button type="submit" className="w-[200px]">
+                        <Button type="submit" className="w-[200px] bg-[#40ba4d]">
                             Save
                         </Button>
                     </>

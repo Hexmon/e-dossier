@@ -29,16 +29,16 @@ export default function GlobalTabs({
       >
         {tabs.map(({ value, title, icon: Icon, link }) =>
           link ? (
-            <Link key={value} href={link} className="text-center hover:text-primary">
+            <Link key={value} href={link} className="text-center hover:text-primary min-w-0">
               <TabsTrigger
                 value={value}
                 className="flex items-center gap-2 border border-gray-300 
-                data-[state=inactive]:bg-blue-100 text-blue-700 
+                data-[state=inactive]:bg-blue-100 text-[#1677ff] 
                 data-[state=active]:bg-white data-[state=active]:border-primary 
-                rounded-md px-3 py-2 transition-colors w-full"
+                rounded-md px-3 py-2 transition-colors w-full shrink min-w-0 truncate"
               >
-                {Icon && <Icon className="h-4 w-4" />}
-                {title}
+                {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
+                <span className="truncate">{title}</span>
               </TabsTrigger>
             </Link>
           ) : (
@@ -48,10 +48,10 @@ export default function GlobalTabs({
               className="flex items-center gap-2 border border-gray-300 
               data-[state=inactive]:bg-blue-100 text-blue-700 
               data-[state=active]:bg-white data-[state=active]:border-primary 
-              rounded-md px-3 py-2 transition-colors w-full"
+              rounded-md px-3 py-2 transition-colors w-full shrink min-w-0 truncate"
             >
-              {Icon && <Icon className="h-4 w-4" />}
-              {title}
+              {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
+              <span className="truncate">{title}</span>
             </TabsTrigger>
           )
         )}

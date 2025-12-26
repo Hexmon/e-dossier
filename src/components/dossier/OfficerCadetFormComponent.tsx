@@ -105,8 +105,8 @@ export default function OfficerCadetFormComponent({ initialValues = null, onSave
                             </div>
 
                             <div className="flex justify-center mt-6 gap-4">
-                                <Button type="submit" className="w-40">Save</Button>
-                                <Button type="button" variant="outline" className="w-40" onClick={() => reset()}>Reset</Button>
+                                <Button type="submit" className="w-40 bg-[#40ba4d]">Save</Button>
+                                <Button type="button" variant="outline" className="w-40 hover:bg-destructive hover:text-white" onClick={() => reset()}>Reset</Button>
                             </div>
                         </form>
                     </TabsContent>

@@ -52,11 +52,11 @@ export function DashboardCard({
                 </p>
 
                 {to ? (
-                    <Button asChild variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
+                    <Button asChild variant="outline" size="sm" className="w-full border hover:bg-[#1677ff] hover:text-white cursor-pointer">
                         <Link href={to}>Access Module →</Link>
                     </Button>
                 ) : (
-                    <Button variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
+                    <Button variant="outline" size="sm" className="w-full border hover:bg-[#1677ff] hover:text-white cursor-pointer">
                         Access Module →
                     </Button>
                 )}

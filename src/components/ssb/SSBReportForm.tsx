@@ -96,6 +96,7 @@ export function SSBReportForm({
                             <Button
                                 type="button"
                                 variant="outline"
+                                className="hover:bg-[#40ba4d] hover:text-white"
                                 size="sm"
                                 disabled={!isEditing}
                                 onClick={() => addPositive({ trait: "" })}
@@ -149,6 +150,7 @@ export function SSBReportForm({
                             <Button
                                 type="button"
                                 variant="outline"
+                                className="hover:bg-[#40ba4d] hover:text-white"
                                 size="sm"
                                 disabled={!isEditing}
                                 onClick={() => addNegative({ trait: "" })}
@@ -214,6 +216,7 @@ export function SSBReportForm({
                             <Button
                                 type="button"
                                 variant="outline"
+                                className="hover:bg-destructive hover:text-white"
                                 onClick={() => {
                                     setIsEditing(false);
                                     reset(report ? {
@@ -229,7 +232,7 @@ export function SSBReportForm({
                                 Cancel
                             </Button>
 
-                            <Button type="submit">
+                            <Button type="submit" className="bg-[#40ba4d]">
                                 Save
                             </Button>
                         </>

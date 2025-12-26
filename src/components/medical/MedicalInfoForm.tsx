@@ -82,7 +82,7 @@ export default function MedicalInfoFormComponent({ onSubmit, disabled, defaultVa
                     + Add Row
                 </Button>
 
-                <Button variant="outline" type="button" onClick={() => reset(defaultValues)}>
+                <Button variant="outline" className="hover:bg-destructive hover:text-white" type="button" onClick={() => reset(defaultValues)}>
                     Reset
                 </Button>
             </div>

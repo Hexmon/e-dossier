@@ -209,7 +209,7 @@ export default function OCManagementPage() {
                   <h2 className="text-2xl font-bold text-foreground">OCs</h2>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleAdd}>
+                    <Button className="bg-[#40ba4d] cursor-pointer" onClick={handleAdd}>
                       Add OC
                     </Button>
 
