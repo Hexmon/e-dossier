@@ -2,6 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { UseFormRegister, FieldArrayWithId } from "react-hook-form";
 import { FormValues } from "@/types/club-detls";
 
@@ -15,6 +16,114 @@ interface Props {
 }
 
 export default function DrillForm({ register, fields, onSubmit, onReset, disabled = false, onEdit }: Props) {
+    const columns: TableColumn<FieldArrayWithId<FormValues, "drillRows", "id">>[] = [
+        {
+            key: "semester",
+            label: "Semester",
+            render: (value, row, index) => (
+                <>
+                    <input type="hidden" {...register(`drillRows.${index}.id` as const)} />
+                    <Input
+                        {...register(`drillRows.${index}.semester` as const)}
+                        readOnly
+                        disabled
+                        className="bg-gray-100 cursor-not-allowed"
+                    />
+                </>
+            )
+        },
+        {
+            key: "maxMks",
+            label: "Max Mks",
+            type: "number",
+            render: (value, row, index) => (
+                <Input
+                    type="number"
+                    {...register(`drillRows.${index}.maxMks` as const)}
+                    disabled={disabled}
+                />
+            )
+        },
+        {
+            key: "m1",
+            label: "M1",
+            type: "number",
+            render: (value, row, index) => (
+                <Input
+                    type="number"
+                    {...register(`drillRows.${index}.m1` as const)}
+                    disabled={disabled}
+                />
+            )
+        },
+        {
+            key: "m2",
+            label: "M2",
+            type: "number",
+            render: (value, row, index) => (
+                <Input
+                    type="number"
+                    {...register(`drillRows.${index}.m2` as const)}
+                    disabled={disabled}
+                />
+            )
+        },
+        {
+            key: "a1c1",
+            label: "A1/C1",
+            type: "number",
+            render: (value, row, index) => (
+                <Input
+                    type="number"
+                    {...register(`drillRows.${index}.a1c1` as const)}
+                    disabled={disabled}
+                />
+            )
+        },
+        {
+            key: "a2c2",
+            label: "A2/C2",
+            type: "number",
+            render: (value, row, index) => (
+                <Input
+                    type="number"
+                    {...register(`drillRows.${index}.a2c2` as const)}
+                    disabled={disabled}
+                />
+            )
+        },
+        {
+            key: "remarks",
+            label: "Remarks",
+            render: (value, row, index) => (
+                <Input
+                    {...register(`drillRows.${index}.remarks` as const)}
+                    disabled={disabled}
+                />
+            )
+        }
+    ];
+
+    const config: TableConfig<FieldArrayWithId<FormValues, "drillRows", "id">> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        },
+        theme: {
+            variant: "blue"
+        }
+    };
+
     return (
         <form onSubmit={onSubmit ?? ((e) => e.preventDefault())} className="space-y-6">
 
@@ -22,87 +131,11 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
                 ASSESSMENT : DRILL
             </div>
 
-            <div className="overflow-x-auto border rounded-lg shadow-sm">
-                <table className="w-full border-collapse text-sm">
-                    <thead className="bg-blue-50 text-gray-700">
-                        <tr>
-                            <th className="border p-2">Semester</th>
-                            <th className="border p-2">Max Mks</th>
-                            <th className="border p-2">M1</th>
-                            <th className="border p-2">M2</th>
-                            <th className="border p-2">A1/C1</th>
-                            <th className="border p-2">A2/C2</th>
-                            <th className="border p-2">Remarks</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {fields.map((f, idx) => {
-                            const { id} = f;
-                            return (
-                                <tr key={id ?? idx}>
-                                    <input type="hidden" {...register(`drillRows.${idx}.id` as const)} />
-
-                                    <td className="border p-2">
-                                        <Input
-                                            {...register(`drillRows.${idx}.semester` as const)}
-                                            readOnly
-                                            disabled
-                                            className="bg-gray-100 cursor-not-allowed"
-                                        />
-                                    </td>
-
-                                    <td className="border p-2">
-                                        <Input
-                                            type="number"
-                                            {...register(`drillRows.${idx}.maxMks` as const)}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-
-                                    <td className="border p-2">
-                                        <Input
-                                            type="number"
-                                            {...register(`drillRows.${idx}.m1` as const)}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-
-                                    <td className="border p-2">
-                                        <Input
-                                            type="number"
-                                            {...register(`drillRows.${idx}.m2` as const)}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-
-                                    <td className="border p-2">
-                                        <Input
-                                            type="number"
-                                            {...register(`drillRows.${idx}.a1c1` as const)}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-
-                                    <td className="border p-2">
-                                        <Input
-                                            type="number"
-                                            {...register(`drillRows.${idx}.a2c2` as const)}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-
-                                    <td className="border p-2">
-                                        <Input
-                                            {...register(`drillRows.${idx}.remarks` as const)}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+            <div className="border rounded-lg shadow-sm">
+                <UniversalTable<FieldArrayWithId<FormValues, "drillRows", "id">>
+                    data={fields}
+                    config={config}
+                />
             </div>
 
             {disabled ? (

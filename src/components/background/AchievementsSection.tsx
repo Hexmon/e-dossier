@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 
 import { Achievement } from "@/types/background-detls";
@@ -91,117 +92,145 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
     };
 
     // ------------------------------------------
+    // UNIVERSAL TABLE CONFIGURATION
+    // ------------------------------------------
+    const tableColumns: TableColumn<Achievement>[] = [
+        {
+            key: "sno",
+            label: "S.No",
+            render: (value, row, index) => index + 1
+        },
+        {
+            key: "event",
+            label: "Event",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.event ?? ""}
+                        onChange={(e) => changeEdit("event", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "year",
+            label: "Year",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="number"
+                        value={editForm?.year ?? ""}
+                        onChange={(e) =>
+                            changeEdit("year", e.target.value ? Number(e.target.value) : "")
+                        }
+                    />
+                ) : (
+                    <span className="text-center block">{value}</span>
+                );
+            }
+        },
+        {
+            key: "level",
+            label: "Level",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.level ?? ""}
+                        onChange={(e) => changeEdit("level", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "prize",
+            label: "Prize",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.prize ?? ""}
+                        onChange={(e) => changeEdit("prize", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        }
+    ];
+
+    const actions: TableAction<Achievement>[] = [
+        {
+            key: "edit-cancel",
+            label: editingId ? "Cancel" : "Edit",
+            variant: editingId ? "outline" : "outline",
+            size: "sm",
+            handler: (row) => {
+                if (editingId === row.id) {
+                    cancelEdit();
+                } else {
+                    startEdit(row);
+                }
+            }
+        },
+        {
+            key: "save-delete",
+            label: editingId ? "Save" : "Delete",
+            variant: editingId ? "default" : "destructive",
+            size: "sm",
+            handler: async (row) => {
+                if (editingId === row.id) {
+                    await saveEdit();
+                } else {
+                    await deleteItem(row.id);
+                }
+            }
+        }
+    ];
+
+    const config: TableConfig<Achievement> = {
+        columns: tableColumns,
+        actions,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        },
+        theme: {
+            variant: "blue"
+        },
+        emptyState: {
+            message: "No achievements saved yet."
+        }
+    };
+
+    // ------------------------------------------
     // JSX
     // ------------------------------------------
     return (
         <div>
             {/* Saved Achievements Table */}
-            {items.length > 0 ? (
-                <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-                    <table className="min-w-full text-sm border border-gray-300">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                {["S.No", "Event", "Year", "Level", "Prize", "Actions"].map((head) => {
-                                    return (
-                                        <th key={head} className="border px-4 py-2 text-center bg-gray-300">
-                                            {head}
-                                        </th>
-                                    );
-                                })}
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {items.map((row, idx) => {
-                                const { id, event, level, prize, year } = row;
-                                const isEditing = editingId === id;
-
-                                return (
-                                    <tr key={id}>
-                                        <td className="border px-4 py-2 text-center">{idx + 1}</td>
-
-                                        {/* EVENT */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.event ?? ""}
-                                                    onChange={(e) => changeEdit("event", e.target.value)}
-                                                />
-                                            ) : (
-                                                event
-                                            )}
-                                        </td>
-
-                                        {/* YEAR */}
-                                        <td className="border px-4 py-2 text-center">
-                                            {isEditing ? (
-                                                <Input
-                                                    type="number"
-                                                    value={editForm?.year ?? ""}
-                                                    onChange={(e) =>
-                                                        changeEdit("year", e.target.value ? Number(e.target.value) : "")
-                                                    }
-                                                />
-                                            ) : (
-                                                year
-                                            )}
-                                        </td>
-
-                                        {/* LEVEL */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.level ?? ""}
-                                                    onChange={(e) => changeEdit("level", e.target.value)}
-                                                />
-                                            ) : (
-                                                level
-                                            )}
-                                        </td>
-
-                                        {/* PRIZE */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.prize ?? ""}
-                                                    onChange={(e) => changeEdit("prize", e.target.value)}
-                                                />
-                                            ) : (
-                                                prize
-                                            )}
-                                        </td>
-
-                                        {/* ACTION BUTTONS */}
-                                        <td className="border px-4 py-2 text-center space-x-2">
-                                            {!isEditing ? (
-                                                <>
-                                                    <Button size="sm" variant="outline" onClick={() => startEdit(row)}>
-                                                        Edit
-                                                    </Button>
-                                                    <Button size="sm" variant="destructive" onClick={() => deleteItem(id)}>
-                                                        Delete
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Button size="sm" onClick={saveEdit}>
-                                                        Save
-                                                    </Button>
-                                                    <Button size="sm" variant="outline" onClick={cancelEdit}>
-                                                        Cancel
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            ) : (
-                <p className="text-center mb-4 text-gray-500">No achievements saved yet.</p>
-            )}
+            <div className="mb-6 border rounded-lg shadow">
+                <UniversalTable<Achievement>
+                    data={items}
+                    config={config}
+                />
+            </div>
 
             {/* Add New Achievement Form */}
             <form onSubmit={achievementForm.handleSubmit(submitAchievements)}>

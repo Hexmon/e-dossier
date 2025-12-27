@@ -4,6 +4,7 @@ import React, { useEffect, useMemo } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import type { WeaponTrainingRecord } from "@/app/lib/api/weaponTrainingApi";
 
 type Row = {
@@ -74,52 +75,66 @@ export default function WeaponTrainingForm({
 
     const watched = watch("records");
 
+    const columns: TableColumn<Row>[] = [
+        {
+            key: "subject",
+            label: "Subject",
+            render: (value) => value ?? "-"
+        },
+        {
+            key: "maxMarks",
+            label: "Max Marks",
+            type: "number",
+            render: (value, row, index) => (
+                <Input
+                    {...register(`records.${index}.maxMarks`, {
+                        valueAsNumber: true,
+                    })}
+                    type="number"
+                    defaultValue={value ?? 0}
+                    disabled={disabled}
+                />
+            )
+        },
+        {
+            key: "obtained",
+            label: "Obtained",
+            type: "number",
+            render: (value, row, index) => (
+                <Input
+                    {...register(`records.${index}.obtained`)}
+                    type="number"
+                    defaultValue={value ?? ""}
+                    disabled={disabled}
+                />
+            )
+        }
+    ];
+
+    const config: TableConfig<Row> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        }
+    };
+
     return (
         <form onSubmit={handleSubmit(onSave)}>
-            <div className="overflow-x-auto border rounded-lg shadow">
-                <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
-                        <tr>
-                            <th className="p-2 border">Subject</th>
-                            <th className="p-2 border">Max Marks</th>
-                            <th className="p-2 border">Obtained</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {merged.map((row, idx) => {
-                            const subject = row.subject ?? "-";
-                            const maxMarks = row.maxMarks ?? 0;
-                            const obtained = row.obtained ?? "";
-
-                            return (
-                                <tr key={subject + idx}>
-                                    <td className="p-2 border">{subject}</td>
-
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...register(`records.${idx}.maxMarks`, {
-                                                valueAsNumber: true,
-                                            })}
-                                            type="number"
-                                            defaultValue={maxMarks}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...register(`records.${idx}.obtained`)}
-                                            type="number"
-                                            defaultValue={obtained}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+            <div className="border rounded-lg shadow">
+                <UniversalTable<Row>
+                    data={merged}
+                    config={config}
+                />
             </div>
 
             {/* Action Buttons */}

@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
+
+type AwardRow = {
+    id: string;
+    label: string;
+    value: string;
+};
 
 export default function MotivationAwards({ activeSemester }: { activeSemester: string }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -33,63 +40,64 @@ export default function MotivationAwards({ activeSemester }: { activeSemester: s
         setIsEditing(false);
     };
 
+    const tableData: AwardRow[] = [
+        { id: "meritCard", label: "Merit Card", value: awards.meritCard },
+        { id: "halfBlue", label: "Half Blue", value: awards.halfBlue },
+        { id: "blue", label: "Blue", value: awards.blue },
+        { id: "blazer", label: "Blazer", value: awards.blazer }
+    ];
+
+    const columns: TableColumn<AwardRow>[] = [
+        {
+            key: "label",
+            label: "Award Type",
+            width: "30%",
+            render: (value) => value
+        },
+        {
+            key: "value",
+            label: "Details",
+            render: (value, row) => (
+                <Textarea
+                    value={value}
+                    onChange={(e) => handleChange(row.id as keyof typeof awards, e.target.value)}
+                    placeholder="Enter Motivation Award"
+                    className="border border-gray-300 px-4 py-2"
+                    disabled={!isEditing}
+                />
+            )
+        }
+    ];
+
+    const config: TableConfig<AwardRow> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        }
+    };
+
     return (
         <div>
             <div>
                 <h2 className="mt-4 text-left text-lg font-bold text-gray-700">Motivation Awards</h2>
             </div>
-            <table className="w-full mt-4">
-                <tbody>
-                    <tr>
-                        <td className="border border-gray-300 px-4 py-2 text-left">Merit Card</td>
-                        <td>
-                            <Textarea
-                                value={awards.meritCard}
-                                onChange={(e) => handleChange("meritCard", e.target.value)}
-                                placeholder="Enter Motivation Award"
-                                className="border border-gray-300 px-4 py-2"
-                                disabled={!isEditing}
-                            />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td className="border border-gray-300 px-4 py-2 text-left">Half Blue</td>
-                        <td>
-                            <Textarea
-                                value={awards.halfBlue}
-                                onChange={(e) => handleChange("halfBlue", e.target.value)}
-                                placeholder="Enter Motivation Award"
-                                className="border border-gray-300 px-4 py-2"
-                                disabled={!isEditing}
-                            />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td className="border border-gray-300 px-4 py-2 text-left">Blue</td>
-                        <td>
-                            <Textarea
-                                value={awards.blue}
-                                onChange={(e) => handleChange("blue", e.target.value)}
-                                placeholder="Enter Motivation Award"
-                                className="border border-gray-300 px-4 py-2"
-                                disabled={!isEditing}
-                            />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td className="border rounded border-gray-300 px-4 py-2 text-left">Blazer</td>
-                        <td>
-                            <Textarea
-                                value={awards.blazer}
-                                onChange={(e) => handleChange("blazer", e.target.value)}
-                                placeholder="Enter Motivation Award"
-                                className="border border-gray-300 px-4 py-2"
-                                disabled={!isEditing}
-                            />
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            
+            <div className="mt-4">
+                <UniversalTable<AwardRow>
+                    data={tableData}
+                    config={config}
+                />
+            </div>
 
             {/* Edit/Save/Cancel Buttons */}
             <div className="flex gap-3 justify-center mt-6">

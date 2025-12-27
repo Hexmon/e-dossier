@@ -285,7 +285,7 @@ export const managementCard = [
     description: "Create and Manage Camps efficiently",
     icon: Tent,
     to: "/dashboard/genmgmt/camps",
-    color: "bg-yellow-500",
+    color: "bg-green-700"
   }
 
 
@@ -1203,7 +1203,7 @@ export const ocTabs = [
     value: "camp-mgmt",
     title: "Camps Management",
     icon: Tent,
-    link: "/dashboard/genmgmt/camps",
+    link: "/dashboard/genmgmt/camps"
   }
   // {
   //   value: "instructors",
