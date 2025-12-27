@@ -39,7 +39,7 @@ export function DashboardCard({
                     </div>
 
                     <div className="flex-1">
-                        <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                        <CardTitle className="text-lg group-hover:text-[#1677ff] transition-colors">
                             {title}
                         </CardTitle>
                     </div>
