@@ -2,6 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import {
     UseFormRegister,
     FieldArrayWithId,
@@ -25,63 +26,83 @@ export default function ClubForm({
     disabled = false,
     onEdit
 }: Props) {
+    const columns: TableColumn<FieldArrayWithId<FormValues, "clubRows", "id">>[] = [
+        {
+            key: "semester",
+            label: "Semester",
+            render: (value, row, index) => (
+                <>
+                    <input type="hidden"
+                        {...register(`clubRows.${index}.id` as const)}
+                    />
+                    <Input
+                        {...register(`clubRows.${index}.semester` as const)}
+                        readOnly
+                        disabled
+                        className="bg-gray-100 cursor-not-allowed"
+                    />
+                </>
+            )
+        },
+        {
+            key: "clubName",
+            label: "Name of Club",
+            render: (value, row, index) => (
+                <Input
+                    {...register(`clubRows.${index}.clubName` as const)}
+                    disabled={disabled}
+                />
+            )
+        },
+        {
+            key: "splAchievement",
+            label: "Spl Achievement",
+            render: (value, row, index) => (
+                <Input
+                    {...register(`clubRows.${index}.splAchievement` as const)}
+                    disabled={disabled}
+                />
+            )
+        },
+        {
+            key: "remarks",
+            label: "Remarks",
+            render: (value, row, index) => (
+                <Input
+                    {...register(`clubRows.${index}.remarks` as const)}
+                    disabled={disabled}
+                />
+            )
+        }
+    ];
+
+    const config: TableConfig<FieldArrayWithId<FormValues, "clubRows", "id">> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        },
+        theme: {
+            variant: "blue"
+        }
+    };
+
     return (
         <form onSubmit={onSubmit} className="space-y-6">
-            <div className="overflow-x-auto border rounded-lg shadow-sm">
-                <table className="w-full border-collapse text-sm">
-                    <thead className="bg-blue-50 text-gray-700">
-                        <tr>
-                            <th className="border p-2">Semester</th>
-                            <th className="border p-2">Name of Club</th>
-                            <th className="border p-2">Spl Achievement</th>
-                            <th className="border p-2">Remarks</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {fields.map((f, idx) => {
-                            const { id} = f;
-                            return (
-                                <tr key={id ?? idx}>
-
-                                    <input type="hidden"
-                                        {...register(`clubRows.${idx}.id` as const)}
-                                    />
-
-                                    <td className="border p-2">
-                                        <Input
-                                            {...register(`clubRows.${idx}.semester` as const)}
-                                            readOnly
-                                            disabled
-                                            className="bg-gray-100 cursor-not-allowed"
-                                        />
-                                    </td>
-
-                                    <td className="border p-2">
-                                        <Input
-                                            {...register(`clubRows.${idx}.clubName` as const)}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-
-                                    <td className="border p-2">
-                                        <Input
-                                            {...register(`clubRows.${idx}.splAchievement` as const)}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-
-                                    <td className="border p-2">
-                                        <Input
-                                            {...register(`clubRows.${idx}.remarks` as const)}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-                                </tr>
-                            )
-                        })}
-                    </tbody>
-                </table>
+            <div className="border rounded-lg shadow-sm">
+                <UniversalTable<FieldArrayWithId<FormValues, "clubRows", "id">>
+                    data={fields}
+                    config={config}
+                />
             </div>
 
             {disabled ? (

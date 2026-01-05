@@ -4,6 +4,7 @@ import React, { useEffect, useMemo } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import type { SpeedMarchRecord } from "@/app/lib/api/speedMarchApi";
 import { termColumns } from "@/constants/app.constants";
 
@@ -74,49 +75,61 @@ export default function SpeedMarchForm({
         reset({ records: merged });
     }, [merged, reset]);
 
+    /** Get distance label based on semester */
+    const distanceLabel = useMemo(() => {
+        if (semesterNumber === 4) return "10 KM";
+        if (semesterNumber === 5) return "20 KM";
+        return "30 KM";
+    }, [semesterNumber]);
+
+    const columns: TableColumn<Row>[] = [
+        {
+            key: "test",
+            label: "Test",
+            render: (value) => value ?? "-"
+        },
+        {
+            key: timingKey,
+            label: "Timings",
+            render: (value) => (value as string) ?? ""
+        },
+        {
+            key: distanceKey,
+            label: distanceLabel,
+            render: (value, row, index) => (
+                <Input
+                    {...register(`records.${index}.${distanceKey}` as const)}
+                    defaultValue={(value as string) ?? ""}
+                    disabled={!isEditing || disabled}
+                />
+            )
+        }
+    ];
+
+    const config: TableConfig<Row> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        }
+    };
+
     return (
         <form onSubmit={handleSubmit(onSave)}>
-            <div className="overflow-x-auto border rounded-lg shadow">
-                <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
-                        <tr>
-                            <th className="p-2 border">Test</th>
-                            <th className="p-2 border">Timings</th>
-                            <th className="p-2 border">
-                                {semesterNumber === 4
-                                    ? "10 KM"
-                                    : semesterNumber === 5
-                                        ? "20 KM"
-                                        : "30 KM"}
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {merged.map((row, i) => {
-                            const id = row.id ?? `row-${i}`;
-                            const test = row.test ?? "-";
-                            const timingLabel = (row[timingKey] as string) ?? "";
-                            const distanceValue = (row[distanceKey] as string) ?? "";
-
-                            return (
-                                <tr key={id}>
-                                    <td className="p-2 border">{test}</td>
-
-                                    <td className="p-2 border">{timingLabel}</td>
-
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...register(`records.${i}.${distanceKey}` as const)}
-                                            defaultValue={distanceValue}
-                                            disabled={!isEditing || disabled}
-                                        />
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+            <div className="border rounded-lg shadow">
+                <UniversalTable<Row>
+                    data={merged}
+                    config={config}
+                />
             </div>
 
             {/* Bottom Buttons */}

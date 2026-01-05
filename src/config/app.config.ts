@@ -279,6 +279,13 @@ export const managementCard = [
     icon: BookOpenCheck,
     to: "/dashboard/genmgmt/offerings",
     color: "bg-purple-500"
+  },
+  {
+    title: "Camps Management",
+    description: "Create and Manage Camps efficiently",
+    icon: Tent,
+    to: "/dashboard/genmgmt/camps",
+    color: "bg-green-700"
   }
 
 
@@ -1192,6 +1199,12 @@ export const ocTabs = [
     icon: CalendarDays,
     link: "/dashboard/genmgmt/appointmentmgmt"
   },
+  {
+    value: "camp-mgmt",
+    title: "Camps Management",
+    icon: Tent,
+    link: "/dashboard/genmgmt/camps"
+  }
   // {
   //   value: "instructors",
   //   title: "Instructor Management",

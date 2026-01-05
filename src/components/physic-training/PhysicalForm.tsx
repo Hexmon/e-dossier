@@ -11,6 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 import MotivationAwards from "./MotivationAwards";
 import Ipet1Form from "./Ipet1Form";
@@ -246,6 +247,130 @@ export default function PhysicalForm() {
         "VI TERM": 40,
     };
 
+    const columns: TableColumn<PhysicalTraining>[] = [
+        {
+            key: "column1",
+            label: "S.No",
+            render: (value, row, index) => {
+                const isTotalRow = index === semesterTableData[activeSemester].length - 1;
+                return isTotalRow ? "—" : value;
+            }
+        },
+        {
+            key: "column2",
+            label: "Test",
+            render: (value) => value
+        },
+        {
+            key: "column3",
+            label: "Max Marks",
+            type: "number",
+            render: (value, row, index) => {
+                const isTotalRow = index === semesterTableData[activeSemester].length - 1;
+                return (
+                    <span className="text-center block">
+                        {isTotalRow ? semesterTableData[activeSemester].slice(0, -1).reduce((sum, r) => sum + (r.column3 || 0), 0) : value}
+                    </span>
+                );
+            }
+        },
+        {
+            key: "column4",
+            label: "Category",
+            render: (value, row, index) => {
+                const isTotalRow = index === semesterTableData[activeSemester].length - 1;
+                if (isTotalRow) {
+                    return <span className="text-center block">—</span>;
+                }
+                return (
+                    <Select
+                        value={value}
+                        onValueChange={(val) => handleColumn4Change(row.id, val)}
+                        disabled={!isEditing}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {column3Options.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                    {option}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                );
+            }
+        },
+        {
+            key: "column5",
+            label: "Status",
+            render: (value, row, index) => {
+                const isTotalRow = index === semesterTableData[activeSemester].length - 1;
+                if (isTotalRow) {
+                    return <span className="text-center block">—</span>;
+                }
+                return (
+                    <Select
+                        value={value}
+                        onValueChange={(val) => handleColumn5Change(row.id, val)}
+                        disabled={!isEditing}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {column4Options.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                    {option}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                );
+            }
+        },
+        {
+            key: "column6",
+            label: "Marks Scored",
+            type: "number",
+            render: (value, row, index) => {
+                const isTotalRow = index === semesterTableData[activeSemester].length - 1;
+                if (isTotalRow) {
+                    return <span className="text-center block">{totalMarksObtained}</span>;
+                }
+                return isEditing ? (
+                    <Input
+                        type="number"
+                        value={value}
+                        onChange={(e) => handleColumn6Change(row.id, e.target.value)}
+                        placeholder="Enter marks"
+                        className="w-full"
+                    />
+                ) : (
+                    <span>{value || "-"}</span>
+                );
+            }
+        }
+    ];
+
+    const config: TableConfig<PhysicalTraining> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: true
+        }
+    };
+
     return (
         <div className="mt-4 space-y-6">
             <Card className="p-6 rounded-2xl shadow-xl bg-white">
@@ -272,109 +397,11 @@ export default function PhysicalForm() {
 
                     {/* Physical Training Table */}
                     <div>
-                        <div className="overflow-x-auto rounded-lg">
-                            <table className="w-full">
-                                <thead className="bg-gray-100">
-                                    <tr>
-                                        <th className="border border-gray-300 px-4 py-2 text-left">S.No</th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left">Test</th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left">Max Marks</th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left">Category</th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
-                                        <th className="border border-gray-300 px-4 py-2 text-left">Marks Scored</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    {semesterTableData[activeSemester].map((row, index, arr) => {
-                                        const { id, column1, column2, column3, column4, column5, column6 } = row;
-                                        const isTotalRow = index === arr.length - 1;
-
-                                        return (
-                                            <tr key={id} className={isTotalRow ? "bg-gray-100 font-semibold" : "hover:bg-gray-50 border-b border-gray-300"}>
-                                                <td className="border border-gray-300 px-4 py-2">
-                                                    {isTotalRow ? "—" : column1}
-                                                </td>
-
-                                                <td className="border border-gray-300 px-4 py-2">
-                                                    {column2}
-                                                </td>
-
-                                                <td className="border border-gray-300 px-4 py-2 text-center">
-                                                    {isTotalRow ? semesterTableData[activeSemester].slice(0, -1).reduce((sum, r) => sum + (r.column3 || 0), 0) : column3}
-                                                </td>
-
-                                                {!isTotalRow ? (
-                                                    <>
-                                                        <td className="border border-gray-300 px-4 py-2">
-                                                            <Select
-                                                                value={column4}
-                                                                onValueChange={(value) =>
-                                                                    handleColumn4Change(id, value)
-                                                                }
-                                                                disabled={!isEditing}
-                                                            >
-                                                                <SelectTrigger className="w-full">
-                                                                    <SelectValue placeholder="Select category" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {column3Options.map((option) => (
-                                                                        <SelectItem key={option} value={option}>
-                                                                            {option}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </td>
-
-                                                        <td className="border border-gray-300 px-4 py-2">
-                                                            <Select
-                                                                value={column5}
-                                                                onValueChange={(value) =>
-                                                                    handleColumn5Change(id, value)
-                                                                }
-                                                                disabled={!isEditing}
-                                                            >
-                                                                <SelectTrigger className="w-full">
-                                                                    <SelectValue placeholder="Select status" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {column4Options.map((option) => (
-                                                                        <SelectItem key={option} value={option}>
-                                                                            {option}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </td>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <td className="border border-gray-300 px-4 py-2 text-center">—</td>
-                                                        <td className="border border-gray-300 px-4 py-2 text-center">—</td>
-                                                    </>
-                                                )}
-
-                                                <td className="border border-gray-300 px-4 py-2 text-center">
-                                                    {isTotalRow ? totalMarksObtained : isEditing ? (
-                                                        <Input
-                                                            type="number"
-                                                            value={column6}
-                                                            onChange={(e) =>
-                                                                handleColumn6Change(id, e.target.value)
-                                                            }
-                                                            placeholder="Enter marks"
-                                                            className="w-full"
-                                                        />
-                                                    ) : (
-                                                        <span>{column6 || "-"}</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                        <div className="rounded-lg">
+                            <UniversalTable<PhysicalTraining>
+                                data={semesterTableData[activeSemester]}
+                                config={config}
+                            />
                         </div>
 
                         {/* Buttons */}

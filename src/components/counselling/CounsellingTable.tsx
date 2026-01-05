@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import type { CounsellingRow } from "@/types/counselling";
 
 interface Props {
@@ -15,14 +16,6 @@ interface Props {
 export default function CounsellingTable({ rows, loading, onEditSave, onDelete }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<CounsellingRow> | null>(null);
-
-    if (loading) {
-        return <p className="text-center">Loading...</p>;
-    }
-
-    if (!rows || rows.length === 0) {
-        return <p className="text-center text-gray-500">No saved records for this term.</p>;
-    }
 
     const startEdit = (row: CounsellingRow) => {
         setEditingId(row.id ?? null);
@@ -47,87 +40,134 @@ export default function CounsellingTable({ rows, loading, onEditSave, onDelete }
         setEditForm(null);
     };
 
+    const columns: TableColumn<CounsellingRow>[] = [
+        {
+            key: "serialNo",
+            label: "S No",
+            render: (value, row, index) => value || String(index + 1)
+        },
+        {
+            key: "reason",
+            label: "Reason (Attach copy)",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.reason ?? ""}
+                        onChange={(e) => changeEdit("reason", e.target.value)}
+                    />
+                ) : (
+                    value || "-"
+                );
+            }
+        },
+        {
+            key: "warningType",
+            label: "Nature of Warning",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.warningType ?? ""}
+                        onChange={(e) => changeEdit("warningType", e.target.value)}
+                    />
+                ) : (
+                    value || "-"
+                );
+            }
+        },
+        {
+            key: "date",
+            label: "Date",
+            type: "date",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="date"
+                        value={editForm?.date ?? (value === "-" ? "" : value ?? "")}
+                        onChange={(e) => changeEdit("date", e.target.value)}
+                    />
+                ) : (
+                    value || "-"
+                );
+            }
+        },
+        {
+            key: "warningBy",
+            label: "Warning by (Rk & Name)",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.warningBy ?? ""}
+                        onChange={(e) => changeEdit("warningBy", e.target.value)}
+                    />
+                ) : (
+                    value || "-"
+                );
+            }
+        }
+    ];
+
+    const actions: TableAction<CounsellingRow>[] = [
+        {
+            key: "edit-cancel",
+            label: editingId ? "Cancel" : "Edit",
+            variant: editingId ? "outline" : "outline",
+            size: "sm",
+            handler: (row) => {
+                if (editingId === row.id) {
+                    setEditingId(null);
+                    setEditForm(null);
+                } else {
+                    startEdit(row);
+                }
+            }
+        },
+        {
+            key: "save-delete",
+            label: editingId ? "Save" : "Delete",
+            variant: editingId ? "default" : "destructive",
+            size: "sm",
+            handler: async (row) => {
+                if (editingId === row.id) {
+                    await saveEdit();
+                } else {
+                    if (row.id) await onDelete(row.id);
+                }
+            }
+        }
+    ];
+
+    const config: TableConfig<CounsellingRow> = {
+        columns,
+        actions,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        },
+        emptyState: {
+            message: "No saved records for this term."
+        },
+        loading
+    };
+
     return (
-        <div className="overflow-x-auto border rounded-lg shadow mb-6">
-            <table className="w-full border text-sm">
-                <thead className="bg-gray-100">
-                    <tr>
-                        <th className="p-2 border text-center">S No</th>
-                        <th className="p-2 border">Reason (Attach copy)</th>
-                        <th className="p-2 border">Nature of Warning</th>
-                        <th className="p-2 border">Date</th>
-                        <th className="p-2 border">Warning by (Rk & Name)</th>
-                        <th className="p-2 border text-center">Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {rows.map((row, i) => {
-                        const {
-                            id = "",
-                            serialNo = String(i + 1),
-                            reason = "-",
-                            warningType = "-",
-                            date = "",
-                            warningBy = "-",
-                        } = row;
-
-                        const isEditing = editingId === id;
-
-                        return (
-                            <tr key={id || serialNo}>
-                                <td className="p-2 border text-center">{serialNo}</td>
-
-                                <td className="p-2 border">
-                                    {isEditing ? (
-                                        <Input value={editForm?.reason ?? ""} onChange={(e) => changeEdit("reason", e.target.value)} />
-                                    ) : (
-                                        reason || "-"
-                                    )}
-                                </td>
-
-                                <td className="p-2 border">
-                                    {isEditing ? (
-                                        <Input value={editForm?.warningType ?? ""} onChange={(e) => changeEdit("warningType", e.target.value)} />
-                                    ) : (
-                                        warningType || "-"
-                                    )}
-                                </td>
-
-                                <td className="p-2 border">
-                                    {isEditing ? (
-                                        <Input type="date" value={editForm?.date ?? (date === "-" ? "" : date)} onChange={(e) => changeEdit("date", e.target.value)} />
-                                    ) : (
-                                        date || "-"
-                                    )}
-                                </td>
-
-                                <td className="p-2 border">
-                                    {isEditing ? (
-                                        <Input value={editForm?.warningBy ?? ""} onChange={(e) => changeEdit("warningBy", e.target.value)} />
-                                    ) : (
-                                        warningBy || "-"
-                                    )}
-                                </td>
-
-                                <td className="p-2 border text-center">
-                                    {!isEditing ? (
-                                        <div className="flex justify-center gap-2">
-                                            <Button size="sm" variant="outline" onClick={() => startEdit(row)}>Edit</Button>
-                                            <Button size="sm" variant="destructive" onClick={() => id && onDelete(id)}>Delete</Button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex justify-center gap-2">
-                                            <Button size="sm" onClick={saveEdit}>Save</Button>
-                                            <Button size="sm" variant="outline" onClick={() => { setEditingId(null); setEditForm(null); }}>Cancel</Button>
-                                        </div>
-                                    )}
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+        <div className="mb-6">
+            <UniversalTable<CounsellingRow>
+                data={rows}
+                config={config}
+            />
         </div>
     );
 }

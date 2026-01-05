@@ -2,32 +2,66 @@
 
 import React from "react";
 import { CardContent } from "@/components/ui/card";
-
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 
 interface GrandTotalProps {
     grandTotalMarks: number;
 }
 
-export default function GrandTotal( { grandTotalMarks }: GrandTotalProps ) {
+type GrandTotalRow = {
+    maxMarks: number;
+    marksObtained: number;
+};
+
+export default function GrandTotal({ grandTotalMarks }: GrandTotalProps) {
+    const data: GrandTotalRow[] = [
+        {
+            maxMarks: 150,
+            marksObtained: grandTotalMarks
+        }
+    ];
+
+    const columns: TableColumn<GrandTotalRow>[] = [
+        {
+            key: "maxMarks",
+            label: "Max Marks",
+            type: "number",
+            render: (value) => value
+        },
+        {
+            key: "marksObtained",
+            label: "Marks Obtained",
+            type: "number",
+            render: (value) => value
+        }
+    ];
+
+    const config: TableConfig<GrandTotalRow> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        }
+    };
+
     return (
         <div className="mt-3 space-y-6">
             <CardContent className="space-y-6">
                 <h2 className="text-left text-lg font-bold text-gray-700">Grand Total</h2>
                 <div>
-                    <table className="w-full">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Max Marks</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Marks Obtained</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td className="border border-gray-300 px-4 py-2 text-left">150</td>
-                                <td className="border border-gray-300 px-4 py-2 text-left">{grandTotalMarks}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <UniversalTable<GrandTotalRow>
+                        data={data}
+                        config={config}
+                    />
                 </div>
             </CardContent>
         </div>

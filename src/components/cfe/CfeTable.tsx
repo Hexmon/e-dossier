@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import { catOptions } from "@/constants/app.constants";
 import type { cfeRow } from "@/types/cfe";
 
@@ -19,14 +20,6 @@ interface Props {
 export default function CfeTable({ rows, loading, StartEdit, onReplaceSemester, onDelete, semesterIndex }: Props) {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editValues, setEditValues] = useState<{ cat: string; mks: string; remarks: string }>({ cat: "", mks: "", remarks: "" });
-
-    if (loading) {
-        return <p className="text-center text-gray-500 py-4">Loading...</p>;
-    }
-
-    if (!rows || rows.length === 0) {
-        return <p className="text-center text-gray-500 py-4">No records for this semester.</p>;
-    }
 
     const startEdit = (index: number) => {
         const row = rows[index];
@@ -66,94 +59,124 @@ export default function CfeTable({ rows, loading, StartEdit, onReplaceSemester, 
         await onDelete(index, semesterIndex, rows);
     };
 
+    const columns: TableColumn<cfeRow>[] = [
+        {
+            key: "serialNo",
+            label: "S No",
+            render: (value, row, index) => value || String(index + 1)
+        },
+        {
+            key: "cat",
+            label: "Cat",
+            render: (value, row, index) => {
+                const isEditing = editingIndex === index;
+                return isEditing ? (
+                    <Select value={editValues.cat} onValueChange={(v) => setEditValues((p) => ({ ...p, cat: v }))}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {catOptions.map((opt) => (
+                                <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                ) : (
+                    value || "-"
+                );
+            }
+        },
+        {
+            key: "mks",
+            label: "Mks",
+            render: (value, row, index) => {
+                const isEditing = editingIndex === index;
+                return isEditing ? (
+                    <Input value={editValues.mks} onChange={(e) => setEditValues((p) => ({ ...p, mks: e.target.value }))} />
+                ) : (
+                    value || "0"
+                );
+            }
+        },
+        {
+            key: "remarks",
+            label: "Remarks",
+            render: (value, row, index) => {
+                const isEditing = editingIndex === index;
+                return isEditing ? (
+                    <Input value={editValues.remarks} onChange={(e) => setEditValues((p) => ({ ...p, remarks: e.target.value }))} />
+                ) : (
+                    value || "-"
+                );
+            }
+        }
+    ];
+
+    const actions: TableAction<cfeRow>[] = [
+        {
+            key: "edit-cancel",
+            label: editingIndex !== null ? "Cancel" : "Edit",
+            variant: editingIndex !== null ? "outline" : "outline",
+            size: "sm",
+            handler: (row, index) => {
+                if (editingIndex === index) {
+                    cancelEdit();
+                } else {
+                    startEdit(index);
+                }
+            },
+            condition: (row, index) => !loading
+        },
+        {
+            key: "save-delete",
+            label: editingIndex !== null ? "Save" : "Delete",
+            variant: editingIndex !== null ? "default" : "destructive",
+            size: "sm",
+            className: editingIndex !== null ? "bg-green-600" : "",
+            handler: async (row, index) => {
+                if (editingIndex === index) {
+                    await saveEdit(index);
+                } else {
+                    await handleDelete(index);
+                }
+            },
+            condition: (row, index) => {
+                if (editingIndex === index) return !loading;
+                return !loading && !!row.id;
+            }
+        }
+    ];
+
+    const config: TableConfig<cfeRow> = {
+        columns,
+        actions,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        },
+        emptyState: {
+            message: "No records for this semester."
+        },
+        loading
+    };
+
     return (
-        <div className="overflow-x-auto border rounded-lg shadow mb-6">
-            <table className="w-full border text-sm">
-                <thead className="bg-gray-100">
-                    <tr>
-                        <th className="p-2 border">S No</th>
-                        <th className="p-2 border">Cat</th>
-                        <th className="p-2 border">Mks</th>
-                        <th className="p-2 border">Remarks</th>
-                        <th className="p-2 border text-center">Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {rows.map((row, idx) => {
-                        const { id = "", serialNo = String(idx + 1), cat = "-", mks = "0", remarks = "" } = row;
-                        const isEditing = editingIndex === idx;
-                        
-                        // Generate unique key combining semester index + id + array index
-                        const uniqueKey = `${semesterIndex}-${id || "new"}-${idx}`;
-
-                        return (
-                            <tr key={uniqueKey}>
-                                <td className="p-2 border text-center">{serialNo}</td>
-
-                                <td className="p-2 border">
-                                    {isEditing ? (
-                                        <Select value={editValues.cat} onValueChange={(v) => setEditValues((p) => ({ ...p, cat: v }))}>
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select category" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {catOptions.map((opt) => (
-                                                    <SelectItem key={opt} value={opt}>
-                                                        {opt}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    ) : (
-                                        cat || "-"
-                                    )}
-                                </td>
-
-                                <td className="p-2 border text-center">
-                                    {isEditing ? (
-                                        <Input value={editValues.mks} onChange={(e) => setEditValues((p) => ({ ...p, mks: e.target.value }))} />
-                                    ) : (
-                                        mks
-                                    )}
-                                </td>
-
-                                <td className="p-2 border">
-                                    {isEditing ? (
-                                        <Input value={editValues.remarks} onChange={(e) => setEditValues((p) => ({ ...p, remarks: e.target.value }))} />
-                                    ) : (
-                                        remarks || "-"
-                                    )}
-                                </td>
-
-                                <td className="p-2 border text-center">
-                                    {isEditing ? (
-                                        <div className="flex justify-center gap-2">
-                                            <Button size="sm" className="bg-green-600" onClick={() => saveEdit(idx)} disabled={loading}>
-                                                Save
-                                            </Button>
-                                            <Button size="sm" variant="outline" onClick={cancelEdit} disabled={loading}>
-                                                Cancel
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex justify-center gap-2">
-                                            <Button size="sm" variant="outline" onClick={() => startEdit(idx)} disabled={loading}>
-                                                Edit
-                                            </Button>
-                                            {id ? (
-                                                <Button size="sm" variant="destructive" onClick={() => handleDelete(idx)} disabled={loading}>
-                                                    Delete
-                                                </Button>
-                                            ) : null}
-                                        </div>
-                                    )}
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+        <div className="mb-6">
+            <UniversalTable<cfeRow>
+                data={rows}
+                config={config}
+            />
         </div>
     );
 }
