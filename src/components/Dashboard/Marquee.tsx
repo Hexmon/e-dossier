@@ -8,7 +8,7 @@ interface MarqueeProps {
   className?: string;
 }
 
-const Marquee = ({ data, speed = 10, className }: MarqueeProps) => {
+const Marquee = ({ data, speed = 20, className }: MarqueeProps) => {
   // Create a much longer duplicated array for smoother infinite loop
   const extendedData = Array.from({ length: 1 }, () => data).flat();
 
