@@ -4,6 +4,7 @@ import React, { useEffect, useMemo } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import type { ObstacleTrainingRecord } from "@/app/lib/api/obstacleTrainingApi";
 import { TermData } from "@/types/obstacleTrg";
 
@@ -79,72 +80,113 @@ export default function ObstacleTrainingForm({
 
     const watched = watch("records");
 
+    // Add total row to data
+    const totalRow: Row = {
+        obstacle: "Total",
+        obtained: String(
+            (watched ?? merged)
+                .slice(0, merged.length)
+                .reduce(
+                    (sum, r) =>
+                        sum + (parseFloat(r.obtained || "0") || 0),
+                    0
+                )
+        ),
+        remark: "—"
+    };
+
+    const tableData = [...merged, totalRow];
+
+    const columns: TableColumn<Row>[] = [
+        {
+            key: "index",
+            label: "No",
+            render: (value, row, index) => {
+                return index + 1;
+            }
+        },
+        {
+            key: "obstacle",
+            label: "Obstacle",
+            render: (value) => value
+        },
+        {
+            key: "obtained",
+            label: "Marks Obtained",
+            type: "number",
+            render: (value, row, index) => {
+                const isTotalRow = index === merged.length;
+
+                if (isTotalRow) {
+                    return (
+                        <span className="text-center block">
+                            {(watched ?? merged)
+                                .slice(0, merged.length)
+                                .reduce(
+                                    (sum, r) =>
+                                        sum + (parseFloat(r.obtained || "0") || 0),
+                                    0
+                                )}
+                        </span>
+                    );
+                }
+
+                return (
+                    <Input
+                        {...register(`records.${index}.obtained`)}
+                        type="number"
+                        defaultValue={value}
+                        disabled={!isEditing || disabled}
+                    />
+                );
+            }
+        },
+        {
+            key: "remark",
+            label: "Remarks",
+            render: (value, row, index) => {
+                const isTotalRow = index === merged.length;
+
+                if (isTotalRow) {
+                    return <span className="text-center block">—</span>;
+                }
+
+                return (
+                    <Input
+                        {...register(`records.${index}.remark`)}
+                        type="text"
+                        defaultValue={value}
+                        disabled={!isEditing || disabled}
+                    />
+                );
+            }
+        }
+    ];
+
+    const config: TableConfig<Row> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        }
+    };
+
     return (
         <form onSubmit={handleSubmit(onSave)}>
-            <div className="overflow-x-auto border rounded-lg shadow">
-                <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
-                        <tr>
-                            <th className="p-2 border text-left">No</th>
-                            <th className="p-2 border text-left">Obstacle</th>
-                            <th className="p-2 border text-left">Marks Obtained</th>
-                            <th className="p-2 border text-left">Remarks</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {merged.map((row, idx) => {
-                            const { id = `${idx}`, obstacle, obtained, remark } = row;
-
-                            return (
-                                <tr key={id}>
-                                    <td className="p-2 border text-center">{idx + 1}</td>
-
-                                    <td className="p-2 border">{obstacle}</td>
-
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...register(`records.${idx}.obtained`)}
-                                            type="number"
-                                            defaultValue={obtained}
-                                            disabled={!isEditing || disabled}
-                                        />
-                                    </td>
-
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...register(`records.${idx}.remark`)}
-                                            type="text"
-                                            defaultValue={remark}
-                                            disabled={!isEditing || disabled}
-                                        />
-                                    </td>
-                                </tr>
-                            );
-                        })}
-
-                        {/* Total Row */}
-                        <tr className="font-semibold bg-gray-50">
-                            <td className="p-2 border text-center">
-                                {(watched?.length ?? merged.length) + 1}
-                            </td>
-
-                            <td className="p-2 border">Total</td>
-
-                            <td className="p-2 border text-center">
-                                {(watched ?? merged)
-                                    .slice(0, merged.length)
-                                    .reduce(
-                                        (sum, r) =>
-                                            sum + (parseFloat(r.obtained || "0") || 0),
-                                        0
-                                    )}
-                            </td>
-
-                            <td className="p-2 border text-center">—</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div className="border rounded-lg shadow">
+                <UniversalTable<Row>
+                    data={tableData}
+                    config={config}
+                />
             </div>
 
             {/* Action Buttons */}

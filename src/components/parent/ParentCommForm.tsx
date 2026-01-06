@@ -98,11 +98,11 @@ export default function ParentCommForm({ onSubmit, defaultValues }: Props) {
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-green-600">
+                <Button type="submit" className="bg-[#40ba4d]">
                     Submit
                 </Button>
 
-                <Button type="button" variant="outline" onClick={() => reset()}>
+                <Button type="button" variant="outline" className="hover:bg-destructive hover:text-white" onClick={() => reset()}>
                     Reset
                 </Button>
             </div>

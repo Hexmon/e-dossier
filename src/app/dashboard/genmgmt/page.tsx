@@ -63,7 +63,7 @@ export default function GeneralManagementPage() {
             </nav>
             {/* Welcome section */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-primary mb-2">
+              <h2 className="text-2xl font-bold text-[#1677ff] mb-2">
                 Admin Management
               </h2>
               <p className="text-muted-foreground">

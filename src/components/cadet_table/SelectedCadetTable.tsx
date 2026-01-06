@@ -29,9 +29,9 @@ export default function SelectedCadetTable({
 
   return (
     <>
-      <div className="sticky top-16 z-50 bg-white border border-gray-200 shadow-sm min-w-full mb-4 rounded-lg overflow-hidden">
+      <div className="!sticky !top-16 !z-50 bg-white border border-gray-200 shadow-sm min-w-full mb-4 rounded-lg overflow-hidden">
         <table className="min-w-full text-sm text-gray-700 border-collapse">
-          <thead className="bg-blue-100 text-blue-700">
+          <thead className="bg-[#1677ff] text-white">
             <tr>
               <th className="px-6 py-3 text-center font-semibold border border-gray-300">
                 Selected Cadet
@@ -61,7 +61,7 @@ export default function SelectedCadetTable({
               <td className="px-6 py-3 border border-gray-300">
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+                  className="px-4 py-2 bg-[#40ba4d] text-white font-medium rounded-lg transition-colors duration-200"
                 >
                   View Graphs
                 </button>

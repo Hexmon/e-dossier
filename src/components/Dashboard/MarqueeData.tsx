@@ -11,5 +11,5 @@ export const marqueeData = [
 ];
 
 export const marqueeData2 = [
-    "*** Pending : 10 x Interviews of Arjun PL ***"
+    "*** Interview Pending ***"
 ]
