@@ -1,147 +1,228 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
+import InspTable from "./InspTable";
 import type { InspFormData } from "@/types/dossierInsp";
 
-export default function InspFormComponent() {
-    const form = useForm<InspFormData>({
-        defaultValues: {
-            date: "",
-            rk: "",
-            name: "",
-            appointment: "",
-            remarks: "",
-            initials: "",
+interface Props {
+  onSubmit?: (data: { inspections: InspFormData[] }) => void;
+  disabled?: boolean;
+  defaultValues?: { inspections: InspFormData[]; savedData: InspFormData[] };
+}
+
+export default function InspFormComponent({ onSubmit, disabled = false, defaultValues }: Props) {
+  const form = useForm<{ inspections: InspFormData[]; savedData: InspFormData[] }>({
+    defaultValues: defaultValues || {
+      inspections: [
+        {
+          date: "",
+          rk: "",
+          name: "",
+          appointment: "",
+          remarks: "",
+          initials: "",
         },
+      ],
+      savedData: [],
+    },
+  });
+
+  const { control, handleSubmit, register, reset, watch, setValue, getValues } = form;
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "inspections",
+  });
+
+  const savedData = watch("savedData");
+
+  //Reset form whenever defaultValues change
+  useEffect(() => {
+    if (defaultValues) {
+      reset(defaultValues);
+    }
+  }, [defaultValues, reset]);
+
+  const handleDeleteFromTable = (index: number) => {
+    const currentSavedData = getValues("savedData");
+    const newSavedData = currentSavedData.filter((_, i) => i !== index);
+    setValue("savedData", newSavedData);
+    toast.success("Record deleted.");
+  };
+
+  const handleUpdateFromTable = (index: number, updatedRow: InspFormData) => {
+    const currentSavedData = getValues("savedData");
+    const newSavedData = currentSavedData.map((row, i) =>
+      i === index ? updatedRow : row
+    );
+    setValue("savedData", newSavedData);
+  };
+
+  const handleSave = () => {
+    const inspections = getValues("inspections");
+    const validRows = inspections.filter((row) => row.name && row.name.trim());
+
+    if (validRows.length === 0) {
+      toast.error("At least one row must have a name.");
+      return;
+    }
+
+    const currentSavedData = getValues("savedData");
+    const updatedSavedData = [...currentSavedData, ...validRows];
+    setValue("savedData", updatedSavedData);
+    toast.success(`${validRows.length} inspection(s) saved.`);
+
+    reset({
+      inspections: [
+        {
+          date: "",
+          rk: "",
+          name: "",
+          appointment: "",
+          remarks: "",
+          initials: "",
+        },
+      ],
+      savedData: updatedSavedData,
+    });
+  };
+
+  const handleReset = () => {
+    reset({
+      inspections: [
+        {
+          date: "",
+          rk: "",
+          name: "",
+          appointment: "",
+          remarks: "",
+          initials: "",
+        },
+      ],
+      savedData: getValues("savedData"),
+    });
+    toast.info("Form reset.");
+  };
+
+  const onFormSubmit = (data: { inspections: InspFormData[]; savedData: InspFormData[] }) => {
+    if (onSubmit) {
+      onSubmit({ inspections: data.savedData });
+    }
+  };
+
+  const addRow = () =>
+    append({
+      date: "",
+      rk: "",
+      name: "",
+      appointment: "",
+      remarks: "",
+      initials: "",
     });
 
-    const { register, handleSubmit, reset } = form;
+  return (
+    <form onSubmit={handleSubmit(onFormSubmit)}>
+      {/* Table Component */}
+      <InspTable 
+        data={savedData} 
+        onDelete={handleDeleteFromTable}
+        onUpdate={handleUpdateFromTable}
+      />
 
-    const [savedData, setSavedData] = useState<InspFormData | null>(null);
+      {/* Form Table */}
+      <div className="overflow-x-auto border rounded-lg shadow">
+        <table className="w-full border text-sm">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-2 border">S No</th>
+              <th className="p-2 border">Date</th>
+              <th className="p-2 border">Rank</th>
+              <th className="p-2 border">Name</th>
+              <th className="p-2 border">Appointment</th>
+              <th className="p-2 border">Remarks</th>
+              <th className="p-2 border">Initials</th>
+              <th className="p-2 border text-center">Action</th>
+            </tr>
+          </thead>
 
-    const onSubmit = (data: InspFormData) => {
-        const { name = "" } = data;
+          <tbody>
+            {fields.map((field, idx) => {
+              return (
+                <tr key={field.id}>
+                  <td className="p-2 border text-center">
+                    <Input value={String(idx + 1)} disabled className="bg-gray-100 text-center" />
+                  </td>
+                  <td className="p-2 border">
+                    <Input
+                      {...register(`inspections.${idx}.date` as any)}
+                      type="date"
+                    />
+                  </td>
+                  <td className="p-2 border">
+                    <Input
+                      {...register(`inspections.${idx}.rk` as any)}
+                      placeholder="Rank"
+                    />
+                  </td>
+                  <td className="p-2 border">
+                    <Input
+                      {...register(`inspections.${idx}.name` as any)}
+                      placeholder="Name"
+                    />
+                  </td>
+                  <td className="p-2 border">
+                    <Input
+                      {...register(`inspections.${idx}.appointment` as any)}
+                      placeholder="Appointment"
+                    />
+                  </td>
+                  <td className="p-2 border">
+                    <Input
+                      {...register(`inspections.${idx}.remarks` as any)}
+                      placeholder="Remarks"
+                    />
+                  </td>
+                  <td className="p-2 border">
+                    <Input
+                      {...register(`inspections.${idx}.initials` as any)}
+                      placeholder="Initials"
+                    />
+                  </td>
+                  <td className="p-2 border text-center">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => remove(idx)}
+                      disabled={disabled}
+                    >
+                      Remove
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-        if (!name.trim()) {
-            toast.error("Name is required.");
-            return;
-        }
+      <div className="mt-4 flex justify-center gap-3">
+        <Button type="button" onClick={addRow} disabled={disabled}>
+          + Add Row
+        </Button>
 
-        setSavedData(data);
-        toast.success("Inspection saved.");
-        reset();
-    };
+        <Button type="button" className="bg-green-600 hover:bg-green-700" onClick={handleSave} disabled={disabled}>
+          {disabled ? "Submitting..." : "Submit"}
+        </Button>
 
-    // Helper for preview mapping
-    const renderRows = (obj: InspFormData | null) => {
-        if (!obj) {
-            return <p className="italic text-gray-500">No saved inspection yet.</p>;
-        }
-
-        const {
-            date = "-",
-            rk = "-",
-            name = "-",
-            appointment = "-",
-            remarks = "-",
-            initials = "-",
-        } = obj;
-
-        const rows: Array<[string, string]> = [
-            ["Date", date || "-"],
-            ["Rank", rk || "-"],
-            ["Name", name || "-"],
-            ["Appointment", appointment || "-"],
-            ["Remarks", remarks || "-"],
-            ["Initials", initials || "-"],
-        ];
-
-        return (
-            <div className="grid grid-cols-2 gap-4 text-sm">
-                {rows.map(([label, val]) => (
-                    <p key={label}>
-                        <strong>{label}:</strong> {val}
-                    </p>
-                ))}
-            </div>
-        );
-    };
-
-    return (
-        <Card className="max-w-4xl mx-auto shadow-lg rounded-xl">
-            <CardHeader>
-                <CardTitle className="text-lg font-semibold text-center bg-blue-100 rounded-2xl">
-                    Inspection Sheet
-                </CardTitle>
-            </CardHeader>
-
-            <CardContent>
-                <Tabs defaultValue="fill" className="w-full">
-                    <TabsList className="mb-6">
-                        <TabsTrigger value="fill">Fill Form</TabsTrigger>
-                        <TabsTrigger value="preview">Preview</TabsTrigger>
-                    </TabsList>
-
-                    {/* FORM TAB */}
-                    <TabsContent value="fill">
-                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium">Date</label>
-                                    <Input type="date" {...register("date")} className="mt-1" />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium">Rank</label>
-                                    <Input {...register("rk")} className="mt-1" placeholder="Rank" />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium">Name</label>
-                                    <Input {...register("name")} className="mt-1" placeholder="Name" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Appointment</label>
-                                <Input {...register("appointment")} className="mt-1" />
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Remarks</label>
-                                <Textarea {...register("remarks")} className="mt-1 min-h-[100px]" />
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Initials</label>
-                                <Textarea {...register("initials")} className="mt-1 min-h-[80px]" />
-                            </div>
-
-                            <div className="flex justify-center gap-2">
-                                <Button variant="outline" type="button" className="hover:bg-destructive hover:text-white" onClick={() => reset()}>
-                                    Reset
-                                </Button>
-                                <Button type="submit" className="bg-[#40ba4d]">Save</Button>
-                            </div>
-                        </form>
-                    </TabsContent>
-
-                    {/* PREVIEW TAB */}
-                    <TabsContent value="preview">
-                        <div className="p-6 bg-gray-50 border rounded-lg">
-                            <h3 className="text-lg font-semibold mb-4">Preview</h3>
-                            {renderRows(savedData)}
-                        </div>
-                    </TabsContent>
-                </Tabs>
-            </CardContent>
-        </Card>
-    );
+        <Button type="button" variant="outline" onClick={handleReset} disabled={disabled}>
+          Reset
+        </Button>
+      </div>
+    </form>
+  );
 }
