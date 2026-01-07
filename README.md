@@ -1,26 +1,18 @@
-DATABASE_URL=postgresql://postgres:root@localhost:5432/e_dossier_v2
-ACCESS_TOKEN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIKsoxAMJEZLV+A9pJF/1+A0vkGdjaKTQGVSlKHn7LBXw\n-----END PRIVATE KEY-----"
-ACCESS_TOKEN_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAX/+LJjlZfaHoN38xoH2VrDSmzcKUmySLHLrtI6nw7a4=\n-----END PUBLIC KEY-----"
-ACCESS_TOKEN_TTL_SECONDS=100000000000000000000000000000000000000
-NODE_ENV=development
-EXPOSE_TOKENS_IN_DEV=true
+# e-dossier-v2
 
-# Super Admin (post: SUPER_ADMIN)
-SUPERADMIN_USERNAME=superadmin
-SUPERADMIN_PASSWORD=ChangeMe!123
-SUPERADMIN_EMAIL=superadmin@example.com
-SUPERADMIN_PHONE=+910000000000
-SUPERADMIN_NAME=Super Admin
-SUPERADMIN_RANK=SUPER
+## Project Details
+- Next.js 15 app (App Router) written in TypeScript
+- PostgreSQL database accessed via Drizzle ORM
+- Backend APIs live under `/api/v1`
 
-# Admin (post: ADMIN)
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=Admin@1234
-ADMIN_EMAIL=admin@example.com
-ADMIN_PHONE=+910000000001
-ADMIN_NAME=Admin
-ADMIN_RANK=ADMIN
-
-## Seeding admin accounts
-
-With the above env vars set (or in a .env file), run `pnpm seed:admins` to create/update the SUPER_ADMIN and ADMIN users, their credentials, positions, and active appointments.
+## Setup Guide
+1. Install prerequisites: Node.js and `pnpm`.
+2. Install dependencies: `pnpm install`.
+3. Configure environment:
+   - Copy `.env.example` to `.env`.
+   - Update `DATABASE_URL`, JWT keys, CSRF secret, and any admin credentials.
+4. Prepare the database:
+   - Create the database defined in `DATABASE_URL`.
+   - Run migrations: `pnpm db:migrate`.
+5. (Optional) Seed admin accounts: `pnpm seed:admins`.
+6. Start the dev server: `pnpm dev` and open `http://localhost:3000`.
