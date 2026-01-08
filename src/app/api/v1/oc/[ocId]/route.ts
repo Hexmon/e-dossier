@@ -4,6 +4,8 @@ import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth, hasAdminRole } from '@/app/lib/authz';
 import { ocCadets } from '@/app/db/schema/training/oc';
+import { courses } from '@/app/db/schema/training/courses';
+import { platoons } from '@/app/db/schema/auth/platoons';
 import { eq } from 'drizzle-orm';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
@@ -28,9 +30,81 @@ async function GETHandler(_: NextRequest, { params }: { params: Promise<{ ocId: 
     try {
         await requireAuth(_);
         const { ocId } = await OcParam.parseAsync(await params);
-        const [row] = await db.select().from(ocCadets).where(eq(ocCadets.id, ocId)).limit(1);
+        const [row] = await db
+            .select({
+                id: ocCadets.id,
+                ocNo: ocCadets.ocNo,
+                uid: ocCadets.uid,
+                name: ocCadets.name,
+                branch: ocCadets.branch,
+                arrivalAtUniversity: ocCadets.arrivalAtUniversity,
+                status: ocCadets.status,
+                managerUserId: ocCadets.managerUserId,
+                relegatedToCourseId: ocCadets.relegatedToCourseId,
+                relegatedOn: ocCadets.relegatedOn,
+                withdrawnOn: ocCadets.withdrawnOn,
+                createdAt: ocCadets.createdAt,
+                updatedAt: ocCadets.updatedAt,
+                courseId: courses.id,
+                courseCode: courses.code,
+                courseTitle: courses.title,
+                courseNotes: courses.notes,
+                courseCreatedAt: courses.createdAt,
+                courseUpdatedAt: courses.updatedAt,
+                courseDeletedAt: courses.deletedAt,
+                platoonId: platoons.id,
+                platoonKey: platoons.key,
+                platoonName: platoons.name,
+                platoonAbout: platoons.about,
+                platoonCreatedAt: platoons.createdAt,
+                platoonUpdatedAt: platoons.updatedAt,
+                platoonDeletedAt: platoons.deletedAt,
+            })
+            .from(ocCadets)
+            .leftJoin(courses, eq(courses.id, ocCadets.courseId))
+            .leftJoin(platoons, eq(platoons.id, ocCadets.platoonId))
+            .where(eq(ocCadets.id, ocId))
+            .limit(1);
         if (!row) throw new ApiError(404, 'OC not found', 'not_found');
-        return json.ok({ message: 'OC retrieved successfully.', oc: row });
+        const course = row.courseId ? {
+            id: row.courseId,
+            code: row.courseCode,
+            title: row.courseTitle,
+            notes: row.courseNotes,
+            createdAt: row.courseCreatedAt,
+            updatedAt: row.courseUpdatedAt,
+            deletedAt: row.courseDeletedAt,
+        } : null;
+
+        const platoon = row.platoonId ? {
+            id: row.platoonId,
+            key: row.platoonKey,
+            name: row.platoonName,
+            about: row.platoonAbout,
+            createdAt: row.platoonCreatedAt,
+            updatedAt: row.platoonUpdatedAt,
+            deletedAt: row.platoonDeletedAt,
+        } : null;
+
+        const oc = {
+            id: row.id,
+            ocNo: row.ocNo,
+            uid: row.uid,
+            name: row.name,
+            course,
+            branch: row.branch,
+            platoon,
+            arrivalAtUniversity: row.arrivalAtUniversity,
+            status: row.status,
+            managerUserId: row.managerUserId,
+            relegatedToCourseId: row.relegatedToCourseId,
+            relegatedOn: row.relegatedOn,
+            withdrawnOn: row.withdrawnOn,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+        };
+
+        return json.ok({ message: 'OC retrieved successfully.', oc });
     } catch (err) { return handleApiError(err); }
 }
 
