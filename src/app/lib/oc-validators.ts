@@ -375,6 +375,26 @@ export const academicSubjectPatchSchema = z.object({
     message: 'No subject fields provided.',
 });
 
+const academicSubjectBulkUpsertSchema = academicSubjectPatchSchema.safeExtend({
+    op: z.enum(['upsert', 'update', 'edit']),
+    ocId: z.string().uuid(),
+    semester: Semester,
+    subjectId: z.string().uuid(),
+});
+
+const academicSubjectBulkDeleteSchema = z.object({
+    op: z.literal('delete'),
+    ocId: z.string().uuid(),
+    semester: Semester,
+    subjectId: z.string().uuid(),
+    hard: z.boolean().optional(),
+});
+
+export const academicSubjectBulkRequestSchema = z.object({
+    items: z.array(z.union([academicSubjectBulkUpsertSchema, academicSubjectBulkDeleteSchema])).min(1),
+    failFast: z.boolean().optional(),
+});
+
 export const academicSummaryPatchSchema = z.object({
     sgpa: z.coerce.number().optional(),
     cgpa: z.coerce.number().optional(),
