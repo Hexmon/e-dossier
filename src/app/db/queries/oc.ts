@@ -8,6 +8,7 @@ import {
     ocCommissioning,
     ocDelegations,
     ocCadets,
+    ocImages,
     ocMotivationAwards,
     ocSportsAndGames,
     ocWeaponTraining,
@@ -292,6 +293,90 @@ export async function deleteSemesterSubject(ocId: string, semester: number, subj
             .returning();
         return updated;
     });
+}
+
+// ---- OC images ------------------------------------------------------------
+export type OcImageKind = 'CIVIL_DRESS' | 'UNIFORM';
+export type OcImageRow = typeof ocImages.$inferSelect;
+
+export async function listOcImages(ocId: string, includeDeleted = false) {
+    const wh: any[] = [eq(ocImages.ocId, ocId)];
+    if (!includeDeleted) wh.push(isNull(ocImages.deletedAt));
+    return db
+        .select()
+        .from(ocImages)
+        .where(and(...wh))
+        .orderBy(ocImages.kind);
+}
+
+export async function getOcImage(ocId: string, kind: OcImageKind) {
+    const [row] = await db
+        .select()
+        .from(ocImages)
+        .where(and(eq(ocImages.ocId, ocId), eq(ocImages.kind, kind)))
+        .limit(1);
+    return row ?? null;
+}
+
+export async function upsertOcImage(
+    ocId: string,
+    kind: OcImageKind,
+    data: {
+        bucket: string;
+        objectKey: string;
+        contentType: string;
+        sizeBytes: number;
+        etag?: string | null;
+        uploadedAt?: Date | null;
+    },
+) {
+    const now = new Date();
+    const [row] = await db
+        .insert(ocImages)
+        .values({
+            ocId,
+            kind,
+            bucket: data.bucket,
+            objectKey: data.objectKey,
+            contentType: data.contentType,
+            sizeBytes: data.sizeBytes,
+            etag: data.etag ?? null,
+            uploadedAt: data.uploadedAt ?? now,
+            deletedAt: null,
+            updatedAt: now,
+        })
+        .onConflictDoUpdate({
+            target: [ocImages.ocId, ocImages.kind],
+            set: {
+                bucket: data.bucket,
+                objectKey: data.objectKey,
+                contentType: data.contentType,
+                sizeBytes: data.sizeBytes,
+                etag: data.etag ?? null,
+                uploadedAt: data.uploadedAt ?? now,
+                deletedAt: null,
+                updatedAt: now,
+            },
+        })
+        .returning();
+    return row ?? null;
+}
+
+export async function softDeleteOcImage(ocId: string, kind: OcImageKind) {
+    const [row] = await db
+        .update(ocImages)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(ocImages.ocId, ocId), eq(ocImages.kind, kind), isNull(ocImages.deletedAt)))
+        .returning();
+    return row ?? null;
+}
+
+export async function hardDeleteOcImage(ocId: string, kind: OcImageKind) {
+    const [row] = await db
+        .delete(ocImages)
+        .where(and(eq(ocImages.ocId, ocId), eq(ocImages.kind, kind)))
+        .returning();
+    return row ?? null;
 }
 // ---- Personal ---------------------------------------------------------------
 export async function getPersonal(ocId: string) {
