@@ -17,6 +17,7 @@ export const counsellingWarningKind = pgEnum('counselling_warning_kind', [
 
 export const campSemesterKind = pgEnum('camp_semester_kind', ['SEM5', 'SEM6A', 'SEM6B']);
 export const campReviewRoleKind = pgEnum('camp_review_role_kind', ['OIC', 'PLATOON_COMMANDER', 'HOAT']);
+export const ocImageKind = pgEnum('oc_image_kind', ['CIVIL_DRESS', 'UNIFORM']);
 
 export type CreditForExcellenceEntry = {
     cat: string;
@@ -49,6 +50,26 @@ export const ocCadets = pgTable('oc_cadets', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// === OC images (2 per OC: civil dress, uniform) =============================
+export const ocImages = pgTable('oc_images', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    kind: ocImageKind('kind').notNull(),
+    bucket: varchar('bucket', { length: 128 }).notNull(),
+    objectKey: varchar('object_key', { length: 512 }).notNull(),
+    contentType: varchar('content_type', { length: 128 }).notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    etag: varchar('etag', { length: 128 }),
+    uploadedAt: timestamp('uploaded_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqOcImageKind: uniqueIndex('uq_oc_images_kind').on(t.ocId, t.kind),
+}));
 
 export type TheoryMarksRecord = {
     phaseTest1Marks?: number | null;
