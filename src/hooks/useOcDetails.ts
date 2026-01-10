@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
-import { fetchOCById } from "@/app/lib/api/ocApi";
-import { fetchCourseById } from "@/app/lib/api/courseApi";
+import { fetchOCById, type OCListRow } from "@/app/lib/api/ocApi";
 import { Cadet } from "@/types/cadet";
 
 export function useOcDetails(ocId?: string) {
@@ -19,20 +18,17 @@ export function useOcDetails(ocId?: string) {
         setError(null);
 
         try {
-            const oc = await fetchOCById(ocId);
-            if (!oc) return;
-
-            const course = await fetchCourseById(oc.courseId);
+            const oc: OCListRow | null = await fetchOCById(ocId);
+            if (!oc || !oc.course) return;
 
             setCadet({
                 name: oc.name,
-                course: oc.courseId,
-                courseName: course?.course?.code || "",
+                course: oc.course.id,
+                courseName: oc.course.code || "",
                 ocNumber: oc.ocNo,
                 ocId: oc.id,
             });
         } catch (err) {
-            console.error(err);
             setError("Failed to load cadet details");
             toast.error("Error loading OC");
         } finally {
