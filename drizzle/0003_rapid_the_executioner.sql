@@ -1,1 +1,0 @@
-ALTER TABLE "oc_motivation_awards" ADD COLUMN "motivation_title" varchar(200) NOT NULL;

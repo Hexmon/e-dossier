@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -9,21 +8,12 @@ import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DossierTab from "@/components/Tabs/DossierTab";
-import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
+import { dossierTabs } from "@/config/app.config";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Shield, ChevronDown } from "lucide-react";
-
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import { useOcDetails } from "@/hooks/useOcDetails";
 
-import type { OfficerCadetForm } from "@/types/dossierSnap";
 import OfficerCadetFormComponent from "@/components/dossier/OfficerCadetFormComponent";
 
 export default function DossierSnapshotPage() {
@@ -32,21 +22,13 @@ export default function DossierSnapshotPage() {
 
   const { cadet } = useOcDetails(ocId);
 
-  const {
-    name = "",
-    courseName = "",
-    ocNumber = "",
-    ocId: cadetOcId = ocId,
-    course = "",
-  } = cadet ?? {};
-
-  const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
-
-  const [savedData, setSavedData] = useState<OfficerCadetForm | null>(null);
-
-  useEffect(() => {
-    setSavedData(null);
-  }, [ocId]);
+  const selectedCadet = cadet ? {
+    name: cadet.name,
+    courseName: cadet.courseName,
+    ocNumber: cadet.ocNumber,
+    ocId: cadet.ocId,
+    course: cadet.course,
+  } : null;
 
   return (
     <DashboardLayout title="Dossier Snapshot" description="Quickly view and analyze OC details">
@@ -74,10 +56,7 @@ export default function DossierSnapshotPage() {
                 </CardHeader>
 
                 <CardContent>
-                  <OfficerCadetFormComponent
-                    initialValues={savedData}
-                    onSave={(data) => setSavedData(data)}
-                  />
+                  <OfficerCadetFormComponent ocId={ocId} />
                 </CardContent>
               </Card>
             </section>

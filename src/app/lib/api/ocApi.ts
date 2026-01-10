@@ -2,6 +2,17 @@
 import { api } from "@/app/lib/apiClient";
 import { baseURL, endpoints } from "@/constants/endpoints";
 
+/** Course object */
+export interface Course {
+  id: string;
+  code: string;
+  title: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
 /** Base OC row from oc_cadets */
 export interface OCRecord {
   id: string;
@@ -18,6 +29,7 @@ export interface OCRecord {
 
 /** Optional denormalized fields the list API now returns */
 export interface OCDenorm {
+  course?: Course;
   courseCode?: string;
   courseTitle?: string;
   platoonKey?: string | null;
@@ -96,34 +108,6 @@ export async function getAllOCs(query?: string): Promise<OCListRow[]> {
  * When `params.full === true`, returns the full graph per OC.
  * Otherwise returns list rows with denormalized fields.
  */
-
-/** Base OC row from oc_cadets */
-export interface OCRecord {
-  id: string;
-  name: string;
-  ocNo: string;
-  uid?: string;
-  courseId: string;
-  branch?: "E" | "M" | "O" | null;
-  platoonId?: string | null;
-  arrivalAtUniversity: string; // ISO string
-  withdrawnOn?: string | null;
-  createdAt?: string;
-}
-
-/** Optional denormalized fields the list API now returns */
-export interface OCDenorm {
-  courseCode?: string;
-  courseTitle?: string;
-  platoonKey?: string | null;
-  platoonName?: string | null;
-
-  status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
-  managerUserId?: string | null;
-  relegateToCourseId?: string | null;
-  relegatedOn?: string | null;
-  updatedAt?: string;
-}
 
 /** Basic list row shape (cadet + denorm) */
 export type OCListRow = OCRecord & OCDenorm;
