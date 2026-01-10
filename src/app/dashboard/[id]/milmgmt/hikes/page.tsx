@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import { useParams } from "next/navigation";
 import { saveHikeForm, clearHikeForm } from "@/store/slices/hikeRecordsSlice";
+import { Cadet } from "@/types/cadet";
 
 export default function HikePage() {
     const { id } = useParams();
@@ -63,10 +64,17 @@ export default function HikePage() {
     // Initialize form with saved data or defaults
     const getDefaultValues = (): HikeFormValues => {
         if (savedFormData && savedFormData.length > 0) {
-            return { hikeRows: savedFormData };
+            return {
+                hikeRows: savedFormData.map(row => ({
+                    ...row,
+                    id: row.id ?? null,
+                    type: "HIKE",        
+                })),
+            };
         }
         return { hikeRows: defaultHikeRows };
     };
+
 
     const methods = useForm<HikeFormValues>({
         defaultValues: getDefaultValues(),
@@ -115,7 +123,7 @@ function InnerHikePage({
     ocId,
     onClearForm
 }: {
-    selectedCadet: RootState['cadet']['selectedCadet'];
+    selectedCadet: Cadet;
     ocId: string;
     onClearForm: () => void;
 }) {
@@ -274,8 +282,8 @@ function InnerHikePage({
                                         cancelEdit();
                                     }}
                                     className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-gray-200 text-gray-700"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-gray-200 text-gray-700"
                                         }`}
                                 >
                                     {term}

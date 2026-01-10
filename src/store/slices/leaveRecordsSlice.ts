@@ -4,7 +4,7 @@ export interface LeaveRecordFormData {
     id?: string | null;
     semester: number;
     reason: string;
-    type: string;
+    type: "LEAVE" | "OVERSTAY" | "HIKE" | "DETENTION";
     dateFrom: string;
     dateTo: string;
     remark: string;

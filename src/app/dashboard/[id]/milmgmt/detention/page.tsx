@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import { useParams } from "next/navigation";
 import { saveDetentionForm, clearDetentionForm } from "@/store/slices/detentionRecordsSlice";
+import { Cadet } from "@/types/cadet";
 
 export default function DetentionPage() {
     const { id } = useParams();
@@ -74,7 +75,12 @@ export default function DetentionPage() {
     // Initialize form with saved data or defaults
     const getDefaultValues = (): DetentionFormValues => {
         if (savedFormData && savedFormData.length > 0) {
-            return { detentionRows: savedFormData };
+            return {
+                detentionRows: savedFormData.map(row => ({
+                    ...row,
+                    id: row.id ?? null, // ✅ force undefined → null
+                })),
+            };
         }
         return { detentionRows: defaultDetentionRows };
     };
@@ -129,7 +135,7 @@ function InnerDetentionPage({
     ocId,
     onClearForm
 }: {
-    selectedCadet: RootState['cadet']['selectedCadet'];
+    selectedCadet: Cadet;
     ocId: string;
     onClearForm: () => void;
 }) {
@@ -308,8 +314,8 @@ function InnerDetentionPage({
                                         cancelEdit();
                                     }}
                                     className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-gray-200 text-gray-700"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-gray-200 text-gray-700"
                                         }`}
                                 >
                                     {term}

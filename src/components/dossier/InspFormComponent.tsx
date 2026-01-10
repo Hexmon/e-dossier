@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
+import { useForm } from "react-hook-form";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,187 +17,150 @@ import type { RootState } from "@/store";
 import { useDebounce } from "@/hooks/useDebounce";
 
 interface Props {
-    ocId: string;
+  ocId: string;
 }
 
 export default function InspFormComponent({ ocId }: Props) {
-    const dispatch = useDispatch();
+  const dispatch = useDispatch();
 
-    // Get persisted data from Redux
-    const savedData = useSelector((state: RootState) =>
-        state.inspSheet.forms[ocId]
+  /* ✅ Redux Persist – KEEP */
+  const savedData = useSelector(
+    (state: RootState) => state.inspSheet.forms[ocId]
+  );
+
+  const form = useForm<InspFormData>({
+    defaultValues: {
+      date: "",
+      rk: "",
+      name: "",
+      appointment: "",
+      remarks: "",
+      initials: "",
+    },
+  });
+
+  const { register, handleSubmit, reset, watch } = form;
+
+  /* Load persisted data */
+  useEffect(() => {
+    if (savedData) {
+      reset(savedData);
+    }
+  }, [savedData, reset]);
+
+  /* Auto-save (Redux Persist) */
+  const debouncedValues = useDebounce(watch(), 500);
+
+  useEffect(() => {
+    if (!debouncedValues) return;
+
+    const hasData = Object.values(debouncedValues).some(
+      v => v !== "" && v !== null && v !== undefined
     );
 
-    const form = useForm<InspFormData>({
-        defaultValues: {
-            date: "",
-            rk: "",
-            name: "",
-            appointment: "",
-            remarks: "",
-            initials: "",
-        },
+    if (hasData) {
+      dispatch(saveInspForm({ ocId, data: debouncedValues }));
+    }
+  }, [debouncedValues, dispatch, ocId]);
+
+  const onSubmit = (data: InspFormData) => {
+    if (!data.name?.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+
+    dispatch(saveInspForm({ ocId, data }));
+    toast.success("Inspection submitted successfully");
+  };
+
+  const handleReset = () => {
+    if (!confirm("Clear all inspection data?")) return;
+
+    reset({
+      date: "",
+      rk: "",
+      name: "",
+      appointment: "",
+      remarks: "",
+      initials: "",
     });
 
-    const { register, handleSubmit, reset, watch } = form;
+    dispatch(clearInspForm(ocId));
+    toast.info("Form cleared");
+  };
 
-    // Watch all form values for auto-save
-    const formValues = watch();
-    const debouncedFormValues = useDebounce(formValues, 500);
+  const renderPreview = (data: InspFormData | null) => {
+    if (!data) {
+      return <p className="italic text-gray-500">No inspection saved yet.</p>;
+    }
 
-    // Load persisted data when component mounts or ocId changes
-    useEffect(() => {
-        if (savedData) {
-            reset(savedData);
-        }
-    }, [ocId, savedData, reset]);
-
-    // Auto-save on form changes (debounced)
-    useEffect(() => {
-        if (debouncedFormValues && Object.keys(debouncedFormValues).length > 0) {
-            const hasAnyData = Object.values(debouncedFormValues).some(val => {
-                return val !== null && val !== undefined && val !== "";
-            });
-
-            if (hasAnyData) {
-                dispatch(saveInspForm({ ocId, data: debouncedFormValues as InspFormData }));
-            }
-        }
-    }, [debouncedFormValues, dispatch, ocId]);
-
-    const onSubmit = (data: InspFormData) => {
-        const { name = "" } = data;
-
-        if (!name.trim()) {
-            toast.error("Name is required.");
-            return;
-        }
-
-        dispatch(saveInspForm({ ocId, data }));
-        toast.success("Inspection submitted successfully.");
-    };
-
-    const handleReset = () => {
-        if (confirm("Are you sure you want to clear all form data? This cannot be undone.")) {
-            reset({
-                date: "",
-                rk: "",
-                name: "",
-                appointment: "",
-                remarks: "",
-                initials: "",
-            });
-            dispatch(clearInspForm(ocId));
-            toast.info("Form cleared");
-        }
-    };
-
-    // Helper for preview mapping
-    const renderRows = (obj: InspFormData | null) => {
-        if (!obj) {
-            return <p className="italic text-gray-500">No saved inspection yet.</p>;
-        }
-
-        const {
-            date = "-",
-            rk = "-",
-            name = "-",
-            appointment = "-",
-            remarks = "-",
-            initials = "-",
-        } = obj;
-
-        const rows: Array<[string, string]> = [
-            ["Date", date || "-"],
-            ["Rank", rk || "-"],
-            ["Name", name || "-"],
-            ["Appointment", appointment || "-"],
-            ["Remarks", remarks || "-"],
-            ["Initials", initials || "-"],
-        ];
-
-        return (
-            <div className="grid grid-cols-2 gap-4 text-sm">
-                {rows.map(([label, val]) => (
-                    <p key={label}>
-                        <strong>{label}:</strong> {val}
-                    </p>
-                ))}
-            </div>
-        );
-    };
+    const rows: Array<[string, string]> = [
+      ["Date", data.date || "-"],
+      ["Rank", data.rk || "-"],
+      ["Name", data.name || "-"],
+      ["Appointment", data.appointment || "-"],
+      ["Remarks", data.remarks || "-"],
+      ["Initials", data.initials || "-"],
+    ];
 
     return (
-        <Card className="max-w-4xl mx-auto shadow-lg rounded-xl">
-            <CardHeader>
-                <CardTitle className="text-lg font-semibold text-center bg-blue-100 rounded-2xl">
-                    Inspection Sheet
-                </CardTitle>
-            </CardHeader>
-
-            <CardContent>
-                <Tabs defaultValue="fill" className="w-full">
-                    <TabsList className="mb-6">
-                        <TabsTrigger value="fill">Fill Form</TabsTrigger>
-                        <TabsTrigger value="preview">Preview</TabsTrigger>
-                    </TabsList>
-
-                    {/* FORM TAB */}
-                    <TabsContent value="fill">
-                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                            {/* Auto-save indicator */}
-                            <div className="text-xs text-gray-500 text-right">
-                                ✓ Changes are saved automatically
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium">Date</label>
-                                    <Input type="date" {...register("date")} className="mt-1" />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium">Rank</label>
-                                    <Input {...register("rk")} className="mt-1" placeholder="Rank" />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium">Name</label>
-                                    <Input {...register("name")} className="mt-1" placeholder="Name" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Appointment</label>
-                                <Input {...register("appointment")} className="mt-1" />
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Remarks</label>
-                                <Textarea {...register("remarks")} className="mt-1 min-h-[100px]" />
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Initials</label>
-                                <Textarea {...register("initials")} className="mt-1 min-h-[80px]" />
-                            </div>
-
-                            <div className="flex justify-center gap-2">
-                                <Button variant="outline" type="button" className="hover:bg-destructive hover:text-white" onClick={handleReset}>
-                                    Clear Form
-                                </Button>
-                                <Button type="submit" className="bg-[#40ba4d]">Submit</Button>
-                            </div>
-                        </form>
-                    </TabsContent>
-
-                    {/* PREVIEW TAB */}
-                    <TabsContent value="preview">
-                        <div className="p-6 bg-gray-50 border rounded-lg">
-                            <h3 className="text-lg font-semibold mb-4">Preview</h3>
-                            {renderRows(savedData)}
-                        </div>
-                    </TabsContent>
-                </Tabs>
-            </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        {rows.map(([label, val]) => (
+          <p key={label}>
+            <strong>{label}:</strong> {val}
+          </p>
+        ))}
+      </div>
     );
+  };
+
+  return (
+    <Card className="max-w-4xl mx-auto shadow-lg rounded-xl">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold text-center">
+          Inspection Sheet
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent>
+        <Tabs defaultValue="fill">
+          <TabsList className="mb-6">
+            <TabsTrigger value="fill">Fill Form</TabsTrigger>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+          </TabsList>
+
+          {/* FORM TAB */}
+          <TabsContent value="fill">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="text-xs text-gray-500 text-right">
+                ✓ Changes are saved automatically
+              </div>
+
+              <Input type="date" {...register("date")} />
+              <Input placeholder="Rank" {...register("rk")} />
+              <Input placeholder="Name" {...register("name")} />
+              <Input placeholder="Appointment" {...register("appointment")} />
+              <Textarea placeholder="Remarks" {...register("remarks")} />
+              <Textarea placeholder="Initials" {...register("initials")} />
+
+              <div className="flex justify-center gap-2">
+                <Button variant="outline" type="button" onClick={handleReset}>
+                  Clear Form
+                </Button>
+                <Button type="submit">Submit</Button>
+              </div>
+            </form>
+          </TabsContent>
+
+          {/* PREVIEW TAB */}
+          <TabsContent value="preview">
+            <div className="p-6 bg-gray-50 border rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Preview</h3>
+              {renderPreview(savedData ?? null)}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
 }

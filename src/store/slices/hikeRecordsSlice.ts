@@ -5,7 +5,7 @@ export interface HikeRecordFormData {
     id?: string | null;
     semester: number;
     reason: string;
-    type: string;
+    type: "HIKE" | "LEAVE" | "OVERSTAY" | "DETENTION";
     dateFrom: string;
     dateTo: string;
     remark: string;

@@ -5,7 +5,7 @@ export interface DetentionRecordFormData {
     id?: string | null;
     semester: number;
     reason: string;
-    type: string;
+    type: "DETENTION";
     dateFrom: string;
     dateTo: string;
     remark: string;

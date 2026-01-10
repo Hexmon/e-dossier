@@ -29,6 +29,7 @@ import { useParams } from "next/navigation";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Link from "next/link";
 import { clearLeaveForm, saveLeaveForm } from "@/store/slices/leaveRecordsSlice";
+import { Cadet } from "@/types/cadet";
 
 export default function LeavePage() {
     const { id } = useParams();
@@ -62,10 +63,17 @@ export default function LeavePage() {
     // Initialize form with saved data or defaults
     const getDefaultValues = (): LeaveFormValues => {
         if (savedFormData && savedFormData.length > 0) {
-            return { leaveRows: savedFormData };
+            return {
+                leaveRows: savedFormData.map(row => ({
+                    ...row,
+                    id: row.id ?? null,
+                    type: "LEAVE",
+                })),
+            };
         }
         return { leaveRows: defaultLeaveRows };
     };
+
 
     const methods = useForm<LeaveFormValues>({
         defaultValues: getDefaultValues(),
@@ -120,7 +128,7 @@ function InnerLeavePage({
     ocId,
     onClearForm
 }: {
-    selectedCadet: RootState['cadet']['selectedCadet'];
+    selectedCadet: Cadet;
     ocId: string;
     onClearForm: () => void;
 }) {
