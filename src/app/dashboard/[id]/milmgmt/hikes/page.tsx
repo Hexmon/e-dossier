@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -22,16 +22,24 @@ import { semesters } from "@/constants/app.constants";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, ChevronDown, Link } from "lucide-react";
+import { Shield, ChevronDown } from "lucide-react";
+import Link from "next/link";
 
 import { updateOcHikeRecord } from "@/app/lib/api/hikeApi";
 import { toast } from "sonner";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import { useParams } from "next/navigation";
+import { saveHikeForm, clearHikeForm } from "@/store/slices/hikeRecordsSlice";
 
 export default function HikePage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const dispatch = useDispatch();
+
+    // Get saved form data from Redux
+    const savedFormData = useSelector((state: RootState) =>
+        state.hikeRecords.forms[ocId]
+    );
 
     // Load cadet data via hook (no redux)
     const { cadet } = useOcDetails(ocId);
@@ -52,9 +60,25 @@ export default function HikePage() {
         course,
     };
 
+    // Initialize form with saved data or defaults
+    const getDefaultValues = (): HikeFormValues => {
+        if (savedFormData && savedFormData.length > 0) {
+            return { hikeRows: savedFormData };
+        }
+        return { hikeRows: defaultHikeRows };
+    };
+
     const methods = useForm<HikeFormValues>({
-        defaultValues: { hikeRows: defaultHikeRows },
+        defaultValues: getDefaultValues(),
     });
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearHikeForm(ocId));
+            methods.reset({ hikeRows: defaultHikeRows });
+            toast.info("Form cleared");
+        }
+    };
 
     return (
         <DashboardLayout title="Hike Records" description="Manage Hike records">
@@ -74,7 +98,11 @@ export default function HikePage() {
                 )}
 
                 <FormProvider {...methods}>
-                    <InnerHikePage selectedCadet={selectedCadet} ocId={ocId} />
+                    <InnerHikePage
+                        selectedCadet={selectedCadet}
+                        ocId={ocId}
+                        onClearForm={handleClearForm}
+                    />
                 </FormProvider>
             </main>
         </DashboardLayout>
@@ -82,8 +110,17 @@ export default function HikePage() {
 }
 
 /* Inner component */
-function InnerHikePage({ selectedCadet, ocId }: { selectedCadet: RootState['cadet']['selectedCadet']; ocId: string; }) {
-    const { control, register, setValue, handleSubmit } = useFormContext<HikeFormValues>();
+function InnerHikePage({
+    selectedCadet,
+    ocId,
+    onClearForm
+}: {
+    selectedCadet: RootState['cadet']['selectedCadet'];
+    ocId: string;
+    onClearForm: () => void;
+}) {
+    const dispatch = useDispatch();
+    const { control, register, setValue, handleSubmit, watch } = useFormContext<HikeFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "hikeRows" });
 
     const { submitHike, fetchHike, deleteFormHike, deleteSavedHike } = useHikeActions(selectedCadet);
@@ -94,8 +131,27 @@ function InnerHikePage({ selectedCadet, ocId }: { selectedCadet: RootState['cade
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [editingValues, setEditingValues] = useState<Partial<HikeRow> | null>(null);
 
-
     const [refreshFlag, setRefreshFlag] = useState(0);
+
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = watch((value) => {
+            if (ocId && value.hikeRows && value.hikeRows.length > 0) {
+                const formData = value.hikeRows.map(row => ({
+                    id: row?.id || null,
+                    semester: row?.semester || 1,
+                    reason: row?.reason || "",
+                    type: row?.type || "HIKE",
+                    dateFrom: row?.dateFrom || "",
+                    dateTo: row?.dateTo || "",
+                    remark: row?.remark || "",
+                }));
+
+                dispatch(saveHikeForm({ ocId, data: formData }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [watch, dispatch, ocId]);
 
     useEffect(() => {
         if (!selectedCadet) return;
@@ -159,6 +215,13 @@ function InnerHikePage({ selectedCadet, ocId }: { selectedCadet: RootState['cade
     const handleNewSubmit = handleSubmit(async () => {
         await submitHike();
         toast.success("New hike records saved");
+
+        // Clear Redux cache after successful save
+        dispatch(clearHikeForm(ocId));
+
+        // Reset form to defaults
+        setValue("hikeRows", defaultHikeRows);
+
         setRefreshFlag((f) => f + 1);
     });
 
@@ -195,7 +258,9 @@ function InnerHikePage({ selectedCadet, ocId }: { selectedCadet: RootState['cade
             <TabsContent value="hikes" className="space-y-6">
                 <Card className="max-w-6xl mx-auto p-6 shadow bg-white">
                     <CardHeader>
-                        <CardTitle className="text-lg font-semibold text-center">RECORD OF HIKE : ALL TERMS</CardTitle>
+                        <CardTitle className="text-lg font-semibold text-center">
+                            RECORD OF HIKE : ALL TERMS
+                        </CardTitle>
                     </CardHeader>
 
                     <CardContent>
@@ -208,7 +273,10 @@ function InnerHikePage({ selectedCadet, ocId }: { selectedCadet: RootState['cade
                                         setActiveTab(idx);
                                         cancelEdit();
                                     }}
-                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-gray-200 text-gray-700"
+                                        }`}
                                 >
                                     {term}
                                 </button>
@@ -229,8 +297,13 @@ function InnerHikePage({ selectedCadet, ocId }: { selectedCadet: RootState['cade
                             saveInlineEdit={saveInlineEdit}
                             cancelInlineEdit={cancelEdit}
                             onSubmit={handleNewSubmit}
-                            onReset={() => setValue("hikeRows", defaultHikeRows)}
+                            onReset={onClearForm}
                         />
+
+                        {/* Auto-save indicator */}
+                        <p className="text-sm text-muted-foreground text-center mt-2">
+                            * Changes are automatically saved
+                        </p>
                     </CardContent>
                 </Card>
             </TabsContent>

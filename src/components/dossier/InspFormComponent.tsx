@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,22 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 import type { InspFormData } from "@/types/dossierInsp";
+import { saveInspForm, clearInspForm } from "@/store/slices/inspSheetSlice";
+import type { RootState } from "@/store";
+import { useDebounce } from "@/hooks/useDebounce";
 
-export default function InspFormComponent() {
+interface Props {
+    ocId: string;
+}
+
+export default function InspFormComponent({ ocId }: Props) {
+    const dispatch = useDispatch();
+
+    // Get persisted data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.inspSheet.forms[ocId]
+    );
+
     const form = useForm<InspFormData>({
         defaultValues: {
             date: "",
@@ -24,9 +39,31 @@ export default function InspFormComponent() {
         },
     });
 
-    const { register, handleSubmit, reset } = form;
+    const { register, handleSubmit, reset, watch } = form;
 
-    const [savedData, setSavedData] = useState<InspFormData | null>(null);
+    // Watch all form values for auto-save
+    const formValues = watch();
+    const debouncedFormValues = useDebounce(formValues, 500);
+
+    // Load persisted data when component mounts or ocId changes
+    useEffect(() => {
+        if (savedData) {
+            reset(savedData);
+        }
+    }, [ocId, savedData, reset]);
+
+    // Auto-save on form changes (debounced)
+    useEffect(() => {
+        if (debouncedFormValues && Object.keys(debouncedFormValues).length > 0) {
+            const hasAnyData = Object.values(debouncedFormValues).some(val => {
+                return val !== null && val !== undefined && val !== "";
+            });
+
+            if (hasAnyData) {
+                dispatch(saveInspForm({ ocId, data: debouncedFormValues as InspFormData }));
+            }
+        }
+    }, [debouncedFormValues, dispatch, ocId]);
 
     const onSubmit = (data: InspFormData) => {
         const { name = "" } = data;
@@ -36,9 +73,23 @@ export default function InspFormComponent() {
             return;
         }
 
-        setSavedData(data);
-        toast.success("Inspection saved.");
-        reset();
+        dispatch(saveInspForm({ ocId, data }));
+        toast.success("Inspection submitted successfully.");
+    };
+
+    const handleReset = () => {
+        if (confirm("Are you sure you want to clear all form data? This cannot be undone.")) {
+            reset({
+                date: "",
+                rk: "",
+                name: "",
+                appointment: "",
+                remarks: "",
+                initials: "",
+            });
+            dispatch(clearInspForm(ocId));
+            toast.info("Form cleared");
+        }
     };
 
     // Helper for preview mapping
@@ -94,6 +145,11 @@ export default function InspFormComponent() {
                     {/* FORM TAB */}
                     <TabsContent value="fill">
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            {/* Auto-save indicator */}
+                            <div className="text-xs text-gray-500 text-right">
+                                ✓ Changes are saved automatically
+                            </div>
+
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div>
                                     <label className="text-sm font-medium">Date</label>
@@ -125,10 +181,10 @@ export default function InspFormComponent() {
                             </div>
 
                             <div className="flex justify-center gap-2">
-                                <Button variant="outline" type="button" className="hover:bg-destructive hover:text-white" onClick={() => reset()}>
-                                    Reset
+                                <Button variant="outline" type="button" className="hover:bg-destructive hover:text-white" onClick={handleReset}>
+                                    Clear Form
                                 </Button>
-                                <Button type="submit" className="bg-[#40ba4d]">Save</Button>
+                                <Button type="submit" className="bg-[#40ba4d]">Submit</Button>
                             </div>
                         </form>
                     </TabsContent>

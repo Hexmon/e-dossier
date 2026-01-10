@@ -1,21 +1,31 @@
-// components/dossier/OfficerCadetForm.tsx  (Tabs-in-component version)
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { OfficerCadetForm } from "@/types/dossierSnap";
+import { saveForm, clearForm } from "@/store/slices/officerCadetFormSlice";
+import type { RootState } from "@/store";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Props {
-    initialValues?: OfficerCadetForm | null;
-    onSave?: (data: OfficerCadetForm) => void; // optional, since component also shows preview
+    ocId: string;
+    onSave?: (data: OfficerCadetForm) => void;
 }
 
-export default function OfficerCadetFormComponent({ initialValues = null, onSave }: Props) {
+export default function OfficerCadetFormComponent({ ocId, onSave }: Props) {
+    const dispatch = useDispatch();
+
+    // Get persisted data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.officerCadetForm.forms[ocId]
+    );
+
     const form = useForm<OfficerCadetForm>({
         defaultValues: {
             arrivalPhoto: null,
@@ -32,22 +42,35 @@ export default function OfficerCadetFormComponent({ initialValues = null, onSave
             orderOfMerit: "",
             regtArm: "",
             postedAtt: "",
-            ...initialValues,
         },
     });
 
     const { register, handleSubmit, reset, watch } = form;
-    const [savedData, setSavedData] = useState<OfficerCadetForm | null>(initialValues ?? null);
 
-    const arrivalPhoto = watch("arrivalPhoto");
-    const departurePhoto = watch("departurePhoto");
+    const formValues = watch();
+    const debouncedFormValues = useDebounce(formValues, 500); // 500ms delay
 
     useEffect(() => {
-        // keep preview live while typing / file selection if you want:
-        // setSavedData(prev => ({ ...prev, arrivalPhoto, departurePhoto }));
-        // but here we'll only update preview on Save
-        return () => { /* cleanup if needed */ };
-    }, [arrivalPhoto, departurePhoto]);
+        if (savedData) {
+            reset(savedData);
+        }
+    }, [ocId, savedData, reset]);
+
+    useEffect(() => {
+        if (debouncedFormValues && Object.keys(debouncedFormValues).length > 0) {
+            const hasAnyData = Object.values(debouncedFormValues).some(val => {
+                if (val === null || val === undefined || val === "") return false;
+                if (typeof val === "object" && val !== null && "length" in val) {
+                    return (val as FileList).length > 0;
+                }
+                return true;
+            });
+
+            if (hasAnyData) {
+                dispatch(saveForm({ ocId, data: debouncedFormValues as OfficerCadetForm }));
+            }
+        }
+    }, [debouncedFormValues, dispatch, ocId]);
 
     const onSubmit = (data: OfficerCadetForm) => {
         const { name = "" } = data;
@@ -55,10 +78,33 @@ export default function OfficerCadetFormComponent({ initialValues = null, onSave
             toast.error("Please provide the cadet name");
             return;
         }
-        setSavedData(data);
+
+        dispatch(saveForm({ ocId, data }));
         onSave?.(data);
-        toast.success("Saved locally for preview");
-        reset();
+        toast.success("Form saved successfully");
+    };
+
+    const handleReset = () => {
+        if (confirm("Are you sure you want to clear all form data? This cannot be undone.")) {
+            reset({
+                arrivalPhoto: null,
+                departurePhoto: null,
+                tesNo: "",
+                name: "",
+                course: "",
+                pi: "",
+                dtOfArr: "",
+                relegated: "",
+                withdrawnOn: "",
+                dtOfPassingOut: "",
+                icNo: "",
+                orderOfMerit: "",
+                regtArm: "",
+                postedAtt: "",
+            });
+            dispatch(clearForm(ocId));
+            toast.info("Form cleared");
+        }
     };
 
     return (
@@ -72,7 +118,11 @@ export default function OfficerCadetFormComponent({ initialValues = null, onSave
                 <div className="w-full">
                     <TabsContent value="form">
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                            {/* Form contents (same as before) */}
+                            {/* Auto-save indicator */}
+                            <div className="text-xs text-gray-500 text-right">
+                                ✓ Changes are saved automatically
+                            </div>
+
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="flex flex-col items-center border p-4 rounded-lg">
                                     <Label>Arrival (Civil Dress)</Label>
@@ -84,7 +134,6 @@ export default function OfficerCadetFormComponent({ initialValues = null, onSave
                                 </div>
                             </div>
 
-                            {/* rest of fields... */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div><Label className="ml-1 mb-1">TES No</Label><Input {...register("tesNo")} /></div>
                                 <div><Label className="ml-1 mb-1">Name</Label><Input {...register("name")} /></div>
@@ -105,8 +154,8 @@ export default function OfficerCadetFormComponent({ initialValues = null, onSave
                             </div>
 
                             <div className="flex justify-center mt-6 gap-4">
-                                <Button type="submit" className="w-40 bg-[#40ba4d]">Save</Button>
-                                <Button type="button" variant="outline" className="w-40 hover:bg-destructive hover:text-white" onClick={() => reset()}>Reset</Button>
+                                <Button type="submit" className="w-40 bg-[#40ba4d]">Submit</Button>
+                                <Button type="button" variant="outline" className="w-40 hover:bg-destructive hover:text-white" onClick={handleReset}>Clear Form</Button>
                             </div>
                         </form>
                     </TabsContent>

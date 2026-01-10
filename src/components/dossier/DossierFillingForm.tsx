@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,15 +11,22 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 import type { DossierFormData } from "@/types/dossierFilling";
+import { saveDossierForm, clearDossierForm } from "@/store/slices/dossierFillingSlice";
+import type { RootState } from "@/store";
+import { useDebounce } from "@/hooks/useDebounce";
 
-/**
- * Self-contained Dossier Filling form component.
- * - Tabs are inside this component (Option B)
- * - Strict typing, no `any`
- * - Destructures values with fallbacks
- * - map() that returns JSX lives inside a return
- */
-export default function DossierFillingForm() {
+interface Props {
+    ocId: string;
+}
+
+export default function DossierFillingForm({ ocId }: Props) {
+    const dispatch = useDispatch();
+
+    // Get persisted data from Redux
+    const savedDossier = useSelector((state: RootState) =>
+        state.dossierFilling.forms[ocId]
+    );
+
     const form = useForm<DossierFormData>({
         defaultValues: {
             initiatedBy: "",
@@ -31,32 +39,58 @@ export default function DossierFillingForm() {
     });
 
     const { register, handleSubmit, reset, watch } = form;
-    const watchedValues = watch();
 
-    // local saved dossier used for preview
-    const [savedDossier, setSavedDossier] = useState<DossierFormData | null>(null);
+    // Watch all form values for auto-save
+    const formValues = watch();
+    const debouncedFormValues = useDebounce(formValues, 500);
 
-    // keep preview in sync optionally if you want live preview; here we keep saved preview after Save
+    // Load persisted data when component mounts or ocId changes
     useEffect(() => {
-        return () => {
-            // cleanup if needed
-        };
-    }, []);
+        if (savedDossier) {
+            reset(savedDossier);
+        }
+    }, [ocId, savedDossier, reset]);
+
+    // Auto-save on form changes (debounced)
+    useEffect(() => {
+        if (debouncedFormValues && Object.keys(debouncedFormValues).length > 0) {
+            const hasAnyData = Object.values(debouncedFormValues).some(val => {
+                return val !== null && val !== undefined && val !== "";
+            });
+
+            if (hasAnyData) {
+                dispatch(saveDossierForm({ ocId, data: debouncedFormValues as DossierFormData }));
+            }
+        }
+    }, [debouncedFormValues, dispatch, ocId]);
 
     const onSubmit = (data: DossierFormData) => {
-        // simple validation example
         const { initiatedBy = "" } = data;
         if (!initiatedBy.trim()) {
             toast.error("Please enter 'Initiated By'.");
             return;
         }
 
-        setSavedDossier(data);
-        toast.success("Dossier saved locally for preview.");
-        reset();
+        dispatch(saveDossierForm({ ocId, data }));
+        toast.success("Dossier submitted successfully");
     };
 
-    // Helper to render label/value rows (map returns JSX inside return)
+    const handleReset = () => {
+        if (confirm("Are you sure you want to clear all form data? This cannot be undone.")) {
+            reset({
+                initiatedBy: "",
+                openedOn: "",
+                initialInterview: "",
+                closedBy: "",
+                closedOn: "",
+                finalInterview: "",
+            });
+            dispatch(clearDossierForm(ocId));
+            toast.info("Form cleared");
+        }
+    };
+
+    // Helper to render label/value rows
     function RenderSavedRows({ dossier }: { dossier: DossierFormData | null }) {
         if (!dossier) {
             return <p className="text-gray-500 italic">No dossier data saved yet.</p>;
@@ -111,6 +145,11 @@ export default function DossierFillingForm() {
                     {/* FORM TAB */}
                     <TabsContent value="form">
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            {/* Auto-save indicator */}
+                            <div className="text-xs text-gray-500 text-right">
+                                ✓ Changes are saved automatically
+                            </div>
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium">Initiated By</label>
@@ -146,10 +185,10 @@ export default function DossierFillingForm() {
                             </div>
 
                             <div className="flex justify-center gap-2 mt-6">
-                                <Button variant="outline" type="button" className="hover:bg-destructive hover:text-white" onClick={() => reset()}>
-                                    Reset
+                                <Button variant="outline" type="button" className="hover:bg-destructive hover:text-white" onClick={handleReset}>
+                                    Clear Form
                                 </Button>
-                                <Button type="submit" className="bg-[#40ba4d]">Save</Button>
+                                <Button type="submit" className="bg-[#40ba4d]">Submit</Button>
                             </div>
                         </form>
                     </TabsContent>

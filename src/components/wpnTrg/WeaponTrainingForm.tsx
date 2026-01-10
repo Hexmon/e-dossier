@@ -15,6 +15,7 @@ type Row = {
 
 type FormValues = {
     records: Row[];
+    achievements: { achievement: string }[];
 };
 
 interface Props {
@@ -23,6 +24,11 @@ interface Props {
     savedRecords: WeaponTrainingRecord[];
     onSave: (values: FormValues) => Promise<void>;
     disabled?: boolean;
+    editing?: boolean;
+    onEdit?: () => void;
+    onCancel?: () => void;
+    onReset?: () => void;
+    isSaving?: boolean;
     formMethods?: UseFormReturn<FormValues>;
 }
 
@@ -32,11 +38,19 @@ export default function WeaponTrainingForm({
     savedRecords,
     onSave,
     disabled = false,
+    editing = false,
+    onEdit,
+    onCancel,
+    onReset,
+    isSaving = false,
     formMethods,
 }: Props) {
     /** ALWAYS call hook at top-level */
     const internalForm = useForm<FormValues>({
-        defaultValues: { records: inputPrefill },
+        defaultValues: {
+            records: inputPrefill,
+            achievements: []
+        },
     });
 
     const methods = formMethods ?? internalForm;
@@ -139,18 +153,53 @@ export default function WeaponTrainingForm({
 
             {/* Action Buttons */}
             <div className="flex justify-center gap-3 mt-6">
-                <Button type="submit" disabled={disabled}>
-                    Save Training
-                </Button>
+                {editing ? (
+                    <>
+                        <Button
+                            type="submit"
+                            disabled={isSaving}
+                            className="bg-[#40ba4d]"
+                        >
+                            {isSaving ? "Saving..." : "Save Training"}
+                        </Button>
 
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => reset({ records: merged })}
-                    disabled={disabled}
-                >
-                    Reset
-                </Button>
+                        {onCancel && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={onCancel}
+                                disabled={isSaving}
+                            >
+                                Cancel Edit
+                            </Button>
+                        )}
+
+                        {onReset && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="hover:bg-destructive hover:text-white"
+                                onClick={onReset}
+                                disabled={isSaving}
+                            >
+                                Reset
+                            </Button>
+                        )}
+                    </>
+                ) : (
+                    onEdit && (
+                        <Button
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onEdit();
+                            }}
+                            disabled={isSaving}
+                        >
+                            Edit Training Table
+                        </Button>
+                    )
+                )}
             </div>
         </form>
     );
