@@ -375,10 +375,49 @@ export const academicSubjectPatchSchema = z.object({
     message: 'No subject fields provided.',
 });
 
+const academicSubjectBulkUpsertSchema = academicSubjectPatchSchema.safeExtend({
+    op: z.enum(['upsert', 'update', 'edit']),
+    ocId: z.string().uuid(),
+    semester: Semester,
+    subjectId: z.string().uuid(),
+});
+
+const academicSubjectBulkDeleteSchema = z.object({
+    op: z.literal('delete'),
+    ocId: z.string().uuid(),
+    semester: Semester,
+    subjectId: z.string().uuid(),
+    hard: z.boolean().optional(),
+});
+
+export const academicSubjectBulkRequestSchema = z.object({
+    items: z.array(z.union([academicSubjectBulkUpsertSchema, academicSubjectBulkDeleteSchema])).min(1),
+    failFast: z.boolean().optional(),
+});
+
 export const academicSummaryPatchSchema = z.object({
     sgpa: z.coerce.number().optional(),
     cgpa: z.coerce.number().optional(),
     marksScored: z.coerce.number().optional(),
 }).refine((value) => value.sgpa !== undefined || value.cgpa !== undefined || value.marksScored !== undefined, {
     message: 'No summary fields provided.',
+});
+
+// --- OC images --------------------------------------------------------------
+export const ocImageKindSchema = z.enum(['CIVIL_DRESS', 'UNIFORM']);
+
+export const ocImagePresignSchema = z.object({
+    kind: ocImageKindSchema,
+    contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+    sizeBytes: z.coerce.number().int().min(20 * 1024).max(200 * 1024),
+});
+
+export const ocImageCompleteSchema = z.object({
+    kind: ocImageKindSchema,
+    objectKey: z.string().min(1),
+});
+
+export const ocImageDeleteQuerySchema = z.object({
+    kind: ocImageKindSchema,
+    hard: z.enum(['true', 'false']).optional(),
 });

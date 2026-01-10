@@ -160,7 +160,17 @@ export async function updateOcAcademicSubject(
 
     const offering = await getCourseOfferingForSubject(ocInfo.courseId, semester, subjectId);
     if (!offering) {
-        throw new ApiError(400, 'Subject is not valid for this course/semester.', 'bad_request');
+        const validOfferings = await listCourseOfferings(ocInfo.courseId, semester);
+        const validSubjects = validOfferings.map((row) => ({
+            subjectId: row.subject.id,
+            subjectCode: row.subject.code,
+            subjectName: row.subject.name,
+        }));
+        throw new ApiError(400, 'Subject is not valid for this course/semester.', 'bad_request', {
+            courseId: ocInfo.courseId,
+            semester,
+            validSubjects,
+        });
     }
 
     await upsertSemesterSubjectMarks(ocId, semester, {
@@ -228,7 +238,17 @@ export async function deleteOcAcademicSubject(
     if (!ocInfo) throw new ApiError(404, 'OC not found', 'not_found');
     const offering = await getCourseOfferingForSubject(ocInfo.courseId, semester, subjectId);
     if (!offering) {
-        throw new ApiError(404, 'Subject not found for this semester.', 'not_found');
+        const validOfferings = await listCourseOfferings(ocInfo.courseId, semester);
+        const validSubjects = validOfferings.map((row) => ({
+            subjectId: row.subject.id,
+            subjectCode: row.subject.code,
+            subjectName: row.subject.name,
+        }));
+        throw new ApiError(404, 'Subject not found for this semester.', 'not_found', {
+            courseId: ocInfo.courseId,
+            semester,
+            validSubjects,
+        });
     }
     const result = await deleteSemesterSubject(ocId, semester, offering.subject.code, opts);
     if (!result) throw new ApiError(404, 'Subject record not found in academics', 'not_found');
