@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,9 @@ import HigherTests from "./HigherTests";
 import Swimming from "./Swimming";
 import Swimming1 from "./Swimming1";
 
+import type { RootState } from "@/store";
+import { savePPTData } from "@/store/slices/physicalTrainingSlice";
+
 interface PhysicalTraining {
     id: string;
     column1: number | string;
@@ -34,64 +38,91 @@ interface PhysicalTraining {
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
 const column4Options = ["Excellent", "Good", "Satisfied"];
 
-export default function PhysicalForm() {
+const DEFAULT_SEMESTER_DATA: Record<string, PhysicalTraining[]> = {
+    "I TERM": [
+        { id: "1", column1: 1, column2: "1.6 Km Run", column3: 66, column4: "", column5: "", column6: 0 },
+        { id: "2", column1: 2, column2: "Sprint 100m", column3: 28, column4: "", column5: "", column6: 0 },
+        { id: "3", column1: 3, column2: "5 M Shuttle", column3: 32, column4: "", column5: "", column6: 0 },
+        { id: "4", column1: 4, column2: "Sit Ups", column3: 24, column4: "", column5: "", column6: 0 },
+        { id: "5", column1: "", column2: "Total", column3: 150, column4: "", column5: "", column6: 0 },
+    ],
+    "II TERM": [
+        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 53, column4: "", column5: "", column6: 0 },
+        { id: "2", column1: 2, column2: "Chin Ups", column3: 26, column4: "", column5: "", column6: 0 },
+        { id: "3", column1: 3, column2: "Toe Touch", column3: 26, column4: "", column5: "", column6: 0 },
+        { id: "4", column1: 4, column2: "Sprint 100m", column3: 15, column4: "", column5: "", column6: 0 },
+        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 19, column4: "", column5: "", column6: 0 },
+        { id: "6", column1: 6, column2: "Sit Ups", column3: 11, column4: "", column5: "", column6: 0 },
+        { id: "7", column1: "", column2: "Total", column3: 150, column4: "", column5: "", column6: 0 },
+    ],
+    "III TERM": [
+        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 17, column4: "", column5: "", column6: 0 },
+        { id: "2", column1: 2, column2: "Chin Ups", column3: 9, column4: "", column5: "", column6: 0 },
+        { id: "3", column1: 3, column2: "Toe Touch", column3: 9, column4: "", column5: "", column6: 0 },
+        { id: "4", column1: 4, column2: "Sprint 100m", column3: 5, column4: "", column5: "", column6: 0 },
+        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 6, column4: "", column5: "", column6: 0 },
+        { id: "6", column1: 6, column2: "Sit Ups", column3: 4, column4: "", column5: "", column6: 0 },
+        { id: "7", column1: "", column2: "Total", column3: 50, column4: "", column5: "", column6: 0 },
+    ],
+    "IV TERM": [
+        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 14, column4: "", column5: "", column6: 0 },
+        { id: "2", column1: 2, column2: "Chin Ups", column3: 7, column4: "", column5: "", column6: 0 },
+        { id: "3", column1: 3, column2: "Toe Touch", column3: 7, column4: "", column5: "", column6: 0 },
+        { id: "4", column1: 4, column2: "Sprint 100m", column3: 4, column4: "", column5: "", column6: 0 },
+        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 5, column4: "", column5: "", column6: 0 },
+        { id: "6", column1: 6, column2: "Sit Ups", column3: 3, column4: "", column5: "", column6: 0 },
+        { id: "7", column1: "", column2: "Total", column3: 40, column4: "", column5: "", column6: 0 },
+    ],
+    "V TERM": [
+        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 14, column4: "", column5: "", column6: 0 },
+        { id: "2", column1: 2, column2: "Chin Ups", column3: 7, column4: "", column5: "", column6: 0 },
+        { id: "3", column1: 3, column2: "Toe Touch", column3: 7, column4: "", column5: "", column6: 0 },
+        { id: "4", column1: 4, column2: "Sprint 100m", column3: 4, column4: "", column5: "", column6: 0 },
+        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 5, column4: "", column5: "", column6: 0 },
+        { id: "6", column1: 6, column2: "Sit Ups", column3: 3, column4: "", column5: "", column6: 0 },
+        { id: "7", column1: "", column2: "Total", column3: 40, column4: "", column5: "", column6: 0 },
+    ],
+    "VI TERM": [
+        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 14, column4: "", column5: "", column6: 0 },
+        { id: "2", column1: 2, column2: "Chin Ups", column3: 7, column4: "", column5: "", column6: 0 },
+        { id: "3", column1: 3, column2: "Toe Touch", column3: 7, column4: "", column5: "", column6: 0 },
+        { id: "4", column1: 4, column2: "Sprint 100m", column3: 4, column4: "", column5: "", column6: 0 },
+        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 5, column4: "", column5: "", column6: 0 },
+        { id: "6", column1: 6, column2: "Sit Ups", column3: 3, column4: "", column5: "", column6: 0 },
+        { id: "7", column1: "", column2: "Total", column3: 40, column4: "", column5: "", column6: 0 },
+    ],
+};
+
+interface PhysicalFormProps {
+    ocId: string;
+}
+
+export default function PhysicalForm({ ocId }: PhysicalFormProps) {
+    const dispatch = useDispatch();
     const [activeSemester, setActiveSemester] = useState("I TERM");
     const [isEditing, setIsEditing] = useState(false);
     const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 
-    const [semesterTableData, setSemesterTableData] = useState<Record<string, PhysicalTraining[]>>({
-        "I TERM": [
-            { id: "1", column1: 1, column2: "1.6 Km Run", column3: 66, column4: "", column5: "", column6: 0 },
-            { id: "2", column1: 2, column2: "Sprint 100m", column3: 28, column4: "", column5: "", column6: 0 },
-            { id: "3", column1: 3, column2: "5 M Shuttle", column3: 32, column4: "", column5: "", column6: 0 },
-            { id: "4", column1: 4, column2: "Sit Ups", column3: 24, column4: "", column5: "", column6: 0 },
-            { id: "5", column1: "", column2: "Total", column3: 150, column4: "", column5: "", column6: 0 },
-        ],
-        "II TERM": [
-            { id: "1", column1: 1, column2: "2.4 Km Run", column3: 53, column4: "", column5: "", column6: 0 },
-            { id: "2", column1: 2, column2: "Chin Ups", column3: 26, column4: "", column5: "", column6: 0 },
-            { id: "3", column1: 3, column2: "Toe Touch", column3: 26, column4: "", column5: "", column6: 0 },
-            { id: "4", column1: 4, column2: "Sprint 100m", column3: 15, column4: "", column5: "", column6: 0 },
-            { id: "5", column1: 5, column2: "5 M Shuttle", column3: 19, column4: "", column5: "", column6: 0 },
-            { id: "6", column1: 6, column2: "Sit Ups", column3: 11, column4: "", column5: "", column6: 0 },
-            { id: "7", column1: "", column2: "Total", column3: 150, column4: "", column5: "", column6: 0 },
-        ],
-        "III TERM": [
-            { id: "1", column1: 1, column2: "2.4 Km Run", column3: 17, column4: "", column5: "", column6: 0 },
-            { id: "2", column1: 2, column2: "Chin Ups", column3: 9, column4: "", column5: "", column6: 0 },
-            { id: "3", column1: 3, column2: "Toe Touch", column3: 9, column4: "", column5: "", column6: 0 },
-            { id: "4", column1: 4, column2: "Sprint 100m", column3: 5, column4: "", column5: "", column6: 0 },
-            { id: "5", column1: 5, column2: "5 M Shuttle", column3: 6, column4: "", column5: "", column6: 0 },
-            { id: "6", column1: 6, column2: "Sit Ups", column3: 4, column4: "", column5: "", column6: 0 },
-            { id: "7", column1: "", column2: "Total", column3: 50, column4: "", column5: "", column6: 0 },
-        ],
-        "IV TERM": [
-            { id: "1", column1: 1, column2: "2.4 Km Run", column3: 14, column4: "", column5: "", column6: 0 },
-            { id: "2", column1: 2, column2: "Chin Ups", column3: 7, column4: "", column5: "", column6: 0 },
-            { id: "3", column1: 3, column2: "Toe Touch", column3: 7, column4: "", column5: "", column6: 0 },
-            { id: "4", column1: 4, column2: "Sprint 100m", column3: 4, column4: "", column5: "", column6: 0 },
-            { id: "5", column1: 5, column2: "5 M Shuttle", column3: 5, column4: "", column5: "", column6: 0 },
-            { id: "6", column1: 6, column2: "Sit Ups", column3: 3, column4: "", column5: "", column6: 0 },
-            { id: "7", column1: "", column2: "Total", column3: 40, column4: "", column5: "", column6: 0 },
-        ],
-        "V TERM": [
-            { id: "1", column1: 1, column2: "2.4 Km Run", column3: 14, column4: "", column5: "", column6: 0 },
-            { id: "2", column1: 2, column2: "Chin Ups", column3: 7, column4: "", column5: "", column6: 0 },
-            { id: "3", column1: 3, column2: "Toe Touch", column3: 7, column4: "", column5: "", column6: 0 },
-            { id: "4", column1: 4, column2: "Sprint 100m", column3: 4, column4: "", column5: "", column6: 0 },
-            { id: "5", column1: 5, column2: "5 M Shuttle", column3: 5, column4: "", column5: "", column6: 0 },
-            { id: "6", column1: 6, column2: "Sit Ups", column3: 3, column4: "", column5: "", column6: 0 },
-            { id: "7", column1: "", column2: "Total", column3: 40, column4: "", column5: "", column6: 0 },
-        ],
-        "VI TERM": [
-            { id: "1", column1: 1, column2: "2.4 Km Run", column3: 14, column4: "", column5: "", column6: 0 },
-            { id: "2", column1: 2, column2: "Chin Ups", column3: 7, column4: "", column5: "", column6: 0 },
-            { id: "3", column1: 3, column2: "Toe Touch", column3: 7, column4: "", column5: "", column6: 0 },
-            { id: "4", column1: 4, column2: "Sprint 100m", column3: 4, column4: "", column5: "", column6: 0 },
-            { id: "5", column1: 5, column2: "5 M Shuttle", column3: 5, column4: "", column5: "", column6: 0 },
-            { id: "6", column1: 6, column2: "Sit Ups", column3: 3, column4: "", column5: "", column6: 0 },
-            { id: "7", column1: "", column2: "Total", column3: 40, column4: "", column5: "", column6: 0 },
-        ],
+    // Get all saved data from Redux - but DON'T use it in effects
+    const allSavedData = useSelector((state: RootState) =>
+        state.physicalTraining.forms[ocId]
+    );
+
+    // Initialize state ONCE with Redux data or defaults
+    const [semesterTableData, setSemesterTableData] = useState<Record<string, PhysicalTraining[]>>(() => {
+        const initialData = { ...DEFAULT_SEMESTER_DATA };
+
+        // Load all saved semesters from Redux on initial mount only
+        if (allSavedData) {
+            Object.keys(allSavedData).forEach((semester) => {
+                const semesterData = allSavedData[semester]?.pptData;
+                if (semesterData) {
+                    initialData[semester] = semesterData;
+                }
+            });
+        }
+
+        return initialData;
     });
 
     // State to track marks from all child components
@@ -103,11 +134,36 @@ export default function PhysicalForm() {
         higherTests: 0,
     });
 
+    // Auto-save to Redux when data changes - with proper checks to prevent loops
+    const lastSavedDataRef = useRef<string>("");
+
+    useEffect(() => {
+        const currentData = semesterTableData[activeSemester];
+        if (!currentData || !ocId) return;
+
+        // Create a stable string representation for comparison
+        const dataString = JSON.stringify(currentData);
+
+        // Only save if data actually changed
+        if (dataString !== lastSavedDataRef.current) {
+            lastSavedDataRef.current = dataString;
+
+            const timeoutId = setTimeout(() => {
+                dispatch(savePPTData({
+                    ocId,
+                    semester: activeSemester,
+                    data: currentData
+                }));
+            }, 300);
+
+            return () => clearTimeout(timeoutId);
+        }
+    }, [semesterTableData, activeSemester, ocId, dispatch]);
+
     // Auto-calc total marks (excluding "Total" row)
     const totalMarksObtained = useMemo(() => {
         const rows = semesterTableData[activeSemester] || [];
         const nonTotalRows = rows.slice(0, -1);
-
         return nonTotalRows.reduce((sum, row) => sum + (row.column6 || 0), 0);
     }, [semesterTableData, activeSemester]);
 
@@ -128,63 +184,64 @@ export default function PhysicalForm() {
         return total;
     }, [pptGrandTotal, childComponentMarks]);
 
-    const handleColumn4Change = (rowId: string, value: string) => {
+    const handleColumn4Change = useCallback((rowId: string, value: string) => {
         setSemesterTableData((prev) => ({
             ...prev,
             [activeSemester]: prev[activeSemester].map((row) =>
                 row.id === rowId ? { ...row, column4: value } : row
             ),
         }));
-    };
+    }, [activeSemester]);
 
-    const handleColumn5Change = (rowId: string, value: string) => {
+    const handleColumn5Change = useCallback((rowId: string, value: string) => {
         setSemesterTableData((prev) => ({
             ...prev,
             [activeSemester]: prev[activeSemester].map((row) =>
                 row.id === rowId ? { ...row, column5: value } : row
             ),
         }));
-    };
+    }, [activeSemester]);
 
-    const handleColumn6Change = (rowId: string, value: string) => {
-        const row = semesterTableData[activeSemester].find(r => r.id === rowId);
-        if (!row) return;
+    const handleColumn6Change = useCallback((rowId: string, value: string) => {
+        setSemesterTableData((prev) => {
+            const row = prev[activeSemester].find(r => r.id === rowId);
+            if (!row) return prev;
 
-        const numValue = parseFloat(value);
+            const numValue = parseFloat(value);
 
-        // Allow empty values
-        if (value.trim() === "") {
-            setSemesterTableData((prev) => ({
+            // Allow empty values
+            if (value.trim() === "") {
+                return {
+                    ...prev,
+                    [activeSemester]: prev[activeSemester].map((r) =>
+                        r.id === rowId ? { ...r, column6: 0 } : r
+                    ),
+                };
+            }
+
+            // Validate marks
+            if (isNaN(numValue) || numValue < 0) {
+                toast.error("Marks must be a valid positive number");
+                return prev;
+            }
+
+            if (numValue > row.column3) {
+                toast.error(`Marks scored cannot exceed maximum marks (${row.column3})`);
+                return prev;
+            }
+
+            return {
                 ...prev,
                 [activeSemester]: prev[activeSemester].map((r) =>
-                    r.id === rowId ? { ...r, column6: 0 } : r
+                    r.id === rowId ? { ...r, column6: numValue } : r
                 ),
-            }));
-            return;
-        }
+            };
+        });
+    }, [activeSemester]);
 
-        // Validate marks
-        if (isNaN(numValue) || numValue < 0) {
-            toast.error("Marks must be a valid positive number");
-            return;
-        }
+    const handleEdit = useCallback(() => setIsEditing(true), []);
 
-        if (numValue > row.column3) {
-            toast.error(`Marks scored cannot exceed maximum marks (${row.column3})`);
-            return;
-        }
-
-        setSemesterTableData((prev) => ({
-            ...prev,
-            [activeSemester]: prev[activeSemester].map((r) =>
-                r.id === rowId ? { ...r, column6: numValue } : r
-            ),
-        }));
-    };
-
-    const handleEdit = () => setIsEditing(true);
-
-    const handleSave = () => {
+    const handleSave = useCallback(() => {
         // Validate all marks before saving
         const currentTableData = semesterTableData[activeSemester];
         const nonTotalRows = currentTableData.slice(0, -1);
@@ -198,44 +255,44 @@ export default function PhysicalForm() {
 
         setIsEditing(false);
         toast.success("PPT data saved successfully");
-        console.log("Data saved:", semesterTableData[activeSemester]);
-    };
+    }, [semesterTableData, activeSemester]);
 
-    const handleCancel = () => setIsEditing(false);
+    const handleCancel = useCallback(() => setIsEditing(false), []);
 
+    // Memoize all callback handlers to prevent child re-renders
     const handleIpet1FormMarks = useCallback((marks: number) => {
-        setChildComponentMarks((prev) => ({
-            ...prev,
-            ipet1Form: marks,
-        }));
+        setChildComponentMarks((prev) => {
+            if (prev.ipet1Form === marks) return prev;
+            return { ...prev, ipet1Form: marks };
+        });
     }, []);
 
     const handleIpet2FormMarks = useCallback((marks: number) => {
-        setChildComponentMarks((prev) => ({
-            ...prev,
-            ipet2Form: marks,
-        }));
+        setChildComponentMarks((prev) => {
+            if (prev.ipet2Form === marks) return prev;
+            return { ...prev, ipet2Form: marks };
+        });
     }, []);
 
     const handleSwimming1Marks = useCallback((marks: number) => {
-        setChildComponentMarks((prev) => ({
-            ...prev,
-            swimming1: marks,
-        }));
+        setChildComponentMarks((prev) => {
+            if (prev.swimming1 === marks) return prev;
+            return { ...prev, swimming1: marks };
+        });
     }, []);
 
     const handleSwimmingMarks = useCallback((marks: number) => {
-        setChildComponentMarks((prev) => ({
-            ...prev,
-            swimming: marks,
-        }));
+        setChildComponentMarks((prev) => {
+            if (prev.swimming === marks) return prev;
+            return { ...prev, swimming: marks };
+        });
     }, []);
 
     const handleHigherTestsMarks = useCallback((marks: number) => {
-        setChildComponentMarks((prev) => ({
-            ...prev,
-            higherTests: marks,
-        }));
+        setChildComponentMarks((prev) => {
+            if (prev.higherTests === marks) return prev;
+            return { ...prev, higherTests: marks };
+        });
     }, []);
 
     const pptMarks: Record<string, number> = {
@@ -247,7 +304,7 @@ export default function PhysicalForm() {
         "VI TERM": 40,
     };
 
-    const columns: TableColumn<PhysicalTraining>[] = [
+    const columns: TableColumn<PhysicalTraining>[] = useMemo(() => [
         {
             key: "column1",
             label: "S.No",
@@ -352,9 +409,9 @@ export default function PhysicalForm() {
                 );
             }
         }
-    ];
+    ], [semesterTableData, activeSemester, isEditing, totalMarksObtained, handleColumn4Change, handleColumn5Change, handleColumn6Change]);
 
-    const config: TableConfig<PhysicalTraining> = {
+    const config: TableConfig<PhysicalTraining> = useMemo(() => ({
         columns,
         features: {
             sorting: false,
@@ -369,7 +426,7 @@ export default function PhysicalForm() {
             striped: false,
             hover: true
         }
-    };
+    }), [columns]);
 
     return (
         <div className="mt-4 space-y-6">
@@ -421,16 +478,22 @@ export default function PhysicalForm() {
                         {activeSemester === "III TERM" && (
                             <>
                                 <Ipet1Form
+                                    key="ipet1-III"
                                     onMarksChange={handleIpet1FormMarks}
                                     activeSemester={activeSemester}
+                                    ocId={ocId}
                                 />
                                 <Swimming
+                                    key="swimming-III"
                                     onMarksChange={handleSwimmingMarks}
                                     activeSemester={activeSemester}
+                                    ocId={ocId}
                                 />
                                 <HigherTests
+                                    key="higher-tests-III"
                                     onMarksChange={handleHigherTestsMarks}
                                     activeSemester={activeSemester}
+                                    ocId={ocId}
                                 />
                             </>
                         )}
@@ -440,26 +503,41 @@ export default function PhysicalForm() {
                             activeSemester === "VI TERM") && (
                                 <>
                                     <Ipet2Form
+                                        key={`ipet2-${activeSemester}`}
                                         onMarksChange={handleIpet2FormMarks}
                                         activeSemester={activeSemester}
+                                        ocId={ocId}
                                     />
 
                                     <Swimming1
+                                        key={`swimming1-${activeSemester}`}
                                         onMarksChange={handleSwimming1Marks}
                                         activeSemester={activeSemester}
+                                        ocId={ocId}
                                     />
 
                                     <HigherTests
+                                        key={`higher-tests-${activeSemester}`}
                                         onMarksChange={handleHigherTestsMarks}
                                         activeSemester={activeSemester}
+                                        ocId={ocId}
                                     />
                                 </>
                             )}
 
-                        <MotivationAwards activeSemester={activeSemester} />
+                        <MotivationAwards
+                            key={`motivation-${activeSemester}`}
+                            activeSemester={activeSemester}
+                            ocId={ocId}
+                        />
 
                         <GrandTotal grandTotalMarks={grandTotalMarks} />
                     </div>
+
+                    {/* Auto-save indicator */}
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                        * Changes are automatically saved
+                    </p>
                 </CardContent>
             </Card>
         </div>

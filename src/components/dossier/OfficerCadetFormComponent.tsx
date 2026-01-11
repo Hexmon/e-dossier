@@ -1,26 +1,35 @@
 "use client";
 
-
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import type { OfficerCadetForm } from "@/types/dossierSnap";
-import { Title } from "chart.js";
 
+import type { OfficerCadetForm } from "@/types/dossierSnap";
+import { saveForm, clearForm } from "@/store/slices/officerCadetFormSlice";
+import type { RootState } from "@/store";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useOcDetails } from "@/hooks/useOcDetails";
 
 interface Props {
-    initialValues?: OfficerCadetForm | null;
-    onSave?: (data: OfficerCadetForm) => void; // optional, since component also shows preview
+    ocId: string;
+    onSave?: (data: OfficerCadetForm) => void;
 }
 
+export default function OfficerCadetFormComponent({ ocId, onSave }: Props) {
+    const dispatch = useDispatch();
 
-export default function OfficerCadetFormComponent({ initialValues = null, onSave }: Props) {
-    const [isEditMode, setIsEditMode] = useState(false);
-    
+    /* 🔒 All hooks must be first */
+    const { cadet } = useOcDetails(ocId);
+
+    const savedData = useSelector(
+        (state: RootState) => state.officerCadetForm.forms[ocId]
+    );
+
     const form = useForm<OfficerCadetForm>({
         defaultValues: {
             arrivalPhoto: null,
@@ -37,204 +46,143 @@ export default function OfficerCadetFormComponent({ initialValues = null, onSave
             orderOfMerit: "",
             regtArm: "",
             postedAtt: "",
-            ...initialValues,
         },
     });
 
-
     const { register, handleSubmit, reset, watch } = form;
-    const [savedData, setSavedData] = useState<OfficerCadetForm | null>(initialValues ?? null);
 
+    const debouncedValues = useDebounce(watch(), 500);
 
-    const arrivalPhoto = watch("arrivalPhoto");
-    const departurePhoto = watch("departurePhoto");
-
-
+    /* 🔄 Load redux-persisted data */
     useEffect(() => {
-        // keep preview live while typing / file selection if you want:
-        // setSavedData(prev => ({ ...prev, arrivalPhoto, departurePhoto }));
-        // but here we'll only update preview on Save
-        return () => { /* cleanup if needed */ };
-    }, [arrivalPhoto, departurePhoto]);
+        if (savedData) reset(savedData);
+    }, [savedData, reset]);
 
+    /* 💾 Auto-save */
+    useEffect(() => {
+        if (!debouncedValues) return;
+
+        const hasAnyData = Object.values(debouncedValues).some(val => {
+            if (val === null || val === undefined || val === "") return false;
+            if (typeof val === "object" && "length" in val) {
+                return (val as FileList).length > 0;
+            }
+            return true;
+        });
+
+        if (hasAnyData) {
+            dispatch(saveForm({ ocId, data: debouncedValues }));
+        }
+    }, [debouncedValues, dispatch, ocId]);
+
+    /* 🧠 Now it's safe to do conditions */
+    if (!cadet) return null;
 
     const onSubmit = (data: OfficerCadetForm) => {
-        const { name = "" } = data;
-        if (!name.trim()) {
+        if (!data.name?.trim()) {
             toast.error("Please provide the cadet name");
             return;
         }
-        setSavedData(data);
+
+        dispatch(saveForm({ ocId, data }));
         onSave?.(data);
-        toast.success("Saved successfully");
-        setIsEditMode(false);
-        reset();
+        toast.success("Form saved successfully");
     };
 
-    const handleEditClick = () => {
-        setIsEditMode(true);
-    };
+    const handleReset = () => {
+        if (!confirm("Clear all officer cadet details?")) return;
 
-    const handleCancel = () => {
-        setIsEditMode(false);
-        reset();
-    };
+        reset({
+            arrivalPhoto: null,
+            departurePhoto: null,
+            tesNo: "",
+            name: "",
+            course: "",
+            pi: "",
+            dtOfArr: "",
+            relegated: "",
+            withdrawnOn: "",
+            dtOfPassingOut: "",
+            icNo: "",
+            orderOfMerit: "",
+            regtArm: "",
+            postedAtt: "",
+        });
 
+        dispatch(clearForm(ocId));
+        toast.info("Form cleared");
+    };
 
     return (
-        <div>
-            {!isEditMode ? (
-                // VIEW MODE
-                <div className="p-4 bg-gray-50 rounded">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-semibold">Officer Cadet Details</h3>
-                        <Button onClick={handleEditClick} className="bg-blue-500 hover:bg-blue-600">
-                            Edit
+        <Tabs defaultValue="form">
+            <TabsList className="mb-6">
+                <TabsTrigger value="form">Fill Form</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="form">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="text-xs text-gray-500 text-right">
+                        ✓ Changes are saved automatically
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="flex flex-col items-center border p-4 rounded-lg">
+                            <Label>Arrival (Civil Dress)</Label>
+                            <Input type="file" accept="image/*" {...register("arrivalPhoto")} />
+                        </div>
+                        <div className="flex flex-col items-center border p-4 rounded-lg">
+                            <Label>Departure (Uniform)</Label>
+                            <Input type="file" accept="image/*" {...register("departurePhoto")} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input placeholder="TES No" {...register("tesNo")} />
+                        <Input placeholder="Name" {...register("name")} />
+                        <Input placeholder="Course" {...register("course")} />
+                        <Input placeholder="PI" {...register("pi")} />
+                        <Input type="date" {...register("dtOfArr")} />
+                        <Input placeholder="Relegated" {...register("relegated")} />
+                        <Input type="date" {...register("withdrawnOn")} />
+                    </div>
+
+                    <h3 className="font-semibold bg-blue-100 px-4 py-1 rounded-2xl">
+                        Commissioning Details
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input type="date" {...register("dtOfPassingOut")} />
+                        <Input placeholder="IC No" {...register("icNo")} />
+                        <Input placeholder="Order of Merit" {...register("orderOfMerit")} />
+                        <Input placeholder="Regt / Arm" {...register("regtArm")} />
+                        <Input className="col-span-2" placeholder="Posted / Attached To" {...register("postedAtt")} />
+                    </div>
+
+                    <div className="flex justify-center gap-4">
+                        <Button type="submit" className="w-40 bg-[#40ba4d]">Submit</Button>
+                        <Button type="button" variant="outline" className="w-40" onClick={handleReset}>
+                            Clear Form
                         </Button>
                     </div>
+                </form>
+            </TabsContent>
 
-                    {!savedData ? (
-                        <p className="text-gray-500 italic text-center">No data available. Click Edit to add information.</p>
-                    ) : (
-                        <div>
-                            <div className="grid grid-cols-2 gap-6 mb-6">
-                                {savedData.arrivalPhoto?.[0] ? (
-                                    <div className="flex flex-col items-center">
-                                        <img src={URL.createObjectURL(savedData.arrivalPhoto[0])} alt="Arrival" className="h-32 w-32 object-cover rounded border" />
-                                        <p className="mt-2 text-sm text-gray-600">Arrival (Civil Dress)</p>
-                                    </div>
-                                ) : <p className="text-gray-500 italic">No arrival photo</p>}
-
-
-                                {savedData.departurePhoto?.[0] ? (
-                                    <div className="flex flex-col items-center">
-                                        <img src={URL.createObjectURL(savedData.departurePhoto[0])} alt="Departure" className="h-32 w-32 object-cover rounded border" />
-                                        <p className="mt-2 text-sm text-gray-600">Departure (Uniform)</p>
-                                    </div>
-                                ) : <p className="text-gray-500 italic">No departure photo</p>}
-                            </div>
-
-
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                {Object.entries({
-                                    Name: savedData.name,
-                                    "TES No": savedData.tesNo,
-                                    Course: savedData.course,
-                                    PI: savedData.pi,
-                                    "Date of Arrival": savedData.dtOfArr,
-                                    Relegated: savedData.relegated,
-                                    "Withdrawn On": savedData.withdrawnOn,
-                                    "Date of Passing Out": savedData.dtOfPassingOut,
-                                    "IC No": savedData.icNo,
-                                    "Order of Merit": savedData.orderOfMerit,
-                                    "Regt/Arm": savedData.regtArm,
-                                    "Posted/Attached To": savedData.postedAtt,
-                                }).map(([label, value]) => (
-                                    <p key={label}><strong>{label}:</strong> {value || "-"}</p>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            ) : (
-                // EDIT MODE
-                <Tabs defaultValue="form">
-                    <div className="w-full">
-                        <TabsContent value="form">
-                            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                                {/* Form contents (same as before) */}
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="flex flex-col items-center border p-4 rounded-lg">
-                                        <Label className="mb-2">Arrival (Civil Dress)</Label>
-                                        <Input type="file" accept="image/*" {...register("arrivalPhoto")} />
-                                    </div>
-                                    <div className="flex flex-col items-center border p-4 rounded-lg">
-                                        <Label className="mb-2">Departure (Uniform)</Label>
-                                        <Input type="file" accept="image/*" {...register("departurePhoto")} />
-                                    </div>
-                                </div>
-
-
-                                {/* rest of fields... */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div><Label className="ml-1 mb-1">TES No</Label><Input {...register("tesNo")} /></div>
-                                    <div><Label className="ml-1 mb-1">Name</Label><Input {...register("name")} /></div>
-                                    <div><Label className="ml-1 mb-1">Course</Label><Input {...register("course")} /></div>
-                                    <div><Label className="ml-1 mb-1">PI</Label><Input {...register("pi")} /></div>
-                                    <div><Label className="ml-1 mb-1">Date of Arrival</Label><Input type="date" {...register("dtOfArr")} /></div>
-                                    <div><Label className="ml-1 mb-1">Relegated to Course & Date</Label><Input {...register("relegated")} /></div>
-                                    <div><Label className="ml-1 mb-1">Withdrawn On</Label><Input type="date" {...register("withdrawnOn")} /></div>
-                                </div>
-
-
-                                <h3 className="text-lg font-semibold bg-blue-100 px-4 py-1 rounded-2xl">Commissioning Details</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div><Label className="ml-1 mb-1">Date of Passing Out</Label><Input type="date" {...register("dtOfPassingOut")} /></div>
-                                    <div><Label className="ml-1 mb-1">IC No</Label><Input {...register("icNo")} /></div>
-                                    <div><Label className="ml-1 mb-1">Order of Merit</Label><Input {...register("orderOfMerit")} /></div>
-                                    <div><Label className="ml-1 mb-1">Regt/Arm Allotted</Label><Input {...register("regtArm")} /></div>
-                                    <div className="col-span-2"><Label className="ml-1 mb-1">Posted/Attached To</Label><Input {...register("postedAtt")} /></div>
-                                </div>
-
-
-                                <div className="flex justify-center mt-6 gap-4">
-                                    <Button type="submit" className="w-40 bg-[#40ba4d]">Save</Button>
-                                    <Button type="button" variant="outline" className="w-40 hover:bg-destructive hover:text-white" onClick={handleCancel}>Cancel</Button>
-                                </div>
-                            </form>
-                        </TabsContent>
-
-
-                        <TabsContent value="preview">
-                            <div className="p-4 bg-gray-50 rounded">
-                                {!savedData ? (
-                                    <p className="text-gray-500 italic text-center">No data saved yet. Fill and save the form first.</p>
-                                ) : (
-                                    <div>
-                                        <h3 className="text-lg font-semibold mb-4">Preview</h3>
-                                        <div className="grid grid-cols-2 gap-6 mb-6">
-                                            {savedData.arrivalPhoto?.[0] ? (
-                                                <div className="flex flex-col items-center">
-                                                    <img src={URL.createObjectURL(savedData.arrivalPhoto[0])} alt="Arrival" className="h-32 w-32 object-cover rounded border" />
-                                                    <p className="mt-2 text-sm text-gray-600">Arrival (Civil Dress)</p>
-                                                </div>
-                                            ) : <p className="text-gray-500 italic">No arrival photo</p>}
-
-
-                                            {savedData.departurePhoto?.[0] ? (
-                                                <div className="flex flex-col items-center">
-                                                    <img src={URL.createObjectURL(savedData.departurePhoto[0])} alt="Departure" className="h-32 w-32 object-cover rounded border" />
-                                                    <p className="mt-2 text-sm text-gray-600">Departure (Uniform)</p>
-                                                </div>
-                                            ) : <p className="text-gray-500 italic">No departure photo</p>}
-                                        </div>
-
-
-                                        <div className="grid grid-cols-2 gap-4 text-sm">
-                                            {Object.entries({
-                                                Name: savedData.name,
-                                                "TES No": savedData.tesNo,
-                                                Course: savedData.course,
-                                                PI: savedData.pi,
-                                                "Date of Arrival": savedData.dtOfArr,
-                                                Relegated: savedData.relegated,
-                                                "Withdrawn On": savedData.withdrawnOn,
-                                                "Date of Passing Out": savedData.dtOfPassingOut,
-                                                "IC No": savedData.icNo,
-                                                "Order of Merit": savedData.orderOfMerit,
-                                                "Regt/Arm": savedData.regtArm,
-                                                "Posted/Attached To": savedData.postedAtt,
-                                            }).map(([label, value]) => (
-                                                <p key={label}><strong>{label}:</strong> {value || "-"}</p>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </TabsContent>
+            <TabsContent value="preview">
+                {!savedData ? (
+                    <p className="italic text-gray-500 text-center">
+                        No data saved yet.
+                    </p>
+                ) : (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        {Object.entries(savedData).map(([k, v]) =>
+                            typeof v === "string" ? (
+                                <p key={k}><strong>{k}:</strong> {v || "-"}</p>
+                            ) : null
+                        )}
                     </div>
-                </Tabs>
-            )}
-        </div>
+                )}
+            </TabsContent>
+        </Tabs>
     );
 }

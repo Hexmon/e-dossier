@@ -10,9 +10,10 @@ import { Edit, Save, RotateCcw, X } from "lucide-react";
 interface Props {
     form: UseFormReturn<FieldValues>;
     tabName?: string;
+    onClearForm?: () => void;
 }
 
-export default function DSCoordForm({ form, tabName = "DS COORD" }: Props) {
+export default function DSCoordForm({ form, tabName = "DS COORD", onClearForm }: Props) {
     const { register, handleSubmit, reset, watch } = form;
 
     const formValues = watch();
@@ -47,6 +48,7 @@ export default function DSCoordForm({ form, tabName = "DS COORD" }: Props) {
 
     const handleReset = () => {
         reset();
+        onClearForm?.();
         toast.info("Form has been reset");
     };
 

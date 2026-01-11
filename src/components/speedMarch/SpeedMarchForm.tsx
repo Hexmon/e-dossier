@@ -27,55 +27,38 @@ type FormValues = {
 
 interface Props {
     semesterNumber: number;
-    inputPrefill: Row[];
     savedRecords: SpeedMarchRecord[];
     onSave: (values: FormValues) => Promise<void>;
     isEditing: boolean;
     onCancelEdit: () => void;
     disabled?: boolean;
+    isSaving?: boolean;
     formMethods?: UseFormReturn<FormValues>;
 }
 
 export default function SpeedMarchForm({
     semesterNumber,
-    inputPrefill,
     onSave,
     isEditing,
     onCancelEdit,
     disabled = false,
+    isSaving = false,
     formMethods,
 }: Props) {
-    /**  Always call hooks at the top level — NEVER conditionally */
     const internalForm = useForm<FormValues>({
-        defaultValues: { records: inputPrefill },
+        defaultValues: { records: [] },
     });
 
     const methods = formMethods ?? internalForm;
 
-    const { register, handleSubmit, reset } = methods;
+    const { register, handleSubmit, reset, getValues } = methods;
 
-    /** Safe timing + distance column selection */
+    // Safe timing + distance column selection
     const term = termColumns[semesterNumber - 4];
     const timingKey = term?.timing as keyof Row;
     const distanceKey = term?.distance as keyof Row;
 
-    /** Protect from undefined termColumns */
-    const merged = useMemo<Row[]>(() => {
-        if (!timingKey || !distanceKey) return inputPrefill;
-
-        return inputPrefill.map((pref) => ({
-            ...pref,
-            [timingKey]: pref[timingKey] ?? "",
-            [distanceKey]: pref[distanceKey] ?? "",
-        }));
-    }, [inputPrefill, timingKey, distanceKey]);
-
-    /** Sync form values */
-    useEffect(() => {
-        reset({ records: merged });
-    }, [merged, reset]);
-
-    /** Get distance label based on semester */
+    // Get distance label based on semester
     const distanceLabel = useMemo(() => {
         if (semesterNumber === 4) return "10 KM";
         if (semesterNumber === 5) return "20 KM";
@@ -123,11 +106,19 @@ export default function SpeedMarchForm({
         }
     };
 
+    const handleReset = () => {
+        const values = getValues();
+        reset(values);
+    };
+
+    // Get current form data
+    const currentRecords = getValues("records") || [];
+
     return (
         <form onSubmit={handleSubmit(onSave)}>
             <div className="border rounded-lg shadow">
                 <UniversalTable<Row>
-                    data={merged}
+                    data={currentRecords}
                     config={config}
                 />
             </div>
@@ -136,15 +127,19 @@ export default function SpeedMarchForm({
             <div className="flex justify-center gap-3 mt-6">
                 {isEditing && (
                     <>
-                        <Button type="submit" disabled={disabled}>
-                            Save
+                        <Button
+                            type="submit"
+                            disabled={disabled || isSaving}
+                            className="bg-[#40ba4d]"
+                        >
+                            {isSaving ? "Saving..." : "Save"}
                         </Button>
 
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => reset({ records: merged })}
-                            disabled={disabled}
+                            onClick={handleReset}
+                            disabled={disabled || isSaving}
                         >
                             Reset
                         </Button>
@@ -153,7 +148,7 @@ export default function SpeedMarchForm({
                             type="button"
                             variant="secondary"
                             onClick={onCancelEdit}
-                            disabled={disabled}
+                            disabled={disabled || isSaving}
                         >
                             Cancel
                         </Button>

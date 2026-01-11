@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
     Select,
@@ -13,6 +14,9 @@ import {
 } from "@/components/ui/select";
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
+
+import type { RootState } from "@/store";
+import { saveIpet1Data } from "@/store/slices/physicalTrainingSlice";
 
 interface TableRow {
     id: string;
@@ -27,19 +31,46 @@ interface TableRow {
 interface Ipet1FormProps {
     onMarksChange: (marks: number) => void;
     activeSemester: string;
+    ocId: string;
 }
 
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
 const column4Options = ["Pass", "Fail"];
 
-export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormProps) {
+const DEFAULT_DATA: TableRow[] = [
+    { id: "1", column1: 1, column2: "T/A Vault", column3: "", column4: "", maxMarks: 10, column5: 0 },
+    { id: "2", column1: 2, column2: "Rope", column3: "", column4: "", maxMarks: 13, column5: 0 },
+    { id: "3", column1: 3, column2: "Chest Touch/ Heaving", column3: "", column4: "", maxMarks: 12, column5: 0 },
+];
+
+export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1FormProps) {
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
 
-    const [tableData, setTableData] = useState<TableRow[]>([
-        { id: "1", column1: 1, column2: "T/A Vault", column3: "", column4: "", maxMarks: 10, column5: 0 },
-        { id: "2", column1: 2, column2: "Rope", column3: "", column4: "", maxMarks: 13, column5: 0 },
-        { id: "3", column1: 3, column2: "Chest Touch/ Heaving", column3: "", column4: "", maxMarks: 12, column5: 0 },
-    ]);
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.physicalTraining.forms[ocId]?.[activeSemester]?.ipet1Data
+    );
+
+    const [tableData, setTableData] = useState<TableRow[]>(savedData || DEFAULT_DATA);
+
+    // Load saved data when it changes
+    useEffect(() => {
+        if (savedData) {
+            setTableData(savedData);
+        }
+    }, [savedData, activeSemester]);
+
+    // Auto-save to Redux whenever data changes
+    useEffect(() => {
+        if (tableData && ocId) {
+            dispatch(saveIpet1Data({
+                ocId,
+                semester: activeSemester,
+                data: tableData
+            }));
+        }
+    }, [tableData, ocId, activeSemester, dispatch]);
 
     const tableTotal = useMemo(() => {
         return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);
@@ -64,13 +95,11 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
 
         const numValue = parseFloat(value);
 
-        // Allow empty values
         if (value.trim() === "") {
             setTableData((prev) => prev.map((r) => (r.id === rowId ? { ...r, column5: 0 } : r)));
             return;
         }
 
-        // Validate marks
         if (isNaN(numValue) || numValue < 0) {
             toast.error("Marks must be a valid positive number");
             return;
@@ -89,7 +118,6 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
     }, [tableTotal, onMarksChange]);
 
     const handleSave = () => {
-        // Validate all marks before saving
         for (const row of tableData) {
             if (row.column5 > 0 && row.column5 > row.maxMarks) {
                 toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and ${row.maxMarks}`);
@@ -101,7 +129,6 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
         toast.success("IPET data saved successfully");
     };
 
-    // Add total row to data
     const totalRow: TableRow = {
         id: "total",
         column1: "—",
@@ -257,6 +284,10 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
                         <Button onClick={() => setIsEditing(true)}>Edit</Button>
                     )}
                 </div>
+
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                    * Changes are automatically saved
+                </p>
             </CardContent>
         </div>
     );

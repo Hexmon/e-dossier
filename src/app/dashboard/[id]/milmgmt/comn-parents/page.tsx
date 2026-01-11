@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
@@ -13,15 +14,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import ParentCommForm, { ParentCommFormData } from "@/components/parent/ParentCommForm";
 import { useParentComms, ParentCommRow } from "@/hooks/useParentComms";
-import { useOcPersonal } from "@/hooks/useOcPersonal";
 import ParentCommTable from "@/components/parent/ParentCommTable";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Link from "next/link";
 import { ParentCommPayload } from "@/app/lib/api/parentComnApi";
+import type { RootState } from "@/store";
+import { clearParentCommForm } from "@/store/slices/parentCommSlice";
 
 export default function ParentCommnPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.parentComm.forms[ocId]
+    );
 
     const { cadet } = useOcDetails(ocId);
 
@@ -37,8 +45,6 @@ export default function ParentCommnPage() {
 
     const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
     const [activeTab, setActiveTab] = useState<number>(0);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editForm, setEditForm] = useState<ParentCommRow | null>(null);
 
     const { grouped, loading, fetch, save, update, remove } = useParentComms(ocId, semesters.length);
 
@@ -54,7 +60,23 @@ export default function ParentCommnPage() {
             return;
         }
 
-        const payloads: ParentCommPayload[] = data.records.map((r) => ({
+        // Filter out empty rows
+        const filledRows = data.records.filter(row => {
+            const hasData =
+                (row.letterNo && row.letterNo.trim() !== "") ||
+                (row.date && row.date.trim() !== "") ||
+                (row.teleCorres && row.teleCorres.trim() !== "") ||
+                (row.briefContents && row.briefContents.trim() !== "") ||
+                (row.sigPICdr && row.sigPICdr.trim() !== "");
+            return hasData;
+        });
+
+        if (filledRows.length === 0) {
+            toast.error("Please fill in at least one record with data");
+            return;
+        }
+
+        const payloads: ParentCommPayload[] = filledRows.map((r) => ({
             semester: activeTab + 1,
             mode: "LETTER",
             refNo: r.letterNo ?? null,
@@ -65,39 +87,39 @@ export default function ParentCommnPage() {
         }));
 
         await save(activeTab + 1, payloads);
+
+        // Clear Redux cache after successful save
+        dispatch(clearParentCommForm(ocId));
+
+        toast.success("Parent communication records saved successfully!");
+    };
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearParentCommForm(ocId));
+            toast.info("Form cleared");
+        }
     };
 
     // delete
     const handleDelete = async (row: ParentCommRow) => {
         if (!row.id) return;
-        const resp = await remove(row.id);
-        if (!resp) return;
+        await remove(row.id);
     };
 
-    // edit flow
-    const startEdit = (row: ParentCommRow) => {
-        if (!row.id) return toast.error("Record missing id");
-        setEditingId(row.id);
-        setEditForm({ ...row });
-    };
+    // Get default values - prioritize Redux over empty form
+    const getDefaultValues = (): ParentCommFormData => {
+        if (savedFormData && savedFormData.length > 0) {
+            return {
+                records: savedFormData,
+            };
+        }
 
-    const cancelEdit = () => {
-        setEditingId(null);
-        setEditForm(null);
-    };
-
-    const saveEdit = async () => {
-        if (!ocId || !editingId || !editForm) return;
-        const payload: Partial<ParentCommPayload> = {
-            refNo: editForm.letterNo ?? null,
-            date: editForm.date ?? null,
-            subject: editForm.teleCorres ?? null,
-            brief: editForm.briefContents ?? null,
-            platoonCommanderName: editForm.sigPICdr ?? null,
+        return {
+            records: [
+                { letterNo: "", date: "", teleCorres: "", briefContents: "", sigPICdr: "" },
+            ],
         };
-
-        await update(editingId, payload);
-        cancelEdit();
     };
 
     return (
@@ -187,18 +209,11 @@ export default function ParentCommnPage() {
 
                                     {/* Input Form */}
                                     <ParentCommForm
-                                        onSubmit={async (formData) => {
-                                            const payloads: ParentCommPayload[] = formData.records.map((r) => ({
-                                                semester: activeTab + 1,
-                                                mode: "LETTER",
-                                                refNo: r.letterNo ?? null,
-                                                date: r.date ?? "",
-                                                subject: r.teleCorres ?? "",
-                                                brief: r.briefContents ?? "",
-                                                platoonCommanderName: r.sigPICdr ?? null,
-                                            }));
-                                            await save(activeTab + 1, payloads);
-                                        }}
+                                        key={`${ocId}-${savedFormData ? 'redux' : 'default'}`}
+                                        onSubmit={handleSubmit}
+                                        defaultValues={getDefaultValues()}
+                                        ocId={ocId}
+                                        onClear={handleClearForm}
                                     />
                                 </CardContent>
                             </Card>

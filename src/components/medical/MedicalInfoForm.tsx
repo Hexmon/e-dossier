@@ -2,31 +2,68 @@
 
 import { useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MedicalInfoForm } from "@/types/med-records";
+import { saveMedicalInfoForm } from "@/store/slices/medicalInfoSlice";
 
 interface Props {
     onSubmit: (data: MedicalInfoForm) => void;
     disabled: boolean;
     defaultValues: MedicalInfoForm;
+    ocId: string;
+    onClear: () => void;
 }
 
-export default function MedicalInfoFormComponent({ onSubmit, disabled, defaultValues }: Props) {
+export default function MedicalInfoFormComponent({
+    onSubmit,
+    disabled,
+    defaultValues,
+    ocId,
+    onClear
+}: Props) {
+    const dispatch = useDispatch();
 
     const form = useForm<MedicalInfoForm>({
         defaultValues,
     });
 
-    const { control, handleSubmit, register, reset } = form;
+    const { control, handleSubmit, register, reset, watch } = form;
 
     const { fields, append, remove } = useFieldArray({ control, name: "medInfo" });
 
-    //Reset form whenever defaultValues change
+    // Auto-save to Redux on form changes
     useEffect(() => {
-        reset(defaultValues);
-    }, [defaultValues, reset]);
+        const subscription = watch((value) => {
+            if (ocId && value.medInfo && value.medInfo.length > 0) {
+                const medInfoData = value.medInfo.map(item => ({
+                    date: item?.date || "",
+                    age: item?.age || "",
+                    height: item?.height || "",
+                    ibw: item?.ibw || "",
+                    abw: item?.abw || "",
+                    overw: item?.overw || "",
+                    bmi: item?.bmi || "",
+                    chest: item?.chest || "",
+                }));
+
+                const detailsData = {
+                    medicalHistory: value.medicalHistory || "",
+                    medicalIssues: value.medicalIssues || "",
+                    allergies: value.allergies || "",
+                };
+
+                dispatch(saveMedicalInfoForm({
+                    ocId,
+                    medInfo: medInfoData,
+                    details: detailsData
+                }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [watch, dispatch, ocId]);
 
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -75,15 +112,17 @@ export default function MedicalInfoFormComponent({ onSubmit, disabled, defaultVa
                     overw: "",
                     bmi: "",
                     chest: "",
-                    medicalHistory: "",
-                    medicalIssues: "",
-                    allergies: "",
                 })}>
                     + Add Row
                 </Button>
 
-                <Button variant="outline" className="hover:bg-destructive hover:text-white" type="button" onClick={() => reset(defaultValues)}>
-                    Reset
+                <Button
+                    variant="outline"
+                    className="hover:bg-destructive hover:text-white"
+                    type="button"
+                    onClick={onClear}
+                >
+                    Clear Form
                 </Button>
             </div>
 
@@ -105,10 +144,15 @@ export default function MedicalInfoFormComponent({ onSubmit, disabled, defaultVa
                 />
             </div>
 
-            <div className="flex justify-center mt-4">
+            <div className="flex flex-col items-center mt-4 gap-2">
                 <Button type="submit" className="w-64 bg-blue-600">
                     Submit Medical Info
                 </Button>
+
+                {/* Show auto-save indicator */}
+                <p className="text-sm text-muted-foreground text-center">
+                    * Changes are automatically saved
+                </p>
             </div>
         </form>
     );

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -28,9 +30,18 @@ import CfeTable from "@/components/cfe/CfeTable";
 import CfeForm from "@/components/cfe/CfeForm";
 import type { cfeRow } from "@/types/cfe";
 
+import type { RootState } from "@/store";
+import { clearCfeForm } from "@/store/slices/cfeRecordsSlice";
+
 export default function CFEFormPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.cfeRecords.forms[ocId]
+    );
 
     const { cadet } = useOcDetails(ocId);
 
@@ -71,6 +82,18 @@ export default function CFEFormPage() {
     const handleSubmit = async (data: cfeFormData) => {
         const termIndex = activeTab;
         await saveSemesterPayload(termIndex, data.records);
+
+        // Clear Redux cache after successful save
+        dispatch(clearCfeForm(ocId));
+
+        toast.success("CFE records saved successfully!");
+    };
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearCfeForm(ocId));
+            toast.info("Form cleared");
+        }
     };
 
     // replace an entire semester payload (used by inline-edit save)
@@ -101,6 +124,26 @@ export default function CFEFormPage() {
         }));
 
         await replaceSemesterPayload(semesterIndex, itemsToSave);
+    };
+
+    // Get default values - prioritize Redux over empty form
+    const getDefaultValues = (): cfeFormData => {
+        if (savedFormData && savedFormData.length > 0) {
+            return {
+                records: savedFormData,
+            };
+        }
+
+        return {
+            records: [
+                {
+                    serialNo: "1",
+                    cat: "",
+                    mks: "",
+                    remarks: "",
+                },
+            ],
+        };
     };
 
     return (
@@ -169,11 +212,10 @@ export default function CFEFormPage() {
                                                 key={s}
                                                 type="button"
                                                 onClick={() => setActiveTab(idx)}
-                                                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-                                                    activeTab === idx
+                                                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === idx
                                                         ? "bg-blue-600 text-white"
                                                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                                }`}
+                                                    }`}
                                             >
                                                 {s}
                                             </button>
@@ -201,10 +243,14 @@ export default function CFEFormPage() {
                                         Add New Records for {semesters[activeTab]}
                                     </h3>
                                     <CfeForm
+                                        key={`${ocId}-${savedFormData ? 'redux' : 'default'}`}
                                         onSubmit={handleSubmit}
                                         semIndex={activeTab}
                                         existingRows={groups[activeTab] ?? []}
                                         loading={loading}
+                                        ocId={ocId}
+                                        defaultValues={getDefaultValues()}
+                                        onClear={handleClearForm}
                                     />
                                 </div>
                             </CardContent>

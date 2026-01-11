@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import type { RootState } from "@/store";
+import { saveWithdrawals } from "@/store/slices/overallAssessmentSlice";
 
 interface Withdrawal {
     id: string;
@@ -13,16 +15,58 @@ interface Withdrawal {
     isRowEditing?: boolean;
 }
 
-export default function Withdrawal() {
+interface WithdrawalProps {
+    ocId: string;
+}
+
+export default function Withdrawal({ ocId }: WithdrawalProps) {
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
-    const [withdrawalData, setWithdrawalData] = useState<Withdrawal[]>([]);
+
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.overallAssessment.forms[ocId]?.withdrawals
+    );
+
+    const [withdrawalData, setWithdrawalData] = useState<Withdrawal[]>(() =>
+        savedData || []
+    );
+
+    // Debounce ref
+    const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load saved data when ocId changes
+    useEffect(() => {
+        if (savedData) {
+            setWithdrawalData(savedData);
+        }
+    }, [ocId, savedData]);
+
+    // Auto-save with debounce
+    useEffect(() => {
+        if (!ocId) return;
+
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            dispatch(saveWithdrawals({ ocId, data: withdrawalData }));
+        }, 500);
+
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+            }
+        };
+    }, [withdrawalData, ocId, dispatch]);
 
     const handleAddWithdrawal = () => {
         const newWithdrawal: Withdrawal = {
             id: Date.now().toString(),
             dateWithdrawn: "",
             reason: "",
-            isRowEditing: false,
+            isRowEditing: true,
         };
         setWithdrawalData([...withdrawalData, newWithdrawal]);
     };
@@ -40,6 +84,7 @@ export default function Withdrawal() {
 
     const handleDeleteWithdrawal = (id: string) => {
         setWithdrawalData(prev => prev.filter(w => w.id !== id));
+        toast.success("Withdrawal deleted");
     };
 
     const handleRowEdit = (id: string) => {
@@ -58,7 +103,6 @@ export default function Withdrawal() {
 
         if (!rowToSave) return;
 
-        // Check if both fields are empty
         if (!rowToSave.dateWithdrawn.trim() || !rowToSave.reason.trim()) {
             toast.error("Please fill in all fields before saving");
             return;
@@ -73,7 +117,6 @@ export default function Withdrawal() {
             }),
         );
         toast.success("Row saved successfully");
-        console.log("Row saved:", rowToSave);
     };
 
     const handleCancel = () => {
@@ -87,9 +130,8 @@ export default function Withdrawal() {
     };
 
     const handleEdit = () => setIsEditing(true);
-    
+
     const handleSave = () => {
-        // Check if there are any empty rows in edit mode
         const hasEmptyRows = withdrawalData.some(
             row => row.isRowEditing && (!row.dateWithdrawn.trim() || !row.reason.trim())
         );
@@ -100,13 +142,19 @@ export default function Withdrawal() {
         }
 
         setIsEditing(false);
-        console.log("Withdrawal Table saved:", withdrawalData);
         toast.success("Withdrawal data saved successfully");
     };
 
     return (
         <div>
             <h2 className="p-2 text-lg font-bold text-left text-gray-700 underline">Withdrawal</h2>
+
+            {isEditing && (
+                <div className="text-xs text-gray-500 text-right mb-2">
+                    ✓ Changes are saved automatically
+                </div>
+            )}
+
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead className="bg-gray-100">
@@ -205,7 +253,6 @@ export default function Withdrawal() {
                 </table>
             </div>
 
-            {/* Add Withdrawal Button - Only in Edit Mode */}
             {isEditing && (
                 <div className="flex gap-3 justify-center mt-4">
                     <Button onClick={handleAddWithdrawal} className="bg-green-600 hover:bg-green-700">
@@ -214,7 +261,6 @@ export default function Withdrawal() {
                 </div>
             )}
 
-            {/* Edit Buttons */}
             <div className="flex gap-3 justify-center mt-4">
                 {isEditing ? (
                     <>

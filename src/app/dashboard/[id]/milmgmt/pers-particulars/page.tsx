@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useParams } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 
-import { Shield, Settings, Link } from "lucide-react";
+import { Shield, Settings } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -26,6 +27,10 @@ import { useOcPersonal } from "@/hooks/useOcPersonal";
 import { OCPersonalRecord } from "@/app/lib/api/ocPersonalApi";
 import { toast } from "sonner";
 import PersonalForm from "@/components/pers/PersonalForm";
+import Link from "next/link";
+import type { RootState } from "@/store";
+import { savePersonalForm, clearPersonalForm } from "@/store/slices/personalParticularsSlice";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function PersParticularsPage() {
 
@@ -34,6 +39,14 @@ export default function PersParticularsPage() {
     // ---------------------------
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // ---------------------------
+    // REDUX
+    // ---------------------------
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.personalParticulars.forms[ocId]
+    );
 
     // ---------------------------
     // USE PERSONAL HOOK
@@ -46,13 +59,18 @@ export default function PersParticularsPage() {
     } = useOcPersonal(ocId);
 
     const [isEditing, setIsEditing] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
 
     // ---------------------------
     // REACT HOOK FORM
     // ---------------------------
-    const { register, handleSubmit, reset } = useForm<OCPersonalRecord>({
+    const { register, handleSubmit, reset, watch } = useForm<OCPersonalRecord>({
         defaultValues: {} as OCPersonalRecord,
     });
+
+    // Watch all form values for auto-save
+    const formValues = watch();
+    const debouncedFormValues = useDebounce(formValues, 500);
 
     // ---------------------------
     // UPDATE MERGE UTILITY
@@ -78,11 +96,12 @@ export default function PersParticularsPage() {
     }
 
     // ---------------------------
-    // PRELOAD FORM DATA
+    // PRELOAD FORM DATA - SMART MERGE VERSION
     // ---------------------------
     useEffect(() => {
         if (!cadet || !personal) return;
 
+        // Transform API data
         const {
             ocNumber,
             name: cadetName,
@@ -95,7 +114,7 @@ export default function PersParticularsPage() {
             bloodGroup
         } = personal;
 
-        const transformed: OCPersonalRecord = {
+        const transformedApiData: OCPersonalRecord = {
             ...personal,
             no: ocNumber,
             name: cadetName,
@@ -105,8 +124,59 @@ export default function PersParticularsPage() {
             course: courseName ?? "",
         };
 
-        reset(transformed);
-    }, [cadet, personal, reset]);
+        // Smart merge: Prioritize API data, but use Redux data for empty API fields
+        if (savedFormData) {
+            console.log("Merging API data with Redux fallback");
+
+            const mergedData: Partial<OCPersonalRecord> = { ...transformedApiData };
+
+            // For each field, check if API value is empty, if so use Redux value
+            (Object.keys(transformedApiData) as (keyof OCPersonalRecord)[]).forEach((key) => {
+                const apiValue = transformedApiData[key];
+                const reduxValue = savedFormData[key];
+
+                // If API value is empty/null/undefined, use Redux value as fallback
+                const isApiEmpty = apiValue === null || apiValue === undefined || apiValue === "";
+                const hasReduxValue = reduxValue !== null && reduxValue !== undefined && reduxValue !== "";
+
+                if (isApiEmpty && hasReduxValue) {
+                    (mergedData as Record<string, unknown>)[key] = reduxValue;
+                } else {
+                    // Use API value (whether it's filled or empty)
+                    (mergedData as Record<string, unknown>)[key] = apiValue;
+                }
+            });
+
+            console.log("Merged data:", mergedData);
+            reset(mergedData as OCPersonalRecord);
+        } else {
+            console.log("Loading from API:", transformedApiData);
+            reset(transformedApiData);
+        }
+
+        setIsInitialized(true);
+    }, [cadet, personal, savedFormData, reset]);
+
+    // ---------------------------
+    // AUTO-SAVE TO REDUX (DEBOUNCED)
+    // ---------------------------
+    useEffect(() => {
+        if (!isInitialized) return; // Don't auto-save until initial load is complete
+
+        if (isEditing && debouncedFormValues && Object.keys(debouncedFormValues).length > 0) {
+            const hasAnyData = Object.values(debouncedFormValues).some(val => {
+                return val !== null && val !== undefined && val !== "";
+            });
+
+            if (hasAnyData) {
+                console.log("Auto-saving to Redux:", debouncedFormValues);
+                dispatch(savePersonalForm({
+                    ocId,
+                    data: debouncedFormValues as OCPersonalRecord
+                }));
+            }
+        }
+    }, [debouncedFormValues, dispatch, ocId, isEditing, isInitialized]);
 
     // ---------------------------
     // SAVE HANDLER
@@ -167,10 +237,53 @@ export default function PersParticularsPage() {
 
             reset(saved);
             setIsEditing(false);
+
+            // Clear redux cache after successful save
+            console.log("Clearing Redux cache after successful save");
+            dispatch(clearPersonalForm(ocId));
+
             toast.success("Saved successfully!");
 
         } catch {
             toast.error("Error saving");
+        }
+    };
+
+    // ---------------------------
+    // CLEAR FORM HANDLER
+    // ---------------------------
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            console.log("Clearing Redux cache manually");
+            dispatch(clearPersonalForm(ocId));
+
+            if (cadet && personal) {
+                const {
+                    ocNumber,
+                    name: cadetName,
+                    courseName
+                } = cadet;
+
+                const {
+                    pi,
+                    dob,
+                    bloodGroup
+                } = personal;
+
+                const transformed: OCPersonalRecord = {
+                    ...personal,
+                    no: ocNumber,
+                    name: cadetName,
+                    pl: pi ?? "",
+                    dob: dob ? dob.split("T")[0] : "",
+                    bloodGp: bloodGroup ?? "",
+                    course: courseName ?? "",
+                };
+
+                reset(transformed);
+            }
+            setIsEditing(false);
+            toast.info("Form cleared");
         }
     };
 
@@ -237,6 +350,12 @@ export default function PersParticularsPage() {
                             </CardHeader>
 
                             <CardContent>
+                                {isEditing && (
+                                    <div className="text-xs text-gray-500 text-right mb-4">
+                                        ✓ Changes are saved automatically
+                                    </div>
+                                )}
+
                                 <PersonalForm
                                     register={register}
                                     handleSubmit={handleSubmit}
@@ -245,6 +364,7 @@ export default function PersParticularsPage() {
                                     isEditing={isEditing}
                                     setIsEditing={setIsEditing}
                                     onSubmit={onSubmit}
+                                    onClear={handleClearForm}
                                 />
                             </CardContent>
                         </Card>

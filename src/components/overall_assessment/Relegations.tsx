@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import type { RootState } from "@/store";
+import { saveRelegations } from "@/store/slices/overallAssessmentSlice";
 
 interface Relegation {
     id: string;
@@ -14,9 +16,51 @@ interface Relegation {
     isRowEditing?: boolean;
 }
 
-export default function Relegations() {
+interface RelegationsProps {
+    ocId: string;
+}
+
+export default function Relegations({ ocId }: RelegationsProps) {
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
-    const [relegationData, setRelegationData] = useState<Relegation[]>([]);
+
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.overallAssessment.forms[ocId]?.relegations
+    );
+
+    const [relegationData, setRelegationData] = useState<Relegation[]>(() =>
+        savedData || []
+    );
+
+    // Debounce ref
+    const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load saved data when ocId changes
+    useEffect(() => {
+        if (savedData) {
+            setRelegationData(savedData);
+        }
+    }, [ocId, savedData]);
+
+    // Auto-save with debounce
+    useEffect(() => {
+        if (!ocId) return;
+
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            dispatch(saveRelegations({ ocId, data: relegationData }));
+        }, 500);
+
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+            }
+        };
+    }, [relegationData, ocId, dispatch]);
 
     const handleAddRelegation = () => {
         const newRelegation: Relegation = {
@@ -24,7 +68,7 @@ export default function Relegations() {
             dateOfRelegation: "",
             courseRelegatedTo: "",
             reason: "",
-            isRowEditing: false,
+            isRowEditing: true,
         };
         setRelegationData([...relegationData, newRelegation]);
     };
@@ -42,6 +86,7 @@ export default function Relegations() {
 
     const handleDeleteRelegation = (id: string) => {
         setRelegationData(prev => prev.filter(r => r.id !== id));
+        toast.success("Relegation deleted");
     };
 
     const handleRowEdit = (id: string) => {
@@ -60,7 +105,6 @@ export default function Relegations() {
 
         if (!rowToSave) return;
 
-        // Check if all fields are empty
         if (
             !rowToSave.dateOfRelegation.trim() ||
             !rowToSave.courseRelegatedTo.trim() ||
@@ -79,7 +123,6 @@ export default function Relegations() {
             }),
         );
         toast.success("Row saved successfully");
-        console.log("Row saved:", rowToSave);
     };
 
     const handleCancel = () => {
@@ -95,7 +138,6 @@ export default function Relegations() {
     const handleEdit = () => setIsEditing(true);
 
     const handleSave = () => {
-        // Check if there are any empty rows in edit mode
         const hasEmptyRows = relegationData.some(
             row =>
                 row.isRowEditing &&
@@ -110,13 +152,19 @@ export default function Relegations() {
         }
 
         setIsEditing(false);
-        console.log("Relegations Table saved:", relegationData);
         toast.success("Relegation data saved successfully");
     };
 
     return (
         <div>
             <h2 className="p-2 text-lg font-bold text-left text-gray-700 underline">Relegations, If Any</h2>
+
+            {isEditing && (
+                <div className="text-xs text-gray-500 text-right mb-2">
+                    ✓ Changes are saved automatically
+                </div>
+            )}
+
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead className="bg-gray-100">
@@ -229,7 +277,6 @@ export default function Relegations() {
                 </table>
             </div>
 
-            {/* Add Relegation Button - Only in Edit Mode */}
             {isEditing && (
                 <div className="flex gap-3 justify-center mt-4">
                     <Button onClick={handleAddRelegation} className="bg-green-600 hover:bg-green-700">
@@ -238,7 +285,6 @@ export default function Relegations() {
                 </div>
             )}
 
-            {/* Edit Buttons */}
             <div className="flex gap-3 justify-center mt-4">
                 {isEditing ? (
                     <>

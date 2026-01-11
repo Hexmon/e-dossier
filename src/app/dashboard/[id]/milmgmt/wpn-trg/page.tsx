@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -13,17 +14,18 @@ import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Shield, ChevronDown } from "lucide-react";
+import { Shield } from "lucide-react";
 import { toast } from "sonner";
 
 import WeaponTrainingForm from "@/components/wpnTrg/WeaponTrainingForm";
 import AchievementsForm from "@/components/wpnTrg/AchievementsForm";
-import { useOcPersonal } from "@/hooks/useOcPersonal";
+import { useOcDetails } from "@/hooks/useOcDetails";
 import { useWeaponTraining } from "@/hooks/useWeaponTraining";
 
 import type { WeaponTrainingRecord } from "@/app/lib/api/weaponTrainingApi";
 import { termPrefill } from "@/types/wpn-trg";
-import { useOcDetails } from "@/hooks/useOcDetails";
+import type { RootState } from "@/store";
+import { saveWeaponTrainingForm, clearWeaponTrainingForm } from "@/store/slices/weaponTrainingSlice";
 import Link from "next/link";
 
 export default function WpnTrgPage() {
@@ -45,6 +47,15 @@ export default function WpnTrgPage() {
     const [activeTab, setActiveTab] = useState<number>(0);
     const semesterApiNumber = activeTab + 3;
 
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.weaponTraining.forms[ocId]?.[semesterApiNumber]
+    );
+
+    // Ref to track last saved data for auto-save optimization
+    const lastSavedData = useRef<string>("");
+
     const {
         weaponRecords,
         achievements,
@@ -60,13 +71,119 @@ export default function WpnTrgPage() {
         loadAll();
     }, [ocId, loadAll]);
 
+    // Create stable default values - prioritize Redux cache over database
+    const getDefaultValues = useCallback(() => {
+        // First check Redux cache for this semester
+        if (savedFormData) {
+            console.log('Using Redux cache data');
+            return savedFormData;
+        }
+
+        // Then check database
+        const currentRecords = weaponRecords.filter(
+            (r: WeaponTrainingRecord) => r.semester === semesterApiNumber
+        );
+
+        if (currentRecords.length > 0 || achievements.length > 0) {
+            console.log('Using database data');
+            const mergedRecords = termPrefill.map((pref) => {
+                const match = currentRecords.find((r) => r.subject === pref.subject);
+                return match
+                    ? {
+                        id: match.id,
+                        subject: match.subject ?? pref.subject,
+                        maxMarks: match.maxMarks ?? pref.maxMarks,
+                        obtained: String(match.marksObtained ?? ""),
+                    }
+                    : pref;
+            });
+
+            return {
+                records: mergedRecords,
+                achievements: achievements.map((a) => ({
+                    id: a.id,
+                    achievement: a.achievement ?? "",
+                })),
+            };
+        }
+
+        // Finally use prefill
+        console.log('Using prefill data');
+        return {
+            records: termPrefill,
+            achievements: [{ achievement: "" }],
+        };
+    }, [savedFormData, weaponRecords, achievements, semesterApiNumber]);
+
     const weaponFormMethods = useForm({
-        defaultValues: { records: termPrefill },
+        mode: "onChange",
+        defaultValues: getDefaultValues(),
     });
+
+    const { reset, watch, getValues } = weaponFormMethods;
+
+    const [isSaving, setIsSaving] = useState(false);
+    const [editing, setEditing] = useState(false);
+
+    // Reset form when activeTab changes
+    useEffect(() => {
+        const newValues = getDefaultValues();
+        console.log('Resetting form with:', newValues);
+        reset(newValues);
+    }, [activeTab, reset, getDefaultValues]);
+
+    // Auto-save to Redux on form changes with debouncing
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
+        const subscription = watch((value) => {
+            if (!ocId || !value.records) return;
+
+            // Clear existing timeout
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+
+            // Debounce the save operation
+            timeoutId = setTimeout(() => {
+                const formData = {
+                    records: value.records as any[],
+                    achievements: value.achievements as any[] || [{ achievement: "" }],
+                };
+
+                // Compare stringified data to avoid unnecessary dispatches
+                const currentData = JSON.stringify(formData);
+                if (currentData !== lastSavedData.current) {
+                    console.log('Auto-saving to Redux:', formData);
+                    lastSavedData.current = currentData;
+                    dispatch(saveWeaponTrainingForm({
+                        ocId,
+                        semester: semesterApiNumber,
+                        data: formData,
+                    }));
+                }
+            }, 500);
+        });
+
+        return () => {
+            subscription.unsubscribe();
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
+    }, [watch, dispatch, ocId, semesterApiNumber]);
+
+    // Update lastSavedData when activeTab changes
+    useEffect(() => {
+        const defaultVals = getDefaultValues();
+        lastSavedData.current = JSON.stringify(defaultVals);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
 
     const onSaveWeapon = useCallback(
         async (data: { records: { maxMarks: number; obtained: string }[] }) => {
             try {
+                setIsSaving(true);
                 const payloads = termPrefill.map((pref, idx) => {
                     const formRow = data.records[idx] ?? { obtained: "" };
                     const existing = weaponRecords.find((r: WeaponTrainingRecord) => r.semester === semesterApiNumber && r.subject === pref.subject);
@@ -81,21 +198,66 @@ export default function WpnTrgPage() {
 
                 const ok = await saveWeaponRecords(payloads);
                 if (!ok) throw new Error("save failed");
+
+                toast.success("Weapon training saved successfully");
+                await loadAll();
+
+                // Clear Redux cache for this semester after successful save
+                dispatch(clearWeaponTrainingForm({ ocId, semester: semesterApiNumber }));
+                setEditing(false);
             } catch (err) {
                 console.error(err);
                 toast.error("Failed to save weapon training");
+            } finally {
+                setIsSaving(false);
             }
         },
-        [weaponRecords, semesterApiNumber, saveWeaponRecords]
+        [weaponRecords, semesterApiNumber, saveWeaponRecords, loadAll, dispatch, ocId]
     );
 
     const onSaveAchievements = useCallback(
         async (list: { achievement: string }[]) => {
-            const cleaned = list.map((l) => ({ achievement: l.achievement ?? "" })).filter((l) => l.achievement.trim() !== "");
-            await saveAchievements(cleaned);
+            try {
+                setIsSaving(true);
+                const cleaned = list.map((l) => ({ achievement: l.achievement ?? "" })).filter((l) => l.achievement.trim() !== "");
+                await saveAchievements(cleaned);
+                toast.success("Achievements saved successfully");
+                await loadAll();
+
+                // Clear Redux cache for this semester after successful save
+                dispatch(clearWeaponTrainingForm({ ocId, semester: semesterApiNumber }));
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to save achievements");
+            } finally {
+                setIsSaving(false);
+            }
         },
-        [saveAchievements]
+        [saveAchievements, loadAll, dispatch, ocId, semesterApiNumber]
     );
+
+    const handleCancel = async () => {
+        // Clear Redux cache and reload from database
+        dispatch(clearWeaponTrainingForm({ ocId, semester: semesterApiNumber }));
+        await loadAll();
+        setEditing(false);
+    };
+
+    const handleReset = () => {
+        const resetData = {
+            records: termPrefill,
+            achievements: [{ achievement: "" }],
+        };
+
+        reset(resetData);
+
+        // Update Redux cache
+        dispatch(saveWeaponTrainingForm({
+            ocId,
+            semester: semesterApiNumber,
+            data: resetData,
+        }));
+    };
 
     return (
         <DashboardLayout title="Weapon Training (WPN TRG)" description="Marks and achievements">
@@ -135,7 +297,6 @@ export default function WpnTrgPage() {
                                                 type="button"
                                                 onClick={() => {
                                                     setActiveTab(i);
-                                                    // reload server snapshot for this oc
                                                     loadAll();
                                                 }}
                                                 className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === i ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
@@ -150,11 +311,14 @@ export default function WpnTrgPage() {
                                     semesterNumber={semesterApiNumber}
                                     inputPrefill={termPrefill}
                                     savedRecords={weaponRecords}
-                                    onSave={async (vals) => {
-                                        await onSaveWeapon(vals);
-                                        await loadAll();
-                                    }}
+                                    onSave={onSaveWeapon}
                                     formMethods={weaponFormMethods}
+                                    disabled={!editing}
+                                    editing={editing}
+                                    onEdit={() => setEditing(true)}
+                                    onCancel={handleCancel}
+                                    onReset={handleReset}
+                                    isSaving={isSaving}
                                 />
 
                                 <div className="mt-6">
@@ -165,8 +329,16 @@ export default function WpnTrgPage() {
                                             await deleteAchievement(id);
                                             await loadAll();
                                         }}
+                                        disabled={!editing}
+                                        control={weaponFormMethods.control}
+                                        register={weaponFormMethods.register}
                                     />
                                 </div>
+
+                                {/* Auto-save indicator */}
+                                <p className="text-sm text-muted-foreground text-center mt-4">
+                                    * Changes are automatically saved to your browser
+                                </p>
                             </CardContent>
                         </Card>
                     </TabsContent>
