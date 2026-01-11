@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -23,20 +23,9 @@ interface Props {
 export default function OfficerCadetFormComponent({ ocId, onSave }: Props) {
     const dispatch = useDispatch();
 
+    /* 🔒 All hooks must be first */
     const { cadet } = useOcDetails(ocId);
 
-    if (!cadet) return null;
-
-    const selectedCadet = {
-        name: cadet.name,
-        courseName: cadet.courseName,
-        ocNumber: cadet.ocNumber,
-        ocId: cadet.ocId,
-        course: cadet.course,
-    };
-
-
-    /*  Redux Persist */
     const savedData = useSelector(
         (state: RootState) => state.officerCadetForm.forms[ocId]
     );
@@ -62,16 +51,14 @@ export default function OfficerCadetFormComponent({ ocId, onSave }: Props) {
 
     const { register, handleSubmit, reset, watch } = form;
 
-    /* Load persisted data */
-    useEffect(() => {
-        if (savedData) {
-            reset(savedData);
-        }
-    }, [savedData, reset]);
-
-    /* Auto-save (debounced) */
     const debouncedValues = useDebounce(watch(), 500);
 
+    /* 🔄 Load redux-persisted data */
+    useEffect(() => {
+        if (savedData) reset(savedData);
+    }, [savedData, reset]);
+
+    /* 💾 Auto-save */
     useEffect(() => {
         if (!debouncedValues) return;
 
@@ -87,6 +74,9 @@ export default function OfficerCadetFormComponent({ ocId, onSave }: Props) {
             dispatch(saveForm({ ocId, data: debouncedValues }));
         }
     }, [debouncedValues, dispatch, ocId]);
+
+    /* 🧠 Now it's safe to do conditions */
+    if (!cadet) return null;
 
     const onSubmit = (data: OfficerCadetForm) => {
         if (!data.name?.trim()) {
@@ -130,7 +120,6 @@ export default function OfficerCadetFormComponent({ ocId, onSave }: Props) {
                 <TabsTrigger value="preview">Preview</TabsTrigger>
             </TabsList>
 
-            {/* FORM TAB */}
             <TabsContent value="form">
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div className="text-xs text-gray-500 text-right">
@@ -179,7 +168,6 @@ export default function OfficerCadetFormComponent({ ocId, onSave }: Props) {
                 </form>
             </TabsContent>
 
-            {/* PREVIEW TAB */}
             <TabsContent value="preview">
                 {!savedData ? (
                     <p className="italic text-gray-500 text-center">
