@@ -25,7 +25,7 @@ const CSP_DEV = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https:",
+  "img-src 'self' data: https: http:",
   "font-src 'self' data:",
   // Allow dev tooling (HMR, RSC transport, etc.) to open connections freely.
   "connect-src *",

@@ -10,7 +10,7 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { eq } from 'drizzle-orm';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
-import { getPublicObjectUrl, buildImageKey, createPresignedUploadUrl, headObject } from '@/app/lib/storage';
+import { getPublicObjectUrl, buildImageKey, createPresignedUploadUrl, headObject, createPresignedGetUrl } from '@/app/lib/storage';
 import { getOcImage, upsertOcImage } from '@/app/db/queries/oc';
 
 const OcIdParam = z.object({ ocId: z.string().uuid() });
@@ -70,7 +70,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
     const images: Record<string, any> = { CIVIL_DRESS: null, UNIFORM: null };
     for (const row of imagesRows) {
       if (!row.deletedAt) {
-        images[row.kind] = getPublicObjectUrl(row.objectKey);
+        images[row.kind] = await createPresignedGetUrl({ key: row.objectKey });
       }
     }
 
