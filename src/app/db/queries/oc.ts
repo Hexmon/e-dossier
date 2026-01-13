@@ -2,7 +2,7 @@ import { db } from '@/app/db/client';
 import { ApiError } from '@/app/lib/http';
 import {
     ocPersonal, ocFamilyMembers, ocEducation, ocAchievements,
-    ocAutobiography, ocSsbReports, ocSsbPoints,
+    ocAutobiography, ocDossierFilling, ocSsbReports, ocSsbPoints,
     ocMedicals, ocMedicalCategory, ocDiscipline, ocParentComms,
     ocPreCommission,
     ocCommissioning,
@@ -1957,4 +1957,23 @@ export async function recomputeOcCampTotal(ocCampId: string) {
         .where(eq(ocCamps.id, ocCampId))
         .returning();
     return row;
+}
+
+// ---- Dossier Filling (upsert single) -----------------------------------------
+export async function getDossierFilling(ocId: string) {
+    const [row] = await db.select().from(ocDossierFilling).where(eq(ocDossierFilling.ocId, ocId)).limit(1);
+    return row ?? null;
+}
+export async function upsertDossierFilling(ocId: string, data: Partial<typeof ocDossierFilling.$inferInsert>) {
+    const existing = await getDossierFilling(ocId);
+    if (existing) {
+        const [row] = await db.update(ocDossierFilling).set(data).where(eq(ocDossierFilling.ocId, ocId)).returning();
+        return row;
+    }
+    const [row] = await db.insert(ocDossierFilling).values({ ocId, ...data }).returning();
+    return row;
+}
+export async function deleteDossierFilling(ocId: string) {
+    const [row] = await db.delete(ocDossierFilling).where(eq(ocDossierFilling.ocId, ocId)).returning();
+    return row ?? null;
 }

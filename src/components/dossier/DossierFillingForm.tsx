@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -9,22 +8,42 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-
+import { useDossierFilling } from "@/hooks/useDossierFilling";
 
 import type { DossierFormData } from "@/types/dossierFilling";
 
+interface DossierFillingFormProps {
+    ocId: string;
+}
 
 /**
- * Self-contained Dossier Filling form component.
+ * Dossier Filling form component integrated with API.
+ * - Loads data from API on mount
+ * - Saves data to API
  * - View mode by default with Edit button
  * - Tabs are inside edit mode
  * - Strict typing, no `any`
  * - Destructures values with fallbacks
  * - map() that returns JSX lives inside a return
  */
-export default function DossierFillingForm() {
+
+// Helper function to format dates
+function formatDate(dateString: string | null | undefined): string {
+    if (!dateString) return "-";
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "-";
+        return date.toLocaleDateString('en-GB'); // DD/MM/YYYY format
+    } catch {
+        return "-";
+    }
+}
+
+export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
     const [isEditMode, setIsEditMode] = useState(false);
-    
+
+    const { dossierFilling, loading, isSaving, saveDossierFilling } = useDossierFilling(ocId);
+
     const form = useForm<DossierFormData>({
         defaultValues: {
             initiatedBy: "",
@@ -36,24 +55,20 @@ export default function DossierFillingForm() {
         },
     });
 
+    const { register, handleSubmit, reset, setValue } = form;
 
-    const { register, handleSubmit, reset, watch } = form;
-    const watchedValues = watch();
-
-
-    // local saved dossier used for preview
-    const [savedDossier, setSavedDossier] = useState<DossierFormData | null>(null);
-
-
-    // keep preview in sync optionally if you want live preview; here we keep saved preview after Save
+    // Set form values when dossierFilling loads
     useEffect(() => {
-        return () => {
-            // cleanup if needed
-        };
-    }, []);
+        if (dossierFilling) {
+            Object.entries(dossierFilling).forEach(([key, value]) => {
+                setValue(key as keyof DossierFormData, value || "");
+            });
+        } else {
+            reset();
+        }
+    }, [dossierFilling, setValue, reset]);
 
-
-    const onSubmit = (data: DossierFormData) => {
+    const onSubmit = async (data: DossierFormData) => {
         // simple validation example
         const { initiatedBy = "" } = data;
         if (!initiatedBy.trim()) {
@@ -61,11 +76,12 @@ export default function DossierFillingForm() {
             return;
         }
 
-
-        setSavedDossier(data);
-        toast.success("Dossier saved successfully.");
-        setIsEditMode(false);
-        reset();
+        try {
+            await saveDossierFilling(data);
+            setIsEditMode(false);
+        } catch (error) {
+            // Error handling is done in the hook
+        }
     };
 
     const handleEditClick = () => {
@@ -77,13 +93,11 @@ export default function DossierFillingForm() {
         reset();
     };
 
-
     // Helper to render label/value rows (map returns JSX inside return)
     function RenderSavedRows({ dossier }: { dossier: DossierFormData | null }) {
         if (!dossier) {
-            return <p className="text-gray-500 italic text-center">No dossier data saved yet.</p>;
+            return <p className="text-gray-500 italic text-center">No dossier data available.</p>;
         }
-
 
         const {
             initiatedBy = "-",
@@ -94,16 +108,14 @@ export default function DossierFillingForm() {
             finalInterview = "-",
         } = dossier;
 
-
         const pairs: Array<[string, string]> = [
             ["Initiated By", initiatedBy || "-"],
-            ["Opened On", openedOn || "-"],
+            ["Opened On", formatDate(openedOn)],
             ["Initial Interview", initialInterview || "-"],
             ["Closed By", closedBy || "-"],
-            ["Closed On", closedOn || "-"],
+            ["Closed On", formatDate(closedOn)],
             ["Final Interview", finalInterview || "-"],
         ];
-
 
         return (
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -116,13 +128,21 @@ export default function DossierFillingForm() {
         );
     }
 
+    if (loading) {
+        return (
+            <Card className="max-w-4xl mx-auto shadow-lg rounded-2xl">
+                <CardContent className="p-6">
+                    <p className="text-center">Loading dossier data...</p>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card className="max-w-4xl mx-auto shadow-lg rounded-2xl">
             <CardHeader>
                 <CardTitle className="text-xl font-semibold text-center">Dossier Details</CardTitle>
             </CardHeader>
-
 
             <CardContent>
                 {!isEditMode ? (
@@ -134,7 +154,7 @@ export default function DossierFillingForm() {
                                 Edit
                             </Button>
                         </div>
-                        <RenderSavedRows dossier={savedDossier} />
+                        <RenderSavedRows dossier={dossierFilling} />
                     </div>
                 ) : (
                     // EDIT MODE
@@ -148,19 +168,16 @@ export default function DossierFillingForm() {
                                         <Input placeholder="Enter your name" {...register("initiatedBy")} />
                                     </div>
 
-
                                     <div>
                                         <label className="text-sm font-medium">Opened On</label>
                                         <Input type="date" {...register("openedOn")} />
                                     </div>
                                 </div>
 
-
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Initial Interview</label>
                                     <Textarea placeholder="Enter initial interview notes..." className="min-h-[100px]" {...register("initialInterview")} />
                                 </div>
-
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
@@ -168,22 +185,21 @@ export default function DossierFillingForm() {
                                         <Input placeholder="Enter your name" {...register("closedBy")} />
                                     </div>
 
-
                                     <div>
                                         <label className="text-sm font-medium">Closed On</label>
                                         <Input type="date" {...register("closedOn")} />
                                     </div>
                                 </div>
 
-
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Final Interview</label>
                                     <Textarea placeholder="Enter final interview notes..." className="min-h-[100px]" {...register("finalInterview")} />
                                 </div>
 
-
                                 <div className="flex justify-center gap-2 mt-6">
-                                    <Button type="submit" className="bg-[#40ba4d]">Save</Button>
+                                    <Button type="submit" disabled={isSaving} className="bg-[#40ba4d]">
+                                        {isSaving ? "Saving..." : "Save"}
+                                    </Button>
                                     <Button variant="outline" type="button" className="hover:bg-destructive hover:text-white" onClick={handleCancel}>
                                         Cancel
                                     </Button>
@@ -191,12 +207,11 @@ export default function DossierFillingForm() {
                             </form>
                         </TabsContent>
 
-
                         {/* VIEW TAB */}
                         <TabsContent value="view">
                             <div className="p-6 border rounded-lg bg-gray-50">
                                 <h3 className="text-lg font-semibold mb-4">Dossier Filling Data</h3>
-                                <RenderSavedRows dossier={savedDossier} />
+                                <RenderSavedRows dossier={dossierFilling} />
                             </div>
                         </TabsContent>
                     </Tabs>

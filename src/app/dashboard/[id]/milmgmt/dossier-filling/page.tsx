@@ -7,15 +7,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import DossierTab from "@/components/Tabs/DossierTab";
-import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Shield, ChevronDown } from "lucide-react";
+import { dossierTabs } from "@/config/app.config";
 import { TabsContent } from "@/components/ui/tabs";
 
 import { useOcDetails } from "@/hooks/useOcDetails";
@@ -64,7 +56,7 @@ export default function DossierFillingPage() {
         <DossierTab tabs={dossierTabs} defaultValue="dossier-filling" ocId={ocId}>
           <TabsContent value="dossier-filling">
             <section className="p-6">
-              <DossierFillingForm />
+              <DossierFillingForm ocId={ocId} />
             </section>
           </TabsContent>
         </DossierTab>

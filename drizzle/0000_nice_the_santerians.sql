@@ -681,6 +681,18 @@ CREATE TABLE "oc_weapon_training" (
 	"deleted_at" timestamp with time zone
 );
 --> statement-breakpoint
+CREATE TABLE "oc_dossier_filling" (
+	"oc_id" uuid PRIMARY KEY NOT NULL,
+	"initiated_by" varchar(160),
+	"opened_on" timestamp with time zone,
+	"initial_interview" text,
+	"closed_by" varchar(160),
+	"closed_on" timestamp with time zone,
+	"final_interview" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "training_camp_activities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"training_camp_id" uuid NOT NULL,
@@ -797,6 +809,7 @@ ALTER TABLE "oc_ssb_points" ADD CONSTRAINT "oc_ssb_points_report_id_oc_ssb_repor
 ALTER TABLE "oc_ssb_points" ADD CONSTRAINT "oc_ssb_points_author_user_id_users_id_fk" FOREIGN KEY ("author_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "oc_ssb_reports" ADD CONSTRAINT "oc_ssb_reports_oc_id_oc_cadets_id_fk" FOREIGN KEY ("oc_id") REFERENCES "public"."oc_cadets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "oc_weapon_training" ADD CONSTRAINT "oc_weapon_training_oc_id_oc_cadets_id_fk" FOREIGN KEY ("oc_id") REFERENCES "public"."oc_cadets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "oc_dossier_filling" ADD CONSTRAINT "oc_dossier_filling_oc_id_oc_cadets_id_fk" FOREIGN KEY ("oc_id") REFERENCES "public"."oc_cadets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "training_camp_activities" ADD CONSTRAINT "training_camp_activities_training_camp_id_training_camps_id_fk" FOREIGN KEY ("training_camp_id") REFERENCES "public"."training_camps"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "uq_platoons_key" ON "platoons" USING btree ("key");--> statement-breakpoint
 CREATE INDEX "ix_signup_requests_status" ON "signup_requests" USING btree ("status");--> statement-breakpoint
