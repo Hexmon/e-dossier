@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { OfficerCadetForm } from "@/types/dossierSnap";
 import { useDossierSnapshot } from "@/hooks/useDossierSnapshot";
-import { useDebounce } from "@/hooks/useDebounce";
 
 interface Props {
     ocId: string;
@@ -18,8 +17,6 @@ interface Props {
 
 export default function OfficerCadetFormComponent({ ocId }: Props) {
     const [isEditMode, setIsEditMode] = useState(false);
-
-    const handleEditClick = () => setIsEditMode(true);
 
     const { dossierSnapshot, saveSnapshot, loadingSnapshot } = useDossierSnapshot(ocId);
 
@@ -44,7 +41,7 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
 
     const { register, handleSubmit, reset, watch } = form;
 
-    const debouncedValues = useDebounce(watch(), 500);
+    const handleEditClick = () => setIsEditMode(true);
 
     /* 🔄 Load redux-persisted data */
     useEffect(() => {
@@ -102,6 +99,11 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
 
         await saveSnapshot(formData);
         setIsEditMode(false);
+    };
+
+    const handleReset = () => {
+        if (!confirm("Clear all officer cadet details?")) return;
+        reset();
     };
 
     const handleCancel = () => {
@@ -207,7 +209,7 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
             ) : (
                 // EDIT MODE
                 <Tabs defaultValue="form">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList>
                         <TabsTrigger value="form">Form</TabsTrigger>
                         <TabsTrigger value="preview">Preview</TabsTrigger>
                     </TabsList>

@@ -22,13 +22,15 @@ export default function DossierSnapshotPage() {
 
   const { cadet } = useOcDetails(ocId);
 
-  const selectedCadet = cadet ? {
-    name: cadet.name,
-    courseName: cadet.courseName,
-    ocNumber: cadet.ocNumber,
-    ocId: cadet.ocId,
-    course: cadet.course,
-  } : null;
+  const {
+    name = "",
+    courseName = "",
+    ocNumber = "",
+    ocId: cadetOcId = ocId,
+    course = "",
+  } = cadet ?? {};
+
+  const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
 
   return (
     <DashboardLayout title="Dossier Snapshot" description="Quickly view and analyze OC details">
