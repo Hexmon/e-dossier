@@ -2,6 +2,18 @@
 import { api } from "@/app/lib/apiClient";
 import { baseURL, endpoints } from "@/constants/endpoints";
 
+export interface CourseRef {
+  id: string;
+  code: string;
+  title?: string;
+}
+
+export interface PlatoonRef {
+  id: string;
+  key: string;
+  name: string;
+}
+
 /** Base OC row from oc_cadets */
 export interface OCRecord {
   id: string;
@@ -9,12 +21,13 @@ export interface OCRecord {
   name: string;
   ocNo: string;
   uid?: string;
-  courseId: string;
   branch?: "E" | "M" | "O" | null;
   platoonId?: string | null;
-  arrivalAtUniversity: string; // ISO string
+  arrivalAtUniversity: string;
   withdrawnOn?: string | null;
   createdAt?: string;
+  course?: CourseRef;
+  platoon?: PlatoonRef;
 }
 
 /** Optional denormalized fields the list API now returns */
