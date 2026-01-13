@@ -90,7 +90,7 @@ export default function DossierInspSheetPage() {
                 >
                     <TabsContent value="dossier-insp">
                         <section className="p-6">
-                            <InspFormComponent ocId={ocId} />
+                            <InspFormComponent />
                         </section>
                     </TabsContent>
                 </DossierTab>
