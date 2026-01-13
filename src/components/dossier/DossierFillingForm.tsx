@@ -120,13 +120,27 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
             return <p className="text-gray-500 italic text-center">No dossier data available.</p>;
         }
 
+        // Fields to display, excluding ocId, createdAt, updatedAt
+        const displayFields = [
+            { key: 'initiatedBy', label: 'Initiated By' },
+            { key: 'openedOn', label: 'Opened On' },
+            { key: 'initialInterview', label: 'Initial Interview' },
+            { key: 'closedBy', label: 'Closed By' },
+            { key: 'closedOn', label: 'Closed On' },
+            { key: 'finalInterview', label: 'Final Interview' },
+        ];
+
         return (
             <div className="grid grid-cols-2 gap-4 text-sm">
-                {Object.entries(dossier).map(([k, v]) => (
-                    <p key={k}>
-                        <strong>{k}:</strong> {v || "-"}
-                    </p>
-                ))}
+                {displayFields.map(({ key, label }) => {
+                    const value = (dossier as any)[key];
+                    const displayValue = (key === 'openedOn' || key === 'closedOn') ? formatDate(value) : (value || "-");
+                    return (
+                        <p key={key}>
+                            <strong>{label}:</strong> {displayValue}
+                        </p>
+                    );
+                })}
             </div>
         );
     }
@@ -164,10 +178,6 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
                 ) : (
                     // EDIT MODE
                     <Tabs defaultValue="form" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="form">Form</TabsTrigger>
-                            <TabsTrigger value="view">View</TabsTrigger>
-                        </TabsList>
 
                         <TabsContent value="form">
                             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
