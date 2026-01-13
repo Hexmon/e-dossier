@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { createOcClub, updateOcClub, getOcClubs } from "@/app/lib/api/clubApi";
@@ -7,7 +8,7 @@ import { FormValues } from "@/types/club-detls";
 export const useClubActions = (selectedCadet: any) => {
     const { getValues, setValue } = useFormContext<FormValues>();
 
-    const submitClub = async () => {
+    const submitClub = useCallback(async () => {
         try {
             const { clubRows } = getValues();
             if (!selectedCadet?.ocId) throw new Error("No cadet selected");
@@ -49,13 +50,13 @@ export const useClubActions = (selectedCadet: any) => {
             console.error(err);
             toast.error("Failed to save club details");
         }
-    };
+    }, [selectedCadet?.ocId, getValues, setValue]);
 
-    const fetchClub = async () => {
+    const fetchClub = useCallback(async () => {
         if (!selectedCadet?.ocId) return [];
         const res: any = await getOcClubs(selectedCadet.ocId);
         return res?.items ?? res ?? [];
-    };
+    }, [selectedCadet?.ocId]);
 
     return { submitClub, fetchClub };
 };

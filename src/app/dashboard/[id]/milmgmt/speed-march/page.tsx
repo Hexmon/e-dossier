@@ -1,9 +1,10 @@
 // app/(dashboard)/[id]/speed-march-runback/page.tsx
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -15,18 +16,16 @@ import { TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Shield, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 import { tablePrefill, terms as termsConst, termColumns } from "@/constants/app.constants";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import { Button } from "@/components/ui/button";
-import { useForm as useHookForm } from "react-hook-form";
 import { useSpeedMarch } from "@/hooks/useSpeedMarch";
 import SpeedMarchForm from "@/components/speedMarch/SpeedMarchForm";
-import Link from "next/link";
+import type { RootState } from "@/store";
+import { saveSpeedMarchForm, clearSpeedMarchForm } from "@/store/slices/speedMarchSlice";
 
-/**
- * Page-level types
- */
 type Row = {
     id?: string;
     test: string;
@@ -48,7 +47,6 @@ export default function SpeedMarchPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
 
-    // fetch cadet via hook using route param
     const { cadet } = useOcDetails(ocId);
     const {
         name = "",
@@ -64,65 +62,145 @@ export default function SpeedMarchPage() {
     const semesterBase = 4; // IV -> 4
     const semesterNumber = activeTab + semesterBase;
 
-    // hook for server records
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.speedMarch.forms[ocId]?.[semesterNumber]
+    );
+
+    // Ref to track last saved data for auto-save optimization
+    const lastSavedData = useRef<string>("");
+
     const { records, loading, loadAll, saveRecords, updateRecord, deleteRecord } = useSpeedMarch(ocId);
 
-    // editing state toggles & saving
     const [isEditingAll, setIsEditingAll] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    // shared form methods (optional to pass to form)
-    const formMethods = useHookForm<TermData>({ defaultValues: { records: tablePrefill } });
-
-    // load snapshot when ocId changes
     useEffect(() => {
         if (!ocId) return;
         void loadAll();
     }, [ocId, loadAll]);
 
-    // compute merged prefills for the semester (prefill + latest saved)
-    const mergedForSemester = useMemo(() => {
-        const savedForSem = (records ?? []).filter((r) => Number(r.semester ?? 0) === Number(semesterNumber));
-        return tablePrefill.map((p) => {
-            const {
-                id: prefId,
-                test: prefTest,
-                timing10Label: prefT10 = "",
-                distance10: prefD10 = "",
-                timing20Label: prefT20 = "",
-                distance20: prefD20 = "",
-                timing30Label: prefT30 = "",
-                distance30: prefD30 = "",
-                marks: prefMarks = "",
-                remark: prefRemark = "",
-            } = p;
-            const latest = [...savedForSem].slice().reverse().find((s) => (s.test ?? "") === (prefTest ?? ""));
-            const id = latest?.id ?? prefId;
-            const test = prefTest ?? "-";
-            const timing10Label = prefT10 ?? "";
-            const distance10 = latest && Number(latest.semester) === semesterNumber ? (latest.timings ?? "") : prefD10 ?? "";
-            const timing20Label = prefT20 ?? "";
-            const distance20 = latest && Number(latest.semester) === semesterNumber ? (latest.timings ?? "") : prefD20 ?? "";
-            const timing30Label = prefT30 ?? "";
-            const distance30 = latest && Number(latest.semester) === semesterNumber ? (latest.timings ?? "") : prefD30 ?? "";
-            const marks = String(latest?.marks ?? prefMarks ?? "");
-            const remark = String(latest?.remark ?? prefRemark ?? "");
-            return {
-                id,
-                test,
-                timing10Label,
-                distance10,
-                timing20Label,
-                distance20,
-                timing30Label,
-                distance30,
-                marks,
-                remark,
-            } as Row;
-        });
-    }, [records, semesterNumber]);
+    // Create stable default values - prioritize Redux cache over database
+    const getDefaultValues = useCallback(() => {
+        // First check Redux cache for this semester
+        if (savedFormData) {
+            console.log('Using Redux cache data');
+            return savedFormData;
+        }
 
-    // Save handler called by form
+        // Then check database
+        const savedForSem = (records ?? []).filter((r) => Number(r.semester ?? 0) === Number(semesterNumber));
+
+        if (savedForSem.length > 0) {
+            console.log('Using database data');
+            const mergedRecords = tablePrefill.map((p) => {
+                const {
+                    id: prefId,
+                    test: prefTest,
+                    timing10Label: prefT10 = "",
+                    distance10: prefD10 = "",
+                    timing20Label: prefT20 = "",
+                    distance20: prefD20 = "",
+                    timing30Label: prefT30 = "",
+                    distance30: prefD30 = "",
+                    marks: prefMarks = "",
+                    remark: prefRemark = "",
+                } = p;
+                const latest = [...savedForSem].slice().reverse().find((s) => (s.test ?? "") === (prefTest ?? ""));
+                const id = latest?.id ?? prefId;
+                const test = prefTest ?? "-";
+                const timing10Label = prefT10 ?? "";
+                const distance10 = latest && Number(latest.semester) === semesterNumber ? (latest.timings ?? "") : prefD10 ?? "";
+                const timing20Label = prefT20 ?? "";
+                const distance20 = latest && Number(latest.semester) === semesterNumber ? (latest.timings ?? "") : prefD20 ?? "";
+                const timing30Label = prefT30 ?? "";
+                const distance30 = latest && Number(latest.semester) === semesterNumber ? (latest.timings ?? "") : prefD30 ?? "";
+                const marks = String(latest?.marks ?? prefMarks ?? "");
+                const remark = String(latest?.remark ?? prefRemark ?? "");
+                return {
+                    id,
+                    test,
+                    timing10Label,
+                    distance10,
+                    timing20Label,
+                    distance20,
+                    timing30Label,
+                    distance30,
+                    marks,
+                    remark,
+                } as Row;
+            });
+
+            return { records: mergedRecords };
+        }
+
+        // Finally use prefill
+        console.log('Using prefill data');
+        return { records: tablePrefill };
+    }, [savedFormData, records, semesterNumber]);
+
+    const formMethods = useForm<TermData>({
+        mode: "onChange",
+        defaultValues: getDefaultValues()
+    });
+
+    const { reset, watch } = formMethods;
+
+    // Reset form when activeTab changes
+    useEffect(() => {
+        const newValues = getDefaultValues();
+        console.log('Resetting form with:', newValues);
+        reset(newValues);
+    }, [activeTab, reset, getDefaultValues]);
+
+    // Auto-save to Redux on form changes with debouncing
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
+        const subscription = watch((value) => {
+            if (!ocId || !value.records) return;
+
+            // Clear existing timeout
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+
+            // Debounce the save operation
+            timeoutId = setTimeout(() => {
+                const formData = {
+                    records: value.records as any[],
+                };
+
+                // Compare stringified data to avoid unnecessary dispatches
+                const currentData = JSON.stringify(formData);
+                if (currentData !== lastSavedData.current) {
+                    console.log('Auto-saving to Redux:', formData);
+                    lastSavedData.current = currentData;
+                    dispatch(saveSpeedMarchForm({
+                        ocId,
+                        semester: semesterNumber,
+                        data: formData,
+                    }));
+                }
+            }, 500);
+        });
+
+        return () => {
+            subscription.unsubscribe();
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
+    }, [watch, dispatch, ocId, semesterNumber]);
+
+    // Update lastSavedData when activeTab changes
+    useEffect(() => {
+        const defaultVals = getDefaultValues();
+        lastSavedData.current = JSON.stringify(defaultVals);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
+
     const handleSaveTerm = useCallback(
         async (formData: TermData) => {
             if (!ocId) {
@@ -143,7 +221,7 @@ export default function SpeedMarchPage() {
                         : "";
 
                     if (timings === "") {
-                        return null; // prevents backend error
+                        return null;
                     }
 
                     const marks = Number(String(r.marks ?? tablePrefill[idx].marks ?? "0"));
@@ -174,10 +252,12 @@ export default function SpeedMarchPage() {
 
                 if (!ok) throw new Error("save failed");
 
-                // refresh server snapshot
+                toast.success("Speed march saved successfully");
                 await loadAll();
+
+                // Clear Redux cache for this semester after successful save
+                dispatch(clearSpeedMarchForm({ ocId, semester: semesterNumber }));
                 setIsEditingAll(false);
-                toast.success("Speed march saved");
             } catch (err) {
                 console.error("handleSaveTerm", err);
                 toast.error("Failed to save speed march");
@@ -185,14 +265,19 @@ export default function SpeedMarchPage() {
                 setIsSaving(false);
             }
         },
-        [ocId, activeTab, semesterNumber, saveRecords, loadAll]
+        [ocId, activeTab, semesterNumber, saveRecords, loadAll, dispatch]
     );
 
-    // Handle tab change
+    const handleCancel = async () => {
+        // Clear Redux cache and reload from database
+        dispatch(clearSpeedMarchForm({ ocId, semester: semesterNumber }));
+        await loadAll();
+        setIsEditingAll(false);
+    };
+
     const handleTabChange = (index: number) => {
         setActiveTab(index);
         setIsEditingAll(false);
-        void loadAll();
     };
 
     return (
@@ -254,12 +339,12 @@ export default function SpeedMarchPage() {
 
                                 <SpeedMarchForm
                                     semesterNumber={semesterNumber}
-                                    inputPrefill={mergedForSemester}
                                     savedRecords={records}
                                     onSave={handleSaveTerm}
                                     isEditing={isEditingAll}
-                                    onCancelEdit={() => setIsEditingAll(false)}
+                                    onCancelEdit={handleCancel}
                                     formMethods={formMethods}
+                                    isSaving={isSaving}
                                 />
 
                                 <div className="flex justify-center mb-4">
@@ -269,6 +354,11 @@ export default function SpeedMarchPage() {
                                         </Button>
                                     ) : null}
                                 </div>
+
+                                {/* Auto-save indicator */}
+                                <p className="text-sm text-muted-foreground text-center mt-4">
+                                    * Changes are automatically saved to your browser
+                                </p>
                             </CardContent>
                         </Card>
                     </TabsContent>

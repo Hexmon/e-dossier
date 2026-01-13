@@ -134,12 +134,12 @@ export default function OCManagementPage() {
     const oc = ocList[index];
     setEditingIndex(index);
 
-    setValue("name", oc.name ?? "");
-    setValue("ocNo", oc.ocNo ?? "");
-    setValue("courseId", oc.courseId ?? "");
-    setValue("branch", oc.branch ?? undefined);
-    setValue("platoonId", oc.platoonId ?? "");
-    setValue("arrivalAtUniversity", oc.arrivalAtUniversity?.slice(0, 10) ?? "");
+    // setValue("name", oc.name ?? "");
+    // setValue("ocNo", oc.ocNo ?? "");
+    // setValue("courseId", oc.courseId ?? "");
+    // setValue("branch", oc.branch ?? undefined);
+    // setValue("platoonId", oc.platoonId ?? "");
+    // setValue("arrivalAtUniversity", oc.arrivalAtUniversity?.slice(0, 10) ?? "");
 
     setIsDialogOpen(true);
   };
@@ -301,13 +301,15 @@ export default function OCManagementPage() {
       {/* Add / Edit dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <OCForm
-          defaultValues={{}}
+          key={editingIndex !== null ? ocList[editingIndex]?.id : 'new'}
+          defaultValues={editingIndex !== null ? ocList[editingIndex] : {}}
           courses={courses}
           platoons={platoons}
           isEditing={editingIndex !== null}
           onCancel={() => {
             setIsDialogOpen(false);
             reset();
+            setEditingIndex(null);
           }}
           onSubmit={onSubmit}
         />

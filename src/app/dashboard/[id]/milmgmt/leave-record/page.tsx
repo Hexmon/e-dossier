@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -28,10 +28,18 @@ import { toast } from "sonner";
 import { useParams } from "next/navigation";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Link from "next/link";
+import { clearLeaveForm, saveLeaveForm } from "@/store/slices/leaveRecordsSlice";
+import { Cadet } from "@/types/cadet";
 
 export default function LeavePage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const dispatch = useDispatch();
+
+    // Get saved form data from Redux
+    const savedFormData = useSelector((state: RootState) =>
+        state.leaveRecords.forms[ocId]
+    );
 
     // Load cadet data via hook (no redux)
     const { cadet } = useOcDetails(ocId);
@@ -52,9 +60,32 @@ export default function LeavePage() {
         course,
     };
 
+    // Initialize form with saved data or defaults
+    const getDefaultValues = (): LeaveFormValues => {
+        if (savedFormData && savedFormData.length > 0) {
+            return {
+                leaveRows: savedFormData.map(row => ({
+                    ...row,
+                    id: row.id ?? null,
+                    type: "LEAVE",
+                })),
+            };
+        }
+        return { leaveRows: defaultLeaveRows };
+    };
+
+
     const methods = useForm<LeaveFormValues>({
-        defaultValues: { leaveRows: defaultLeaveRows },
+        defaultValues: getDefaultValues(),
     });
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearLeaveForm(ocId));
+            methods.reset({ leaveRows: defaultLeaveRows });
+            toast.info("Form cleared");
+        }
+    };
 
     return (
         <DashboardLayout
@@ -77,7 +108,11 @@ export default function LeavePage() {
                 )}
 
                 <FormProvider {...methods}>
-                    <InnerLeavePage selectedCadet={selectedCadet} ocId={ocId} />
+                    <InnerLeavePage
+                        selectedCadet={selectedCadet}
+                        ocId={ocId}
+                        onClearForm={handleClearForm}
+                    />
                 </FormProvider>
             </main>
         </DashboardLayout>
@@ -88,8 +123,17 @@ export default function LeavePage() {
 // INNER PAGE (with DossierTab present)
 // -----------------------------------------------------------
 
-function InnerLeavePage({ selectedCadet, ocId }: { selectedCadet: RootState['cadet']['selectedCadet']; ocId: string; }) {
-    const { control, register, setValue, handleSubmit } = useFormContext<LeaveFormValues>();
+function InnerLeavePage({
+    selectedCadet,
+    ocId,
+    onClearForm
+}: {
+    selectedCadet: Cadet;
+    ocId: string;
+    onClearForm: () => void;
+}) {
+    const dispatch = useDispatch();
+    const { control, register, setValue, handleSubmit, watch } = useFormContext<LeaveFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "leaveRows" });
 
     const { submitLeave, fetchLeave, deleteLeave, deleteSavedLeave } = useLeaveActions(selectedCadet);
@@ -100,6 +144,26 @@ function InnerLeavePage({ selectedCadet, ocId }: { selectedCadet: RootState['cad
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [editingValues, setEditingValues] = useState<Partial<LeaveRow> | null>(null);
     const [refreshFlag, setRefreshFlag] = useState(0);
+
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = watch((value) => {
+            if (ocId && value.leaveRows && value.leaveRows.length > 0) {
+                const formData = value.leaveRows.map(row => ({
+                    id: row?.id || null,
+                    semester: row?.semester || 1,
+                    reason: row?.reason || "",
+                    type: row?.type || "LEAVE",
+                    dateFrom: row?.dateFrom || "",
+                    dateTo: row?.dateTo || "",
+                    remark: row?.remark || "",
+                }));
+
+                dispatch(saveLeaveForm({ ocId, data: formData }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [watch, dispatch, ocId]);
 
     const handleDeleteSaved = async (index: number) => {
         const row = savedData[activeTab][index];
@@ -175,6 +239,19 @@ function InnerLeavePage({ selectedCadet, ocId }: { selectedCadet: RootState['cad
         }
     };
 
+    const handleFormSubmit = async () => {
+        await submitLeave();
+        toast.success("Leave records saved");
+
+        // Clear Redux cache after successful save
+        dispatch(clearLeaveForm(ocId));
+
+        // Reset form to defaults
+        setValue("leaveRows", defaultLeaveRows);
+
+        setRefreshFlag((f) => f + 1);
+    };
+
     return (
         <DossierTab
             tabs={dossierTabs}
@@ -246,13 +323,14 @@ function InnerLeavePage({ selectedCadet, ocId }: { selectedCadet: RootState['cad
                             setEditingField={setEditingField}
                             saveInlineEdit={saveInlineEdit}
                             cancelInlineEdit={cancelEdit}
-                            onSubmit={handleSubmit(async () => {
-                                await submitLeave();
-                                toast.success("Leave records saved");
-                                setRefreshFlag((f) => f + 1);
-                            })}
-                            onReset={() => setValue("leaveRows", defaultLeaveRows)}
+                            onSubmit={handleSubmit(handleFormSubmit)}
+                            onReset={onClearForm}
                         />
+
+                        {/* Auto-save indicator */}
+                        <p className="text-sm text-muted-foreground text-center mt-2">
+                            * Changes are automatically saved
+                        </p>
                     </CardContent>
                 </Card>
             </TabsContent>

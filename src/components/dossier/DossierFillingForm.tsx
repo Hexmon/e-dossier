@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
+import { useDebounce } from "@/hooks/useDebounce";
+
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +14,8 @@ import { toast } from "sonner";
 import { useDossierFilling } from "@/hooks/useDossierFilling";
 
 import type { DossierFormData } from "@/types/dossierFilling";
+import { saveDossierForm, clearDossierForm } from "@/store/slices/dossierFillingSlice";
+import type { RootState } from "@/store";
 
 interface DossierFillingFormProps {
     ocId: string;
@@ -42,6 +47,8 @@ function formatDate(dateString: string | null | undefined): string {
 export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
     const [isEditMode, setIsEditMode] = useState(false);
 
+    const handleEditClick = () => setIsEditMode(true);
+
     const { dossierFilling, loading, isSaving, saveDossierFilling } = useDossierFilling(ocId);
 
     const form = useForm<DossierFormData>({
@@ -56,6 +63,8 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
     });
 
     const { register, handleSubmit, reset, setValue } = form;
+
+    const dispatch = useDispatch();
 
     // Set form values when dossierFilling loads
     useEffect(() => {
@@ -84,8 +93,20 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
         }
     };
 
-    const handleEditClick = () => {
-        setIsEditMode(true);
+    const handleReset = () => {
+        if (!confirm("Clear all form data?")) return;
+
+        reset({
+            initiatedBy: "",
+            openedOn: "",
+            initialInterview: "",
+            closedBy: "",
+            closedOn: "",
+            finalInterview: "",
+        });
+
+        dispatch(clearDossierForm(ocId));
+        toast.info("Form cleared");
     };
 
     const handleCancel = () => {
@@ -99,29 +120,11 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
             return <p className="text-gray-500 italic text-center">No dossier data available.</p>;
         }
 
-        const {
-            initiatedBy = "-",
-            openedOn = "-",
-            initialInterview = "-",
-            closedBy = "-",
-            closedOn = "-",
-            finalInterview = "-",
-        } = dossier;
-
-        const pairs: Array<[string, string]> = [
-            ["Initiated By", initiatedBy || "-"],
-            ["Opened On", formatDate(openedOn)],
-            ["Initial Interview", initialInterview || "-"],
-            ["Closed By", closedBy || "-"],
-            ["Closed On", formatDate(closedOn)],
-            ["Final Interview", finalInterview || "-"],
-        ];
-
         return (
             <div className="grid grid-cols-2 gap-4 text-sm">
-                {pairs.map(([label, val]) => (
-                    <p key={label}>
-                        <strong>{label}:</strong> {val}
+                {Object.entries(dossier).map(([k, v]) => (
+                    <p key={k}>
+                        <strong>{k}:</strong> {v || "-"}
                     </p>
                 ))}
             </div>
@@ -141,7 +144,9 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
     return (
         <Card className="max-w-4xl mx-auto shadow-lg rounded-2xl">
             <CardHeader>
-                <CardTitle className="text-xl font-semibold text-center">Dossier Details</CardTitle>
+                <CardTitle className="text-xl font-semibold text-center">
+                    Dossier Details
+                </CardTitle>
             </CardHeader>
 
             <CardContent>
@@ -159,7 +164,11 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
                 ) : (
                     // EDIT MODE
                     <Tabs defaultValue="form" className="w-full">
-                        {/* FORM TAB */}
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="form">Form</TabsTrigger>
+                            <TabsTrigger value="view">View</TabsTrigger>
+                        </TabsList>
+
                         <TabsContent value="form">
                             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -207,7 +216,6 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
                             </form>
                         </TabsContent>
 
-                        {/* VIEW TAB */}
                         <TabsContent value="view">
                             <div className="p-6 border rounded-lg bg-gray-50">
                                 <h3 className="text-lg font-semibold mb-4">Dossier Filling Data</h3>

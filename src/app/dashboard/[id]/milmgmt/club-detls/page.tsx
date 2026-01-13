@@ -47,6 +47,7 @@ import DossierTab from "@/components/Tabs/DossierTab";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { Cadet } from "@/types/cadet";
 
 const EMPTY = "" as const;
 
@@ -113,7 +114,7 @@ function InnerClubDrillPage({
     selectedCadet,
     ocId,
 }: {
-    selectedCadet: RootState['cadet']['selectedCadet'];
+    selectedCadet: Cadet;
     ocId: string;
 }) {
     const {

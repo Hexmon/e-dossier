@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { OfficerCadetForm } from "@/types/dossierSnap";
 import { useDossierSnapshot } from "@/hooks/useDossierSnapshot";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Props {
     ocId: string;
@@ -16,6 +18,8 @@ interface Props {
 
 export default function OfficerCadetFormComponent({ ocId }: Props) {
     const [isEditMode, setIsEditMode] = useState(false);
+
+    const handleEditClick = () => setIsEditMode(true);
 
     const { dossierSnapshot, saveSnapshot, loadingSnapshot } = useDossierSnapshot(ocId);
 
@@ -40,6 +44,9 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
 
     const { register, handleSubmit, reset, watch } = form;
 
+    const debouncedValues = useDebounce(watch(), 500);
+
+    /* 🔄 Load redux-persisted data */
     useEffect(() => {
         if (dossierSnapshot) {
             reset({
@@ -95,10 +102,6 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
 
         await saveSnapshot(formData);
         setIsEditMode(false);
-    };
-
-    const handleEditClick = () => {
-        setIsEditMode(true);
     };
 
     const handleCancel = () => {
@@ -204,6 +207,10 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
             ) : (
                 // EDIT MODE
                 <Tabs defaultValue="form">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="form">Form</TabsTrigger>
+                        <TabsTrigger value="preview">Preview</TabsTrigger>
+                    </TabsList>
 
                     <div className="w-full">
                         <TabsContent value="form">

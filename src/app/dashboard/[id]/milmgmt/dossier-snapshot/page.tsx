@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DossierTab from "@/components/Tabs/DossierTab";
 import { dossierTabs } from "@/config/app.config";
 
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 
 import { useOcDetails } from "@/hooks/useOcDetails";
 

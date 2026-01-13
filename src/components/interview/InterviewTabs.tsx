@@ -2,8 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
+import { useSelector, useDispatch } from "react-redux";
+import { useParams } from "next/navigation";
+import { RootState } from "@/store";
 import { InterviewFormRecord, InterviewOfficer } from "@/types/interview";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
+import { saveInterviewForm, clearInterviewForm } from "@/store/slices/initialInterviewSlice";
 
 import DSCoordForm from "./forms/DSCoordForm";
 import DyCdrForm from "./forms/DyCdrForm";
@@ -15,15 +19,55 @@ interface FormWrapperFields {
 }
 
 export default function InterviewTabs() {
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const dispatch = useDispatch();
+
     const [active, setActive] = useState<InterviewOfficer>("plcdr");
     const { records, save, fetchAll, loading } = useInterviewForms([]);
-    const form = useForm<FormWrapperFields>({ defaultValues: {} });
+
+    // Get saved form data from Redux for current officer
+    const savedFormData = useSelector((state: RootState) =>
+        state.initialInterview.forms[ocId]?.[active] || {}
+    );
+
+    const form = useForm<FormWrapperFields>({
+        defaultValues: savedFormData
+    });
 
     useEffect(() => {
         (async () => {
             await fetchAll();
         })();
     }, [fetchAll]);
+
+    // Load saved data when switching tabs
+    useEffect(() => {
+        const savedData = savedFormData || {};
+        form.reset(savedData);
+    }, [active, ocId]);
+
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = form.watch((value) => {
+            if (ocId && value) {
+                const formData = Object.entries(value).reduce<Record<string, string | boolean | undefined>>(
+                    (acc, [key, val]) => {
+                        acc[key] = val;
+                        return acc;
+                    },
+                    {}
+                );
+
+                dispatch(saveInterviewForm({
+                    ocId,
+                    officer: active,
+                    data: formData
+                }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [form.watch, dispatch, ocId, active]);
 
     async function onSubmitAll(data: FormWrapperFields) {
         const officer = active;
@@ -43,11 +87,19 @@ export default function InterviewTabs() {
             return;
         }
 
-        const keep = Object.fromEntries(
-            Object.keys(form.getValues()).map((k) => [k, form.getValues()[k] ?? ""])
-        );
-        form.reset(keep);
+        // Clear Redux cache after successful save
+        dispatch(clearInterviewForm({ ocId, officer: active }));
+
+        // Reset form to empty state
+        form.reset({});
     }
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearInterviewForm({ ocId, officer: active }));
+            form.reset({});
+        }
+    };
 
     return (
         <div className="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow">
@@ -62,7 +114,10 @@ export default function InterviewTabs() {
                         key={id}
                         type="button"
                         onClick={() => setActive(id as InterviewOfficer)}
-                        className={`px-4 py-2 rounded-t-lg ${active === id ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                        className={`px-4 py-2 rounded-t-lg ${active === id
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-200 text-gray-700"
+                            }`}
                     >
                         {label}
                     </button>
@@ -72,20 +127,39 @@ export default function InterviewTabs() {
             <form onSubmit={form.handleSubmit(onSubmitAll)}>
                 <div className="space-y-6">
                     {active === "plcdr" && (
-                        <>
-                            <PLCdrCombinedForm form={form} />
-                        </>
+                        <PLCdrCombinedForm
+                            form={form}
+                            onClearForm={handleClearForm}
+                        />
                     )}
 
-                    {active === "dscoord" && <DSCoordForm form={form as UseFormReturn<any>} />}
+                    {active === "dscoord" && (
+                        <DSCoordForm
+                            form={form as UseFormReturn<any>}
+                            onClearForm={handleClearForm}
+                        />
+                    )}
 
-                    {active === "dycdr" && <DyCdrForm form={form as UseFormReturn<any>} />}
+                    {active === "dycdr" && (
+                        <DyCdrForm
+                            form={form as UseFormReturn<any>}
+                            onClearForm={handleClearForm}
+                        />
+                    )}
 
-                    {active === "cdr" && <CdrForm form={form as UseFormReturn<any>} />}
+                    {active === "cdr" && (
+                        <CdrForm
+                            form={form as UseFormReturn<any>}
+                            onClearForm={handleClearForm}
+                        />
+                    )}
                 </div>
-
             </form>
 
+            {/* Auto-save indicator */}
+            <p className="text-sm text-muted-foreground text-center mt-4">
+                * Changes are automatically saved
+            </p>
         </div>
     );
 }

@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
+import { toast } from "sonner";
+
+import type { RootState } from "@/store";
+import { saveMotivationAwards } from "@/store/slices/physicalTrainingSlice";
 
 type AwardRow = {
     id: string;
@@ -11,14 +16,46 @@ type AwardRow = {
     value: string;
 };
 
-export default function MotivationAwards({ activeSemester }: { activeSemester: string }) {
+interface MotivationAwardsProps {
+    activeSemester: string;
+    ocId: string;
+}
+
+const DEFAULT_AWARDS = {
+    meritCard: "",
+    halfBlue: "",
+    blue: "",
+    blazer: ""
+};
+
+export default function MotivationAwards({ activeSemester, ocId }: MotivationAwardsProps) {
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
-    const [awards, setAwards] = useState({
-        meritCard: "",
-        halfBlue: "",
-        blue: "",
-        blazer: ""
-    });
+
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.physicalTraining.forms[ocId]?.[activeSemester]?.motivationAwards
+    );
+
+    const [awards, setAwards] = useState(savedData || DEFAULT_AWARDS);
+
+    // Load saved data when semester changes
+    useEffect(() => {
+        if (savedData) {
+            setAwards(savedData);
+        }
+    }, [savedData, activeSemester]);
+
+    // Auto-save to Redux whenever data changes
+    useEffect(() => {
+        if (awards && ocId) {
+            dispatch(saveMotivationAwards({
+                ocId,
+                semester: activeSemester,
+                data: awards
+            }));
+        }
+    }, [awards, ocId, activeSemester, dispatch]);
 
     const handleChange = (field: keyof typeof awards, value: string) => {
         setAwards(prev => ({
@@ -33,6 +70,7 @@ export default function MotivationAwards({ activeSemester }: { activeSemester: s
 
     const handleSave = () => {
         setIsEditing(false);
+        toast.success("Motivation Awards saved successfully");
         console.log("Motivation Awards saved:", awards);
     };
 
@@ -91,7 +129,7 @@ export default function MotivationAwards({ activeSemester }: { activeSemester: s
             <div>
                 <h2 className="mt-4 text-left text-lg font-bold text-gray-700">Motivation Awards</h2>
             </div>
-            
+
             <div className="mt-4">
                 <UniversalTable<AwardRow>
                     data={tableData}
@@ -112,6 +150,11 @@ export default function MotivationAwards({ activeSemester }: { activeSemester: s
                     <Button onClick={handleEdit}>Edit</Button>
                 )}
             </div>
+
+            {/* Auto-save indicator */}
+            <p className="text-sm text-muted-foreground text-center mt-2">
+                * Changes are automatically saved
+            </p>
         </div>
     );
 }

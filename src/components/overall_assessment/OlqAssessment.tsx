@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +11,9 @@ import Appointments from "./Appointments";
 import Relegations from "./Relegations";
 import Withdrawal from "./Withdrawal";
 import OverallPerformance from "./OverallPerformance";
+import { toast } from "sonner";
+import type { RootState } from "@/store";
+import { saveOlqTableData, saveObservations } from "@/store/slices/overallAssessmentSlice";
 
 interface Row {
     factor: string;
@@ -20,19 +25,90 @@ interface Row {
     remarks: string;
 }
 
+const DEFAULT_TABLE_DATA: Row[] = [
+    { factor: "1st Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "2nd Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "3rd Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "4th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "5th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "6th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+];
+
 export default function OlqAssessment() {
+    const params = useParams();
+    const paramId = params?.id || params?.ocId;
+    const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
+
+    const dispatch = useDispatch();
     const [isEditingTable, setIsEditingTable] = useState(false);
     const [isEditingObservations, setIsEditingObservations] = useState(false);
-    const [observations, setObservations] = useState("");
 
-    const [tableData, setTableData] = useState<Row[]>([
-        { factor: "1st Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "2nd Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "3rd Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "4th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "5th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "6th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-    ]);
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.overallAssessment.forms[ocId]
+    );
+
+    // Initialize state from Redux or defaults
+    const [tableData, setTableData] = useState<Row[]>(() =>
+        savedData?.olqTableData || DEFAULT_TABLE_DATA
+    );
+    const [observations, setObservations] = useState(() =>
+        savedData?.observations || ""
+    );
+
+    // Debounce refs
+    const tableDebounceRef = useRef<NodeJS.Timeout | null>(null);
+    const observationsDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load saved data when ocId changes
+    useEffect(() => {
+        if (savedData) {
+            if (savedData.olqTableData && savedData.olqTableData.length > 0) {
+                setTableData(savedData.olqTableData);
+            }
+            if (savedData.observations) {
+                setObservations(savedData.observations);
+            }
+        }
+    }, [ocId, savedData]);
+
+    // Auto-save table data with debounce
+    useEffect(() => {
+        if (!ocId) return;
+
+        if (tableDebounceRef.current) {
+            clearTimeout(tableDebounceRef.current);
+        }
+
+        tableDebounceRef.current = setTimeout(() => {
+            dispatch(saveOlqTableData({ ocId, data: tableData }));
+        }, 500);
+
+        return () => {
+            if (tableDebounceRef.current) {
+                clearTimeout(tableDebounceRef.current);
+            }
+        };
+    }, [tableData, ocId, dispatch]);
+
+    // Auto-save observations with debounce
+    useEffect(() => {
+        if (!ocId) return;
+
+        if (observationsDebounceRef.current) {
+            clearTimeout(observationsDebounceRef.current);
+        }
+
+        observationsDebounceRef.current = setTimeout(() => {
+            dispatch(saveObservations({ ocId, data: observations }));
+        }, 500);
+
+        return () => {
+            if (observationsDebounceRef.current) {
+                clearTimeout(observationsDebounceRef.current);
+            }
+        };
+    }, [observations, ocId, dispatch]);
 
     const handleChange = (factor: string, key: keyof Row, value: string) => {
         setTableData(prev =>
@@ -59,14 +135,14 @@ export default function OlqAssessment() {
     const handleEditTable = () => setIsEditingTable(true);
     const handleSaveTable = () => {
         setIsEditingTable(false);
-        console.log("OLQ Assessment Table saved:", tableData);
+        toast.success("OLQ Assessment saved successfully");
     };
     const handleCancelTable = () => setIsEditingTable(false);
 
     const handleEditObservations = () => setIsEditingObservations(true);
     const handleSaveObservations = () => {
         setIsEditingObservations(false);
-        console.log("Observations on Moral Conduct saved:", observations);
+        toast.success("Observations saved successfully");
     };
     const handleCancelObservations = () => setIsEditingObservations(false);
 
@@ -236,6 +312,12 @@ export default function OlqAssessment() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                    {(isEditingTable || isEditingObservations) && (
+                        <div className="text-xs text-gray-500 text-center">
+                            ✓ Changes are saved automatically
+                        </div>
+                    )}
+
                     <div>
                         <h2 className="p-2 text-lg font-bold text-left text-gray-700 underline">OLQ Assessment</h2>
                         <UniversalTable<Row>
@@ -283,10 +365,10 @@ export default function OlqAssessment() {
                         )}
                     </div>
 
-                    <Appointments />
-                    <Relegations />
-                    <Withdrawal />
-                    <OverallPerformance />
+                    <Appointments ocId={ocId} />
+                    <Relegations ocId={ocId} />
+                    <Withdrawal ocId={ocId} />
+                    <OverallPerformance ocId={ocId} />
                 </CardContent>
             </Card>
         </div>

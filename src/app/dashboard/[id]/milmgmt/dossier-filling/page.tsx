@@ -18,7 +18,7 @@ export default function DossierFillingPage() {
   const { id } = useParams();
   const ocId = Array.isArray(id) ? id[0] : id ?? "";
 
-  // load cadet via hook (no redux)
+  // load cadet via hook
   const { cadet } = useOcDetails(ocId);
 
   const {
@@ -31,10 +31,6 @@ export default function DossierFillingPage() {
 
   const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
 
-  useEffect(() => {
-    // If you want to do something when ocId changes, do it here.
-  }, [ocId]);
-
   return (
     <DashboardLayout title="Dossier Filling" description="Record, maintain, and fill cadet dossiers for documentation.">
       <main className="p-6">
@@ -46,7 +42,7 @@ export default function DossierFillingPage() {
           ]}
         />
 
-        {/* Selected Cadet (uses hook data, not redux) */}
+        {/* Selected Cadet */}
         {selectedCadet && (
           <div className="hidden md:flex sticky top-16 z-40 mb-6">
             <SelectedCadetTable selectedCadet={selectedCadet} />

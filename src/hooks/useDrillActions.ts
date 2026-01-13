@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { listOcDrill, updateOcDrill, createOcDrill } from "@/app/lib/api/drillApi";
@@ -8,7 +9,7 @@ import { calculateDrillTotals } from "@/utils/drillTotals";
 export const useDrillActions = (selectedCadet: any) => {
     const { getValues, setValue } = useFormContext<FormValues>();
 
-    const submitDrill = async () => {
+    const submitDrill = useCallback(async () => {
         try {
             const values = getValues();
             const totals = calculateDrillTotals(values.drillRows);
@@ -43,13 +44,13 @@ export const useDrillActions = (selectedCadet: any) => {
             console.error(err);
             toast.error("Failed saving drill values");
         }
-    };
+    }, [selectedCadet?.ocId, getValues, setValue]);
 
-    const fetchDrill = async () => {
+    const fetchDrill = useCallback(async () => {
         if (!selectedCadet?.ocId) return [];
         const res = await listOcDrill(selectedCadet.ocId, 50, 0);
         return res?.items ?? [];
-    };
+    }, [selectedCadet?.ocId]);
 
     return { submitDrill, fetchDrill };
 };

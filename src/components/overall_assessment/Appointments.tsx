@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import type { RootState } from "@/store";
+import { saveAppointments } from "@/store/slices/overallAssessmentSlice";
 
 interface Appointment {
     id: string;
@@ -15,9 +17,51 @@ interface Appointment {
     isRowEditing?: boolean;
 }
 
-export default function Appointments() {
+interface AppointmentsProps {
+    ocId: string;
+}
+
+export default function Appointments({ ocId }: AppointmentsProps) {
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
-    const [appointmentData, setAppointmentData] = useState<Appointment[]>([]);
+
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.overallAssessment.forms[ocId]?.appointments
+    );
+
+    const [appointmentData, setAppointmentData] = useState<Appointment[]>(() =>
+        savedData || []
+    );
+
+    // Debounce ref
+    const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load saved data when ocId changes
+    useEffect(() => {
+        if (savedData) {
+            setAppointmentData(savedData);
+        }
+    }, [ocId, savedData]);
+
+    // Auto-save with debounce
+    useEffect(() => {
+        if (!ocId) return;
+
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            dispatch(saveAppointments({ ocId, data: appointmentData }));
+        }, 500);
+
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+            }
+        };
+    }, [appointmentData, ocId, dispatch]);
 
     const handleAddAppointment = () => {
         const newAppointment: Appointment = {
@@ -26,7 +70,7 @@ export default function Appointments() {
             from: "",
             to: "",
             remarks: "",
-            isRowEditing: false,
+            isRowEditing: true,
         };
         setAppointmentData([...appointmentData, newAppointment]);
     };
@@ -44,6 +88,7 @@ export default function Appointments() {
 
     const handleDeleteAppointment = (id: string) => {
         setAppointmentData(prev => prev.filter(a => a.id !== id));
+        toast.success("Appointment deleted");
     };
 
     const handleRowEdit = (id: string) => {
@@ -62,7 +107,6 @@ export default function Appointments() {
 
         if (!rowToSave) return;
 
-        // Check if all fields are empty
         if (
             !rowToSave.appointments.trim() ||
             !rowToSave.from.trim() ||
@@ -82,7 +126,6 @@ export default function Appointments() {
             }),
         );
         toast.success("Row saved successfully");
-        console.log("Row saved:", rowToSave);
     };
 
     const handleCancel = () => {
@@ -98,7 +141,6 @@ export default function Appointments() {
     const handleEdit = () => setIsEditing(true);
 
     const handleSave = () => {
-        // Check if there are any empty rows in edit mode
         const hasEmptyRows = appointmentData.some(
             row =>
                 row.isRowEditing &&
@@ -114,13 +156,19 @@ export default function Appointments() {
         }
 
         setIsEditing(false);
-        console.log("Appointments Table saved:", appointmentData);
         toast.success("Appointment data saved successfully");
     };
 
     return (
         <div>
             <h2 className="p-2 text-lg font-bold text-left text-gray-700 underline">Appointments Held, If Any</h2>
+
+            {isEditing && (
+                <div className="text-xs text-gray-500 text-right mb-2">
+                    ✓ Changes are saved automatically
+                </div>
+            )}
+
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead className="bg-gray-100">
@@ -247,7 +295,6 @@ export default function Appointments() {
                 </table>
             </div>
 
-            {/* Add Appointment Button - Only in Edit Mode */}
             {isEditing && (
                 <div className="flex gap-3 justify-center mt-4">
                     <Button onClick={handleAddAppointment} className="bg-green-600 hover:bg-green-700">
@@ -256,7 +303,6 @@ export default function Appointments() {
                 </div>
             )}
 
-            {/* Edit Buttons */}
             <div className="flex gap-3 justify-center mt-4">
                 {isEditing ? (
                     <>

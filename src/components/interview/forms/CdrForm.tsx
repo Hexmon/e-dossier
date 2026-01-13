@@ -10,9 +10,10 @@ import { Edit, Save, RotateCcw, X } from "lucide-react";
 interface Props {
     form: UseFormReturn<FieldValues>;
     tabName?: string;
+    onClearForm?: () => void;
 }
 
-export default function CdrForm({ form, tabName = "CDR" }: Props) {
+export default function CdrForm({ form, tabName = "CDR", onClearForm }: Props) {
     const { register, handleSubmit, reset, watch } = form;
 
     const formValues = watch();
@@ -47,6 +48,7 @@ export default function CdrForm({ form, tabName = "CDR" }: Props) {
 
     const handleReset = () => {
         reset();
+        onClearForm?.();
         toast.info("Form has been reset");
     };
 
