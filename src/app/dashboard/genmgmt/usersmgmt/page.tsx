@@ -15,8 +15,10 @@ import { toast } from "sonner";
 import { ocTabs } from "@/config/app.config";
 import UserFormDialog from "@/components/users/UserFormDialog";
 import { UserListItem } from "@/components/users/UserCard";
+import UserFilters from "@/components/users/UserFilters";
 import { useUsers } from "@/hooks/useUsers";
 import type { User } from "@/app/lib/api/userApi";
+import { useDebouncedValue } from "@/app/lib/debounce";
 
 export default function UserManagement() {
   const { users, loading, fetchUsers, addUser, editUser, removeUser } = useUsers();
@@ -27,9 +29,33 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
+  // Filter states
+  const [search, setSearch] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [roleFilter, setRoleFilter] = useState<string>("");
+
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  // Filter users based on search and filters
+  const filteredUsers = users.filter((user) => {
+    const searchLower = debouncedSearch.toLowerCase();
+    const matchesSearch = !debouncedSearch ||
+      user.name?.toLowerCase().includes(searchLower) ||
+      user.username?.toLowerCase().includes(searchLower) ||
+      user.email?.toLowerCase().includes(searchLower);
+
+    const matchesStatus = !statusFilter ||
+      (statusFilter === "active" && user.isActive) ||
+      (statusFilter === "disabled" && !user.isActive);
+
+    const matchesRole = !roleFilter || user.rank?.toLowerCase() === roleFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus && matchesRole;
+  });
 
   /** SAVE USER */
   const onSubmit = async (data: User) => {
@@ -99,11 +125,27 @@ export default function UserManagement() {
                   </Button>
                 </div>
 
+                {/* Search and Filters */}
+                <UserFilters
+                  search={search}
+                  onSearch={setSearch}
+                  statusFilter={statusFilter}
+                  onStatusChange={setStatusFilter}
+                  roleFilter={roleFilter}
+                  onRoleChange={setRoleFilter}
+                />
+
                 {loading ? (
                   <p className="text-center py-4 text-muted-foreground">Loading...</p>
+                ) : filteredUsers.length === 0 ? (
+                  <p className="text-center py-4 text-muted-foreground">
+                    {debouncedSearch || statusFilter || roleFilter
+                      ? "No users found matching your filters"
+                      : "No users available"}
+                  </p>
                 ) : (
                   <div className="divide-y border rounded-md">
-                    {users.map((u) => {
+                    {filteredUsers.map((u) => {
                       const {
                         id = "",
                         username = "N/A",

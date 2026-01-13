@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
@@ -11,14 +12,20 @@ import { EducationUI, EducationItem } from "@/app/lib/api/educationApi";
 import { useEducation } from "@/hooks/useEducation";
 import { FormValues } from "@/types/educational-qual";
 import { Props } from "@/types/family-background";
+import type { RootState } from "@/store";
+import { saveEducationForm, clearEducationForm } from "@/store/slices/educationQualificationSlice";
 
 export default function EducationQualifications({ ocId, cadet }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<EducationUI | null>(null);
 
-    // ---------------------------------------------------------
-    // HOOK FOR API OPERATIONS
-    // ---------------------------------------------------------
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.educationQualification.forms[ocId]
+    );
+
+    // API operations
     const {
         education,
         setEducation,
@@ -32,14 +39,12 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
         fetchEducation();
     }, [fetchEducation]);
 
-    // ---------------------------------------------------------
-    // ADD FORM — RHF
-    // ---------------------------------------------------------
+    // React Hook Form
     const qualificationForm = useForm<FormValues>({
         defaultValues: {
-            qualifications: [
-                { qualification: "", school: "", subs: "", board: "", marks: "", grade: "" },
-            ],
+            qualifications: savedFormData && savedFormData.length > 0
+                ? savedFormData
+                : [{ qualification: "", school: "", subs: "", board: "", marks: "", grade: "" }],
         },
     });
 
@@ -51,9 +56,37 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
     const columns = ["qualification", "school", "subs", "board", "marks", "grade"] as const;
     type ColumnKey = typeof columns[number];
 
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = qualificationForm.watch((value) => {
+            if (value.qualifications && value.qualifications.length > 0) {
+                const formData = value.qualifications.map(qual => ({
+                    qualification: qual?.qualification || "",
+                    school: qual?.school || "",
+                    subs: qual?.subs || "",
+                    board: qual?.board || "",
+                    marks: qual?.marks ?? "",
+                    grade: qual?.grade || "",
+                }));
+                dispatch(saveEducationForm({ ocId, data: formData }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [qualificationForm, dispatch, ocId]);
+
     const submitQualifications = async ({ qualifications }: FormValues) => {
+        // Filter out empty rows
+        const filledQualifications = qualifications.filter(q =>
+            q.qualification && q.qualification.trim() !== ""
+        );
+
+        if (filledQualifications.length === 0) {
+            toast.error("Please add at least one qualification");
+            return;
+        }
+
         try {
-            const payload = qualifications.map((q) => ({
+            const payload = filledQualifications.map((q) => ({
                 level: q.qualification,
                 school: q.school,
                 board: q.board,
@@ -65,6 +98,12 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
 
             if (saved && saved.length > 0) {
                 toast.success("Education details saved!");
+                // Clear Redux cache after successful save
+                dispatch(clearEducationForm(ocId));
+                // Reset form to default state
+                qualificationForm.reset({
+                    qualifications: [{ qualification: "", school: "", subs: "", board: "", marks: "", grade: "" }]
+                });
                 fetchEducation();
             }
         } catch {
@@ -72,9 +111,18 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
         }
     };
 
-    // ---------------------------------------------------------
-    // EDIT HANDLERS
-    // ---------------------------------------------------------
+    // Clear form handler
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearEducationForm(ocId));
+            qualificationForm.reset({
+                qualifications: [{ qualification: "", school: "", subs: "", board: "", marks: "", grade: "" }]
+            });
+            toast.info("Form cleared");
+        }
+    };
+
+    // Edit handlers
     const startEdit = (row: EducationUI) => {
         setEditingId(row.id);
         setEditForm({ ...row });
@@ -98,7 +146,6 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
             });
 
             toast.success("Record updated!");
-
             fetchEducation();
             cancelEdit();
         } catch {
@@ -273,7 +320,7 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
 
     return (
         <div>
-            {/* ---------------- SAVED EDUCATION TABLE ---------------- */}
+            {/* SAVED EDUCATION TABLE */}
             <div className="mb-6 border rounded-lg shadow">
                 <UniversalTable<EducationUI>
                     data={education}
@@ -281,7 +328,7 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                 />
             </div>
 
-            {/* ---------------- ADD NEW QUALIFICATIONS FORM ---------------- */}
+            {/* ADD NEW QUALIFICATIONS FORM */}
             <form onSubmit={qualificationForm.handleSubmit(submitQualifications)}>
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm border border-gray-300">
@@ -299,7 +346,7 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
 
                         <tbody>
                             {fields.map((row, index) => {
-                                const {id} = row;
+                                const { id } = row;
                                 return (
                                     <tr key={id}>
                                         <td className="border px-4 py-2 text-center">{index + 1}</td>
@@ -318,7 +365,12 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                                         })}
 
                                         <td className="border px-4 py-2 text-center">
-                                            <Button variant="destructive" type="button" onClick={() => remove(index)}>
+                                            <Button 
+                                                variant="destructive" 
+                                                type="button" 
+                                                size="sm"
+                                                onClick={() => remove(index)}
+                                            >
                                                 Remove
                                             </Button>
                                         </td>
@@ -345,8 +397,25 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                     >
                         Add Qualification
                     </Button>
-                    <Button type="submit" className="bg-[#40ba4d]">Save</Button>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClearForm}
+                    >
+                        Clear Form
+                    </Button>
+
+                    <Button type="submit" className="bg-[#40ba4d]">
+                        Save
+                    </Button>
                 </div>
+
+                {savedFormData && savedFormData.length > 0 && (
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                        * Changes are automatically saved
+                    </p>
+                )}
             </form>
         </div>
     );

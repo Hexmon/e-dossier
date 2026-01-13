@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
     Select,
@@ -13,6 +14,9 @@ import {
 } from "@/components/ui/select";
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
+
+import type { RootState } from "@/store";
+import { saveIpet2Data } from "@/store/slices/physicalTrainingSlice";
 
 interface TableRow {
     id: string;
@@ -27,21 +31,48 @@ interface TableRow {
 interface Ipet2FormProps {
     onMarksChange: (marks: number) => void;
     activeSemester: string;
+    ocId: string;
 }
 
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
 const column4Options = ["Pass", "Fail"];
 
-export default function Ipet2Form({ onMarksChange, activeSemester }: Ipet2FormProps) {
+const DEFAULT_DATA: TableRow[] = [
+    { id: "1", column1: 1, column2: "Back Roll", maxMarks: 10, column3: "", column4: "", column5: 0 },
+    { id: "2", column1: 2, column2: "Dive Roll", maxMarks: 5, column3: "", column4: "", column5: 0 },
+    { id: "3", column1: 3, column2: "T/A Vault", maxMarks: 10, column3: "", column4: "", column5: 0 },
+    { id: "4", column1: 4, column2: "Rope", maxMarks: 15, column3: "", column4: "", column5: 0 },
+    { id: "5", column1: 5, column2: "Chest Touch/Heaving", maxMarks: 10, column3: "", column4: "", column5: 0 },
+];
+
+export default function Ipet2Form({ onMarksChange, activeSemester, ocId }: Ipet2FormProps) {
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
 
-    const [tableData, setTableData] = useState<TableRow[]>([
-        { id: "1", column1: 1, column2: "Back Roll", maxMarks: 10, column3: "", column4: "", column5: 0 },
-        { id: "2", column1: 2, column2: "Dive Roll", maxMarks: 5, column3: "", column4: "", column5: 0 },
-        { id: "3", column1: 3, column2: "T/A Vault", maxMarks: 10, column3: "", column4: "", column5: 0 },
-        { id: "4", column1: 4, column2: "Rope", maxMarks: 15, column3: "", column4: "", column5: 0 },
-        { id: "5", column1: 5, column2: "Chest Touch/Heaving", maxMarks: 10, column3: "", column4: "", column5: 0 },
-    ]);
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.physicalTraining.forms[ocId]?.[activeSemester]?.ipet2Data
+    );
+
+    const [tableData, setTableData] = useState<TableRow[]>(savedData || DEFAULT_DATA);
+
+    // Load saved data when it changes
+    useEffect(() => {
+        if (savedData) {
+            setTableData(savedData);
+        }
+    }, [savedData, activeSemester]);
+
+    // Auto-save to Redux whenever data changes
+    useEffect(() => {
+        if (tableData && ocId) {
+            dispatch(saveIpet2Data({
+                ocId,
+                semester: activeSemester,
+                data: tableData
+            }));
+        }
+    }, [tableData, ocId, activeSemester, dispatch]);
 
     const totalMaxMarks = useMemo(
         () => tableData.reduce((sum, r) => sum + (r.maxMarks || 0), 0),
@@ -281,6 +312,10 @@ export default function Ipet2Form({ onMarksChange, activeSemester }: Ipet2FormPr
                         <Button onClick={() => setIsEditing(true)}>Edit</Button>
                     )}
                 </div>
+
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                    * Changes are automatically saved
+                </p>
 
             </CardContent>
         </div>

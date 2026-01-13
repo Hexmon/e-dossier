@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
@@ -9,6 +10,8 @@ import { toast } from "sonner";
 
 import { Achievement } from "@/types/background-detls";
 import { useAchievements } from "@/hooks/useAchievementsBackground";
+import type { RootState } from "@/store";
+import { saveAchievementsForm, clearAchievementsForm } from "@/store/slices/achievementsSlice";
 
 type FormValues = {
     achievements: Omit<Achievement, "id">[];
@@ -20,17 +23,23 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Achievement | null>(null);
 
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.achievements.forms[ocId]
+    );
+
     // Load achievements on mount
     useEffect(() => {
         fetch();
     }, [fetch]);
 
-    // ------------------------------------------
-    // RHF Form for Adding New Achievements
-    // ------------------------------------------
+    // React Hook Form
     const achievementForm = useForm<FormValues>({
         defaultValues: {
-            achievements: [{ event: "", year: "", level: "", prize: "" }],
+            achievements: savedFormData && savedFormData.length > 0
+                ? savedFormData
+                : [{ event: "", year: "", level: "", prize: "" }],
         },
     });
 
@@ -39,21 +48,62 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
         name: "achievements",
     });
 
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = achievementForm.watch((value) => {
+            if (value.achievements && value.achievements.length > 0) {
+                const formData = value.achievements.map(achievement => ({
+                    event: achievement?.event || "",
+                    year: achievement?.year ?? "",
+                    level: achievement?.level || "",
+                    prize: achievement?.prize || "",
+                }));
+                dispatch(saveAchievementsForm({ ocId, data: formData }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [achievementForm, dispatch, ocId]);
+
     // Submit handler
     const submitAchievements = async (values: FormValues) => {
         const { achievements } = values;
-        const result = await save(achievements);
+
+        // Filter out empty rows
+        const filledAchievements = achievements.filter(a =>
+            a.event && a.event.trim() !== ""
+        );
+
+        if (filledAchievements.length === 0) {
+            toast.error("Please add at least one achievement");
+            return;
+        }
+
+        const result = await save(filledAchievements);
 
         if (result) {
             toast.success("Achievements saved");
+            // Clear Redux cache after successful save
+            dispatch(clearAchievementsForm(ocId));
+            // Reset form to default state
+            achievementForm.reset({
+                achievements: [{ event: "", year: "", level: "", prize: "" }]
+            });
             await fetch();
-            achievementForm.reset();
         }
     };
 
-    // ------------------------------------------
+    // Clear form handler
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearAchievementsForm(ocId));
+            achievementForm.reset({
+                achievements: [{ event: "", year: "", level: "", prize: "" }]
+            });
+            toast.info("Form cleared");
+        }
+    };
+
     // Inline Edit Logic
-    // ------------------------------------------
     const startEdit = (row: Achievement) => {
         setEditingId(row.id ?? null);
         setEditForm({ ...row });
@@ -91,9 +141,7 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
         if (ok) await fetch();
     };
 
-    // ------------------------------------------
     // UNIVERSAL TABLE CONFIGURATION
-    // ------------------------------------------
     const tableColumns: TableColumn<Achievement>[] = [
         {
             key: "sno",
@@ -219,9 +267,6 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
         }
     };
 
-    // ------------------------------------------
-    // JSX
-    // ------------------------------------------
     return (
         <div>
             {/* Saved Achievements Table */}
@@ -266,7 +311,12 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
                                         })}
 
                                         <td className="border px-4 py-2 text-center">
-                                            <Button variant="destructive" type="button" onClick={() => removeField(idx)}>
+                                            <Button
+                                                variant="destructive"
+                                                type="button"
+                                                size="sm"
+                                                onClick={() => removeField(idx)}
+                                            >
                                                 Remove
                                             </Button>
                                         </td>
@@ -284,8 +334,25 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
                     >
                         Add Achievement
                     </Button>
-                    <Button type="submit" className="bg-[#40ba4d]">Save</Button>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClearForm}
+                    >
+                        Clear Form
+                    </Button>
+
+                    <Button type="submit" className="bg-[#40ba4d]">
+                        Save
+                    </Button>
                 </div>
+
+                {savedFormData && savedFormData.length > 0 && (
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                        * Changes are automatically saved
+                    </p>
+                )}
             </form>
         </div>
     );

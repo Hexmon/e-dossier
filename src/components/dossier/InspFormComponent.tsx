@@ -1,121 +1,82 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
+import { useForm } from "react-hook-form";
+
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
-import InspTable from "./InspTable";
 import type { InspFormData } from "@/types/dossierInsp";
+import { saveInspForm, clearInspForm } from "@/store/slices/inspSheetSlice";
+import type { RootState } from "@/store";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Props {
-  onSubmit?: (data: { inspections: InspFormData[] }) => void;
-  disabled?: boolean;
-  defaultValues?: { inspections: InspFormData[]; savedData: InspFormData[] };
+  ocId: string;
 }
 
-export default function InspFormComponent({ onSubmit, disabled = false, defaultValues }: Props) {
-  const form = useForm<{ inspections: InspFormData[]; savedData: InspFormData[] }>({
-    defaultValues: defaultValues || {
-      inspections: [
-        {
-          date: "",
-          rk: "",
-          name: "",
-          appointment: "",
-          remarks: "",
-          initials: "",
-        },
-      ],
-      savedData: [],
+export default function InspFormComponent({ ocId }: Props) {
+  const dispatch = useDispatch();
+
+  /* ✅ Redux Persist – KEEP */
+  const savedData = useSelector(
+    (state: RootState) => state.inspSheet.forms[ocId]
+  );
+
+  const form = useForm<InspFormData>({
+    defaultValues: {
+      date: "",
+      rk: "",
+      name: "",
+      appointment: "",
+      remarks: "",
+      initials: "",
     },
   });
 
-  const { control, handleSubmit, register, reset, watch, setValue, getValues } = form;
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "inspections",
-  });
+  const { register, handleSubmit, reset, watch } = form;
 
-  const savedData = watch("savedData");
-
-  //Reset form whenever defaultValues change
+  /* Load persisted data */
   useEffect(() => {
-    if (defaultValues) {
-      reset(defaultValues);
+    if (savedData) {
+      reset(savedData);
     }
-  }, [defaultValues, reset]);
+  }, [savedData, reset]);
 
-  const handleDeleteFromTable = (index: number) => {
-    const currentSavedData = getValues("savedData");
-    const newSavedData = currentSavedData.filter((_, i) => i !== index);
-    setValue("savedData", newSavedData);
-    toast.success("Record deleted.");
-  };
+  /* Auto-save (Redux Persist) */
+  const debouncedValues = useDebounce(watch(), 500);
 
-  const handleUpdateFromTable = (index: number, updatedRow: InspFormData) => {
-    const currentSavedData = getValues("savedData");
-    const newSavedData = currentSavedData.map((row, i) =>
-      i === index ? updatedRow : row
+  useEffect(() => {
+    if (!debouncedValues) return;
+
+    const hasData = Object.values(debouncedValues).some(
+      v => v !== "" && v !== null && v !== undefined
     );
-    setValue("savedData", newSavedData);
-  };
 
-  const handleSave = () => {
-    const inspections = getValues("inspections");
-    const validRows = inspections.filter((row) => row.name && row.name.trim());
+    if (hasData) {
+      dispatch(saveInspForm({ ocId, data: debouncedValues }));
+    }
+  }, [debouncedValues, dispatch, ocId]);
 
-    if (validRows.length === 0) {
-      toast.error("At least one row must have a name.");
+  const onSubmit = (data: InspFormData) => {
+    if (!data.name?.trim()) {
+      toast.error("Name is required");
       return;
     }
 
-    const currentSavedData = getValues("savedData");
-    const updatedSavedData = [...currentSavedData, ...validRows];
-    setValue("savedData", updatedSavedData);
-    toast.success(`${validRows.length} inspection(s) saved.`);
-
-    reset({
-      inspections: [
-        {
-          date: "",
-          rk: "",
-          name: "",
-          appointment: "",
-          remarks: "",
-          initials: "",
-        },
-      ],
-      savedData: updatedSavedData,
-    });
+    dispatch(saveInspForm({ ocId, data }));
+    toast.success("Inspection submitted successfully");
   };
 
   const handleReset = () => {
+    if (!confirm("Clear all inspection data?")) return;
+
     reset({
-      inspections: [
-        {
-          date: "",
-          rk: "",
-          name: "",
-          appointment: "",
-          remarks: "",
-          initials: "",
-        },
-      ],
-      savedData: getValues("savedData"),
-    });
-    toast.info("Form reset.");
-  };
-
-  const onFormSubmit = (data: { inspections: InspFormData[]; savedData: InspFormData[] }) => {
-    if (onSubmit) {
-      onSubmit({ inspections: data.savedData });
-    }
-  };
-
-  const addRow = () =>
-    append({
       date: "",
       rk: "",
       name: "",
@@ -124,105 +85,82 @@ export default function InspFormComponent({ onSubmit, disabled = false, defaultV
       initials: "",
     });
 
+    dispatch(clearInspForm(ocId));
+    toast.info("Form cleared");
+  };
+
+  const renderPreview = (data: InspFormData | null) => {
+    if (!data) {
+      return <p className="italic text-gray-500">No inspection saved yet.</p>;
+    }
+
+    const rows: Array<[string, string]> = [
+      ["Date", data.date || "-"],
+      ["Rank", data.rk || "-"],
+      ["Name", data.name || "-"],
+      ["Appointment", data.appointment || "-"],
+      ["Remarks", data.remarks || "-"],
+      ["Initials", data.initials || "-"],
+    ];
+
+    return (
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        {rows.map(([label, val]) => (
+          <p key={label}>
+            <strong>{label}:</strong> {val}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)}>
-      {/* Table Component */}
-      <InspTable 
-        data={savedData} 
-        onDelete={handleDeleteFromTable}
-        onUpdate={handleUpdateFromTable}
-      />
+    <Card className="max-w-4xl mx-auto shadow-lg rounded-xl">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold text-center">
+          Inspection Sheet
+        </CardTitle>
+      </CardHeader>
 
-      {/* Form Table */}
-      <div className="overflow-x-auto border rounded-lg shadow">
-        <table className="w-full border text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-2 border">S No</th>
-              <th className="p-2 border">Date</th>
-              <th className="p-2 border">Rank</th>
-              <th className="p-2 border">Name</th>
-              <th className="p-2 border">Appointment</th>
-              <th className="p-2 border">Remarks</th>
-              <th className="p-2 border">Initials</th>
-              <th className="p-2 border text-center">Action</th>
-            </tr>
-          </thead>
+      <CardContent>
+        <Tabs defaultValue="fill">
+          <TabsList className="mb-6">
+            <TabsTrigger value="fill">Fill Form</TabsTrigger>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+          </TabsList>
 
-          <tbody>
-            {fields.map((field, idx) => {
-              return (
-                <tr key={field.id}>
-                  <td className="p-2 border text-center">
-                    <Input value={String(idx + 1)} disabled className="bg-gray-100 text-center" />
-                  </td>
-                  <td className="p-2 border">
-                    <Input
-                      {...register(`inspections.${idx}.date` as any)}
-                      type="date"
-                    />
-                  </td>
-                  <td className="p-2 border">
-                    <Input
-                      {...register(`inspections.${idx}.rk` as any)}
-                      placeholder="Rank"
-                    />
-                  </td>
-                  <td className="p-2 border">
-                    <Input
-                      {...register(`inspections.${idx}.name` as any)}
-                      placeholder="Name"
-                    />
-                  </td>
-                  <td className="p-2 border">
-                    <Input
-                      {...register(`inspections.${idx}.appointment` as any)}
-                      placeholder="Appointment"
-                    />
-                  </td>
-                  <td className="p-2 border">
-                    <Input
-                      {...register(`inspections.${idx}.remarks` as any)}
-                      placeholder="Remarks"
-                    />
-                  </td>
-                  <td className="p-2 border">
-                    <Input
-                      {...register(`inspections.${idx}.initials` as any)}
-                      placeholder="Initials"
-                    />
-                  </td>
-                  <td className="p-2 border text-center">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => remove(idx)}
-                      disabled={disabled}
-                    >
-                      Remove
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+          {/* FORM TAB */}
+          <TabsContent value="fill">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="text-xs text-gray-500 text-right">
+                ✓ Changes are saved automatically
+              </div>
 
-      <div className="mt-4 flex justify-center gap-3">
-        <Button type="button" onClick={addRow} disabled={disabled}>
-          + Add Row
-        </Button>
+              <Input type="date" {...register("date")} />
+              <Input placeholder="Rank" {...register("rk")} />
+              <Input placeholder="Name" {...register("name")} />
+              <Input placeholder="Appointment" {...register("appointment")} />
+              <Textarea placeholder="Remarks" {...register("remarks")} />
+              <Textarea placeholder="Initials" {...register("initials")} />
 
-        <Button type="button" className="bg-green-600 hover:bg-green-700" onClick={handleSave} disabled={disabled}>
-          {disabled ? "Submitting..." : "Submit"}
-        </Button>
+              <div className="flex justify-center gap-2">
+                <Button variant="outline" type="button" onClick={handleReset}>
+                  Clear Form
+                </Button>
+                <Button type="submit">Submit</Button>
+              </div>
+            </form>
+          </TabsContent>
 
-        <Button type="button" variant="outline" onClick={handleReset} disabled={disabled}>
-          Reset
-        </Button>
-      </div>
-    </form>
+          {/* PREVIEW TAB */}
+          <TabsContent value="preview">
+            <div className="p-6 bg-gray-50 border rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Preview</h3>
+              {renderPreview(savedData ?? null)}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }

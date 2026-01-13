@@ -2,9 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
+import { useSelector, useDispatch } from "react-redux";
+import { useParams } from "next/navigation";
+import { RootState } from "@/store";
 import TermSubForm from "./TermSubForm";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
 import { beginningFields, postMidFields, specialFields } from "@/types/interview-term";
+import { saveTermInterviewForm, clearTermInterviewForm, SpecialInterviewRecord } from "@/store/slices/termInterviewSlice";
 
 type TermVariant = "beginning" | "postmid" | "special";
 
@@ -14,6 +18,10 @@ interface FormState {
 }
 
 export default function InterviewTermTabs() {
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const dispatch = useDispatch();
+
     const [selectedTerm, setSelectedTerm] = useState<number>(1);
 
     const initialSub: Record<number, TermVariant> = {
@@ -30,8 +38,13 @@ export default function InterviewTermTabs() {
     // Store form state for each term + variant combination
     const [formStates, setFormStates] = useState<Record<string, FormState>>({});
 
+    // Get saved form data from Redux
+    const savedFormData = useSelector((state: RootState) =>
+        state.termInterview.forms[ocId]?.[selectedTerm]?.[subTab[selectedTerm]]
+    );
+
     const form: UseFormReturn<Record<string, string>> = useForm<Record<string, string>>({
-        defaultValues: {},
+        defaultValues: savedFormData?.formFields || {},
     });
 
     const { records, save, fetchAll, loading } = useInterviewForms([]);
@@ -41,6 +54,38 @@ export default function InterviewTermTabs() {
             await fetchAll();
         })();
     }, [fetchAll]);
+
+    // Load saved data when switching terms or variants
+    useEffect(() => {
+        const savedData = savedFormData?.formFields || {};
+        form.reset(savedData);
+    }, [selectedTerm, subTab, ocId]);
+
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = form.watch((value) => {
+            if (ocId && value) {
+                const formFields = Object.entries(value).reduce<Record<string, string>>(
+                    (acc, [key, val]) => {
+                        acc[key] = (val as string) ?? "";
+                        return acc;
+                    },
+                    {}
+                );
+
+                dispatch(saveTermInterviewForm({
+                    ocId,
+                    termIndex: selectedTerm,
+                    variant: currentVariant,
+                    data: {
+                        formFields,
+                        specialInterviews: savedFormData?.specialInterviews,
+                    },
+                }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [form.watch, dispatch, ocId, selectedTerm, subTab]);
 
     const currentVariant = subTab[selectedTerm] ?? "beginning";
     const stateKey = `${selectedTerm}_${currentVariant}`;
@@ -58,6 +103,17 @@ export default function InterviewTermTabs() {
             ...prev,
             [stateKey]: { ...currentFormState, ...updates }
         }));
+    };
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearTermInterviewForm({
+                ocId,
+                termIndex: selectedTerm,
+                variant: currentVariant,
+            }));
+            form.reset({});
+        }
     };
 
     const termTabs = [1, 2, 3, 4, 5, 6];
@@ -110,7 +166,8 @@ export default function InterviewTermTabs() {
                     key={variant}
                     type="button"
                     onClick={() => setSubTab((prev) => ({ ...prev, [selectedTerm]: variant }))}
-                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"}`}
+                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"
+                        }`}
                 >
                     {label}
                 </button>
@@ -140,7 +197,15 @@ export default function InterviewTermTabs() {
                 isSaved={currentFormState.isSaved}
                 onSave={save}
                 updateFormState={updateFormState}
+                ocId={ocId}
+                savedSpecialInterviews={savedFormData?.specialInterviews || []}
+                onClearForm={handleClearForm}
             />
+
+            {/* Auto-save indicator */}
+            <p className="text-sm text-muted-foreground text-center mt-4">
+                * Changes are automatically saved
+            </p>
         </div>
     );
 }

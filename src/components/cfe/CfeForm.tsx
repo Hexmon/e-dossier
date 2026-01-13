@@ -2,41 +2,59 @@
 
 import { useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { catOptions } from "@/constants/app.constants";
 
 import type { cfeFormData, cfeRow } from "@/types/cfe";
+import { saveCfeForm } from "@/store/slices/cfeRecordsSlice";
 
 interface Props {
     onSubmit: (data: cfeFormData) => Promise<void> | void;
     semIndex: number;
     existingRows: cfeRow[];
     loading?: boolean;
+    ocId: string; // Add ocId prop
+    defaultValues: cfeFormData; // Add defaultValues prop
+    onClear: () => void; // Add onClear prop
 }
 
-export default function CfeForm({ onSubmit, semIndex, existingRows, loading = false }: Props) {
+export default function CfeForm({
+    onSubmit,
+    semIndex,
+    existingRows,
+    loading = false,
+    ocId,
+    defaultValues,
+    onClear
+}: Props) {
+    const dispatch = useDispatch();
+
     const form = useForm<cfeFormData>({
-        defaultValues: {
-            records: [
-                {
-                    serialNo: "1",
-                    cat: "",
-                    mks: "",
-                    remarks: "",
-                },
-            ],
-        },
+        defaultValues,
     });
 
     const { control, handleSubmit, register, reset, setValue, watch } = form;
     const { fields, append, remove } = useFieldArray({ control, name: "records" });
 
-    // Reset form after successful submission
+    // Auto-save to Redux on form changes
     useEffect(() => {
-        // Form is reset via reset() after submit in the page component
-    }, [semIndex]);
+        const subscription = watch((value) => {
+            if (ocId && value.records && value.records.length > 0) {
+                const formData = value.records.map(record => ({
+                    serialNo: record?.serialNo || "",
+                    cat: record?.cat || "",
+                    mks: record?.mks || "",
+                    remarks: record?.remarks || "",
+                }));
+
+                dispatch(saveCfeForm({ ocId, data: formData }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [watch, dispatch, ocId]);
 
     const addRow = () =>
         append({
@@ -47,18 +65,32 @@ export default function CfeForm({ onSubmit, semIndex, existingRows, loading = fa
         });
 
     const handleFormSubmit = async (data: cfeFormData) => {
-        await onSubmit(data);
-        // Reset form after successful submission
-        reset({
-            records: [
-                {
-                    serialNo: "1",
-                    cat: "",
-                    mks: "",
-                    remarks: "",
-                },
-            ],
+        // Filter out empty rows
+        const filledRows = data.records.filter(row => {
+            const hasData =
+                (row.cat && row.cat.trim() !== "") ||
+                (row.mks && row.mks.trim() !== "") ||
+                (row.remarks && row.remarks.trim() !== "");
+            return hasData;
         });
+
+        if (filledRows.length === 0) {
+            alert("Please fill in at least one CFE record with data");
+            return;
+        }
+
+        // Validate that filled rows have required fields
+        const invalidRows = filledRows.filter(row =>
+            !row.cat || row.cat.trim() === "" ||
+            !row.mks || row.mks.trim() === ""
+        );
+
+        if (invalidRows.length > 0) {
+            alert("Category and Marks are required for all records");
+            return;
+        }
+
+        await onSubmit({ records: filledRows });
     };
 
     return (
@@ -132,10 +164,21 @@ export default function CfeForm({ onSubmit, semIndex, existingRows, loading = fa
                     {loading ? "Submitting..." : "Submit"}
                 </Button>
 
-                <Button type="button" variant="outline" onClick={() => reset()} disabled={loading}>
-                    Reset
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onClear}
+                    disabled={loading}
+                    className="hover:bg-destructive hover:text-white"
+                >
+                    Clear Form
                 </Button>
             </div>
+
+            {/* Auto-save indicator */}
+            <p className="text-sm text-muted-foreground text-center mt-2">
+                * Changes are automatically saved
+            </p>
         </form>
     );
 }

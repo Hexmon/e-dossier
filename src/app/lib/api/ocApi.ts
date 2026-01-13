@@ -16,6 +16,7 @@ export interface Course {
 /** Base OC row from oc_cadets */
 export interface OCRecord {
   id: string;
+  photo: File;
   name: string;
   ocNo: string;
   uid?: string;

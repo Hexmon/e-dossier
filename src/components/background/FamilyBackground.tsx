@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
@@ -10,14 +11,20 @@ import { toast } from "sonner";
 import { FamilyMemberRecord } from "@/app/lib/api/familyApi";
 import { FormValues, Props } from "@/types/family-background";
 import { useFamily } from "@/hooks/useFamily";
+import type { RootState } from "@/store";
+import { saveFamilyForm, clearFamilyForm } from "@/store/slices/familyBackgroundSlice";
 
 export default function FamilyBackground({ ocId }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<FamilyMemberRecord | null>(null);
 
-    // ------------------------------------
-    // HOOK FOR API OPERATIONS
-    // ------------------------------------
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.familyBackground.forms[ocId]
+    );
+
+    // API operations
     const {
         family,
         setFamily,
@@ -31,14 +38,12 @@ export default function FamilyBackground({ ocId }: Props) {
         fetchFamily();
     }, [fetchFamily]);
 
-    // ------------------------------------
-    // RHF — NEW FAMILY FORM
-    // ------------------------------------
+    // React Hook Form
     const familyForm = useForm<FormValues>({
         defaultValues: {
-            family: [
-                { name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" },
-            ],
+            family: savedFormData && savedFormData.length > 0 
+                ? savedFormData 
+                : [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }],
         },
     });
 
@@ -56,14 +61,48 @@ export default function FamilyBackground({ ocId }: Props) {
         name: "family",
     });
 
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = familyForm.watch((value) => {
+            if (value.family && value.family.length > 0) {
+                const formData = value.family.map(member => ({
+                    name: member?.name || "",
+                    relation: member?.relation || "",
+                    age: member?.age ?? "", // Use ?? to handle both string and number
+                    occupation: member?.occupation || "",
+                    education: member?.education || "",
+                    mobileNo: member?.mobileNo || "",
+                }));
+                dispatch(saveFamilyForm({ ocId, data: formData }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [familyForm, dispatch, ocId]);
+
     const submitFamily = async (values: FormValues) => {
         const { family: newMembers } = values;
 
+        // Filter out empty rows
+        const filledMembers = newMembers.filter(member => 
+            member.name && member.name.trim() !== ""
+        );
+
+        if (filledMembers.length === 0) {
+            toast.error("Please add at least one family member");
+            return;
+        }
+
         try {
-            const saved = await saveFamily(newMembers);
+            const saved = await saveFamily(filledMembers);
 
             if (saved && saved.length > 0) {
                 toast.success("Family details saved successfully!");
+                // Clear Redux cache after successful save
+                dispatch(clearFamilyForm(ocId));
+                // Reset form to default state
+                familyForm.reset({
+                    family: [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }]
+                });
                 fetchFamily();
             }
         } catch {
@@ -71,9 +110,18 @@ export default function FamilyBackground({ ocId }: Props) {
         }
     };
 
-    // ------------------------------------
-    // EDITING HANDLERS
-    // ------------------------------------
+    // Clear form handler
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearFamilyForm(ocId));
+            familyForm.reset({
+                family: [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }]
+            });
+            toast.info("Form cleared");
+        }
+    };
+
+    // Editing handlers
     const startEdit = (member: FamilyMemberRecord) => {
         setEditingId(member.id);
         setEditForm({ ...member });
@@ -114,6 +162,7 @@ export default function FamilyBackground({ ocId }: Props) {
             toast.error("Failed to delete family member");
         }
     };
+
     const columns: TableColumn<FamilyMemberRecord>[] = [
         {
             key: "sno",
@@ -270,7 +319,7 @@ export default function FamilyBackground({ ocId }: Props) {
     return (
         <div className="w-full">
 
-            {/* -------------------------------- SAVED TABLE -------------------------------- */}
+            {/* SAVED TABLE */}
             <div className="mb-6 border rounded-lg shadow">
                 <UniversalTable<FamilyMemberRecord>
                     data={family}
@@ -278,7 +327,7 @@ export default function FamilyBackground({ ocId }: Props) {
                 />
             </div>
 
-            {/* -------------------------------- ADD NEW FORM -------------------------------- */}
+            {/* ADD NEW FORM */}
             <form onSubmit={familyForm.handleSubmit(submitFamily)}>
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm border border-gray-300">
@@ -307,7 +356,12 @@ export default function FamilyBackground({ ocId }: Props) {
                                     ))}
 
                                     <td className="border px-4 py-2 text-center">
-                                        <Button variant="destructive" type="button" onClick={() => remove(index)}>
+                                        <Button 
+                                            variant="destructive" 
+                                            type="button" 
+                                            size="sm"
+                                            onClick={() => remove(index)}
+                                        >
                                             Remove
                                         </Button>
                                     </td>
@@ -334,8 +388,24 @@ export default function FamilyBackground({ ocId }: Props) {
                         Add Member
                     </Button>
 
-                    <Button type="submit" className="bg-[#40ba4d]">Save</Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClearForm}
+                    >
+                        Clear Form
+                    </Button>
+
+                    <Button type="submit" className="bg-[#40ba4d]">
+                        Save
+                    </Button>
                 </div>
+
+                {savedFormData && savedFormData.length > 0 && (
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                        * Changes are automatically saved
+                    </p>
+                )}
             </form>
         </div>
     );

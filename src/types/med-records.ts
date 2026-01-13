@@ -1,7 +1,7 @@
-export interface MedInfoRow {
-    id?: string;
-    term?: string;
-    semester?: number;
+// types/med-records.ts
+
+// Base row data (without medical details)
+export interface MedInfoRowData {
     date: string;
     age: string;
     height: string;
@@ -10,13 +10,21 @@ export interface MedInfoRow {
     overw: string;
     bmi: string;
     chest: string;
+}
+
+// Extended row with medical details (for saved data from backend)
+export interface MedInfoRow extends MedInfoRowData {
+    id?: string;
+    term?: string;
+    semester?: number;
     medicalHistory: string;
     medicalIssues: string;
     allergies: string;
 }
 
+// Form structure
 export interface MedicalInfoForm {
-    medInfo: MedInfoRow[];
+    medInfo: MedInfoRowData[]; // Form only needs row data, not the full details
     medicalHistory: string;
     medicalIssues: string;
     allergies: string;

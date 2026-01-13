@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
 
     const { register, handleSubmit, reset, watch } = form;
 
+    /* 💾 Auto-save */
     useEffect(() => {
         if (dossierSnapshot) {
             reset({
@@ -97,9 +99,8 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
         setIsEditMode(false);
     };
 
-    const handleEditClick = () => {
-        setIsEditMode(true);
-    };
+    const handleReset = () => {
+        if (!confirm("Clear all officer cadet details?")) return;
 
     const handleCancel = () => {
         setIsEditMode(false);
@@ -356,8 +357,53 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                             </div>
                         </TabsContent>
                     </div>
-                </Tabs>
-            )}
-        </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input placeholder="TES No" {...register("tesNo")} />
+                        <Input placeholder="Name" {...register("name")} />
+                        <Input placeholder="Course" {...register("course")} />
+                        <Input placeholder="PI" {...register("pi")} />
+                        <Input type="date" {...register("dtOfArr")} />
+                        <Input placeholder="Relegated" {...register("relegated")} />
+                        <Input type="date" {...register("withdrawnOn")} />
+                    </div>
+
+                    <h3 className="font-semibold bg-blue-100 px-4 py-1 rounded-2xl">
+                        Commissioning Details
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input type="date" {...register("dtOfPassingOut")} />
+                        <Input placeholder="IC No" {...register("icNo")} />
+                        <Input placeholder="Order of Merit" {...register("orderOfMerit")} />
+                        <Input placeholder="Regt / Arm" {...register("regtArm")} />
+                        <Input className="col-span-2" placeholder="Posted / Attached To" {...register("postedAtt")} />
+                    </div>
+
+                    <div className="flex justify-center gap-4">
+                        <Button type="submit" className="w-40 bg-[#40ba4d]">Submit</Button>
+                        <Button type="button" variant="outline" className="w-40" onClick={handleReset}>
+                            Clear Form
+                        </Button>
+                    </div>
+                </form>
+            </TabsContent>
+
+            <TabsContent value="preview">
+                {!savedData ? (
+                    <p className="italic text-gray-500 text-center">
+                        No data saved yet.
+                    </p>
+                ) : (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        {Object.entries(savedData).map(([k, v]) =>
+                            typeof v === "string" ? (
+                                <p key={k}><strong>{k}:</strong> {v || "-"}</p>
+                            ) : null
+                        )}
+                    </div>
+                )}
+            </TabsContent>
+        </Tabs>
     );
 }

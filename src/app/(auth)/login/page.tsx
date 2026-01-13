@@ -78,7 +78,7 @@ function LoginPageContent() {
 
   // Filter platoon commanders directly from appointments
   const platoonCommanders = useMemo(() => {
-    return appointments.filter((a) => a.positionName === "Platoon Commander");
+    return appointments.filter((a) => a.scopeType === "PLATOON");
   }, [appointments]);
 
   const onSubmit = async (data: LoginForm) => {

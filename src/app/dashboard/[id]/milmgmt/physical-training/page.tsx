@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React from "react";
 import { useParams } from "next/navigation";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -18,20 +18,16 @@ import PhysicalForm from "@/components/physic-training/PhysicalForm";
 
 export default function PhysicalTrainingPage() {
   const params = useParams();
-  // Handle both 'id' and 'ocId' param names, similar to your working file
+  // Handle both 'id' and 'ocId' param names
   const paramId = params?.ocId || params?.id;
   const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
   const { cadet } = useOcDetails(ocId);
-
-
-
 
   return (
     <DashboardLayout
       title="Physical Training"
       description="Record and manage cadet physical training details."
     >
-
       <main className="p-6">
         <BreadcrumbNav
           paths={[
@@ -83,7 +79,6 @@ export default function PhysicalTrainingPage() {
             </DropdownMenu>
           }
         >
-
           <TabsContent value="physical-training">
             <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
               <CardHeader>
@@ -92,13 +87,10 @@ export default function PhysicalTrainingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <PhysicalForm />
+                <PhysicalForm ocId={ocId} />
               </CardContent>
-
-
             </Card>
           </TabsContent>
-
         </DossierTab>
       </main>
     </DashboardLayout>

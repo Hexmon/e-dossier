@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryClient } from "@tanstack/react-query";
-import { Providers } from "@/components/providers/Providers";
 import { Toaster } from "sonner";
+import ReduxProvider from "@/components/providers/ReduxProvider";
 
 const queryClient = new QueryClient();
 
@@ -30,13 +30,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-            <body
-              className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-            >
-              <Providers>{children}</Providers>
-               {/* <GlobalLoader /> */}
-              <Toaster richColors position="top-right" />
-            </body>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <ReduxProvider>
+          {children}
+        </ReduxProvider>
+        {/* <GlobalLoader /> */}
+        <Toaster richColors position="top-right" />
+      </body>
     </html>
   );
 }

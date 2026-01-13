@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,9 @@ import {
 } from "@/components/ui/select";
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
+
+import type { RootState } from "@/store";
+import { saveSwimming1Data } from "@/store/slices/physicalTrainingSlice";
 
 interface Row {
     id: string;
@@ -27,18 +31,45 @@ interface Row {
 interface Swimming1Props {
     onMarksChange: (marks: number) => void;
     activeSemester: string;
+    ocId: string;
 }
 
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
 const column4Options = ["Pass", "Fail"];
 
-export default function Swimming1({ onMarksChange, activeSemester }: Swimming1Props) {
+const DEFAULT_DATA: Row[] = [
+    { id: "1", column1: 1, column2: "25 meter", column3: "", column4: "", maxMarks: 10, column5: 0 },
+    { id: "2", column1: 2, column2: "Jump", column3: "", column4: "", maxMarks: 20, column5: 0 },
+];
+
+export default function Swimming1({ onMarksChange, activeSemester, ocId }: Swimming1Props) {
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
 
-    const [tableData, setTableData] = useState<Row[]>([
-        { id: "1", column1: 1, column2: "25 meter", column3: "", column4: "", maxMarks: 10, column5: 0 },
-        { id: "2", column1: 2, column2: "Jump", column3: "", column4: "", maxMarks: 20, column5: 0 },
-    ]);
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.physicalTraining.forms[ocId]?.[activeSemester]?.swimming1Data
+    );
+
+    const [tableData, setTableData] = useState<Row[]>(savedData || DEFAULT_DATA);
+
+    // Load saved data when semester changes
+    useEffect(() => {
+        if (savedData) {
+            setTableData(savedData);
+        }
+    }, [savedData, activeSemester]);
+
+    // Auto-save to Redux whenever data changes
+    useEffect(() => {
+        if (tableData && ocId) {
+            dispatch(saveSwimming1Data({
+                ocId,
+                semester: activeSemester,
+                data: tableData
+            }));
+        }
+    }, [tableData, ocId, activeSemester, dispatch]);
 
     const tableTotal = useMemo(() => {
         return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);
@@ -278,6 +309,11 @@ export default function Swimming1({ onMarksChange, activeSemester }: Swimming1Pr
                     <Button onClick={handleEdit}>Edit</Button>
                 )}
             </div>
+
+            {/* Auto-save indicator */}
+            <p className="text-sm text-muted-foreground text-center mt-2">
+                * Changes are automatically saved
+            </p>
         </CardContent>
     );
 }

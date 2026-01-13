@@ -10,9 +10,14 @@ import { Edit, RotateCcw, Save } from "lucide-react";
 interface Props {
     form: UseFormReturn<FieldValues>;
     tabName?: string;
+    onClearForm?: () => void;
 }
 
-export default function PLCdrCombinedForm({ form, tabName = "PL CDR" }: Props) {
+export default function PLCdrCombinedForm({
+    form,
+    tabName = "PL CDR",
+    onClearForm
+}: Props) {
     const { register, handleSubmit, reset, watch } = form;
 
     const formValues = watch();
@@ -46,8 +51,11 @@ export default function PLCdrCombinedForm({ form, tabName = "PL CDR" }: Props) {
     };
 
     const handleReset = () => {
-        reset();
-        toast.info("Form has been reset");
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            reset();
+            onClearForm?.();
+            toast.info("Form has been reset");
+        }
     };
 
     const handleCancel = () => {
@@ -137,7 +145,7 @@ export default function PLCdrCombinedForm({ form, tabName = "PL CDR" }: Props) {
                     maxLength={10}
                 />
             </div>
-            <div className="flex justify-center items-center">
+            <div className="flex justify-center items-center gap-2">
                 {isSaved && !isEditing ? (
                     <>
                         <Button
@@ -167,7 +175,7 @@ export default function PLCdrCombinedForm({ form, tabName = "PL CDR" }: Props) {
                             className="flex items-center gap-2"
                         >
                             <RotateCcw className="h-4 w-4" />
-                            Reset
+                            Clear Form
                         </Button>
                     </>
                 )}

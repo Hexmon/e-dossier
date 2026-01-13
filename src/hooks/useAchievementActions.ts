@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -11,7 +12,7 @@ import { FormValues } from "@/types/club-detls";
 export const useAchievementActions = (selectedCadet: any) => {
     const { getValues, setValue } = useFormContext<FormValues>();
 
-    const submitAchievements = async () => {
+    const submitAchievements = useCallback(async () => {
         const rows = getValues().achievements;
 
         if (!selectedCadet?.ocId) {
@@ -49,15 +50,15 @@ export const useAchievementActions = (selectedCadet: any) => {
             console.error(err);
             toast.error("Failed to save achievements");
         }
-    };
+    }, [selectedCadet?.ocId, getValues, setValue]);
 
-    const fetchAchievements = async () => {
+    const fetchAchievements = useCallback(async () => {
         if (!selectedCadet?.ocId) return [];
         const res = await listOcAchievements(selectedCadet.ocId);
         return res.items ?? [];
-    };
+    }, [selectedCadet?.ocId]);
 
-    const deleteAchievement = async (index: number, remove: (index: number) => void) => {
+    const deleteAchievement = useCallback(async (index: number, remove: (index: number) => void) => {
         const rows = getValues().achievements;
         const row = rows?.[index];
         if (!row) {
@@ -85,8 +86,7 @@ export const useAchievementActions = (selectedCadet: any) => {
             console.error(err);
             toast.error("Failed to delete achievement");
         }
-    };
+    }, [selectedCadet?.ocId, getValues]);
 
     return { submitAchievements, fetchAchievements, deleteAchievement };
-
 };

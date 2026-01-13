@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,9 @@ import {
 } from "@/components/ui/select";
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
+
+import type { RootState } from "@/store";
+import { saveHigherTestsData } from "@/store/slices/physicalTrainingSlice";
 
 interface Row {
     id: string;
@@ -27,20 +31,47 @@ interface Row {
 interface HigherTestsProps {
     onMarksChange: (marks: number) => void;
     activeSemester: string;
+    ocId: string;
 }
 
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
 const column4Options = ["Pass", "Fail"];
 
-export default function HigherTests({ onMarksChange, activeSemester }: HigherTestsProps) {
+const DEFAULT_DATA: Row[] = [
+    { id: "1", column1: 1, column2: "Swimming", column3: "", column4: "", maxMarks: 7, column5: 0 },
+    { id: "2", column1: 2, column2: "Jump", column3: "", column4: "", maxMarks: 8, column5: 0 },
+    { id: "3", column1: 3, column2: "Chin Ups", column3: "", column4: "", maxMarks: 7, column5: 0 },
+    { id: "4", column1: 4, column2: "Rope", column3: "", column4: "", maxMarks: 8, column5: 0 },
+];
+
+export default function HigherTests({ onMarksChange, activeSemester, ocId }: HigherTestsProps) {
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
 
-    const [tableData, setTableData] = useState<Row[]>([
-        { id: "1", column1: 1, column2: "Swimming", column3: "", column4: "", maxMarks: 7, column5: 0 },
-        { id: "2", column1: 2, column2: "Jump", column3: "", column4: "", maxMarks: 8, column5: 0 },
-        { id: "3", column1: 3, column2: "Chin Ups", column3: "", column4: "", maxMarks: 7, column5: 0 },
-        { id: "4", column1: 4, column2: "Rope", column3: "", column4: "", maxMarks: 8, column5: 0 },
-    ]);
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.physicalTraining.forms[ocId]?.[activeSemester]?.higherTestsData
+    );
+
+    const [tableData, setTableData] = useState<Row[]>(savedData || DEFAULT_DATA);
+
+    // Load saved data when semester changes
+    useEffect(() => {
+        if (savedData) {
+            setTableData(savedData);
+        }
+    }, [savedData, activeSemester]);
+
+    // Auto-save to Redux whenever data changes
+    useEffect(() => {
+        if (tableData && ocId) {
+            dispatch(saveHigherTestsData({
+                ocId,
+                semester: activeSemester,
+                data: tableData
+            }));
+        }
+    }, [tableData, ocId, activeSemester, dispatch]);
 
     const tableTotal = useMemo(() => {
         return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);
@@ -90,7 +121,16 @@ export default function HigherTests({ onMarksChange, activeSemester }: HigherTes
 
     const handleEdit = () => setIsEditing(true);
     const handleSave = () => {
+        // Validate all marks before saving
+        for (const row of tableData) {
+            if (row.column5 > 0 && row.column5 > row.maxMarks) {
+                toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and ${row.maxMarks}`);
+                return;
+            }
+        }
+
         setIsEditing(false);
+        toast.success("Higher Tests data saved successfully");
         console.log("Higher Tests Table saved:", tableData);
     };
     const handleCancel = () => setIsEditing(false);
@@ -270,6 +310,11 @@ export default function HigherTests({ onMarksChange, activeSemester }: HigherTes
                     <Button onClick={handleEdit}>Edit</Button>
                 )}
             </div>
+
+            {/* Auto-save indicator */}
+            <p className="text-sm text-muted-foreground text-center mt-2">
+                * Changes are automatically saved
+            </p>
         </CardContent>
     );
 }
