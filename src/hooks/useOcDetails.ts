@@ -21,12 +21,13 @@ export function useOcDetails(ocId?: string) {
         try {
             const oc = await fetchOCById(ocId);
             if (!oc) return;
+            const courseId = oc.course?.id || "";
 
-            const course = await fetchCourseById(oc.courseId);
+            const course = await fetchCourseById(courseId) || null;
 
             setCadet({
                 name: oc.name,
-                course: oc.courseId,
+                course: courseId ?? "",
                 courseName: course?.course?.code || "",
                 ocNumber: oc.ocNo,
                 ocId: oc.id,

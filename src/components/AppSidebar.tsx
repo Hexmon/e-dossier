@@ -7,6 +7,7 @@ import {
   Shield,
   HelpCircle,
   ChevronRight,
+  Lock,
 } from "lucide-react";
 
 import {
@@ -23,11 +24,13 @@ import {
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Image from "next/image";
 import { MenuSection } from "@/types/appSidebar";
 import { menuItems } from "@/constants/app.constants";
 import { fetchMe, MeResponse } from "@/app/lib/api/me";
 import OCSelectModal from "@/components/modals/OCSelectModal";
+import { listAppointments } from "@/app/lib/api/AppointmentFilterApi";
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -37,6 +40,8 @@ export function AppSidebar() {
 
   const [openGroups, setOpenGroups] = useState<string[]>(["Interview"]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   const isActive = (path: string) => pathname === path;
 
@@ -94,13 +99,61 @@ export function AppSidebar() {
     position = "",
   } = apt as any;
 
+  // Extract user ID from the data
+  const userId = (user as any)?.id || "";
+
+  // Check if user is admin by fetching their appointments
+  useEffect(() => {
+    if (!userId) {
+      setCheckingAdmin(false);
+      return;
+    }
+
+    const checkAdminStatus = async () => {
+      setCheckingAdmin(true);
+      try {
+        const { appointments } = await listAppointments({ userId });
+
+        // Get the first active appointment (or the most recent one)
+        const activeAppointment = appointments.find(apt => !apt.endsAt) || appointments[0];
+
+        if (activeAppointment) {
+          // Check if positionName is "Admin" (case-insensitive)
+          const positionName = activeAppointment.positionName || "";
+          setIsAdmin(positionName.toLowerCase() === "admin");
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (err) {
+        console.error("Failed to check admin status:", err);
+        setIsAdmin(false);
+      } finally {
+        setCheckingAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [userId]);
+
   // Handle menu item click
-  const handleMenuItemClick = (item: any, e: React.MouseEvent) => {
+  const handleMenuItemClick = (item: any, e: React.MouseEvent, section: MenuSection) => {
     // Check if this is the Dossier Management item
     if (item.title === "Dossier Management") {
       e.preventDefault();
       setModalOpen(true);
+      return;
     }
+
+    // Check if trying to access admin section without permissions
+    if (section.group === "Admin Management" && !isAdmin) {
+      e.preventDefault();
+      return;
+    }
+  };
+
+  // Determine if a section or item should be disabled
+  const isDisabled = (section: MenuSection) => {
+    return section.group === "Admin" && !isAdmin;
   };
 
   return (
@@ -138,120 +191,182 @@ export function AppSidebar() {
 
           {/* Navigation */}
           <div className="flex-1 p-2">
-            {menuItems.map((section) => (
-              <SidebarGroup key={section.group}>
-                {section.collapsible ? (
-                  <Collapsible
-                    open={openGroups.includes(section.group)}
-                    onOpenChange={() => toggleGroup(section.group)}
-                  >
-                    <CollapsibleTrigger asChild>
-                      <SidebarGroupLabel className="flex items-center justify-between hover:bg-accent/50 rounded-md p-2 cursor-pointer">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {collapsed ? section.group.charAt(0) : section.group}
-                        </span>
-                        {!collapsed && (
-                          <ChevronRight
-                            className={`h-3 w-3 transition-transform ${openGroups.includes(section.group) ? "rotate-90" : ""
+            <TooltipProvider>
+              {menuItems.map((section) => {
+                const disabled = isDisabled(section);
+
+                return (
+                  <SidebarGroup key={section.group}>
+                    {section.collapsible ? (
+                      <Collapsible
+                        open={openGroups.includes(section.group)}
+                        onOpenChange={() => !disabled && toggleGroup(section.group)}
+                        disabled={disabled}
+                      >
+                        <CollapsibleTrigger asChild>
+                          <SidebarGroupLabel
+                            className={`flex items-center justify-between rounded-md p-2 ${disabled
+                                ? "cursor-not-allowed opacity-50"
+                                : "hover:bg-accent/50 cursor-pointer"
                               }`}
-                          />
-                        )}
-                      </SidebarGroupLabel>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarGroupContent>
-                        <SidebarMenu>
-                          {section.items.map((item) => (
-                            <SidebarMenuItem key={item.title}>
-                              <SidebarMenuButton asChild>
-                                <Link
-                                  href={item.url}
-                                  className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
-                                      ? "bg-[#1677ff] text-white"
-                                      : "hover:bg-accent/50"
-                                    }`}
-                                >
-                                  <item.icon className="h-4 w-4" />
-                                  {!collapsed && (
-                                    <div className="flex items-center justify-between w-full">
-                                      <span>{item.title}</span>
-                                      {item.badge && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {item.badge}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  )}
-                                </Link>
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          ))}
-                        </SidebarMenu>
-                      </SidebarGroupContent>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ) : (
-                  <>
-                    {!collapsed && (
-                      <SidebarGroupLabel className="text-xs font-medium text-muted-foreground">
-                        {section.group}
-                      </SidebarGroupLabel>
-                    )}
-                    <SidebarGroupContent>
-                      <SidebarMenu>
-                        {section.items.map((item) => (
-                          <SidebarMenuItem key={item.title}>
-                            {item.title === "Dossier Management" ? (
-                              <SidebarMenuButton
-                                onClick={(e) => handleMenuItemClick(item, e)}
-                                className={`flex items-center gap-2 ${isActive(item.url)
-                                    ? "bg-[#1677ff] text-white"
-                                    : ""
+                          >
+                            <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                              {collapsed ? section.group.charAt(0) : section.group}
+                              {disabled && !collapsed && <Lock className="h-3 w-3" />}
+                            </span>
+                            {!collapsed && !disabled && (
+                              <ChevronRight
+                                className={`h-3 w-3 transition-transform ${openGroups.includes(section.group) ? "rotate-90" : ""
                                   }`}
-                              >
-                                <item.icon className="h-4 w-4" />
-                                {!collapsed && (
-                                  <div className="flex items-center justify-between w-full">
-                                    <span>{item.title}</span>
-                                    {item.badge && (
-                                      <Badge variant="outline" className="text-xs">
-                                        {item.badge}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                )}
-                              </SidebarMenuButton>
-                            ) : (
-                              <SidebarMenuButton asChild>
-                                <Link
-                                  href={item.url}
-                                  className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
-                                      ? "bg-[#1677ff] text-white"
-                                      : "hover:bg-accent/50"
-                                    }`}
-                                >
-                                  <item.icon className="h-4 w-4" />
-                                  {!collapsed && (
-                                    <div className="flex items-center justify-between w-full">
-                                      <span>{item.title}</span>
-                                      {item.badge && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {item.badge}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  )}
-                                </Link>
-                              </SidebarMenuButton>
+                              />
                             )}
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
-                    </SidebarGroupContent>
-                  </>
-                )}
-              </SidebarGroup>
-            ))}
+                          </SidebarGroupLabel>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarGroupContent>
+                            <SidebarMenu>
+                              {section.items.map((item) => (
+                                <SidebarMenuItem key={item.title}>
+                                  {disabled ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-2 px-2 py-1 rounded-md opacity-50 cursor-not-allowed">
+                                          <item.icon className="h-4 w-4" />
+                                          {!collapsed && (
+                                            <div className="flex items-center justify-between w-full">
+                                              <span>{item.title}</span>
+                                              {item.badge && (
+                                                <Badge variant="outline" className="text-xs">
+                                                  {item.badge}
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Admin access required</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <SidebarMenuButton asChild>
+                                      <Link
+                                        href={item.url}
+                                        className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
+                                            ? "bg-[#1677ff] text-white"
+                                            : "hover:bg-accent/50"
+                                          }`}
+                                      >
+                                        <item.icon className="h-4 w-4" />
+                                        {!collapsed && (
+                                          <div className="flex items-center justify-between w-full">
+                                            <span>{item.title}</span>
+                                            {item.badge && (
+                                              <Badge variant="outline" className="text-xs">
+                                                {item.badge}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        )}
+                                      </Link>
+                                    </SidebarMenuButton>
+                                  )}
+                                </SidebarMenuItem>
+                              ))}
+                            </SidebarMenu>
+                          </SidebarGroupContent>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ) : (
+                      <>
+                        {!collapsed && (
+                          <SidebarGroupLabel
+                            className={`text-xs font-medium text-muted-foreground flex items-center gap-2 ${disabled ? "opacity-50" : ""
+                              }`}
+                          >
+                            {section.group}
+                            {disabled && <Lock className="h-3 w-3" />}
+                          </SidebarGroupLabel>
+                        )}
+                        <SidebarGroupContent>
+                          <SidebarMenu>
+                            {section.items.map((item) => (
+                              <SidebarMenuItem key={item.title}>
+                                {item.title === "Dossier Management" ? (
+                                  <SidebarMenuButton
+                                    onClick={(e) => handleMenuItemClick(item, e, section)}
+                                    className={`flex items-center gap-2 ${isActive(item.url)
+                                        ? "bg-[#1677ff] text-white"
+                                        : ""
+                                      }`}
+                                  >
+                                    <item.icon className="h-4 w-4" />
+                                    {!collapsed && (
+                                      <div className="flex items-center justify-between w-full">
+                                        <span>{item.title}</span>
+                                        {item.badge && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {item.badge}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    )}
+                                  </SidebarMenuButton>
+                                ) : disabled ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center gap-2 px-2 py-1 rounded-md opacity-50 cursor-not-allowed">
+                                        <item.icon className="h-4 w-4" />
+                                        {!collapsed && (
+                                          <div className="flex items-center justify-between w-full">
+                                            <span>{item.title}</span>
+                                            {item.badge && (
+                                              <Badge variant="outline" className="text-xs">
+                                                {item.badge}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Admin access required</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <SidebarMenuButton asChild>
+                                    <Link
+                                      href={item.url}
+                                      onClick={(e) => handleMenuItemClick(item, e, section)}
+                                      className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
+                                          ? "bg-[#1677ff] text-white"
+                                          : "hover:bg-accent/50"
+                                        }`}
+                                    >
+                                      <item.icon className="h-4 w-4" />
+                                      {!collapsed && (
+                                        <div className="flex items-center justify-between w-full">
+                                          <span>{item.title}</span>
+                                          {item.badge && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {item.badge}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      )}
+                                    </Link>
+                                  </SidebarMenuButton>
+                                )}
+                              </SidebarMenuItem>
+                            ))}
+                          </SidebarMenu>
+                        </SidebarGroupContent>
+                      </>
+                    )}
+                  </SidebarGroup>
+                );
+              })}
+            </TooltipProvider>
           </div>
 
           {/* Help Section */}
@@ -276,11 +391,12 @@ export function AppSidebar() {
         </SidebarContent>
       </Sidebar>
 
-      {/* OC Select Modal */}
+      {/* OC Select Modal - Pass userId to filter by platoon */}
       <OCSelectModal
         open={modalOpen}
         onOpenChange={setModalOpen}
         onSelect={(oc) => router.push(`/dashboard/${oc.id}/milmgmt`)}
+        userId={userId}
       />
     </>
   );
