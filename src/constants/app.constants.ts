@@ -255,11 +255,18 @@ export const motivationPrefill: sportsRow[] = [
 ];
 
 export const catOptions = [
-  "Sports Awards (Blazer/Blue/H-Blue/Merit)",
+  "Sports Award Blazer",
+  "Sports Award Blue",
+  "Sports Award Half-Blue",
+  "Sports Award Merit",
   "70%+ in Service Subjects",
-  "Academic Torches (G/S/B)",
-  "Debate / Public Speaking (Wg/Pl)",
-  "Discipline (Negatives)",
+  "Academic Torches Gold",
+  "Academic Torches Silver",
+  "Academic Torches Bronze",
+  "Debate Wg",
+  "Public Speaking pl",
+  "Discipline (0-35 negative pts)",
+  "Discipline (36-70 negative pts)",
   "Misc Activities (Adv, MC, TD, etc.)"
 ];
 

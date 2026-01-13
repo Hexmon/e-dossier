@@ -15,7 +15,8 @@ import {
   NotebookPen,
   ChartArea,
   BookOpenCheck,
-  ArrowDownUp
+  ArrowDownUp,
+  Gavel
 } from "lucide-react";
 
 
@@ -301,6 +302,13 @@ export const managementCard = [
     icon: Tent,
     to: "/dashboard/genmgmt/camps",
     color: "bg-green-700"
+  },
+  {
+    title: "Punishment Management",
+    description: "Track, assign, and manage disciplinary punishments",
+    icon: Gavel,
+    to: "/dashboard/genmgmt/punishments",
+    color: "bg-red-700"
   }
 
   // {

@@ -12,6 +12,17 @@ export interface Course {
   updatedAt: string;
   deletedAt?: string | null;
 }
+export interface CourseRef {
+  id: string;
+  code: string;
+  title?: string;
+}
+
+export interface PlatoonRef {
+  id: string;
+  key: string;
+  name: string;
+}
 
 /** Base OC row from oc_cadets */
 export interface OCRecord {
@@ -20,12 +31,13 @@ export interface OCRecord {
   name: string;
   ocNo: string;
   uid?: string;
-  courseId: string;
-  branch?: "E" | "M" | "O" | null;
+  branch?: "E" | "M" | "C" | null;
   platoonId?: string | null;
-  arrivalAtUniversity: string; // ISO string
+  arrivalAtUniversity: string;
   withdrawnOn?: string | null;
   createdAt?: string;
+  course?: CourseRef;
+  platoon?: PlatoonRef;
 }
 
 /** Optional denormalized fields the list API now returns */
@@ -69,7 +81,7 @@ export interface FetchOCParams {
   /** filter by platoon */
   platoonId?: string;
   /** filter by branch */
-  branch?: "O" | "E" | "M";
+  branch?: "C" | "E" | "M";
   /** filter by status enum */
   status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
   /** shorthand for withdrawnOn IS NULL */
@@ -149,7 +161,7 @@ export interface FetchOCParams {
   /** filter by platoon */
   platoonId?: string;
   /** filter by branch */
-  branch?: "O" | "E" | "M";
+  branch?: "C" | "E" | "M";
   /** filter by status enum */
   status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
   /** shorthand for withdrawnOn IS NULL */

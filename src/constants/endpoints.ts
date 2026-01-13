@@ -23,6 +23,8 @@ export const endpoints = {
         subjectById: (subjectId: string) => `/api/v1/admin/subjects/${subjectId}`,
         instructors: "/api/v1/admin/instructors",
         instructorById: (id: string) => `/api/v1/admin/instructors/${id}`,
+        punishments: "/api/v1/admin/punishments",
+        punishmentById: (punishmentId: string) => `/api/v1/admin/punishments/${punishmentId}`,
         courseOfferings: (courseId: string) =>
             `/api/v1/admin/courses/${courseId}/offerings`,
         courseOfferingById: (courseId: string, offeringId: string) =>
