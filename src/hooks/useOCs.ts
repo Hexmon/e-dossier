@@ -31,7 +31,7 @@ export function useOCs() {
     const addOC = useCallback(
         async (payload: Omit<OCRecord, "id" | "uid" | "createdAt">) => {
             const created = await createOC(payload);
-            setOcList((prev) => [...prev, created]);
+            setOcList((prev) => [...prev, created as OCListRow]);
             setTotalCount((t) => t + 1);
             return created;
         },
@@ -40,7 +40,7 @@ export function useOCs() {
 
     const editOC = useCallback(async (id: string, payload: Partial<OCRecord>) => {
         const updated = await updateOC(id, payload);
-        setOcList((prev) => prev.map((o) => (o.id === id ? updated : o)));
+        setOcList((prev) => prev.map((o) => (o.id === id ? updated as OCListRow : o)));
         return updated;
     }, []);
 
