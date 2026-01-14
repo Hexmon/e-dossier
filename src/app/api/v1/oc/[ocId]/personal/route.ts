@@ -6,6 +6,7 @@ import { getPersonal, upsertPersonal, deletePersonal } from '@/app/db/queries/oc
 import { authorizeOcAccess } from '@/lib/authorization';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
+import { requireAuth } from '@/app/lib/authz';
 
 async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
@@ -13,7 +14,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
         await ensureOcExists(ocId);
 
         // SECURITY FIX: Proper authorization check to prevent IDOR
-        await authorizeOcAccess(req, ocId);
+        await requireAuth(req);
 
         return json.ok({ message: 'Personal details retrieved successfully.', data: await getPersonal(ocId) });
     } catch (err) { return handleApiError(err); }
@@ -25,7 +26,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
         await ensureOcExists(ocId);
 
         // SECURITY FIX: Proper authorization check to prevent IDOR
-        const authCtx = await authorizeOcAccess(req, ocId);
+        const authCtx = await requireAuth(req);
 
         const dto = personalUpsertSchema.parse(await req.json());
         const existing = await getPersonal(ocId);
@@ -54,7 +55,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const dto = personalUpsertSchema.partial().parse(await req.json());
         const previous = await getPersonal(ocId);
@@ -84,7 +85,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const deleted = await deletePersonal(ocId);
 

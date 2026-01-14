@@ -4,6 +4,7 @@ import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists } from '../../_checks';
 import { authorizeOcAccess } from '@/lib/authorization';
+import { requireAuth } from '@/app/lib/authz';
 import { ocCadets, ocCommissioning, ocImages } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -27,7 +28,8 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
   try {
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
-    await authorizeOcAccess(req, ocId);
+    // Allow any authenticated user to read dossier snapshots (read-only summary data)
+    await requireAuth(req);
 
     // Fetch OC data
     const [ocRow] = await db
@@ -178,10 +180,7 @@ async function uploadImage(ocId: string, file: File, kind: 'CIVIL_DRESS' | 'UNIF
 
 async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const adminCtx = await import('@/app/lib/authz').then(m => m.requireAuth(req));
-    if (!(await import('@/app/lib/authz').then(m => m.hasAdminRole(adminCtx.roles)))) {
-      throw new ApiError(403, 'Admin privileges required', 'forbidden');
-    }
+    const adminCtx = await requireAuth(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
 
@@ -263,10 +262,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
 
 async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const adminCtx = await import('@/app/lib/authz').then(m => m.requireAuth(req));
-    if (!(await import('@/app/lib/authz').then(m => m.hasAdminRole(adminCtx.roles)))) {
-      throw new ApiError(403, 'Admin privileges required', 'forbidden');
-    }
+    const adminCtx = await requireAuth(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
 
