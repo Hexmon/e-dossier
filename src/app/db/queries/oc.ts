@@ -33,9 +33,12 @@ import {
     TheoryMarksRecord,
     PracticalMarksRecord,
 } from '@/app/db/schema/training/oc';
+import { dossierInspections } from '@/app/db/schema/training/dossierInspections';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
-import { and, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { users } from '@/app/db/schema/auth/users';
+import { positions } from '@/app/db/schema/auth/positions';
+import { and, eq, ilike, inArray, isNull, or, sql, desc } from 'drizzle-orm';
 
 type ListOpts = {
     q?: string;
@@ -1975,5 +1978,86 @@ export async function upsertDossierFilling(ocId: string, data: Partial<typeof oc
 }
 export async function deleteDossierFilling(ocId: string) {
     const [row] = await db.delete(ocDossierFilling).where(eq(ocDossierFilling.ocId, ocId)).returning();
+    return row ?? null;
+}
+
+// ---- Dossier Inspections -----------------------------------------------------
+export async function listDossierInspections(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select({
+            id: dossierInspections.id,
+            date: dossierInspections.date,
+            remarks: dossierInspections.remarks,
+            createdAt: dossierInspections.createdAt,
+            updatedAt: dossierInspections.updatedAt,
+            inspector: {
+                id: users.id,
+                name: users.name,
+                rank: users.rank,
+                appointment: positions.displayName,
+            },
+            initials: sql<string>`CONCAT(${users.rank}, ' ', ${users.name})`,
+        })
+        .from(dossierInspections)
+        .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
+        .leftJoin(positions, eq(users.appointId, positions.id))
+        .where(eq(dossierInspections.ocId, ocId))
+        .orderBy(desc(dossierInspections.createdAt))
+        .limit(limit)
+        .offset(offset);
+}
+
+export async function createDossierInspection(
+    ocId: string,
+    data: Omit<typeof dossierInspections.$inferInsert, 'id' | 'ocId' | 'createdAt' | 'updatedAt'>,
+) {
+    const [row] = await db.insert(dossierInspections).values({ ocId, ...data }).returning();
+    return row;
+}
+
+export async function getDossierInspection(ocId: string, id: string) {
+    const [row] = await db
+        .select({
+            id: dossierInspections.id,
+            ocId: dossierInspections.ocId,
+            inspectorUserId: dossierInspections.inspectorUserId,
+            date: dossierInspections.date,
+            remarks: dossierInspections.remarks,
+            createdAt: dossierInspections.createdAt,
+            updatedAt: dossierInspections.updatedAt,
+            inspector: {
+                id: users.id,
+                name: users.name,
+                rank: users.rank,
+                appointment: positions.displayName,
+            },
+            initials: sql<string>`CONCAT(${users.rank}, ' ', ${users.name})`,
+        })
+        .from(dossierInspections)
+        .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
+        .leftJoin(positions, eq(users.appointId, positions.id))
+        .where(and(eq(dossierInspections.id, id), eq(dossierInspections.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+
+export async function updateDossierInspection(
+    ocId: string,
+    id: string,
+    data: Partial<typeof dossierInspections.$inferInsert>,
+) {
+    const [row] = await db
+        .update(dossierInspections)
+        .set(data)
+        .where(and(eq(dossierInspections.id, id), eq(dossierInspections.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+export async function deleteDossierInspection(ocId: string, id: string) {
+    const [row] = await db
+        .delete(dossierInspections)
+        .where(and(eq(dossierInspections.id, id), eq(dossierInspections.ocId, ocId)))
+        .returning();
     return row ?? null;
 }
