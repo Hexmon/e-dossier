@@ -38,7 +38,7 @@ export default function OCSelectModal({
             const fetchUserPlatoon = async () => {
                 setLoadingPlatoon(true);
                 try {
-                    const { appointments } = await listAppointments({ userId });
+                    const { appointments } = await listAppointments({ userId, active: true });
 
                     const activeAppointment = appointments.find(apt => !apt.endsAt) || appointments[0];
 
