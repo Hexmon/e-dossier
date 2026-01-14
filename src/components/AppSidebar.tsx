@@ -112,7 +112,7 @@ export function AppSidebar() {
     const checkAdminStatus = async () => {
       setCheckingAdmin(true);
       try {
-        const { appointments } = await listAppointments({ userId });
+        const { appointments } = await listAppointments({ userId, active: true });
 
         // Get the first active appointment (or the most recent one)
         const activeAppointment = appointments.find(apt => !apt.endsAt) || appointments[0];
