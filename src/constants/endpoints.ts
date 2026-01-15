@@ -26,6 +26,7 @@ export const endpoints = {
         punishments: "/api/v1/admin/punishments",
         punishmentById: (punishmentId: string) => `/api/v1/admin/punishments/${punishmentId}`,
         discipline: "/api/v1/admin/discipline",
+        disciplineById: (id: string) => `/api/v1/admin/discipline/${id}`,
         courseOfferings: (courseId: string) =>
             `/api/v1/admin/courses/${courseId}/offerings`,
         courseOfferingById: (courseId: string, offeringId: string) =>
