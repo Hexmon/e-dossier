@@ -23,15 +23,36 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { fetchMe, MeResponse } from "@/app/lib/api/me";
 import { listAppointments } from "@/app/lib/api/AppointmentFilterApi";
 
 export default function DisciplineRecordsManagementPage() {
     const router = useRouter();
-    const { records, loading, fetchAll } = useDisciplineRecordsAdmin();
+    const { records, loading, fetchAll, updateRecord, deleteRecord } = useDisciplineRecordsAdmin();
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [recordToDelete, setRecordToDelete] = useState<AdminDisciplineRow | null>(null);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [recordToEdit, setRecordToEdit] = useState<AdminDisciplineRow | null>(null);
+    const [editForm, setEditForm] = useState({
+        semester: "",
+        dateOfOffence: "",
+        offence: "",
+        punishmentAwarded: "",
+        awardedOn: "",
+        awardedBy: "",
+        pointsDelta: "",
+    });
     const [isAdmin, setIsAdmin] = useState(false);
     const [checkingAdmin, setCheckingAdmin] = useState(true);
     const hasFetchedRef = useRef(false);
@@ -83,8 +104,17 @@ export default function DisciplineRecordsManagementPage() {
             toast.error("Admin privileges required");
             return;
         }
-        // TODO: Implement edit functionality
-        toast.info("Edit functionality not yet implemented");
+        setRecordToEdit(record);
+        setEditForm({
+            semester: record.semester?.toString() || "",
+            dateOfOffence: record.dateOfOffence || "",
+            offence: record.offence || "",
+            punishmentAwarded: record.punishment || "",
+            awardedOn: record.dateOfAward || "",
+            awardedBy: record.byWhomAwarded || "",
+            pointsDelta: record.points?.toString() || "",
+        });
+        setEditModalOpen(true);
     };
 
     const handleDelete = (record: AdminDisciplineRow) => {
@@ -99,11 +129,29 @@ export default function DisciplineRecordsManagementPage() {
     const confirmDelete = async () => {
         if (!recordToDelete) return;
 
-        // TODO: Implement delete API call
-        toast.info("Delete functionality not yet implemented");
+        await deleteRecord(recordToDelete.id);
 
         setDeleteConfirmOpen(false);
         setRecordToDelete(null);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!recordToEdit) return;
+
+        const payload = {
+            semester: parseInt(editForm.semester),
+            dateOfOffence: editForm.dateOfOffence,
+            offence: editForm.offence,
+            punishmentAwarded: editForm.punishmentAwarded || null,
+            awardedOn: editForm.awardedOn || null,
+            awardedBy: editForm.awardedBy || null,
+            pointsDelta: editForm.pointsDelta ? parseInt(editForm.pointsDelta) : 0,
+        };
+
+        await updateRecord(recordToEdit.id, payload);
+
+        setEditModalOpen(false);
+        setRecordToEdit(null);
     };
 
 
@@ -173,6 +221,84 @@ export default function DisciplineRecordsManagementPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Edit Discipline Record</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="semester">Semester</Label>
+                            <Input
+                                id="semester"
+                                type="number"
+                                value={editForm.semester}
+                                onChange={(e) => setEditForm({ ...editForm, semester: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="dateOfOffence">Date of Offence</Label>
+                            <Input
+                                id="dateOfOffence"
+                                type="date"
+                                value={editForm.dateOfOffence}
+                                onChange={(e) => setEditForm({ ...editForm, dateOfOffence: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="offence">Offence</Label>
+                            <Textarea
+                                id="offence"
+                                value={editForm.offence}
+                                onChange={(e) => setEditForm({ ...editForm, offence: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="punishmentAwarded">Punishment Awarded</Label>
+                            <Input
+                                id="punishmentAwarded"
+                                value={editForm.punishmentAwarded}
+                                onChange={(e) => setEditForm({ ...editForm, punishmentAwarded: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="awardedOn">Awarded On</Label>
+                            <Input
+                                id="awardedOn"
+                                type="date"
+                                value={editForm.awardedOn}
+                                onChange={(e) => setEditForm({ ...editForm, awardedOn: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="awardedBy">Awarded By</Label>
+                            <Input
+                                id="awardedBy"
+                                value={editForm.awardedBy}
+                                onChange={(e) => setEditForm({ ...editForm, awardedBy: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="pointsDelta">Points</Label>
+                            <Input
+                                id="pointsDelta"
+                                type="number"
+                                value={editForm.pointsDelta}
+                                onChange={(e) => setEditForm({ ...editForm, pointsDelta: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveEdit}>
+                            Save Changes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </SidebarProvider>
     );
 }
