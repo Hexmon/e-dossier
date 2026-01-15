@@ -3,11 +3,12 @@ import { NextResponse, NextRequest } from 'next/server';
 
 // SECURITY FIX: Changed default from 100000000000 (3,170 years) to 900 (15 minutes)
 const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900); // 15 minutes default
+const IS_PROD = process.env.NODE_ENV === 'production';
 
 export function setAccessCookie(res: NextResponse, token: string) {
   res.cookies.set('access_token', token, {
     httpOnly: true,
-    secure: true,
+    secure: false,
     sameSite: 'lax',
     path: '/',
     maxAge: ACCESS_TTL,
@@ -18,7 +19,7 @@ export function setAccessCookie(res: NextResponse, token: string) {
 export function clearAuthCookies(res: NextResponse) {
   res.cookies.set('access_token', '', {
     httpOnly: true,
-    secure: true,
+    secure: IS_PROD,
     sameSite: 'lax',
     path: '/',
     maxAge: 0,
