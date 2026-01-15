@@ -24,6 +24,10 @@ export interface DisciplineResponse {
     pointsCumulative?: number;
     createdAt?: string;
     updatedAt?: string;
+    // For admin all records
+    ocId?: string;
+    ocName?: string;
+    ocNo?: string;
 }
 
 function toISODateString(v?: string | Date | null) {
@@ -126,4 +130,19 @@ export async function deleteDisciplineRecord(
     return await api.delete(
         endpoints.oc.discipRec(ocId, disciplineId),
     );
+}
+
+/** Fetch all discipline records for admin */
+export async function getAllDisciplineRecords(): Promise<DisciplineResponse[]> {
+    try {
+        const response = (await api.get(endpoints.admin.discipline)) as any;
+
+        if (Array.isArray(response?.data)) return response.data;
+        if (Array.isArray(response)) return response;
+
+        return [];
+    } catch (error) {
+        console.error("Failed to fetch all discipline records:", error);
+        return [];
+    }
 }

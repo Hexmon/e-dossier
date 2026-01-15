@@ -4,7 +4,7 @@ import { parseParam, ensureOcExists, mustBeAdmin } from '../../_checks';
 import { OcIdParam, ocImageDeleteQuerySchema } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { listOcImages, getOcImage, softDeleteOcImage, hardDeleteOcImage } from '@/app/db/queries/oc';
-import { deleteObject, getPublicObjectUrl } from '@/app/lib/storage';
+import { deleteObject, getPublicObjectUrl, createPresignedGetUrl } from '@/app/lib/storage';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
 
@@ -22,7 +22,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
         for (const row of rows) {
             images[row.kind] = {
                 ...row,
-                publicUrl: row.deletedAt ? null : getPublicObjectUrl(row.objectKey),
+                publicUrl: row.deletedAt ? null : await createPresignedGetUrl({ key: row.objectKey }),
             };
         }
 

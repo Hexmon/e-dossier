@@ -111,6 +111,15 @@ export const autobiographyUpsertSchema = z.object({
     platoonCommanderName: z.string().optional(),
 });
 
+export const dossierFillingUpsertSchema = z.object({
+    initiatedBy: z.string().optional(),
+    openedOn: z.coerce.date().optional(),
+    initialInterview: z.string().optional(),
+    closedBy: z.string().optional(),
+    closedOn: z.coerce.date().optional(),
+    finalInterview: z.string().optional(),
+});
+
 // Legacy metadata-only schema (used in some internal APIs)
 export const ssbReportUpsertSchema = z.object({
     overallPredictiveRating: z.coerce.number().int().min(0).max(10).nullable().optional(),

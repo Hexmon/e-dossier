@@ -63,7 +63,7 @@ export default function OCsTable({
             key: "courseId",
             label: "Course",
             type: "custom",
-            render: (_value, row) => row.courseCode ?? row.courseTitle ?? row.courseId,
+            render: (_value, row) => row.courseCode ?? row.courseTitle ?? row.course?.id ?? "",
         },
         {
             key: "platoonId",

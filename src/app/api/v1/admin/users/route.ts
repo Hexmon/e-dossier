@@ -3,7 +3,7 @@ import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { userQuerySchema, userCreateSchema } from '@/app/lib/validators';
 import argon2 from 'argon2';
 import { listUsersWithActiveAppointments, UserListQuery } from '@/app/db/queries/users';
@@ -16,7 +16,7 @@ type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?:
 // GET /api/v1/admin/users (ADMIN)
 async function GETHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        await requireAuth(req);
 
         const { searchParams } = new URL(req.url);
         const qp = userQuerySchema.parse({
@@ -38,7 +38,7 @@ async function GETHandler(req: NextRequest) {
 // body: userCreateSchema (password optional; if provided → credentials_local)
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const authCtx = await requireAuth(req);
 
         const body = await req.json();
         const parsed = userCreateSchema.safeParse(body);
@@ -119,7 +119,7 @@ async function POSTHandler(req: NextRequest) {
         }
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.USER_CREATED,
             resourceType: AuditResourceType.USER,
             resourceId: u.id,

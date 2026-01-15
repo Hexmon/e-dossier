@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { S3Client, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const REQUIRED_ENV = [
@@ -109,6 +109,22 @@ export async function headObject(key: string) {
     const config = getStorageConfig();
     const client = createStorageClient();
     return client.send(new HeadObjectCommand({ Bucket: config.bucket, Key: key }));
+}
+
+export async function createPresignedGetUrl(params: {
+    key: string;
+    expiresInSeconds?: number;
+}) {
+    const config = getStorageConfig();
+    const client = createStorageClient();
+    const command = new GetObjectCommand({
+        Bucket: config.bucket,
+        Key: params.key,
+    });
+    const url = await getSignedUrl(client, command, {
+        expiresIn: params.expiresInSeconds ?? 3600, // 1 hour default
+    });
+    return url;
 }
 
 export async function deleteObject(key: string) {
