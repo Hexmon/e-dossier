@@ -120,6 +120,7 @@ export async function middleware(req: NextRequest) {
       '/api/v1/auth/login',
       '/api/v1/auth/signup',
       '/api/v1/auth/logout',
+      '/api/v1/bootstrap/super-admin',
     ];
     const shouldSkipCsrf = skipCsrfPaths.some((p) => matchPrefix(pathname, p));
 

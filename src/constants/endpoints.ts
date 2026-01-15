@@ -1,5 +1,4 @@
 export const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://172.22.128.57"
-
 export const endpoints = {
     auth: {
         login: "/api/v1/auth/login",
