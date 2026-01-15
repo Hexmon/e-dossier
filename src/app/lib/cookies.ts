@@ -5,9 +5,6 @@ import { NextResponse, NextRequest } from 'next/server';
 const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900); // 15 minutes default
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-// Use secure cookies only in production/https; in dev over http the browser drops Secure cookies.
-const IS_PROD = process.env.NODE_ENV === 'production';
-
 export function setAccessCookie(res: NextResponse, token: string) {
   res.cookies.set('access_token', token, {
     httpOnly: true,
