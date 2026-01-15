@@ -312,13 +312,6 @@ async function POSTHandler(req: NextRequest) {
     });
     setAccessCookie(res, access);
     if (csrfToken) setCsrfCookie(res, csrfToken);
-    // Log cookie attributes (no secrets) to debug cross-origin/secure flags
-    console.info('Auth cookie set', {
-      secure: false,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900),
-    });
     return res;
   } catch (err) {
     return handleApiError(err);

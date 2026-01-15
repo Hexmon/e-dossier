@@ -16,10 +16,6 @@ async function GETHandler(req: NextRequest) {
           .map((c) => c.split('=')[0]?.trim())
           .filter(Boolean)
       : [];
-    console.info('/api/v1/me incoming cookies', {
-      hasCookie: !!cookieHeader,
-      cookieNames,
-    });
 
     const principal = await requireAuth(req);
 
