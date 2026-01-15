@@ -2,6 +2,16 @@
 import { api } from "@/app/lib/apiClient";
 import { baseURL, endpoints } from "@/constants/endpoints";
 
+/** Course object */
+export interface Course {
+  id: string;
+  code: string;
+  title: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
 export interface CourseRef {
   id: string;
   code: string;
@@ -21,7 +31,7 @@ export interface OCRecord {
   name: string;
   ocNo: string;
   uid?: string;
-  branch?: "E" | "M" | "O" | null;
+  branch?: "E" | "M" | "C" | null;
   platoonId?: string | null;
   arrivalAtUniversity: string;
   withdrawnOn?: string | null;
@@ -32,6 +42,7 @@ export interface OCRecord {
 
 /** Optional denormalized fields the list API now returns */
 export interface OCDenorm {
+  course?: Course;
   courseCode?: string;
   courseTitle?: string;
   platoonKey?: string | null;
@@ -70,7 +81,7 @@ export interface FetchOCParams {
   /** filter by platoon */
   platoonId?: string;
   /** filter by branch */
-  branch?: "O" | "E" | "M";
+  branch?: "C" | "E" | "M";
   /** filter by status enum */
   status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
   /** shorthand for withdrawnOn IS NULL */
@@ -111,34 +122,6 @@ export async function getAllOCs(query?: string): Promise<OCListRow[]> {
  * Otherwise returns list rows with denormalized fields.
  */
 
-/** Base OC row from oc_cadets */
-export interface OCRecord {
-  id: string;
-  name: string;
-  ocNo: string;
-  uid?: string;
-  courseId: string;
-  branch?: "E" | "M" | "O" | null;
-  platoonId?: string | null;
-  arrivalAtUniversity: string; // ISO string
-  withdrawnOn?: string | null;
-  createdAt?: string;
-}
-
-/** Optional denormalized fields the list API now returns */
-export interface OCDenorm {
-  courseCode?: string;
-  courseTitle?: string;
-  platoonKey?: string | null;
-  platoonName?: string | null;
-
-  status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
-  managerUserId?: string | null;
-  relegateToCourseId?: string | null;
-  relegatedOn?: string | null;
-  updatedAt?: string;
-}
-
 /** Basic list row shape (cadet + denorm) */
 export type OCListRow = OCRecord & OCDenorm;
 
@@ -178,7 +161,7 @@ export interface FetchOCParams {
   /** filter by platoon */
   platoonId?: string;
   /** filter by branch */
-  branch?: "O" | "E" | "M";
+  branch?: "C" | "E" | "M";
   /** filter by status enum */
   status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
   /** shorthand for withdrawnOn IS NULL */

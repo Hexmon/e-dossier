@@ -8,7 +8,6 @@ import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import DossierTab from "@/components/Tabs/DossierTab";
 import { dossierTabs } from "@/config/app.config";
-
 import { TabsContent } from "@/components/ui/tabs";
 
 import { useOcDetails } from "@/hooks/useOcDetails";

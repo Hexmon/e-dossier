@@ -74,9 +74,9 @@ export default function OCManagementPage() {
   const [viewOpen, setViewOpen] = useState<boolean>(false);
   const [viewId, setViewId] = useState<string | null>(null);
 
-  type BranchType = "O" | "E" | "M";
+  type BranchType = "C" | "E" | "M";
 
-  const allowedBranches = useMemo(() => ["O", "E", "M"] as const, []);
+  const allowedBranches = useMemo(() => ["C", "E", "M"] as const, []);
   const safeBranch = ((): BranchType | undefined => {
     return (allowedBranches.includes(branchFilter as BranchType) ? (branchFilter as BranchType) : undefined);
   })();

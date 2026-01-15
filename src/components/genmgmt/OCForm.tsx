@@ -94,7 +94,7 @@ export function OCForm({
                 <div>
                     <Label>Course</Label>
                     <select
-                        {...register("courseId", { required: true })}
+                        {...register("course.id", { required: true })}
                         className="w-full border rounded-md p-2"
                     >
                         <option value="">Select Course</option>
