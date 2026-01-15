@@ -28,70 +28,81 @@ export default function SportsGamesTable({
             <h2 className="font-semibold text-md mb-2 underline">{title}</h2>
 
             <div className="overflow-x-auto border rounded-lg shadow">
-                <table className="w-full border text-sm">
+                <table className="w-full border-collapse text-sm">
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="p-2 border">Games / Awards</th>
-                            {!hideStringAndMaxMarks && <th className="p-2 border">String</th>}
-                            {!hideStringAndMaxMarks && <th className="p-2 border">Max Marks</th>}
-                            <th className="p-2 border">Obtained</th>
+                            <th className="p-2 border text-center font-semibold">Games / Awards</th>
+                            {!hideStringAndMaxMarks && (
+                                <>
+                                    <th className="p-2 border text-center font-semibold">String</th>
+                                    <th className="p-2 border text-center font-semibold">Max Marks</th>
+                                </>
+                            )}
+                            <th className="p-2 border text-center font-semibold">Obtained</th>
                         </tr>
                     </thead>
-
                     <tbody>
-                        {rows.map((prefillRow, index) => {
-                            const activity = prefillRow.activity ?? "-";
+                        {rows.map((row, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                                <td className="p-2 border">
+                                    {row.activity ?? "-"}
+                                </td>
 
-                            return (
-                                <tr key={`${termKey}-${index}`}>
-                                    <td className="p-2 border">{activity}</td>
+                                {!hideStringAndMaxMarks && (
+                                    <>
+                                        <td className="p-2 border">
+                                            <Controller
+                                                name={`${termKey}.${index}.string` as any}
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <Input
+                                                        {...field}
+                                                        value={field.value ?? ""}
+                                                        onChange={(e) => field.onChange(e.target.value)}
+                                                        disabled={disabled}
+                                                        className="w-full"
+                                                    />
+                                                )}
+                                            />
+                                        </td>
 
-                                    {/* STRING - Always Register */}
-                                    <td className={hideStringAndMaxMarks ? "hidden" : "p-2 border"}>
-                                        <Controller
-                                            name={`${termKey}.${index}.string`}
-                                            control={control}
-                                            render={({ field }) => (
-                                                <Input
-                                                    {...field}
-                                                    disabled={disabled || hideStringAndMaxMarks}
-                                                />
-                                            )}
-                                        />
-                                    </td>
+                                        <td className="p-2 border">
+                                            <Controller
+                                                name={`${termKey}.${index}.maxMarks` as any}
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <Input
+                                                        {...field}
+                                                        type="number"
+                                                        value={field.value ?? ""}
+                                                        onChange={(e) => field.onChange(e.target.value)}
+                                                        disabled={disabled}
+                                                        className="w-full"
+                                                    />
+                                                )}
+                                            />
+                                        </td>
+                                    </>
+                                )}
 
-                                    {/* MAX MARKS - Always Register */}
-                                    <td className={hideStringAndMaxMarks ? "hidden" : "p-2 border"}>
-                                        <Controller
-                                            name={`${termKey}.${index}.maxMarks`}
-                                            control={control}
-                                            render={({ field }) => (
-                                                <Input
-                                                    {...field}
-                                                    type="number"
-                                                    disabled={disabled || hideStringAndMaxMarks}
-                                                />
-                                            )}
-                                        />
-                                    </td>
-
-                                    {/* OBTAINED */}
-                                    <td className="p-2 border">
-                                        <Controller
-                                            name={`${termKey}.${index}.obtained`}
-                                            control={control}
-                                            render={({ field }) => (
-                                                <Input
-                                                    {...field}
-                                                    type="number"
-                                                    disabled={disabled}
-                                                />
-                                            )}
-                                        />
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                                <td className="p-2 border">
+                                    <Controller
+                                        name={`${termKey}.${index}.obtained` as any}
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Input
+                                                {...field}
+                                                type="number"
+                                                value={field.value ?? ""}
+                                                onChange={(e) => field.onChange(e.target.value)}
+                                                disabled={disabled}
+                                                className="w-full"
+                                            />
+                                        )}
+                                    />
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>

@@ -63,7 +63,7 @@ export default function OCsTable({
             key: "courseId",
             label: "Course",
             type: "custom",
-            render: (_value, row) => row.courseCode ?? row.courseTitle ?? row.courseId,
+            render: (_value, row) => row.courseCode ?? row.courseTitle ?? row.course?.id ?? "",
         },
         {
             key: "platoonId",
@@ -124,7 +124,7 @@ export default function OCsTable({
             },
             condition: (row) => !!row.id,
             className:
-                "text-destructive hover:bg-destructive hover:text-destructive-foreground",
+                "text-destructive hover:bg-red-500 hover:text-white",
         },
     ];
 

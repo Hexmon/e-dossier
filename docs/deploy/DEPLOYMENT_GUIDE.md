@@ -56,7 +56,6 @@ edossier_app_setup.sh    # Run on App VM
 ```
 
 > **Run both scripts as root or with sudo on a fresh Ubuntu 24.04 VM.**
-
 ---
 
 ## 3. Prerequisites

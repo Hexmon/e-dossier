@@ -1,13 +1,19 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import Appointments from "./Appointments";
 import Relegations from "./Relegations";
 import Withdrawal from "./Withdrawal";
 import OverallPerformance from "./OverallPerformance";
+import { toast } from "sonner";
+import type { RootState } from "@/store";
+import { saveOlqTableData, saveObservations } from "@/store/slices/overallAssessmentSlice";
 
 interface Row {
     factor: string;
@@ -19,19 +25,90 @@ interface Row {
     remarks: string;
 }
 
+const DEFAULT_TABLE_DATA: Row[] = [
+    { factor: "1st Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "2nd Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "3rd Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "4th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "5th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+    { factor: "6th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
+];
+
 export default function OlqAssessment() {
+    const params = useParams();
+    const paramId = params?.id || params?.ocId;
+    const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
+
+    const dispatch = useDispatch();
     const [isEditingTable, setIsEditingTable] = useState(false);
     const [isEditingObservations, setIsEditingObservations] = useState(false);
-    const [observations, setObservations] = useState("");
 
-    const [tableData, setTableData] = useState<Row[]>([
-        { factor: "1st Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "2nd Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "3rd Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "4th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "5th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-        { factor: "6th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
-    ]);
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.overallAssessment.forms[ocId]
+    );
+
+    // Initialize state from Redux or defaults
+    const [tableData, setTableData] = useState<Row[]>(() =>
+        savedData?.olqTableData || DEFAULT_TABLE_DATA
+    );
+    const [observations, setObservations] = useState(() =>
+        savedData?.observations || ""
+    );
+
+    // Debounce refs
+    const tableDebounceRef = useRef<NodeJS.Timeout | null>(null);
+    const observationsDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load saved data when ocId changes
+    useEffect(() => {
+        if (savedData) {
+            if (savedData.olqTableData && savedData.olqTableData.length > 0) {
+                setTableData(savedData.olqTableData);
+            }
+            if (savedData.observations) {
+                setObservations(savedData.observations);
+            }
+        }
+    }, [ocId, savedData]);
+
+    // Auto-save table data with debounce
+    useEffect(() => {
+        if (!ocId) return;
+
+        if (tableDebounceRef.current) {
+            clearTimeout(tableDebounceRef.current);
+        }
+
+        tableDebounceRef.current = setTimeout(() => {
+            dispatch(saveOlqTableData({ ocId, data: tableData }));
+        }, 500);
+
+        return () => {
+            if (tableDebounceRef.current) {
+                clearTimeout(tableDebounceRef.current);
+            }
+        };
+    }, [tableData, ocId, dispatch]);
+
+    // Auto-save observations with debounce
+    useEffect(() => {
+        if (!ocId) return;
+
+        if (observationsDebounceRef.current) {
+            clearTimeout(observationsDebounceRef.current);
+        }
+
+        observationsDebounceRef.current = setTimeout(() => {
+            dispatch(saveObservations({ ocId, data: observations }));
+        }, 500);
+
+        return () => {
+            if (observationsDebounceRef.current) {
+                clearTimeout(observationsDebounceRef.current);
+            }
+        };
+    }, [observations, ocId, dispatch]);
 
     const handleChange = (factor: string, key: keyof Row, value: string) => {
         setTableData(prev =>
@@ -58,16 +135,173 @@ export default function OlqAssessment() {
     const handleEditTable = () => setIsEditingTable(true);
     const handleSaveTable = () => {
         setIsEditingTable(false);
-        console.log("OLQ Assessment Table saved:", tableData);
+        toast.success("OLQ Assessment saved successfully");
     };
     const handleCancelTable = () => setIsEditingTable(false);
 
     const handleEditObservations = () => setIsEditingObservations(true);
     const handleSaveObservations = () => {
         setIsEditingObservations(false);
-        console.log("Observations on Moral Conduct saved:", observations);
+        toast.success("Observations saved successfully");
     };
     const handleCancelObservations = () => setIsEditingObservations(false);
+
+    // Add total row to data
+    const totalRow: Row = {
+        factor: "Total",
+        column1: tableData.reduce((sum, r) => sum + (r.column1 || 0), 0),
+        column2: tableData.reduce((sum, r) => sum + (r.column2 || 0), 0),
+        column3: tableData.reduce((sum, r) => sum + (r.column3 || 0), 0),
+        column4: tableData.reduce((sum, r) => sum + (r.column4 || 0), 0),
+        column5: calculateGrandTotal(),
+        remarks: "-"
+    };
+
+    const displayData = [...tableData, totalRow];
+
+    const columns: TableColumn<Row>[] = [
+        {
+            key: "factor",
+            label: "Factor",
+            render: (value) => value
+        },
+        {
+            key: "column1",
+            label: "Planning & Organisation",
+            type: "number",
+            render: (value, row) => {
+                const isTotalRow = row.factor === "Total";
+                if (isTotalRow) {
+                    return <span className="text-center block">{value}</span>;
+                }
+                return isEditingTable ? (
+                    <Input
+                        type="number"
+                        value={value}
+                        onChange={(e) => handleChange(row.factor, "column1", e.target.value)}
+                        placeholder="0"
+                        className="w-full"
+                    />
+                ) : (
+                    <span>{value || "-"}</span>
+                );
+            }
+        },
+        {
+            key: "column2",
+            label: "Social Adjustment",
+            type: "number",
+            render: (value, row) => {
+                const isTotalRow = row.factor === "Total";
+                if (isTotalRow) {
+                    return <span className="text-center block">{value}</span>;
+                }
+                return isEditingTable ? (
+                    <Input
+                        type="number"
+                        value={value}
+                        onChange={(e) => handleChange(row.factor, "column2", e.target.value)}
+                        placeholder="0"
+                        className="w-full"
+                    />
+                ) : (
+                    <span>{value || "-"}</span>
+                );
+            }
+        },
+        {
+            key: "column3",
+            label: "Social Effectiveness",
+            type: "number",
+            render: (value, row) => {
+                const isTotalRow = row.factor === "Total";
+                if (isTotalRow) {
+                    return <span className="text-center block">{value}</span>;
+                }
+                return isEditingTable ? (
+                    <Input
+                        type="number"
+                        value={value}
+                        onChange={(e) => handleChange(row.factor, "column3", e.target.value)}
+                        placeholder="0"
+                        className="w-full"
+                    />
+                ) : (
+                    <span>{value || "-"}</span>
+                );
+            }
+        },
+        {
+            key: "column4",
+            label: "Dynamic",
+            type: "number",
+            render: (value, row) => {
+                const isTotalRow = row.factor === "Total";
+                if (isTotalRow) {
+                    return <span className="text-center block">{value}</span>;
+                }
+                return isEditingTable ? (
+                    <Input
+                        type="number"
+                        value={value}
+                        onChange={(e) => handleChange(row.factor, "column4", e.target.value)}
+                        placeholder="0"
+                        className="w-full"
+                    />
+                ) : (
+                    <span>{value || "-"}</span>
+                );
+            }
+        },
+        {
+            key: "column5",
+            label: "Total",
+            type: "number",
+            render: (value, row) => {
+                const isTotalRow = row.factor === "Total";
+                const rowTotal = isTotalRow ? value : calculateRowTotal(row);
+                return <span className="text-center block font-semibold">{rowTotal}</span>;
+            }
+        },
+        {
+            key: "remarks",
+            label: "Remarks",
+            render: (value, row) => {
+                const isTotalRow = row.factor === "Total";
+                if (isTotalRow) {
+                    return <span className="text-center block">-</span>;
+                }
+                return isEditingTable ? (
+                    <Input
+                        type="text"
+                        value={value}
+                        onChange={(e) => handleChange(row.factor, "remarks", e.target.value)}
+                        placeholder="Enter remarks"
+                        className="w-full"
+                    />
+                ) : (
+                    <span>{value || "-"}</span>
+                );
+            }
+        }
+    ];
+
+    const config: TableConfig<Row> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: true
+        }
+    };
 
     return (
         <div className="space-y-6 p-6">
@@ -78,121 +312,18 @@ export default function OlqAssessment() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="overflow-x-auto">
+                    {(isEditingTable || isEditingObservations) && (
+                        <div className="text-xs text-gray-500 text-center">
+                            ✓ Changes are saved automatically
+                        </div>
+                    )}
+
+                    <div>
                         <h2 className="p-2 text-lg font-bold text-left text-gray-700 underline">OLQ Assessment</h2>
-                        <table className="w-full">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    <th className="border border-gray-300 px-4 py-2 text-left">Factor</th>
-                                    <th className="border border-gray-300 px-4 py-2 text-left">Planning & Organisation</th>
-                                    <th className="border border-gray-300 px-4 py-2 text-left">Social Adjustment</th>
-                                    <th className="border border-gray-300 px-4 py-2 text-left">Social Effectiveness</th>
-                                    <th className="border border-gray-300 px-4 py-2 text-left">Dynamic</th>
-                                    <th className="border border-gray-300 px-4 py-2 text-left">Total</th>
-                                    <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {tableData.map(row => {
-                                    const { factor, column1, column2, column3, column4, remarks } = row;
-                                    const rowTotal = calculateRowTotal(row);
-                                    return (
-                                        <tr key={factor} className="hover:bg-gray-50 border-b border-gray-300">
-                                            <td className="border border-gray-300 px-4 py-2">{factor}</td>
-                                            <td className="border border-gray-300 px-4 py-2">
-                                                {isEditingTable ? (
-                                                    <Input
-                                                        type="number"
-                                                        value={column1}
-                                                        onChange={(e) => handleChange(factor, "column1", e.target.value)}
-                                                        placeholder="0"
-                                                        className="w-full"
-                                                    />
-                                                ) : (
-                                                    <span>{column1 || "-"}</span>
-                                                )}
-                                            </td>
-                                            <td className="border border-gray-300 px-4 py-2">
-                                                {isEditingTable ? (
-                                                    <Input
-                                                        type="number"
-                                                        value={column2}
-                                                        onChange={(e) => handleChange(factor, "column2", e.target.value)}
-                                                        placeholder="0"
-                                                        className="w-full"
-                                                    />
-                                                ) : (
-                                                    <span>{column2 || "-"}</span>
-                                                )}
-                                            </td>
-                                            <td className="border border-gray-300 px-4 py-2">
-                                                {isEditingTable ? (
-                                                    <Input
-                                                        type="number"
-                                                        value={column3}
-                                                        onChange={(e) => handleChange(factor, "column3", e.target.value)}
-                                                        placeholder="0"
-                                                        className="w-full"
-                                                    />
-                                                ) : (
-                                                    <span>{column3 || "-"}</span>
-                                                )}
-                                            </td>
-                                            <td className="border border-gray-300 px-4 py-2">
-                                                {isEditingTable ? (
-                                                    <Input
-                                                        type="number"
-                                                        value={column4}
-                                                        onChange={(e) => handleChange(factor, "column4", e.target.value)}
-                                                        placeholder="0"
-                                                        className="w-full"
-                                                    />
-                                                ) : (
-                                                    <span>{column4 || "-"}</span>
-                                                )}
-                                            </td>
-                                            <td className="border border-gray-300 px-4 py-2 text-center font-semibold">
-                                                {rowTotal}
-                                            </td>
-                                            <td className="border border-gray-300 px-4 py-2">
-                                                {isEditingTable ? (
-                                                    <Input
-                                                        type="text"
-                                                        value={remarks}
-                                                        onChange={(e) => handleChange(factor, "remarks", e.target.value)}
-                                                        placeholder="Enter remarks"
-                                                        className="w-full"
-                                                    />
-                                                ) : (
-                                                    <span>{remarks || "-"}</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                                <tr className="bg-gray-100 font-semibold">
-                                    <td className="border border-gray-300 px-4 py-2">Total</td>
-                                    <td className="border border-gray-300 px-4 py-2 text-center">
-                                        {tableData.reduce((sum, r) => sum + (r.column1 || 0), 0)}
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-center">
-                                        {tableData.reduce((sum, r) => sum + (r.column2 || 0), 0)}
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-center">
-                                        {tableData.reduce((sum, r) => sum + (r.column3 || 0), 0)}
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-center">
-                                        {tableData.reduce((sum, r) => sum + (r.column4 || 0), 0)}
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-center">
-                                        {calculateGrandTotal()}
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-center">
-                                        <span>{"-"}</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <UniversalTable<Row>
+                            data={displayData}
+                            config={config}
+                        />
                     </div>
 
                     {/* OLQ Assessment Edit Buttons */}
@@ -234,10 +365,10 @@ export default function OlqAssessment() {
                         )}
                     </div>
 
-                    <Appointments />
-                    <Relegations />
-                    <Withdrawal />
-                    <OverallPerformance />
+                    <Appointments ocId={ocId} />
+                    <Relegations ocId={ocId} />
+                    <Withdrawal ocId={ocId} />
+                    <OverallPerformance ocId={ocId} />
                 </CardContent>
             </Card>
         </div>

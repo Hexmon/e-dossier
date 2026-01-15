@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 
 import {
@@ -11,54 +11,13 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 import OcCampActivitiesTable from "@/components/camps/campMarksTable";
 import OcCampReviews from "@/components/camps/campReviews";
-
-// Mock Data - Updated semester assignments
-const mockAvailableCamps = [
-  {
-    id: "1",
-    name: "EX-SURAKSHA",
-    semester: "SEM5",
-    activities: [
-      { id: "1", name: "Activity 1", defaultMaxMarks: 30 },
-      { id: "2", name: "Activity 2", defaultMaxMarks: 35 },
-    ],
-  },
-  {
-    id: "2",
-    name: "EX-VAJRA",
-    semester: "SEM6",
-    activities: [
-      { id: "3", name: "Activity 3", defaultMaxMarks: 25 },
-      { id: "4", name: "Activity 4", defaultMaxMarks: 30 },
-    ],
-  },
-  {
-    id: "3",
-    name: "TECHNO TAC CAMP",
-    semester: "SEM6",
-    activities: [
-      { id: "5", name: "Activity 5", defaultMaxMarks: 40 },
-      { id: "6", name: "Activity 6", defaultMaxMarks: 15 },
-    ],
-  },
-];
-
-// Mock camp type that matches OcCampActivitiesTable props
-const createMockCamp = (trainingCampId: string, ocId: string) => ({
-  id: trainingCampId,
-  ocId: ocId,
-  trainingCampId: trainingCampId,
-  year: new Date().getFullYear(),
-  totalMarksScored: 75,
-  reviews: [] as any[],
-  activities: [] as any[],
-  createdAt: new Date(),
-  updatedAt: new Date(),
-});
+import { useTrainingCamps, useOcCampByName, useCampMutations, useAllOcCamps } from "@/hooks/useCampData";
+import { CreateOcCampPayload, UpdateOcCampPayload } from "@/app/lib/api/campApi";
+import { trainingCampActivities } from "@/app/db/schema/training/oc";
 
 interface CampContentProps {
   ocId: string;
@@ -80,33 +39,108 @@ export default function CampContent({ ocId }: CampContentProps) {
   // ---------------------------
   // FORM SETUP
   // ---------------------------
-  const { handleSubmit, getValues } = useFormContext();
+  const { getValues } = useFormContext();
 
   // ---------------------------
-  // COMPUTED VALUES (Mock Data)
+  // API HOOKS
+  // ---------------------------
+  const { trainingCamps, loading: loadingCamps, error: campsError } = useTrainingCamps();
+  const { camp: currentCamp, loading: loadingCamp, refetch: refetchCamp } = useOcCampByName(
+    ocId,
+    selectedCampName
+  );
+  const {
+    createCamp,
+    updateCamp,
+    isCreating,
+    isUpdating,
+    mutationError,
+  } = useCampMutations(ocId);
+
+  // Fetch all camps for totals calculation
+  const { camps: allCamps, loading: loadingAllCamps } = useAllOcCamps(ocId);
+
+  console.log("final table", allCamps)
+
+  // ---------------------------
+  // COMPUTED VALUES
   // ---------------------------
   const availableCamps = useMemo(() => {
-    return mockAvailableCamps.filter((camp) => camp.semester === currentSemester);
-  }, [currentSemester]);
+    // For SEM6, include both SEM6A and SEM6B camps
+    if (currentSemester === "SEM6") {
+      const filtered = trainingCamps.filter(
+        (camp) => camp.semester === "SEM6A" || camp.semester === "SEM6B"
+      );
+      console.log("SEM6 camps:", filtered);
+      return filtered;
+    }
+    const filtered = trainingCamps.filter((camp) => camp.semester === currentSemester);
+    console.log(`${currentSemester} camps:`, filtered);
+    return filtered;
+  }, [trainingCamps, currentSemester]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log("All training camps:", trainingCamps);
+    console.log("Current semester:", currentSemester);
+    console.log("Available camps:", availableCamps);
+  }, [trainingCamps, currentSemester, availableCamps]);
 
   const selectedTrainingCamp = useMemo(() => {
     return availableCamps.find((camp) => camp.name === selectedCampName);
   }, [availableCamps, selectedCampName]);
-
-  const currentCamp = useMemo(() => {
-    // Mock current camp data with all required properties
-    if (!selectedTrainingCamp) return null;
-    return createMockCamp(selectedTrainingCamp.id, ocId);
-  }, [selectedTrainingCamp, ocId]);
 
   const availableActivities = useMemo(() => {
     if (!selectedTrainingCamp) return [];
     return selectedTrainingCamp.activities || [];
   }, [selectedTrainingCamp]);
 
+  // Debug logging
+  useEffect(() => {
+    console.log("Current semester:", currentSemester);
+    console.log("Available Activites:", availableActivities);
+  }, [currentSemester, availableActivities]);
+
   const showWarning = useMemo(() => {
-    return selectedCampName && !selectedTrainingCamp;
-  }, [selectedCampName, selectedTrainingCamp]);
+    return selectedCampName && !currentCamp && !loadingCamp;
+  }, [selectedCampName, currentCamp, loadingCamp]);
+
+  // Calculate totals for TECHNO TAC CAMP table from API data
+  const campTotals = useMemo(() => {
+    if (!allCamps?.length) return {};
+
+    const totals: Record<string, { obtained: number; max: number }> = {};
+
+    allCamps.forEach((camp) => {
+      const {
+        campName,
+        totalMarksScored,
+        activities,
+      } = camp;
+
+      if (!campName) return;
+      const maxMarks = activities.reduce(
+        (sum, { maxMarks }) => sum + Number(maxMarks || 0),
+        0
+      );
+
+      totals[campName] = {
+        obtained: Number(totalMarksScored) || 0,
+        max: maxMarks,
+      };
+    });
+
+    return totals;
+  }, [allCamps]);
+
+
+  const totalSum = useMemo(() => {
+    const values = Object.values(campTotals);
+    return {
+      obtained: values.reduce((sum, { obtained }) => sum + obtained, 0),
+      max: values.reduce((sum, { max }) => sum + max, 0),
+    };
+  }, [campTotals]);
 
   // ---------------------------
   // EFFECTS
@@ -119,15 +153,17 @@ export default function CampContent({ ocId }: CampContentProps) {
   };
 
   // Set first camp as selected when available camps change
-  if (availableCamps.length > 0 && !selectedCampName) {
-    setSelectedCampName(availableCamps[0].name);
-  }
+  useEffect(() => {
+    if (availableCamps.length > 0 && !selectedCampName) {
+      setSelectedCampName(availableCamps[0]?.name || null);
+    }
+  }, [availableCamps, selectedCampName]);
 
   // ---------------------------
   // HANDLERS
   // ---------------------------
   const handleSubmitReviewsForm = async () => {
-    if (!selectedCampName) {
+    if (!selectedCampName || !selectedTrainingCamp) {
       console.log("No camp selected");
       return;
     }
@@ -141,44 +177,115 @@ export default function CampContent({ ocId }: CampContentProps) {
         return;
       }
 
-      console.log("Reviews form submitted:", {
-        campName: selectedCampName,
-        reviews: campData.reviews || [],
-      });
+      const reviews = campData.reviews || [];
 
+      if (currentCamp) {
+        // Update existing camp
+        const payload: UpdateOcCampPayload = {
+          ocCampId: currentCamp.id,
+          trainingCampId: selectedTrainingCamp.id,
+          year: campData.year || new Date().getFullYear(),
+          reviews,
+        };
+
+        await updateCamp(payload);
+      } else {
+        // Create new camp
+        const payload: CreateOcCampPayload = {
+          trainingCampId: selectedTrainingCamp.id,
+          year: campData.year || new Date().getFullYear(),
+          reviews,
+        };
+
+        await createCamp(payload);
+      }
+
+      await refetchCamp();
       setIsEditingReviews(false);
     } catch (error) {
       console.error("Error handling reviews form:", error);
     }
   };
 
+  // Key changes in handleSubmitActivitiesForm and handleCancelActivities
+
   const handleSubmitActivitiesForm = async () => {
-    if (!selectedCampName) {
+    if (!selectedCampName || !selectedTrainingCamp) {
       console.log("No camp selected");
       return;
     }
 
     try {
       const values = getValues();
+      console.log("All form values:", values);
       const campData = values.campsByName?.[selectedCampName];
+      console.log("Camp data:", campData);
 
       if (!campData || !campData.activities || campData.activities.length === 0) {
         console.log("No activity data to save");
         return;
       }
 
-      console.log("Activities form submitted:", {
-        campName: selectedCampName,
-        activities: campData.activities,
-      });
+      console.log("Activities before mapping:", campData.activities);
 
+      // Ensure all required fields are present
+      const activities = campData.activities
+        .filter((activity: {
+          trainingCampActivityId?: string;
+          marksScored?: number | null;
+          remark?: string | null;
+        }) => activity.trainingCampActivityId)
+        .map((activity: {
+          trainingCampActivityId: string;
+          marksScored?: number | null;
+          remark?: string | null;
+        }) => ({
+          trainingCampActivityId: activity.trainingCampActivityId,
+          marksScored: activity.marksScored ?? null,
+          remark: activity.remark || null,
+        }));
+
+      if (activities.length === 0) {
+        console.log("No valid activities to save");
+        return;
+      }
+
+      if (currentCamp) {
+        // Update existing camp
+        const payload: UpdateOcCampPayload = {
+          ocCampId: currentCamp.id,
+          trainingCampId: selectedTrainingCamp.id,
+          year: campData.year || new Date().getFullYear(),
+          activities,
+        };
+
+        await updateCamp(payload);
+      } else {
+        // Create new camp
+        const payload: CreateOcCampPayload = {
+          trainingCampId: selectedTrainingCamp.id,
+          year: campData.year || new Date().getFullYear(),
+          activities,
+        };
+
+        await createCamp(payload);
+      }
+
+      // Exit edit mode first, then refetch
       setIsEditingActivities(false);
+
+      // Add a small delay before refetching to ensure state updates
+      setTimeout(() => {
+        refetchCamp();
+      }, 100);
     } catch (error) {
       console.error("Error handling activities form:", error);
     }
   };
 
-  const handleCancelActivities = () => {
+  const handleCancelActivities = async () => {
+    // Refetch to restore original data
+    await refetchCamp();
     setIsEditingActivities(false);
   };
 
@@ -193,6 +300,33 @@ export default function CampContent({ ocId }: CampContentProps) {
   // ---------------------------
   // RENDER
   // ---------------------------
+  if (loadingCamps) {
+    return (
+      <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="ml-3 text-gray-600">Loading camps...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (campsError) {
+    return (
+      <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+        <CardContent className="py-12">
+          <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-red-800 font-medium">Error Loading Camps</p>
+              <p className="text-sm text-red-700 mt-1">{campsError}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <>
       <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
@@ -210,11 +344,10 @@ export default function CampContent({ ocId }: CampContentProps) {
                 key={semester}
                 type="button"
                 onClick={() => handleSemesterChange(idx)}
-                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-                  activeSemester === idx
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
+                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeSemester === idx
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
               >
                 {semester}
               </button>
@@ -231,19 +364,20 @@ export default function CampContent({ ocId }: CampContentProps) {
             {/* Camp Selection Buttons */}
             {availableCamps.length > 0 && (
               <div className="flex items-center space-x-2 flex-wrap gap-2">
-                {availableCamps.map((camp) => (
-                  <Button
-                    key={camp.id}
-                    type="button"
-                    variant={
-                      selectedCampName === camp.name ? "default" : "outline"
-                    }
-                    size="sm"
-                    onClick={() => setSelectedCampName(camp.name)}
-                  >
-                    {camp.name}
-                  </Button>
-                ))}
+                {availableCamps.map((camp) => {
+                  const { id, name } = camp;
+                  return (
+                    <Button
+                      key={id}
+                      type="button"
+                      variant={selectedCampName === name ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCampName(name)}
+                    >
+                      {name}
+                    </Button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -260,6 +394,19 @@ export default function CampContent({ ocId }: CampContentProps) {
           </CardDescription>
         </CardHeader>
 
+        {/* Mutation Error */}
+        {mutationError && (
+          <CardContent className="mb-4">
+            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-red-800 font-medium">Error</p>
+                <p className="text-sm text-red-700 mt-1">{mutationError}</p>
+              </div>
+            </div>
+          </CardContent>
+        )}
+
         {/* Warning/Info Notice */}
         {showWarning && (
           <CardContent className="mb-4">
@@ -272,6 +419,16 @@ export default function CampContent({ ocId }: CampContentProps) {
                   to create it.
                 </p>
               </div>
+            </div>
+          </CardContent>
+        )}
+
+        {/* Loading Camp Data */}
+        {loadingCamp && selectedCampName && (
+          <CardContent>
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <span className="ml-3 text-gray-600">Loading camp data...</span>
             </div>
           </CardContent>
         )}
@@ -298,7 +455,7 @@ export default function CampContent({ ocId }: CampContentProps) {
         )}
 
         {/* REVIEWS SECTION */}
-        {selectedCampName && (
+        {selectedCampName && !loadingCamp && (
           <div className="mt-6">
             <OcCampReviews
               campIndex={0}
@@ -313,6 +470,7 @@ export default function CampContent({ ocId }: CampContentProps) {
                 <Button
                   type="button"
                   onClick={() => setIsEditingReviews(true)}
+                  disabled={isCreating || isUpdating}
                 >
                   Edit Reviews
                 </Button>
@@ -325,12 +483,24 @@ export default function CampContent({ ocId }: CampContentProps) {
                   type="button"
                   variant="outline"
                   onClick={handleCancelReviews}
+                  disabled={isCreating || isUpdating}
                 >
                   Cancel
                 </Button>
 
-                <Button type="button" onClick={handleSubmitReviewsForm}>
-                  Save Reviews
+                <Button
+                  type="button"
+                  onClick={handleSubmitReviewsForm}
+                  disabled={isCreating || isUpdating}
+                >
+                  {isCreating || isUpdating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Reviews"
+                  )}
                 </Button>
               </div>
             )}
@@ -339,13 +509,13 @@ export default function CampContent({ ocId }: CampContentProps) {
       </Card>
 
       {/* ACTIVITIES SECTION */}
-      {selectedCampName && (
+      {selectedCampName && !loadingCamp && (
         <div className="mt-6">
           <OcCampActivitiesTable
             camp={currentCamp}
             availableActivities={availableActivities}
             disabled={!isEditingActivities}
-            campName={selectedCampName || ""}
+            campName={selectedCampName}
           />
 
           {!isEditingActivities && (
@@ -353,6 +523,7 @@ export default function CampContent({ ocId }: CampContentProps) {
               <Button
                 type="button"
                 onClick={() => setIsEditingActivities(true)}
+                disabled={isCreating || isUpdating}
               >
                 Edit Activity Marks
               </Button>
@@ -365,19 +536,31 @@ export default function CampContent({ ocId }: CampContentProps) {
                 type="button"
                 variant="outline"
                 onClick={handleCancelActivities}
+                disabled={isCreating || isUpdating}
               >
                 Cancel
               </Button>
 
-              <Button type="button" onClick={handleSubmitActivitiesForm}>
-                Save Activity Marks
+              <Button
+                type="button"
+                onClick={handleSubmitActivitiesForm}
+                disabled={isCreating || isUpdating}
+              >
+                {isCreating || isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Activity Marks"
+                )}
               </Button>
             </div>
           )}
         </div>
       )}
 
-      {/* TOTAL TABLE SECTION - ONLY FOR TECHNO TAC CAMP */}
+      {/* TOTAL TABLE SECTION */}
       {selectedCampName && selectedTrainingCamp?.name === "TECHNO TAC CAMP" && (
         <div className="mt-6 max-w-6xl mx-auto">
           <Card className="p-6 rounded-2xl shadow-xl bg-white">
@@ -385,69 +568,60 @@ export default function CampContent({ ocId }: CampContentProps) {
               <CardTitle className="text-lg font-semibold">TOTAL</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border border-gray-300 px-4 py-2 text-left font-medium">
-                        Camp
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-center font-medium">
-                        Marks Obtained
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-center font-medium">
-                        Max Marks
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="hover:bg-gray-50">
-                      <td className="border border-gray-300 px-4 py-2">
-                        EX-SURAKSHA
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
-                        100
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
-                        100
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-gray-50">
-                      <td className="border border-gray-300 px-4 py-2">
-                        EX-VAJRA
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
-                        55
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
-                        55
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-2">
-                        TECHNO TAC CAMP
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
-                        55
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
-                        55
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-2">
-                        TOTAL
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
-                        210
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
-                        210
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {loadingAllCamps ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                  <span className="ml-3 text-gray-600">Loading totals...</span>
+                </div>
+              ) : Object.keys(campTotals).length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No camp data available for totals calculation.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">
+                          Camp
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 text-center font-medium">
+                          Marks Obtained
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 text-center font-medium">
+                          Max Marks
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(campTotals).map(([campName, { obtained, max }]) => (
+                        <tr key={campName} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-2">
+                            {campName}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">
+                            {obtained}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">
+                            {max}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-gray-50">
+                        <td className="border border-gray-300 px-4 py-2 font-semibold">
+                          TOTAL
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-center font-semibold">
+                          {totalSum.obtained}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-center font-semibold">
+                          {totalSum.max}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -1,17 +1,11 @@
 "use client";
 
-import React, { useMemo, useEffect } from "react";
+import React, { useMemo, useEffect, useRef } from "react";
 import { useFormContext, FieldValues } from "react-hook-form";
 import { UniversalTable, TableConfig } from "@/components/layout/TableLayout";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
-// ---------- Helpers ----------
-const safeDefault = (v: unknown): string => {
-  if (v === null || v === undefined) return "";
-  const n = Number(v);
-  return isNaN(n) ? "" : String(v);
-};
+import { OcCampData } from "@/app/lib/api/campApi";
 
 // ---------- Types ----------
 interface FormActivity {
@@ -20,6 +14,7 @@ interface FormActivity {
   marksScored: number | null;
   defaultMaxMarks: number;
   remark?: string | null;
+  ocActivityId?: string; // ID from OC camp activities
 }
 
 interface CampFormRow {
@@ -41,21 +36,11 @@ type ActivityRowData = {
   maxMarks: number;
   remark: string;
   isTotal?: boolean;
-  activityScoreId?: string;
+  ocActivityId?: string;
 };
 
 interface OcCampActivitiesTableProps {
-  camp: {
-    id: string;
-    ocId: string;
-    trainingCampId: string;
-    year: number;
-    totalMarksScored: number;
-    reviews: any[];
-    activities: any[];
-    createdAt: Date;
-    updatedAt: Date;
-  } | null;
+  camp: OcCampData; // This has marksScored from OC API
   availableActivities: Array<{
     id: string;
     name: string;
@@ -65,33 +50,6 @@ interface OcCampActivitiesTableProps {
   campName: string;
 }
 
-// HARDCODED PREFILL DATA - This defines the activities for each camp
-const getActivityPrefillForCampType = (campName: string) => {
-  const campMap: Record<string, Array<{ id: string; activity: string; maxMarks: number }>> = {
-    "TECHNO TAC CAMP": [
-      { id: "techno-1", activity: "Mini Proj", maxMarks: 30 },
-      { id: "techno-2", activity: "Tech Seminar", maxMarks: 20 },
-      { id: "techno-3", activity: "Mut Assessment", maxMarks: 5 },
-    ],
-    "EX-SURAKSHA": [
-      { id: "suraksha-1", activity: "Run Back", maxMarks: 25 },
-      { id: "suraksha-2", activity: "Ex Disha Khoj", maxMarks: 30 },
-      { id: "suraksha-3", activity: "Tent Pitching", maxMarks: 15 },
-      { id: "suraksha-4", activity: "Orders/Bfg", maxMarks: 20 },
-      { id: "suraksha-5", activity: "Mut Assessment", maxMarks: 10 },
-    ],
-    "EX-VAJRA": [
-      { id: "vajra-1", activity: "Physical Fitness", maxMarks: 50 },
-      { id: "vajra-2", activity: "Weapon Training", maxMarks: 50 },
-      { id: "vajra-3", activity: "Tactical Training", maxMarks: 100 },
-      { id: "vajra-4", activity: "Leadership", maxMarks: 50 },
-      { id: "vajra-5", activity: "Navigation", maxMarks: 50 },
-    ],
-  };
-
-  return campMap[campName] || [];
-};
-
 export default function OcCampActivitiesTable({
   camp,
   availableActivities,
@@ -99,59 +57,117 @@ export default function OcCampActivitiesTable({
   campName,
 }: OcCampActivitiesTableProps) {
   const { register, watch, setValue } = useFormContext<FormValues>();
+  const initializedRef = useRef<Set<string>>(new Set());
+  const lastCampIdRef = useRef<string | null>(null);
 
   // Watch this specific camp's data by campName
   const campFormRow = watch(`campsByName.${campName}`) as CampFormRow | undefined;
   const formActivities = campFormRow?.activities ?? [];
 
-  // Initialize form activities for this specific camp USING HARDCODED DATA
+  // Initialize form activities for this specific camp
   useEffect(() => {
-    // Only initialize if there are no form activities yet for this camp
-    if (!campFormRow || formActivities.length === 0) {
-      let initialActivities: FormActivity[] = [];
+    if (!campName) return;
 
-      // Get hardcoded prefill data for this specific camp
-      const prefillData = getActivityPrefillForCampType(campName);
 
-      if (prefillData.length > 0) {
-        // Use fresh hardcoded structure
-        initialActivities = prefillData.map((item) => ({
-          trainingCampActivityId: item.id,
-          name: item.activity,
-          marksScored: null,
-          defaultMaxMarks: item.maxMarks,
-          remark: null,
-        }));
+    // Create a unique key for this camp initialization
+    const initKey = `${campName}-${camp?.ocCampId || camp?.id || 'new'}`;
 
-        // Set the initial activities for this specific camp
-        setValue(`campsByName.${campName}.activities`, initialActivities, {
-          shouldValidate: false,
-          shouldDirty: false,
-        });
+    // Skip if already initialized
+    if (initializedRef.current.has(initKey)) {
+      return;
+    }
 
-        // Also set the trainingCampId if available
-        if (camp?.trainingCampId) {
-          setValue(`campsByName.${campName}.trainingCampId`, camp.trainingCampId, {
-            shouldValidate: false,
-            shouldDirty: false,
-          });
-        }
+    // If camp ID changed, we need to reinitialize (switching between camps)
+    const campIdChanged = lastCampIdRef.current !== null &&
+      lastCampIdRef.current !== (camp?.ocCampId || camp?.id || null);
 
-        setValue(`campsByName.${campName}.year`, camp?.year || new Date().getFullYear(), {
+    // Check if form data needs to be updated with API data
+    const hasOcActivities = camp?.activities && camp.activities.length > 0;
+    const formHasOcData = formActivities.length > 0 &&
+      formActivities.some(fa => fa.ocActivityId !== undefined);
+
+
+    // Skip only if we have form data AND it already includes OC data AND camp hasn't changed
+    if (!campIdChanged && formActivities.length > 0 && formHasOcData) {
+      return;
+    }
+
+    // Update last camp ID
+    lastCampIdRef.current = camp?.ocCampId || camp?.id || null;
+
+    // Mark as initialized
+    initializedRef.current.add(initKey);
+
+    // MERGE LOGIC: Combine training camp activities structure with OC camp scores
+    if (availableActivities.length > 0) {
+
+      // Create a map of OC camp activities by name for quick lookup
+      const ocActivitiesMap = new Map(
+        (camp?.activities || []).map(ocActivity => {
+          return [
+            ocActivity.name,
+            {
+              marksScored: ocActivity.marksScored,
+              remark: ocActivity.remark,
+              ocActivityId: ocActivity.id
+            }
+          ];
+        })
+      );
+
+
+      // Merge: Use training camp structure + OC camp scores
+      const mergedActivities: FormActivity[] = availableActivities.map((trainingActivity) => {
+        const ocData = ocActivitiesMap.get(trainingActivity.name);
+
+        return {
+          trainingCampActivityId: trainingActivity.id,
+          name: trainingActivity.name,
+          marksScored: ocData?.marksScored ?? null, // Use OC score if exists
+          defaultMaxMarks: trainingActivity.defaultMaxMarks, // Use training camp max marks
+          remark: ocData?.remark || null,
+          ocActivityId: ocData?.ocActivityId
+        };
+      });
+
+
+      setValue(`campsByName.${campName}.activities`, mergedActivities, {
+        shouldValidate: false,
+        shouldDirty: false,
+      });
+
+
+      if (camp?.trainingCampId) {
+        setValue(`campsByName.${campName}.trainingCampId`, camp.trainingCampId, {
           shouldValidate: false,
           shouldDirty: false,
         });
       }
+
+      setValue(`campsByName.${campName}.year`, camp?.year || new Date().getFullYear(), {
+        shouldValidate: false,
+        shouldDirty: false,
+      });
+    } else {
     }
-  }, [camp, campName, setValue, campFormRow, formActivities.length]);
+
+  }, [campName, camp?.ocCampId, camp?.id, camp?.trainingCampId, camp?.year, camp?.activities, availableActivities, formActivities.length, setValue]);
+
+  // Reset initialized flag when camp name changes
+  useEffect(() => {
+    return () => {
+      lastCampIdRef.current = null;
+    };
+  }, [campName]);
 
   const activityData: ActivityRowData[] = useMemo(() => {
+
     let rows: ActivityRowData[] = [];
 
     // Use formActivities if they exist
     if (formActivities && formActivities.length > 0) {
       rows = formActivities.map((formAct) => {
-        return {
+        const row = {
           trainingCampActivityId: formAct.trainingCampActivityId || "",
           activityName: formAct.name || "",
           marksScored:
@@ -160,8 +176,9 @@ export default function OcCampActivitiesTable({
               : 0,
           maxMarks: Number(formAct.defaultMaxMarks) || 0,
           remark: formAct.remark || "",
-          activityScoreId: undefined,
+          ocActivityId: formAct.ocActivityId,
         };
+        return row;
       });
     }
 
@@ -223,17 +240,55 @@ export default function OcCampActivitiesTable({
           }
 
           return (
-            <Input
-              type="number"
-              min="0"
-              max={row.maxMarks}
-              {...register(
-                `campsByName.${campName}.activities.${index}.marksScored`,
-                { valueAsNumber: true }
+            <div className="flex flex-col gap-1">
+              {/* Hidden fields to preserve activity metadata */}
+              <input
+                type="hidden"
+                value={row.trainingCampActivityId}
+                {...register(
+                  `campsByName.${campName}.activities.${index}.trainingCampActivityId`
+                )}
+              />
+              {row.ocActivityId && (
+                <input
+                  type="hidden"
+                  value={row.ocActivityId}
+                  {...register(
+                    `campsByName.${campName}.activities.${index}.ocActivityId`
+                  )}
+                />
               )}
-              placeholder="0"
-              className="w-20"
-            />
+              <input
+                type="hidden"
+                value={row.activityName}
+                {...register(`campsByName.${campName}.activities.${index}.name`)}
+              />
+              <input
+                type="hidden"
+                value={row.maxMarks}
+                {...register(
+                  `campsByName.${campName}.activities.${index}.defaultMaxMarks`
+                )}
+              />
+              <Input
+                type="number"
+                min="0"
+                max={row.maxMarks}
+                {...register(
+                  `campsByName.${campName}.activities.${index}.marksScored`,
+                  {
+                    setValueAs: (v) => {
+                      // Handle empty string or invalid input
+                      if (v === '' || v === null || v === undefined) return null;
+                      const num = Number(v);
+                      return isNaN(num) ? null : num;
+                    }
+                  }
+                )}
+                placeholder="0"
+                className="w-20"
+              />
+            </div>
           );
         },
       },

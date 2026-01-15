@@ -2,12 +2,13 @@ import { db } from '@/app/db/client';
 import { ApiError } from '@/app/lib/http';
 import {
     ocPersonal, ocFamilyMembers, ocEducation, ocAchievements,
-    ocAutobiography, ocSsbReports, ocSsbPoints,
+    ocAutobiography, ocDossierFilling, ocSsbReports, ocSsbPoints,
     ocMedicals, ocMedicalCategory, ocDiscipline, ocParentComms,
     ocPreCommission,
     ocCommissioning,
     ocDelegations,
     ocCadets,
+    ocImages,
     ocMotivationAwards,
     ocSportsAndGames,
     ocWeaponTraining,
@@ -32,9 +33,12 @@ import {
     TheoryMarksRecord,
     PracticalMarksRecord,
 } from '@/app/db/schema/training/oc';
+import { dossierInspections } from '@/app/db/schema/training/dossierInspections';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
-import { and, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { users } from '@/app/db/schema/auth/users';
+import { positions } from '@/app/db/schema/auth/positions';
+import { and, eq, ilike, inArray, isNull, or, sql, desc } from 'drizzle-orm';
 
 type ListOpts = {
     q?: string;
@@ -292,6 +296,90 @@ export async function deleteSemesterSubject(ocId: string, semester: number, subj
             .returning();
         return updated;
     });
+}
+
+// ---- OC images ------------------------------------------------------------
+export type OcImageKind = 'CIVIL_DRESS' | 'UNIFORM';
+export type OcImageRow = typeof ocImages.$inferSelect;
+
+export async function listOcImages(ocId: string, includeDeleted = false) {
+    const wh: any[] = [eq(ocImages.ocId, ocId)];
+    if (!includeDeleted) wh.push(isNull(ocImages.deletedAt));
+    return db
+        .select()
+        .from(ocImages)
+        .where(and(...wh))
+        .orderBy(ocImages.kind);
+}
+
+export async function getOcImage(ocId: string, kind: OcImageKind) {
+    const [row] = await db
+        .select()
+        .from(ocImages)
+        .where(and(eq(ocImages.ocId, ocId), eq(ocImages.kind, kind)))
+        .limit(1);
+    return row ?? null;
+}
+
+export async function upsertOcImage(
+    ocId: string,
+    kind: OcImageKind,
+    data: {
+        bucket: string;
+        objectKey: string;
+        contentType: string;
+        sizeBytes: number;
+        etag?: string | null;
+        uploadedAt?: Date | null;
+    },
+) {
+    const now = new Date();
+    const [row] = await db
+        .insert(ocImages)
+        .values({
+            ocId,
+            kind,
+            bucket: data.bucket,
+            objectKey: data.objectKey,
+            contentType: data.contentType,
+            sizeBytes: data.sizeBytes,
+            etag: data.etag ?? null,
+            uploadedAt: data.uploadedAt ?? now,
+            deletedAt: null,
+            updatedAt: now,
+        })
+        .onConflictDoUpdate({
+            target: [ocImages.ocId, ocImages.kind],
+            set: {
+                bucket: data.bucket,
+                objectKey: data.objectKey,
+                contentType: data.contentType,
+                sizeBytes: data.sizeBytes,
+                etag: data.etag ?? null,
+                uploadedAt: data.uploadedAt ?? now,
+                deletedAt: null,
+                updatedAt: now,
+            },
+        })
+        .returning();
+    return row ?? null;
+}
+
+export async function softDeleteOcImage(ocId: string, kind: OcImageKind) {
+    const [row] = await db
+        .update(ocImages)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(ocImages.ocId, ocId), eq(ocImages.kind, kind), isNull(ocImages.deletedAt)))
+        .returning();
+    return row ?? null;
+}
+
+export async function hardDeleteOcImage(ocId: string, kind: OcImageKind) {
+    const [row] = await db
+        .delete(ocImages)
+        .where(and(eq(ocImages.ocId, ocId), eq(ocImages.kind, kind)))
+        .returning();
+    return row ?? null;
 }
 // ---- Personal ---------------------------------------------------------------
 export async function getPersonal(ocId: string) {
@@ -1872,4 +1960,104 @@ export async function recomputeOcCampTotal(ocCampId: string) {
         .where(eq(ocCamps.id, ocCampId))
         .returning();
     return row;
+}
+
+// ---- Dossier Filling (upsert single) -----------------------------------------
+export async function getDossierFilling(ocId: string) {
+    const [row] = await db.select().from(ocDossierFilling).where(eq(ocDossierFilling.ocId, ocId)).limit(1);
+    return row ?? null;
+}
+export async function upsertDossierFilling(ocId: string, data: Partial<typeof ocDossierFilling.$inferInsert>) {
+    const existing = await getDossierFilling(ocId);
+    if (existing) {
+        const [row] = await db.update(ocDossierFilling).set(data).where(eq(ocDossierFilling.ocId, ocId)).returning();
+        return row;
+    }
+    const [row] = await db.insert(ocDossierFilling).values({ ocId, ...data }).returning();
+    return row;
+}
+export async function deleteDossierFilling(ocId: string) {
+    const [row] = await db.delete(ocDossierFilling).where(eq(ocDossierFilling.ocId, ocId)).returning();
+    return row ?? null;
+}
+
+// ---- Dossier Inspections -----------------------------------------------------
+export async function listDossierInspections(ocId: string, limit = 100, offset = 0) {
+    return db
+        .select({
+            id: dossierInspections.id,
+            date: dossierInspections.date,
+            remarks: dossierInspections.remarks,
+            createdAt: dossierInspections.createdAt,
+            updatedAt: dossierInspections.updatedAt,
+            inspector: {
+                id: users.id,
+                name: users.name,
+                rank: users.rank,
+                appointment: positions.displayName,
+            },
+            initials: sql<string>`CONCAT(${users.rank}, ' ', ${users.name})`,
+        })
+        .from(dossierInspections)
+        .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
+        .leftJoin(positions, eq(users.appointId, positions.id))
+        .where(eq(dossierInspections.ocId, ocId))
+        .orderBy(desc(dossierInspections.createdAt))
+        .limit(limit)
+        .offset(offset);
+}
+
+export async function createDossierInspection(
+    ocId: string,
+    data: Omit<typeof dossierInspections.$inferInsert, 'id' | 'ocId' | 'createdAt' | 'updatedAt'>,
+) {
+    const [row] = await db.insert(dossierInspections).values({ ocId, ...data }).returning();
+    return row;
+}
+
+export async function getDossierInspection(ocId: string, id: string) {
+    const [row] = await db
+        .select({
+            id: dossierInspections.id,
+            ocId: dossierInspections.ocId,
+            inspectorUserId: dossierInspections.inspectorUserId,
+            date: dossierInspections.date,
+            remarks: dossierInspections.remarks,
+            createdAt: dossierInspections.createdAt,
+            updatedAt: dossierInspections.updatedAt,
+            inspector: {
+                id: users.id,
+                name: users.name,
+                rank: users.rank,
+                appointment: positions.displayName,
+            },
+            initials: sql<string>`CONCAT(${users.rank}, ' ', ${users.name})`,
+        })
+        .from(dossierInspections)
+        .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
+        .leftJoin(positions, eq(users.appointId, positions.id))
+        .where(and(eq(dossierInspections.id, id), eq(dossierInspections.ocId, ocId)))
+        .limit(1);
+    return row ?? null;
+}
+
+export async function updateDossierInspection(
+    ocId: string,
+    id: string,
+    data: Partial<typeof dossierInspections.$inferInsert>,
+) {
+    const [row] = await db
+        .update(dossierInspections)
+        .set(data)
+        .where(and(eq(dossierInspections.id, id), eq(dossierInspections.ocId, ocId)))
+        .returning();
+    return row ?? null;
+}
+
+export async function deleteDossierInspection(ocId: string, id: string) {
+    const [row] = await db
+        .delete(dossierInspections)
+        .where(and(eq(dossierInspections.id, id), eq(dossierInspections.ocId, ocId)))
+        .returning();
+    return row ?? null;
 }

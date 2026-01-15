@@ -3,6 +3,7 @@ import { NextResponse, NextRequest } from 'next/server';
 
 // SECURITY FIX: Changed default from 100000000000 (3,170 years) to 900 (15 minutes)
 const ACCESS_TTL = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900); // 15 minutes default
+const IS_PROD = process.env.NODE_ENV === 'production';
 
 // Use secure cookies only in production/https; in dev over http the browser drops Secure cookies.
 const IS_PROD = process.env.NODE_ENV === 'production';

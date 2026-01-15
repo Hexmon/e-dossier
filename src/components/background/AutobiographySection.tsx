@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 import { useAutobiography } from "@/hooks/useAutobiography";
 import { AutoBio } from "@/types/background-detls";
 import { AutoBioPayload } from "@/app/lib/api/autobiographyApi";
+import type { RootState } from "@/store";
+import { saveAutobiographyForm, clearAutobiographyForm } from "@/store/slices/autobiographySlice";
 
 type Props = {
     ocId: string;
@@ -25,10 +29,17 @@ type TextFieldKey = typeof textFields[number];
 
 export default function AutobiographySection({ ocId, cadet }: Props) {
     const [isEditing, setIsEditing] = useState(false);
+    const isInitialLoad = useRef(true);
+
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.autobiography.forms[ocId]
+    );
 
     const { autoBio, exists, fetchAutoBio, save } = useAutobiography(ocId);
 
-    const { register, handleSubmit, reset } = useForm<AutoBio>({
+    const { register, handleSubmit, reset, watch } = useForm<AutoBio>({
         defaultValues: {
             general: "",
             proficiency: "",
@@ -42,45 +53,83 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
 
     const cadetName = cadet?.name ?? "";
 
-    // ----------------------------------------------------
-    // LOAD DATA
-    // ----------------------------------------------------
+    // Auto-save to Redux on form changes (only when editing and not initial load)
+    useEffect(() => {
+        if (!isEditing || isInitialLoad.current) return;
+
+        const subscription = watch((value) => {
+            const formData = {
+                general: value.general || "",
+                proficiency: value.proficiency || "",
+                work: value.work || "",
+                additional: value.additional || "",
+                date: value.date || "",
+                sign_oc: value.sign_oc || "",
+                sign_pi: value.sign_pi || "",
+            };
+            dispatch(saveAutobiographyForm({ ocId, data: formData }));
+        });
+        return () => subscription.unsubscribe();
+    }, [watch, dispatch, ocId, isEditing]);
+
+    // Load data from backend
     useEffect(() => {
         fetchAutoBio();
     }, [fetchAutoBio]);
 
+    // Initialize form data
     useEffect(() => {
-        if (!autoBio) {
-            reset();
-            setIsEditing(true);
+        // If backend data exists, use it
+        if (autoBio) {
+            const {
+                generalSelf,
+                proficiencySports,
+                achievementsNote,
+                areasToWork,
+                filledOn,
+                platoonCommanderName,
+            } = autoBio;
+
+            reset({
+                general: generalSelf ?? "",
+                proficiency: proficiencySports ?? "",
+                work: achievementsNote ?? "",
+                additional: areasToWork ?? "",
+                date: filledOn ?? "",
+                sign_oc: cadetName,
+                sign_pi: platoonCommanderName ?? "",
+            });
+
+            setIsEditing(false);
+            isInitialLoad.current = false;
             return;
         }
 
-        const {
-            generalSelf,
-            proficiencySports,
-            achievementsNote,
-            areasToWork,
-            filledOn,
-            platoonCommanderName,
-        } = autoBio;
+        // If no backend data but we have saved form data in Redux
+        if (savedFormData && isInitialLoad.current) {
+            reset(savedFormData);
+            setIsEditing(true);
+            isInitialLoad.current = false;
+            return;
+        }
 
-        reset({
-            general: generalSelf ?? "",
-            proficiency: proficiencySports ?? "",
-            work: achievementsNote ?? "",
-            additional: areasToWork ?? "",
-            date: filledOn ?? "",
-            sign_oc: cadetName,
-            sign_pi: platoonCommanderName ?? "",
-        });
+        // If no data at all
+        if (isInitialLoad.current) {
+            reset({
+                general: "",
+                proficiency: "",
+                work: "",
+                additional: "",
+                date: "",
+                sign_oc: cadetName,
+                sign_pi: "",
+            });
+            setIsEditing(true);
+            isInitialLoad.current = false;
+        }
+    }, [autoBio, cadetName]);
 
-        setIsEditing(false);
-    }, [autoBio, cadetName, reset]);
-
-    // ----------------------------------------------------
-    // SAVE HANDLER
-    // ----------------------------------------------------
+    // Save handler
     const onSubmit = async (form: AutoBio) => {
         const {
             general,
@@ -102,16 +151,64 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         };
 
         const saved = await save(payload);
-        if (saved) fetchAutoBio();
+        if (saved) {
+            toast.success("Autobiography saved successfully!");
+            // Clear Redux cache after successful save
+            dispatch(clearAutobiographyForm(ocId));
+            setIsEditing(false);
+            fetchAutoBio();
+        } else {
+            toast.error("Failed to save autobiography");
+        }
     };
 
-    // ----------------------------------------------------
-    // UI
-    // ----------------------------------------------------
+    // Clear form handler
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearAutobiographyForm(ocId));
+            reset({
+                general: "",
+                proficiency: "",
+                work: "",
+                additional: "",
+                date: "",
+                sign_oc: cadetName,
+                sign_pi: "",
+            });
+            toast.info("Form cleared");
+        }
+    };
+
+    // Cancel handler
+    const handleCancel = () => {
+        // If we have backend data, restore it
+        if (autoBio) {
+            const {
+                generalSelf,
+                proficiencySports,
+                achievementsNote,
+                areasToWork,
+                filledOn,
+                platoonCommanderName,
+            } = autoBio;
+
+            reset({
+                general: generalSelf ?? "",
+                proficiency: proficiencySports ?? "",
+                work: achievementsNote ?? "",
+                additional: areasToWork ?? "",
+                date: filledOn ?? "",
+                sign_oc: cadetName,
+                sign_pi: platoonCommanderName ?? "",
+            });
+        }
+        setIsEditing(false);
+    };
+
     return (
         <Card className="shadow-lg rounded-2xl border border-border w-full max-w-4xl mx-auto">
             <CardHeader>
-                <CardTitle className="text-xl font-bold text-center uppercase text-primary">
+                <CardTitle className="text-xl font-bold text-center uppercase text-[#1677ff]">
                     Confidential – Autobiography Form
                 </CardTitle>
             </CardHeader>
@@ -167,21 +264,33 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="w-[200px]"
-                                    onClick={() => {
-                                        fetchAutoBio();
-                                        setIsEditing(false);
-                                    }}
+                                    className="w-[200px] hover:bg-destructive hover:text-white"
+                                    onClick={handleCancel}
                                 >
                                     Cancel
                                 </Button>
 
-                                <Button type="submit" className="w-[200px]">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-[200px]"
+                                    onClick={handleClearForm}
+                                >
+                                    Clear Form
+                                </Button>
+
+                                <Button type="submit" className="w-[200px] bg-[#40ba4d]">
                                     Save
                                 </Button>
                             </>
                         )}
                     </div>
+
+                    {isEditing && savedFormData && !isInitialLoad.current && (
+                        <p className="text-sm text-muted-foreground text-center mt-2">
+                            * Changes are automatically saved
+                        </p>
+                    )}
                 </form>
             </CardContent>
         </Card>

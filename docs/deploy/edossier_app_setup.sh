@@ -175,19 +175,16 @@ cat > "$APP_DIR/.env" <<EOF
 DATABASE_URL=${DATABASE_URL}
 NODE_ENV=production
 PORT=${APP_PORT}
-
 ACCESS_TOKEN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIKsoxAMJEZLV+A9pJF/1+A0vkGdjaKTQGVSlKHn7LBXw\n-----END PRIVATE KEY-----"
 ACCESS_TOKEN_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAX/+LJjlZfaHoN38xoH2VrDSmzcKUmySLHLrtI6nw7a4=\n-----END PUBLIC KEY-----"
 ACCESS_TOKEN_TTL_SECONDS=1000
 EXPOSE_TOKENS_IN_DEV=true
-
 SUPERADMIN_USERNAME=superadmin
 SUPERADMIN_PASSWORD=ChangeMe!123
 SUPERADMIN_EMAIL=superadmin@example.com
 SUPERADMIN_PHONE=+910000000000
 SUPERADMIN_NAME=Super Admin
 SUPERADMIN_RANK=SUPER
-
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=ChangeMe!123
 ADMIN_EMAIL=admin@example.com
@@ -229,7 +226,6 @@ cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=E-Dossier Next.js Application
 After=network.target
-
 [Service]
 Type=simple
 User=${APP_USER}
@@ -240,7 +236,6 @@ Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-
 [Install]
 WantedBy=multi-user.target
 EOF

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MedInfoRow } from "@/types/med-records";
+import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 
 interface Props {
     rows: MedInfoRow[];
@@ -32,86 +33,181 @@ export default function MedicalInfoTable({
     onCancel,
     onDelete
 }: Props) {
-    if (loading) return <p className="text-center">Loading...</p>;
-
     const filtered = rows.filter((r) => r.term === semesters[activeTab]);
 
-    if (filtered.length === 0)
-        return <p className="text-center text-gray-500">No records yet.</p>;
+    const columns: TableColumn<MedInfoRow>[] = [
+        {
+            key: "date",
+            label: "Date",
+            type: "date",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="date"
+                        value={editForm?.date ?? ""}
+                        onChange={(e) => onChange("date", e.target.value)}
+                    />
+                ) : value;
+            }
+        },
+        {
+            key: "age",
+            label: "Age",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.age ?? ""}
+                        onChange={(e) => onChange("age", e.target.value)}
+                    />
+                ) : value;
+            }
+        },
+        {
+            key: "height",
+            label: "Height",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.height ?? ""}
+                        onChange={(e) => onChange("height", e.target.value)}
+                    />
+                ) : value;
+            }
+        },
+        {
+            key: "ibw",
+            label: "IBW",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.ibw ?? ""}
+                        onChange={(e) => onChange("ibw", e.target.value)}
+                    />
+                ) : value;
+            }
+        },
+        {
+            key: "abw",
+            label: "ABW",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.abw ?? ""}
+                        onChange={(e) => onChange("abw", e.target.value)}
+                    />
+                ) : value;
+            }
+        },
+        {
+            key: "overw",
+            label: "Overwt",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.overw ?? ""}
+                        onChange={(e) => onChange("overw", e.target.value)}
+                    />
+                ) : value;
+            }
+        },
+        {
+            key: "bmi",
+            label: "BMI",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.bmi ?? ""}
+                        onChange={(e) => onChange("bmi", e.target.value)}
+                    />
+                ) : value;
+            }
+        },
+        {
+            key: "chest",
+            label: "Chest",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.chest ?? ""}
+                        onChange={(e) => onChange("chest", e.target.value)}
+                    />
+                ) : value;
+            }
+        }
+    ];
+
+    const actions: TableAction<MedInfoRow>[] = [
+        {
+            key: "edit-cancel",
+            label: editingId ? "Cancel" : "Edit",
+            variant: editingId ? "outline" : "outline",
+            size: "sm",
+            handler: (row) => {
+                if (editingId === row.id) {
+                    onCancel();
+                } else {
+                    onEdit(row);
+                }
+            }
+        },
+        {
+            key: "save-delete",
+            label: editingId ? "Save" : "Delete",
+            variant: editingId ? "default" : "destructive",
+            size: "sm",
+            handler: (row) => {
+                if (editingId === row.id) {
+                    onSave();
+                } else {
+                    onDelete(row);
+                }
+            }
+        }
+    ];
+
+    const config: TableConfig<MedInfoRow> = {
+        columns,
+        actions,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        },
+        emptyState: {
+            message: filtered.length === 0 ? "No records yet." : "No data found"
+        },
+        loading
+    };
 
     return (
-        <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-            <table className="w-full border text-sm">
-                <thead className="bg-gray-100">
-                    <tr>
-                        {[
-                            "Date", "Age", "Height", "IBW",
-                            "ABW", "Overwt", "BMI", "Chest", "Action"
-                        ].map((h) => (
-                            <th key={h} className="border p-2 text-center">{h}</th>
-                        ))}
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {filtered.map((row) => {
-                        const { id = "", date = "", age = "" } = row;
-                        const isEditing = editingId === id;
-
-                        return (
-                            <tr key={row.id}>
-                                <td className="border p-2 text-center">
-                                    {isEditing ? (
-                                        <Input
-                                            type="date"
-                                            value={editForm?.date ?? ""}
-                                            onChange={(e) => onChange("date", e.target.value)}
-                                        />
-                                    ) : date}
-                                </td>
-
-                                <td className="border p-2 text-center">
-                                    {isEditing ? (
-                                        <Input
-                                            value={editForm?.age ?? ""}
-                                            onChange={(e) => onChange("age", e.target.value)}
-                                        />
-                                    ) : age}
-                                </td>
-
-                                {["height", "ibw", "abw", "overw", "bmi", "chest"].map((f) => (
-                                    <td key={f} className="border p-2 text-center">
-                                        {isEditing ? (
-                                            <Input
-                                                value={(editForm as any)[f] ?? ""}
-                                                onChange={(e) => onChange(f as any, e.target.value)}
-                                            />
-                                        ) : (row as any)[f]}
-                                    </td>
-                                ))}
-
-                                <td className="border p-2 text-center space-x-2">
-                                    {!isEditing ? (
-                                        <>
-                                            <Button size="sm" variant="outline" onClick={() => onEdit(row)}>
-                                                Edit
-                                            </Button>
-                                            <Button size="sm" variant="destructive" onClick={() => onDelete(row)}>
-                                                Delete
-                                            </Button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Button size="sm" onClick={onSave}>Save</Button>
-                                            <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
-                                        </>
-                                    )}
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+        <div className="mb-6">
+            <UniversalTable<MedInfoRow>
+                data={filtered}
+                config={config}
+            />
         </div>
     );
 }

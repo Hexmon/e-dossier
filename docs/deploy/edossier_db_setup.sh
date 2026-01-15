@@ -170,21 +170,15 @@ apply_conf "log_statement" "'ddl'"
 log "Writing hardened pg_hba.conf ..."
 cat > "$HBA_CONF" <<EOF
 # Hardened pg_hba.conf for e-dossier
-
 # TYPE  DATABASE        USER            ADDRESS                 METHOD
-
 # Local postgres superuser (via Unix socket)
 local   all             postgres                                peer
-
 # Local access for the application DB/user (Unix socket)
 local   ${DB_NAME}      ${DB_USER}                               scram-sha-256
-
 # TCP access from localhost (DB VM itself)
 host    ${DB_NAME}      ${DB_USER}      127.0.0.1/32             scram-sha-256
-
 # TCP access from application server only
 host    ${DB_NAME}      ${DB_USER}      ${APP_CIDR}              scram-sha-256
-
 # Reject everything else by default
 host    all             all             0.0.0.0/0                reject
 host    all             all             ::/0                     reject
@@ -242,11 +236,9 @@ if [[ "${ENABLE_BACKUPS,,}" == "y" ]]; then
   cat > "$BACKUP_SCRIPT" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-
 DB_NAME="${DB_NAME}"
 BACKUP_DIR="${BACKUP_DIR}"
 TS="\$(date +%Y%m%d%H%M%S)"
-
 pg_dump -Fc "\${DB_NAME}" > "\${BACKUP_DIR}/\${DB_NAME}_\${TS}.dump"
 find "\${BACKUP_DIR}" -type f -name "\${DB_NAME}_*.dump" -mtime +7 -delete
 EOF

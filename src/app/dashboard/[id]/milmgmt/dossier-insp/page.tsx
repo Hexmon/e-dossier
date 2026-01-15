@@ -38,10 +38,6 @@ export default function DossierInspSheetPage() {
 
     const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
 
-    useEffect(() => {
-        // Logic when ocId changes (if needed)
-    }, [ocId]);
-
     return (
         <DashboardLayout
             title="Dossier Insp Sheet"
@@ -65,7 +61,7 @@ export default function DossierInspSheetPage() {
                 <DossierTab
                     tabs={dossierTabs}
                     defaultValue="dossier-insp"
-                      ocId={ocId}
+                    ocId={ocId}
                     extraTabs={
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -94,7 +90,7 @@ export default function DossierInspSheetPage() {
                 >
                     <TabsContent value="dossier-insp">
                         <section className="p-6">
-                            <InspFormComponent />
+                            <InspFormComponent ocId={ocId} />
                         </section>
                     </TabsContent>
                 </DossierTab>

@@ -74,9 +74,9 @@ export default function OCManagementPage() {
   const [viewOpen, setViewOpen] = useState<boolean>(false);
   const [viewId, setViewId] = useState<string | null>(null);
 
-  type BranchType = "O" | "E" | "M";
+  type BranchType = "C" | "E" | "M";
 
-  const allowedBranches = useMemo(() => ["O", "E", "M"] as const, []);
+  const allowedBranches = useMemo(() => ["C", "E", "M"] as const, []);
   const safeBranch = ((): BranchType | undefined => {
     return (allowedBranches.includes(branchFilter as BranchType) ? (branchFilter as BranchType) : undefined);
   })();
@@ -134,12 +134,12 @@ export default function OCManagementPage() {
     const oc = ocList[index];
     setEditingIndex(index);
 
-    setValue("name", oc.name ?? "");
-    setValue("ocNo", oc.ocNo ?? "");
-    setValue("courseId", oc.courseId ?? "");
-    setValue("branch", oc.branch ?? undefined);
-    setValue("platoonId", oc.platoonId ?? "");
-    setValue("arrivalAtUniversity", oc.arrivalAtUniversity?.slice(0, 10) ?? "");
+    // setValue("name", oc.name ?? "");
+    // setValue("ocNo", oc.ocNo ?? "");
+    // setValue("courseId", oc.courseId ?? "");
+    // setValue("branch", oc.branch ?? undefined);
+    // setValue("platoonId", oc.platoonId ?? "");
+    // setValue("arrivalAtUniversity", oc.arrivalAtUniversity?.slice(0, 10) ?? "");
 
     setIsDialogOpen(true);
   };
@@ -209,7 +209,7 @@ export default function OCManagementPage() {
                   <h2 className="text-2xl font-bold text-foreground">OCs</h2>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleAdd}>
+                    <Button className="bg-[#40ba4d] cursor-pointer" onClick={handleAdd}>
                       Add OC
                     </Button>
 
@@ -301,13 +301,15 @@ export default function OCManagementPage() {
       {/* Add / Edit dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <OCForm
-          defaultValues={{}}
+          key={editingIndex !== null ? ocList[editingIndex]?.id : 'new'}
+          defaultValues={editingIndex !== null ? ocList[editingIndex] : {}}
           courses={courses}
           platoons={platoons}
           isEditing={editingIndex !== null}
           onCancel={() => {
             setIsDialogOpen(false);
             reset();
+            setEditingIndex(null);
           }}
           onSubmit={onSubmit}
         />

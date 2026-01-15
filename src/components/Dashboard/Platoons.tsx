@@ -39,6 +39,9 @@ export default function Platoons() {
                 filterable: false,
             },
         ],
+        theme: {
+            variant: "blue",
+        },
         styling: {
             compact: false,
             bordered: true,
@@ -48,10 +51,10 @@ export default function Platoons() {
     };
 
     return (
-        <div className="container mx-auto py-8">
-            <Card>
+        <div className="container mx-auto py-2">
+            <Card className='shadow-xl'>
                 <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-gray-800">Platoons</CardTitle>
+                    <CardTitle className="text-2xl font-semibold text-white bg-[#1677ff] p-2 rounded">Platoons</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <UniversalTable<Platoon>

@@ -2,21 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 
 import { FamilyMemberRecord } from "@/app/lib/api/familyApi";
 import { FormValues, Props } from "@/types/family-background";
 import { useFamily } from "@/hooks/useFamily";
+import type { RootState } from "@/store";
+import { saveFamilyForm, clearFamilyForm } from "@/store/slices/familyBackgroundSlice";
 
 export default function FamilyBackground({ ocId }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<FamilyMemberRecord | null>(null);
 
-    // ------------------------------------
-    // HOOK FOR API OPERATIONS
-    // ------------------------------------
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.familyBackground.forms[ocId]
+    );
+
+    // API operations
     const {
         family,
         setFamily,
@@ -30,14 +38,12 @@ export default function FamilyBackground({ ocId }: Props) {
         fetchFamily();
     }, [fetchFamily]);
 
-    // ------------------------------------
-    // RHF — NEW FAMILY FORM
-    // ------------------------------------
+    // React Hook Form
     const familyForm = useForm<FormValues>({
         defaultValues: {
-            family: [
-                { name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" },
-            ],
+            family: savedFormData && savedFormData.length > 0 
+                ? savedFormData 
+                : [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }],
         },
     });
 
@@ -55,14 +61,48 @@ export default function FamilyBackground({ ocId }: Props) {
         name: "family",
     });
 
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = familyForm.watch((value) => {
+            if (value.family && value.family.length > 0) {
+                const formData = value.family.map(member => ({
+                    name: member?.name || "",
+                    relation: member?.relation || "",
+                    age: member?.age ?? "", // Use ?? to handle both string and number
+                    occupation: member?.occupation || "",
+                    education: member?.education || "",
+                    mobileNo: member?.mobileNo || "",
+                }));
+                dispatch(saveFamilyForm({ ocId, data: formData }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [familyForm, dispatch, ocId]);
+
     const submitFamily = async (values: FormValues) => {
         const { family: newMembers } = values;
 
+        // Filter out empty rows
+        const filledMembers = newMembers.filter(member => 
+            member.name && member.name.trim() !== ""
+        );
+
+        if (filledMembers.length === 0) {
+            toast.error("Please add at least one family member");
+            return;
+        }
+
         try {
-            const saved = await saveFamily(newMembers);
+            const saved = await saveFamily(filledMembers);
 
             if (saved && saved.length > 0) {
                 toast.success("Family details saved successfully!");
+                // Clear Redux cache after successful save
+                dispatch(clearFamilyForm(ocId));
+                // Reset form to default state
+                familyForm.reset({
+                    family: [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }]
+                });
                 fetchFamily();
             }
         } catch {
@@ -70,9 +110,18 @@ export default function FamilyBackground({ ocId }: Props) {
         }
     };
 
-    // ------------------------------------
-    // EDITING HANDLERS
-    // ------------------------------------
+    // Clear form handler
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearFamilyForm(ocId));
+            familyForm.reset({
+                family: [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }]
+            });
+            toast.info("Form cleared");
+        }
+    };
+
+    // Editing handlers
     const startEdit = (member: FamilyMemberRecord) => {
         setEditingId(member.id);
         setEditForm({ ...member });
@@ -114,141 +163,171 @@ export default function FamilyBackground({ ocId }: Props) {
         }
     };
 
-    // ------------------------------------
-    // UI
-    // ------------------------------------
+    const columns: TableColumn<FamilyMemberRecord>[] = [
+        {
+            key: "sno",
+            label: "S.No",
+            render: (value, row, index) => index + 1
+        },
+        {
+            key: "name",
+            label: "Name",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.name || ""}
+                        onChange={(e) => changeEdit("name", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "relation",
+            label: "Relation",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.relation || ""}
+                        onChange={(e) => changeEdit("relation", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "age",
+            label: "Age",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="number"
+                        value={editForm?.age || ""}
+                        onChange={(e) => changeEdit("age", Number(e.target.value))}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "occupation",
+            label: "Occupation",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.occupation || ""}
+                        onChange={(e) => changeEdit("occupation", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "education",
+            label: "Edn Qual",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.education || ""}
+                        onChange={(e) => changeEdit("education", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "mobileNo",
+            label: "Mobile",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.mobileNo || ""}
+                        onChange={(e) => changeEdit("mobileNo", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        }
+    ];
+
+    const actions: TableAction<FamilyMemberRecord>[] = [
+        {
+            key: "edit-cancel",
+            label: editingId ? "Cancel" : "Edit",
+            variant: editingId ? "outline" : "outline",
+            size: "sm",
+            handler: (row) => {
+                if (editingId === row.id) {
+                    cancelEdit();
+                } else {
+                    startEdit(row);
+                }
+            }
+        },
+        {
+            key: "save-delete",
+            label: editingId ? "Save" : "Delete",
+            variant: editingId ? "default" : "destructive",
+            size: "sm",
+            handler: async (row) => {
+                if (editingId === row.id) {
+                    await saveEdit();
+                } else {
+                    await deleteMember(row);
+                }
+            }
+        }
+    ];
+
+    const config: TableConfig<FamilyMemberRecord> = {
+        columns,
+        actions,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        },
+        theme: {
+            variant: "blue"
+        },
+        emptyState: {
+            message: "No family data yet."
+        }
+    };
+
     return (
         <div className="w-full">
 
-            {/* -------------------------------- SAVED TABLE -------------------------------- */}
-            {family.length > 0 ? (
-                <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-                    <table className="min-w-full text-sm border border-gray-300">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                {["S.No", "Name", "Relation", "Age", "Occupation", "Edn Qual", "Mobile", "Action"].map((head) => (
-                                    <th key={head} className="border px-4 py-2 bg-gray-300 text-center">
-                                        {head}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
+            {/* SAVED TABLE */}
+            <div className="mb-6 border rounded-lg shadow">
+                <UniversalTable<FamilyMemberRecord>
+                    data={family}
+                    config={config}
+                />
+            </div>
 
-                        <tbody>
-                            {family.map((member, index) => {
-                                const { id, name, relation, age, occupation, education, mobileNo } = member;
-                                const isEditing = editingId === id;
-
-                                return (
-                                    <tr key={id}>
-                                        <td className="border px-4 py-2 text-center">{index + 1}</td>
-
-                                        {/* NAME */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.name || ""}
-                                                    onChange={(e) => changeEdit("name", e.target.value)}
-                                                />
-                                            ) : (
-                                                name
-                                            )}
-                                        </td>
-
-                                        {/* RELATION */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.relation || ""}
-                                                    onChange={(e) => changeEdit("relation", e.target.value)}
-                                                />
-                                            ) : (
-                                                relation
-                                            )}
-                                        </td>
-
-                                        {/* AGE */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    type="number"
-                                                    value={editForm?.age || ""}
-                                                    onChange={(e) => changeEdit("age", Number(e.target.value))}
-                                                />
-                                            ) : (
-                                                age
-                                            )}
-                                        </td>
-
-                                        {/* OCCUPATION */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.occupation || ""}
-                                                    onChange={(e) => changeEdit("occupation", e.target.value)}
-                                                />
-                                            ) : (
-                                                occupation
-                                            )}
-                                        </td>
-
-                                        {/* EDUCATION */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.education || ""}
-                                                    onChange={(e) => changeEdit("education", e.target.value)}
-                                                />
-                                            ) : (
-                                                education
-                                            )}
-                                        </td>
-
-                                        {/* MOBILE */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.mobileNo || ""}
-                                                    onChange={(e) => changeEdit("mobileNo", e.target.value)}
-                                                />
-                                            ) : (
-                                                mobileNo
-                                            )}
-                                        </td>
-
-                                        {/* ACTIONS */}
-                                        <td className="border px-4 py-2 text-center space-x-2">
-                                            {!isEditing ? (
-                                                <>
-                                                    <Button size="sm" variant="outline" onClick={() => startEdit(member)}>
-                                                        Edit
-                                                    </Button>
-                                                    <Button size="sm" variant="destructive" onClick={() => deleteMember(member)}>
-                                                        Delete
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Button size="sm" onClick={saveEdit}>
-                                                        Save
-                                                    </Button>
-                                                    <Button size="sm" variant="outline" onClick={cancelEdit}>
-                                                        Cancel
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            ) : (
-                <p className="text-center text-gray-500">No family data yet.</p>
-            )}
-
-            {/* -------------------------------- ADD NEW FORM -------------------------------- */}
+            {/* ADD NEW FORM */}
             <form onSubmit={familyForm.handleSubmit(submitFamily)}>
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm border border-gray-300">
@@ -277,7 +356,12 @@ export default function FamilyBackground({ ocId }: Props) {
                                     ))}
 
                                     <td className="border px-4 py-2 text-center">
-                                        <Button variant="destructive" type="button" onClick={() => remove(index)}>
+                                        <Button 
+                                            variant="destructive" 
+                                            type="button" 
+                                            size="sm"
+                                            onClick={() => remove(index)}
+                                        >
                                             Remove
                                         </Button>
                                     </td>
@@ -304,10 +388,25 @@ export default function FamilyBackground({ ocId }: Props) {
                         Add Member
                     </Button>
 
-                    <Button type="submit">Save</Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClearForm}
+                    >
+                        Clear Form
+                    </Button>
+
+                    <Button type="submit" className="bg-[#40ba4d]">
+                        Save
+                    </Button>
                 </div>
+
+                {savedFormData && savedFormData.length > 0 && (
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                        * Changes are automatically saved
+                    </p>
+                )}
             </form>
         </div>
     );
 }
-

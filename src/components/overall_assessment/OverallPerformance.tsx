@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { UniversalTable, TableConfig } from "@/components/layout/TableLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import type { RootState } from "@/store";
+import { saveOverallPerformance } from "@/store/slices/overallAssessmentSlice";
 
 interface FinalTableData {
   id: string;
@@ -19,7 +22,10 @@ interface FinalTableData {
   column11: string;
 }
 
-// Base table config – 11 columns
+interface OverallPerformanceProps {
+  ocId: string;
+}
+
 const finalTableConfig: TableConfig<FinalTableData> = {
   columns: [
     { key: "column1", label: "S.No", type: "number", sortable: true, width: "10%" },
@@ -33,10 +39,23 @@ const finalTableConfig: TableConfig<FinalTableData> = {
     { key: "column9", label: "VI", sortable: false, width: "10%" },
     { key: "column10", label: "Total", sortable: false, width: "20%" },
     { key: "column11", label: "CGPA/Percentage", sortable: false, width: "20%" },
-  ]
+  ],
+  features: {
+    sorting: false,
+    filtering: false,
+    pagination: false,
+    selection: false,
+    search: false
+  },
+  styling: {
+    compact: false,
+    bordered: true,
+    striped: false,
+    hover: true
+  }
 };
 
-const initialFinalData: FinalTableData[] = [
+const INITIAL_FINAL_DATA: FinalTableData[] = [
   {
     id: "1",
     column1: 1,
@@ -165,23 +184,61 @@ const initialFinalData: FinalTableData[] = [
   },
 ];
 
-export default function OverallPerformance() {
-  
-    const [finalData, setFinalData] = useState(initialFinalData);
+export default function OverallPerformance({ ocId }: OverallPerformanceProps) {
+  const dispatch = useDispatch();
 
+  // Get saved data from Redux
+  const savedData = useSelector((state: RootState) =>
+    state.overallAssessment.forms[ocId]?.overallPerformance
+  );
+
+  const [finalData, setFinalData] = useState<FinalTableData[]>(() =>
+    savedData || INITIAL_FINAL_DATA
+  );
+
+  // Debounce ref
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load saved data when ocId changes
+  useEffect(() => {
+    if (savedData) {
+      setFinalData(savedData);
+    }
+  }, [ocId, savedData]);
+
+  // Auto-save with debounce
+  useEffect(() => {
+    if (!ocId) return;
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      dispatch(saveOverallPerformance({ ocId, data: finalData }));
+    }, 500);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [finalData, ocId, dispatch]);
 
   return (
-  <div className="space-y-6">
-    <Card className="p-6 rounded-2xl shadow-xl bg-white">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-center text-primary">Overall Performance Record</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <UniversalTable data={finalData} config={finalTableConfig} />
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
+    <div className="space-y-6">
+      <Card className="p-6 rounded-2xl shadow-xl bg-white">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-center text-primary">
+            Overall Performance Record
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <UniversalTable data={finalData} config={finalTableConfig} />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

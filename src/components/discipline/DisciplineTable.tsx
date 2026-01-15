@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import type { DisciplineRow as HookRow } from "@/hooks/useDisciplineRecords";
 
 interface Props {
@@ -22,19 +23,6 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<HookRow> | null>(null);
 
-    if (loading) {
-        return <p className="text-center">Loading...</p>;
-    }
-
-    if (!rows || rows.length === 0) {
-        return <p className="text-center text-gray-500">No data submitted yet for this semester.</p>;
-    }
-
-    const startEdit = (row: HookRow) => {
-        setEditingId(row.id ?? null);
-        setEditForm({ ...row });
-    };
-
     const changeEdit = <K extends keyof HookRow>(key: K, value: HookRow[K]) => {
         setEditForm((prev) => (prev ? { ...prev, [key]: value } : prev));
     };
@@ -46,150 +34,166 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
         setEditForm(null);
     };
 
+    const startEdit = (row: HookRow) => {
+        setEditingId(row.id ?? null);
+        setEditForm({ ...row });
+    };
+
+    const columns: TableColumn<HookRow>[] = [
+        {
+            key: "serialNo",
+            label: "S.No",
+            render: (value) => value || "-"
+        },
+        {
+            key: "dateOfOffence",
+            label: "Date",
+            type: "date",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="date"
+                        value={String(editForm?.dateOfOffence ?? (value === "-" || !value ? "" : value))}
+                        onChange={(e) => changeEdit("dateOfOffence", e.target.value as any)}
+                    />
+                ) : value || "-";
+            }
+        },
+        {
+            key: "offence",
+            label: "Offence",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={String(editForm?.offence ?? value)}
+                        onChange={(e) => changeEdit("offence", e.target.value as any)}
+                    />
+                ) : value || "-";
+            }
+        },
+        {
+            key: "punishmentAwarded",
+            label: "Punishment",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={String(editForm?.punishmentAwarded ?? value)}
+                        onChange={(e) => changeEdit("punishmentAwarded", e.target.value as any)}
+                    />
+                ) : value || "-";
+            }
+        },
+        {
+            key: "dateOfAward",
+            label: "Date Awarded",
+            type: "date",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="date"
+                        value={String(editForm?.dateOfAward ?? (value === "-" || !value ? "" : value))}
+                        onChange={(e) => changeEdit("dateOfAward", e.target.value as any)}
+                    />
+                ) : value || "-";
+            }
+        },
+        {
+            key: "byWhomAwarded",
+            label: "By Whom",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={String(editForm?.byWhomAwarded ?? value)}
+                        onChange={(e) => changeEdit("byWhomAwarded", e.target.value as any)}
+                    />
+                ) : value || "-";
+            }
+        },
+        {
+            key: "negativePts",
+            label: "Negative Pts",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="number"
+                        value={String(editForm?.negativePts ?? value)}
+                        onChange={(e) => changeEdit("negativePts", e.target.value as any)}
+                    />
+                ) : value || "0";
+            }
+        },
+        {
+            key: "cumulative",
+            label: "Cumulative",
+            render: (value) => value ?? "0"
+        }
+    ];
+
+    const actions: TableAction<HookRow>[] = [
+        {
+            key: "edit-cancel",
+            label: editingId ? "Cancel" : "Edit",
+            variant: editingId ? "outline" : "outline",
+            size: "sm",
+            handler: (row) => {
+                if (editingId === row.id) {
+                    setEditingId(null);
+                    setEditForm(null);
+                } else {
+                    startEdit(row);
+                }
+            }
+        },
+        {
+            key: "save-delete",
+            label: editingId ? "Save" : "Delete",
+            variant: editingId ? "default" : "destructive",
+            size: "sm",
+            handler: async (row) => {
+                if (editingId === row.id) {
+                    await saveEdit();
+                } else {
+                    await onDelete(row);
+                }
+            }
+        }
+    ];
+
+    const config: TableConfig<HookRow> = {
+        columns,
+        actions,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        },
+        emptyState: {
+            message: "No data submitted yet for this semester."
+        },
+        loading
+    };
+
     return (
-        <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-            <table className="w-full border text-sm">
-                <thead className="bg-gray-100">
-                    <tr>
-                        <th className="border p-2 text-center">S.No</th>
-                        <th className="border p-2 text-center">Date</th>
-                        <th className="border p-2 text-center">Offence</th>
-                        <th className="border p-2 text-center">Punishment</th>
-                        <th className="border p-2 text-center">Date Awarded</th>
-                        <th className="border p-2 text-center">By Whom</th>
-                        <th className="border p-2 text-center">Negative Pts</th>
-                        <th className="border p-2 text-center">Cumulative</th>
-                        <th className="border p-2 text-center">Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {rows.map((row) => {
-                        const {
-                            id = "",
-                            serialNo = "-",
-                            dateOfOffence = "-",
-                            offence = "-",
-                            punishmentAwarded = "-",
-                            dateOfAward = "-",
-                            byWhomAwarded = "-",
-                            negativePts = "0",
-                            cumulative = "0",
-                        } = row;
-
-                        const isEditing = editingId === id;
-
-                        return (
-                            <tr key={id || serialNo}>
-                                <td className="border p-2 text-center">{serialNo}</td>
-
-                                <td className="border p-2 text-center">
-                                    {isEditing ? (
-                                        <Input
-                                            type="date"
-                                            value={String(editForm?.dateOfOffence ?? dateOfOffence === "-" ? "" : dateOfOffence)}
-                                            onChange={(e) => changeEdit("dateOfOffence", e.target.value)}
-                                        />
-                                    ) : (
-                                        dateOfOffence || "-"
-                                    )}
-                                </td>
-
-                                <td className="border p-2 text-center">
-                                    {isEditing ? (
-                                        <Input
-                                            value={String(editForm?.offence ?? offence)}
-                                            onChange={(e) => changeEdit("offence", e.target.value)}
-                                        />
-                                    ) : (
-                                        offence || "-"
-                                    )}
-                                </td>
-
-                                <td className="border p-2 text-center">
-                                    {isEditing ? (
-                                        <Input
-                                            value={String(editForm?.punishmentAwarded ?? punishmentAwarded)}
-                                            onChange={(e) => changeEdit("punishmentAwarded", e.target.value)}
-                                        />
-                                    ) : (
-                                        punishmentAwarded || "-"
-                                    )}
-                                </td>
-
-                                <td className="border p-2 text-center">
-                                    {isEditing ? (
-                                        <Input
-                                            type="date"
-                                            value={String(editForm?.dateOfAward ?? (dateOfAward === "-" ? "" : dateOfAward))}
-                                            onChange={(e) => changeEdit("dateOfAward", e.target.value)}
-                                        />
-                                    ) : (
-                                        dateOfAward || "-"
-                                    )}
-                                </td>
-
-                                <td className="border p-2 text-center">
-                                    {isEditing ? (
-                                        <Input
-                                            value={String(editForm?.byWhomAwarded ?? byWhomAwarded)}
-                                            onChange={(e) => changeEdit("byWhomAwarded", e.target.value)}
-                                        />
-                                    ) : (
-                                        byWhomAwarded || "-"
-                                    )}
-                                </td>
-
-                                <td className="border p-2 text-center">
-                                    {isEditing ? (
-                                        <Input
-                                            type="number"
-                                            value={String(editForm?.negativePts ?? negativePts)}
-                                            onChange={(e) => changeEdit("negativePts", e.target.value)}
-                                        />
-                                    ) : (
-                                        negativePts
-                                    )}
-                                </td>
-
-                                <td className="border p-2 text-center">
-                                    {/* show cumulative even if positive in table; form shows negative only */}
-                                    {cumulative ?? "0"}
-                                </td>
-
-                                <td className="border p-2 text-center">
-                                    {!isEditing ? (
-                                        <>
-                                            <Button size="sm" variant="outline" onClick={() => startEdit(row)}>
-                                                Edit
-                                            </Button>
-                                            <Button size="sm" variant="destructive" onClick={() => onDelete(row)}>
-                                                Delete
-                                            </Button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Button size="sm" onClick={saveEdit}>
-                                                Save
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    setEditingId(null);
-                                                    setEditForm(null);
-                                                }}
-                                            >
-                                                Cancel
-                                            </Button>
-                                        </>
-                                    )}
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+        <div className="mb-6">
+            <UniversalTable<HookRow>
+                data={rows || []}
+                config={config}
+            />
         </div>
     );
 }

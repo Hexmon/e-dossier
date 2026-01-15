@@ -14,7 +14,9 @@ import {
   FileBadge,
   NotebookPen,
   ChartArea,
-  BookOpenCheck
+  BookOpenCheck,
+  ArrowDownUp,
+  Gavel
 } from "lucide-react";
 
 
@@ -279,10 +281,42 @@ export const managementCard = [
     icon: BookOpenCheck,
     to: "/dashboard/genmgmt/offerings",
     color: "bg-purple-500"
+  },
+  {
+    title: "Relegation Management",
+    description: "Monitor, evaluate, and manage student relegation and promotion status",
+    icon: ArrowDownUp,
+    to: "/dashboard/genmgmt/relegation",
+    color: "bg-red-500"
+  },
+  {
+    title: "Platoon Management",
+    description: "Create, organize, and manage platoons and assigned personnel efficiently",
+    icon: Users,
+    to: "/dashboard/genmgmt/platoon-management",
+    color: "bg-green-500"
+  },
+  {
+    title: "Discipline Management",
+    description: "Manage and track discipline records",
+    icon: ShieldAlert,
+    to: "/dashboard/genmgmt/discipline-records",
+    color: "bg-blue-500"
+  },
+  {
+    title: "Camps Management",
+    description: "Create and Manage Camps efficiently",
+    icon: Tent,
+    to: "/dashboard/genmgmt/camps",
+    color: "bg-green-700"
+  },
+  {
+    title: "Punishment Management",
+    description: "Track, assign, and manage disciplinary punishments",
+    icon: Gavel,
+    to: "/dashboard/genmgmt/punishments",
+    color: "bg-red-700"
   }
-
-
-
 
   // {
   //   title: "Settings Management",
@@ -1192,6 +1226,18 @@ export const ocTabs = [
     icon: CalendarDays,
     link: "/dashboard/genmgmt/appointmentmgmt"
   },
+  {
+    value: "camp-mgmt",
+    title: "Camps Management",
+    icon: Tent,
+    link: "/dashboard/genmgmt/camps"
+  },
+  {
+    value: "discipline-records",
+    title: "Discipline Records",
+    icon: ShieldAlert,
+    link: "/dashboard/genmgmt/discipline-records"
+  }
   // {
   //   value: "instructors",
   //   title: "Instructor Management",
@@ -1200,6 +1246,57 @@ export const ocTabs = [
   // }
 
 
+];
+export const ocTabsWithDropdown = [
+  {
+    value: "oc-mgmt",
+    title: "OC Management",
+    icon: Users,
+    link: "/dashboard/genmgmt/ocmgmt"
+  },
+  {
+    value: "course-mgmt",
+    title: "Course Management",
+    icon: FileText,
+    link: "/dashboard/genmgmt/coursemgmt"
+  },
+  {
+    value: "subject-mgmt",
+    title: "Subject Management",
+    icon: Book,
+    link: "/dashboard/genmgmt/subjectmgmt"
+  },
+  {
+    value: "admin-mgmt",
+    title: "Admin",
+    icon: Settings,
+    dropdownItems: [
+      {
+        title: "User Management",
+        icon: Shield,
+        color: "text-blue-600",
+        href: "/dashboard/genmgmt/usersmgmt"
+      },
+      {
+        title: "Approval Management",
+        icon: CheckCircle,
+        color: "text-green-600",
+        href: "/dashboard/genmgmt/approvalmgmt"
+      },
+      {
+        title: "Appointment Management",
+        icon: CalendarDays,
+        color: "text-purple-600",
+        href: "/dashboard/genmgmt/appointmentmgmt"
+      },
+      {
+        title: "Instructor Management",
+        icon: UserCheck,
+        color: "text-orange-600",
+        href: "/dashboard/genmgmt/instructors"
+      }
+    ]
+  }
 ];
 
 export const semesterTabs = [

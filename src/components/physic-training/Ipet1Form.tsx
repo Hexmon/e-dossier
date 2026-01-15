@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
     Select,
@@ -11,7 +12,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
+
+import type { RootState } from "@/store";
+import { saveIpet1Data } from "@/store/slices/physicalTrainingSlice";
 
 interface TableRow {
     id: string;
@@ -26,19 +31,46 @@ interface TableRow {
 interface Ipet1FormProps {
     onMarksChange: (marks: number) => void;
     activeSemester: string;
+    ocId: string;
 }
 
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
 const column4Options = ["Pass", "Fail"];
 
-export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormProps) {
+const DEFAULT_DATA: TableRow[] = [
+    { id: "1", column1: 1, column2: "T/A Vault", column3: "", column4: "", maxMarks: 10, column5: 0 },
+    { id: "2", column1: 2, column2: "Rope", column3: "", column4: "", maxMarks: 13, column5: 0 },
+    { id: "3", column1: 3, column2: "Chest Touch/ Heaving", column3: "", column4: "", maxMarks: 12, column5: 0 },
+];
+
+export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1FormProps) {
+    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
 
-    const [tableData, setTableData] = useState<TableRow[]>([
-        { id: "1", column1: 1, column2: "T/A Vault", column3: "", column4: "", maxMarks: 10, column5: 0 },
-        { id: "2", column1: 2, column2: "Rope", column3: "", column4: "", maxMarks: 13, column5: 0 },
-        { id: "3", column1: 3, column2: "Chest Touch/ Heaving", column3: "", column4: "", maxMarks: 12, column5: 0 },
-    ]);
+    // Get saved data from Redux
+    const savedData = useSelector((state: RootState) =>
+        state.physicalTraining.forms[ocId]?.[activeSemester]?.ipet1Data
+    );
+
+    const [tableData, setTableData] = useState<TableRow[]>(savedData || DEFAULT_DATA);
+
+    // Load saved data when it changes
+    useEffect(() => {
+        if (savedData) {
+            setTableData(savedData);
+        }
+    }, [savedData, activeSemester]);
+
+    // Auto-save to Redux whenever data changes
+    useEffect(() => {
+        if (tableData && ocId) {
+            dispatch(saveIpet1Data({
+                ocId,
+                semester: activeSemester,
+                data: tableData
+            }));
+        }
+    }, [tableData, ocId, activeSemester, dispatch]);
 
     const tableTotal = useMemo(() => {
         return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);
@@ -63,13 +95,11 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
 
         const numValue = parseFloat(value);
 
-        // Allow empty values
         if (value.trim() === "") {
             setTableData((prev) => prev.map((r) => (r.id === rowId ? { ...r, column5: 0 } : r)));
             return;
         }
 
-        // Validate marks
         if (isNaN(numValue) || numValue < 0) {
             toast.error("Marks must be a valid positive number");
             return;
@@ -88,7 +118,6 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
     }, [tableTotal, onMarksChange]);
 
     const handleSave = () => {
-        // Validate all marks before saving
         for (const row of tableData) {
             if (row.column5 > 0 && row.column5 > row.maxMarks) {
                 toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and ${row.maxMarks}`);
@@ -100,117 +129,149 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
         toast.success("IPET data saved successfully");
     };
 
+    const totalRow: TableRow = {
+        id: "total",
+        column1: "—",
+        column2: "Total",
+        column3: "—",
+        column4: "—",
+        maxMarks: tableData.reduce((sum, r) => sum + (r.maxMarks || 0), 0),
+        column5: tableTotal
+    };
+
+    const displayData = [...tableData, totalRow];
+
+    const columns: TableColumn<TableRow>[] = [
+        {
+            key: "column1",
+            label: "S.No",
+            render: (value) => value
+        },
+        {
+            key: "column2",
+            label: "Test",
+            render: (value) => value
+        },
+        {
+            key: "maxMarks",
+            label: "Max Marks",
+            type: "number",
+            render: (value, row) => {
+                if (row.id === "total") {
+                    return <span className="text-center block">{value}</span>;
+                }
+                return isEditing ? (
+                    <Input
+                        type="number"
+                        value={value}
+                        onChange={(e) => handleMaxMarksChange(row.id, e.target.value)}
+                        placeholder="Max"
+                    />
+                ) : (
+                    <span>{value || "-"}</span>
+                );
+            }
+        },
+        {
+            key: "column3",
+            label: "Category",
+            render: (value, row) => {
+                if (row.id === "total") {
+                    return <span className="text-center block">—</span>;
+                }
+                return (
+                    <Select
+                        value={value}
+                        onValueChange={(val) => handleColumn3Change(row.id, val)}
+                        disabled={!isEditing}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {column3Options.map((option) => (
+                                <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                );
+            }
+        },
+        {
+            key: "column4",
+            label: "Status",
+            render: (value, row) => {
+                if (row.id === "total") {
+                    return <span className="text-center block">—</span>;
+                }
+                return (
+                    <Select
+                        value={value}
+                        onValueChange={(val) => handleColumn4Change(row.id, val)}
+                        disabled={!isEditing}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {column4Options.map((option) => (
+                                <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                );
+            }
+        },
+        {
+            key: "column5",
+            label: "Marks Scored",
+            type: "number",
+            render: (value, row) => {
+                if (row.id === "total") {
+                    return <span className="text-center block">{value}</span>;
+                }
+                return isEditing ? (
+                    <Input
+                        type="number"
+                        value={value}
+                        onChange={(e) => handleColumn5Change(row.id, e.target.value)}
+                        placeholder="Enter marks"
+                        className="w-full"
+                    />
+                ) : (
+                    <span>{value || "-"}</span>
+                );
+            }
+        }
+    ];
+
+    const config: TableConfig<TableRow> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: true
+        }
+    };
+
     return (
         <div className="mt-3 space-y-6">
             <CardContent className="space-y-6">
                 <h2 className="text-lg font-bold text-left text-gray-700">IPET (35 Marks)</h2>
 
-                <div className="overflow-x-auto border border-gray-300 rounded-lg">
-                    <table className="w-full">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                <th className="border border-gray-300 px-4 py-2 text-left">S.No</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Test</th>
-
-                                {/* MOVED HERE */}
-                                <th className="border border-gray-300 px-4 py-2 text-left">Max Marks</th>
-
-                                <th className="border border-gray-300 px-4 py-2 text-left">Category</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
-
-                                <th className="border border-gray-300 px-4 py-2 text-left">Marks Scored</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {tableData.map((row) => {
-                                const { id, column1, column2, maxMarks, column3, column4, column5 } = row;
-                                return (
-                                    <tr key={id} className="hover:bg-gray-50 border-b border-gray-300">
-                                        <td className="border border-gray-300 px-4 py-2">{column1}</td>
-                                        <td className="border border-gray-300 px-4 py-2">{column2}</td>
-
-                                        {/* MOVED MAX MARKS CELL */}
-                                        <td className="border border-gray-300 px-4 py-2 ">
-                                            {isEditing ? (
-                                                <Input
-                                                    type="number"
-                                                    value={maxMarks}
-                                                    onChange={(e) => handleMaxMarksChange(id, e.target.value)}
-                                                    placeholder="Max"
-                                                />
-                                            ) : (
-                                                <span>{maxMarks || "-"}</span>
-                                            )}
-                                        </td>
-
-                                        <td className="border border-gray-300 px-4 py-2">
-                                            <Select
-                                                value={column3}
-                                                onValueChange={(value) => handleColumn3Change(id, value)}
-                                                disabled={!isEditing}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select category" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {column3Options.map((option) => (
-                                                        <SelectItem key={option} value={option}>{option}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </td>
-
-                                        <td className="border border-gray-300 px-4 py-2">
-                                            <Select
-                                                value={column4}
-                                                onValueChange={(value) => handleColumn4Change(id, value)}
-                                                disabled={!isEditing}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select status" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {column4Options.map((option) => (
-                                                        <SelectItem key={option} value={option}>{option}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </td>
-
-                                        <td className="border border-gray-300 px-4 py-2 ">
-                                            {isEditing ? (
-                                                <Input
-                                                    type="number"
-                                                    value={column5}
-                                                    onChange={(e) => handleColumn5Change(id, e.target.value)}
-                                                    placeholder="Enter marks"
-                                                    className="w-full"
-                                                />
-                                            ) : (
-                                                <span>{column5 || "-"}</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-
-                            <tr className="bg-gray-100 font-semibold">
-                                <td className="border border-gray-300 px-4 py-2">—</td>
-                                <td className="border border-gray-300 px-4 py-2">Total</td>
-
-                                {/* MAX MARKS TOTAL — SAME POSITION */}
-                                <td className="border border-gray-300 px-4 py-2 text-center">
-                                    {tableData.reduce((sum, r) => sum + (r.maxMarks || 0), 0)}
-                                </td>
-
-                                <td className="border border-gray-300 px-4 py-2 text-center">—</td>
-                                <td className="border border-gray-300 px-4 py-2 text-center">—</td>
-
-                                <td className="border border-gray-300 px-4 py-2 text-center">{tableTotal}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div className="border border-gray-300 rounded-lg">
+                    <UniversalTable<TableRow>
+                        data={displayData}
+                        config={config}
+                    />
                 </div>
 
                 <div className="flex gap-3 justify-center mt-4">
@@ -223,6 +284,10 @@ export default function Ipet1Form({ onMarksChange, activeSemester }: Ipet1FormPr
                         <Button onClick={() => setIsEditing(true)}>Edit</Button>
                     )}
                 </div>
+
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                    * Changes are automatically saved
+                </p>
             </CardContent>
         </div>
     );

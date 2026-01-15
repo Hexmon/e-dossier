@@ -24,7 +24,7 @@ export default function AcademicsPage() {
         courseName = "",
         ocNumber = "",
         ocId: cadetOcId = ocId,
-        course = "", // This is the courseId we need
+        course = "",
     } = cadet || {};
 
     const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };

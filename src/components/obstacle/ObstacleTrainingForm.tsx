@@ -4,14 +4,8 @@ import React, { useEffect, useMemo } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { ObstacleTrainingRecord } from "@/app/lib/api/obstacleTrainingApi";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { TermData } from "@/types/obstacleTrg";
-
-function hasSubject(
-    r: ObstacleTrainingRecord
-): r is ObstacleTrainingRecord & { subject: string } {
-    return typeof (r as Record<string, unknown>).subject === "string";
-}
 
 type Row = {
     id?: string;
@@ -22,144 +16,156 @@ type Row = {
 
 interface Props {
     semesterNumber: number;
-    inputPrefill: Row[];
-    savedRecords: ObstacleTrainingRecord[];
     onSave: (values: TermData) => Promise<void>;
     isEditing: boolean;
     onCancelEdit: () => void;
     disabled?: boolean;
+    isSaving?: boolean;
     formMethods?: UseFormReturn<TermData>;
 }
 
 export default function ObstacleTrainingForm({
     semesterNumber,
-    inputPrefill,
-    savedRecords,
     onSave,
     isEditing,
     onCancelEdit,
     disabled = false,
+    isSaving = false,
     formMethods,
 }: Props) {
     const internalForm = useForm<TermData>({
-        defaultValues: { records: inputPrefill },
+        defaultValues: { records: [] },
     });
 
     const methods = formMethods ?? internalForm;
 
-    const { register, handleSubmit, reset, watch } = methods;
-
-    const merged = useMemo<Row[]>(() => {
-        return inputPrefill.map((pref) => {
-            const obstacle = pref.obstacle ?? "-";
-            const prefObtained = pref.obtained ?? "";
-            const prefRemark = pref.remark ?? "";
-
-            const match = [...savedRecords]
-                .reverse()
-                .find(
-                    (r) =>
-                        ((hasSubject(r) ? r.subject : r.obstacle) ?? "") === obstacle &&
-                        Number(r.semester ?? 0) === Number(semesterNumber)
-                );
-
-            return {
-                id: match?.id ?? pref.id,
-                obstacle,
-                obtained: match ? String(match.marksObtained ?? "") : String(prefObtained),
-                remark: match ? String(match.remark ?? "") : String(prefRemark),
-            };
-        });
-    }, [inputPrefill, savedRecords, semesterNumber]);
-
-    /** Sync merged rows into React Hook Form */
-    useEffect(() => {
-        reset({ records: merged });
-    }, [merged, reset]);
+    const { register, handleSubmit, reset, watch, getValues } = methods;
 
     const watched = watch("records");
+    const currentRecords = watched || getValues("records") || [];
+
+    const columns: TableColumn<Row>[] = [
+        {
+            key: "index",
+            label: "No",
+            render: (value, row, index) => {
+                const isTotalRow = row.obstacle === "Total";
+                return isTotalRow ? "" : index + 1;
+            }
+        },
+        {
+            key: "obstacle",
+            label: "Obstacle",
+            render: (value) => value
+        },
+        {
+            key: "obtained",
+            label: "Marks Obtained",
+            type: "number",
+            render: (value, row, index) => {
+                const isTotalRow = row.obstacle === "Total";
+
+                if (isTotalRow) {
+                    const total = currentRecords
+                        .filter((r: Row) => r.obstacle !== "Total")
+                        .reduce((sum: number, r: Row) => sum + (parseFloat(r.obtained || "0") || 0), 0);
+
+                    return <span className="text-center block font-semibold">{total}</span>;
+                }
+
+                return (
+                    <Input
+                        {...register(`records.${index}.obtained`)}
+                        type="number"
+                        defaultValue={value}
+                        disabled={!isEditing || disabled}
+                    />
+                );
+            }
+        },
+        {
+            key: "remark",
+            label: "Remarks",
+            render: (value, row, index) => {
+                const isTotalRow = row.obstacle === "Total";
+
+                if (isTotalRow) {
+                    return <span className="text-center block">—</span>;
+                }
+
+                return (
+                    <Input
+                        {...register(`records.${index}.remark`)}
+                        type="text"
+                        defaultValue={value}
+                        disabled={!isEditing || disabled}
+                    />
+                );
+            }
+        }
+    ];
+
+    // Add total row to data
+    const tableData = useMemo(() => {
+        const records = currentRecords.filter((r: Row) => r.obstacle !== "Total");
+        const totalRow: Row = {
+            obstacle: "Total",
+            obtained: String(
+                records.reduce((sum: number, r: Row) => sum + (parseFloat(r.obtained || "0") || 0), 0)
+            ),
+            remark: "—"
+        };
+        return [...records, totalRow];
+    }, [currentRecords]);
+
+    const config: TableConfig<Row> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        }
+    };
+
+    const handleReset = () => {
+        const values = getValues();
+        reset(values);
+    };
 
     return (
         <form onSubmit={handleSubmit(onSave)}>
-            <div className="overflow-x-auto border rounded-lg shadow">
-                <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
-                        <tr>
-                            <th className="p-2 border text-left">No</th>
-                            <th className="p-2 border text-left">Obstacle</th>
-                            <th className="p-2 border text-left">Marks Obtained</th>
-                            <th className="p-2 border text-left">Remarks</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {merged.map((row, idx) => {
-                            const { id = `${idx}`, obstacle, obtained, remark } = row;
-
-                            return (
-                                <tr key={id}>
-                                    <td className="p-2 border text-center">{idx + 1}</td>
-
-                                    <td className="p-2 border">{obstacle}</td>
-
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...register(`records.${idx}.obtained`)}
-                                            type="number"
-                                            defaultValue={obtained}
-                                            disabled={!isEditing || disabled}
-                                        />
-                                    </td>
-
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...register(`records.${idx}.remark`)}
-                                            type="text"
-                                            defaultValue={remark}
-                                            disabled={!isEditing || disabled}
-                                        />
-                                    </td>
-                                </tr>
-                            );
-                        })}
-
-                        {/* Total Row */}
-                        <tr className="font-semibold bg-gray-50">
-                            <td className="p-2 border text-center">
-                                {(watched?.length ?? merged.length) + 1}
-                            </td>
-
-                            <td className="p-2 border">Total</td>
-
-                            <td className="p-2 border text-center">
-                                {(watched ?? merged)
-                                    .slice(0, merged.length)
-                                    .reduce(
-                                        (sum, r) =>
-                                            sum + (parseFloat(r.obtained || "0") || 0),
-                                        0
-                                    )}
-                            </td>
-
-                            <td className="p-2 border text-center">—</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div className="border rounded-lg shadow">
+                <UniversalTable<Row>
+                    data={tableData}
+                    config={config}
+                />
             </div>
 
             {/* Action Buttons */}
             <div className="flex justify-center gap-3 mt-6">
                 {isEditing && (
                     <>
-                        <Button type="submit" disabled={disabled}>
-                            Save
+                        <Button
+                            type="submit"
+                            disabled={disabled || isSaving}
+                            className="bg-[#40ba4d]"
+                        >
+                            {isSaving ? "Saving..." : "Save"}
                         </Button>
 
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => reset({ records: merged })}
-                            disabled={disabled}
+                            onClick={handleReset}
+                            disabled={disabled || isSaving}
                         >
                             Reset
                         </Button>
@@ -168,7 +174,7 @@ export default function ObstacleTrainingForm({
                             type="button"
                             variant="secondary"
                             onClick={onCancelEdit}
-                            disabled={disabled}
+                            disabled={disabled || isSaving}
                         >
                             Cancel
                         </Button>

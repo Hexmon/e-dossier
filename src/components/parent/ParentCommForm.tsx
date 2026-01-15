@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { saveParentCommForm } from "@/store/slices/parentCommSlice";
 
 export type ParentCommFormRow = {
     serialNo?: string;
@@ -21,9 +23,15 @@ export type ParentCommFormData = {
 interface Props {
     onSubmit: (data: ParentCommFormData) => Promise<void> | void;
     defaultValues?: ParentCommFormData;
+    ocId: string;
+    onClear?: () => void;
 }
 
-export default function ParentCommForm({ onSubmit, defaultValues }: Props) {
+export default function ParentCommForm({ onSubmit, defaultValues, ocId, onClear }: Props) {
+    const dispatch = useDispatch();
+    const lastSavedData = useRef<string>("");
+    const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
     const form = useForm<ParentCommFormData>({
         defaultValues: defaultValues ?? {
             records: [
@@ -32,7 +40,7 @@ export default function ParentCommForm({ onSubmit, defaultValues }: Props) {
         },
     });
 
-    const { control, handleSubmit, register, reset } = form;
+    const { control, handleSubmit, register, reset, watch } = form;
     const { fields, append, remove } = useFieldArray({ control, name: "records" });
 
     useEffect(() => {
@@ -40,6 +48,64 @@ export default function ParentCommForm({ onSubmit, defaultValues }: Props) {
             reset(defaultValues);
         }
     }, [defaultValues, reset]);
+
+    // Auto-save to Redux on form changes with debounce
+    useEffect(() => {
+        const subscription = watch((value) => {
+            if (!ocId || !value.records || value.records.length === 0) return;
+
+            // Clear existing timeout
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+
+            // Debounce the save operation
+            saveTimeoutRef.current = setTimeout(() => {
+                const formData = value.records!.map(record => ({
+                    serialNo: record?.serialNo || "",
+                    letterNo: record?.letterNo || "",
+                    date: record?.date || "",
+                    teleCorres: record?.teleCorres || "",
+                    briefContents: record?.briefContents || "",
+                    sigPICdr: record?.sigPICdr || "",
+                }));
+
+                // Compare stringified data to avoid unnecessary dispatches
+                const currentData = JSON.stringify(formData);
+                if (currentData !== lastSavedData.current) {
+                    lastSavedData.current = currentData;
+                    dispatch(saveParentCommForm({ ocId, data: formData }));
+                }
+            }, 500); // 500ms debounce delay
+        });
+
+        return () => {
+            subscription.unsubscribe();
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [watch, dispatch, ocId]);
+
+    // Update lastSavedData when defaultValues change
+    useEffect(() => {
+        if (defaultValues?.records) {
+            lastSavedData.current = JSON.stringify(defaultValues.records);
+        }
+    }, [defaultValues]);
+
+    // Handle reset/clear
+    const handleReset = () => {
+        if (onClear) {
+            onClear();
+        } else {
+            reset({
+                records: [
+                    { letterNo: "", date: "", teleCorres: "", briefContents: "", sigPICdr: "" },
+                ],
+            });
+        }
+    };
 
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -94,18 +160,31 @@ export default function ParentCommForm({ onSubmit, defaultValues }: Props) {
             </div>
 
             <div className="mt-4 flex justify-center gap-3">
-                <Button type="button" onClick={() => append({ letterNo: "", date: "", teleCorres: "", briefContents: "", sigPICdr: "" })}>
+                <Button
+                    type="button"
+                    onClick={() => append({ letterNo: "", date: "", teleCorres: "", briefContents: "", sigPICdr: "" })}
+                >
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-green-600">
+                <Button type="submit" className="bg-[#40ba4d]">
                     Submit
                 </Button>
 
-                <Button type="button" variant="outline" onClick={() => reset()}>
-                    Reset
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="hover:bg-destructive hover:text-white"
+                    onClick={handleReset}
+                >
+                    {onClear ? "Clear Form" : "Reset"}
                 </Button>
             </div>
+
+            {/* Auto-save indicator */}
+            <p className="text-sm text-muted-foreground text-center mt-2">
+                * Changes are automatically saved (after 0.5s pause)
+            </p>
         </form>
     );
 }

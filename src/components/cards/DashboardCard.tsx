@@ -39,7 +39,7 @@ export function DashboardCard({
                     </div>
 
                     <div className="flex-1">
-                        <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                        <CardTitle className="text-lg group-hover:text-[#1677ff] transition-colors">
                             {title}
                         </CardTitle>
                     </div>
@@ -52,11 +52,11 @@ export function DashboardCard({
                 </p>
 
                 {to ? (
-                    <Button asChild variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
+                    <Button asChild variant="outline" size="sm" className="w-full border hover:bg-[#1677ff] hover:text-white cursor-pointer">
                         <Link href={to}>Access Module →</Link>
                     </Button>
                 ) : (
-                    <Button variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
+                    <Button variant="outline" size="sm" className="w-full border hover:bg-[#1677ff] hover:text-white cursor-pointer">
                         Access Module →
                     </Button>
                 )}

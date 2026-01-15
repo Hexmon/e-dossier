@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useAcademics } from "@/hooks/useAcademics";
+import { toast } from "sonner";
 
 export type AcademicRow = {
     subjectId: string;
@@ -89,6 +90,25 @@ export default function AcademicTable({
     const [sgpa, setSgpa] = useState("");
     const [marksScored, setMarksScored] = useState("");
     const [cgpa, setCgpa] = useState("");
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+    const toNum = (v: string | number | undefined): number => {
+        const n = parseFloat(String(v || "").replace(/[^\d.-]/g, ""));
+        return Number.isFinite(n) ? n : 0;
+    };
+
+    const calculateValues = (rowData: RowState): RowState => {
+        const sessional = toNum(rowData.phase1) + toNum(rowData.phase2) + toNum(rowData.tutorial);
+        const total = sessional + toNum(rowData.final);
+        const practicalTotal = toNum(rowData.practicalFinal) + toNum(rowData.practicalTutorial);
+
+        return {
+            ...rowData,
+            sessional: sessional > 0 ? String(Math.round(sessional)) : "",
+            total: total > 0 ? String(Math.round(total)) : "",
+            practicalTotal: practicalTotal > 0 ? String(Math.round(practicalTotal)) : ""
+        };
+    };
 
     // Load data from backend
     useEffect(() => {
@@ -105,6 +125,7 @@ export default function AcademicTable({
                 }));
                 setData(initializedData);
                 setIsSaved(false);
+                setIsInitialLoad(false);
                 return;
             }
 
@@ -117,7 +138,6 @@ export default function AcademicTable({
             setMarksScored(backendMarks?.toString() || "");
 
             const updatedData = rows.map((row, idx) => {
-                // Find subject by offeringId (which is stored in subjectId field)
                 const subject = subjects?.find((s: any) => s.subject?.id === row.subjectId);
                 const theory = subject?.theory;
                 const practical = subject?.practical;
@@ -128,7 +148,7 @@ export default function AcademicTable({
                     practical
                 });
 
-                return {
+                const baseData = {
                     ...initialState[idx],
                     phase1: theory?.phaseTest1Marks?.toString() || "",
                     phase2: theory?.phaseTest2Marks?.toString() || "",
@@ -136,53 +156,32 @@ export default function AcademicTable({
                     final: theory?.finalMarks?.toString() || "",
                     grade: theory?.grade?.toString() || "",
                     practicalFinal: practical?.finalMarks?.toString() || "",
-                    practicalGrade: practical?.grade?.toString() || "",
                     practicalTutorial: practical?.tutorial?.toString() || "",
+                    practicalGrade: practical?.grade?.toString() || "",
                     practicalExam: row.practicalExam || "Practical",
                     practicalCredit: row.practicalCredit || "",
                 };
+
+                // Calculate sessional and totals
+                return calculateValues(baseData);
             });
 
             console.log("Updated data state:", updatedData);
 
             setData(updatedData);
             setIsSaved(true);
+            setIsInitialLoad(false);
         };
 
         loadData();
     }, [semester, ocId, rows, initialState, getSpecificSemester]);
 
-    const toNum = (v: string | number | undefined): number => {
-        const n = parseFloat(String(v || "").replace(/[^\d.-]/g, ""));
-        return Number.isFinite(n) ? n : 0;
-    };
-
-    // Auto-calculate sessional, total, and practical total
-    useEffect(() => {
-        setData(prev =>
-            prev.map(row => {
-                // Calculate sessional = phase1 + phase2 + tutorial
-                const sessional = toNum(row.phase1) + toNum(row.phase2) + toNum(row.tutorial);
-
-                // Calculate total = sessional + final
-                const total = sessional + toNum(row.final);
-
-                const practicalTotal = toNum(row.practicalFinal) + toNum(row.practicalTutorial);
-
-                return {
-                    ...row,
-                    sessional: String(Math.round(sessional)),
-                    total: String(Math.round(total)),
-                    practicalTotal: String(Math.round(practicalTotal))
-                };
-            })
-        );
-    }, [data.map(d => `${d.phase1}-${d.phase2}-${d.tutorial}-${d.final}-${d.practicalFinal}-${d.practicalTutorial}`).join('|'), isSaved]);
-
     const handleChange = (idx: number, key: keyof RowState, value: string) => {
         setData(prev => {
             const next = [...prev];
-            next[idx] = { ...next[idx], [key]: value };
+            const updatedRow = { ...next[idx], [key]: value };
+            // Recalculate on change
+            next[idx] = calculateValues(updatedRow);
             return next;
         });
     };
@@ -199,7 +198,7 @@ export default function AcademicTable({
         });
 
         if (!gpaSuccess) {
-            alert("Failed to update semester GPA");
+            toast.error("Failed to update semester GPA");
             return;
         }
 
@@ -249,13 +248,13 @@ export default function AcademicTable({
 
             const success = await updateSubjectMarks(semester, row.subjectId, marks);
             if (!success) {
-                alert(`Failed to update subject: ${row.subject}`);
+                toast.error(`Failed to update subject: ${row.subject}`);
                 return;
             }
         }
 
         setIsSaved(true);
-        alert("Data saved successfully!");
+        toast.success("Data saved successfully!");
     };
 
     const handleEdit = () => {
@@ -270,7 +269,7 @@ export default function AcademicTable({
         setIsSaved(false);
     };
 
-    if (loading) {
+    if (loading || isInitialLoad) {
         return <div className="p-4 text-center">Loading...</div>;
     }
 
@@ -385,8 +384,9 @@ export default function AcademicTable({
                                     <td className="border px-2 py-1">
                                         <input
                                             value={state.practicalTutorial}
-                                            disabled
-                                            className="w-full border px-1 rounded bg-gray-100"
+                                            disabled={isSaved}
+                                            onChange={e => handleChange(idx, "practicalTutorial", e.target.value)}
+                                            className="w-full border px-1 rounded"
                                         />
                                     </td>
                                     <td className="border px-2 py-1">
