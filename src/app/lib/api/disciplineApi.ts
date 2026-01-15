@@ -146,3 +146,23 @@ export async function getAllDisciplineRecords(): Promise<DisciplineResponse[]> {
         return [];
     }
 }
+
+// PATCH update admin discipline record
+export async function updateAdminDisciplineRecord(
+    disciplineId: string,
+    payload: Record<string, unknown>
+) {
+    return await api.patch(
+        endpoints.admin.disciplineById(disciplineId),
+        payload
+    );
+}
+
+// DELETE admin discipline record
+export async function deleteAdminDisciplineRecord(
+    disciplineId: string
+) {
+    return await api.delete(
+        endpoints.admin.disciplineById(disciplineId),
+    );
+}
