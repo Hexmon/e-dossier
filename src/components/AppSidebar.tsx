@@ -120,7 +120,8 @@ export function AppSidebar() {
         if (activeAppointment) {
           // Check if positionName is "Admin" (case-insensitive)
           const positionName = activeAppointment.positionName || "";
-          setIsAdmin(positionName.toLowerCase() === "admin");
+          const normalizedPosition = positionName.toLowerCase();
+          setIsAdmin(normalizedPosition === "admin" || normalizedPosition === "super admin");
         } else {
           setIsAdmin(false);
         }
@@ -206,8 +207,8 @@ export function AppSidebar() {
                         <CollapsibleTrigger asChild>
                           <SidebarGroupLabel
                             className={`flex items-center justify-between rounded-md p-2 ${disabled
-                                ? "cursor-not-allowed opacity-50"
-                                : "hover:bg-accent/50 cursor-pointer"
+                              ? "cursor-not-allowed opacity-50"
+                              : "hover:bg-accent/50 cursor-pointer"
                               }`}
                           >
                             <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
@@ -253,8 +254,8 @@ export function AppSidebar() {
                                       <Link
                                         href={item.url}
                                         className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
-                                            ? "bg-[#1677ff] text-white"
-                                            : "hover:bg-accent/50"
+                                          ? "bg-[#1677ff] text-white"
+                                          : "hover:bg-accent/50"
                                           }`}
                                       >
                                         <item.icon className="h-4 w-4" />
@@ -296,8 +297,8 @@ export function AppSidebar() {
                                   <SidebarMenuButton
                                     onClick={(e) => handleMenuItemClick(item, e, section)}
                                     className={`flex items-center gap-2 ${isActive(item.url)
-                                        ? "bg-[#1677ff] text-white"
-                                        : ""
+                                      ? "bg-[#1677ff] text-white"
+                                      : ""
                                       }`}
                                   >
                                     <item.icon className="h-4 w-4" />
@@ -339,8 +340,8 @@ export function AppSidebar() {
                                       href={item.url}
                                       onClick={(e) => handleMenuItemClick(item, e, section)}
                                       className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
-                                          ? "bg-[#1677ff] text-white"
-                                          : "hover:bg-accent/50"
+                                        ? "bg-[#1677ff] text-white"
+                                        : "hover:bg-accent/50"
                                         }`}
                                     >
                                       <item.icon className="h-4 w-4" />
