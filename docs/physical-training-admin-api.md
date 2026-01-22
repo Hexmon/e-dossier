@@ -526,3 +526,248 @@ GET {{baseURL}}/api/v1/admin/physical-training/motivation-fields/{{id}}
 - `task`: `title` max 160, `maxMarks` >= 0
 - `score`: `maxMarks` >= 0, requires `ptAttemptId` + `ptAttemptGradeId`
 - `motivation field`: `label` max 160
+
+---
+
+# OC Physical Training Marks APIs
+
+## OC PT Overview (Marks Entry)
+These endpoints store **OC marks** against the **template matrix** (`pt_task_scores`) so each attempt/grade can be saved **separately** (M1 and M2 are distinct rows). Motivation awards are stored as per-OC text values mapped to template fields.
+
+**Validation rules enforced by API:**
+- `marksScored` must be `<= template maxMarks`.
+- `ptTaskScoreId` must exist and belong to the same semester.
+- Template items must be active and not deleted.
+- If a template score entry is missing, the API rejects the request.
+
+**Auth rules:**
+- Any authenticated user can read/write.
+- POST/PATCH/DELETE require `X-CSRF-Token`.
+
+---
+
+## OC PT Scores
+
+### GET /api/v1/oc/:ocId/physical-training?semester=#
+**Purpose:** Fetch OC PT scores for a semester.
+
+**Response (200)**
+```json
+{
+  "status": 200,
+  "ok": true,
+  "message": "PT scores retrieved successfully.",
+  "data": {
+    "semester": 2,
+    "scores": [
+      {
+        "id": "oc_score_id",
+        "ocId": "oc_id",
+        "semester": 2,
+        "ptTaskScoreId": "template_score_id",
+        "marksScored": 53,
+        "remark": "Good run",
+        "templateMaxMarks": 53,
+        "ptTypeCode": "PPT",
+        "taskTitle": "2.4 Km Run",
+        "attemptCode": "M1",
+        "gradeCode": "E"
+      }
+    ]
+  }
+}
+```
+
+**curl**
+```bash
+curl -s "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training?semester=2" \
+  -H "Authorization: Bearer {{auth_token}}"
+```
+
+---
+
+### POST /api/v1/oc/:ocId/physical-training
+**Purpose:** Upsert multiple OC PT scores (multiple attempts per task supported).
+
+**Request JSON**
+```json
+{
+  "semester": 2,
+  "scores": [
+    { "ptTaskScoreId": "{{ptTaskScoreId_M1_E}}", "marksScored": 53, "remark": "Good run" },
+    { "ptTaskScoreId": "{{ptTaskScoreId_M2_E}}", "marksScored": 45 }
+  ]
+}
+```
+
+**curl**
+```bash
+curl -s -X POST "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training" \
+  -H "Authorization: Bearer {{auth_token}}" \
+  -H "X-CSRF-Token: {{CSRF_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "semester": 2,
+    "scores": [
+      { "ptTaskScoreId": "{{ptTaskScoreId_M1_E}}", "marksScored": 53, "remark": "Good run" },
+      { "ptTaskScoreId": "{{ptTaskScoreId_M2_E}}", "marksScored": 45 }
+    ]
+  }'
+```
+
+---
+
+### PATCH /api/v1/oc/:ocId/physical-training
+**Purpose:** Update scores and/or delete specific OC score rows.
+
+**Request JSON**
+```json
+{
+  "semester": 2,
+  "scores": [
+    { "ptTaskScoreId": "{{ptTaskScoreId_M1_E}}", "marksScored": 52, "remark": "Adjusted" }
+  ],
+  "deleteScoreIds": ["{{ocPtScoreIdToDelete}}"]
+}
+```
+
+**curl**
+```bash
+curl -s -X PATCH "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training" \
+  -H "Authorization: Bearer {{auth_token}}" \
+  -H "X-CSRF-Token: {{CSRF_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "semester": 2,
+    "scores": [
+      { "ptTaskScoreId": "{{ptTaskScoreId_M1_E}}", "marksScored": 52, "remark": "Adjusted" }
+    ],
+    "deleteScoreIds": ["{{ocPtScoreIdToDelete}}"]
+  }'
+```
+
+---
+
+### DELETE /api/v1/oc/:ocId/physical-training
+**Purpose:** Delete specific scores or all scores for a semester.
+
+**Delete by IDs**
+```bash
+curl -s -X DELETE "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training" \
+  -H "Authorization: Bearer {{auth_token}}" \
+  -H "X-CSRF-Token: {{CSRF_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{ "semester": 2, "scoreIds": ["{{ocPtScoreId1}}","{{ocPtScoreId2}}"] }'
+```
+
+**Delete all scores for semester**
+```bash
+curl -s -X DELETE "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training" \
+  -H "Authorization: Bearer {{auth_token}}" \
+  -H "X-CSRF-Token: {{CSRF_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{ "semester": 2 }'
+```
+
+---
+
+## OC PT Motivation Awards (Text Values)
+
+### GET /api/v1/oc/:ocId/physical-training/motivation-awards?semester=#
+**Purpose:** Fetch OC motivation values for a semester.
+
+**curl**
+```bash
+curl -s "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training/motivation-awards?semester=2" \
+  -H "Authorization: Bearer {{auth_token}}"
+```
+
+---
+
+### POST /api/v1/oc/:ocId/physical-training/motivation-awards
+**Purpose:** Upsert multiple motivation values.
+
+**Request JSON**
+```json
+{
+  "semester": 2,
+  "values": [
+    { "fieldId": "{{motivationFieldId_MeritCard}}", "value": "Awarded" },
+    { "fieldId": "{{motivationFieldId_Blue}}", "value": "—" }
+  ]
+}
+```
+
+**curl**
+```bash
+curl -s -X POST "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training/motivation-awards" \
+  -H "Authorization: Bearer {{auth_token}}" \
+  -H "X-CSRF-Token: {{CSRF_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "semester": 2,
+    "values": [
+      { "fieldId": "{{motivationFieldId_MeritCard}}", "value": "Awarded" },
+      { "fieldId": "{{motivationFieldId_Blue}}", "value": "—" }
+    ]
+  }'
+```
+
+---
+
+### PATCH /api/v1/oc/:ocId/physical-training/motivation-awards
+**Purpose:** Update values and/or delete specific rows.
+
+**Request JSON**
+```json
+{
+  "semester": 2,
+  "values": [
+    { "fieldId": "{{motivationFieldId_MeritCard}}", "value": "Updated text" }
+  ],
+  "deleteFieldIds": ["{{ocMotivationAwardIdToDelete}}"]
+}
+```
+
+**curl**
+```bash
+curl -s -X PATCH "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training/motivation-awards" \
+  -H "Authorization: Bearer {{auth_token}}" \
+  -H "X-CSRF-Token: {{CSRF_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "semester": 2,
+    "values": [
+      { "fieldId": "{{motivationFieldId_MeritCard}}", "value": "Updated text" }
+    ],
+    "deleteFieldIds": ["{{ocMotivationAwardIdToDelete}}"]
+  }'
+```
+
+---
+
+### DELETE /api/v1/oc/:ocId/physical-training/motivation-awards
+**Purpose:** Delete specific values or all values for a semester.
+
+**Delete by IDs**
+```bash
+curl -s -X DELETE "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training/motivation-awards" \
+  -H "Authorization: Bearer {{auth_token}}" \
+  -H "X-CSRF-Token: {{CSRF_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{ "semester": 2, "fieldIds": ["{{ocMotivationAwardId1}}","{{ocMotivationAwardId2}}"] }'
+```
+
+**Delete all values for semester**
+```bash
+curl -s -X DELETE "{{baseURL}}/api/v1/oc/{{ocId}}/physical-training/motivation-awards" \
+  -H "Authorization: Bearer {{auth_token}}" \
+  -H "X-CSRF-Token: {{CSRF_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{ "semester": 2 }'
+```
+
+---
+
+## OC PT Common Errors
+- **400 invalid_score**: `ptTaskScoreId` missing or does not match semester/type/attempt/grade.\n- **400 marks_exceed_max**: `marksScored` exceeds template max.\n- **400 invalid_field**: motivation `fieldId` missing, deleted, inactive, or wrong semester.\n- **401 Unauthorized**: missing/invalid token.\n- **404 Not Found**: OC not found.
