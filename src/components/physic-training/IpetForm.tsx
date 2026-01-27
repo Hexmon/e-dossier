@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,11 +14,11 @@ import {
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 
-import type { RootState } from "@/store";
-import { saveIpet1Data } from "@/store/slices/physicalTrainingSlice";
+import { useIpetTemplates } from "@/hooks/useIpetTemplates";
+import { usePhysicalTraining } from "@/hooks/usePhysicalTraining";
 
 interface TableRow {
-    id: string;
+    ptTaskScoreId: string;
     column1: number | string;
     column2: string;
     column3: string;
@@ -34,69 +33,97 @@ interface Ipet1FormProps {
     ocId: string;
 }
 
-const column3Options = ["M1", "M2", "A1", "A2", "A3"];
+// Semester to API semester mapping (1-based index)
+const semesterToApiSemester: Record<string, number> = {
+    "I TERM": 1,
+    "II TERM": 2,
+    "III TERM": 3,
+    "IV TERM": 4,
+    "V TERM": 5,
+    "VI TERM": 6,
+};
+
 const column4Options = ["Pass", "Fail"];
 
-const DEFAULT_DATA: TableRow[] = [
-    { id: "1", column1: 1, column2: "T/A Vault", column3: "", column4: "", maxMarks: 10, column5: 0 },
-    { id: "2", column1: 2, column2: "Rope", column3: "", column4: "", maxMarks: 13, column5: 0 },
-    { id: "3", column1: 3, column2: "Chest Touch/ Heaving", column3: "", column4: "", maxMarks: 12, column5: 0 },
-];
+// Default data is now populated from API
 
 export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1FormProps) {
-    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
 
-    // Get saved data from Redux
-    const savedData = useSelector((state: RootState) =>
-        state.physicalTraining.forms[ocId]?.[activeSemester]?.ipet1Data
-    );
+    // Use API hooks
+    const { templates: ipetTemplates, loading: templatesLoading, fetchTemplates } = useIpetTemplates();
+    const { scores: apiScores, loading: scoresLoading, fetchScores, updateScores } = usePhysicalTraining(ocId);
 
-    const [tableData, setTableData] = useState<TableRow[]>(savedData || DEFAULT_DATA);
+    const [tableData, setTableData] = useState<TableRow[]>([]);
 
-    // Load saved data when it changes
+    // Fetch templates when semester changes
     useEffect(() => {
-        if (savedData) {
-            setTableData(savedData);
+        const semesterNum = semesterToApiSemester[activeSemester];
+        if (semesterNum) {
+            fetchTemplates(semesterNum);
         }
-    }, [savedData, activeSemester]);
+    }, [activeSemester, fetchTemplates]);
 
-    // Auto-save to Redux whenever data changes
+    // Fetch scores when semester changes
     useEffect(() => {
-        if (tableData && ocId) {
-            dispatch(saveIpet1Data({
-                ocId,
-                semester: activeSemester,
-                data: tableData
-            }));
+        const semesterNum = semesterToApiSemester[activeSemester];
+        if (semesterNum) {
+            fetchScores(semesterNum);
         }
-    }, [tableData, ocId, activeSemester, dispatch]);
+    }, [activeSemester, fetchScores]);
+
+    // Populate table data from templates and scores
+    useEffect(() => {
+        if (ipetTemplates && ipetTemplates.length > 0) {
+            const rows: TableRow[] = ipetTemplates.map((template, index) => {
+                const apiScore = apiScores.find(score => score.ptTaskScoreId === template.ptTaskScoreId);
+                return {
+                    ptTaskScoreId: template.ptTaskScoreId,
+                    column1: index + 1,
+                    column2: template.taskTitle,
+                    column3: template.attemptCode,
+                    column4: "",
+                    maxMarks: template.maxMarks,
+                    column5: apiScore ? apiScore.marksScored : 0,
+                };
+            });
+            setTableData(rows);
+        }
+    }, [ipetTemplates, apiScores]);
 
     const tableTotal = useMemo(() => {
         return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);
     }, [tableData]);
 
-    const handleColumn3Change = (rowId: string, value: string) => {
-        setTableData((prev) => prev.map((row) => (row.id === rowId ? { ...row, column3: value } : row)));
-    };
+    const totalMaxMarks = useMemo(() => {
+        return tableData.reduce((sum, row) => sum + (row.maxMarks || 0), 0);
+    }, [tableData]);
 
-    const handleColumn4Change = (rowId: string, value: string) => {
-        setTableData((prev) => prev.map((row) => (row.id === rowId ? { ...row, column4: value } : row)));
-    };
+    const column3Options = useMemo(() => {
+        return ipetTemplates ? [...new Set(ipetTemplates.map(t => t.attemptCode))] : [];
+    }, [ipetTemplates]);
 
-    const handleMaxMarksChange = (rowId: string, value: string) => {
+    const handleColumn3Change = useCallback((rowId: string, value: string) => {
+        setTableData((prev) => prev.map((row) => (row.ptTaskScoreId === rowId ? { ...row, column3: value } : row)));
+    }, []);
+
+    const handleColumn4Change = useCallback((rowId: string, value: string) => {
+        setTableData((prev) => prev.map((row) => (row.ptTaskScoreId === rowId ? { ...row, column4: value } : row)));
+    }, []);
+
+    const handleMaxMarksChange = useCallback((rowId: string, value: string) => {
         const numValue = parseFloat(value) || 0;
-        setTableData((prev) => prev.map((row) => (row.id === rowId ? { ...row, maxMarks: numValue } : row)));
-    };
+        setTableData((prev) => prev.map((row) => (row.ptTaskScoreId === rowId ? { ...row, maxMarks: numValue } : row)));
+    }, []);
 
-    const handleColumn5Change = (rowId: string, value: string) => {
-        const row = tableData.find(r => r.id === rowId);
+    const handleColumn5Change = useCallback((rowId: string, value: string) => {
+        const row = tableData.find(r => r.ptTaskScoreId === rowId);
         if (!row) return;
 
         const numValue = parseFloat(value);
 
         if (value.trim() === "") {
-            setTableData((prev) => prev.map((r) => (r.id === rowId ? { ...r, column5: 0 } : r)));
+            setTableData((prev) => prev.map((r) => (r.ptTaskScoreId === rowId ? { ...r, column5: 0 } : r)));
             return;
         }
 
@@ -110,14 +137,15 @@ export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1
             return;
         }
 
-        setTableData((prev) => prev.map((r) => (r.id === rowId ? { ...r, column5: numValue } : r)));
-    };
+        setTableData((prev) => prev.map((r) => (r.ptTaskScoreId === rowId ? { ...r, column5: numValue } : r)));
+    }, [tableData]);
 
     useEffect(() => {
         onMarksChange(tableTotal);
     }, [tableTotal, onMarksChange]);
 
-    const handleSave = () => {
+    const handleSave = useCallback(async () => {
+        // Validate all marks before saving
         for (const row of tableData) {
             if (row.column5 > 0 && row.column5 > row.maxMarks) {
                 toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and ${row.maxMarks}`);
@@ -125,12 +153,23 @@ export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1
             }
         }
 
+        // Prepare scores for API
+        const scoresForApi = tableData.map((row) => ({
+            ptTaskScoreId: row.ptTaskScoreId,
+            marksScored: row.column5 || 0,
+        }));
+
+        // Save to API
+        const semesterNum = semesterToApiSemester[activeSemester];
+        if (scoresForApi.length > 0) {
+            await updateScores(semesterNum, scoresForApi);
+        }
+
         setIsEditing(false);
-        toast.success("IPET data saved successfully");
-    };
+    }, [tableData, activeSemester, updateScores]);
 
     const totalRow: TableRow = {
-        id: "total",
+        ptTaskScoreId: "total",
         column1: "—",
         column2: "Total",
         column3: "—",
@@ -157,14 +196,14 @@ export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1
             label: "Max Marks",
             type: "number",
             render: (value, row) => {
-                if (row.id === "total") {
+                if (row.ptTaskScoreId === "total") {
                     return <span className="text-center block">{value}</span>;
                 }
                 return isEditing ? (
                     <Input
                         type="number"
                         value={value}
-                        onChange={(e) => handleMaxMarksChange(row.id, e.target.value)}
+                        onChange={(e) => handleMaxMarksChange(row.ptTaskScoreId, e.target.value)}
                         placeholder="Max"
                     />
                 ) : (
@@ -176,13 +215,13 @@ export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1
             key: "column3",
             label: "Category",
             render: (value, row) => {
-                if (row.id === "total") {
+                if (row.ptTaskScoreId === "total") {
                     return <span className="text-center block">—</span>;
                 }
                 return (
                     <Select
                         value={value}
-                        onValueChange={(val) => handleColumn3Change(row.id, val)}
+                        onValueChange={(val) => handleColumn3Change(row.ptTaskScoreId, val)}
                         disabled={!isEditing}
                     >
                         <SelectTrigger className="w-full">
@@ -201,13 +240,13 @@ export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1
             key: "column4",
             label: "Status",
             render: (value, row) => {
-                if (row.id === "total") {
+                if (row.ptTaskScoreId === "total") {
                     return <span className="text-center block">—</span>;
                 }
                 return (
                     <Select
                         value={value}
-                        onValueChange={(val) => handleColumn4Change(row.id, val)}
+                        onValueChange={(val) => handleColumn4Change(row.ptTaskScoreId, val)}
                         disabled={!isEditing}
                     >
                         <SelectTrigger className="w-full">
@@ -227,14 +266,14 @@ export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1
             label: "Marks Scored",
             type: "number",
             render: (value, row) => {
-                if (row.id === "total") {
+                if (row.ptTaskScoreId === "total") {
                     return <span className="text-center block">{value}</span>;
                 }
                 return isEditing ? (
                     <Input
                         type="number"
                         value={value}
-                        onChange={(e) => handleColumn5Change(row.id, e.target.value)}
+                        onChange={(e) => handleColumn5Change(row.ptTaskScoreId, e.target.value)}
                         placeholder="Enter marks"
                         className="w-full"
                     />
@@ -265,7 +304,7 @@ export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1
     return (
         <div className="mt-3 space-y-6">
             <CardContent className="space-y-6">
-                <h2 className="text-lg font-bold text-left text-gray-700">IPET (35 Marks)</h2>
+                <h2 className="text-lg font-bold text-left text-gray-700">IPET ({totalMaxMarks} Marks)</h2>
 
                 <div className="border border-gray-300 rounded-lg">
                     <UniversalTable<TableRow>

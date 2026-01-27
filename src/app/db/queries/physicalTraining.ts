@@ -20,7 +20,7 @@ export async function listPtTypes(opts: { semester?: number; includeDeleted?: bo
             semester: ptTypes.semester,
             code: ptTypes.code,
             title: ptTypes.title,
-            description: ptTypes.description,
+            description: ptTypes.description,           
             maxTotalMarks: ptTypes.maxTotalMarks,
             sortOrder: ptTypes.sortOrder,
             isActive: ptTypes.isActive,

@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,15 +14,14 @@ import {
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 
-import type { RootState } from "@/store";
-import { saveHigherTestsData } from "@/store/slices/physicalTrainingSlice";
+import { useHigherTestTemplates } from "@/hooks/useHigherTestTemplates";
+import { usePhysicalTraining } from "@/hooks/usePhysicalTraining";
 
 interface Row {
-    id: string;
+    ptTaskScoreId: string;
     column1: number;
     column2: string;
     column3: string;
-    column4: string;
     maxMarks: number;
     column5: number;
 }
@@ -34,51 +32,72 @@ interface HigherTestsProps {
     ocId: string;
 }
 
-const column3Options = ["M1", "M2", "A1", "A2", "A3"];
-const column4Options = ["Pass", "Fail"];
 
-const DEFAULT_DATA: Row[] = [
-    { id: "1", column1: 1, column2: "Swimming", column3: "", column4: "", maxMarks: 7, column5: 0 },
-    { id: "2", column1: 2, column2: "Jump", column3: "", column4: "", maxMarks: 8, column5: 0 },
-    { id: "3", column1: 3, column2: "Chin Ups", column3: "", column4: "", maxMarks: 7, column5: 0 },
-    { id: "4", column1: 4, column2: "Rope", column3: "", column4: "", maxMarks: 8, column5: 0 },
-];
+
+// Semester to API semester mapping (1-based index)
+const semesterToApiSemester: Record<string, number> = {
+    "I TERM": 1,
+    "II TERM": 2,
+    "III TERM": 3,
+    "IV TERM": 4,
+    "V TERM": 5,
+    "VI TERM": 6,
+};
 
 export default function HigherTests({ onMarksChange, activeSemester, ocId }: HigherTestsProps) {
-    const dispatch = useDispatch();
     const [isEditing, setIsEditing] = useState(false);
 
-    // Get saved data from Redux
-    const savedData = useSelector((state: RootState) =>
-        state.physicalTraining.forms[ocId]?.[activeSemester]?.higherTestsData
-    );
+    // Use API hooks
+    const { templates: higherTestTemplates, loading: templatesLoading, fetchTemplates } = useHigherTestTemplates();
+    const { scores: apiScores, loading: scoresLoading, fetchScores, updateScores } = usePhysicalTraining(ocId);
 
-    const [tableData, setTableData] = useState<Row[]>(savedData || DEFAULT_DATA);
+    const [tableData, setTableData] = useState<Row[]>([]);
 
-    // Load saved data when semester changes
+    // Fetch templates when semester changes
     useEffect(() => {
-        if (savedData) {
-            setTableData(savedData);
+        const semesterNum = semesterToApiSemester[activeSemester];
+        if (semesterNum) {
+            fetchTemplates(semesterNum);
         }
-    }, [savedData, activeSemester]);
+    }, [activeSemester, fetchTemplates]);
 
-    // Auto-save to Redux whenever data changes
+    // Fetch scores when semester changes
     useEffect(() => {
-        if (tableData && ocId) {
-            dispatch(saveHigherTestsData({
-                ocId,
-                semester: activeSemester,
-                data: tableData
-            }));
+        const semesterNum = semesterToApiSemester[activeSemester];
+        if (semesterNum) {
+            fetchScores(semesterNum);
         }
-    }, [tableData, ocId, activeSemester, dispatch]);
+    }, [activeSemester, fetchScores]);
+
+    // Populate table data from templates and scores
+    useEffect(() => {
+        if (higherTestTemplates && higherTestTemplates.length > 0) {
+            const rows: Row[] = higherTestTemplates.map((template, index) => {
+                const apiScore = apiScores.find(score => score.ptTaskScoreId === template.ptTaskScoreId);
+                return {
+                    ptTaskScoreId: template.ptTaskScoreId,
+                    column1: index + 1,
+                    column2: template.taskTitle,
+                    column3: template.attemptCode,
+                    column4: "",
+                    maxMarks: template.maxMarks,
+                    column5: apiScore ? apiScore.marksScored : 0,
+                };
+            });
+            setTableData(rows);
+        }
+    }, [higherTestTemplates, apiScores]);
 
     const tableTotal = useMemo(() => {
         return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);
     }, [tableData]);
 
-    const handleChange = (id: string, key: keyof Row, value: string) => {
-        const row = tableData.find(r => r.id === id);
+    const column3Options = useMemo(() => {
+        return higherTestTemplates ? [...new Set(higherTestTemplates.map(t => t.attemptCode))] : [];
+    }, [higherTestTemplates]);
+
+    const handleChange = useCallback((id: string, key: keyof Row, value: string) => {
+        const row = tableData.find(r => r.ptTaskScoreId === id);
         if (!row) return;
 
         // Validation for column5 (Marks Scored)
@@ -88,7 +107,7 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
             // Allow empty values
             if (value.trim() === "") {
                 setTableData(prev =>
-                    prev.map(r => (r.id === id ? { ...r, column5: 0 } : r))
+                    prev.map(r => (r.ptTaskScoreId === id ? { ...r, column5: 0 } : r))
                 );
                 return;
             }
@@ -108,7 +127,7 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
         // Regular handling for other fields
         setTableData(prev =>
             prev.map(r => {
-                if (r.id === id) {
+                if (r.ptTaskScoreId === id) {
                     if (key === "maxMarks" || key === "column5") {
                         return { ...r, [key]: parseFloat(value) || 0 };
                     }
@@ -117,10 +136,10 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
                 return r;
             }),
         );
-    };
+    }, [tableData]);
 
     const handleEdit = () => setIsEditing(true);
-    const handleSave = () => {
+    const handleSave = useCallback(async () => {
         // Validate all marks before saving
         for (const row of tableData) {
             if (row.column5 > 0 && row.column5 > row.maxMarks) {
@@ -129,10 +148,20 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
             }
         }
 
+        // Prepare scores for API
+        const scoresForApi = tableData.map((row) => ({
+            ptTaskScoreId: row.ptTaskScoreId,
+            marksScored: row.column5 || 0,
+        }));
+
+        // Save to API
+        const semesterNum = semesterToApiSemester[activeSemester];
+        if (scoresForApi.length > 0) {
+            await updateScores(semesterNum, scoresForApi);
+        }
+
         setIsEditing(false);
-        toast.success("Higher Tests data saved successfully");
-        console.log("Higher Tests Table saved:", tableData);
-    };
+    }, [tableData, activeSemester, updateScores]);
     const handleCancel = () => setIsEditing(false);
 
     // Call parent callback when tableTotal changes
@@ -147,11 +176,10 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
 
     // Add total row to data
     const totalRow: Row = {
-        id: "total",
+        ptTaskScoreId: "total",
         column1: 0,
         column2: "Total",
         column3: "—",
-        column4: "—",
         maxMarks: tableData.reduce((sum, r) => sum + (r.maxMarks || 0), 0),
         column5: tableTotal
     };
@@ -163,7 +191,7 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
             key: "column1",
             label: "S.No",
             render: (value, row) => {
-                if (row.id === "total") return "—";
+                if (row.ptTaskScoreId === "total") return "—";
                 return value;
             }
         },
@@ -177,14 +205,14 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
             label: "Max Marks",
             type: "number",
             render: (value, row) => {
-                if (row.id === "total") {
+                if (row.ptTaskScoreId === "total") {
                     return <span className="text-center block">{value}</span>;
                 }
                 return isEditing ? (
                     <Input
                         type="number"
                         value={value}
-                        onChange={(e) => handleChange(row.id, "maxMarks", e.target.value)}
+                        onChange={(e) => handleChange(row.ptTaskScoreId, "maxMarks", e.target.value)}
                         placeholder="Max"
                         className="w-full"
                     />
@@ -197,13 +225,13 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
             key: "column3",
             label: "Category",
             render: (value, row) => {
-                if (row.id === "total") {
+                if (row.ptTaskScoreId === "total") {
                     return <span className="text-center block">—</span>;
                 }
                 return (
                     <Select
                         value={value}
-                        onValueChange={(v) => handleChange(row.id, "column3", v)}
+                        onValueChange={(v) => handleChange(row.ptTaskScoreId, "column3", v)}
                         disabled={!isEditing}
                     >
                         <SelectTrigger className="w-full">
@@ -221,45 +249,18 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
             }
         },
         {
-            key: "column4",
-            label: "Status",
-            render: (value, row) => {
-                if (row.id === "total") {
-                    return <span className="text-center block">—</span>;
-                }
-                return (
-                    <Select
-                        value={value}
-                        onValueChange={(v) => handleChange(row.id, "column4", v)}
-                        disabled={!isEditing}
-                    >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {column4Options.map(opt => (
-                                <SelectItem key={opt} value={opt}>
-                                    {opt}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                );
-            }
-        },
-        {
             key: "column5",
             label: "Marks Scored",
             type: "number",
             render: (value, row) => {
-                if (row.id === "total") {
+                if (row.ptTaskScoreId === "total") {
                     return <span className="text-center block">{value}</span>;
                 }
                 return isEditing ? (
                     <Input
                         type="number"
                         value={value}
-                        onChange={(e) => handleChange(row.id, "column5", e.target.value)}
+                        onChange={(e) => handleChange(row.ptTaskScoreId, "column5", e.target.value)}
                         placeholder="Enter marks"
                         className="w-full"
                     />

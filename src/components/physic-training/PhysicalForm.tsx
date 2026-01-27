@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,15 +14,12 @@ import {
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 import MotivationAwards from "./MotivationAwards";
-import Ipet1Form from "./Ipet1Form";
-import Ipet2Form from "./Ipet2Form";
+import IpetForm from "./IpetForm";
 import GrandTotal from "./GrandTotal";
 import HigherTests from "./HigherTests";
 import Swimming from "./Swimming";
-import Swimming1 from "./Swimming1";
 
-import type { RootState } from "@/store";
-import { savePPTData } from "@/store/slices/physicalTrainingSlice";
+import { usePhysicalTraining } from "@/hooks/usePhysicalTraining";
 
 interface PhysicalTraining {
     id: string;
@@ -38,92 +34,29 @@ interface PhysicalTraining {
 const column3Options = ["M1", "M2", "A1", "A2", "A3"];
 const column4Options = ["Excellent", "Good", "Satisfied"];
 
-const DEFAULT_SEMESTER_DATA: Record<string, PhysicalTraining[]> = {
-    "I TERM": [
-        { id: "1", column1: 1, column2: "1.6 Km Run", column3: 66, column4: "", column5: "", column6: 0 },
-        { id: "2", column1: 2, column2: "Sprint 100m", column3: 28, column4: "", column5: "", column6: 0 },
-        { id: "3", column1: 3, column2: "5 M Shuttle", column3: 32, column4: "", column5: "", column6: 0 },
-        { id: "4", column1: 4, column2: "Sit Ups", column3: 24, column4: "", column5: "", column6: 0 },
-        { id: "5", column1: "", column2: "Total", column3: 150, column4: "", column5: "", column6: 0 },
-    ],
-    "II TERM": [
-        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 53, column4: "", column5: "", column6: 0 },
-        { id: "2", column1: 2, column2: "Chin Ups", column3: 26, column4: "", column5: "", column6: 0 },
-        { id: "3", column1: 3, column2: "Toe Touch", column3: 26, column4: "", column5: "", column6: 0 },
-        { id: "4", column1: 4, column2: "Sprint 100m", column3: 15, column4: "", column5: "", column6: 0 },
-        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 19, column4: "", column5: "", column6: 0 },
-        { id: "6", column1: 6, column2: "Sit Ups", column3: 11, column4: "", column5: "", column6: 0 },
-        { id: "7", column1: "", column2: "Total", column3: 150, column4: "", column5: "", column6: 0 },
-    ],
-    "III TERM": [
-        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 17, column4: "", column5: "", column6: 0 },
-        { id: "2", column1: 2, column2: "Chin Ups", column3: 9, column4: "", column5: "", column6: 0 },
-        { id: "3", column1: 3, column2: "Toe Touch", column3: 9, column4: "", column5: "", column6: 0 },
-        { id: "4", column1: 4, column2: "Sprint 100m", column3: 5, column4: "", column5: "", column6: 0 },
-        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 6, column4: "", column5: "", column6: 0 },
-        { id: "6", column1: 6, column2: "Sit Ups", column3: 4, column4: "", column5: "", column6: 0 },
-        { id: "7", column1: "", column2: "Total", column3: 50, column4: "", column5: "", column6: 0 },
-    ],
-    "IV TERM": [
-        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 14, column4: "", column5: "", column6: 0 },
-        { id: "2", column1: 2, column2: "Chin Ups", column3: 7, column4: "", column5: "", column6: 0 },
-        { id: "3", column1: 3, column2: "Toe Touch", column3: 7, column4: "", column5: "", column6: 0 },
-        { id: "4", column1: 4, column2: "Sprint 100m", column3: 4, column4: "", column5: "", column6: 0 },
-        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 5, column4: "", column5: "", column6: 0 },
-        { id: "6", column1: 6, column2: "Sit Ups", column3: 3, column4: "", column5: "", column6: 0 },
-        { id: "7", column1: "", column2: "Total", column3: 40, column4: "", column5: "", column6: 0 },
-    ],
-    "V TERM": [
-        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 14, column4: "", column5: "", column6: 0 },
-        { id: "2", column1: 2, column2: "Chin Ups", column3: 7, column4: "", column5: "", column6: 0 },
-        { id: "3", column1: 3, column2: "Toe Touch", column3: 7, column4: "", column5: "", column6: 0 },
-        { id: "4", column1: 4, column2: "Sprint 100m", column3: 4, column4: "", column5: "", column6: 0 },
-        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 5, column4: "", column5: "", column6: 0 },
-        { id: "6", column1: 6, column2: "Sit Ups", column3: 3, column4: "", column5: "", column6: 0 },
-        { id: "7", column1: "", column2: "Total", column3: 40, column4: "", column5: "", column6: 0 },
-    ],
-    "VI TERM": [
-        { id: "1", column1: 1, column2: "2.4 Km Run", column3: 14, column4: "", column5: "", column6: 0 },
-        { id: "2", column1: 2, column2: "Chin Ups", column3: 7, column4: "", column5: "", column6: 0 },
-        { id: "3", column1: 3, column2: "Toe Touch", column3: 7, column4: "", column5: "", column6: 0 },
-        { id: "4", column1: 4, column2: "Sprint 100m", column3: 4, column4: "", column5: "", column6: 0 },
-        { id: "5", column1: 5, column2: "5 M Shuttle", column3: 5, column4: "", column5: "", column6: 0 },
-        { id: "6", column1: 6, column2: "Sit Ups", column3: 3, column4: "", column5: "", column6: 0 },
-        { id: "7", column1: "", column2: "Total", column3: 40, column4: "", column5: "", column6: 0 },
-    ],
+// Semester to API semester mapping (1-based index)
+const semesterToApiSemester: Record<string, number> = {
+    "I TERM": 1,
+    "II TERM": 2,
+    "III TERM": 3,
+    "IV TERM": 4,
+    "V TERM": 5,
+    "VI TERM": 6,
 };
+
+
 
 interface PhysicalFormProps {
     ocId: string;
 }
 
 export default function PhysicalForm({ ocId }: PhysicalFormProps) {
-    const dispatch = useDispatch();
     const [activeSemester, setActiveSemester] = useState("I TERM");
     const [isEditing, setIsEditing] = useState(false);
     const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 
-    // Get all saved data from Redux - but DON'T use it in effects
-    const allSavedData = useSelector((state: RootState) =>
-        state.physicalTraining.forms[ocId]
-    );
-
-    // Initialize state ONCE with Redux data or defaults
-    const [semesterTableData, setSemesterTableData] = useState<Record<string, PhysicalTraining[]>>(() => {
-        const initialData = { ...DEFAULT_SEMESTER_DATA };
-
-        // Load all saved semesters from Redux on initial mount only
-        if (allSavedData) {
-            Object.keys(allSavedData).forEach((semester) => {
-                const semesterData = allSavedData[semester]?.pptData;
-                if (semesterData) {
-                    initialData[semester] = semesterData;
-                }
-            });
-        }
-
-        return initialData;
-    });
+    // Use the physical training hook to manage API calls
+    const { scores: apiScores, loading, error: ptError, fetchScores, saveScores, updateScores, template } = usePhysicalTraining(ocId);
 
     // State to track marks from all child components
     const [childComponentMarks, setChildComponentMarks] = useState<Record<string, number>>({
@@ -134,31 +67,93 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
         higherTests: 0,
     });
 
-    // Auto-save to Redux when data changes - with proper checks to prevent loops
-    const lastSavedDataRef = useRef<string>("");
+    // Build local table data from API only - no hardcoded or Redux fallback
+    const [semesterTableData, setSemesterTableData] = useState<Record<string, PhysicalTraining[]>>(() => {
+        const data: Record<string, PhysicalTraining[]> = {};
 
+        // Initialize with empty arrays for each semester - data will be populated from API
+        semesters.forEach((semester) => {
+            data[semester] = [];
+        });
+
+        return data;
+    });
+
+    // When API scores or template arrive, update state
     useEffect(() => {
-        const currentData = semesterTableData[activeSemester];
-        if (!currentData || !ocId) return;
+        if (template && template.length > 0) {
+            // Populate table with template data
+            setSemesterTableData((prev) => {
+                const updated = { ...prev };
+                const semesterNum = semesterToApiSemester[activeSemester];
+                const semesterTemplate = template.filter(t => t.semester === semesterNum);
 
-        // Create a stable string representation for comparison
-        const dataString = JSON.stringify(currentData);
+                if (semesterTemplate.length > 0) {
+                    const rows = semesterTemplate.map((task, index) => ({
+                        id: task.ptTaskScoreId,
+                        column1: index + 1 as number | string,
+                        column2: task.taskTitle,
+                        column3: task.maxMarks,
+                        column4: "",
+                        column5: "",
+                        column6: 0,
+                    }));
 
-        // Only save if data actually changed
-        if (dataString !== lastSavedDataRef.current) {
-            lastSavedDataRef.current = dataString;
+                    const totalMaxMarks = rows.reduce((sum, row) => sum + row.column3, 0);
+                    rows.push({
+                        id: `${rows.length + 1}`,
+                        column1: "" as number | string,
+                        column2: "Total",
+                        column3: totalMaxMarks,
+                        column4: "",
+                        column5: "",
+                        column6: 0,
+                    });
 
-            const timeoutId = setTimeout(() => {
-                dispatch(savePPTData({
-                    ocId,
-                    semester: activeSemester,
-                    data: currentData
-                }));
-            }, 300);
+                    updated[activeSemester] = rows;
+                }
 
-            return () => clearTimeout(timeoutId);
+                return updated;
+            });
+        } else if (apiScores && apiScores.length > 0) {
+            // Update existing scores
+            setSemesterTableData((prev) => {
+                const updated = { ...prev };
+
+                const updatedRows = updated[activeSemester].map((row) => {
+                    if (row.column2 === "Total") return row;
+
+                    const apiScore = apiScores.find(
+                        (score) => score.ptTaskScoreId === row.id
+                    );
+
+                    if (apiScore) {
+                        return {
+                            ...row,
+                            column6: apiScore.marksScored || 0,
+                        };
+                    }
+
+                    return row;
+                });
+
+                return {
+                    ...updated,
+                    [activeSemester]: updatedRows,
+                };
+            });
         }
-    }, [semesterTableData, activeSemester, ocId, dispatch]);
+    }, [apiScores, template, activeSemester]);
+
+    // Fetch scores when semester changes
+    useEffect(() => {
+        const semesterNum = semesterToApiSemester[activeSemester];
+        if (semesterNum) {
+            fetchScores(semesterNum);
+        }
+    }, [activeSemester, fetchScores]);
+
+
 
     // Auto-calc total marks (excluding "Total" row)
     const totalMarksObtained = useMemo(() => {
@@ -241,7 +236,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
 
     const handleEdit = useCallback(() => setIsEditing(true), []);
 
-    const handleSave = useCallback(() => {
+    const handleSave = useCallback(async () => {
         // Validate all marks before saving
         const currentTableData = semesterTableData[activeSemester];
         const nonTotalRows = currentTableData.slice(0, -1);
@@ -253,9 +248,29 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
             }
         }
 
+        // Prepare scores for API - only include rows with valid UUID ptTaskScoreId
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const scoresForApi = nonTotalRows
+            .filter((row) => uuidRegex.test(row.id))
+            .map((row) => ({
+                ptTaskScoreId: row.id,
+                marksScored: row.column6 || 0,
+            }));
+
+        // Call API to save - use POST for new scores, PATCH for updates
+        const semesterNum = semesterToApiSemester[activeSemester];
+        if (scoresForApi.length > 0) {
+            // Update existing scores
+            await updateScores(semesterNum, scoresForApi);
+        } else {
+            // No existing scores to update - this shouldn't happen with current logic
+            toast.error("No valid scores to save. Please ensure scores are loaded from the server.");
+            return;
+        }
+
         setIsEditing(false);
         toast.success("PPT data saved successfully");
-    }, [semesterTableData, activeSemester]);
+    }, [semesterTableData, activeSemester, updateScores]);
 
     const handleCancel = useCallback(() => setIsEditing(false), []);
 
@@ -295,14 +310,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
         });
     }, []);
 
-    const pptMarks: Record<string, number> = {
-        "I TERM": 150,
-        "II TERM": 150,
-        "III TERM": 50,
-        "IV TERM": 40,
-        "V TERM": 40,
-        "VI TERM": 40,
-    };
+
 
     const columns: TableColumn<PhysicalTraining>[] = useMemo(() => [
         {
@@ -449,7 +457,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                     </div>
 
                     <h2 className="text-lg font-bold text-left text-gray-700">
-                        PPT ({pptMarks[activeSemester]} marks)
+                        PPT ({semesterTableData[activeSemester].slice(0, -1).reduce((sum, row) => sum + (row.column3 || 0), 0)} marks)
                     </h2>
 
                     {/* Physical Training Table */}
@@ -477,7 +485,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
 
                         {activeSemester === "III TERM" && (
                             <>
-                                <Ipet1Form
+                                <IpetForm
                                     key="ipet1-III"
                                     onMarksChange={handleIpet1FormMarks}
                                     activeSemester={activeSemester}
@@ -502,14 +510,14 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                             activeSemester === "V TERM" ||
                             activeSemester === "VI TERM") && (
                                 <>
-                                    <Ipet2Form
+                                    <IpetForm
                                         key={`ipet2-${activeSemester}`}
                                         onMarksChange={handleIpet2FormMarks}
                                         activeSemester={activeSemester}
                                         ocId={ocId}
                                     />
 
-                                    <Swimming1
+                                    <Swimming
                                         key={`swimming1-${activeSemester}`}
                                         onMarksChange={handleSwimming1Marks}
                                         activeSemester={activeSemester}
@@ -526,7 +534,6 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                             )}
 
                         <MotivationAwards
-                            key={`motivation-${activeSemester}`}
                             activeSemester={activeSemester}
                             ocId={ocId}
                         />
@@ -534,10 +541,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                         <GrandTotal grandTotalMarks={grandTotalMarks} />
                     </div>
 
-                    {/* Auto-save indicator */}
-                    <p className="text-sm text-muted-foreground text-center mt-2">
-                        * Changes are automatically saved
-                    </p>
+
                 </CardContent>
             </Card>
         </div>
