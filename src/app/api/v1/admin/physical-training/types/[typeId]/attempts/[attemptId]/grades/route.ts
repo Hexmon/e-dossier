@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { ptAttemptGradeCreateSchema, ptAttemptGradeQuerySchema, ptAttemptParam } from '@/app/lib/physical-training-validators';
 import { getPtAttempt, listPtAttemptGrades, createPtAttemptGrade } from '@/app/db/queries/physicalTraining';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -26,7 +26,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ type
 
 async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string; attemptId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId, attemptId } = ptAttemptParam.parse(await params);
         const attempt = await getPtAttempt(attemptId);
         if (!attempt || attempt.ptTypeId !== typeId) throw new ApiError(404, 'PT attempt not found', 'not_found');

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { interviewFieldParam, interviewFieldUpdateSchema } from '@/app/lib/interview-template-validators';
 import { getInterviewTemplateField, updateInterviewTemplateField, deleteInterviewTemplateField } from '@/app/db/queries/interviewTemplates';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -26,7 +26,7 @@ async function PATCHHandler(
     { params }: { params: Promise<{ templateId: string; fieldId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, fieldId } = interviewFieldParam.parse(await params);
         const existing = await getInterviewTemplateField(fieldId);
         if (!existing || existing.templateId !== templateId) throw new ApiError(404, 'Interview field not found', 'not_found');
@@ -66,7 +66,7 @@ async function DELETEHandler(
     { params }: { params: Promise<{ templateId: string; fieldId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, fieldId } = interviewFieldParam.parse(await params);
         const existing = await getInterviewTemplateField(fieldId);
         if (!existing || existing.templateId !== templateId) throw new ApiError(404, 'Interview field not found', 'not_found');

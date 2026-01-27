@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { interviewGroupParam, interviewGroupUpdateSchema } from '@/app/lib/interview-template-validators';
 import {
     getInterviewTemplateSection,
@@ -31,7 +31,7 @@ async function PATCHHandler(
     { params }: { params: Promise<{ templateId: string; groupId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, groupId } = interviewGroupParam.parse(await params);
         const existing = await getInterviewTemplateGroup(groupId);
         if (!existing || existing.templateId !== templateId) throw new ApiError(404, 'Interview group not found', 'not_found');
@@ -78,7 +78,7 @@ async function DELETEHandler(
     { params }: { params: Promise<{ templateId: string; groupId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, groupId } = interviewGroupParam.parse(await params);
         const existing = await getInterviewTemplateGroup(groupId);
         if (!existing || existing.templateId !== templateId) throw new ApiError(404, 'Interview group not found', 'not_found');

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { ptTaskScoreCreateSchema, ptTaskParam } from '@/app/lib/physical-training-validators';
 import { getPtTask, listPtTaskScores, createPtTaskScore, getPtAttempt, getPtAttemptGrade } from '@/app/db/queries/physicalTraining';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -28,7 +28,7 @@ async function POSTHandler(
     { params }: { params: Promise<{ typeId: string; taskId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId, taskId } = ptTaskParam.parse(await params);
         const task = await getPtTask(taskId);
         if (!task || task.ptTypeId !== typeId) throw new ApiError(404, 'PT task not found', 'not_found');

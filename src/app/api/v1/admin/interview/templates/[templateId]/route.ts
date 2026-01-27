@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { interviewTemplateParam, interviewTemplateUpdateSchema } from '@/app/lib/interview-template-validators';
 import { getInterviewTemplate, updateInterviewTemplate, deleteInterviewTemplate } from '@/app/db/queries/interviewTemplates';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -20,7 +20,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ temp
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ templateId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId } = interviewTemplateParam.parse(await params);
         const dto = interviewTemplateUpdateSchema.parse(await req.json());
         const row = await updateInterviewTemplate(templateId, {
@@ -52,7 +52,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ te
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ templateId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId } = interviewTemplateParam.parse(await params);
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteInterviewTemplate(templateId, { hard: body?.hard === true });

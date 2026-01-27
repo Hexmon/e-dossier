@@ -2,13 +2,13 @@ import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { ocDiscipline } from '@/app/db/schema/training/oc';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { eq } from 'drizzle-orm';
 import { withRouteLogging } from '@/lib/withRouteLogging';
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await requireAdmin(req);
+        await requireAuth(req);
 
         const { id } = await params;
         const body = await req.json();
@@ -47,7 +47,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await requireAdmin(req);
+        await requireAuth(req);
 
         const { id } = await params;
 

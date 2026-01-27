@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { ptAttemptGradeParam, ptAttemptGradeUpdateSchema } from '@/app/lib/physical-training-validators';
 import { getPtAttempt, getPtAttemptGrade, updatePtAttemptGrade, deletePtAttemptGrade } from '@/app/db/queries/physicalTraining';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -28,7 +28,7 @@ async function PATCHHandler(
     { params }: { params: Promise<{ typeId: string; attemptId: string; gradeId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId, attemptId, gradeId } = ptAttemptGradeParam.parse(await params);
         const attempt = await getPtAttempt(attemptId);
         if (!attempt || attempt.ptTypeId !== typeId) throw new ApiError(404, 'PT attempt not found', 'not_found');
@@ -68,7 +68,7 @@ async function DELETEHandler(
     { params }: { params: Promise<{ typeId: string; attemptId: string; gradeId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId, attemptId, gradeId } = ptAttemptGradeParam.parse(await params);
         const attempt = await getPtAttempt(attemptId);
         if (!attempt || attempt.ptTypeId !== typeId) throw new ApiError(404, 'PT attempt not found', 'not_found');

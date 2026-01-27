@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { listQuerySchema, instructorCreateSchema } from '@/app/lib/validators.courses';
 import { listInstructors } from '@/app/db/queries/instructors';
 import { db } from '@/app/db/client';
@@ -31,7 +31,7 @@ async function GETHandler(req: NextRequest) {
 
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const body = instructorCreateSchema.parse(await req.json());
 
         let userId: string | null = null;

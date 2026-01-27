@@ -4,7 +4,7 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { json, handleApiError } from '@/app/lib/http';
 import { platoonCreateSchema } from '@/app/lib/validators';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
 
@@ -54,7 +54,7 @@ async function GETHandler(req: NextRequest) {
 // { key, name, about? }
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const body = await req.json();
         const parsed = platoonCreateSchema.safeParse(body);
@@ -128,7 +128,7 @@ async function POSTHandler(req: NextRequest) {
 // Soft-delete ALL platoons (sets deleted_at = now())
 async function DELETEHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const now = new Date();
         const deleted = await db

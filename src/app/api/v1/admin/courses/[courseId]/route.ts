@@ -2,7 +2,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { getCourse, listCourseOfferings, softDeleteCourse, updateCourse, hardDeleteCourse } from '@/app/db/queries/courses';
 import type { CourseRow } from '@/app/db/queries/courses';
 import { courseUpdateSchema } from '@/app/lib/validators.courses';
@@ -58,7 +58,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ cour
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
 
         const body = courseUpdateSchema.parse(await req.json());
@@ -103,7 +103,7 @@ type CourseDeleteResult =
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
         const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
         const result = (hard ? await hardDeleteCourse(courseId) : await softDeleteCourse(courseId)) as CourseDeleteResult | null;

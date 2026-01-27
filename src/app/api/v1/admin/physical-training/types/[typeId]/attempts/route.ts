@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { ptAttemptCreateSchema, ptAttemptQuerySchema, ptTypeParam } from '@/app/lib/physical-training-validators';
 import { getPtType, listPtAttempts, createPtAttempt } from '@/app/db/queries/physicalTraining';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -26,7 +26,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ type
 
 async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId } = ptTypeParam.parse(await params);
         const type = await getPtType(typeId);
         if (!type) throw new ApiError(404, 'PT type not found', 'not_found');

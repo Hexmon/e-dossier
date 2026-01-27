@@ -5,7 +5,7 @@ import { positions } from '@/app/db/schema/auth/positions';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { appointmentUpdateSchema } from '@/app/lib/validators';
 import { and, eq, sql } from 'drizzle-orm';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -56,7 +56,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { id } = await params;
         const body = await req.json();
         const parsed = appointmentUpdateSchema.safeParse(body);
@@ -204,7 +204,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { id } = await params;
         // Soft delete by setting deleted_at = now()
         const [previous] = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);
