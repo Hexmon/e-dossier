@@ -316,7 +316,15 @@ export const managementCard = [
     icon: Gavel,
     to: "/dashboard/genmgmt/punishments",
     color: "bg-red-700"
+  },
+  {
+    title: "Interview Management",
+    description: "Schedule, track, and manage interviews",
+    icon: Users,
+    to: "/dashboard/genmgmt/interviews-mgmt",
+    color: "bg-blue-700"
   }
+
 
   // {
   //   title: "Settings Management",
