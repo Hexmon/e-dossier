@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { interviewTemplateSemesterParam } from '@/app/lib/interview-template-validators';
 import { getInterviewTemplate, removeInterviewTemplateSemester } from '@/app/db/queries/interviewTemplates';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -11,7 +11,7 @@ async function DELETEHandler(
     { params }: { params: Promise<{ templateId: string; semester: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, semester } = interviewTemplateSemesterParam.parse(await params);
         const template = await getInterviewTemplate(templateId);
         if (!template) throw new ApiError(404, 'Interview template not found', 'not_found');

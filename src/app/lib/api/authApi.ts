@@ -90,7 +90,7 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
 
 export async function logout() {
   try {
-    await api.post(endpoints.auth.logout);
+    await api.post(endpoints.auth.logout, undefined, { skipCsrf: true });
     return true;
   } catch (err) {
     console.error("Logout error:", err);

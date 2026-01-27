@@ -2,13 +2,13 @@ import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { ocDiscipline, ocCadets } from '@/app/db/schema/training/oc';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { eq } from 'drizzle-orm';
 import { withRouteLogging } from '@/lib/withRouteLogging';
 
 async function GETHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        await requireAuth(req);
 
         const rows = await db
             .select({

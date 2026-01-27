@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { ptTaskParam, ptTaskUpdateSchema } from '@/app/lib/physical-training-validators';
 import { getPtTask, updatePtTask, deletePtTask } from '@/app/db/queries/physicalTraining';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -20,7 +20,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ type
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string; taskId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId, taskId } = ptTaskParam.parse(await params);
         const existing = await getPtTask(taskId);
         if (!existing || existing.ptTypeId !== typeId) throw new ApiError(404, 'PT task not found', 'not_found');
@@ -54,7 +54,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ty
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string; taskId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId, taskId } = ptTaskParam.parse(await params);
         const existing = await getPtTask(taskId);
         if (!existing || existing.ptTypeId !== typeId) throw new ApiError(404, 'PT task not found', 'not_found');

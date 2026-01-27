@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { punishmentCreateSchema, punishmentListQuerySchema } from '@/app/lib/validators.punishments';
 import { createPunishment, listPunishments } from '@/app/db/queries/punishments';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -32,7 +32,7 @@ async function GETHandler(req: NextRequest) {
 
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const body = punishmentCreateSchema.parse(await req.json());
         const row = await createPunishment({
             title: body.title,

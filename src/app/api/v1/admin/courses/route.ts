@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { listQuerySchema, courseCreateSchema } from '@/app/lib/validators.courses';
 import { createCourse, listCourses } from '@/app/db/queries/courses';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -27,7 +27,7 @@ async function GETHandler(req: NextRequest) {
 
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { code, title, notes } = courseCreateSchema.parse(await req.json());
         // enforce unique code
         // (uq index already exists; we handle conflict error format)

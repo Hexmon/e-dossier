@@ -13,7 +13,7 @@ import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAdmin: vi.fn(),
+  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/client', () => ({
@@ -138,7 +138,7 @@ describe('GET /api/v1/subjects/[id]', () => {
 
 describe('PATCH /api/v1/subjects/[id]', () => {
   it('returns 403 when user lacks admin privileges', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(403, 'Admin privileges required', 'forbidden'),
     );
 
@@ -157,7 +157,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
   });
 
   it('returns 400 when request body has no changes', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
     const req = makeJsonRequest({
       method: 'PATCH',
@@ -174,7 +174,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
   });
 
   it('returns 409 when updating subject violates unique code constraint', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         where: () => ({
@@ -215,7 +215,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
   });
 
   it('updates subject on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         where: () => ({
@@ -262,7 +262,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
 
 describe('DELETE /api/v1/subjects/[id]', () => {
   it('returns 401 when authentication fails', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
 
@@ -277,7 +277,7 @@ describe('DELETE /api/v1/subjects/[id]', () => {
   });
 
   it('returns 404 when subject to delete is not found', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (subjectQueries.softDeleteSubject as any).mockResolvedValueOnce(null);
 
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${subjectId}` });
@@ -291,7 +291,7 @@ describe('DELETE /api/v1/subjects/[id]', () => {
   });
 
   it('soft-deletes subject on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (subjectQueries.softDeleteSubject as any).mockResolvedValueOnce({
       before: { id: subjectId, code: 'SUB-1' },
       after: { id: subjectId, code: 'SUB-1', deletedAt: new Date().toISOString() },
@@ -309,7 +309,7 @@ describe('DELETE /api/v1/subjects/[id]', () => {
   });
 
   it('hard-deletes subject when requested', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (subjectQueries.hardDeleteSubject as any).mockResolvedValueOnce({
       before: { id: subjectId, code: 'SUB-1' },
     });

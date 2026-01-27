@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { ptMotivationFieldCreateSchema, ptMotivationFieldQuerySchema } from '@/app/lib/physical-training-validators';
 import { listPtMotivationFields, createPtMotivationField } from '@/app/db/queries/physicalTraining';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -26,7 +26,7 @@ async function GETHandler(req: NextRequest) {
 
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const dto = ptMotivationFieldCreateSchema.parse(await req.json());
         const row = await createPtMotivationField({
             semester: dto.semester,

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { interviewGroupParam, interviewFieldCreateSchema, interviewFieldQuerySchema } from '@/app/lib/interview-template-validators';
 import {
     getInterviewTemplateGroup,
@@ -36,7 +36,7 @@ async function POSTHandler(
     { params }: { params: Promise<{ templateId: string; groupId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, groupId } = interviewGroupParam.parse(await params);
         const group = await getInterviewTemplateGroup(groupId);
         if (!group || group.templateId !== templateId) throw new ApiError(404, 'Interview group not found', 'not_found');

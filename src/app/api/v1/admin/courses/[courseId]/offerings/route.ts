@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { offeringCreateSchema } from '@/app/lib/validators.courses';
 import { listCourseOfferings } from '@/app/db/queries/courses';
 import { db } from '@/app/db/client';
@@ -28,7 +28,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ cour
 
 async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
         const body = offeringCreateSchema.parse(await req.json());
 

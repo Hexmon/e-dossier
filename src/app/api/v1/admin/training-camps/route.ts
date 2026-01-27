@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import {
     trainingCampCreateSchema,
     trainingCampQuerySchema,
@@ -36,7 +36,7 @@ async function GETHandler(req: NextRequest) {
 
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const dto = trainingCampCreateSchema.parse(await req.json());
         const row = await createTrainingCamp({
             name: dto.name.trim(),

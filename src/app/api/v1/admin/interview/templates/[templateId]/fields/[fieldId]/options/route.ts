@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { interviewFieldOptionCreateSchema, interviewFieldOptionQuerySchema, interviewFieldParam } from '@/app/lib/interview-template-validators';
 import {
     getInterviewTemplateField,
@@ -36,7 +36,7 @@ async function POSTHandler(
     { params }: { params: Promise<{ templateId: string; fieldId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, fieldId } = interviewFieldParam.parse(await params);
         const field = await getInterviewTemplateField(fieldId);
         if (!field || field.templateId !== templateId) throw new ApiError(404, 'Interview field not found', 'not_found');

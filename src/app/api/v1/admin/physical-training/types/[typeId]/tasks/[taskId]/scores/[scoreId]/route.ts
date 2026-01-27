@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { ptTaskScoreParam, ptTaskScoreUpdateSchema } from '@/app/lib/physical-training-validators';
 import {
     getPtTask,
@@ -35,7 +35,7 @@ async function PATCHHandler(
     { params }: { params: Promise<{ typeId: string; taskId: string; scoreId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId, taskId, scoreId } = ptTaskScoreParam.parse(await params);
         const task = await getPtTask(taskId);
         if (!task || task.ptTypeId !== typeId) throw new ApiError(404, 'PT task not found', 'not_found');
@@ -87,7 +87,7 @@ async function DELETEHandler(
     { params }: { params: Promise<{ typeId: string; taskId: string; scoreId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId, taskId, scoreId } = ptTaskScoreParam.parse(await params);
         const task = await getPtTask(taskId);
         if (!task || task.ptTypeId !== typeId) throw new ApiError(404, 'PT task not found', 'not_found');
