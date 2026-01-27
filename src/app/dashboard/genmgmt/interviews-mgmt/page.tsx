@@ -32,11 +32,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-
-const interviewTabs = [
-    { label: "Templates", value: "templates" },
-    { label: "Settings", value: "settings" },
-];
+import { dossierTabs, ocTabs } from "@/config/app.config";
 
 export default function InterviewTemplateManagementPage() {
     const router = useRouter();
@@ -162,7 +158,7 @@ export default function InterviewTemplateManagementPage() {
                             ]}
                         />
 
-                        <GlobalTabs tabs={interviewTabs} defaultValue="templates">
+                        <GlobalTabs tabs={ocTabs} defaultValue="templates">
                             <TabsContent value="templates" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
