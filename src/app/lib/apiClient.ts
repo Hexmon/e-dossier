@@ -67,6 +67,8 @@ export type ApiRequestOptions<B = unknown> = {
     headers?: Record<string, string>;
     /** Abort support */
     signal?: AbortSignal;
+    /** Skip CSRF token fetch/header (use for login/signup/logout) */
+    skipCsrf?: boolean;
     /**
      * Optional baseURL override (useful on server if you need absolute URL).
      * If omitted, a relative fetch is used and cookies still flow on same-origin.
@@ -154,6 +156,7 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
         body,
         headers,
         signal,
+        skipCsrf,
         baseURL,
     } = opts;
 
@@ -176,7 +179,7 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
     // Only on client-side (browser environment). We lazily obtain the token
     // via a lightweight GET to /api/v1/health, which the middleware uses to
     // set the CSRF cookie and return the token in the X-CSRF-Token header.
-    if (typeof window !== 'undefined' && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
+    if (typeof window !== 'undefined' && !skipCsrf && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
         await ensureCsrfToken(finalBase);
 
         if (csrfToken) {
