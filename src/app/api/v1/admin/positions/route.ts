@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { positions } from '@/app/db/schema/auth/positions';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { positionCreateSchema } from '@/app/lib/validators';
 import { asc, eq, isNull } from 'drizzle-orm';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -66,7 +66,7 @@ async function GETHandler(req: NextRequest) {
 
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const body = await req.json();
         const parsed = positionCreateSchema.safeParse(body);

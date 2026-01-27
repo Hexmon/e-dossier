@@ -9,7 +9,7 @@ import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAdmin: vi.fn(),
+  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/subjects', () => ({
@@ -133,7 +133,7 @@ describe('GET /api/v1/subjects', () => {
 
 describe('POST /api/v1/subjects', () => {
   it('returns 401 when not authenticated', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
 
@@ -147,7 +147,7 @@ describe('POST /api/v1/subjects', () => {
   });
 
   it('returns 403 when user lacks admin privileges', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(403, 'Admin privileges required', 'forbidden'),
     );
 
@@ -165,7 +165,7 @@ describe('POST /api/v1/subjects', () => {
   });
 
   it('returns 400 when request body fails validation', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
     const req = makeJsonRequest({ method: 'POST', path, body: { code: '' } });
     const res = await postSubject(req as any);
@@ -177,7 +177,7 @@ describe('POST /api/v1/subjects', () => {
   });
 
   it('returns 409 when subject code already exists', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
     (db.insert as any).mockImplementationOnce(() => ({
       values: () => ({
@@ -203,7 +203,7 @@ describe('POST /api/v1/subjects', () => {
   });
 
   it('creates a subject on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
     const req = makeJsonRequest({
       method: 'POST',

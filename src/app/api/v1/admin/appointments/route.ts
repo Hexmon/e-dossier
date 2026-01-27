@@ -5,7 +5,7 @@ import { positions } from '@/app/db/schema/auth/positions';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { appointmentCreateSchema, appointmentListQuerySchema } from '@/app/lib/validators';
 import { and, eq, sql, isNull } from 'drizzle-orm';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -76,7 +76,7 @@ async function GETHandler(req: NextRequest) {
 
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const body = await req.json();
         const parsed = appointmentCreateSchema.safeParse(body);

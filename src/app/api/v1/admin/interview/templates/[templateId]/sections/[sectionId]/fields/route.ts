@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import {
     interviewSectionParam,
     interviewFieldCreateSchema,
@@ -40,7 +40,7 @@ async function POSTHandler(
     { params }: { params: Promise<{ templateId: string; sectionId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, sectionId } = interviewSectionParam.parse(await params);
         const section = await getInterviewTemplateSection(sectionId);
         if (!section || section.templateId !== templateId) throw new ApiError(404, 'Interview section not found', 'not_found');

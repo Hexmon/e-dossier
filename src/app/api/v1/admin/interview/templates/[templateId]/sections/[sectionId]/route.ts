@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { interviewSectionParam, interviewSectionUpdateSchema } from '@/app/lib/interview-template-validators';
 import {
     getInterviewTemplateSection,
@@ -30,7 +30,7 @@ async function PATCHHandler(
     { params }: { params: Promise<{ templateId: string; sectionId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, sectionId } = interviewSectionParam.parse(await params);
         const existing = await getInterviewTemplateSection(sectionId);
         if (!existing || existing.templateId !== templateId) throw new ApiError(404, 'Interview section not found', 'not_found');
@@ -68,7 +68,7 @@ async function DELETEHandler(
     { params }: { params: Promise<{ templateId: string; sectionId: string }> },
 ) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId, sectionId } = interviewSectionParam.parse(await params);
         const existing = await getInterviewTemplateSection(sectionId);
         if (!existing || existing.templateId !== templateId) throw new ApiError(404, 'Interview section not found', 'not_found');

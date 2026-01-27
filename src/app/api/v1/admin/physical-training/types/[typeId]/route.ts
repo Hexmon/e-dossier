@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { ptTypeParam, ptTypeUpdateSchema } from '@/app/lib/physical-training-validators';
 import { getPtType, updatePtType, deletePtType } from '@/app/db/queries/physicalTraining';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -20,7 +20,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ type
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId } = ptTypeParam.parse(await params);
         const dto = ptTypeUpdateSchema.parse(await req.json());
         const row = await updatePtType(typeId, {
@@ -52,7 +52,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ty
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { typeId } = ptTypeParam.parse(await params);
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deletePtType(typeId, { hard: body?.hard === true });

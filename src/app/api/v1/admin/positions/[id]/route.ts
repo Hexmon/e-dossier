@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { positions } from '@/app/db/schema/auth/positions';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { positionUpdateSchema } from '@/app/lib/validators';
 import { and, eq, ne} from 'drizzle-orm';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -28,7 +28,7 @@ async function GETHandler(_: NextRequest, { params }: { params: Promise<{ id: st
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const adminCtx = await requireAdmin(req);
+    const adminCtx = await requireAuth(req);
 
     const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
@@ -100,7 +100,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const adminCtx = await requireAdmin(req);
+    const adminCtx = await requireAuth(req);
 
     const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();

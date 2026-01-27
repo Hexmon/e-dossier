@@ -12,7 +12,7 @@ import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAdmin: vi.fn(),
+  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/courses', () => ({
@@ -152,7 +152,7 @@ describe('GET /api/v1/courses/[courseId]', () => {
 
 describe('PATCH /api/v1/courses/[courseId]', () => {
   it('returns 403 when user lacks admin privileges', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(403, 'Admin privileges required', 'forbidden'),
     );
 
@@ -171,7 +171,7 @@ describe('PATCH /api/v1/courses/[courseId]', () => {
   });
 
   it('returns 400 when request body fails validation', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
     const req = makeJsonRequest({
       method: 'PATCH',
@@ -188,7 +188,7 @@ describe('PATCH /api/v1/courses/[courseId]', () => {
   });
 
   it('returns 409 when updating course violates unique code constraint', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (coursesQueries.getCourse as any).mockResolvedValueOnce({
       id: courseId,
       code: 'TES-50',
@@ -216,7 +216,7 @@ describe('PATCH /api/v1/courses/[courseId]', () => {
   });
 
   it('updates course on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (coursesQueries.getCourse as any).mockResolvedValueOnce({
       id: courseId,
       code: 'TES-50',
@@ -249,7 +249,7 @@ describe('PATCH /api/v1/courses/[courseId]', () => {
 
 describe('DELETE /api/v1/courses/[courseId]', () => {
   it('returns 401 when authentication fails', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
 
@@ -264,7 +264,7 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
   });
 
   it('returns 404 when course to delete is not found', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (coursesQueries.softDeleteCourse as any).mockResolvedValueOnce(null);
 
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}` });
@@ -278,7 +278,7 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
   });
 
   it('soft-deletes course on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (coursesQueries.softDeleteCourse as any).mockResolvedValueOnce({
       before: { id: courseId, code: 'TES-50' },
       after: { id: courseId, code: 'TES-50', deletedAt: new Date().toISOString() },
@@ -296,7 +296,7 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
   });
 
   it('hard-deletes course when requested', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (coursesQueries.hardDeleteCourse as any).mockResolvedValueOnce({
       before: { id: courseId, code: 'TES-50' },
     });

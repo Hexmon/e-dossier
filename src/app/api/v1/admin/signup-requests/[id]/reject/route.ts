@@ -1,7 +1,7 @@
 // src/app/api/v1/admin/signup-requests/[id]/reject/route.ts
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { rejectSignupRequestSchema } from '@/app/lib/validators';
 import { rejectSignupRequest } from '@/app/db/queries/signupRequests';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -14,7 +14,7 @@ async function POSTHandler(
 ) {
   try {
     // Who is acting
-    const { userId: adminUserId } = await requireAdmin(req);
+    const { userId: adminUserId } = await requireAuth(req);
 
     // Await dynamic params once (Next.js requirement)
     const { id: raw } = await params;

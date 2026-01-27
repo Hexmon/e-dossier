@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import {
     olqSubtitleCreateSchema,
     olqSubtitleQuerySchema,
@@ -34,7 +34,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
 async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const dto = olqSubtitleCreateSchema.parse(await req.json());
         const row = await createOlqSubtitle({

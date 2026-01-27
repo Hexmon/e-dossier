@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import {
     trainingCampParam,
     trainingCampActivityCreateSchema,
@@ -33,7 +33,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
 async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
         const camp = await getTrainingCamp(campId);
         if (!camp) throw new ApiError(404, 'Training camp not found', 'not_found');

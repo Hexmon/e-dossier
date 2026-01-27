@@ -7,7 +7,7 @@ import { db } from '@/app/db/client';
 import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
-  requireAdmin: vi.fn(),
+  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/client', () => ({
@@ -50,7 +50,7 @@ beforeEach(() => {
 
 describe('PATCH /api/v1/platoons/[idOrKey]', () => {
   it('returns 403 when user is not admin', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(403, 'Admin privileges required', 'forbidden'),
     );
     const req = makeJsonRequest({ method: 'PATCH', path: `${basePath}/${idOrKey}`, body: { name: 'New' } });
@@ -63,7 +63,7 @@ describe('PATCH /api/v1/platoons/[idOrKey]', () => {
   });
 
   it('returns 400 when body fails validation', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     const req = makeJsonRequest({ method: 'PATCH', path: `${basePath}/${idOrKey}`, body: { key: 'x' } });
     const ctx = { params: Promise.resolve({ idOrKey }) } as any;
     const res = await patchPlatoon(req as any, ctx);
@@ -74,7 +74,7 @@ describe('PATCH /api/v1/platoons/[idOrKey]', () => {
   });
 
   it('returns 404 when platoon is not found', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         where: () => ({
@@ -92,7 +92,7 @@ describe('PATCH /api/v1/platoons/[idOrKey]', () => {
   });
 
   it('returns 409 when key or name conflicts', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         where: () => ({
@@ -117,7 +117,7 @@ describe('PATCH /api/v1/platoons/[idOrKey]', () => {
   });
 
   it('updates platoon on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         where: () => ({
@@ -153,7 +153,7 @@ describe('PATCH /api/v1/platoons/[idOrKey]', () => {
 
 describe('DELETE /api/v1/platoons/[idOrKey]', () => {
   it('returns 401 when not authenticated as admin', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${idOrKey}` });
@@ -166,7 +166,7 @@ describe('DELETE /api/v1/platoons/[idOrKey]', () => {
   });
 
   it('returns 400 when idOrKey is missing', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/` });
     const ctx = { params: '' } as any;
     const res = await deletePlatoon(req as any, ctx);
@@ -177,7 +177,7 @@ describe('DELETE /api/v1/platoons/[idOrKey]', () => {
   });
 
   it('soft-deletes platoon on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         where: () => ({

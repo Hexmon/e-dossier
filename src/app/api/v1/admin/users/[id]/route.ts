@@ -4,7 +4,7 @@ import { users } from '@/app/db/schema/auth/users';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { userUpdateSchema } from '@/app/lib/validators';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -79,7 +79,7 @@ async function GETHandler(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin(req);
+    await requireAuth(req);
 
     const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
@@ -101,7 +101,7 @@ async function PATCHHandler(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminCtx = await requireAdmin(req);
+    const adminCtx = await requireAuth(req);
 
     const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
@@ -223,7 +223,7 @@ async function DELETEHandler(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminCtx = await requireAdmin(req);
+    const adminCtx = await requireAuth(req);
 
     // Await params once (Next.js App Router dynamic API requirement)
     const { id: raw } = await params;

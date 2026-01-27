@@ -1,7 +1,7 @@
 // src/app/api/v1/admin/appointments/[id]/transfer/route.ts
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { appointmentTransferBody } from '@/app/lib/validators';
 import { transferAppointment } from '@/app/db/queries/appointment-transfer';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -13,7 +13,7 @@ async function POSTHandler(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { userId: adminId } = await requireAdmin(req);
+        const { userId: adminId } = await requireAuth(req);
 
         const { id: raw } = await params;
         const { id } = IdSchema.parse({ id: decodeURIComponent((raw ?? '')).trim() });

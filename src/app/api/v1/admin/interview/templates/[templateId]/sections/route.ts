@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import {
     interviewTemplateParam,
     interviewSectionCreateSchema,
@@ -34,7 +34,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ temp
 
 async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ templateId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { templateId } = interviewTemplateParam.parse(await params);
         const template = await getInterviewTemplate(templateId);
         if (!template) throw new ApiError(404, 'Interview template not found', 'not_found');
