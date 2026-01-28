@@ -1,5 +1,5 @@
 // hooks/Useinterviewtemplates.ts
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import {
     InterviewTemplate,
@@ -64,7 +64,7 @@ export function useInterviewTemplates() {
     // Template Operations
     // ============================================================================
 
-    const fetchTemplates = async (params?: ListParams) => {
+    const fetchTemplates = useCallback(async (params?: ListParams) => {
         setLoading(true);
         try {
             const data = await listTemplates(params);
@@ -78,9 +78,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchTemplateById = async (templateId: string) => {
+    const fetchTemplateById = useCallback(async (templateId: string) => {
         setLoading(true);
         try {
             const template = await getTemplateById(templateId);
@@ -93,9 +93,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const addTemplate = async (template: InterviewTemplateCreate) => {
+    const addTemplate = useCallback(async (template: InterviewTemplateCreate) => {
         setLoading(true);
         try {
             const newTemplate = await createTemplate(template);
@@ -118,9 +118,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const editTemplate = async (templateId: string, updates: InterviewTemplateUpdate) => {
+    const editTemplate = useCallback(async (templateId: string, updates: InterviewTemplateUpdate) => {
         setLoading(true);
         try {
             const updatedTemplate = await updateTemplate(templateId, updates);
@@ -133,9 +133,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const removeTemplate = async (templateId: string, hard: boolean = false) => {
+    const removeTemplate = useCallback(async (templateId: string, hard: boolean = false) => {
         setLoading(true);
         try {
             await deleteTemplate(templateId, hard);
@@ -148,13 +148,13 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     // ============================================================================
     // Semester Operations
     // ============================================================================
 
-    const fetchTemplateSemesters = async (templateId: string) => {
+    const fetchTemplateSemesters = useCallback(async (templateId: string) => {
         setLoading(true);
         try {
             const data = await listTemplateSemesters(templateId);
@@ -167,9 +167,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const addSemesterToTemplate = async (templateId: string, semester: number) => {
+    const addSemesterToTemplate = useCallback(async (templateId: string, semester: number) => {
         setLoading(true);
         try {
             await addTemplateSemester(templateId, { semester });
@@ -182,9 +182,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const removeSemesterFromTemplate = async (templateId: string, semester: number) => {
+    const removeSemesterFromTemplate = useCallback(async (templateId: string, semester: number) => {
         setLoading(true);
         try {
             await removeTemplateSemester(templateId, semester);
@@ -197,13 +197,13 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     // ============================================================================
     // Section Operations
     // ============================================================================
 
-    const fetchSections = async (templateId: string, params?: ListParams) => {
+    const fetchSections = useCallback(async (templateId: string, params?: ListParams) => {
         setLoading(true);
         try {
             const data = await listSections(templateId, params);
@@ -216,9 +216,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const addSection = async (templateId: string, section: SectionCreate) => {
+    const addSection = useCallback(async (templateId: string, section: SectionCreate) => {
         setLoading(true);
         try {
             const newSection = await createSection(templateId, section);
@@ -231,9 +231,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const editSection = async (
+    const editSection = useCallback(async (
         templateId: string,
         sectionId: string,
         updates: SectionUpdate
@@ -250,9 +250,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const removeSection = async (
+    const removeSection = useCallback(async (
         templateId: string,
         sectionId: string,
         hard: boolean = false
@@ -269,13 +269,13 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     // ============================================================================
     // Group Operations
     // ============================================================================
 
-    const fetchGroups = async (templateId: string, params?: ListParams) => {
+    const fetchGroups = useCallback(async (templateId: string, params?: ListParams) => {
         setLoading(true);
         try {
             const data = await listGroups(templateId, params);
@@ -288,9 +288,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const addGroup = async (templateId: string, group: GroupCreate) => {
+    const addGroup = useCallback(async (templateId: string, group: GroupCreate) => {
         setLoading(true);
         try {
             const newGroup = await createGroup(templateId, group);
@@ -303,9 +303,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const editGroup = async (
+    const editGroup = useCallback(async (
         templateId: string,
         groupId: string,
         updates: GroupUpdate
@@ -322,9 +322,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const removeGroup = async (
+    const removeGroup = useCallback(async (
         templateId: string,
         groupId: string,
         hard: boolean = false
@@ -341,13 +341,13 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     // ============================================================================
     // Field Operations
     // ============================================================================
 
-    const fetchSectionFields = async (
+    const fetchSectionFields = useCallback(async (
         templateId: string,
         sectionId: string,
         params?: ListParams
@@ -363,9 +363,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchGroupFields = async (
+    const fetchGroupFields = useCallback(async (
         templateId: string,
         groupId: string,
         params?: ListParams
@@ -381,9 +381,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const addSectionField = async (
+    const addSectionField = useCallback(async (
         templateId: string,
         sectionId: string,
         field: FieldCreate
@@ -400,9 +400,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const addGroupField = async (
+    const addGroupField = useCallback(async (
         templateId: string,
         groupId: string,
         field: FieldCreate
@@ -419,9 +419,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const editField = async (
+    const editField = useCallback(async (
         templateId: string,
         fieldId: string,
         updates: FieldUpdate
@@ -438,9 +438,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const removeField = async (
+    const removeField = useCallback(async (
         templateId: string,
         fieldId: string,
         hard: boolean = false
@@ -457,13 +457,13 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     // ============================================================================
     // Field Option Operations
     // ============================================================================
 
-    const fetchFieldOptions = async (
+    const fetchFieldOptions = useCallback(async (
         templateId: string,
         fieldId: string,
         params?: ListParams
@@ -479,9 +479,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const addFieldOption = async (
+    const addFieldOption = useCallback(async (
         templateId: string,
         fieldId: string,
         option: FieldOptionCreate
@@ -498,9 +498,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const editFieldOption = async (
+    const editFieldOption = useCallback(async (
         templateId: string,
         fieldId: string,
         optionId: string,
@@ -523,9 +523,9 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const removeFieldOption = async (
+    const removeFieldOption = useCallback(async (
         templateId: string,
         fieldId: string,
         optionId: string,
@@ -543,7 +543,7 @@ export function useInterviewTemplates() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     return {
         loading,

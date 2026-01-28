@@ -1,11 +1,11 @@
 // app/dashboard/genmgmt/interviews-mgmt/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Save } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -24,11 +24,16 @@ export default function TemplateDetailPage() {
     const { loading, currentTemplate, fetchTemplateById } = useInterviewTemplates();
     const [activeTab, setActiveTab] = useState("overview");
 
-    useEffect(() => {
+    // Memoize the fetch function to avoid dependency warnings
+    const loadTemplate = useCallback(() => {
         if (templateId) {
             fetchTemplateById(templateId);
         }
-    }, [templateId]);
+    }, [templateId, fetchTemplateById]);
+
+    useEffect(() => {
+        loadTemplate();
+    }, [loadTemplate]);
 
     const handleLogout = () => {
         console.log("Logout clicked");

@@ -1,3 +1,4 @@
+// app/dashboard/genmgmt/interviews-mgmt/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -32,7 +33,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { dossierTabs, ocTabs } from "@/config/app.config";
+import { ocTabs } from "@/config/app.config";
 
 export default function InterviewTemplateManagementPage() {
     const router = useRouter();
@@ -42,7 +43,6 @@ export default function InterviewTemplateManagementPage() {
     const [editingTemplate, setEditingTemplate] = useState<InterviewTemplate | undefined>(undefined);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
-    const [viewingTemplate, setViewingTemplate] = useState<InterviewTemplate | null>(null);
 
     const {
         loading,
@@ -59,7 +59,7 @@ export default function InterviewTemplateManagementPage() {
             params.semester = parseInt(semesterFilter);
         }
         fetchTemplates(params);
-    }, [semesterFilter]);
+    }, [semesterFilter, fetchTemplates]);
 
     const handleLogout = () => {
         console.log("Logout clicked");
@@ -68,8 +68,6 @@ export default function InterviewTemplateManagementPage() {
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
-        // Note: The API doesn't seem to have a search parameter
-        // So we'll filter client-side
     };
 
     const handleAddTemplate = async (newTemplate: InterviewTemplateCreate) => {
@@ -93,11 +91,10 @@ export default function InterviewTemplateManagementPage() {
 
     const handleViewTemplate = (index: number) => {
         const template = filteredTemplates[index];
-        // if (template) {
-        //     setViewingTemplate(template);
-        //     // You can navigate to a detail page or show a detail dialog
-        //     router.push(`/dashboard/interview/templates/${template.id}`);
-        // }
+        if (template) {
+            // Navigate to detail page
+            router.push(`/dashboard/genmgmt/interviews-mgmt/${template.id}`);
+        }
     };
 
     const handleEditTemplate = (index: number) => {
@@ -153,7 +150,8 @@ export default function InterviewTemplateManagementPage() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Interview Management", href: "/dashboard/interview" },
+                                { label: "Gentlemen Management", href: "/dashboard/genmgmt" },
+                                { label: "Interview Management", href: "/dashboard/genmgmt/interviews-mgmt" },
                                 { label: "Templates" },
                             ]}
                         />
