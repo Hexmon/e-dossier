@@ -1,4 +1,4 @@
-//component/Interviewtemplateform.tsx
+// components/interview-mgmt/Interviewtemplateform.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { InterviewTemplate, InterviewTemplateCreate } from "@/app/lib/api/Interviewtemplateapi";
@@ -31,6 +32,7 @@ export default function InterviewTemplateForm({
         allowMultiple: false,
         sortOrder: 0,
         isActive: true,
+        semesters: [],
     });
 
     useEffect(() => {
@@ -42,6 +44,7 @@ export default function InterviewTemplateForm({
                 allowMultiple: template.allowMultiple || false,
                 sortOrder: template.sortOrder || 0,
                 isActive: template.isActive !== undefined ? template.isActive : true,
+                semesters: template.semesters?.map(s => s.semester) || [],
             });
         } else {
             setFormData({
@@ -51,23 +54,46 @@ export default function InterviewTemplateForm({
                 allowMultiple: false,
                 sortOrder: 0,
                 isActive: true,
+                semesters: [],
             });
         }
     }, [template]);
 
-    const handleChange = (field: keyof InterviewTemplateCreate, value: string | number | boolean) => {
+    const handleChange = (field: keyof InterviewTemplateCreate, value: string | number | boolean | number[]) => {
         setFormData((prev) => ({
             ...prev,
             [field]: value,
         }));
     };
 
+    const handleSemesterToggle = (semester: number, checked: boolean) => {
+        setFormData((prev) => {
+            const currentSemesters = prev.semesters || [];
+            if (checked) {
+                return {
+                    ...prev,
+                    semesters: [...currentSemesters, semester].sort(),
+                };
+            } else {
+                return {
+                    ...prev,
+                    semesters: currentSemesters.filter((s) => s !== semester),
+                };
+            }
+        });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const { code, title } = formData;
+        const { code, title, semesters } = formData;
         if (!code || !title) {
             toast.error("Code and Title are required");
+            return;
+        }
+
+        if (!template && (!semesters || semesters.length === 0)) {
+            toast.error("Please select at least one semester");
             return;
         }
 
@@ -114,6 +140,35 @@ export default function InterviewTemplateForm({
                     rows={3}
                 />
             </div>
+
+            {/* Semester Selection */}
+            {!template && (
+                <div className="space-y-2">
+                    <Label>Applicable Semesters *</Label>
+                    <div className="grid grid-cols-3 gap-3 p-4 border rounded-lg">
+                        {[1, 2, 3, 4, 5, 6].map((sem) => (
+                            <div key={sem} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`sem-${sem}`}
+                                    checked={formData.semesters?.includes(sem) || false}
+                                    onCheckedChange={(checked) =>
+                                        handleSemesterToggle(sem, checked as boolean)
+                                    }
+                                />
+                                <label
+                                    htmlFor={`sem-${sem}`}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Semester {sem}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Select the semesters where this template will be available
+                    </p>
+                </div>
+            )}
 
             {/* Sort Order */}
             <div className="space-y-2">

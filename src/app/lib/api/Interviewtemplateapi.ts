@@ -1,3 +1,4 @@
+// app/lib/api/Interviewtemplateapi.ts
 import { api } from "@/app/lib/apiClient";
 
 // ============================================================================
@@ -15,6 +16,9 @@ export interface InterviewTemplate {
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
+    semesters?: TemplateSemester[];
+    sections?: Section[];
+    groups?: Group[];
 }
 
 export interface InterviewTemplateCreate {
@@ -24,6 +28,7 @@ export interface InterviewTemplateCreate {
     allowMultiple?: boolean;
     sortOrder?: number;
     isActive?: boolean;
+    semesters?: number[];
 }
 
 export interface InterviewTemplateUpdate {
@@ -56,6 +61,7 @@ export interface Section {
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
+    fields?: Field[];
 }
 
 export interface SectionCreate {
@@ -84,6 +90,7 @@ export interface Group {
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
+    fields?: Field[];
 }
 
 export interface GroupCreate {
@@ -119,6 +126,7 @@ export interface Field {
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
+    options?: FieldOption[];
 }
 
 export interface FieldCreate {
@@ -267,6 +275,19 @@ export async function removeTemplateSemester(
 // ============================================================================
 // Section APIs
 // ============================================================================
+
+export async function listSections(
+    templateId: string,
+    params?: ListParams
+): Promise<{ sections: Section[] }> {
+    const response = await api.get<{ items: Section[]; count: number }>(
+        `/api/v1/admin/interview/templates/${templateId}/sections`,
+        {
+            query: params as Record<string, string | number | boolean | undefined>,
+        }
+    );
+    return { sections: response.items || [] };
+}
 
 export async function createSection(
     templateId: string,

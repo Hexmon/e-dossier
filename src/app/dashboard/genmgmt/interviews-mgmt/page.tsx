@@ -93,11 +93,11 @@ export default function InterviewTemplateManagementPage() {
 
     const handleViewTemplate = (index: number) => {
         const template = filteredTemplates[index];
-        if (template) {
-            setViewingTemplate(template);
-            // You can navigate to a detail page or show a detail dialog
-            router.push(`/dashboard/interview/templates/${template.id}`);
-        }
+        // if (template) {
+        //     setViewingTemplate(template);
+        //     // You can navigate to a detail page or show a detail dialog
+        //     router.push(`/dashboard/interview/templates/${template.id}`);
+        // }
     };
 
     const handleEditTemplate = (index: number) => {
