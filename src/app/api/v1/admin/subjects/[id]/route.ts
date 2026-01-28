@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { subjectUpdateSchema } from '@/app/lib/validators.courses';
 import { db } from '@/app/db/client';
 import { subjects } from '@/app/db/schema/training/subjects';
@@ -24,7 +24,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { id } = Id.parse(await params);
         const body = subjectUpdateSchema.parse(await req.json());
 
@@ -64,7 +64,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { id } = Id.parse(await params);
         const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
 

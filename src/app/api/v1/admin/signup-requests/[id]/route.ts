@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { deleteSignupRequest } from '@/app/db/queries/signupRequests';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { userId: adminUserId } = await requireAdmin(req);
+    const { userId: adminUserId } = await requireAuth(req);
     const { id } = await params;
     await deleteSignupRequest({
       requestId: id,

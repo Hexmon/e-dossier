@@ -4,7 +4,7 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { platoonUpdateSchema } from '@/app/lib/validators';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
 
@@ -35,7 +35,7 @@ function whereForIdKeyName(idOrKey: string, includeDeleted = false) {
 // body: { key?, name?, about?, restore? }
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
   try {
-    const adminCtx = await requireAdmin(req);
+    const adminCtx = await requireAuth(req);
     const { idOrKey } = await params;
     const body = await req.json();
     const parsed = platoonUpdateSchema.safeParse(body);
@@ -146,7 +146,7 @@ async function DELETEHandler(
   { params }: { params: Promise<{ idOrKey: string }> | { idOrKey: string } | string },
 ) {
   try {
-    const adminCtx = await requireAdmin(req);
+    const adminCtx = await requireAuth(req);
     const resolvedParams = typeof params === 'string' ? params : await params;
     const rawIdOrKey =
       typeof resolvedParams === 'string' ? resolvedParams : resolvedParams?.idOrKey;

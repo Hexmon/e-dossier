@@ -9,7 +9,7 @@ import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAdmin: vi.fn(),
+  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/instructors', () => ({
@@ -118,7 +118,7 @@ describe('GET /api/v1/admin/instructors', () => {
 
 describe('POST /api/v1/admin/instructors', () => {
   it('returns 401 when not authenticated', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
     const req = makeJsonRequest({ method: 'POST', path, body: {} });
@@ -130,7 +130,7 @@ describe('POST /api/v1/admin/instructors', () => {
   });
 
   it('returns 400 when external instructor is missing contact info', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({
+    (authz.requireAuth as any).mockResolvedValueOnce({
       userId: 'admin-1',
       roles: ['ADMIN'],
     });
@@ -147,7 +147,7 @@ describe('POST /api/v1/admin/instructors', () => {
   });
 
   it('returns 400 when userId does not resolve to an active user', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({
+    (authz.requireAuth as any).mockResolvedValueOnce({
       userId: 'admin-1',
       roles: ['ADMIN'],
     });
@@ -173,7 +173,7 @@ describe('POST /api/v1/admin/instructors', () => {
   });
 
   it('returns 409 when unique constraint is violated', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.insert as any).mockImplementationOnce(() => ({
       values: () => ({
         returning: async () => {
@@ -199,7 +199,7 @@ describe('POST /api/v1/admin/instructors', () => {
   });
 
   it('creates instructor on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     const req = makeJsonRequest({
       method: 'POST',
       path,

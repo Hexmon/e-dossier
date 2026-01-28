@@ -259,6 +259,19 @@ export const ocAutobiography = pgTable('oc_autobiography', {
     platoonCommanderName: varchar('platoon_commander_name', { length: 160 }),
 });
 
+// === Dossier Filling =========================================================
+export const ocDossierFilling = pgTable('oc_dossier_filling', {
+    ocId: uuid('oc_id').primaryKey().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    initiatedBy: varchar('initiated_by', { length: 160 }),
+    openedOn: timestamp('opened_on', { withTimezone: true }),
+    initialInterview: text('initial_interview'),
+    closedBy: varchar('closed_by', { length: 160 }),
+    closedOn: timestamp('closed_on', { withTimezone: true }),
+    finalInterview: text('final_interview'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // === SSB Report ==============================================================
 export const ocSsbReports = pgTable('oc_ssb_reports', {
     id: uuid('id').primaryKey().defaultRandom(),

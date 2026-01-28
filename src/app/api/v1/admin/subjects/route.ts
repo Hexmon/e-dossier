@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { listQuerySchema, subjectCreateSchema } from '@/app/lib/validators.courses';
 import { listSubjects } from '@/app/db/queries/subjects';
 import { db } from '@/app/db/client';
@@ -30,7 +30,7 @@ async function GETHandler(req: NextRequest) {
 
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const body = subjectCreateSchema.parse(await req.json());
         const [row] = await db
             .insert(subjects)

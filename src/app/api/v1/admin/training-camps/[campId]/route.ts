@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import {
     trainingCampParam,
     trainingCampUpdateSchema,
@@ -35,7 +35,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
         const dto = trainingCampUpdateSchema.parse(await req.json());
         const row = await updateTrainingCamp(campId, { ...dto });
@@ -61,7 +61,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteTrainingCamp(campId, { hard: body?.hard === true });

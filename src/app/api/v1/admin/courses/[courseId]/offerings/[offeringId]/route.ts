@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { offeringUpdateSchema } from '@/app/lib/validators.courses';
 import { updateOffering, replaceOfferingInstructors, softDeleteOffering, hardDeleteOffering } from '@/app/db/queries/offerings';
 import { getCourseOffering } from '@/app/db/queries/courses';
@@ -23,7 +23,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ cour
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { offeringId } = Param.parse(await params);
         const body = offeringUpdateSchema.parse(await req.json());
 
@@ -89,7 +89,7 @@ type OfferingDeleteResult =
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { offeringId } = Param.parse(await params);
         const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
         const result = (hard

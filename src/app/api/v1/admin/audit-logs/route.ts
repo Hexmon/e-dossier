@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { auditLogs } from '@/app/db/schema/auth/audit';
 import { desc, sql } from 'drizzle-orm';
@@ -9,7 +9,7 @@ import { auditLogQuerySchema, buildAuditLogFilters } from '@/app/lib/auditLogsQu
 
 async function GETHandler(req: NextRequest) {
   try {
-    await requireAdmin(req);
+    await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const parsed = auditLogQuerySchema.parse({
       actorUserId: searchParams.get('actorUserId') ?? undefined,

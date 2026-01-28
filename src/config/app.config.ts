@@ -297,6 +297,13 @@ export const managementCard = [
     color: "bg-green-500"
   },
   {
+    title: "Discipline Management",
+    description: "Manage and track discipline records",
+    icon: ShieldAlert,
+    to: "/dashboard/genmgmt/discipline-records",
+    color: "bg-blue-500"
+  },
+  {
     title: "Camps Management",
     description: "Create and Manage Camps efficiently",
     icon: Tent,
@@ -1231,6 +1238,12 @@ export const ocTabs = [
     title: "Camps Management",
     icon: Tent,
     link: "/dashboard/genmgmt/camps"
+  },
+  {
+    value: "discipline-records",
+    title: "Discipline Records",
+    icon: ShieldAlert,
+    link: "/dashboard/genmgmt/discipline-records"
   }
   // {
   //   value: "instructors",

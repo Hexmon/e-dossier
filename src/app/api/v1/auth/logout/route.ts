@@ -6,24 +6,48 @@ import { requireAuth } from '@/app/lib/authz';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 import { withRouteLogging } from '@/lib/withRouteLogging';
 
-function originMatches(req: NextRequest) {
-  const expected = req.nextUrl.origin;
-  const origin = req.headers.get('origin');
-  const referer = req.headers.get('referer');
+function getExpectedOrigins(req: NextRequest) {
+  const origins = new Set<string>([req.nextUrl.origin]);
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const host = forwardedHost ?? req.headers.get('host');
+  const forwardedProto = req.headers.get('x-forwarded-proto');
+  const proto = (forwardedProto ?? req.nextUrl.protocol.replace(':', '')).split(',')[0]?.trim();
 
-  let refererOrigin: string | null = null;
-  if (referer) {
-    try {
-      refererOrigin = new URL(referer).origin;
-    } catch {
-      refererOrigin = null;
-    }
+  if (host && proto) {
+    origins.add(`${proto}://${host}`);
   }
 
-  return (
-    (origin && origin === expected) ||
-    (!origin && refererOrigin && refererOrigin === expected)
-  );
+  return origins;
+}
+
+function originMatches(req: NextRequest) {
+  const expectedOrigins = getExpectedOrigins(req);
+  const origin = req.headers.get('origin');
+  const referer = req.headers.get('referer');
+  const secFetchSite = req.headers.get('sec-fetch-site');
+
+  const matchesExpected = (value: string) => {
+    try {
+      const url = new URL(value);
+      if (expectedOrigins.has(url.origin)) return true;
+      for (const allowed of expectedOrigins) {
+        const allowedUrl = new URL(allowed);
+        if (url.hostname === allowedUrl.hostname && url.protocol === allowedUrl.protocol) {
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  if (origin && origin !== 'null' && matchesExpected(origin)) return true;
+  if (!origin && referer && matchesExpected(referer)) return true;
+
+  if (secFetchSite === 'same-origin' || secFetchSite === 'same-site') return true;
+
+  return false;
 }
 
 /**
@@ -75,7 +99,7 @@ async function POSTHandler(req: NextRequest) {
     // Server-authoritative cookie clear
     clearAuthCookies(res);
 
-    await createAuditLog({
+    void createAuditLog({
       actorUserId,
       eventType: AuditEventType.LOGOUT,
       resourceType: AuditResourceType.USER,

@@ -1,4 +1,5 @@
 export interface InspFormData {
+    id?: string;
     date: string;
     rk: string;
     name: string;

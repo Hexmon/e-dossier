@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 
 import type { InspFormData } from "@/types/dossierInsp";
+import { useUsers } from "@/hooks/useUsers";
+import { useAppointments } from "@/hooks/useAppointments";
+import { Card, CardTitle } from "../ui/card";
 
 interface InspTableProps {
     data: InspFormData[];
@@ -15,6 +19,13 @@ interface InspTableProps {
 }
 
 export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) {
+    const { users } = useUsers();
+    const { appointments, fetchAppointments } = useAppointments();
+
+    useEffect(() => {
+        fetchAppointments();
+    }, [fetchAppointments]);
+
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editValues, setEditValues] = useState<InspFormData>({
         date: "",
@@ -71,6 +82,44 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
                         onChange={(e) => setEditValues((p) => ({ ...p, date: e.target.value }))}
                     />
                 ) : (
+                    value ? new Date(value).toLocaleDateString('en-GB') : "-"
+                );
+            },
+        },
+        {
+            key: "name",
+            label: "Name",
+            render: (value, row, index) => {
+                const isEditing = editingIndex === index;
+                return isEditing ? (
+                    <Select
+                        value={editValues.name}
+                        onValueChange={(val) => {
+                            setEditValues((p) => ({ ...p, name: val }));
+                            const user = users.find(u => u.name === val);
+                            if (user) {
+                                const app = appointments.find(a => a.userId === user.id);
+                                setEditValues((p) => ({
+                                    ...p,
+                                    rk: user.rank || '',
+                                    initials: `${user.rank} ${user.name}` || '',
+                                    appointment: app?.positionName || ''
+                                }));
+                            }
+                        }}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select Inspector" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {users.map((user) => (
+                                <SelectItem key={user.id} value={user.name}>
+                                    {user.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                ) : (
                     value || "-"
                 );
             },
@@ -83,24 +132,8 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
                 return isEditing ? (
                     <Input
                         value={editValues.rk}
-                        onChange={(e) => setEditValues((p) => ({ ...p, rk: e.target.value }))}
+                        disabled
                         placeholder="Rank"
-                    />
-                ) : (
-                    value || "-"
-                );
-            },
-        },
-        {
-            key: "name",
-            label: "Name",
-            render: (value, row, index) => {
-                const isEditing = editingIndex === index;
-                return isEditing ? (
-                    <Input
-                        value={editValues.name}
-                        onChange={(e) => setEditValues((p) => ({ ...p, name: e.target.value }))}
-                        placeholder="Name"
                     />
                 ) : (
                     value || "-"
@@ -115,7 +148,7 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
                 return isEditing ? (
                     <Input
                         value={editValues.appointment}
-                        onChange={(e) => setEditValues((p) => ({ ...p, appointment: e.target.value }))}
+                        disabled
                         placeholder="Appointment"
                     />
                 ) : (
@@ -147,7 +180,7 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
                 return isEditing ? (
                     <Input
                         value={editValues.initials}
-                        onChange={(e) => setEditValues((p) => ({ ...p, initials: e.target.value }))}
+                        disabled
                         placeholder="Initials"
                     />
                 ) : (
@@ -205,8 +238,8 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
             striped: false,
             hover: false,
         },
-        theme:{
-            variant: "blue"
+        theme: {
+            variant: "default"
         },
         emptyState: {
             message: "No saved inspections.",
@@ -219,11 +252,18 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
     }
 
     return (
-        <div className="mb-6">
-            <UniversalTable<InspFormData>
-                data={data}
-                config={config}
-            />
-        </div>
+        
+            <div className="mb-6">
+
+                <CardTitle className="text-2xl text-center font-semibold mb-4">Inspection Records</CardTitle>
+
+                <UniversalTable<InspFormData>
+                    data={data}
+                    config={config}
+                />
+
+
+            </div>
+        
     );
 }

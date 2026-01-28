@@ -1,7 +1,7 @@
 // src/app/api/v1/admin/positions/active-holder/route.ts
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { positions } from '@/app/db/schema/auth/positions';
 import { appointments } from '@/app/db/schema/auth/appointments';
@@ -13,7 +13,7 @@ import { withRouteLogging } from '@/lib/withRouteLogging';
 async function GETHandler(req: NextRequest) {
     try {
         // must await (async validator)
-        await requireAdmin(req);
+        await requireAuth(req);
 
         const url = new URL(req.url);
         const positionKey = url.searchParams.get('positionKey');
