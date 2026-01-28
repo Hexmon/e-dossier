@@ -15,7 +15,7 @@ import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/Ta
 import { toast } from "sonner";
 
 import { useHigherTestTemplates } from "@/hooks/useHigherTestTemplates";
-import { usePhysicalTraining } from "@/hooks/usePhysicalTraining";
+import { PhysicalTrainingScore, UpdatePhysicalTrainingScores } from "@/hooks/usePhysicalTraining";
 
 interface Row {
     ptTaskScoreId: string;
@@ -29,7 +29,8 @@ interface Row {
 interface HigherTestsProps {
     onMarksChange: (marks: number) => void;
     activeSemester: string;
-    ocId: string;
+    scores: PhysicalTrainingScore[];
+    updateScores: UpdatePhysicalTrainingScores;
 }
 
 
@@ -44,12 +45,11 @@ const semesterToApiSemester: Record<string, number> = {
     "VI TERM": 6,
 };
 
-export default function HigherTests({ onMarksChange, activeSemester, ocId }: HigherTestsProps) {
+export default function HigherTests({ onMarksChange, activeSemester, scores, updateScores }: HigherTestsProps) {
     const [isEditing, setIsEditing] = useState(false);
 
     // Use API hooks
     const { templates: higherTestTemplates, loading: templatesLoading, fetchTemplates } = useHigherTestTemplates();
-    const { scores: apiScores, loading: scoresLoading, fetchScores, updateScores } = usePhysicalTraining(ocId);
 
     const [tableData, setTableData] = useState<Row[]>([]);
 
@@ -61,19 +61,11 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
         }
     }, [activeSemester, fetchTemplates]);
 
-    // Fetch scores when semester changes
-    useEffect(() => {
-        const semesterNum = semesterToApiSemester[activeSemester];
-        if (semesterNum) {
-            fetchScores(semesterNum);
-        }
-    }, [activeSemester, fetchScores]);
-
     // Populate table data from templates and scores
     useEffect(() => {
         if (higherTestTemplates && higherTestTemplates.length > 0) {
             const rows: Row[] = higherTestTemplates.map((template, index) => {
-                const apiScore = apiScores.find(score => score.ptTaskScoreId === template.ptTaskScoreId);
+                const apiScore = scores.find(score => score.ptTaskScoreId === template.ptTaskScoreId);
                 return {
                     ptTaskScoreId: template.ptTaskScoreId,
                     column1: index + 1,
@@ -86,7 +78,7 @@ export default function HigherTests({ onMarksChange, activeSemester, ocId }: Hig
             });
             setTableData(rows);
         }
-    }, [higherTestTemplates, apiScores]);
+    }, [higherTestTemplates, scores]);
 
     const tableTotal = useMemo(() => {
         return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);

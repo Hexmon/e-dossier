@@ -489,19 +489,22 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                                     key="ipet1-III"
                                     onMarksChange={handleIpet1FormMarks}
                                     activeSemester={activeSemester}
-                                    ocId={ocId}
+                                    scores={apiScores}
+                                    updateScores={updateScores}
                                 />
                                 <Swimming
                                     key="swimming-III"
                                     onMarksChange={handleSwimmingMarks}
                                     activeSemester={activeSemester}
-                                    ocId={ocId}
+                                    scores={apiScores}
+                                    updateScores={updateScores}
                                 />
                                 <HigherTests
                                     key="higher-tests-III"
                                     onMarksChange={handleHigherTestsMarks}
                                     activeSemester={activeSemester}
-                                    ocId={ocId}
+                                    scores={apiScores}
+                                    updateScores={updateScores}
                                 />
                             </>
                         )}
@@ -510,26 +513,29 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                             activeSemester === "V TERM" ||
                             activeSemester === "VI TERM") && (
                                 <>
-                                    <IpetForm
-                                        key={`ipet2-${activeSemester}`}
-                                        onMarksChange={handleIpet2FormMarks}
-                                        activeSemester={activeSemester}
-                                        ocId={ocId}
-                                    />
+                                <IpetForm
+                                    key={`ipet2-${activeSemester}`}
+                                    onMarksChange={handleIpet2FormMarks}
+                                    activeSemester={activeSemester}
+                                    scores={apiScores}
+                                    updateScores={updateScores}
+                                />
 
-                                    <Swimming
-                                        key={`swimming1-${activeSemester}`}
-                                        onMarksChange={handleSwimming1Marks}
-                                        activeSemester={activeSemester}
-                                        ocId={ocId}
-                                    />
+                                <Swimming
+                                    key={`swimming1-${activeSemester}`}
+                                    onMarksChange={handleSwimming1Marks}
+                                    activeSemester={activeSemester}
+                                    scores={apiScores}
+                                    updateScores={updateScores}
+                                />
 
-                                    <HigherTests
-                                        key={`higher-tests-${activeSemester}`}
-                                        onMarksChange={handleHigherTestsMarks}
-                                        activeSemester={activeSemester}
-                                        ocId={ocId}
-                                    />
+                                <HigherTests
+                                    key={`higher-tests-${activeSemester}`}
+                                    onMarksChange={handleHigherTestsMarks}
+                                    activeSemester={activeSemester}
+                                    scores={apiScores}
+                                    updateScores={updateScores}
+                                />
                                 </>
                             )}
 

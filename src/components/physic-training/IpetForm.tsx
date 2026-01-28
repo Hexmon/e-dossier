@@ -15,7 +15,7 @@ import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/Ta
 import { toast } from "sonner";
 
 import { useIpetTemplates } from "@/hooks/useIpetTemplates";
-import { usePhysicalTraining } from "@/hooks/usePhysicalTraining";
+import { PhysicalTrainingScore, UpdatePhysicalTrainingScores } from "@/hooks/usePhysicalTraining";
 
 interface TableRow {
     ptTaskScoreId: string;
@@ -30,7 +30,8 @@ interface TableRow {
 interface Ipet1FormProps {
     onMarksChange: (marks: number) => void;
     activeSemester: string;
-    ocId: string;
+    scores: PhysicalTrainingScore[];
+    updateScores: UpdatePhysicalTrainingScores;
 }
 
 // Semester to API semester mapping (1-based index)
@@ -47,12 +48,11 @@ const column4Options = ["Pass", "Fail"];
 
 // Default data is now populated from API
 
-export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1FormProps) {
+export default function Ipet1Form({ onMarksChange, activeSemester, scores, updateScores }: Ipet1FormProps) {
     const [isEditing, setIsEditing] = useState(false);
 
     // Use API hooks
     const { templates: ipetTemplates, loading: templatesLoading, fetchTemplates } = useIpetTemplates();
-    const { scores: apiScores, loading: scoresLoading, fetchScores, updateScores } = usePhysicalTraining(ocId);
 
     const [tableData, setTableData] = useState<TableRow[]>([]);
 
@@ -64,19 +64,11 @@ export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1
         }
     }, [activeSemester, fetchTemplates]);
 
-    // Fetch scores when semester changes
-    useEffect(() => {
-        const semesterNum = semesterToApiSemester[activeSemester];
-        if (semesterNum) {
-            fetchScores(semesterNum);
-        }
-    }, [activeSemester, fetchScores]);
-
     // Populate table data from templates and scores
     useEffect(() => {
         if (ipetTemplates && ipetTemplates.length > 0) {
             const rows: TableRow[] = ipetTemplates.map((template, index) => {
-                const apiScore = apiScores.find(score => score.ptTaskScoreId === template.ptTaskScoreId);
+                const apiScore = scores.find(score => score.ptTaskScoreId === template.ptTaskScoreId);
                 return {
                     ptTaskScoreId: template.ptTaskScoreId,
                     column1: index + 1,
@@ -89,7 +81,7 @@ export default function Ipet1Form({ onMarksChange, activeSemester, ocId }: Ipet1
             });
             setTableData(rows);
         }
-    }, [ipetTemplates, apiScores]);
+    }, [ipetTemplates, scores]);
 
     const tableTotal = useMemo(() => {
         return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);

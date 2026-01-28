@@ -15,7 +15,7 @@ import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/Ta
 import { toast } from "sonner";
 
 import { useSwimmingTemplates } from "@/hooks/useSwimmingTemplates";
-import { usePhysicalTraining } from "@/hooks/usePhysicalTraining";
+import { PhysicalTrainingScore, UpdatePhysicalTrainingScores } from "@/hooks/usePhysicalTraining";
 
 interface Row {
     ptTaskScoreId: string;
@@ -29,7 +29,8 @@ interface Row {
 interface SwimmingProps {
     onMarksChange: (marks: number) => void;
     activeSemester: string;
-    ocId: string;
+    scores: PhysicalTrainingScore[];
+    updateScores: UpdatePhysicalTrainingScores;
 }
 
 // Semester to API semester mapping (1-based index)
@@ -42,12 +43,11 @@ const semesterToApiSemester: Record<string, number> = {
     "VI TERM": 6,
 };
 
-export default function Swimming({ onMarksChange, activeSemester, ocId }: SwimmingProps) {
+export default function Swimming({ onMarksChange, activeSemester, scores, updateScores }: SwimmingProps) {
     const [isEditing, setIsEditing] = useState(false);
 
     // Use API hooks
     const { templates: swimmingTemplates, loading: templatesLoading, fetchTemplates } = useSwimmingTemplates();
-    const { scores: apiScores, loading: scoresLoading, fetchScores, updateScores } = usePhysicalTraining(ocId);
 
     const [tableData, setTableData] = useState<Row[]>([]);
 
@@ -59,19 +59,11 @@ export default function Swimming({ onMarksChange, activeSemester, ocId }: Swimmi
         }
     }, [activeSemester, fetchTemplates]);
 
-    // Fetch scores when semester changes
-    useEffect(() => {
-        const semesterNum = semesterToApiSemester[activeSemester];
-        if (semesterNum) {
-            fetchScores(semesterNum);
-        }
-    }, [activeSemester, fetchScores]);
-
     // Populate table data from templates and scores
     useEffect(() => {
         if (swimmingTemplates && swimmingTemplates.length > 0) {
             const rows: Row[] = swimmingTemplates.map((template, index) => {
-                const apiScore = apiScores.find(score => score.ptTaskScoreId === template.ptTaskScoreId);
+                const apiScore = scores.find(score => score.ptTaskScoreId === template.ptTaskScoreId);
                 return {
                     ptTaskScoreId: template.ptTaskScoreId,
                     column1: index + 1,
@@ -83,7 +75,7 @@ export default function Swimming({ onMarksChange, activeSemester, ocId }: Swimmi
             });
             setTableData(rows);
         }
-    }, [swimmingTemplates, apiScores]);
+    }, [swimmingTemplates, scores]);
 
     const tableTotal = useMemo(() => {
         return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);

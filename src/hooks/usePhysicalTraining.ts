@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { apiRequest } from '@/app/lib/apiClient';
 
-interface PhysicalTrainingScore {
+export interface PhysicalTrainingScore {
     ptTaskScoreId: string;
     marksScored: number;
 }
@@ -21,7 +21,13 @@ interface PTResponse {
     };
 }
 
-interface UsePTReturn {
+export type UpdatePhysicalTrainingScores = (
+    semester: number,
+    scoresData: PhysicalTrainingScore[],
+    deleteScoreIds?: string[]
+) => Promise<void>;
+
+export interface UsePTReturn {
     scores: PhysicalTrainingScore[];
     template: Array<{
         ptTaskScoreId: string;
