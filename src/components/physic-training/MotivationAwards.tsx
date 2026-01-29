@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 import { usePhysicalTrainingMotivationAwards } from "@/hooks/usePhysicalTrainingMotivationAwards";
+import type { MotivationField } from "@/hooks/usePhysicalTraining";
 
 type AwardRow = {
     id: string;
@@ -17,9 +18,10 @@ type AwardRow = {
 interface MotivationAwardsProps {
     activeSemester: string;
     ocId: string;
+    fields: MotivationField[];
 }
 
-export default function MotivationAwards({ activeSemester, ocId }: MotivationAwardsProps) {
+export default function MotivationAwards({ activeSemester, ocId, fields }: MotivationAwardsProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [localValues, setLocalValues] = useState<Record<string, string>>({});
 
@@ -37,6 +39,18 @@ export default function MotivationAwards({ activeSemester, ocId }: MotivationAwa
     };
     const semesterNumber = semesterMap[activeSemester] || 1;
 
+    const effectiveFields = useMemo(() => {
+        if (fields.length > 0) {
+            return fields;
+        }
+        return values.map((value, index) => ({
+            id: value.fieldId,
+            label: value.fieldLabel,
+            semester: semesterNumber,
+            sortOrder: index,
+        }));
+    }, [fields, values, semesterNumber]);
+
     // Fetch values when component mounts or semester changes
     useEffect(() => {
         if (ocId && activeSemester) {
@@ -47,11 +61,12 @@ export default function MotivationAwards({ activeSemester, ocId }: MotivationAwa
     // Update local state when API values change
     useEffect(() => {
         const valueMap: Record<string, string> = {};
-        values.forEach((item) => {
-            valueMap[item.fieldId] = item.value || "";
+        effectiveFields.forEach((field) => {
+            const match = values.find((item) => item.fieldId === field.id);
+            valueMap[field.id] = match?.value || "";
         });
         setLocalValues(valueMap);
-    }, [values]);
+    }, [effectiveFields, values]);
 
     const handleChange = (fieldId: string, value: string) => {
         setLocalValues(prev => ({
@@ -89,10 +104,10 @@ export default function MotivationAwards({ activeSemester, ocId }: MotivationAwa
     };
 
     const handleCancel = () => {
-        // Reset local values to current API values
         const valueMap: Record<string, string> = {};
-        values.forEach((item) => {
-            valueMap[item.fieldId] = item.value || "";
+        effectiveFields.forEach((field) => {
+            const match = values.find((item) => item.fieldId === field.id);
+            valueMap[field.id] = match?.value || "";
         });
         setLocalValues(valueMap);
         setIsEditing(false);
@@ -106,11 +121,11 @@ export default function MotivationAwards({ activeSemester, ocId }: MotivationAwa
         );
     }
 
-    const tableData: AwardRow[] = values.map((item) => ({
-        id: item.id,
-        fieldId: item.fieldId,
-        label: item.fieldLabel,
-        value: localValues[item.fieldId] || ""
+    const tableData: AwardRow[] = effectiveFields.map((field) => ({
+        id: field.id,
+        fieldId: field.id,
+        label: field.label,
+        value: localValues[field.id] || ""
     }));
 
     const columns: TableColumn<AwardRow>[] = [
