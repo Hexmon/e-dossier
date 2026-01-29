@@ -68,10 +68,8 @@ export default function PTAttemptsTab({
             ? await onEdit(selectedTypeId, editingAttempt.id, data)
             : await onAdd(selectedTypeId, data);
 
-        if (result) {
-            setIsDialogOpen(false);
-            setEditingAttempt(undefined);
-        }
+        setIsDialogOpen(false);
+        setEditingAttempt(undefined);
     };
 
     const handleEdit = (index: number) => {

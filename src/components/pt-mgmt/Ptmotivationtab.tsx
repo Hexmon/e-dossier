@@ -50,10 +50,8 @@ export default function PTMotivationTab({
             ? await onEdit(editingField.id, data)
             : await onAdd(data);
 
-        if (result) {
-            setIsDialogOpen(false);
-            setEditingField(undefined);
-        }
+        setIsDialogOpen(false);
+        setEditingField(undefined);
     };
 
     const handleEdit = (index: number) => {
