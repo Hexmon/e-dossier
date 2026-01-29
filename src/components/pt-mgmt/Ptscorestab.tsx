@@ -83,26 +83,16 @@ export default function PTScoresTab({
             return;
         }
 
-        console.log("handleSubmit called:", {
-            editingScore: editingScore?.id,
-            data,
-            selectedTypeId,
-            selectedTaskId
-        });
-
         try {
             const result = editingScore
                 ? await onEdit(selectedTypeId, selectedTaskId, editingScore.id, data)
                 : await onAdd(selectedTypeId, selectedTaskId, data);
 
-            console.log("Submit result:", result);
 
-            if (result) {
-                setIsDialogOpen(false);
-                setEditingScore(undefined);
-            }
+            setIsDialogOpen(false);
+            setEditingScore(undefined);
+
         } catch (error) {
-            console.error("Error in handleSubmit:", error);
         }
     };
 

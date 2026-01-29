@@ -50,10 +50,8 @@ export default function PTTypesTab({
             ? await onEdit(editingType.id, data)
             : await onAdd(data);
 
-        if (result) {
-            setIsDialogOpen(false);
-            setEditingType(undefined);
-        }
+        setIsDialogOpen(false);
+        setEditingType(undefined);
     };
 
     const handleEdit = (index: number) => {

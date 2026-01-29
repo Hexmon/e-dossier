@@ -68,10 +68,8 @@ export default function PTTasksTab({
             ? await onEdit(selectedTypeId, editingTask.id, data)
             : await onAdd(selectedTypeId, data);
 
-        if (result) {
-            setIsDialogOpen(false);
-            setEditingTask(undefined);
-        }
+        setIsDialogOpen(false);
+        setEditingTask(undefined);
     };
 
     const handleEdit = (index: number) => {

@@ -73,10 +73,8 @@ export default function PTGradesTab({
             ? await onEdit(selectedTypeId, selectedAttemptId, editingGrade.id, data)
             : await onAdd(selectedTypeId, selectedAttemptId, data);
 
-        if (result) {
-            setIsDialogOpen(false);
-            setEditingGrade(undefined);
-        }
+        setIsDialogOpen(false);
+        setEditingGrade(undefined);
     };
 
     const handleEdit = (index: number) => {
