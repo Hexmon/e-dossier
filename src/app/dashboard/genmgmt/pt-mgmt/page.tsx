@@ -35,13 +35,13 @@ import { usePhysicalTrainingMgmt } from "@/hooks/usePhysicalTrainingMgmt";
 import PTTypesTab from "@/components/pt-mgmt/Pttypestab";
 
 const ptTabs = [
-    { value: "template", label: "Template View", icon: List },
-    { value: "types", label: "PT Types", icon: Settings },
-    { value: "attempts", label: "Attempts", icon: Target },
-    { value: "grades", label: "Grades", icon: Award },
-    { value: "tasks", label: "Tasks", icon: CheckSquare },
-    { value: "scores", label: "Score Matrix", icon: Grid },
-    { value: "motivation", label: "Motivation Awards", icon: Trophy },
+    { value: "template", title: "Template View", icon: List },
+    { value: "types", title: "PT Types", icon: Settings },
+    { value: "attempts", title: "Attempts", icon: Target },
+    { value: "grades", title: "Grades", icon: Award },
+    { value: "tasks", title: "Tasks", icon: CheckSquare },
+    { value: "scores", title: "Score Matrix", icon: Grid },
+    { value: "motivation", title: "Motivation Awards", icon: Trophy },
 ];
 
 export default function PhysicalTrainingPage() {
