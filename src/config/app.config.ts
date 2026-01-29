@@ -323,7 +323,15 @@ export const managementCard = [
     icon: Users,
     to: "/dashboard/genmgmt/interviews-mgmt",
     color: "bg-blue-700"
+  },
+  {
+    title: "Physical Training Management",
+    description: "Plan, schedule, and track physical training sessions",
+    icon: Dumbbell,
+    to: "/dashboard/genmgmt/pt-mgmt",
+    color: "bg-green-700"
   }
+
 
   // {
   //   title: "Settings Management",
