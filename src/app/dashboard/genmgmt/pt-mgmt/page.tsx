@@ -95,7 +95,7 @@ export default function PhysicalTrainingPage() {
         if (selectedTypeId) {
             fetchAttemptsList(selectedTypeId);
             fetchTasksList(selectedTypeId);
-            fetchAllGradesForType(selectedTypeId); // NEW: Fetch all grades for score matrix
+            fetchAllGradesForType(selectedTypeId);
         } else {
             setAttempts([]);
             setTasks([]);
@@ -189,6 +189,7 @@ export default function PhysicalTrainingPage() {
         await Promise.all([
             fetchTemplate(selectedSemester),
             fetchTypes(selectedSemester),
+            fetchMotivationFields(selectedSemester)
         ]);
         if (selectedTypeId) {
             await fetchAttemptsList(selectedTypeId);
@@ -229,99 +230,104 @@ export default function PhysicalTrainingPage() {
         return result;
     };
 
-    // Attempt handlers
     const handleAddAttempt = async (typeId: string, data: any) => {
         const result = await addAttempt(typeId, data);
-        if (result) await refreshData();
+
+        await fetchAttemptsList(typeId);
+
         return !!result;
     };
 
     const handleEditAttempt = async (typeId: string, attemptId: string, data: any) => {
         const result = await editAttempt(typeId, attemptId, data);
-        if (result) await refreshData();
+
+        await fetchAttemptsList(typeId);
+
         return !!result;
     };
 
     const handleDeleteAttempt = async (typeId: string, attemptId: string) => {
         const result = await removeAttempt(typeId, attemptId, { hard: true });
-        if (result) await refreshData();
+
+        await fetchAttemptsList(typeId);
+
         return result;
     };
 
     // Grade handlers
     const handleAddGrade = async (typeId: string, attemptId: string, data: any) => {
         const result = await addGrade(typeId, attemptId, data);
-        if (result) await refreshData();
+        await refreshData();
         return !!result;
     };
 
     const handleEditGrade = async (typeId: string, attemptId: string, gradeId: string, data: any) => {
         const result = await editGrade(typeId, attemptId, gradeId, data);
-        if (result) await refreshData();
+        await refreshData();
         return !!result;
     };
 
     const handleDeleteGrade = async (typeId: string, attemptId: string, gradeId: string) => {
         const result = await removeGrade(typeId, attemptId, gradeId, { hard: true });
-        if (result) await refreshData();
+        await refreshData();
         return result;
     };
 
     // Task handlers
     const handleAddTask = async (typeId: string, data: any) => {
         const result = await addTask(typeId, data);
-        if (result) await refreshData();
+        await refreshData();
         return !!result;
     };
 
     const handleEditTask = async (typeId: string, taskId: string, data: any) => {
         const result = await editTask(typeId, taskId, data);
-        if (result) await refreshData();
+        await refreshData();
         return !!result;
     };
 
     const handleDeleteTask = async (typeId: string, taskId: string) => {
         const result = await removeTask(typeId, taskId, { hard: true });
-        if (result) await refreshData();
+        await refreshData();
         return result;
     };
 
     // Task Score handlers
     const handleAddTaskScore = async (typeId: string, taskId: string, data: any) => {
         const result = await addTaskScore(typeId, taskId, data);
-        if (result) await refreshData();
+        await refreshData();
         return !!result;
     };
 
     const handleEditTaskScore = async (typeId: string, taskId: string, scoreId: string, data: any) => {
         const result = await editTaskScore(typeId, taskId, scoreId, data);
-        if (result) await refreshData();
+        await refreshData();
         return !!result;
     };
 
     const handleDeleteTaskScore = async (typeId: string, taskId: string, scoreId: string) => {
         const result = await removeTaskScore(typeId, taskId, scoreId);
-        if (result) await refreshData();
+        await refreshData();
         return result;
     };
 
     // Motivation Field handlers
     const handleAddField = async (data: any) => {
         const result = await addMotivationField(data);
-        if (result) await refreshData();
-        return !!result;
+        await refreshData();
+        return true;
     };
 
     const handleEditField = async (id: string, data: any) => {
         const result = await editMotivationField(id, data);
-        if (result) await refreshData();
-        return !!result;
+        await refreshData();
+        return true;
     };
 
     const handleDeleteField = async (id: string) => {
         const result = await removeMotivationField(id, { hard: true });
-        if (result) await refreshData();
-        return result;
+        await refreshData();
+        return true;
     };
 
     return (
