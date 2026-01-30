@@ -603,6 +603,7 @@ export const ocCreditForExcellence = pgTable('oc_credit_for_excellence', {
         .$type<CreditForExcellenceEntry[]>()
         .notNull(),
     remark: text('remark'),
+    sub_category: varchar('sub_category', { length: 160 }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
