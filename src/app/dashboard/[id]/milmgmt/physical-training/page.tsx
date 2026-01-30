@@ -37,7 +37,7 @@ export default function PhysicalTrainingPage() {
           ]}
         />
 
-        {cadet && (
+        {cadet ? (
           <SelectedCadetTable
             selectedCadet={{
               name: cadet.name ?? "",
@@ -45,6 +45,16 @@ export default function PhysicalTrainingPage() {
               ocNumber: cadet.ocNumber ?? "",
               ocId: cadet.ocId ?? "",
               course: cadet.course ?? "",
+            }}
+          />
+        ) : (
+          <SelectedCadetTable
+            selectedCadet={{
+              name: "",
+              courseName: "",
+              ocNumber: "",
+              ocId: ocId,
+              course: "",
             }}
           />
         )}

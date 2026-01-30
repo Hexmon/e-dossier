@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { useSelector, useDispatch } from "react-redux";
 import { useParams } from "next/navigation";
 import { RootState } from "@/store";
-import { InterviewFormRecord, InterviewOfficer } from "@/types/interview";
+import { InterviewOfficer } from "@/types/interview";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
-import { saveInterviewForm, clearInterviewForm } from "@/store/slices/initialInterviewSlice";
+import { saveInterviewForm, clearInterviewForm, type InterviewFormData } from "@/store/slices/initialInterviewSlice";
 
 import DSCoordForm from "./forms/DSCoordForm";
 import DyCdrForm from "./forms/DyCdrForm";
@@ -24,22 +24,59 @@ export default function InterviewTabs() {
     const dispatch = useDispatch();
 
     const [active, setActive] = useState<InterviewOfficer>("plcdr");
-    const { records, save, fetchAll, loading } = useInterviewForms([]);
+    const { fetchInitial, saveInitial, loading, templateMappings } = useInterviewForms(ocId);
+    const hydratedRef = useRef(false);
 
     // Get saved form data from Redux for current officer
     const savedFormData = useSelector((state: RootState) =>
         state.initialInterview.forms[ocId]?.[active] || {}
     );
+    const allSavedForms = useSelector((state: RootState) => state.initialInterview.forms[ocId] || {});
+    const savedFormsRef = useRef(allSavedForms);
 
     const form = useForm<FormWrapperFields>({
         defaultValues: savedFormData
     });
 
     useEffect(() => {
+        hydratedRef.current = false;
+    }, [ocId]);
+
+    useEffect(() => {
+        savedFormsRef.current = allSavedForms;
+    }, [allSavedForms]);
+
+    useEffect(() => {
+        if (!ocId || hydratedRef.current) return;
+        hydratedRef.current = true;
+
         (async () => {
-            await fetchAll();
+            const data = await fetchInitial();
+            if (!data) return;
+
+            (Object.keys(data) as InterviewOfficer[]).forEach((officer) => {
+                const incoming = data[officer];
+                if (!incoming || Object.keys(incoming).length === 0) return;
+
+                const existing = savedFormsRef.current?.[officer];
+                const isEmpty =
+                    !existing ||
+                    Object.values(existing as InterviewFormData).every(
+                        (value) => value === "" || value === null || value === undefined
+                    );
+
+                if (!isEmpty) return;
+
+                dispatch(
+                    saveInterviewForm({
+                        ocId,
+                        officer,
+                        data: incoming,
+                    })
+                );
+            });
         })();
-    }, [fetchAll]);
+    }, [ocId, fetchInitial, dispatch]);
 
     // Load saved data when switching tabs
     useEffect(() => {
@@ -69,29 +106,17 @@ export default function InterviewTabs() {
         return () => subscription.unsubscribe();
     }, [form.watch, dispatch, ocId, active]);
 
-    async function onSubmitAll(data: FormWrapperFields) {
-        const officer = active;
-        const payload: InterviewFormRecord = {
-            officer,
-            ...Object.entries(data).reduce<Record<string, string>>((acc, [k, v]) => {
-                if (k.startsWith(`${officer}_`)) {
-                    acc[k] = (v ?? "") as string;
-                }
-                return acc;
-            }, {}),
-        };
-
-        const resp = await save(payload);
-        if (!resp) {
-            console.error("Failed to save");
-            return;
+    async function handleSave(officer: InterviewOfficer, data: FormWrapperFields) {
+        const resp = await saveInitial(officer, data);
+        if (resp) {
+            dispatch(clearInterviewForm({ ocId, officer }));
         }
 
-        // Clear Redux cache after successful save
-        dispatch(clearInterviewForm({ ocId, officer: active }));
+        return resp;
+    }
 
-        // Reset form to empty state
-        form.reset({});
+    async function onSubmitAll(data: FormWrapperFields) {
+        await handleSave(active, data);
     }
 
     const handleClearForm = () => {
@@ -129,28 +154,36 @@ export default function InterviewTabs() {
                     {active === "plcdr" && (
                         <PLCdrCombinedForm
                             form={form}
+                            template={templateMappings?.byKind.plcdr?.template ?? null}
                             onClearForm={handleClearForm}
+                            onSave={(data) => handleSave("plcdr", data)}
                         />
                     )}
 
                     {active === "dscoord" && (
                         <DSCoordForm
                             form={form as UseFormReturn<any>}
+                            template={templateMappings?.byKind.dscoord?.template ?? null}
                             onClearForm={handleClearForm}
+                            onSave={(data) => handleSave("dscoord", data)}
                         />
                     )}
 
                     {active === "dycdr" && (
                         <DyCdrForm
                             form={form as UseFormReturn<any>}
+                            template={templateMappings?.byKind.dycdr?.template ?? null}
                             onClearForm={handleClearForm}
+                            onSave={(data) => handleSave("dycdr", data)}
                         />
                     )}
 
                     {active === "cdr" && (
                         <CdrForm
                             form={form as UseFormReturn<any>}
+                            template={templateMappings?.byKind.cdr?.template ?? null}
                             onClearForm={handleClearForm}
+                            onSave={(data) => handleSave("cdr", data)}
                         />
                     )}
                 </div>
