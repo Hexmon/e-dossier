@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/store";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -15,10 +17,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Shield, ChevronDown, Link } from "lucide-react";
+import { Shield, ChevronDown } from "lucide-react";
+import Link from "next/link";
 import { TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
 import { useOcDetails } from "@/hooks/useOcDetails";
 import { semestersCounselling } from "@/constants/app.constants";
@@ -26,11 +29,18 @@ import { useCounsellingRecords } from "@/hooks/useCounsellingRecords";
 import CounsellingTable from "@/components/counselling/CounsellingTable";
 import CounsellingForm from "@/components/counselling/CounsellingForm";
 import { CounsellingFormData } from "@/types/counselling";
+import { saveCounsellingForm, clearCounsellingForm } from "@/store/slices/counsellingRecordsSlice";
 
 export default function CounsellingWarningPage() {
     // route param
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const dispatch = useDispatch();
+
+    // Get saved form data from Redux
+    const savedFormData = useSelector((state: RootState) =>
+        state.counsellingRecords.forms[ocId]
+    );
 
     // cadet data via hook (no redux)
     const { cadet } = useOcDetails(ocId);
@@ -71,6 +81,11 @@ export default function CounsellingWarningPage() {
     const handleSubmit = async (data: CounsellingFormData) => {
         const termLabel = semesters[activeTab] ?? semesters[0];
         await saveRecords(termLabel, data.records);
+
+        // Clear Redux cache after successful save
+        dispatch(clearCounsellingForm(ocId));
+
+        toast.success("Counselling records saved successfully");
     };
 
     const handleEditSave = async (
@@ -82,6 +97,13 @@ export default function CounsellingWarningPage() {
 
     const handleDelete = async (idToDelete: string) => {
         await deleteRecord(idToDelete);
+    };
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearCounsellingForm(ocId));
+            toast.info("Form cleared");
+        }
     };
 
     return (
@@ -151,11 +173,10 @@ export default function CounsellingWarningPage() {
                                                     key={term}
                                                     type="button"
                                                     onClick={() => setActiveTab(idx)}
-                                                    className={`px-4 py-2 rounded-t-lg font-medium ${
-                                                        activeTab === idx
+                                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
                                                             ? "bg-blue-600 text-white"
                                                             : "bg-gray-200 text-gray-700"
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {term}
                                                 </button>
@@ -174,6 +195,9 @@ export default function CounsellingWarningPage() {
                                         <CounsellingForm
                                             onSubmit={handleSubmit}
                                             semLabel={semesters[activeTab] ?? semesters[0]}
+                                            ocId={ocId}
+                                            savedFormData={savedFormData}
+                                            onClearForm={handleClearForm}
                                         />
                                     </div>
                                 </CardContent>

@@ -1,17 +1,19 @@
 // src/app/api/v1/admin/appointments/[id]/transfer/route.ts
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { appointmentTransferBody } from '@/app/lib/validators';
 import { transferAppointment } from '@/app/db/queries/appointment-transfer';
 import { IdSchema } from '@/app/lib/apiClient';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function POST(
+async function POSTHandler(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { userId: adminId } = await requireAdmin(req);
+        const { userId: adminId } = await requireAuth(req);
 
         const { id: raw } = await params;
         const { id } = IdSchema.parse({ id: decodeURIComponent((raw ?? '')).trim() });
@@ -41,6 +43,33 @@ export async function POST(
             reason: dto.reason ?? null,
         });
 
+        await createAuditLog({
+            actorUserId: adminId,
+            eventType: AuditEventType.APPOINTMENT_TRANSFERRED,
+            resourceType: AuditResourceType.APPOINTMENT,
+            resourceId: id,
+            description: `Appointment ${id} transferred from ${result.ended.userId} to ${result.next.userId}`,
+            metadata: {
+                appointmentId: id,
+                fromAppointmentId: result.ended.id,
+                toAppointmentId: result.next.id,
+                fromUserId: result.ended.userId,
+                toUserId: result.next.userId,
+                positionId: result.next.positionId,
+                scopeType: result.next.scopeType,
+                scopeId: result.next.scopeId ?? null,
+                reason: dto.reason ?? null,
+                transferAuditId: result.audit.id,
+                transferAuditCreatedAt: result.audit.createdAt,
+                adjustedPrevEndsAt: result.adjustedPrevEndsAt ?? null,
+            },
+            before: result.ended,
+            after: result.next,
+            changedFields: ['userId', 'startsAt', 'endsAt'],
+            request: req,
+            required: true,
+        });
+
         return json.ok({
             message: 'Appointment transferred successfully.',
             ended_appointment: result.ended,
@@ -52,3 +81,4 @@ export async function POST(
         return handleApiError(err);
     }
 }
+export const POST = withRouteLogging('POST', POSTHandler);

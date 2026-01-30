@@ -1,223 +1,408 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
+import {
+  UniversalTable,
+  TableColumn,
+  TableConfig,
+} from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 
-interface Row {
-    id: string;
-    column1: number;
-    column2: string;
-    column3: string;
-    column4: string;
-    maxMarks: number;
-    column5: number;
-}
+import {
+  PhysicalTrainingScore,
+  UpdatePhysicalTrainingScores,
+  PhysicalTrainingTemplateRow,
+} from "@/hooks/usePhysicalTraining";
+import { buildPTTableRows, PTTableRow } from "./ptTableHelpers";
 
 interface HigherTestsProps {
-    onMarksChange: (marks: number) => void;
-    activeSemester: string;
+  onMarksChange: (marks: number) => void;
+  activeSemester: string;
+  scores: PhysicalTrainingScore[];
+  updateScores: UpdatePhysicalTrainingScores;
+  templates: PhysicalTrainingTemplateRow[];
+  typeTitle?: string;
 }
 
-const column3Options = ["M1", "M2", "A1", "A2", "A3"];
-const column4Options = ["Pass", "Fail"];
+// Semester to API semester mapping (1-based index)
+const semesterToApiSemester: Record<string, number> = {
+  "I TERM": 1,
+  "II TERM": 2,
+  "III TERM": 3,
+  "IV TERM": 4,
+  "V TERM": 5,
+  "VI TERM": 6,
+};
 
-export default function HigherTests({ onMarksChange, activeSemester }: HigherTestsProps) {
-    const [isEditing, setIsEditing] = useState(false);
+const isVirtualId = (id?: string) => !!id && id.startsWith("virtual:");
 
-    const [tableData, setTableData] = useState<Row[]>([
-        { id: "1", column1: 1, column2: "Swimming", column3: "", column4: "", maxMarks: 7, column5: 0 },
-        { id: "2", column1: 2, column2: "Jump", column3: "", column4: "", maxMarks: 8, column5: 0 },
-        { id: "3", column1: 3, column2: "Chin Ups", column3: "", column4: "", maxMarks: 7, column5: 0 },
-        { id: "4", column1: 4, column2: "Rope", column3: "", column4: "", maxMarks: 8, column5: 0 },
-    ]);
+export default function HigherTests({
+  onMarksChange,
+  activeSemester,
+  scores,
+  updateScores,
+  templates,
+  typeTitle,
+}: HigherTestsProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tableData, setTableData] = useState<PTTableRow[]>([]);
 
-    const tableTotal = useMemo(() => {
-        return tableData.reduce((sum, row) => sum + (row.column5 || 0), 0);
-    }, [tableData]);
+  const scoreById = useMemo(() => {
+    const map = new Map<string, PhysicalTrainingScore>();
+    scores.forEach((s) => map.set(s.ptTaskScoreId, s));
+    return map;
+  }, [scores]);
 
-    const handleChange = (id: string, key: keyof Row, value: string) => {
-        const row = tableData.find(r => r.id === id);
-        if (!row) return;
+  useEffect(() => {
+    const semesterNum = semesterToApiSemester[activeSemester];
+    if (!semesterNum) {
+      setTableData([]);
+      return;
+    }
+    setTableData(buildPTTableRows(templates, semesterNum, scoreById));
+  }, [templates, activeSemester, scoreById]);
 
-        // Validation for column5 (Marks Scored)
-        if (key === "column5") {
-            const numValue = parseFloat(value);
+  const tableTotal = useMemo(
+    () => tableData.reduce((sum, row) => sum + (row.column6 || 0), 0),
+    [tableData]
+  );
 
-            // Allow empty values
-            if (value.trim() === "") {
-                setTableData(prev =>
-                    prev.map(r => (r.id === id ? { ...r, column5: 0 } : r))
-                );
-                return;
-            }
+  const totalMaxMarks = useMemo(
+    () => tableData.reduce((sum, row) => sum + (row.column3 || 0), 0),
+    [tableData]
+  );
 
-            // Validate marks
-            if (isNaN(numValue) || numValue < 0) {
-                toast.error("Marks must be a valid positive number");
-                return;
-            }
+  useEffect(() => {
+    onMarksChange(tableTotal);
+  }, [tableTotal, onMarksChange]);
 
-            if (numValue > row.maxMarks) {
-                toast.error(`Marks scored cannot exceed maximum marks (${row.maxMarks})`);
-                return;
-            }
+  useEffect(() => {
+    onMarksChange(0);
+  }, [activeSemester, onMarksChange]);
+
+  const handleAttemptChange = useCallback(
+    (rowId: string, attemptCode: string) => {
+      setTableData((prev) =>
+        prev.map((row) => {
+          if (row.id !== rowId) return row;
+
+          const attemptGroup = row.attemptGroups.find(
+            (g) => g.attemptCode === attemptCode
+          );
+          const nextGrade = attemptGroup?.grades[0];
+          const nextScoreId = nextGrade?.scoreId ?? row.selectedScoreId;
+
+          const marks = nextScoreId
+            ? scoreById.get(nextScoreId)?.marksScored ?? 0
+            : row.column6;
+
+          const maxMarks = nextGrade?.maxMarks ?? row.column3;
+
+          return {
+            ...row,
+            selectedAttempt: attemptCode,
+            column4: attemptCode,
+            selectedGrade: nextGrade?.gradeCode ?? row.selectedGrade,
+            column5: nextGrade?.gradeCode ?? row.column5,
+            selectedScoreId: nextScoreId,
+            column3: maxMarks,
+            column6: marks,
+          };
+        })
+      );
+    },
+    [scoreById]
+  );
+
+  const handleGradeChange = useCallback(
+    (rowId: string, gradeCode: string) => {
+      setTableData((prev) =>
+        prev.map((row) => {
+          if (row.id !== rowId) return row;
+
+          const attemptGroup = row.attemptGroups.find(
+            (g) => g.attemptCode === row.selectedAttempt
+          );
+          const grade = attemptGroup?.grades.find((g) => g.gradeCode === gradeCode);
+          const nextScoreId = grade?.scoreId ?? row.selectedScoreId;
+
+          const marks = nextScoreId
+            ? scoreById.get(nextScoreId)?.marksScored ?? 0
+            : row.column6;
+
+          const maxMarks = grade?.maxMarks ?? row.column3;
+
+          return {
+            ...row,
+            selectedGrade: gradeCode,
+            column5: gradeCode,
+            selectedScoreId: nextScoreId,
+            column3: maxMarks,
+            column6: marks,
+          };
+        })
+      );
+    },
+    [scoreById]
+  );
+
+  const handleMarksChange = useCallback((rowId: string, value: string) => {
+    setTableData((prev) =>
+      prev.map((row) => {
+        if (row.id !== rowId) return row;
+
+        if (isVirtualId(row.selectedScoreId)) {
+          toast.error(
+            "This template has no scoreId from server, so marks cannot be saved yet."
+          );
+          return row;
         }
 
-        // Regular handling for other fields
-        setTableData(prev =>
-            prev.map(r => {
-                if (r.id === id) {
-                    if (key === "maxMarks" || key === "column5") {
-                        return { ...r, [key]: parseFloat(value) || 0 };
-                    }
-                    return { ...r, [key]: value };
-                }
-                return r;
-            }),
-        );
-    };
+        if (value.trim() === "") {
+          return { ...row, column6: 0 };
+        }
 
-    const handleEdit = () => setIsEditing(true);
-    const handleSave = () => {
-        setIsEditing(false);
-        console.log("Higher Tests Table saved:", tableData);
-    };
-    const handleCancel = () => setIsEditing(false);
+        const numValue = parseFloat(value);
+        if (isNaN(numValue) || numValue < 0) {
+          toast.error("Marks must be a valid positive number");
+          return row;
+        }
 
-    // Call parent callback when tableTotal changes
-    useEffect(() => {
-        onMarksChange(tableTotal);
-    }, [tableTotal, onMarksChange]);
+        if (numValue > row.column3) {
+          toast.error(`Marks scored cannot exceed maximum marks (${row.column3})`);
+          return row;
+        }
 
-    // Reset when semester changes
-    useEffect(() => {
-        onMarksChange(0);
-    }, [activeSemester, onMarksChange]);
-
-    return (
-        <CardContent className="space-y-4">
-            <h2 className="text-lg font-bold text-left text-gray-700">Higher Tests (30 Marks)</h2>
-            <div className="overflow-x-auto border border-gray-300 rounded-lg">
-                <table className="w-full">
-                    <thead className="bg-gray-100">
-                        <tr>
-                            <th className="border border-gray-300 px-4 py-2 text-left">S.No</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Test</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Max Marks</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Category</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Marks Scored</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {tableData.map(row => {
-                            const { id, column1, column2, maxMarks, column3, column4, column5 } = row;
-                            return (
-                                <tr key={id} className="hover:bg-gray-50 border-b border-gray-300">
-                                    <td className="border border-gray-300 px-4 py-2">{column1}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{column2}</td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                        {isEditing ? (
-                                            <Input
-                                                type="number"
-                                                value={maxMarks}
-                                                onChange={(e) => handleChange(id, "maxMarks", e.target.value)}
-                                                placeholder="Max"
-                                                className="w-full"
-                                            />
-                                        ) : (
-                                            <span>{maxMarks || "-"}</span>
-                                        )}
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                        <Select
-                                            value={column3}
-                                            onValueChange={(v) => handleChange(id, "column3", v)}
-                                            disabled={!isEditing}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select category" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {column3Options.map(opt => (
-                                                    <SelectItem key={opt} value={opt}>
-                                                        {opt}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                        <Select
-                                            value={column4}
-                                            onValueChange={(v) => handleChange(id, "column4", v)}
-                                            disabled={!isEditing}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select status" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {column4Options.map(opt => (
-                                                    <SelectItem key={opt} value={opt}>
-                                                        {opt}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                        {isEditing ? (
-                                            <Input
-                                                type="number"
-                                                value={column5}
-                                                onChange={(e) => handleChange(id, "column5", e.target.value)}
-                                                placeholder="Enter marks"
-                                                className="w-full"
-                                            />
-                                        ) : (
-                                            <span>{column5 || "-"}</span>
-                                        )}
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                        <tr className="bg-gray-100 font-semibold">
-                            <td className="border border-gray-300 px-4 py-2">—</td>
-                            <td className="border border-gray-300 px-4 py-2">Total</td>
-                            <td className="border border-gray-300 px-4 py-2 text-center">
-                                {tableData.reduce((sum, r) => sum + (r.maxMarks || 0), 0)}
-                            </td>
-                            <td className="border border-gray-300 px-4 py-2 text-center">—</td>
-                            <td className="border border-gray-300 px-4 py-2 text-center">—</td>
-                            <td className="border border-gray-300 px-4 py-2 text-center">{tableTotal}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Edit Buttons */}
-            <div className="flex gap-3 justify-center mt-4">
-                {isEditing ? (
-                    <>
-                        <Button variant="outline" onClick={handleCancel}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleSave}>Save</Button>
-                    </>
-                ) : (
-                    <Button onClick={handleEdit}>Edit</Button>
-                )}
-            </div>
-        </CardContent>
+        return { ...row, column6: numValue };
+      })
     );
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    const semesterNum = semesterToApiSemester[activeSemester];
+    if (!semesterNum) return;
+
+    for (const row of tableData) {
+      if (
+        !isVirtualId(row.selectedScoreId) &&
+        row.column6 > 0 &&
+        row.column6 > row.column3
+      ) {
+        toast.error(
+          `Invalid marks for ${row.column2}. Marks must be between 0 and ${row.column3}`
+        );
+        return;
+      }
+    }
+
+    const scoresForApi = tableData
+      .filter((row) => row.selectedScoreId && !isVirtualId(row.selectedScoreId))
+      .map((row) => ({
+        ptTaskScoreId: row.selectedScoreId,
+        marksScored: row.column6 || 0,
+        attemptCode: row.selectedAttempt,
+        gradeCode: row.selectedGrade,
+      }));
+
+    if (scoresForApi.length === 0) {
+      toast.error(
+        "No valid server scoreIds found to save. Please ensure template provides scoreId."
+      );
+      return;
+    }
+
+    await updateScores(semesterNum, scoresForApi);
+    setIsEditing(false);
+    toast.success("Higher Tests data saved successfully");
+  }, [tableData, activeSemester, updateScores]);
+
+  const totalRow: PTTableRow = {
+    id: "total",
+    column1: "—",
+    column2: "Total",
+    column3: totalMaxMarks,
+    column4: "",
+    column5: "",
+    column6: tableTotal,
+    attemptGroups: [],
+    selectedAttempt: "",
+    selectedGrade: "",
+    selectedScoreId: "",
+  };
+
+  const displayData = [...tableData, totalRow];
+
+  // ✅ Column order: S.No, Test, Category, Status, Max Marks, Marks Scored
+  const columns: TableColumn<PTTableRow>[] = useMemo(
+    () => [
+      {
+        key: "column1",
+        label: "S.No",
+        render: (value, row) => (row.id === "total" ? "—" : value),
+      },
+      {
+        key: "column2",
+        label: "Test",
+        render: (value) => value,
+      },
+      {
+        key: "column4",
+        label: "Category",
+        render: (_, row) => {
+          if (row.id === "total") return <span className="text-center block">—</span>;
+          const attemptOptions = row.attemptGroups.map((g) => g.attemptCode);
+          return (
+            <Select
+              value={row.selectedAttempt || ""}
+              onValueChange={(val) => handleAttemptChange(row.id, val)}
+              disabled={!isEditing || attemptOptions.length === 0}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select attempt" />
+              </SelectTrigger>
+              <SelectContent>
+                {attemptOptions.map((option) => (
+                  <SelectItem key={`${row.id}-${option}`} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        },
+      },
+      {
+        key: "column5",
+        label: "Status",
+        render: (_, row) => {
+          if (row.id === "total") return <span className="text-center block">—</span>;
+          const currentAttempt = row.attemptGroups.find(
+            (g) => g.attemptCode === row.selectedAttempt
+          );
+          const gradeOptions = currentAttempt?.grades ?? [];
+          return (
+            <Select
+              value={row.selectedGrade || ""}
+              onValueChange={(val) => handleGradeChange(row.id, val)}
+              disabled={!isEditing || gradeOptions.length === 0}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select grade" />
+              </SelectTrigger>
+              <SelectContent>
+                {gradeOptions.map((opt) => (
+                  <SelectItem
+                    key={`${row.id}-${opt.gradeCode}`}
+                    value={opt.gradeCode}
+                  >
+                    {opt.gradeCode}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        },
+      },
+      // ✅ Max Marks read-only (template-driven)
+      {
+        key: "column3",
+        label: "Max Marks",
+        type: "number",
+        render: (value, row) => {
+          if (row.id === "total") {
+            return <span className="text-center block">{totalMaxMarks}</span>;
+          }
+          return <span className="text-center block">{value || "-"}</span>;
+        },
+      },
+      // ✅ Marks Scored editable
+      {
+        key: "column6",
+        label: "Marks Scored",
+        type: "number",
+        render: (value, row) => {
+          if (row.id === "total") {
+            return <span className="text-center block">{tableTotal}</span>;
+          }
+          const disabled = isVirtualId(row.selectedScoreId);
+          return isEditing ? (
+            <Input
+              type="number"
+              value={value}
+              onChange={(e) => handleMarksChange(row.id, e.target.value)}
+              placeholder={disabled ? "No scoreId" : "Enter marks"}
+              className="w-full"
+              disabled={disabled}
+            />
+          ) : (
+            <span>{value || "-"}</span>
+          );
+        },
+      },
+    ],
+    [
+      handleAttemptChange,
+      handleGradeChange,
+      handleMarksChange,
+      isEditing,
+      tableTotal,
+      totalMaxMarks,
+    ]
+  );
+
+  const config: TableConfig<PTTableRow> = {
+    columns,
+    features: {
+      sorting: false,
+      filtering: false,
+      pagination: false,
+      selection: false,
+      search: false,
+    },
+    styling: {
+      compact: false,
+      bordered: true,
+      striped: false,
+      hover: true,
+    },
+  };
+
+  return (
+    <CardContent className="space-y-4">
+      <h2 className="text-lg font-bold text-left text-gray-700">
+        {typeTitle ?? `Higher Tests (${totalMaxMarks || 30} Marks)`}
+      </h2>
+
+      <div className="border border-gray-300 rounded-lg">
+        <UniversalTable<PTTableRow> data={displayData} config={config} />
+      </div>
+
+      <div className="flex gap-3 justify-center mt-4">
+        {isEditing ? (
+          <>
+            <Button variant="outline" onClick={() => setIsEditing(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>Save</Button>
+          </>
+        ) : (
+          <Button onClick={() => setIsEditing(true)}>Edit</Button>
+        )}
+      </div>
+
+      <p className="text-sm text-muted-foreground text-center mt-2">
+        * Changes are automatically saved
+      </p>
+    </CardContent>
+  );
 }

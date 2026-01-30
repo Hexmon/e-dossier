@@ -4,7 +4,7 @@ import { ClubRow, DrillRow } from "@/types/club-detls";
 import { Row as ObstacleRow } from "@/types/obstacleTrg";
 import { Row as SpeedRow } from "@/types/speedMarchRunback";
 import { Row as sportsRow } from "@/types/sportsAwards";
-import { Book, FileText, Home, NotebookPen } from "lucide-react";
+import { Book, BookOpen, FileText, Home, NotebookPen } from "lucide-react";
 
 export const POS = {
   COMMANDANT: 'COMMANDANT',
@@ -58,10 +58,10 @@ export const menuItems: MenuSection[] = [
   //   group: "Overall OC Details",
   //   items: [{ title: "View All", url: "/dashboard/view-ocs", icon: Users }],
   // },
-  // {
-  //   group: "Academics",
-  //   items: [{ title: "Coming Soon", url: "/dashboard/academics", icon: BookOpen, badge: "Soon" }],
-  // },
+  {
+    group: "Academics",
+    items: [{ title: "Academics Management", url: "/dashboard/manage-marks", icon: BookOpen }],
+  },
   // {
   //   group: "Physical Training & Sports",
   //   items: [{ title: "Activities", url: "/dashboard/activities", icon: Activity }],
@@ -255,11 +255,18 @@ export const motivationPrefill: sportsRow[] = [
 ];
 
 export const catOptions = [
-  "Sports Awards (Blazer/Blue/H-Blue/Merit)",
+  "Sports Award Blazer",
+  "Sports Award Blue",
+  "Sports Award Half-Blue",
+  "Sports Award Merit",
   "70%+ in Service Subjects",
-  "Academic Torches (G/S/B)",
-  "Debate / Public Speaking (Wg/Pl)",
-  "Discipline (Negatives)",
+  "Academic Torches Gold",
+  "Academic Torches Silver",
+  "Academic Torches Bronze",
+  "Debate Wg",
+  "Public Speaking pl",
+  "Discipline (0-35 negative pts)",
+  "Discipline (36-70 negative pts)",
   "Misc Activities (Adv, MC, TD, etc.)"
 ];
 
@@ -387,4 +394,10 @@ export const cdrrows = [
   { key: "cdr_firstImpression", label: "First Impression, Potential of OC & Motivation Level." },
   { key: "cdr_devOc", label: "Potential Areas for Development in OC." },
   { key: "cdr_anyPts", label: "Any Pts from OC." },
+];
+
+export const mockStudents = [
+  { id: "1", ocNumber: "OC101", name: "Rahul Sharma" },
+  { id: "2", ocNumber: "OC102", name: "Amit Verma" },
+  { id: "3", ocNumber: "OC103", name: "Neha Singh" },
 ];

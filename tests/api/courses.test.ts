@@ -4,10 +4,11 @@ import { makeJsonRequest } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as coursesQueries from '@/app/db/queries/courses';
+import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAdmin: vi.fn(),
+  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/courses', () => ({
@@ -24,10 +25,33 @@ vi.mock('@/app/db/queries/courses', () => ({
   updateCourse: vi.fn(),
 }));
 
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    COURSE_CREATED: 'course.created',
+    COURSE_UPDATED: 'course.updated',
+    COURSE_DELETED: 'course.deleted',
+  },
+  AuditResourceType: {
+    COURSE: 'course',
+  },
+}));
+
 const path = '/api/v1/courses';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (auditLog.createAuditLog as any).mockClear?.();
 });
 
 describe('GET /api/v1/courses', () => {
@@ -89,7 +113,7 @@ describe('GET /api/v1/courses', () => {
 
 describe('POST /api/v1/courses', () => {
   it('returns 401 when not authenticated', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
 
@@ -103,7 +127,7 @@ describe('POST /api/v1/courses', () => {
   });
 
   it('returns 403 when user lacks admin privileges', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(403, 'Admin privileges required', 'forbidden'),
     );
 
@@ -121,7 +145,7 @@ describe('POST /api/v1/courses', () => {
   });
 
   it('returns 400 when request body fails validation', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({
+    (authz.requireAuth as any).mockResolvedValueOnce({
       userId: 'admin-1',
       roles: ['ADMIN'],
     });
@@ -136,7 +160,7 @@ describe('POST /api/v1/courses', () => {
   });
 
   it('returns 409 when course code already exists', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({
+    (authz.requireAuth as any).mockResolvedValueOnce({
       userId: 'admin-1',
       roles: ['ADMIN'],
     });
@@ -159,7 +183,7 @@ describe('POST /api/v1/courses', () => {
   });
 
   it('creates a course on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({
+    (authz.requireAuth as any).mockResolvedValueOnce({
       userId: 'admin-1',
       roles: ['ADMIN'],
     });
@@ -183,6 +207,6 @@ describe('POST /api/v1/courses', () => {
     expect(body.ok).toBe(true);
     expect(body.course.id).toBe('course-1');
     expect(body.course.code).toBe('TES-50');
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });
-

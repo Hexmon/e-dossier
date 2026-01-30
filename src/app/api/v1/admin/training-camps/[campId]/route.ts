@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import {
     trainingCampParam,
     trainingCampUpdateSchema,
@@ -12,8 +12,10 @@ import {
     updateTrainingCamp,
     deleteTrainingCamp,
 } from '@/app/db/queries/trainingCamps';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
@@ -31,28 +33,59 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
         const dto = trainingCampUpdateSchema.parse(await req.json());
         const row = await updateTrainingCamp(campId, { ...dto });
         if (!row) throw new ApiError(404, 'Training camp not found', 'not_found');
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.TRAINING_CAMP_UPDATED,
+            resourceType: AuditResourceType.TRAINING_CAMP,
+            resourceId: row.id,
+            description: `Updated training camp ${row.name}`,
+            metadata: {
+                trainingCampId: row.id,
+                changes: Object.keys(dto),
+            },
+            request: req,
+        });
         return json.ok({ message: 'Training camp updated successfully.', trainingCamp: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteTrainingCamp(campId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Training camp not found', 'not_found');
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.TRAINING_CAMP_DELETED,
+            resourceType: AuditResourceType.TRAINING_CAMP,
+            resourceId: row.id,
+            description: `${body?.hard ? 'Hard' : 'Soft'} deleted training camp ${campId}`,
+            metadata: {
+                trainingCampId: row.id,
+                hardDeleted: body?.hard === true,
+            },
+            request: req,
+        });
         return json.ok({ message: 'Training camp deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+
+export const DELETE = withRouteLogging('DELETE', DELETEHandler);

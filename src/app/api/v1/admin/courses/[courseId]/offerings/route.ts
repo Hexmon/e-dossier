@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { offeringCreateSchema } from '@/app/lib/validators.courses';
 import { listCourseOfferings } from '@/app/db/queries/courses';
 import { db } from '@/app/db/client';
@@ -10,10 +10,12 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { createOffering, replaceOfferingInstructors } from '@/app/db/queries/offerings';
 import { courses } from '@/app/db/schema/training/courses';
 import { findMissingInstructorIds } from '@/app/db/queries/instructors';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 const Param = z.object({ courseId: z.string().uuid() });
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
         await requireAuth(req);
         const { courseId } = Param.parse(await params);
@@ -24,9 +26,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ cour
     } catch (err) { return handleApiError(err); }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
         const body = offeringCreateSchema.parse(await req.json());
 
@@ -92,6 +94,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cou
             await replaceOfferingInstructors(offering.id, body.instructors);
         }
 
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.COURSE_OFFERING_CREATED,
+            resourceType: AuditResourceType.OFFERING,
+            resourceId: offering.id,
+            description: `Created course offering ${offering.id} for course ${courseId}`,
+            metadata: {
+                courseId,
+                offeringId: offering.id,
+                subjectId,
+                semester: body.semester,
+                includeTheory: offering.includeTheory,
+                includePractical: offering.includePractical,
+            },
+            after: offering,
+            request: req,
+            required: true,
+        });
         return json.created({ message: 'Course offering created successfully.', offeringId: offering.id });
     } catch (err: any) {
         const pgCode = err?.code ?? err?.cause?.code;
@@ -103,3 +123,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cou
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

@@ -78,10 +78,10 @@ export default function CourseFormModal({
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
+            <Button className="bg-gray-300 text-black hover:bg-destructive hover:text-white" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Save</Button>
+            <Button type="submit" className="bg-[#40ba4d]">Save</Button>
           </div>
         </form>
       </DialogContent>

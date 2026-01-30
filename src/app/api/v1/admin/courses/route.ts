@@ -1,10 +1,12 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { listQuerySchema, courseCreateSchema } from '@/app/lib/validators.courses';
 import { createCourse, listCourses } from '@/app/db/queries/courses';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
@@ -23,16 +25,35 @@ export async function GET(req: NextRequest) {
     } catch (err) { return handleApiError(err); }
 }
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { code, title, notes } = courseCreateSchema.parse(await req.json());
         // enforce unique code
         // (uq index already exists; we handle conflict error format)
         const row = await createCourse({ code, title, notes });
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.COURSE_CREATED,
+            resourceType: AuditResourceType.COURSE,
+            resourceId: row.id,
+            description: `Created course ${row.code}`,
+            metadata: {
+                courseId: row.id,
+                code: row.code,
+                title: row.title,
+            },
+            after: row,
+            request: req,
+            required: true,
+        });
         return json.created({ message: 'Course created successfully.', course: row });
     } catch (err: any) {
         if (err?.code === '23505') return json.conflict('Course code already exists.');
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

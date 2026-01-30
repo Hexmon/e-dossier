@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
+import { useSelector, useDispatch } from "react-redux";
+import { useParams } from "next/navigation";
+import { RootState } from "@/store";
 import TermSubForm from "./TermSubForm";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
-import { beginningFields, postMidFields, specialFields } from "@/types/interview-term";
+import { saveTermInterviewForm, clearTermInterviewForm } from "@/store/slices/termInterviewSlice";
 
 type TermVariant = "beginning" | "postmid" | "special";
 
@@ -14,6 +17,11 @@ interface FormState {
 }
 
 export default function InterviewTermTabs() {
+    const { id } = useParams();
+    const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const dispatch = useDispatch();
+    const hydratedRef = useRef(false);
+
     const [selectedTerm, setSelectedTerm] = useState<number>(1);
 
     const initialSub: Record<number, TermVariant> = {
@@ -30,34 +38,125 @@ export default function InterviewTermTabs() {
     // Store form state for each term + variant combination
     const [formStates, setFormStates] = useState<Record<string, FormState>>({});
 
+    // Get saved form data from Redux
+    const savedFormData = useSelector((state: RootState) =>
+        state.termInterview.forms[ocId]?.[selectedTerm]?.[subTab[selectedTerm]]
+    );
+
     const form: UseFormReturn<Record<string, string>> = useForm<Record<string, string>>({
-        defaultValues: {},
+        defaultValues: savedFormData?.formFields || {},
     });
 
-    const { records, save, fetchAll, loading } = useInterviewForms([]);
+    const { fetchTerm, saveTerm, loading, templateMappings } = useInterviewForms(ocId);
+    const allSavedForms = useSelector((state: RootState) => state.termInterview.forms[ocId] || {});
+    const savedFormsRef = useRef(allSavedForms);
 
     useEffect(() => {
+        hydratedRef.current = false;
+    }, [ocId]);
+
+    useEffect(() => {
+        savedFormsRef.current = allSavedForms;
+    }, [allSavedForms]);
+
+    useEffect(() => {
+        if (!ocId || hydratedRef.current) return;
+        hydratedRef.current = true;
+
         (async () => {
-            await fetchAll();
+            const data = await fetchTerm();
+            if (!data) return;
+
+            Object.entries(data).forEach(([termKey, variants]) => {
+                const termIndex = Number(termKey);
+                (Object.keys(variants) as TermVariant[]).forEach((variant) => {
+                    const incoming = variants[variant];
+                    if (!incoming) return;
+
+                    const existing = savedFormsRef.current?.[termIndex]?.[variant];
+                    const isEmptyFields =
+                        !existing?.formFields ||
+                        Object.values(existing.formFields).every(
+                            (value) => value === "" || value === null || value === undefined
+                        );
+                    const hasSpecial = (existing?.specialInterviews ?? []).length > 0;
+
+                    if (!isEmptyFields || hasSpecial) return;
+
+                    dispatch(
+                        saveTermInterviewForm({
+                            ocId,
+                            termIndex,
+                            variant,
+                            data: incoming,
+                        })
+                    );
+                });
+            });
         })();
-    }, [fetchAll]);
+    }, [ocId, fetchTerm, dispatch]);
+
+    // Load saved data when switching terms or variants
+    useEffect(() => {
+        const savedData = savedFormData?.formFields || {};
+        form.reset(savedData);
+    }, [selectedTerm, subTab, ocId]);
 
     const currentVariant = subTab[selectedTerm] ?? "beginning";
+
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = form.watch((value) => {
+            if (!ocId || !value) return;
+
+            const formFields = Object.entries(value).reduce<Record<string, string>>(
+                (acc, [key, val]) => {
+                    acc[key] = (val as string) ?? "";
+                    return acc;
+                },
+                {}
+            );
+
+            dispatch(saveTermInterviewForm({
+                ocId,
+                termIndex: selectedTerm,
+                variant: currentVariant,
+                data: { formFields },
+            }));
+        });
+
+        return () => subscription.unsubscribe();
+    }, [form.watch, dispatch, ocId, selectedTerm, currentVariant]);
     const stateKey = `${selectedTerm}_${currentVariant}`;
     const currentFormState = formStates[stateKey] ?? { isEditing: true, isSaved: false };
 
-    const fields =
-        currentVariant === "postmid"
-            ? postMidFields
-            : currentVariant === "beginning"
-                ? beginningFields
-                : specialFields;
+    const termMatch = templateMappings?.byKind[currentVariant] ?? null;
+    const termTemplate = termMatch?.template ?? null;
+    const specialGroup = currentVariant === "special" && termMatch?.groupId
+        ? termTemplate?.groups.find((group) => group.id === termMatch.groupId) ?? null
+        : null;
+
+    const templatesLoaded = Boolean(templateMappings);
+    const missingTemplate = templatesLoaded && !termTemplate;
+    const specialGroupMissing = templatesLoaded && currentVariant === "special" && termTemplate && !specialGroup;
+    const formAvailable = Boolean(termTemplate) && (currentVariant !== "special" || Boolean(specialGroup));
 
     const updateFormState = (updates: Partial<FormState>) => {
         setFormStates(prev => ({
             ...prev,
             [stateKey]: { ...currentFormState, ...updates }
         }));
+    };
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearTermInterviewForm({
+                ocId,
+                termIndex: selectedTerm,
+                variant: currentVariant,
+            }));
+            form.reset({});
+        }
     };
 
     const termTabs = [1, 2, 3, 4, 5, 6];
@@ -110,7 +209,8 @@ export default function InterviewTermTabs() {
                     key={variant}
                     type="button"
                     onClick={() => setSubTab((prev) => ({ ...prev, [selectedTerm]: variant }))}
-                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"}`}
+                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"
+                        }`}
                 >
                     {label}
                 </button>
@@ -131,16 +231,49 @@ export default function InterviewTermTabs() {
             </div>
 
             {/* FORM AREA */}
-            <TermSubForm
-                form={form}
-                termIndex={selectedTerm}
-                variant={currentVariant}
-                fields={fields}
-                isEditing={currentFormState.isEditing}
-                isSaved={currentFormState.isSaved}
-                onSave={save}
-                updateFormState={updateFormState}
-            />
+            {formAvailable ? (
+                <TermSubForm
+                    form={form}
+                    termIndex={selectedTerm}
+                    variant={currentVariant}
+                    template={termTemplate}
+                    specialGroup={specialGroup}
+                    isEditing={currentFormState.isEditing}
+                    isSaved={currentFormState.isSaved}
+                    onSave={async (payload) => {
+                        const prefix = `term${selectedTerm}_${currentVariant}_`;
+                        const formFields = Object.entries(payload).reduce<Record<string, string>>((acc, [key, value]) => {
+                            if (key.startsWith(prefix)) {
+                                acc[key] = String(value ?? "");
+                            }
+                            return acc;
+                        }, {});
+
+                        return saveTerm(selectedTerm, currentVariant, formFields, payload.specialInterviews);
+                    }}
+                    updateFormState={updateFormState}
+                    ocId={ocId}
+                    savedSpecialInterviews={savedFormData?.specialInterviews || []}
+                    onClearForm={handleClearForm}
+                />
+            ) : (
+                <div className="border rounded-lg p-6 bg-gray-50 text-center text-sm text-gray-600">
+                    {!templatesLoaded ? (
+                        <p>Loading templates... please wait a moment.</p>
+                    ) : specialGroupMissing ? (
+                        <p>The special interview group is not configured for the selected template.</p>
+                    ) : missingTemplate ? (
+                        <p>The selected interview template is not configured for this tab.</p>
+                    ) : (
+                        <p>The interview template does not support this variant.</p>
+                    )}
+                </div>
+            )}
+
+            {/* Auto-save indicator */}
+            <p className="text-sm text-muted-foreground text-center mt-4">
+                * Changes are automatically saved
+            </p>
         </div>
     );
 }

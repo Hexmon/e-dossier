@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -16,6 +16,9 @@ import { MedInfoRow, MedicalInfoForm } from "@/types/med-records";
 
 import MedicalInfoTable from "./MedicalInfoTable";
 import MedicalInfoFormComponent from "./MedicalInfoForm";
+
+import type { RootState } from "@/store";
+import { clearMedicalInfoForm } from "@/store/slices/medicalInfoSlice";
 
 export default function MedicalInfoSection({
     selectedCadet,
@@ -32,19 +35,11 @@ export default function MedicalInfoSection({
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<MedInfoRow | null>(null);
 
-    const form = useForm<MedicalInfoForm>({
-        defaultValues: {
-            medInfo: [
-                { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "" },
-            ],
-            medicalHistory: "",
-            medicalIssues: "",
-            allergies: "",
-        },
-    });
-
-    const { control, handleSubmit, register, reset } = form;
-    const { fields, append, remove } = useFieldArray({ control, name: "medInfo" });
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.medicalInfo.forms[selectedCadet?.ocId]
+    );
 
     const fetchMedicalInfo = useCallback(async () => {
         if (!selectedCadet?.ocId) return;
@@ -80,32 +75,49 @@ export default function MedicalInfoSection({
                     );
 
                 setDetailsDisabled(hasDetails);
-
-                reset({
-                    medInfo: [
-                        { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "" }
-                    ],
-                    medicalHistory: formatted[0].medicalHistory || "",
-                    medicalIssues: formatted[0].medicalIssues || "",
-                    allergies: formatted[0].allergies || "",
-                });
             }
         } catch {
             toast.error("Failed to load medical info.");
         } finally {
             setLoading(false);
         }
-    }, [selectedCadet?.ocId, semesters, reset]);
+    }, [selectedCadet?.ocId, semesters]);
 
     useEffect(() => {
         fetchMedicalInfo();
-    }, []);
+    }, [fetchMedicalInfo]);
 
     const onSubmit = async (data: MedicalInfoForm) => {
         if (!selectedCadet?.ocId) return toast.error("No cadet selected");
 
+        // Filter out empty rows - check if at least one field has data
+        const filledRows = data.medInfo.filter(row => {
+            const hasData =
+                (row.date && row.date.trim() !== "") ||
+                (row.age && row.age.trim() !== "") ||
+                (row.height && row.height.trim() !== "") ||
+                (row.ibw && row.ibw.trim() !== "") ||
+                (row.abw && row.abw.trim() !== "") ||
+                (row.overw && row.overw.trim() !== "") ||
+                (row.bmi && row.bmi.trim() !== "") ||
+                (row.chest && row.chest.trim() !== "");
+            return hasData;
+        });
+
+        if (filledRows.length === 0) {
+            toast.error("Please fill in at least one medical record with data");
+            return;
+        }
+
+        // Validate that filled rows have required fields (date is mandatory)
+        const invalidRows = filledRows.filter(row => !row.date || row.date.trim() === "");
+        if (invalidRows.length > 0) {
+            toast.error("Date is required for all medical records");
+            return;
+        }
+
         try {
-            const payload = data.medInfo.map((r) => ({
+            const payload = filledRows.map((r) => ({
                 semester: activeTab + 1,
                 examDate: r.date,
                 age: Number(r.age),
@@ -125,10 +137,20 @@ export default function MedicalInfoSection({
             if (!Array.isArray(response)) return toast.error("Save failed");
 
             toast.success(`Medical Info for ${semesters[activeTab]} saved`);
+
+            // Clear Redux cache after successful save
+            dispatch(clearMedicalInfoForm(selectedCadet.ocId));
+
             fetchMedicalInfo();
-            reset();
         } catch {
             toast.error("Failed to save medical info.");
+        }
+    };
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearMedicalInfoForm(selectedCadet.ocId));
+            toast.info("Form cleared");
         }
     };
 
@@ -195,6 +217,40 @@ export default function MedicalInfoSection({
         });
     };
 
+    // Get default values - prioritize Redux over saved data
+    const getDefaultValues = (): MedicalInfoForm => {
+        if (savedFormData && savedFormData.medInfo.length > 0) {
+            return {
+                medInfo: savedFormData.medInfo,
+                medicalHistory: savedFormData.details.medicalHistory,
+                medicalIssues: savedFormData.details.medicalIssues,
+                allergies: savedFormData.details.allergies,
+            };
+        }
+
+        // If no Redux data but we have saved data, use those details
+        if (savedMedInfo.length > 0) {
+            return {
+                medInfo: [
+                    { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "" }
+                ],
+                medicalHistory: savedMedInfo[0].medicalHistory,
+                medicalIssues: savedMedInfo[0].medicalIssues,
+                allergies: savedMedInfo[0].allergies,
+            };
+        }
+
+        // Default empty form
+        return {
+            medInfo: [
+                { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "" }
+            ],
+            medicalHistory: "",
+            medicalIssues: "",
+            allergies: "",
+        };
+    };
+
     return (
         <Card className="p-6 shadow-lg rounded-xl max-w-6xl mx-auto">
             <CardHeader>
@@ -234,16 +290,12 @@ export default function MedicalInfoSection({
                 />
 
                 <MedicalInfoFormComponent
+                    key={`${selectedCadet?.ocId}-${savedFormData ? 'redux' : 'default'}`}
                     onSubmit={onSubmit}
                     disabled={detailsDisabled}
-                    defaultValues={{
-                        medInfo: [
-                            { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "", medicalHistory: "", medicalIssues: "", allergies: "" }
-                        ],
-                        medicalHistory: savedMedInfo[0]?.medicalHistory ?? "",
-                        medicalIssues: savedMedInfo[0]?.medicalIssues ?? "",
-                        allergies: savedMedInfo[0]?.allergies ?? "",
-                    }}
+                    defaultValues={getDefaultValues()}
+                    ocId={selectedCadet?.ocId || ""}
+                    onClear={handleClearForm}
                 />
             </CardContent>
         </Card>

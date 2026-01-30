@@ -2,25 +2,52 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { clearAuthCookies } from '@/app/lib/cookies';
+import { requireAuth } from '@/app/lib/authz';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-function originMatches(req: NextRequest) {
-  const expected = req.nextUrl.origin;
-  const origin = req.headers.get('origin');
-  const referer = req.headers.get('referer');
+function getExpectedOrigins(req: NextRequest) {
+  const origins = new Set<string>([req.nextUrl.origin]);
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const host = forwardedHost ?? req.headers.get('host');
+  const forwardedProto = req.headers.get('x-forwarded-proto');
+  const proto = (forwardedProto ?? req.nextUrl.protocol.replace(':', '')).split(',')[0]?.trim();
 
-  let refererOrigin: string | null = null;
-  if (referer) {
-    try {
-      refererOrigin = new URL(referer).origin;
-    } catch {
-      refererOrigin = null;
-    }
+  if (host && proto) {
+    origins.add(`${proto}://${host}`);
   }
 
-  return (
-    (origin && origin === expected) ||
-    (!origin && refererOrigin && refererOrigin === expected)
-  );
+  return origins;
+}
+
+function originMatches(req: NextRequest) {
+  const expectedOrigins = getExpectedOrigins(req);
+  const origin = req.headers.get('origin');
+  const referer = req.headers.get('referer');
+  const secFetchSite = req.headers.get('sec-fetch-site');
+
+  const matchesExpected = (value: string) => {
+    try {
+      const url = new URL(value);
+      if (expectedOrigins.has(url.origin)) return true;
+      for (const allowed of expectedOrigins) {
+        const allowedUrl = new URL(allowed);
+        if (url.hostname === allowedUrl.hostname && url.protocol === allowedUrl.protocol) {
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  if (origin && origin !== 'null' && matchesExpected(origin)) return true;
+  if (!origin && referer && matchesExpected(referer)) return true;
+
+  if (secFetchSite === 'same-origin' || secFetchSite === 'same-site') return true;
+
+  return false;
 }
 
 /**
@@ -34,7 +61,7 @@ function originMatches(req: NextRequest) {
  * SECURITY NOTE: Kept in PUBLIC_ANY to allow logout even with expired CSRF tokens.
  * Same-origin check provides adequate CSRF protection for logout operations.
  */
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
     // SECURITY FIX: Enhanced same-origin validation
     if (!originMatches(req)) {
@@ -45,6 +72,14 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get('content-type');
     if (contentType && !contentType.includes('application/json') && !contentType.includes('application/x-www-form-urlencoded')) {
       return json.badRequest('Invalid content type for logout request.');
+    }
+
+    let actorUserId: string | null = null;
+    try {
+      const ctx = await requireAuth(req);
+      actorUserId = ctx.userId;
+    } catch {
+      actorUserId = null;
     }
 
     // Prepare a 204 response with security headers
@@ -64,6 +99,16 @@ export async function POST(req: NextRequest) {
     // Server-authoritative cookie clear
     clearAuthCookies(res);
 
+    void createAuditLog({
+      actorUserId,
+      eventType: AuditEventType.LOGOUT,
+      resourceType: AuditResourceType.USER,
+      resourceId: actorUserId,
+      description: 'User logged out via /api/v1/auth/logout',
+      metadata: { actorPresent: Boolean(actorUserId) },
+      request: req,
+    });
+
     return res;
   } catch (err) {
     return handleApiError(err);
@@ -74,7 +119,7 @@ export async function POST(req: NextRequest) {
  * OPTIONS preflight — no CORS advertised; keeps caches off.
  * SECURITY FIX: Enhanced OPTIONS handling
  */
-export async function OPTIONS(req: NextRequest) {
+async function OPTIONSHandler(req: NextRequest) {
   try {
     // Same-origin check for OPTIONS as well
     if (!originMatches(req)) {
@@ -92,3 +137,6 @@ export async function OPTIONS(req: NextRequest) {
     return json.serverError('Unexpected error handling OPTIONS');
   }
 }
+export const POST = withRouteLogging('POST', POSTHandler);
+
+export const OPTIONS = withRouteLogging('OPTIONS', OPTIONSHandler);

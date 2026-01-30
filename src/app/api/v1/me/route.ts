@@ -4,9 +4,19 @@ import { requireAuth } from '@/app/lib/guard';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { eq } from 'drizzle-orm';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   try {
+    const cookieHeader = req.headers.get('cookie') ?? '';
+    const cookieNames = cookieHeader
+      ? cookieHeader
+          .split(';')
+          .map((c) => c.split('=')[0]?.trim())
+          .filter(Boolean)
+      : [];
+
     const principal = await requireAuth(req);
 
     const [u] = await db
@@ -23,8 +33,22 @@ export async function GET(req: NextRequest) {
       .where(eq(users.id, principal.userId));
 
     if (!u) return json.notFound('User not found.');
+
+    await createAuditLog({
+      actorUserId: principal.userId,
+      eventType: AuditEventType.API_REQUEST,
+      resourceType: AuditResourceType.USER,
+      resourceId: principal.userId,
+      description: 'Retrieved current user profile via /api/v1/me',
+      metadata: {
+        roles: principal.roles,
+      },
+      request: req,
+    });
+
     return json.ok({ message: 'User retrieved successfully.', user: u, roles: principal.roles, apt: principal.apt ?? null });
   } catch (err) {
     return handleApiError(err);
   }
 }
+export const GET = withRouteLogging('GET', GETHandler);

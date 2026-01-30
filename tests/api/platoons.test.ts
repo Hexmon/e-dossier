@@ -4,9 +4,10 @@ import { makeJsonRequest } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import { db } from '@/app/db/client';
+import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
-  requireAdmin: vi.fn(),
+  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/client', () => ({
@@ -17,10 +18,33 @@ vi.mock('@/app/db/client', () => ({
   },
 }));
 
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    PLATOON_CREATED: 'platoon.created',
+    PLATOON_UPDATED: 'platoon.updated',
+    PLATOON_DELETED: 'platoon.deleted',
+  },
+  AuditResourceType: {
+    PLATOON: 'platoon',
+  },
+}));
+
 const path = '/api/v1/platoons';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (auditLog.createAuditLog as any).mockClear?.();
 });
 
 describe('GET /api/v1/platoons', () => {
@@ -49,7 +73,7 @@ describe('GET /api/v1/platoons', () => {
 
 describe('POST /api/v1/platoons', () => {
   it('returns 401 when not authenticated as admin', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
     const req = makeJsonRequest({ method: 'POST', path, body: {} });
@@ -61,7 +85,7 @@ describe('POST /api/v1/platoons', () => {
   });
 
   it('returns 400 when body fails validation', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     const req = makeJsonRequest({
       method: 'POST',
       path,
@@ -75,7 +99,7 @@ describe('POST /api/v1/platoons', () => {
   });
 
   it('returns 409 when platoon key or name already exists', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         where: () => ({
@@ -96,7 +120,7 @@ describe('POST /api/v1/platoons', () => {
   });
 
   it('creates platoon on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         where: () => ({
@@ -124,7 +148,7 @@ describe('POST /api/v1/platoons', () => {
 
 describe('DELETE /api/v1/platoons', () => {
   it('returns 403 when user lacks admin privileges', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(403, 'Admin privileges required', 'forbidden'),
     );
     const req = makeJsonRequest({ method: 'DELETE', path });
@@ -136,7 +160,7 @@ describe('DELETE /api/v1/platoons', () => {
   });
 
   it('soft-deletes all platoons on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.update as any).mockImplementationOnce(() => ({
       set: () => ({
         where: () => ({
@@ -152,4 +176,3 @@ describe('DELETE /api/v1/platoons', () => {
     expect(body.count).toBe(2);
   });
 });
-

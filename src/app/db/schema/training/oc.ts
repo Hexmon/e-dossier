@@ -17,6 +17,7 @@ export const counsellingWarningKind = pgEnum('counselling_warning_kind', [
 
 export const campSemesterKind = pgEnum('camp_semester_kind', ['SEM5', 'SEM6A', 'SEM6B']);
 export const campReviewRoleKind = pgEnum('camp_review_role_kind', ['OIC', 'PLATOON_COMMANDER', 'HOAT']);
+export const ocImageKind = pgEnum('oc_image_kind', ['CIVIL_DRESS', 'UNIFORM']);
 
 export type CreditForExcellenceEntry = {
     cat: string;
@@ -49,6 +50,26 @@ export const ocCadets = pgTable('oc_cadets', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// === OC images (2 per OC: civil dress, uniform) =============================
+export const ocImages = pgTable('oc_images', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    kind: ocImageKind('kind').notNull(),
+    bucket: varchar('bucket', { length: 128 }).notNull(),
+    objectKey: varchar('object_key', { length: 512 }).notNull(),
+    contentType: varchar('content_type', { length: 128 }).notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    etag: varchar('etag', { length: 128 }),
+    uploadedAt: timestamp('uploaded_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqOcImageKind: uniqueIndex('uq_oc_images_kind').on(t.ocId, t.kind),
+}));
 
 export type TheoryMarksRecord = {
     phaseTest1Marks?: number | null;
@@ -236,6 +257,19 @@ export const ocAutobiography = pgTable('oc_autobiography', {
     additionalInfo: text('additional_info'),
     filledOn: timestamp('filled_on', { withTimezone: true }),
     platoonCommanderName: varchar('platoon_commander_name', { length: 160 }),
+});
+
+// === Dossier Filling =========================================================
+export const ocDossierFilling = pgTable('oc_dossier_filling', {
+    ocId: uuid('oc_id').primaryKey().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    initiatedBy: varchar('initiated_by', { length: 160 }),
+    openedOn: timestamp('opened_on', { withTimezone: true }),
+    initialInterview: text('initial_interview'),
+    closedBy: varchar('closed_by', { length: 160 }),
+    closedOn: timestamp('closed_on', { withTimezone: true }),
+    finalInterview: text('final_interview'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // === SSB Report ==============================================================
@@ -569,6 +603,7 @@ export const ocCreditForExcellence = pgTable('oc_credit_for_excellence', {
         .$type<CreditForExcellenceEntry[]>()
         .notNull(),
     remark: text('remark'),
+    sub_category: varchar('sub_category', { length: 160 }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },

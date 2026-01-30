@@ -12,6 +12,8 @@ import z from "zod";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://172.22.128.57";
+
 type Primitive = string | number | boolean | null | undefined;
 type QueryValue = Primitive | Primitive[];
 
@@ -65,6 +67,8 @@ export type ApiRequestOptions<B = unknown> = {
     headers?: Record<string, string>;
     /** Abort support */
     signal?: AbortSignal;
+    /** Skip CSRF token fetch/header (use for login/signup/logout) */
+    skipCsrf?: boolean;
     /**
      * Optional baseURL override (useful on server if you need absolute URL).
      * If omitted, a relative fetch is used and cookies still flow on same-origin.
@@ -152,13 +156,15 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
         body,
         headers,
         signal,
+        skipCsrf,
         baseURL,
     } = opts;
 
     // Build URL
     const replaced = applyPathParams(endpoint, path);
     const qs = toQueryString(query);
-    const url = baseURL ? new URL(replaced + qs, baseURL).toString() : `${replaced}${qs}`;
+    const finalBase = baseURL || DEFAULT_API_BASE;
+    const url = finalBase ? new URL(replaced + qs, finalBase).toString() : `${replaced}${qs}`;
 
     // Build init
     const init: RequestInit = {
@@ -173,8 +179,8 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
     // Only on client-side (browser environment). We lazily obtain the token
     // via a lightweight GET to /api/v1/health, which the middleware uses to
     // set the CSRF cookie and return the token in the X-CSRF-Token header.
-    if (typeof window !== 'undefined' && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
-        await ensureCsrfToken(baseURL);
+    if (typeof window !== 'undefined' && !skipCsrf && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
+        await ensureCsrfToken(finalBase);
 
         if (csrfToken) {
             init.headers = {

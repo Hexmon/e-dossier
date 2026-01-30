@@ -103,7 +103,7 @@ export default function UploadButton({ disabled, onParsed, onParsingStateChange,
         className="hidden"
         onChange={onChange}
       />
-      <Button variant="outline" disabled={disabled} onClick={() => inputRef.current?.click()}>
+      <Button className="bg-[#40ba4d] cursor-pointer" disabled={disabled} onClick={() => inputRef.current?.click()}>
         {label}
       </Button>
     </>

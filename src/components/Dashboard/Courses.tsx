@@ -45,6 +45,9 @@ export default function Courses() {
                 filterable: false,
             },
         ],
+        theme: {
+            variant: 'blue',
+        },
         styling: {
             compact: false,
             bordered: true,
@@ -57,10 +60,10 @@ export default function Courses() {
     };
 
     return (
-        <div className="container mx-auto py-8">
-            <Card>
+        <div className="container mx-auto py-2">
+            <Card className='shadow-xl'>
                 <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-gray-800">Courses</CardTitle>
+                    <CardTitle className="text-2xl font-semibold text-white bg-[#1677ff] p-2 rounded">Courses</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <UniversalTable<Course>

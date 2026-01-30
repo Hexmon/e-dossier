@@ -21,6 +21,7 @@ interface Props {
     isEditing: boolean;
     setIsEditing: (v: boolean) => void;
     onSubmit: (data: OCPersonalRecord) => Promise<void>;
+    onClear?: () => void;
 }
 
 export default function PersonalForm({
@@ -31,7 +32,14 @@ export default function PersonalForm({
     isEditing,
     setIsEditing,
     onSubmit,
+    onClear,
 }: Props) {
+
+    const handleCancel = () => {
+        reset(savedData ?? ({} as OCPersonalRecord));
+        setIsEditing(false);
+    };
+
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
@@ -245,17 +253,25 @@ export default function PersonalForm({
                     <>
                         <Button
                             variant="outline"
-                            className="w-[200px]"
+                            className="w-[200px] hover:bg-destructive hover:text-white"
                             type="button"
-                            onClick={() => {
-                                reset(savedData ?? ({} as OCPersonalRecord));
-                                setIsEditing(false);
-                            }}
+                            onClick={handleCancel}
                         >
                             Cancel
                         </Button>
 
-                        <Button type="submit" className="w-[200px]">
+                        {onClear && (
+                            <Button
+                                variant="outline"
+                                className="w-[200px]"
+                                type="button"
+                                onClick={onClear}
+                            >
+                                Clear Form
+                            </Button>
+                        )}
+
+                        <Button type="submit" className="w-[200px] bg-[#40ba4d]">
                             Save
                         </Button>
                     </>

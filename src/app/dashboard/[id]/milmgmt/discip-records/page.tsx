@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -19,7 +21,6 @@ import {
 
 import { Shield, ChevronDown, Link } from "lucide-react";
 
-
 import { useOcPersonal } from "@/hooks/useOcPersonal";
 import { semesters as SEMESTERS_CONST } from "@/constants/app.constants";
 
@@ -29,10 +30,19 @@ import DisciplineTable from "@/components/discipline/DisciplineTable";
 import DisciplineForm from "@/components/discipline/DisciplineForm";
 import { useOcDetails } from "@/hooks/useOcDetails";
 
+import type { RootState } from "@/store";
+import { clearDisciplineForm } from "@/store/slices/disciplineRecordsSlice";
+
 export default function DisciplineRecordsPage() {
     // dynamic route param
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.disciplineRecords.forms[ocId]
+    );
 
     // Load cadet data via hook (no redux)
     const { cadet } = useOcDetails(ocId);
@@ -77,26 +87,90 @@ export default function DisciplineRecordsPage() {
 
     // Handlers to pass to children
     const handleSubmit = async (data: DisciplineFormType) => {
-        await saveRecords(activeTab + 1, data.records);
+        // Filter out empty rows
+        const filledRows = data.records.filter(row => {
+            const hasData =
+                (row.dateOfOffence && row.dateOfOffence.trim() !== "") ||
+                (row.offence && row.offence.trim() !== "") ||
+                (row.punishmentAwarded && row.punishmentAwarded.trim() !== "") ||
+                (row.dateOfAward && row.dateOfAward.trim() !== "") ||
+                (row.byWhomAwarded && row.byWhomAwarded.trim() !== "") ||
+                (row.negativePts && row.negativePts.trim() !== "");
+            return hasData;
+        });
+
+        if (filledRows.length === 0) {
+            toast.error("Please fill in at least one discipline record with data");
+            return;
+        }
+
+        // Validate that filled rows have required fields
+        const invalidRows = filledRows.filter(row =>
+            !row.dateOfOffence || row.dateOfOffence.trim() === "" ||
+            !row.offence || row.offence.trim() === ""
+        );
+
+        if (invalidRows.length > 0) {
+            toast.error("Date of Offence and Offence are required for all records");
+            return;
+        }
+
+        await saveRecords(activeTab + 1, filledRows);
+
+        // Clear Redux cache after successful save
+        dispatch(clearDisciplineForm(ocId));
+
+        toast.success("Discipline records saved successfully!");
+    };
+
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearDisciplineForm(ocId));
+            toast.info("Form cleared");
+        }
     };
 
     const handleUpdate = async (idToUpdate: string, payload: Partial<DisciplineRow>) => {
         await updateRecord(idToUpdate, {
-        dateOfOffence: payload.dateOfOffence,
-        offence: payload.offence,
-        punishmentAwarded: payload.punishmentAwarded,
-        awardedOn: payload.dateOfAward,
-        awardedBy: payload.byWhomAwarded,
-        pointsDelta:
-            payload.negativePts !== undefined
-                ? Number(payload.negativePts)
-                : undefined,
-    });
+            dateOfOffence: payload.dateOfOffence,
+            offence: payload.offence,
+            punishmentAwarded: payload.punishmentAwarded,
+            awardedOn: payload.dateOfAward,
+            awardedBy: payload.byWhomAwarded,
+            pointsDelta:
+                payload.negativePts !== undefined
+                    ? Number(payload.negativePts)
+                    : undefined,
+        });
     };
 
     const handleDelete = async (row: DisciplineRow) => {
         if (!row.id) return;
         await deleteRecord(row.id);
+    };
+
+    // Get default values - prioritize Redux over empty form
+    const getDefaultValues = (): DisciplineFormType => {
+        if (savedFormData && savedFormData.length > 0) {
+            return {
+                records: savedFormData,
+            };
+        }
+
+        return {
+            records: [
+                {
+                    serialNo: "",
+                    dateOfOffence: "",
+                    offence: "",
+                    punishmentAwarded: "",
+                    dateOfAward: "",
+                    byWhomAwarded: "",
+                    negativePts: "",
+                    cumulative: "",
+                },
+            ],
+        };
     };
 
     return (
@@ -165,8 +239,8 @@ export default function DisciplineRecordsPage() {
                                                 type="button"
                                                 onClick={() => setActiveTab(index)}
                                                 className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-gray-200 text-gray-700"
+                                                        ? "bg-blue-600 text-white"
+                                                        : "bg-gray-200 text-gray-700"
                                                     }`}
                                             >
                                                 {sem}
@@ -183,7 +257,13 @@ export default function DisciplineRecordsPage() {
                                 />
 
                                 <div className="mt-6">
-                                    <DisciplineForm onSubmit={handleSubmit} />
+                                    <DisciplineForm
+                                        key={`${ocId}-${savedFormData ? 'redux' : 'default'}`}
+                                        onSubmit={handleSubmit}
+                                        defaultValues={getDefaultValues()}
+                                        ocId={ocId}
+                                        onClear={handleClearForm}
+                                    />
                                 </div>
                             </div>
                         </div>

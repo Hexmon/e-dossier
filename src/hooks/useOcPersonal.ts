@@ -26,11 +26,11 @@ export function useOcPersonal(ocId?: string | null) {
             const oc = await fetchOCById(ocId);
             if (!oc) return;
 
-            const courseRes = await fetchCourseById(oc.courseId);
+            const courseRes = await fetchCourseById(oc.course?.id || "");
 
             const data: Cadet = {
                 name: oc.name ?? "",
-                course: oc.courseId ?? "",
+                course: oc.course?.id ?? "",
                 courseName: courseRes?.course?.code ?? "",
                 ocNumber: oc.ocNo ?? "",
                 ocId: oc.id ?? "",

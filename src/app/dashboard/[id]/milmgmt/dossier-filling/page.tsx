@@ -7,15 +7,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import DossierTab from "@/components/Tabs/DossierTab";
-import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Shield, ChevronDown } from "lucide-react";
+import { dossierTabs } from "@/config/app.config";
 import { TabsContent } from "@/components/ui/tabs";
 
 import { useOcDetails } from "@/hooks/useOcDetails";
@@ -26,7 +18,7 @@ export default function DossierFillingPage() {
   const { id } = useParams();
   const ocId = Array.isArray(id) ? id[0] : id ?? "";
 
-  // load cadet via hook (no redux)
+  // load cadet via hook
   const { cadet } = useOcDetails(ocId);
 
   const {
@@ -39,10 +31,6 @@ export default function DossierFillingPage() {
 
   const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
 
-  useEffect(() => {
-    // If you want to do something when ocId changes, do it here.
-  }, [ocId]);
-
   return (
     <DashboardLayout title="Dossier Filling" description="Record, maintain, and fill cadet dossiers for documentation.">
       <main className="p-6">
@@ -54,7 +42,7 @@ export default function DossierFillingPage() {
           ]}
         />
 
-        {/* Selected Cadet (uses hook data, not redux) */}
+        {/* Selected Cadet */}
         {selectedCadet && (
           <div className="hidden md:flex sticky top-16 z-40 mb-6">
             <SelectedCadetTable selectedCadet={selectedCadet} />
@@ -64,7 +52,7 @@ export default function DossierFillingPage() {
         <DossierTab tabs={dossierTabs} defaultValue="dossier-filling" ocId={ocId}>
           <TabsContent value="dossier-filling">
             <section className="p-6">
-              <DossierFillingForm />
+              <DossierFillingForm ocId={ocId} />
             </section>
           </TabsContent>
         </DossierTab>

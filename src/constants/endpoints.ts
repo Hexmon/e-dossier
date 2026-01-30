@@ -1,9 +1,4 @@
-import { platoons } from "@/app/db"
-import { get } from "http"
-import { string } from "zod"
-
-export const baseURL = 'http://localhost:3000'
-
+export const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://172.22.128.57"
 export const endpoints = {
     auth: {
         login: "/api/v1/auth/login",
@@ -21,6 +16,23 @@ export const endpoints = {
         users: "/api/v1/admin/users",
         subjects: "/api/v1/admin/subjects",
         subjectById: (subjectId: string) => `/api/v1/admin/subjects/${subjectId}`,
+        instructors: "/api/v1/admin/instructors",
+        instructorById: (id: string) => `/api/v1/admin/instructors/${id}`,
+        punishments: "/api/v1/admin/punishments",
+        punishmentById: (punishmentId: string) => `/api/v1/admin/punishments/${punishmentId}`,
+        discipline: "/api/v1/admin/discipline",
+        disciplineById: (id: string) => `/api/v1/admin/discipline/${id}`,
+        courseOfferings: (courseId: string) =>
+            `/api/v1/admin/courses/${courseId}/offerings`,
+        courseOfferingById: (courseId: string, offeringId: string) =>
+            `/api/v1/admin/courses/${courseId}/offerings/${offeringId}`,
+        trainingCamps: {
+            list: "/api/v1/admin/training-camps",
+            getById: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
+            create: "/api/v1/admin/training-camps",
+            update: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
+            delete: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
+        },
     },
     oc: {
         list: "/api/v1/oc",
@@ -83,9 +95,29 @@ export const endpoints = {
         leaveRecordById: (ocId: string, recordId: string) => `/api/v1/oc/${ocId}/recording-leave-hike-detention/${recordId}`,
         olq: (ocId: string) => `/api/v1/oc/${ocId}/olq`,
         olqCategories: (ocId: string) => `/api/v1/oc/${ocId}/olq/categories?includeSubtitles=true&isActive=true`,
+        dossierInspections: (ocId: string) => `/api/v1/oc/${ocId}/dossier-inspection`,
+        camps: {
+            list: (ocId: string) => `/api/v1/oc/${ocId}/camps`,
+            create: (ocId: string) => `/api/v1/oc/${ocId}/camps`,
+            update: (ocId: string) => `/api/v1/oc/${ocId}/camps`,
+            delete: (ocId: string, ocCampId: string) => `/api/v1/oc/${ocId}/camps/${ocCampId}`,
+        },
+        academics: {
+            list: (ocId: string) => `/api/v1/oc/${ocId}/academics`,
+            getBySemester: (ocId: string, semester: number) =>
+                `/api/v1/oc/${ocId}/academics/${semester}`,
+            updateSemester: (ocId: string, semester: number) =>
+                `/api/v1/oc/${ocId}/academics/${semester}`,
+            deleteSemester: (ocId: string, semester: number) =>
+                `/api/v1/oc/${ocId}/academics/${semester}`,
+            updateSubject: (ocId: string, semester: number, subjectId: string) =>
+                `/api/v1/oc/${ocId}/academics/${semester}/subjects/${subjectId}`,
+            deleteSubject: (ocId: string, semester: number, subjectId: string) =>
+                `/api/v1/oc/${ocId}/academics/${semester}/subjects/${subjectId}`,
+        },
     },
     course: {
-        all: "/api/v1/courses"
+        all: "/api/v1/admin/courses"
     },
     users: {
         checkUsername: "/api/v1/admin/users/check-username",

@@ -2,22 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
 
 import { EducationUI, EducationItem } from "@/app/lib/api/educationApi";
 import { useEducation } from "@/hooks/useEducation";
 import { FormValues } from "@/types/educational-qual";
 import { Props } from "@/types/family-background";
+import type { RootState } from "@/store";
+import { saveEducationForm, clearEducationForm } from "@/store/slices/educationQualificationSlice";
 
 export default function EducationQualifications({ ocId, cadet }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<EducationUI | null>(null);
 
-    // ---------------------------------------------------------
-    // HOOK FOR API OPERATIONS
-    // ---------------------------------------------------------
+    // Redux
+    const dispatch = useDispatch();
+    const savedFormData = useSelector((state: RootState) =>
+        state.educationQualification.forms[ocId]
+    );
+
+    // API operations
     const {
         education,
         setEducation,
@@ -31,14 +39,12 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
         fetchEducation();
     }, [fetchEducation]);
 
-    // ---------------------------------------------------------
-    // ADD FORM — RHF
-    // ---------------------------------------------------------
+    // React Hook Form
     const qualificationForm = useForm<FormValues>({
         defaultValues: {
-            qualifications: [
-                { qualification: "", school: "", subs: "", board: "", marks: "", grade: "" },
-            ],
+            qualifications: savedFormData && savedFormData.length > 0
+                ? savedFormData
+                : [{ qualification: "", school: "", subs: "", board: "", marks: "", grade: "" }],
         },
     });
 
@@ -47,14 +53,40 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
         name: "qualifications",
     });
 
-    // step 1 — declare allowed keys
     const columns = ["qualification", "school", "subs", "board", "marks", "grade"] as const;
     type ColumnKey = typeof columns[number];
 
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = qualificationForm.watch((value) => {
+            if (value.qualifications && value.qualifications.length > 0) {
+                const formData = value.qualifications.map(qual => ({
+                    qualification: qual?.qualification || "",
+                    school: qual?.school || "",
+                    subs: qual?.subs || "",
+                    board: qual?.board || "",
+                    marks: qual?.marks ?? "",
+                    grade: qual?.grade || "",
+                }));
+                dispatch(saveEducationForm({ ocId, data: formData }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [qualificationForm, dispatch, ocId]);
 
     const submitQualifications = async ({ qualifications }: FormValues) => {
+        // Filter out empty rows
+        const filledQualifications = qualifications.filter(q =>
+            q.qualification && q.qualification.trim() !== ""
+        );
+
+        if (filledQualifications.length === 0) {
+            toast.error("Please add at least one qualification");
+            return;
+        }
+
         try {
-            const payload = qualifications.map((q) => ({
+            const payload = filledQualifications.map((q) => ({
                 level: q.qualification,
                 school: q.school,
                 board: q.board,
@@ -66,6 +98,12 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
 
             if (saved && saved.length > 0) {
                 toast.success("Education details saved!");
+                // Clear Redux cache after successful save
+                dispatch(clearEducationForm(ocId));
+                // Reset form to default state
+                qualificationForm.reset({
+                    qualifications: [{ qualification: "", school: "", subs: "", board: "", marks: "", grade: "" }]
+                });
                 fetchEducation();
             }
         } catch {
@@ -73,9 +111,18 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
         }
     };
 
-    // ---------------------------------------------------------
-    // EDIT HANDLERS
-    // ---------------------------------------------------------
+    // Clear form handler
+    const handleClearForm = () => {
+        if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            dispatch(clearEducationForm(ocId));
+            qualificationForm.reset({
+                qualifications: [{ qualification: "", school: "", subs: "", board: "", marks: "", grade: "" }]
+            });
+            toast.info("Form cleared");
+        }
+    };
+
+    // Edit handlers
     const startEdit = (row: EducationUI) => {
         setEditingId(row.id);
         setEditForm({ ...row });
@@ -99,7 +146,6 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
             });
 
             toast.success("Record updated!");
-
             fetchEducation();
             cancelEdit();
         } catch {
@@ -119,142 +165,170 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
         }
     };
 
-    // ---------------------------------------------------------
-    // UI
-    // ---------------------------------------------------------
+    const tableColumns: TableColumn<EducationUI>[] = [
+        {
+            key: "sno",
+            label: "S.No",
+            render: (value, row, index) => index + 1
+        },
+        {
+            key: "qualification",
+            label: "Qualification",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.qualification || ""}
+                        onChange={(e) => changeEdit("qualification", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "school",
+            label: "School",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.school || ""}
+                        onChange={(e) => changeEdit("school", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "subs",
+            label: "Subs",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.subs || ""}
+                        onChange={(e) => changeEdit("subs", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "board",
+            label: "Board",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.board || ""}
+                        onChange={(e) => changeEdit("board", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "marks",
+            label: "Marks",
+            type: "number",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="number"
+                        value={editForm?.marks || ""}
+                        onChange={(e) => changeEdit("marks", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        },
+        {
+            key: "grade",
+            label: "Grade",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        value={editForm?.grade || ""}
+                        onChange={(e) => changeEdit("grade", e.target.value)}
+                    />
+                ) : (
+                    value
+                );
+            }
+        }
+    ];
+
+    const actions: TableAction<EducationUI>[] = [
+        {
+            key: "edit-cancel",
+            label: editingId ? "Cancel" : "Edit",
+            variant: editingId ? "outline" : "outline",
+            size: "sm",
+            handler: (row) => {
+                if (editingId === row.id) {
+                    cancelEdit();
+                } else {
+                    startEdit(row);
+                }
+            }
+        },
+        {
+            key: "save-delete",
+            label: editingId ? "Save" : "Delete",
+            variant: editingId ? "default" : "destructive",
+            size: "sm",
+            handler: async (row) => {
+                if (editingId === row.id) {
+                    await saveEdit();
+                } else {
+                    await removeRow(row);
+                }
+            }
+        }
+    ];
+
+    const config: TableConfig<EducationUI> = {
+        columns: tableColumns,
+        actions,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        },
+        theme: {
+            variant: "blue"
+        },
+        emptyState: {
+            message: "No educational qualifications saved yet."
+        }
+    };
+
     return (
         <div>
-            {/* ---------------- SAVED EDUCATION TABLE ---------------- */}
-            <div className="overflow-x-auto mb-6 border rounded-lg shadow">
-                {education.length === 0 ? (
-                    <p className="text-center p-4 text-gray-500">No educational qualifications saved yet.</p>
-                ) : (
-                    <table className="min-w-full text-sm border border-gray-300">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                {["S.No", "Qualification", "School", "Subs", "Board", "Marks", "Grade", "Action"].map(
-                                    (head) => {
-                                        return (
-                                            <th key={head} className="border px-4 py-2 text-center bg-gray-300">
-                                                {head}
-                                            </th>
-                                        );
-                                    }
-                                )}
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {education.map((row, index) => {
-                                const { id, qualification, school, subs, board, marks, grade } = row;
-                                const isEditing = editingId === id;
-
-                                return (
-                                    <tr key={id}>
-                                        <td className="border px-4 py-2 text-center">{index + 1}</td>
-
-                                        {/* QUALIFICATION */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.qualification || ""}
-                                                    onChange={(e) => changeEdit("qualification", e.target.value)}
-                                                />
-                                            ) : (
-                                                qualification
-                                            )}
-                                        </td>
-
-                                        {/* SCHOOL */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.school || ""}
-                                                    onChange={(e) => changeEdit("school", e.target.value)}
-                                                />
-                                            ) : (
-                                                school
-                                            )}
-                                        </td>
-
-                                        {/* SUBJECTS */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.subs || ""}
-                                                    onChange={(e) => changeEdit("subs", e.target.value)}
-                                                />
-                                            ) : (
-                                                subs
-                                            )}
-                                        </td>
-
-                                        {/* BOARD */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.board || ""}
-                                                    onChange={(e) => changeEdit("board", e.target.value)}
-                                                />
-                                            ) : (
-                                                board
-                                            )}
-                                        </td>
-
-                                        {/* MARKS */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    type="number"
-                                                    value={editForm?.marks || ""}
-                                                    onChange={(e) => changeEdit("marks", e.target.value)}
-                                                />
-                                            ) : (
-                                                marks
-                                            )}
-                                        </td>
-
-                                        {/* GRADE */}
-                                        <td className="border px-4 py-2">
-                                            {isEditing ? (
-                                                <Input
-                                                    value={editForm?.grade || ""}
-                                                    onChange={(e) => changeEdit("grade", e.target.value)}
-                                                />
-                                            ) : (
-                                                grade
-                                            )}
-                                        </td>
-
-                                        {/* ACTIONS */}
-                                        <td className="border px-4 py-2 text-center space-x-2">
-                                            {!isEditing ? (
-                                                <>
-                                                    <Button size="sm" variant="outline" onClick={() => startEdit(row)}>
-                                                        Edit
-                                                    </Button>
-                                                    <Button size="sm" variant="destructive" onClick={() => removeRow(row)}>
-                                                        Delete
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Button size="sm" onClick={saveEdit}>Save</Button>
-                                                    <Button size="sm" variant="outline" onClick={cancelEdit}>
-                                                        Cancel
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                )}
+            {/* SAVED EDUCATION TABLE */}
+            <div className="mb-6 border rounded-lg shadow">
+                <UniversalTable<EducationUI>
+                    data={education}
+                    config={config}
+                />
             </div>
 
-            {/* ---------------- ADD NEW QUALIFICATIONS FORM ---------------- */}
+            {/* ADD NEW QUALIFICATIONS FORM */}
             <form onSubmit={qualificationForm.handleSubmit(submitQualifications)}>
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm border border-gray-300">
@@ -272,7 +346,7 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
 
                         <tbody>
                             {fields.map((row, index) => {
-                                const {id} = row;
+                                const { id } = row;
                                 return (
                                     <tr key={id}>
                                         <td className="border px-4 py-2 text-center">{index + 1}</td>
@@ -291,7 +365,12 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                                         })}
 
                                         <td className="border px-4 py-2 text-center">
-                                            <Button variant="destructive" type="button" onClick={() => remove(index)}>
+                                            <Button 
+                                                variant="destructive" 
+                                                type="button" 
+                                                size="sm"
+                                                onClick={() => remove(index)}
+                                            >
                                                 Remove
                                             </Button>
                                         </td>
@@ -318,8 +397,25 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                     >
                         Add Qualification
                     </Button>
-                    <Button type="submit">Save</Button>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClearForm}
+                    >
+                        Clear Form
+                    </Button>
+
+                    <Button type="submit" className="bg-[#40ba4d]">
+                        Save
+                    </Button>
                 </div>
+
+                {savedFormData && savedFormData.length > 0 && (
+                    <p className="text-sm text-muted-foreground text-center mt-2">
+                        * Changes are automatically saved
+                    </p>
+                )}
             </form>
         </div>
     );

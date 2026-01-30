@@ -6,10 +6,12 @@ import { signupLocal } from '@/app/db/queries/auth';
 import { createSignupRequest } from '@/app/db/queries/signupRequests';
 import { preflightConflicts } from '@/utils/preflightConflicts';
 import { getClientIp, checkSignupRateLimit, getRateLimitHeaders } from '@/lib/ratelimit';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 type PgError = { code?: string; detail?: string };
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
     // SECURITY FIX: Rate limiting for signup attempts (3 per hour)
     const clientIp = getClientIp(req);
@@ -17,6 +19,15 @@ export async function POST(req: NextRequest) {
 
     if (!rateLimitResult.success) {
       const headers = getRateLimitHeaders(rateLimitResult as any);
+      await createAuditLog({
+        actorUserId: null,
+        eventType: AuditEventType.API_REQUEST,
+        resourceType: AuditResourceType.API,
+        resourceId: null,
+        description: 'Signup attempt blocked by rate limit',
+        metadata: { reason: 'rate_limited', clientIp },
+        request: req,
+      });
       return new Response(
         JSON.stringify({
           status: 429,
@@ -38,13 +49,33 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = signupSchema.safeParse(body);
-    if (!parsed.success) return json.badRequest('Validation failed.', { issues: parsed.error.flatten() });
+    if (!parsed.success) {
+      await createAuditLog({
+        actorUserId: null,
+        eventType: AuditEventType.API_REQUEST,
+        resourceType: AuditResourceType.API,
+        resourceId: null,
+        description: 'Signup attempt rejected due to validation errors',
+        metadata: { reason: 'validation_failed' },
+        request: req,
+      });
+      return json.badRequest('Validation failed', { issues: parsed.error.flatten() });
+    }
 
     const { username, name, email, phone, rank, password, note } = parsed?.data ?? {};
 
     const conflicts = await preflightConflicts(username, email, phone);
     if (conflicts.length) {
-      return json.badRequest('Already in use.', { conflicts });
+      await createAuditLog({
+        actorUserId: null,
+        eventType: AuditEventType.API_REQUEST,
+        resourceType: AuditResourceType.API,
+        resourceId: null,
+        description: 'Signup attempt blocked by conflicts',
+        metadata: { reason: 'conflict', conflicts },
+        request: req,
+      });
+      return json.badRequest('Already in use', { conflicts });
     }
 
     // 1) Create disabled user
@@ -68,13 +99,28 @@ export async function POST(req: NextRequest) {
       payload: { username, name, email, phone, rank, note },
     });
 
+    await createAuditLog({
+      actorUserId: userId,
+      eventType: AuditEventType.SIGNUP_REQUEST_CREATED,
+      resourceType: AuditResourceType.SIGNUP_REQUEST,
+      resourceId: userId,
+      description: 'Signup request submitted',
+      metadata: {
+        username,
+        email,
+        phone,
+      },
+      request: req,
+    });
+
     return json.created({
       message: 'Signup received. An admin will review your request.',
       user: { id: userId, username: uname, isActive: false },
     });
   } catch (err) {
     const e = err as PgError;
-    if (e?.code === '23505') return json.badRequest('Username / email / phone already in use.');
+    if (e?.code === '23505') return json.badRequest('Username / email / phone already in use');
     return handleApiError(err);
   }
 }
+export const POST = withRouteLogging('POST', POSTHandler);

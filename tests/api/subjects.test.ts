@@ -5,10 +5,11 @@ import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as subjectQueries from '@/app/db/queries/subjects';
 import { db } from '@/app/db/client';
+import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAdmin: vi.fn(),
+  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/subjects', () => ({
@@ -37,10 +38,33 @@ vi.mock('@/app/db/client', () => {
   return { db: { insert } };
 });
 
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    SUBJECT_CREATED: 'subject.created',
+    SUBJECT_UPDATED: 'subject.updated',
+    SUBJECT_DELETED: 'subject.deleted',
+  },
+  AuditResourceType: {
+    SUBJECT: 'subject',
+  },
+}));
+
 const path = '/api/v1/subjects';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (auditLog.createAuditLog as any).mockClear?.();
 });
 
 describe('GET /api/v1/subjects', () => {
@@ -109,7 +133,7 @@ describe('GET /api/v1/subjects', () => {
 
 describe('POST /api/v1/subjects', () => {
   it('returns 401 when not authenticated', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
 
@@ -123,7 +147,7 @@ describe('POST /api/v1/subjects', () => {
   });
 
   it('returns 403 when user lacks admin privileges', async () => {
-    (authz.requireAdmin as any).mockRejectedValueOnce(
+    (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(403, 'Admin privileges required', 'forbidden'),
     );
 
@@ -141,7 +165,7 @@ describe('POST /api/v1/subjects', () => {
   });
 
   it('returns 400 when request body fails validation', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
     const req = makeJsonRequest({ method: 'POST', path, body: { code: '' } });
     const res = await postSubject(req as any);
@@ -153,7 +177,7 @@ describe('POST /api/v1/subjects', () => {
   });
 
   it('returns 409 when subject code already exists', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
     (db.insert as any).mockImplementationOnce(() => ({
       values: () => ({
@@ -179,7 +203,7 @@ describe('POST /api/v1/subjects', () => {
   });
 
   it('creates a subject on happy path', async () => {
-    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
     const req = makeJsonRequest({
       method: 'POST',
@@ -199,6 +223,6 @@ describe('POST /api/v1/subjects', () => {
     expect(body.ok).toBe(true);
     expect(body.subject.id).toBe('sub-1');
     expect(body.subject.code).toBe('SUB-1');
+    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });
-

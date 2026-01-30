@@ -1,6 +1,6 @@
 export interface OfficerCadetForm {
-  arrivalPhoto: FileList | null;
-  departurePhoto: FileList | null;
+  arrivalPhoto: FileList | Blob | string | null;
+  departurePhoto: FileList | Blob | string | null;
   tesNo: string;
   name: string;
   course: string;

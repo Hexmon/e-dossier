@@ -95,7 +95,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                     </p>
 
                     <a href={url}>
-                      <button className="w-full border rounded-md p-2 hover:bg-accent transition">
+                      <button className="w-full border rounded-md p-2 hover:bg-[#1677ff] hover:text-white transition">
                         Access Module →
                       </button>
                     </a>
@@ -134,7 +134,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                     </p>
 
                     <a href={url}>
-                      <button className="w-full border rounded-md p-2 hover:bg-accent transition">
+                      <button className="w-full border rounded-md p-2 hover:bg-[#1677ff] hover:text-white transition">
                         Access Module →
                       </button>
                     </a>
@@ -173,7 +173,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                     </p>
 
                     <a href={url}>
-                      <button className="w-full border rounded-md p-2 hover:bg-accent transition">
+                      <button className="w-full border rounded-md p-2 hover:bg-[#1677ff] hover:text-white transition">
                         Access Module →
                       </button>
                     </a>

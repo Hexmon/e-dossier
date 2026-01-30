@@ -46,7 +46,7 @@ export interface TableConfig<T = any> {
         className?: string;
     };
     theme?: {
-        variant?: 'default' | 'dark' | 'blue' | 'green' | 'purple' | 'vibrant' | 'minimalist' | 'custom';
+        variant?: 'default' | 'dark' | 'blue' | 'green' | 'custom';
         headerBg?: string;
         rowBg?: string;
         rowAltBg?: string;
@@ -421,8 +421,11 @@ export function UniversalTable<T extends Record<string, any>>({
                             paginatedData.map((row, index) => (
                                 <tr
                                     key={index}
-                                    className={`border-t ${activeTheme.borderColor} ${styling.hover ? 'hover:bg-muted/30' : ''
-                                        } ${styling.striped && index % 2 === 1 ? activeTheme.rowAltBg : ''}`}
+                                    className={`border-t ${activeTheme.borderColor} ${styling.hover ? 'hover:opacity-90' : ''
+                                        } ${styling.striped && index % 2 === 1
+                                            ? activeTheme.rowAltBg
+                                            : activeTheme.rowBg
+                                        }`}
                                 >
                                     {features.selection && (
                                         <td className="px-3 py-2">

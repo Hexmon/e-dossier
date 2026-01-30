@@ -4,6 +4,7 @@ import React, { useEffect, useMemo } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import type { WeaponTrainingRecord } from "@/app/lib/api/weaponTrainingApi";
 
 type Row = {
@@ -14,6 +15,7 @@ type Row = {
 
 type FormValues = {
     records: Row[];
+    achievements: { achievement: string }[];
 };
 
 interface Props {
@@ -22,6 +24,11 @@ interface Props {
     savedRecords: WeaponTrainingRecord[];
     onSave: (values: FormValues) => Promise<void>;
     disabled?: boolean;
+    editing?: boolean;
+    onEdit?: () => void;
+    onCancel?: () => void;
+    onReset?: () => void;
+    isSaving?: boolean;
     formMethods?: UseFormReturn<FormValues>;
 }
 
@@ -31,11 +38,19 @@ export default function WeaponTrainingForm({
     savedRecords,
     onSave,
     disabled = false,
+    editing = false,
+    onEdit,
+    onCancel,
+    onReset,
+    isSaving = false,
     formMethods,
 }: Props) {
     /** ALWAYS call hook at top-level */
     const internalForm = useForm<FormValues>({
-        defaultValues: { records: inputPrefill },
+        defaultValues: {
+            records: inputPrefill,
+            achievements: []
+        },
     });
 
     const methods = formMethods ?? internalForm;
@@ -74,68 +89,117 @@ export default function WeaponTrainingForm({
 
     const watched = watch("records");
 
+    const columns: TableColumn<Row>[] = [
+        {
+            key: "subject",
+            label: "Subject",
+            render: (value) => value ?? "-"
+        },
+        {
+            key: "maxMarks",
+            label: "Max Marks",
+            type: "number",
+            render: (value, row, index) => (
+                <Input
+                    {...register(`records.${index}.maxMarks`, {
+                        valueAsNumber: true,
+                    })}
+                    type="number"
+                    defaultValue={value ?? 0}
+                    disabled={disabled}
+                />
+            )
+        },
+        {
+            key: "obtained",
+            label: "Obtained",
+            type: "number",
+            render: (value, row, index) => (
+                <Input
+                    {...register(`records.${index}.obtained`)}
+                    type="number"
+                    defaultValue={value ?? ""}
+                    disabled={disabled}
+                />
+            )
+        }
+    ];
+
+    const config: TableConfig<Row> = {
+        columns,
+        features: {
+            sorting: false,
+            filtering: false,
+            pagination: false,
+            selection: false,
+            search: false
+        },
+        styling: {
+            compact: false,
+            bordered: true,
+            striped: false,
+            hover: false
+        }
+    };
+
     return (
         <form onSubmit={handleSubmit(onSave)}>
-            <div className="overflow-x-auto border rounded-lg shadow">
-                <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
-                        <tr>
-                            <th className="p-2 border">Subject</th>
-                            <th className="p-2 border">Max Marks</th>
-                            <th className="p-2 border">Obtained</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {merged.map((row, idx) => {
-                            const subject = row.subject ?? "-";
-                            const maxMarks = row.maxMarks ?? 0;
-                            const obtained = row.obtained ?? "";
-
-                            return (
-                                <tr key={subject + idx}>
-                                    <td className="p-2 border">{subject}</td>
-
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...register(`records.${idx}.maxMarks`, {
-                                                valueAsNumber: true,
-                                            })}
-                                            type="number"
-                                            defaultValue={maxMarks}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-
-                                    <td className="p-2 border">
-                                        <Input
-                                            {...register(`records.${idx}.obtained`)}
-                                            type="number"
-                                            defaultValue={obtained}
-                                            disabled={disabled}
-                                        />
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+            <div className="border rounded-lg shadow">
+                <UniversalTable<Row>
+                    data={merged}
+                    config={config}
+                />
             </div>
 
             {/* Action Buttons */}
             <div className="flex justify-center gap-3 mt-6">
-                <Button type="submit" disabled={disabled}>
-                    Save Training
-                </Button>
+                {editing ? (
+                    <>
+                        <Button
+                            type="submit"
+                            disabled={isSaving}
+                            className="bg-[#40ba4d]"
+                        >
+                            {isSaving ? "Saving..." : "Save Training"}
+                        </Button>
 
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => reset({ records: merged })}
-                    disabled={disabled}
-                >
-                    Reset
-                </Button>
+                        {onCancel && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={onCancel}
+                                disabled={isSaving}
+                            >
+                                Cancel Edit
+                            </Button>
+                        )}
+
+                        {onReset && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="hover:bg-destructive hover:text-white"
+                                onClick={onReset}
+                                disabled={isSaving}
+                            >
+                                Reset
+                            </Button>
+                        )}
+                    </>
+                ) : (
+                    onEdit && (
+                        <Button
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onEdit();
+                            }}
+                            disabled={isSaving}
+                        >
+                            Edit Training Table
+                        </Button>
+                    )
+                )}
             </div>
         </form>
     );

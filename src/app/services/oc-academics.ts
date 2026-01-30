@@ -12,8 +12,37 @@ import {
     SemesterSummaryPatchInput,
 } from '@/app/db/queries/oc';
 import { TheoryMarksRecord, PracticalMarksRecord } from '@/app/db/schema/training/oc';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 
 type BranchTag = 'C' | 'E' | 'M';
+
+type AuditContext = {
+    actorUserId?: string | null;
+    actorRoles?: string[];
+    request?: Request;
+};
+
+async function logAcademicEvent(
+    ctx: AuditContext | undefined,
+    eventType: string,
+    ocId: string,
+    description: string,
+    metadata: Record<string, unknown>,
+) {
+    await createAuditLog({
+        actorUserId: ctx?.actorUserId ?? null,
+        eventType,
+        resourceType: AuditResourceType.OC_ACADEMICS,
+        resourceId: ocId,
+        description,
+        metadata: {
+            ocId,
+            ...metadata,
+            actorRoles: ctx?.actorRoles ?? undefined,
+        },
+        request: ctx?.request,
+    });
+}
 
 function groupOfferingsBySemester(rows: CourseOfferingRow[]) {
     const map = new Map<number, CourseOfferingRow[]>();
@@ -93,6 +122,7 @@ export async function updateOcAcademicSummary(
     ocId: string,
     semester: number,
     input: Omit<SemesterSummaryPatchInput, 'branchTag'>,
+    auditContext?: AuditContext,
 ): Promise<AcademicSemesterView> {
     const ocInfo = await getOcCourseInfo(ocId);
     if (!ocInfo) throw new ApiError(404, 'OC not found', 'not_found');
@@ -102,6 +132,19 @@ export async function updateOcAcademicSummary(
         ...input,
     });
 
+    await logAcademicEvent(
+        auditContext,
+        AuditEventType.OC_ACADEMICS_SUMMARY_UPDATED,
+        ocId,
+        `Updated academic summary for semester ${semester}`,
+        {
+            semester,
+            sgpa: input.sgpa ?? null,
+            cgpa: input.cgpa ?? null,
+            marksScored: input.marksScored ?? null,
+        },
+    );
+
     return getOcAcademicSemester(ocId, semester);
 }
 
@@ -110,13 +153,24 @@ export async function updateOcAcademicSubject(
     semester: number,
     subjectId: string,
     data: { theory?: TheoryMarksRecord; practical?: PracticalMarksRecord },
+    auditContext?: AuditContext,
 ) {
     const ocInfo = await getOcCourseInfo(ocId);
     if (!ocInfo) throw new ApiError(404, 'OC not found', 'not_found');
 
     const offering = await getCourseOfferingForSubject(ocInfo.courseId, semester, subjectId);
     if (!offering) {
-        throw new ApiError(400, 'Subject is not valid for this course/semester.', 'bad_request');
+        const validOfferings = await listCourseOfferings(ocInfo.courseId, semester);
+        const validSubjects = validOfferings.map((row) => ({
+            subjectId: row.subject.id,
+            subjectCode: row.subject.code,
+            subjectName: row.subject.name,
+        }));
+        throw new ApiError(400, 'Subject is not valid for this course/semester.', 'bad_request', {
+            courseId: ocInfo.courseId,
+            semester,
+            validSubjects,
+        });
     }
 
     await upsertSemesterSubjectMarks(ocId, semester, {
@@ -134,12 +188,42 @@ export async function updateOcAcademicSubject(
         },
     });
 
+    await logAcademicEvent(
+        auditContext,
+        AuditEventType.OC_ACADEMICS_SUBJECT_UPDATED,
+        ocId,
+        `Updated academic subject ${offering.subject.code} for semester ${semester}`,
+        {
+            semester,
+            subjectId: offering.subject.id,
+            subjectCode: offering.subject.code,
+            subjectName: offering.subject.name,
+            theoryProvided: Boolean(data.theory),
+            practicalProvided: Boolean(data.practical),
+        },
+    );
+
     return getOcAcademicSemester(ocId, semester);
 }
 
-export async function deleteOcAcademicSemester(ocId: string, semester: number, opts: { hard?: boolean } = {}) {
+export async function deleteOcAcademicSemester(
+    ocId: string,
+    semester: number,
+    opts: { hard?: boolean } = {},
+    auditContext?: AuditContext,
+) {
     const row = await deleteSemester(ocId, semester, opts);
     if (!row) throw new ApiError(404, 'Academic semester not found', 'not_found');
+    await logAcademicEvent(
+        auditContext,
+        AuditEventType.OC_ACADEMICS_SEMESTER_DELETED,
+        ocId,
+        `${opts.hard ? 'Hard' : 'Soft'} deleted academic semester ${semester}`,
+        {
+            semester,
+            hardDeleted: Boolean(opts.hard),
+        },
+    );
     return { semester, hardDeleted: Boolean(opts.hard) };
 }
 
@@ -148,14 +232,39 @@ export async function deleteOcAcademicSubject(
     semester: number,
     subjectId: string,
     opts: { hard?: boolean } = {},
+    auditContext?: AuditContext,
 ) {
     const ocInfo = await getOcCourseInfo(ocId);
     if (!ocInfo) throw new ApiError(404, 'OC not found', 'not_found');
     const offering = await getCourseOfferingForSubject(ocInfo.courseId, semester, subjectId);
     if (!offering) {
-        throw new ApiError(404, 'Subject not found for this semester.', 'not_found');
+        const validOfferings = await listCourseOfferings(ocInfo.courseId, semester);
+        const validSubjects = validOfferings.map((row) => ({
+            subjectId: row.subject.id,
+            subjectCode: row.subject.code,
+            subjectName: row.subject.name,
+        }));
+        throw new ApiError(404, 'Subject not found for this semester.', 'not_found', {
+            courseId: ocInfo.courseId,
+            semester,
+            validSubjects,
+        });
     }
     const result = await deleteSemesterSubject(ocId, semester, offering.subject.code, opts);
     if (!result) throw new ApiError(404, 'Subject record not found in academics', 'not_found');
+
+    await logAcademicEvent(
+        auditContext,
+        AuditEventType.OC_ACADEMICS_SUBJECT_DELETED,
+        ocId,
+        `${opts.hard ? 'Hard' : 'Soft'} deleted academic subject ${offering.subject.code} for semester ${semester}`,
+        {
+            semester,
+            subjectId: offering.subject.id,
+            subjectCode: offering.subject.code,
+            hardDeleted: Boolean(opts.hard),
+        },
+    );
+
     return getOcAcademicSemester(ocId, semester);
 }

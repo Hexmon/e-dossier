@@ -1,17 +1,19 @@
 // src/app/api/v1/admin/positions/active-holder/route.ts
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { positions } from '@/app/db/schema/auth/positions';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { users } from '@/app/db/schema/auth/users';
 import { and, or, eq, isNull, lte, gte } from 'drizzle-orm';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         // must await (async validator)
-        await requireAdmin(req);
+        await requireAuth(req);
 
         const url = new URL(req.url);
         const positionKey = url.searchParams.get('positionKey');
@@ -58,8 +60,23 @@ export async function GET(req: NextRequest) {
             ))
             .limit(1);
 
+        await createAuditLog({
+            actorUserId: null,
+            eventType: AuditEventType.API_REQUEST,
+            resourceType: AuditResourceType.POSITION,
+            resourceId: pos.id,
+            description: 'Fetched active position holder',
+            metadata: {
+                positionKey,
+                scopeType,
+                scopeId,
+                found: Boolean(rows[0]),
+            },
+            request: req,
+        });
         return json.ok({ message: 'Active holder retrieved successfully.', holder: rows[0] ?? null });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);

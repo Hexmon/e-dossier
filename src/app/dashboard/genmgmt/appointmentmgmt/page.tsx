@@ -18,6 +18,7 @@ import { useAppointments } from "@/hooks/useAppointments";
 import { useForm } from "react-hook-form";
 import { ocTabs } from "@/config/app.config";
 import { Appointment } from "@/app/lib/api/appointmentApi";
+import { CreateAppointment } from "@/components/appointments/createappointment";
 
 export default function AppointmentManagement() {
   const router = useRouter();
@@ -30,6 +31,8 @@ export default function AppointmentManagement() {
     fetchAppointments,
     fetchUsers,
     handleHandover,
+    handleEditAppointment,
+    handleDeleteAppointment,
   } = useAppointments();
 
   const [handoverDialog, setHandoverDialog] = useState(false);
@@ -51,7 +54,8 @@ export default function AppointmentManagement() {
 
   useEffect(() => {
     fetchAppointments();
-  }, [fetchAppointments]);
+    fetchUsers();
+  }, [fetchAppointments, fetchUsers]);
 
   const openHandover = (appt: Appointment) => {
     setSelectedAppointment(appt);
@@ -89,10 +93,17 @@ export default function AppointmentManagement() {
             <GlobalTabs tabs={ocTabs} defaultValue="appointment-mgmt">
               <TabsContent value="appointment-mgmt" className="space-y-8">
                 {/* Current Appointments */}
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold">Current Appointments</h2>
+                  <CreateAppointment />
+                </div>
                 <AppointmentTable
                   appointments={appointments}
                   loading={loading}
                   onHandover={openHandover}
+                  onEdit={handleEditAppointment}
+                  onDelete={handleDeleteAppointment}
+                  users={users}
                 />
 
                 {/* Served History */}

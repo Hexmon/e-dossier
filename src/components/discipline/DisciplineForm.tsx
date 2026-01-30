@@ -2,42 +2,28 @@
 
 import { useEffect } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import type { DisciplineForm as DisciplineFormType } from "@/types/dicp-records";
-
-/**
- * DisciplineForm
- * - onSubmit receives { records: [...] }
- * - live cumulative calculation (only negative cumulative displayed)
- * - all form values editable
- * - uses react-hook-form, no `any`
- */
+import { saveDisciplineForm } from "@/store/slices/disciplineRecordsSlice";
 
 interface Props {
     onSubmit: (data: DisciplineFormType) => Promise<void> | void;
+    defaultValues: DisciplineFormType;
+    ocId: string;
+    onClear: () => void;
 }
 
-export default function DisciplineForm({ onSubmit }: Props) {
-    const defaultRow = {
-        serialNo: "",
-        dateOfOffence: "",
-        offence: "",
-        punishmentAwarded: "",
-        dateOfAward: "",
-        byWhomAwarded: "",
-        negativePts: "",
-        cumulative: "",
-    };
+export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear }: Props) {
+    const dispatch = useDispatch();
 
     const form = useForm<DisciplineFormType>({
-        defaultValues: {
-            records: [{ ...defaultRow }],
-        },
+        defaultValues,
     });
 
-    const { control, handleSubmit, register, reset, setValue } = form;
+    const { control, handleSubmit, register, watch, setValue } = form;
     const { fields, append, remove } = useFieldArray({ control, name: "records" });
 
     // watch negativePts to compute live cumulative (only show negatives for UI)
@@ -55,10 +41,38 @@ export default function DisciplineForm({ onSubmit }: Props) {
         }
     }, [JSON.stringify(watched), setValue]);
 
+    // Auto-save to Redux on form changes
+    useEffect(() => {
+        const subscription = watch((value) => {
+            if (ocId && value.records && value.records.length > 0) {
+                const formData = value.records.map(record => ({
+                    serialNo: record?.serialNo || "",
+                    dateOfOffence: record?.dateOfOffence || "",
+                    offence: record?.offence || "",
+                    punishmentAwarded: record?.punishmentAwarded || "",
+                    dateOfAward: record?.dateOfAward || "",
+                    byWhomAwarded: record?.byWhomAwarded || "",
+                    negativePts: record?.negativePts || "",
+                    cumulative: record?.cumulative || "",
+                }));
+
+                dispatch(saveDisciplineForm({ ocId, data: formData }));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [watch, dispatch, ocId]);
+
     // helper for append with defaults
     const handleAppend = () =>
         append({
-            ...defaultRow,
+            serialNo: "",
+            dateOfOffence: "",
+            offence: "",
+            punishmentAwarded: "",
+            dateOfAward: "",
+            byWhomAwarded: "",
+            negativePts: "",
+            cumulative: "",
         });
 
     return (
@@ -81,7 +95,6 @@ export default function DisciplineForm({ onSubmit }: Props) {
 
                     <tbody>
                         {fields.map((field, index) => {
-                            // destructure nothing from 'field' because react-hook-form field has internal props; use index for names
                             return (
                                 <tr key={field.id}>
                                     <td className="p-2 border text-center">
@@ -146,14 +159,24 @@ export default function DisciplineForm({ onSubmit }: Props) {
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-green-600">
+                <Button type="submit" className="bg-[#40ba4d]">
                     Submit
                 </Button>
 
-                <Button type="button" variant="outline" onClick={() => reset()}>
-                    Reset
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="hover:bg-destructive hover:text-white"
+                    onClick={onClear}
+                >
+                    Clear Form
                 </Button>
             </div>
+
+            {/* Auto-save indicator */}
+            <p className="text-sm text-muted-foreground text-center mt-2">
+                * Changes are automatically saved
+            </p>
         </form>
     );
 }

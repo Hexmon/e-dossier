@@ -1,6 +1,34 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { POST as postLogout } from '@/app/api/v1/auth/logout/route';
 import { makeJsonRequest } from '../utils/next';
+
+vi.mock('@/lib/audit-log', () => ({
+  createAuditLog: vi.fn(async () => {}),
+  logApiRequest: vi.fn(),
+  ensureRequestContext: vi.fn(() => ({
+    requestId: 'test',
+    method: 'GET',
+    pathname: '/',
+    url: '/',
+    startTime: Date.now(),
+  })),
+  noteRequestActor: vi.fn(),
+  setRequestTenant: vi.fn(),
+  AuditEventType: {
+    LOGOUT: 'auth.logout',
+    API_REQUEST: 'api.request',
+  },
+  AuditResourceType: {
+    USER: 'user',
+    API: 'api',
+  },
+}));
+
+vi.mock('@/app/lib/authz', () => ({
+  requireAuth: vi.fn(async () => {
+    throw new Error('no-session');
+  }),
+}));
 
 describe('POST /api/v1/auth/logout', () => {
   it('rejects cross-site logout attempts', async () => {
@@ -38,4 +66,3 @@ describe('POST /api/v1/auth/logout', () => {
     expect(res.headers.get('Clear-Site-Data')).toContain('cookies');
   });
 });
-

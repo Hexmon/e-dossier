@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -28,13 +29,57 @@ export function OCForm({
         defaultValues,
     });
 
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
+        }
+    };
+
+    const handleFormSubmit = async (data: Partial<OCRecord>) => {
+        if (selectedFile) {
+            const submitData = { ...data, photo: selectedFile };
+            onSubmit(submitData);
+        } else {
+            onSubmit(data);
+        }
+    };
+
     return (
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
                 <DialogTitle>{isEditing ? "Update OC" : "Add New OC"}</DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4 mb-6">
+            <form onSubmit={handleSubmit(handleFormSubmit)} className="grid grid-cols-2 gap-4 mb-6">
+
+                <div>
+                    <Label>Upload Photo</Label>
+                    <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                    />
+                    {selectedFile && (
+                        <div className="mt-2">
+                            <p className="text-sm text-gray-600">
+                                Selected: {selectedFile.name}
+                            </p>
+                            {previewUrl && (
+                                <img
+                                    src={previewUrl}
+                                    alt="Preview"
+                                    className="mt-2 w-32 h-32 object-cover rounded border"
+                                />
+                            )}
+                        </div>
+                    )}
+                </div>
 
                 <div>
                     <Label>Name</Label>
@@ -49,7 +94,7 @@ export function OCForm({
                 <div>
                     <Label>Course</Label>
                     <select
-                        {...register("courseId", { required: true })}
+                        {...register("course.id", { required: true })}
                         className="w-full border rounded-md p-2"
                     >
                         <option value="">Select Course</option>

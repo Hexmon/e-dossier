@@ -4,7 +4,7 @@
 // import { and, eq, sql } from 'drizzle-orm';
 // import { z } from 'zod';
 // import { json, handleApiError, ApiError } from '@/app/lib/http';
-// import { requireAdmin, requireAuth } from '@/app/lib/authz'; // make sure this reads cookie OR Bearer
+// import { requireAuth } from '@/app/lib/authz'; // make sure this reads cookie OR Bearer
 // // If you don't have hasAdminRole exported, keep a local helper:
 // const hasAdminRole = (r?: string[]) =>
 //     Array.isArray(r) && r.some(k => ['ADMIN', 'SUPER_ADMIN', 'COMMANDANT'].includes(k));
@@ -41,7 +41,7 @@
 // }
 
 // // ---------- GET (PUBLIC) ----------
-// export async function GET(req: NextRequest) {
+// async function GETHandler(req: NextRequest) {
 //     try {
 //         const { searchParams } = new URL(req.url);
 //         const qp = RoleQuerySchema.parse({
@@ -73,9 +73,9 @@
 // }
 
 // // ---------- POST (ADMIN) ----------
-// export async function POST(req: NextRequest) {
+// async function POSTHandler(req: NextRequest) {
 //     try {
-//         await requireAdmin(req);
+//         await requireAuth(req);
 
 //         const body = await req.json();
 //         const dto = RoleCreateSchema.parse(body);
@@ -102,9 +102,9 @@
 // }
 
 // // ---------- PATCH (ADMIN) ----------
-// export async function PATCH(req: NextRequest) {
+// async function PATCHHandler(req: NextRequest) {
 //     try {
-//         await requireAdmin(req);
+//         await requireAuth(req);
 
 //         const body = await req.json();
 //         const dto = RoleUpdateSchema.parse(body);
@@ -147,9 +147,9 @@
 // }
 
 // // ---------- DELETE (ADMIN) ----------
-// export async function DELETE(req: NextRequest) {
+// async function DELETEHandler(req: NextRequest) {
 //     try {
-//         await requireAdmin(req);
+//         await requireAuth(req);
 
 //         const { searchParams } = new URL(req.url);
 //         const dto = RoleDeleteSchema.parse({
@@ -182,14 +182,18 @@
 
 // src/app/api/v1/roles/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(_req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   // TODO: fetch real roles from your DB
   return NextResponse.json({ ok: true, message: 'Roles retrieved successfully.', roles: [] }, { status: 200 });
 }
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   const body = await req.json();
   // TODO: validate & create role
   return NextResponse.json({ ok: true, message: 'Role created successfully.', created: body }, { status: 201 });
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

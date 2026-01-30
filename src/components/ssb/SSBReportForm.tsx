@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ratingMap, reverseRatingMap } from "@/config/app.config";
 import { SsbReport } from "@/app/lib/api/ssbReportApi";
 import { useEffect, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export interface SSBFormData {
     positiveTraits: { trait: string }[];
@@ -20,19 +21,27 @@ export interface SSBFormData {
 export function SSBReportForm({
     ocId,
     report,
+    savedFormData,
     onSave,
+    onAutoSave,
+    onClear,
 }: {
     ocId: string;
     report: SsbReport | null;
+    savedFormData?: SSBFormData;
     onSave: (data: SSBFormData) => Promise<void>;
+    onAutoSave?: (data: SSBFormData) => void;
+    onClear?: () => void;
 }) {
     const [isEditing, setIsEditing] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
 
     const {
         register,
         control,
         handleSubmit,
-        reset
+        reset,
+        watch
     } = useForm<SSBFormData>({
         defaultValues: {
             positiveTraits: [{ trait: "" }],
@@ -50,26 +59,138 @@ export function SSBReportForm({
     const { fields: negativeFields, append: addNegative, remove: removeNegative } =
         useFieldArray({ control, name: "negativeTraits" });
 
-    useEffect(() => {
-        if (!report) return;
+    // Watch form values for auto-save
+    const formValues = watch();
+    const debouncedFormValues = useDebounce(formValues, 500);
 
-        reset({
+    // ---------------------------
+    // PRELOAD FORM DATA - SMART MERGE
+    // ---------------------------
+    useEffect(() => {
+        if (!report || isInitialized) return;
+
+        // Transform API data
+        const transformedApiData: SSBFormData = {
             positiveTraits: report.positives.map(p => ({ trait: p.note ?? "" })),
             negativeTraits: report.negatives.map(n => ({ trait: n.note ?? "" })),
             positiveBy: report.positives[0]?.by ?? "",
             negativeBy: report.negatives[0]?.by ?? "",
             rating: ratingMap[report.predictiveRating] ?? "",
             improvement: report.scopeForImprovement ?? "",
-        });
+        };
 
+        // Smart merge: Prioritize API data, but use Redux data for empty API fields
+        if (savedFormData) {
+            console.log("Merging API data with Redux fallback");
+
+            const mergedData: Partial<SSBFormData> = { ...transformedApiData };
+
+            // Merge simple string fields
+            const stringFields: (keyof SSBFormData)[] = ['positiveBy', 'negativeBy', 'rating', 'improvement'];
+            stringFields.forEach((key) => {
+                const apiValue = transformedApiData[key] as string;
+                const reduxValue = savedFormData[key] as string;
+
+                const isApiEmpty = !apiValue || apiValue === "";
+                const hasReduxValue = reduxValue && reduxValue !== "";
+
+                if (isApiEmpty && hasReduxValue) {
+                    (mergedData as Record<string, unknown>)[key] = reduxValue;
+                } else {
+                    (mergedData as Record<string, unknown>)[key] = apiValue;
+                }
+            });
+
+            // Merge array fields (positiveTraits)
+            if (transformedApiData.positiveTraits.length === 0 ||
+                transformedApiData.positiveTraits.every(t => !t.trait)) {
+                if (savedFormData.positiveTraits && savedFormData.positiveTraits.length > 0) {
+                    mergedData.positiveTraits = savedFormData.positiveTraits;
+                }
+            } else {
+                mergedData.positiveTraits = transformedApiData.positiveTraits;
+            }
+
+            // Merge array fields (negativeTraits)
+            if (transformedApiData.negativeTraits.length === 0 ||
+                transformedApiData.negativeTraits.every(t => !t.trait)) {
+                if (savedFormData.negativeTraits && savedFormData.negativeTraits.length > 0) {
+                    mergedData.negativeTraits = savedFormData.negativeTraits;
+                }
+            } else {
+                mergedData.negativeTraits = transformedApiData.negativeTraits;
+            }
+
+            console.log("Merged data:", mergedData);
+            reset(mergedData as SSBFormData);
+        } else {
+            console.log("Loading from API:", transformedApiData);
+            reset(transformedApiData);
+        }
+
+        setIsInitialized(true);
+    }, [report, savedFormData, reset, isInitialized]);
+
+    // ---------------------------
+    // AUTO-SAVE TO REDUX (DEBOUNCED)
+    // ---------------------------
+    useEffect(() => {
+        if (!isInitialized || !isEditing || !onAutoSave) return;
+
+        if (debouncedFormValues && Object.keys(debouncedFormValues).length > 0) {
+            const hasAnyData =
+                debouncedFormValues.positiveTraits?.some(t => t.trait) ||
+                debouncedFormValues.negativeTraits?.some(t => t.trait) ||
+                debouncedFormValues.positiveBy ||
+                debouncedFormValues.negativeBy ||
+                debouncedFormValues.rating ||
+                debouncedFormValues.improvement;
+
+            if (hasAnyData) {
+                console.log("Auto-saving to Redux:", debouncedFormValues);
+                onAutoSave(debouncedFormValues as SSBFormData);
+            }
+        }
+    }, [debouncedFormValues, isEditing, isInitialized, onAutoSave]);
+
+    // ---------------------------
+    // HANDLE SUBMIT - PASS DATA DIRECTLY TO PARENT
+    // ---------------------------
+    const handleFormSubmit = async (data: SSBFormData) => {
+        console.log("Form submitted with data:", data);
+        await onSave(data);
         setIsEditing(false);
-    }, [report, reset]);
+    };
+
+    // ---------------------------
+    // HANDLE CANCEL
+    // ---------------------------
+    const handleCancel = () => {
+        setIsEditing(false);
+        if (report) {
+            reset({
+                positiveTraits: report.positives.map(p => ({ trait: p.note ?? "" })),
+                negativeTraits: report.negatives.map(n => ({ trait: n.note ?? "" })),
+                positiveBy: report.positives[0]?.by ?? "",
+                negativeBy: report.negatives[0]?.by ?? "",
+                rating: ratingMap[report.predictiveRating] ?? "",
+                improvement: report.scopeForImprovement ?? "",
+            });
+        }
+    };
 
     return (
-        <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             <div className="rounded-2xl shadow-lg bg-white px-5 py-5">
+
+                {isEditing && (
+                    <div className="text-xs text-gray-500 text-right mb-4">
+                        ✓ Changes are saved automatically
+                    </div>
+                )}
+
                 {/* POSITIVE TRAITS */}
-                <div className="grid grid-cols-2 gap-12">
+                <div className="grid grid-cols-2 gap-12 mb-6">
                     <div>
                         <label className="text-sm font-semibold">Positive Traits</label>
                         <div className="space-y-2 mt-2">
@@ -96,6 +217,7 @@ export function SSBReportForm({
                             <Button
                                 type="button"
                                 variant="outline"
+                                className="hover:bg-[#40ba4d] hover:text-white"
                                 size="sm"
                                 disabled={!isEditing}
                                 onClick={() => addPositive({ trait: "" })}
@@ -122,7 +244,7 @@ export function SSBReportForm({
                 </div>
 
                 {/* NEGATIVE TRAITS */}
-                <div className="grid grid-cols-2 gap-12">
+                <div className="grid grid-cols-2 gap-12 mb-6">
                     <div>
                         <label className="text-sm font-semibold">Negative Traits</label>
                         <div className="space-y-2 mt-2">
@@ -149,6 +271,7 @@ export function SSBReportForm({
                             <Button
                                 type="button"
                                 variant="outline"
+                                className="hover:bg-[#40ba4d] hover:text-white"
                                 size="sm"
                                 disabled={!isEditing}
                                 onClick={() => addNegative({ trait: "" })}
@@ -175,7 +298,7 @@ export function SSBReportForm({
                 </div>
 
                 {/* RATING */}
-                <div>
+                <div className="mb-6">
                     <label className="text-sm font-semibold">Predictive Rating</label>
                     <select
                         {...register("rating")}
@@ -190,7 +313,7 @@ export function SSBReportForm({
                 </div>
 
                 {/* IMPROVEMENT */}
-                <div>
+                <div className="mb-6">
                     <label className="text-sm font-semibold">Scope for Improvement</label>
                     <Textarea
                         {...register("improvement")}
@@ -214,22 +337,23 @@ export function SSBReportForm({
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => {
-                                    setIsEditing(false);
-                                    reset(report ? {
-                                        positiveTraits: report.positives.map(p => ({ trait: p.note })),
-                                        negativeTraits: report.negatives.map(n => ({ trait: n.note })),
-                                        positiveBy: report.positives[0]?.by || "",
-                                        negativeBy: report.negatives[0]?.by || "",
-                                        rating: ratingMap[report.predictiveRating] || "",
-                                        improvement: report.scopeForImprovement,
-                                    } : {});
-                                }}
+                                className="hover:bg-destructive hover:text-white"
+                                onClick={handleCancel}
                             >
                                 Cancel
                             </Button>
 
-                            <Button type="submit">
+                            {onClear && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={onClear}
+                                >
+                                    Clear Form
+                                </Button>
+                            )}
+
+                            <Button type="submit" className="bg-[#40ba4d]">
                                 Save
                             </Button>
                         </>

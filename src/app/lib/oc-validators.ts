@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+const nonEmptyPartial = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>) =>
+    schema.partial().superRefine((val, ctx) => {
+        if (!Object.values(val).some((value) => value !== undefined)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'At least one field must be provided',
+            });
+        }
+    });
+
 export const OcIdParam = z.object({ ocId: z.string().uuid() });
 export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);
@@ -101,6 +111,15 @@ export const autobiographyUpsertSchema = z.object({
     platoonCommanderName: z.string().optional(),
 });
 
+export const dossierFillingUpsertSchema = z.object({
+    initiatedBy: z.string().optional(),
+    openedOn: z.coerce.date().optional(),
+    initialInterview: z.string().optional(),
+    closedBy: z.string().optional(),
+    closedOn: z.coerce.date().optional(),
+    finalInterview: z.string().optional(),
+});
+
 // Legacy metadata-only schema (used in some internal APIs)
 export const ssbReportUpsertSchema = z.object({
     overallPredictiveRating: z.coerce.number().int().min(0).max(10).nullable().optional(),
@@ -188,7 +207,7 @@ export const motivationAwardCreateSchema = z.object({
     maxMarks: z.coerce.number(),
     marksObtained: z.coerce.number(),
 });
-export const motivationAwardUpdateSchema = motivationAwardCreateSchema.partial();
+export const motivationAwardUpdateSchema = nonEmptyPartial(motivationAwardCreateSchema);
 
 export const sportsAndGamesCreateSchema = z.object({
     semester: Semester,
@@ -198,7 +217,7 @@ export const sportsAndGamesCreateSchema = z.object({
     marksObtained: z.coerce.number(),
     sportsStrings: z.string().optional(),
 });
-export const sportsAndGamesUpdateSchema = sportsAndGamesCreateSchema.partial();
+export const sportsAndGamesUpdateSchema = nonEmptyPartial(sportsAndGamesCreateSchema);
 
 export const weaponTrainingCreateSchema = z.object({
     subject: z.string().min(1),
@@ -206,12 +225,12 @@ export const weaponTrainingCreateSchema = z.object({
     maxMarks: z.coerce.number(),
     marksObtained: z.coerce.number(),
 });
-export const weaponTrainingUpdateSchema = weaponTrainingCreateSchema.partial();
+export const weaponTrainingUpdateSchema = nonEmptyPartial(weaponTrainingCreateSchema);
 
 export const specialAchievementInFiringCreateSchema = z.object({
     achievement: z.string().min(1),
 });
-export const specialAchievementInFiringUpdateSchema = specialAchievementInFiringCreateSchema.partial();
+export const specialAchievementInFiringUpdateSchema = nonEmptyPartial(specialAchievementInFiringCreateSchema);
 
 export const obstacleTrainingCreateSchema = z.object({
     semester: SeniorSemester,
@@ -219,7 +238,7 @@ export const obstacleTrainingCreateSchema = z.object({
     marksObtained: z.coerce.number(),
     remark: z.string().optional(),
 }); 
-export const obstacleTrainingUpdateSchema = obstacleTrainingCreateSchema.partial();
+export const obstacleTrainingUpdateSchema = nonEmptyPartial(obstacleTrainingCreateSchema);
 
 export const speedMarchCreateSchema = z.object({
     semester: SeniorSemester,
@@ -228,12 +247,13 @@ export const speedMarchCreateSchema = z.object({
     marks: z.coerce.number(),
     remark: z.string().optional(),
 });
-export const speedMarchUpdateSchema = speedMarchCreateSchema.partial();
+export const speedMarchUpdateSchema = nonEmptyPartial(speedMarchCreateSchema);
 
 export const creditForExcellenceItemSchema = z.object({
     cat: z.string().min(1),
     marks: z.coerce.number(),
     remarks: z.string().optional(),
+    sub_category: z.string().optional(),
 });
 export const creditForExcellenceCreateSchema = z.object({
     semester: Semester,
@@ -365,10 +385,49 @@ export const academicSubjectPatchSchema = z.object({
     message: 'No subject fields provided.',
 });
 
+const academicSubjectBulkUpsertSchema = academicSubjectPatchSchema.safeExtend({
+    op: z.enum(['upsert', 'update', 'edit']),
+    ocId: z.string().uuid(),
+    semester: Semester,
+    subjectId: z.string().uuid(),
+});
+
+const academicSubjectBulkDeleteSchema = z.object({
+    op: z.literal('delete'),
+    ocId: z.string().uuid(),
+    semester: Semester,
+    subjectId: z.string().uuid(),
+    hard: z.boolean().optional(),
+});
+
+export const academicSubjectBulkRequestSchema = z.object({
+    items: z.array(z.union([academicSubjectBulkUpsertSchema, academicSubjectBulkDeleteSchema])).min(1),
+    failFast: z.boolean().optional(),
+});
+
 export const academicSummaryPatchSchema = z.object({
     sgpa: z.coerce.number().optional(),
     cgpa: z.coerce.number().optional(),
     marksScored: z.coerce.number().optional(),
 }).refine((value) => value.sgpa !== undefined || value.cgpa !== undefined || value.marksScored !== undefined, {
     message: 'No summary fields provided.',
+});
+
+// --- OC images --------------------------------------------------------------
+export const ocImageKindSchema = z.enum(['CIVIL_DRESS', 'UNIFORM']);
+
+export const ocImagePresignSchema = z.object({
+    kind: ocImageKindSchema,
+    contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+    sizeBytes: z.coerce.number().int().min(20 * 1024).max(200 * 1024),
+});
+
+export const ocImageCompleteSchema = z.object({
+    kind: ocImageKindSchema,
+    objectKey: z.string().min(1),
+});
+
+export const ocImageDeleteQuerySchema = z.object({
+    kind: ocImageKindSchema,
+    hard: z.enum(['true', 'false']).optional(),
 });

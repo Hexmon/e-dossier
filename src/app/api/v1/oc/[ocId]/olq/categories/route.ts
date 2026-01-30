@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import {
     olqCategoryCreateSchema,
     olqCategoryQuerySchema,
@@ -9,8 +9,10 @@ import {
     createOlqCategory,
     listOlqCategories,
 } from '@/app/db/queries/olq';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
 
@@ -30,9 +32,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const dto = olqCategoryCreateSchema.parse(await req.json());
         const row = await createOlqCategory({
@@ -42,8 +44,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ocI
             displayOrder: dto.displayOrder ?? 0,
             isActive: dto.isActive ?? true,
         });
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.OC_RECORD_CREATED,
+            resourceType: AuditResourceType.OC,
+            resourceId: null,
+            description: `Created OLQ category ${row.id}`,
+            metadata: {
+                module: 'olq_categories',
+                categoryId: row.id,
+                code: row.code,
+                title: row.title,
+            },
+            request: req,
+        });
         return json.created({ message: 'OLQ category created successfully.', category: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

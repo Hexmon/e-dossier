@@ -5,11 +5,13 @@ import { positions } from '@/app/db/schema/auth/positions';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { appointmentCreateSchema, appointmentListQuerySchema } from '@/app/lib/validators';
 import { and, eq, sql, isNull } from 'drizzle-orm';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         const url = new URL(req.url);
         const qp = appointmentListQuerySchema.parse({
@@ -72,9 +74,9 @@ export async function GET(req: NextRequest) {
 }
 
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const body = await req.json();
         const parsed = appointmentCreateSchema.safeParse(body);
@@ -153,8 +155,31 @@ export async function POST(req: NextRequest) {
             })
             .returning();
 
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.APPOINTMENT_CREATED,
+            resourceType: AuditResourceType.APPOINTMENT,
+            resourceId: row.id,
+            description: `Created appointment ${row.id} for user ${row.userId}`,
+            metadata: {
+                appointmentId: row.id,
+                userId: row.userId,
+                positionId: row.positionId,
+                scopeType: row.scopeType,
+                scopeId: row.scopeId,
+                startsAt: row.startsAt,
+                endsAt: row.endsAt,
+            },
+            after: row,
+            request: req,
+            required: true,
+        });
+
         return json.created({ message: 'Appointment created successfully.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

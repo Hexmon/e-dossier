@@ -28,6 +28,7 @@ import { GRADE_BRACKETS } from "@/constants/app.constants";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { Cadet } from "@/types/cadet";
 
 type OlqFormValues = Record<string, any>;
 
@@ -82,7 +83,7 @@ export default function OLQPage() {
     );
 }
 
-function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: RootState['cadet']['selectedCadet']; ocId: string; }) {
+function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: string; }) {
     const { register, reset, getValues, handleSubmit, setValue } = useForm<OlqFormValues>();
 
     const { fetchCategories, fetchSemester, createRecord, updateRecord, deleteSemester } = useOlqActions(selectedCadet);

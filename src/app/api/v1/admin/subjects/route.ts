@@ -1,12 +1,14 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { listQuerySchema, subjectCreateSchema } from '@/app/lib/validators.courses';
 import { listSubjects } from '@/app/db/queries/subjects';
 import { db } from '@/app/db/client';
 import { subjects } from '@/app/db/schema/training/subjects';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
@@ -26,9 +28,9 @@ export async function GET(req: NextRequest) {
     } catch (err) { return handleApiError(err); }
 }
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const body = subjectCreateSchema.parse(await req.json());
         const [row] = await db
             .insert(subjects)
@@ -43,9 +45,33 @@ export async function POST(req: NextRequest) {
                 description: body.description ?? null,
             })
             .returning();
+
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.SUBJECT_CREATED,
+            resourceType: AuditResourceType.SUBJECT,
+            resourceId: row.id,
+            description: `Created subject ${row.code}`,
+            metadata: {
+                subjectId: row.id,
+                code: row.code,
+                name: row.name,
+                branch: row.branch,
+                hasTheory: row.hasTheory,
+                hasPractical: row.hasPractical,
+                defaultTheoryCredits: row.defaultTheoryCredits,
+                defaultPracticalCredits: row.defaultPracticalCredits,
+            },
+            after: row,
+            request: req,
+            required: true,
+        });
         return json.created({ message: 'Subject created successfully.', subject: row });
     } catch (err: any) {
         if (err?.code === '23505') return json.conflict('Subject code already exists.');
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);

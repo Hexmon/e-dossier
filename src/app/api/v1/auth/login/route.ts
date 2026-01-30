@@ -17,15 +17,19 @@ import {
   checkAndLockAccount,
 } from '@/app/db/queries/account-lockout';
 import {
+  createAuditLog,
+  AuditEventType,
+  AuditResourceType,
   logLoginSuccess,
   logLoginFailure,
   logAccountLocked,
 } from '@/lib/audit-log';
 import { generateCsrfToken, setCsrfCookie } from '@/lib/csrf';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.EXPOSE_TOKENS_IN_DEV === 'true';
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
     // SECURITY FIX: Rate limiting for login attempts (5 per 15 minutes)
     const clientIp = getClientIp(req);
@@ -58,7 +62,18 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return json.badRequest('Invalid JSON body.', { message: 'Request body must be valid JSON.' });
+      await createAuditLog({
+        actorUserId: null,
+        eventType: AuditEventType.API_REQUEST,
+        resourceType: AuditResourceType.API,
+        resourceId: null,
+        description: 'Login attempt rejected due to invalid JSON body',
+        metadata: { reason: 'invalid_json' },
+        request: req,
+      });
+      throw new ApiError(400, 'Request body must be valid JSON', 'invalid_json', {
+        message: 'Request body must be valid JSON.',
+      });
     }
 
     // 1) Explicit missing-field check (before Zod)
@@ -73,7 +88,16 @@ export async function POST(req: NextRequest) {
     });
 
     if (missing.length) {
-      return json.badRequest('Missing required fields.', {
+      await createAuditLog({
+        actorUserId: null,
+        eventType: AuditEventType.API_REQUEST,
+        resourceType: AuditResourceType.API,
+        resourceId: null,
+        description: 'Login attempt rejected due to missing fields',
+        metadata: { reason: 'missing_fields', missing },
+        request: req,
+      });
+      throw new ApiError(400, 'Missing required fields', 'missing_fields', {
         missing,
         hint: 'Provide: appointmentId (uuid), username (non-empty), password (min 8 chars).',
       });
@@ -293,3 +317,4 @@ export async function POST(req: NextRequest) {
     return handleApiError(err);
   }
 }
+export const POST = withRouteLogging('POST', POSTHandler);

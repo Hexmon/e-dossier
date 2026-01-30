@@ -4,14 +4,16 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { json, handleApiError } from '@/app/lib/http';
 import { platoonCreateSchema } from '@/app/lib/validators';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
+import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { withRouteLogging } from '@/lib/withRouteLogging';
 
 type PgError = { code?: string; detail?: string };
 
 // GET /api/v1/platoons  (PUBLIC)
 // Optional query: ?q=...  (matches key or name, case-insensitive)
 // Optional query: ?includeDeleted=true
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const q = (searchParams.get('q') || '').trim();
@@ -50,9 +52,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/v1/platoons  (ADMIN)
 // { key, name, about? }
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const body = await req.json();
         const parsed = platoonCreateSchema.safeParse(body);
@@ -100,6 +102,21 @@ export async function POST(req: NextRequest) {
                 updatedAt: platoons.updatedAt,
             });
 
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.PLATOON_CREATED,
+            resourceType: AuditResourceType.PLATOON,
+            resourceId: row.id,
+            description: `Created platoon ${row.key}`,
+            metadata: {
+                platoonId: row.id,
+                key: row.key,
+                name: row.name,
+            },
+            after: row,
+            request: req,
+            required: true,
+        });
         return json.created({ message: 'Platoon created successfully.', platoon: row });
     } catch (err) {
         return handleApiError(err);
@@ -109,9 +126,9 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/v1/platoons  (ADMIN)
 // Soft-delete ALL platoons (sets deleted_at = now())
-export async function DELETE(req: NextRequest) {
+async function DELETEHandler(req: NextRequest) {
     try {
-        await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const now = new Date();
         const deleted = await db
@@ -120,8 +137,26 @@ export async function DELETE(req: NextRequest) {
             .where(isNull(platoons.deletedAt))
             .returning({ id: platoons.id });
 
+        await createAuditLog({
+            actorUserId: adminCtx.userId,
+            eventType: AuditEventType.PLATOON_DELETED,
+            resourceType: AuditResourceType.PLATOON,
+            resourceId: null,
+            description: 'Soft-deleted all platoons',
+            metadata: {
+                bulk: true,
+                count: deleted.length,
+            },
+            request: req,
+            required: true,
+        });
         return json.ok({ message: 'All platoons soft-deleted.', count: deleted.length });
     } catch (err) {
         return handleApiError(err);
     }
 }
+export const GET = withRouteLogging('GET', GETHandler);
+
+export const POST = withRouteLogging('POST', POSTHandler);
+
+export const DELETE = withRouteLogging('DELETE', DELETEHandler);

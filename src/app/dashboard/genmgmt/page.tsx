@@ -1,28 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 
 import { AppSidebar } from "@/components/AppSidebar";
-import { Button } from "@/components/ui/button";
 import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { managementCard, managementTabs } from "@/config/app.config";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { DashboardCard } from "@/components/cards/DashboardCard";
+import CourseSelectModal from "@/components/modals/CourseSelectModal";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function GeneralManagementPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [courseModalOpen, setCourseModalOpen] = useState(false);
 
   const handleLogout = () => {
     console.log("Logout clicked");
+  };
+
+  const handleCardClick = (to: string, title: string, e?: React.MouseEvent) => {
+    // Check if this is the Offerings Management card
+    if (title === "Offerings Management") {
+      if (e) e.preventDefault();
+      setCourseModalOpen(true);
+    } else {
+      router.push(to);
+    }
   };
 
   return (
@@ -32,12 +45,10 @@ export default function GeneralManagementPage() {
 
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header>
-            <PageHeader
-              title="General Management"
-              description="Manage user access and roles in MCEME"
-            />
-          </header>
+          <PageHeader
+            title="General Management"
+            description="Manage user access and roles in MCEME"
+          />
 
           {/* Main Content */}
           <section className="flex-1 p-6">
@@ -52,7 +63,7 @@ export default function GeneralManagementPage() {
             </nav>
             {/* Welcome section */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-primary mb-2">
+              <h2 className="text-2xl font-bold text-[#1677ff] mb-2">
                 Admin Management
               </h2>
               <p className="text-muted-foreground">
@@ -67,14 +78,43 @@ export default function GeneralManagementPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
                   {managementCard.map((card, index) => {
                     const IconComponent = card.icon;
+                    const { title = "", description = "", to = "", color = "" } = card;
+
+                    if (title === "Offerings Management") {
+                      return (
+                        <Card
+                          key={index}
+                          className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4"
+                          style={{ borderLeftColor: color }}
+                          onClick={() => setCourseModalOpen(true)}
+                        >
+                          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                            <div className={`${color} p-2 rounded-lg`}>
+                              <IconComponent className="h-5 w-5 text-white" />
+                            </div>
+                            <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground">{description}</p>
+                          </CardContent>
+                          <CardFooter>
+                            <Button variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
+                              Access Module →
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      );
+                    }
+
                     return (
                       <DashboardCard
                         key={index}
-                        title={card.title}
-                        description={card.description}
-                        to={card.to}
+                        title={title}
+                        description={description}
+                        to={to}
                         icon={IconComponent}
-                        color={card.color}
+                        color={color}
                       />
                     );
                   })}
@@ -97,6 +137,13 @@ export default function GeneralManagementPage() {
           </section>
         </div>
       </main>
+
+      {/* Course Select Modal */}
+      <CourseSelectModal
+        open={courseModalOpen}
+        onOpenChange={setCourseModalOpen}
+        onSelect={(course) => router.push(`/dashboard/genmgmt/coursemgmt/${course.id}/offerings`)}
+      />
     </SidebarProvider>
   );
 }

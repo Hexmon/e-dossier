@@ -1,1 +1,0 @@
-ALTER TYPE "oc_status_kind" ADD VALUE IF NOT EXISTS 'INACTIVE';
