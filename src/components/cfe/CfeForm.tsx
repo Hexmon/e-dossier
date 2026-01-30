@@ -48,6 +48,7 @@ export default function CfeForm({
                     cat: record?.cat || "",
                     mks: record?.mks || "",
                     remarks: record?.remarks || "",
+                    sub_category: record?.sub_category || "",
                 }));
 
                 dispatch(saveCfeForm({ ocId, data: formData }));
@@ -62,6 +63,7 @@ export default function CfeForm({
             cat: "",
             mks: "",
             remarks: "",
+            sub_category: "", // Added sub_category to default values
         });
 
     const handleFormSubmit = async (data: cfeFormData) => {
@@ -101,6 +103,7 @@ export default function CfeForm({
                         <tr>
                             <th className="p-2 border">S No</th>
                             <th className="p-2 border">Cat</th>
+                            <th className="p-2 border">Sub Category</th>
                             <th className="p-2 border">Mks</th>
                             <th className="p-2 border">Remarks</th>
                             <th className="p-2 border text-center">Action</th>
@@ -133,6 +136,10 @@ export default function CfeForm({
                                                 ))}
                                             </SelectContent>
                                         </Select>
+                                    </td>
+
+                                    <td className="p-2 border">
+                                        <Input {...register(`records.${idx}.sub_category` as const)} type="text" />
                                     </td>
 
                                     <td className="p-2 border">
