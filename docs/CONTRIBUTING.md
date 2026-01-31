@@ -25,15 +25,16 @@ When you attempt to push to `master` or `production`:
 
 The hook is already configured in `.git/hooks/pre-push`. To ensure it's executable, run:
 
+**On macOS / Linux:**
 ```bash
 chmod +x .git/hooks/pre-push
 ```
 
-Verify it's executable:
-```bash
-ls -la .git/hooks/pre-push
-# Output should show: -rwxr-xr-x (with 'x' permission)
-```
+**On Windows:**
+- ✅ **Git Bash** (recommended): `chmod +x .git/hooks/pre-push`
+- ✅ **PowerShell**: See [WINDOWS_SETUP.md](../WINDOWS_SETUP.md)
+
+For detailed Windows setup, see [WINDOWS_SETUP.md](../WINDOWS_SETUP.md)
 
 #### If a Check Fails
 
