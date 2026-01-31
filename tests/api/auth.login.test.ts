@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST as postLogin } from '@/app/api/v1/auth/login/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import * as ratelimit from '@/lib/ratelimit';
 import * as accountLockout from '@/app/db/queries/account-lockout';
 import * as auditLog from '@/lib/audit-log';
@@ -129,7 +129,7 @@ describe('POST /api/v1/auth/login', () => {
       body: loginBody,
     });
 
-    const res = await postLogin(req as any);
+    const res = await postLogin(req as any, createRouteContext());
     expect(res.status).toBe(429);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -143,7 +143,7 @@ describe('POST /api/v1/auth/login', () => {
       body: {},
     });
 
-    const res = await postLogin(req as any);
+    const res = await postLogin(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -163,7 +163,7 @@ describe('POST /api/v1/auth/login', () => {
       throw new Error('boom');
     };
 
-    const res = await postLogin(req as any);
+    const res = await postLogin(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -188,7 +188,7 @@ describe('POST /api/v1/auth/login', () => {
       body: loginBody,
     });
 
-    const res = await postLogin(req as any);
+    const res = await postLogin(req as any, createRouteContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);

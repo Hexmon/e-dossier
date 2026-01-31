@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getSpecialFiringRoute, PATCH as patchSpecialFiringRoute, DELETE as deleteSpecialFiringRoute } from '@/app/api/v1/oc/[ocId]/special-achievement-in-firing/[id]/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as ocChecks from '@/app/api/v1/oc/_checks';
