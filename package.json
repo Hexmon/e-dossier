@@ -16,6 +16,7 @@
     "type-check": "tsc --noEmit",
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run build",
     "setup:git-hooks": "bash scripts/setup-git-hooks.sh || pwsh -File scripts/setup-git-hooks.ps1",
+    "postinstall": "pnpm run setup:git-hooks",
     "check": "tsx scripts/health-check.ts",
     "db:generate": "drizzle-kit generate --config=./src/app/db/drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=./src/app/db/drizzle.config.ts",
