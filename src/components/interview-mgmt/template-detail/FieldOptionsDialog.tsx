@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Save } from "lucide-react";
-import { useInterviewTemplates } from "@/hooks/Useinterviewtemplates";
+import { useInterviewTemplates } from "@/hooks/useInterviewTemplates";
 import { Field, FieldOption, FieldOptionCreate } from "@/app/lib/api/Interviewtemplateapi";
 import {
     AlertDialog,
