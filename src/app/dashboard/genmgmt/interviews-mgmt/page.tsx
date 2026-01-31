@@ -13,7 +13,7 @@ import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import InterviewTemplatesTable from "@/components/interview-mgmt/Interviewtemplatestable";
 import InterviewTemplateDialog from "@/components/interview-mgmt/Interviewtemplatedialog";
-import { useInterviewTemplates } from "@/hooks/Useinterviewtemplates";
+import { useInterviewTemplates } from "@/hooks/useInterviewTemplates";
 import { InterviewTemplate, InterviewTemplateCreate } from "@/app/lib/api/Interviewtemplateapi";
 import { Input } from "@/components/ui/input";
 import {
