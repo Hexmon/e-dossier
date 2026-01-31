@@ -2,38 +2,429 @@
 
 ## Code Quality & Push Policy
 
-This repository enforces a strict lint and build gate to ensure code quality on protected branches.
+This repository enforces an **enterprise-grade, cross-platform** quality gate on **EVERY `git push` to ANY branch**. The verification pipeline runs locally (as a Git hook) and remotely (in CI), ensuring consistent code quality.
 
-### Pre-Push Hook (Local Enforcement)
+### Quick Start
 
-A Git hook is enabled locally to enforce lint and build checks **before pushing to protected branches** (master and production).
+**That's it! No setup needed.** Hooks auto-configure on clone/pull or first push.
 
-#### What It Does
-
-When you attempt to push to `master` or `production`:
-1. Runs `pnpm lint` — checks code style and quality
-2. Runs `pnpm build` — ensures your code compiles without errors
-3. Only proceeds with the push if both pass
-
-#### Which Branches Are Protected
-
-- **master** — production-ready code, required to pass lint + build
-- **production** — live deployment branch, required to pass lint + build
-- **Feature branches** (feature/*, bugfix/*, etc.) — checks are skipped to allow faster local development
-
-#### Enabling the Hook
-
-The hook is already configured in `.git/hooks/pre-push`. To ensure it's executable, run:
-
+Just clone and push:
 ```bash
-chmod +x .git/hooks/pre-push
+git clone https://github.com/your-org/e-dossier.git
+cd e-dossier
+pnpm install        # Install dependencies
+git checkout -b feature/my-feature
+# Make changes...
+git push origin feature/my-feature  # Hook auto-configures on first push
 ```
 
-Verify it's executable:
-```bash
-ls -la .git/hooks/pre-push
-# Output should show: -rwxr-xr-x (with 'x' permission)
+Hooks automatically:
+- Configure themselves after clone (`post-checkout` hook)
+- Configure themselves before first push (`pre-push` hook)
+- Run lint, typecheck, and build verification on every push
+
+No manual setup script needed unless you're troubleshooting!
+
+---
+
+## Pre-Push Hook (Local Enforcement)
+
+Git hooks are committed in `.githooks/` and automatically configured via `core.hooksPath` after running the setup script.
+
+### How It Works
+
+When you run `git push`:
+
+1. **Preflight Checks:**
+   - ✓ Verify `pnpm-lock.yaml` exists (dependencies locked)
+   - ✓ Verify `pnpm` is on PATH (package manager available)
+   - ✓ Verify Node.js ≥ 20 (correct runtime version)
+   - ✓ Verify pnpm ≥ 9 (correct package manager version)
+
+2. **Verification Pipeline:**
+   - Runs `pnpm run verify` (which chains: lint → typecheck → build)
+   - Outputs progress with colors and emojis
+   - Shows full error output if any step fails
+
+3. **Result:**
+   - ✅ All pass → push proceeds
+   - ❌ Any fail → push is blocked; detailed errors shown in terminal
+
+### What Gets Verified
+
+#### Lint (`pnpm run lint`)
+Checks code style, formatting, and quality using ESLint.
+
+**Example failure:**
 ```
+✓ pnpm-lock.yaml exists
+✓ pnpm is available
+✓ Node.js version 20.11.1 (required: >=20)
+✓ pnpm version 9.0.0 (required: >=9)
+
+[Running Verification Pipeline]
+❌ VERIFICATION FAILED - Push Blocked
+
+Fix the errors above and try again:
+  • Lint errors: pnpm run lint
+  • Type errors: pnpm run typecheck
+  • Build errors: pnpm run build
+```
+
+**To fix:**
+```bash
+pnpm run lint
+# Fix issues shown
+git add .
+git commit -m "fix: lint errors"
+git push  # Hook re-runs automatically
+```
+
+#### Type Check (`pnpm run typecheck`)
+Validates TypeScript type safety via `tsc --noEmit`.
+
+**To fix:**
+```bash
+pnpm run typecheck
+# Review type errors
+# Update code to match types
+git add .
+git commit -m "fix: type errors"
+git push
+```
+
+#### Build (`pnpm run build`)
+Ensures the app builds successfully for production.
+
+**To fix:**
+```bash
+pnpm run build
+# Debug build errors
+git add .
+git commit -m "fix: build errors"
+git push
+```
+
+---
+
+## Setup Instructions
+
+### Prerequisites
+
+- **Node.js**: ≥ 20 (check with `node -v`)
+- **pnpm**: ≥ 9 (check with `pnpm -v`)
+- **Git**: ≥ 2.9 (for `core.hooksPath` support)
+
+If you don't have these, install them:
+
+**Node.js:**
+- macOS/Linux: Use [nvm](https://github.com/nvm-sh/nvm) or [homebrew](https://brew.sh)
+- Windows: Download from [nodejs.org](https://nodejs.org)
+
+**pnpm:**
+```bash
+npm install -g pnpm@latest
+```
+
+### Automatic Setup (On Clone & First Push)
+
+The Git hooks **auto-configure automatically**. No manual setup needed!
+
+**On clone:**
+```bash
+git clone https://github.com/your-org/e-dossier.git
+# post-checkout hook runs silently and configures core.hooksPath
+```
+
+**On first push:**
+```bash
+git push origin feature/my-feature
+# pre-push hook runs and auto-configures if needed
+# Then runs: lint → typecheck → build
+```
+
+### Manual Setup (Optional, For Troubleshooting)
+
+If you need to manually configure hooks, setup scripts are available:
+
+#### macOS / Linux (Bash/Zsh)
+```bash
+bash scripts/setup-git-hooks.sh
+```
+
+#### Windows (PowerShell)
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup-git-hooks.ps1
+```
+
+### Verify Setup
+
+After setup, confirm everything is configured:
+
+```bash
+# Should output: .githooks
+git config core.hooksPath
+
+# Should be executable (if on macOS/Linux)
+ls -la .githooks/pre-push
+
+# Try a test push (create a dummy branch first)
+git checkout -b test-hook
+git push origin test-hook
+# You should see the hook run with colored output
+```
+
+---
+
+## Verification Checklist
+
+After you run your first `git push`, verify everything worked:
+
+- [ ] `git config core.hooksPath` outputs `.githooks` (auto-configured)
+- [ ] `pnpm run verify` runs without errors
+- [ ] `git push` to any branch triggers the pre-push hook with colored output
+- [ ] Hook output shows colored headings and ✓ preflight checks
+- [ ] Intentionally break lint, re-push, and confirm push is blocked
+- [ ] Fix lint, push again, and confirm push proceeds
+
+---
+
+## Advanced Usage
+
+### Manual Verification
+
+To run the verification pipeline manually (useful for CI integration):
+
+```bash
+pnpm run verify
+```
+
+This chains all checks: lint → typecheck → build
+
+### Individual Checks
+
+```bash
+pnpm run lint       # ESLint only
+pnpm run typecheck  # TypeScript type checking only
+pnpm run build      # Production build only
+```
+
+### Bypass Hook (Not Recommended)
+
+If you absolutely must skip the hook (e.g., emergency hotfix):
+
+```bash
+git push --no-verify
+```
+
+⚠️ **Warning:** This skips local verification but **CI will still run** on GitHub. Pushes that fail CI cannot be merged.
+
+### Troubleshooting
+
+#### Hook Not Running
+
+1. **Verify auto-setup worked:**
+   ```bash
+   git config core.hooksPath
+   # Should output: .githooks
+   ```
+
+2. **If not set, manually configure:**
+   ```bash
+   # macOS/Linux
+   bash scripts/setup-git-hooks.sh
+   
+   # Windows (PowerShell)
+   powershell -ExecutionPolicy Bypass -File scripts/setup-git-hooks.ps1
+   ```
+
+3. **Check hook is executable (macOS/Linux):**
+   ```bash
+   ls -la .githooks/pre-push
+   # Should see: -rwxr-xr-x (executable flag)
+   ```
+
+4. **Manually test hook:**
+   ```bash
+   .githooks/pre-push
+   ```
+
+#### "pnpm not found"
+
+- Install pnpm: `npm install -g pnpm@latest`
+- Verify: `pnpm -v` (should be ≥ 9)
+
+#### "Node.js version is too old"
+
+- Install Node.js ≥ 20
+- Verify: `node -v` (should be ≥ 20.x.x)
+
+#### "pnpm-lock.yaml not found"
+
+- Run: `pnpm install`
+- This generates the lock file
+
+#### Hook Errors on Windows (CRLF vs LF)
+
+Git may convert `.githooks/pre-push` to CRLF (Windows line endings), breaking the bash script.
+
+**Solution:**
+1. `.gitattributes` already forces LF for `.githooks/*`
+2. If you cloned before `.gitattributes` was added:
+   ```bash
+   git rm --cached .githooks/pre-push
+   git checkout .githooks/pre-push
+   git add .githooks/pre-push
+   git commit -m "fix: enforce LF line endings for hook"
+   ```
+
+#### "Lint/Build Passes Locally but Fails in CI"
+
+- CI runs Node.js 20 and pnpm 9
+- Ensure your local setup matches: `node -v`, `pnpm -v`
+- Clear cache and reinstall: `rm -rf node_modules .next && pnpm install`
+- CI logs available in GitHub **Actions** tab
+
+---
+
+## CI Workflow (GitHub Actions)
+
+In addition to local hooks, a GitHub Actions workflow runs on every push and pull request.
+
+### Trigger
+
+The workflow in `.github/workflows/lint-and-build.yml` triggers on:
+- **push** to any branch
+- **pull_request** targeting any branch
+
+### What It Runs
+
+1. Checkout code
+2. Setup Node.js v20
+3. Install pnpm v9
+4. Cache dependencies
+5. Install dependencies (`pnpm install --frozen-lockfile`)
+6. Run verification pipeline (`pnpm run verify`)
+
+### Viewing Results
+
+- **On Push:** Go to **Actions** → **Lint & Build** → most recent run
+- **On Pull Request:** Check the **Checks** tab in the PR
+
+If checks fail, fix locally and re-push; the workflow re-runs automatically.
+
+---
+
+## Branch Protection & Merge Policy
+
+Recommended GitHub branch protection settings for `master` and `production`:
+
+1. **Settings** → **Branches** → **Branch protection rules** → **Add rule**
+2. Configure:
+   - ✅ Require pull request before merging
+   - ✅ Require status checks to pass (`Lint & Build` workflow)
+   - ✅ Require branches to be up to date before merging
+   - ✅ Restrict direct pushes (allow admin override)
+
+**Result:**
+- No direct pushes to protected branches (local hook + GitHub rule)
+- PRs must pass CI before merge
+- Code review + CI validation = safer deployments
+
+---
+
+## Development Workflow Example
+
+### Feature Branch
+
+```bash
+# Create feature branch
+git checkout -b feature/my-feature
+
+# Make changes
+echo "new feature" > src/feature.ts
+
+# Commit
+git add .
+git commit -m "feat: add my feature"
+
+# Push — hook runs lint/typecheck/build
+git push origin feature/my-feature
+# ✅ All pass → push succeeds
+```
+
+### Fix Lint Error
+
+```bash
+# Edit file
+# Commit
+git add .
+git commit -m "fix: lint error"
+
+# Push — hook checks again
+git push origin feature/my-feature
+# ❌ Lint still fails → push blocked
+# Fix lint issues locally
+pnpm run lint --fix
+git add .
+git commit -m "fix: resolve lint issues"
+git push  # ✅ Now passes
+```
+
+### Pull Request & Merge
+
+```bash
+# Create PR on GitHub
+# GitHub Actions runs: lint → typecheck → build
+# Review by teammates
+# Once approved + CI passes, merge
+```
+
+---
+
+## Environment & Dependency Enforcement
+
+### package.json Constraints
+
+The repository enforces specific versions:
+
+```json
+{
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9"
+}
+```
+
+### .npmrc Enforcement
+
+```
+engine-strict=true
+```
+
+**Effect:** `pnpm install` fails if Node/pnpm versions don't match.
+
+### Checking Your Setup
+
+```bash
+node -v      # Should be ≥ 20.x.x
+pnpm -v      # Should be ≥ 9.x.x
+```
+
+If either is too old, install/upgrade:
+- Node: https://nodejs.org/ or use nvm
+- pnpm: `npm install -g pnpm@latest`
+
+---
+
+## Questions or Issues?
+
+- **Hook not running?** See [Troubleshooting](#troubleshooting)
+- **CI failure?** Check **Actions** tab for detailed logs
+- **Need to bypass?** Use `git push --no-verify` (local only; CI still enforces)
+- **Team help?** Contact the DevOps team or check the GitHub Issues
 
 #### If a Check Fails
 

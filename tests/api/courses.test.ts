@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getCourses, POST as postCourses } from '@/app/api/v1/admin/courses/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as coursesQueries from '@/app/db/queries/courses';
@@ -61,7 +61,7 @@ describe('GET /api/v1/courses', () => {
     );
 
     const req = makeJsonRequest({ method: 'GET', path });
-    const res = await getCourses(req as any);
+    const res = await getCourses(req as any, createRouteContext());
 
     expect(res.status).toBe(401);
     const body = await res.json();
@@ -77,7 +77,7 @@ describe('GET /api/v1/courses', () => {
       path: `${path}?limit=0`, // limit must be >= 1
     });
 
-    const res = await getCourses(req as any);
+    const res = await getCourses(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -96,7 +96,7 @@ describe('GET /api/v1/courses', () => {
       path: `${path}?q=TES&includeDeleted=true&limit=10&offset=5`,
     });
 
-    const res = await getCourses(req as any);
+    const res = await getCourses(req as any, createRouteContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
@@ -118,7 +118,7 @@ describe('POST /api/v1/courses', () => {
     );
 
     const req = makeJsonRequest({ method: 'POST', path, body: {} });
-    const res = await postCourses(req as any);
+    const res = await postCourses(req as any, createRouteContext());
 
     expect(res.status).toBe(401);
     const body = await res.json();
@@ -137,7 +137,7 @@ describe('POST /api/v1/courses', () => {
       body: { code: 'TES-50', title: 'Course 50', notes: 'Intro' },
     });
 
-    const res = await postCourses(req as any);
+    const res = await postCourses(req as any, createRouteContext());
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -151,7 +151,7 @@ describe('POST /api/v1/courses', () => {
     });
 
     const req = makeJsonRequest({ method: 'POST', path, body: { code: '' } });
-    const res = await postCourses(req as any);
+    const res = await postCourses(req as any, createRouteContext());
 
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -175,7 +175,7 @@ describe('POST /api/v1/courses', () => {
       body: { code: 'TES-50', title: 'Course 50' },
     });
 
-    const res = await postCourses(req as any);
+    const res = await postCourses(req as any, createRouteContext());
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -201,7 +201,7 @@ describe('POST /api/v1/courses', () => {
       body: { code: 'TES-50', title: 'Course 50', notes: 'Intro' },
     });
 
-    const res = await postCourses(req as any);
+    const res = await postCourses(req as any, createRouteContext());
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.ok).toBe(true);

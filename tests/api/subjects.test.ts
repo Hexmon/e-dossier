@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getSubjects, POST as postSubject } from '@/app/api/v1/admin/subjects/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as subjectQueries from '@/app/db/queries/subjects';
@@ -74,7 +74,7 @@ describe('GET /api/v1/subjects', () => {
     );
 
     const req = makeJsonRequest({ method: 'GET', path });
-    const res = await getSubjects(req as any);
+    const res = await getSubjects(req as any, createRouteContext());
 
     expect(res.status).toBe(401);
     const body = await res.json();
@@ -90,7 +90,7 @@ describe('GET /api/v1/subjects', () => {
       path: `${path}?limit=0`,
     });
 
-    const res = await getSubjects(req as any);
+    const res = await getSubjects(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -115,7 +115,7 @@ describe('GET /api/v1/subjects', () => {
       path: `${path}?q=math&branch=C&includeDeleted=true&limit=10&offset=0`,
     });
 
-    const res = await getSubjects(req as any);
+    const res = await getSubjects(req as any, createRouteContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
@@ -138,7 +138,7 @@ describe('POST /api/v1/subjects', () => {
     );
 
     const req = makeJsonRequest({ method: 'POST', path, body: {} });
-    const res = await postSubject(req as any);
+    const res = await postSubject(req as any, createRouteContext());
 
     expect(res.status).toBe(401);
     const body = await res.json();
@@ -157,7 +157,7 @@ describe('POST /api/v1/subjects', () => {
       body: { code: 'SUB-1', name: 'Subject 1', branch: 'C' },
     });
 
-    const res = await postSubject(req as any);
+    const res = await postSubject(req as any, createRouteContext());
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -168,7 +168,7 @@ describe('POST /api/v1/subjects', () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
     const req = makeJsonRequest({ method: 'POST', path, body: { code: '' } });
-    const res = await postSubject(req as any);
+    const res = await postSubject(req as any, createRouteContext());
 
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -195,7 +195,7 @@ describe('POST /api/v1/subjects', () => {
       body: { code: 'SUB-1', name: 'Subject 1', branch: 'C' },
     });
 
-    const res = await postSubject(req as any);
+    const res = await postSubject(req as any, createRouteContext());
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -217,7 +217,7 @@ describe('POST /api/v1/subjects', () => {
       },
     });
 
-    const res = await postSubject(req as any);
+    const res = await postSubject(req as any, createRouteContext());
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.ok).toBe(true);

@@ -4,7 +4,7 @@ import {
   PATCH as patchInstructor,
   DELETE as deleteInstructor,
 } from '@/app/api/v1/admin/instructors/[id]/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import { db } from '@/app/db/client';

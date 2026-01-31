@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { POST as postLogout } from '@/app/api/v1/auth/logout/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 
 vi.mock('@/lib/audit-log', () => ({
   createAuditLog: vi.fn(async () => {}),
@@ -42,7 +42,7 @@ describe('POST /api/v1/auth/logout', () => {
       cookies: { access_token: 'dummy' },
     });
 
-    const res = await postLogout(req as any);
+    const res = await postLogout(req as any, createRouteContext());
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -60,7 +60,7 @@ describe('POST /api/v1/auth/logout', () => {
       cookies: { access_token: 'dummy' },
     });
 
-    const res = await postLogout(req as any);
+    const res = await postLogout(req as any, createRouteContext());
     expect(res.status).toBe(204);
     // Clear-Site-Data header should be present for security
     expect(res.headers.get('Clear-Site-Data')).toContain('cookies');

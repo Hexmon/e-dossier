@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getMotivationAwardRoute, PATCH as patchMotivationAwardRoute, DELETE as deleteMotivationAwardRoute } from '@/app/api/v1/oc/[ocId]/motivation-awards/[id]/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as ocChecks from '@/app/api/v1/oc/_checks';
