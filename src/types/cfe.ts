@@ -4,6 +4,7 @@ export type cfeRow = {
     cat: string;
     mks: string;
     remarks: string;
+    sub_category: string;
 };
 
 export type cfeFormData = {
@@ -15,4 +16,5 @@ export const defaultRow: cfeRow = {
     cat: "",
     mks: "",
     remarks: "",
+    sub_category: "",
 };

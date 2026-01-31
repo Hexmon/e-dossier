@@ -4,6 +4,7 @@ export type CfeItem = {
     cat: string;
     marks: number;
     remarks?: string;
+    sub_category?: string;
 };
 
 export type CfeRecord = {

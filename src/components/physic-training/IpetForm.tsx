@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -25,7 +25,7 @@ import {
 } from "@/hooks/usePhysicalTraining";
 import { buildPTTableRows, PTTableRow } from "./ptTableHelpers";
 
-interface SwimmingProps {
+interface IpetFormProps {
   onMarksChange: (marks: number) => void;
   activeSemester: string;
   scores: PhysicalTrainingScore[];
@@ -46,14 +46,14 @@ const semesterToApiSemester: Record<string, number> = {
 
 const isVirtualId = (id?: string) => !!id && id.startsWith("virtual:");
 
-export default function Swimming({
+export default function IpetForm({
   onMarksChange,
   activeSemester,
   scores,
   updateScores,
   templates,
   typeTitle,
-}: SwimmingProps) {
+}: IpetFormProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [tableData, setTableData] = useState<PTTableRow[]>([]);
 
@@ -63,6 +63,7 @@ export default function Swimming({
     return map;
   }, [scores]);
 
+  // Build rows from templates + current semester scores
   useEffect(() => {
     const semesterNum = semesterToApiSemester[activeSemester];
     if (!semesterNum) {
@@ -72,20 +73,20 @@ export default function Swimming({
     setTableData(buildPTTableRows(templates, semesterNum, scoreById));
   }, [templates, activeSemester, scoreById]);
 
-  const tableTotal = useMemo(
-    () => tableData.reduce((sum, row) => sum + (row.column6 || 0), 0),
-    [tableData]
-  );
+  const tableTotal = useMemo(() => {
+    return tableData.reduce((sum, row) => sum + (row.column6 || 0), 0);
+  }, [tableData]);
 
-  const totalMaxMarks = useMemo(
-    () => tableData.reduce((sum, row) => sum + (row.column3 || 0), 0),
-    [tableData]
-  );
+  const totalMaxMarks = useMemo(() => {
+    return tableData.reduce((sum, row) => sum + (row.column3 || 0), 0);
+  }, [tableData]);
 
+  // Report total to parent (Grand Total)
   useEffect(() => {
     onMarksChange(tableTotal);
   }, [tableTotal, onMarksChange]);
 
+  // Reset parent marks on semester change (prevents stale totals)
   useEffect(() => {
     onMarksChange(0);
   }, [activeSemester, onMarksChange]);
@@ -106,6 +107,7 @@ export default function Swimming({
             ? scoreById.get(nextScoreId)?.marksScored ?? 0
             : row.column6;
 
+          // ✅ Max Marks should come from template (task maxMarks fallback already applied in hook)
           const maxMarks = nextGrade?.maxMarks ?? row.column3;
 
           return {
@@ -161,6 +163,7 @@ export default function Swimming({
       prev.map((row) => {
         if (row.id !== rowId) return row;
 
+        // If somehow a virtual id is present, prevent editing/saving (same rule as PPT)
         if (isVirtualId(row.selectedScoreId)) {
           toast.error(
             "This template has no scoreId from server, so marks cannot be saved yet."
@@ -193,11 +196,7 @@ export default function Swimming({
     if (!semesterNum) return;
 
     for (const row of tableData) {
-      if (
-        !isVirtualId(row.selectedScoreId) &&
-        row.column6 > 0 &&
-        row.column6 > row.column3
-      ) {
+      if (!isVirtualId(row.selectedScoreId) && row.column6 > 0 && row.column6 > row.column3) {
         toast.error(
           `Invalid marks for ${row.column2}. Marks must be between 0 and ${row.column3}`
         );
@@ -223,7 +222,7 @@ export default function Swimming({
 
     await updateScores(semesterNum, scoresForApi);
     setIsEditing(false);
-    toast.success("Swimming data saved successfully");
+    toast.success("IPET data saved successfully");
   }, [tableData, activeSemester, updateScores]);
 
   const totalRow: PTTableRow = {
@@ -242,7 +241,7 @@ export default function Swimming({
 
   const displayData = [...tableData, totalRow];
 
-  // ✅ Column order: S.No, Test, Category, Status, Max Marks, Marks Scored
+  // ✅ Column order to match PPT: S.No, Test, Category, Status, Max Marks, Marks Scored
   const columns: TableColumn<PTTableRow>[] = useMemo(
     () => [
       {
@@ -259,7 +258,9 @@ export default function Swimming({
         key: "column4",
         label: "Category",
         render: (_, row) => {
-          if (row.id === "total") return <span className="text-center block">—</span>;
+          if (row.id === "total") {
+            return <span className="text-center block">—</span>;
+          }
           const attemptOptions = row.attemptGroups.map((g) => g.attemptCode);
           return (
             <Select
@@ -285,7 +286,9 @@ export default function Swimming({
         key: "column5",
         label: "Status",
         render: (_, row) => {
-          if (row.id === "total") return <span className="text-center block">—</span>;
+          if (row.id === "total") {
+            return <span className="text-center block">—</span>;
+          }
           const currentAttempt = row.attemptGroups.find(
             (g) => g.attemptCode === row.selectedAttempt
           );
@@ -300,12 +303,12 @@ export default function Swimming({
                 <SelectValue placeholder="Select grade" />
               </SelectTrigger>
               <SelectContent>
-                {gradeOptions.map((opt) => (
+                {gradeOptions.map((option) => (
                   <SelectItem
-                    key={`${row.id}-${opt.gradeCode}`}
-                    value={opt.gradeCode}
+                    key={`${row.id}-${option.gradeCode}`}
+                    value={option.gradeCode}
                   >
-                    {opt.gradeCode}
+                    {option.gradeCode}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -313,7 +316,7 @@ export default function Swimming({
           );
         },
       },
-      // ✅ Max Marks read-only (template-driven)
+      // ✅ Max Marks read-only (mapped from template)
       {
         key: "column3",
         label: "Max Marks",
@@ -350,14 +353,7 @@ export default function Swimming({
         },
       },
     ],
-    [
-      handleAttemptChange,
-      handleGradeChange,
-      handleMarksChange,
-      isEditing,
-      tableTotal,
-      totalMaxMarks,
-    ]
+    [handleAttemptChange, handleGradeChange, handleMarksChange, isEditing, tableTotal, totalMaxMarks]
   );
 
   const config: TableConfig<PTTableRow> = {
@@ -377,34 +373,35 @@ export default function Swimming({
     },
   };
 
-  const defaultMarks = activeSemester === "III TERM" ? 35 : 30;
-
   return (
-    <CardContent className="space-y-4">
-      <h2 className="text-lg font-bold text-left text-gray-700">
-        {typeTitle ?? `Swimming (${totalMaxMarks || defaultMarks} Marks)`}
-      </h2>
+    <div className="mt-3 space-y-6">
+      <CardContent className="space-y-6">
+        <h2 className="text-lg font-bold text-left text-gray-700">
+          {typeTitle ?? "IPET"}
+          {!typeTitle && ` (${totalMaxMarks} Marks)`}
+        </h2>
 
-      <div className="border border-gray-300 rounded-lg">
-        <UniversalTable<PTTableRow> data={displayData} config={config} />
-      </div>
+        <div className="border border-gray-300 rounded-lg">
+          <UniversalTable<PTTableRow> data={displayData} config={config} />
+        </div>
 
-      <div className="flex gap-3 justify-center mt-4">
-        {isEditing ? (
-          <>
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>Save</Button>
-          </>
-        ) : (
-          <Button onClick={() => setIsEditing(true)}>Edit</Button>
-        )}
-      </div>
+        <div className="flex gap-3 justify-center mt-4">
+          {isEditing ? (
+            <>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave}>Save</Button>
+            </>
+          ) : (
+            <Button onClick={() => setIsEditing(true)}>Edit</Button>
+          )}
+        </div>
 
-      <p className="text-sm text-muted-foreground text-center mt-2">
-        * Changes are automatically saved
-      </p>
-    </CardContent>
+        <p className="text-sm text-muted-foreground text-center mt-2">
+          * Changes are automatically saved
+        </p>
+      </CardContent>
+    </div>
   );
 }
