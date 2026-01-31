@@ -11,6 +11,96 @@
 - pnpm ≥ 9 (check with `pnpm -v`)
 - Docker (for Postgres/MinIO)
 
+## Getting Started (New Developers)
+
+### Step 1: Clone the Repository
+
+**macOS/Linux:**
+```bash
+git clone https://github.com/your-org/e-dossier.git
+cd e-dossier
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/your-org/e-dossier.git
+cd e-dossier
+```
+
+> ✅ **Git hooks auto-configure after clone** — No manual setup needed!
+
+### Step 2: Install Dependencies
+
+```bash
+pnpm install
+```
+
+### Step 3: Verify Setup
+
+**macOS/Linux/Windows (All Terminals):**
+```bash
+# Verify hooks are configured
+git config core.hooksPath
+# Should output: .githooks
+
+# List the hooks
+ls -la .githooks/
+# Should show: pre-push, post-checkout, .gitkeep
+```
+
+**Windows (PowerShell alternative):**
+```powershell
+git config core.hooksPath
+# Should output: .githooks
+
+dir .\.githooks\
+# Should show: pre-push, post-checkout, .gitkeep
+```
+
+### Step 4: Start Developing
+
+```bash
+git checkout -b feature/my-feature
+# Make your changes...
+git add .
+git commit -m "feat: add something"
+git push origin feature/my-feature
+
+# ✅ Hooks automatically run: lint → typecheck → build
+# If any checks fail, fix errors and push again
+```
+
+### Existing Developers: Pull Master
+
+If you're already working on this project, pull master to get the updated hooks:
+
+```bash
+git pull origin master
+# → post-checkout hook runs
+# → Hooks are ready for your next push
+
+git checkout -b feature/whatever
+git push origin feature/whatever
+# ✅ Hooks automatically enforce quality
+```
+
+### Troubleshooting: Hooks Not Running
+
+If hooks don't trigger on push, manually configure them:
+
+**macOS/Linux:**
+```bash
+bash scripts/setup-git-hooks.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup-git-hooks.ps1
+```
+
+For more details, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
+
+
 ## Code Quality & Git Hooks (Auto-Setup)
 
 This repository enforces automatic quality checks on **every `git push`** to ensure code quality across all branches.
