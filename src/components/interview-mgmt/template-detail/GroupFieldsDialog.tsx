@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Settings } from "lucide-react";
-import { useInterviewTemplates } from "@/hooks/Useinterviewtemplates";
+import { useInterviewTemplates } from "@/hooks/useInterviewTemplates";
 import { Group, Field } from "@/app/lib/api/Interviewtemplateapi";
 import FieldDialog from "./FieldDialog";
 import FieldOptionsDialog from "./FieldOptionsDialog";
