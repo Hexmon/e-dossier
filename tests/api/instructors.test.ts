@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getInstructors, POST as postInstructor } from '@/app/api/v1/admin/instructors/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as instructorQueries from '@/app/db/queries/instructors';
@@ -85,7 +85,7 @@ describe('GET /api/v1/admin/instructors', () => {
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
     const req = makeJsonRequest({ method: 'GET', path });
-    const res = await getInstructors(req as any);
+    const res = await getInstructors(req as any, createRouteContext());
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -101,7 +101,7 @@ describe('GET /api/v1/admin/instructors', () => {
       method: 'GET',
       path: `${path}?q=inst&includeDeleted=true&limit=10&offset=5`,
     });
-    const res = await getInstructors(req as any);
+    const res = await getInstructors(req as any, createRouteContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
@@ -122,7 +122,7 @@ describe('POST /api/v1/admin/instructors', () => {
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
     const req = makeJsonRequest({ method: 'POST', path, body: {} });
-    const res = await postInstructor(req as any);
+    const res = await postInstructor(req as any, createRouteContext());
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -139,7 +139,7 @@ describe('POST /api/v1/admin/instructors', () => {
       path,
       body: { name: 'Ext Instructor' },
     });
-    const res = await postInstructor(req as any);
+    const res = await postInstructor(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -165,7 +165,7 @@ describe('POST /api/v1/admin/instructors', () => {
         userId: '11111111-1111-4111-8111-111111111111',
       },
     });
-    const res = await postInstructor(req as any);
+    const res = await postInstructor(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -191,7 +191,7 @@ describe('POST /api/v1/admin/instructors', () => {
         name: 'Instructor One',
       },
     });
-    const res = await postInstructor(req as any);
+    const res = await postInstructor(req as any, createRouteContext());
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -207,7 +207,7 @@ describe('POST /api/v1/admin/instructors', () => {
         userId: '11111111-1111-4111-8111-111111111111',
       },
     });
-    const res = await postInstructor(req as any);
+    const res = await postInstructor(req as any, createRouteContext());
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.ok).toBe(true);

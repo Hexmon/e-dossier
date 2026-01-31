@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getPlatoons, POST as postPlatoon, DELETE as deleteAllPlatoons } from '@/app/api/v1/platoons/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import { db } from '@/app/db/client';
@@ -62,7 +62,7 @@ describe('GET /api/v1/platoons', () => {
       method: 'GET',
       path: `${path}?q=a1&includeDeleted=true`,
     });
-    const res = await getPlatoons(req as any);
+    const res = await getPlatoons(req as any, createRouteContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
@@ -77,7 +77,7 @@ describe('POST /api/v1/platoons', () => {
       new ApiError(401, 'Unauthorized', 'unauthorized'),
     );
     const req = makeJsonRequest({ method: 'POST', path, body: {} });
-    const res = await postPlatoon(req as any);
+    const res = await postPlatoon(req as any, createRouteContext());
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -91,7 +91,7 @@ describe('POST /api/v1/platoons', () => {
       path,
       body: { key: 'x', name: '' },
     });
-    const res = await postPlatoon(req as any);
+    const res = await postPlatoon(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -112,7 +112,7 @@ describe('POST /api/v1/platoons', () => {
       path,
       body: { key: 'A1', name: 'Platoon A1' },
     });
-    const res = await postPlatoon(req as any);
+    const res = await postPlatoon(req as any, createRouteContext());
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -138,7 +138,7 @@ describe('POST /api/v1/platoons', () => {
       path,
       body: { key: 'A1', name: 'Platoon A1' },
     });
-    const res = await postPlatoon(req as any);
+    const res = await postPlatoon(req as any, createRouteContext());
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.ok).toBe(true);
@@ -152,7 +152,7 @@ describe('DELETE /api/v1/platoons', () => {
       new ApiError(403, 'Admin privileges required', 'forbidden'),
     );
     const req = makeJsonRequest({ method: 'DELETE', path });
-    const res = await deleteAllPlatoons(req as any);
+    const res = await deleteAllPlatoons(req as any, createRouteContext());
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -169,7 +169,7 @@ describe('DELETE /api/v1/platoons', () => {
       }),
     }));
     const req = makeJsonRequest({ method: 'DELETE', path });
-    const res = await deleteAllPlatoons(req as any);
+    const res = await deleteAllPlatoons(req as any, createRouteContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);

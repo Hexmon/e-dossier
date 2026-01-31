@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { GET as getMe } from '@/app/api/v1/me/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as guard from '@/app/lib/guard';
 import { db } from '@/app/db/client';
@@ -57,7 +57,7 @@ describe('GET /api/v1/me', () => {
     );
 
     const req = makeJsonRequest({ method: 'GET', path });
-    const res = await getMe(req as any);
+    const res = await getMe(req as any, createRouteContext());
 
     expect(res.status).toBe(401);
     const body = await res.json();
@@ -72,7 +72,7 @@ describe('GET /api/v1/me', () => {
     }));
 
     const req = makeJsonRequest({ method: 'GET', path });
-    const res = await getMe(req as any);
+    const res = await getMe(req as any, createRouteContext());
 
     expect(res.status).toBe(404);
     const body = await res.json();
@@ -88,7 +88,7 @@ describe('GET /api/v1/me', () => {
     });
 
     const req = makeJsonRequest({ method: 'GET', path });
-    const res = await getMe(req as any);
+    const res = await getMe(req as any, createRouteContext());
 
     expect(res.status).toBe(200);
     const body = await res.json();
