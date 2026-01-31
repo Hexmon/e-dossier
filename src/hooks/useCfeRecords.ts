@@ -45,13 +45,14 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
                 const dataArray = Array.isArray(rec.data) ? rec.data : [];
 
                 const rows: cfeRow[] = dataArray.map((it: CfeItem, index: number) => {
-                    const { cat = "", marks = 0, remarks = "" } = it ?? {};
+                    const { cat = "", marks = 0, remarks = "", sub_category = "" } = it ?? {};
                     return {
                         id: rec.id ?? undefined,
                         serialNo: String(index + 1),
                         cat,
                         mks: String(marks),
                         remarks: remarks ?? rec.remark ?? "",
+                        sub_category,
                     };
                 });
 
@@ -81,7 +82,7 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
      * Result: All previous records are preserved + new ones are added
      */
     const saveSemesterPayload = useCallback(
-        async (semesterIndex: number, dataRows: Array<{ cat: string; mks: string; remarks?: string }>) => {
+        async (semesterIndex: number, dataRows: Array<{ cat: string; mks: string; remarks?: string; sub_category?: string }>) => {
             if (!ocId) return null;
             setLoading(true);
             try {
@@ -90,7 +91,7 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
                 // Transform NEW form rows to CfeItem
                 const newItems: CfeItem[] = dataRows
                     .filter((r) => r.cat && r.mks)
-                    .map((r) => ({ cat: r.cat, marks: Number(r.mks) || 0, remarks: r.remarks ?? "" }));
+                    .map((r) => ({ cat: r.cat, marks: Number(r.mks) || 0, remarks: r.remarks ?? "", sub_category: r.sub_category ?? "" }));
 
                 if (newItems.length === 0) {
                     toast.error("Please provide at least one valid row");
@@ -106,6 +107,7 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
                         cat: row.cat ?? "",
                         marks: Number(row.mks) || 0,
                         remarks: row.remarks ?? "",
+                        sub_category: row.sub_category ?? "", // Added sub_category to existing items as well to preserve it during merge
                     }));
 
                 // MERGE: Combine existing items with new items
@@ -143,7 +145,7 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
      * Used when user edits existing records in the table.
      */
     const replaceSemesterPayload = useCallback(
-        async (semesterIndex: number, items: Array<{ cat: string; marks: number; remarks?: string }>) => {
+        async (semesterIndex: number, items: Array<{ cat: string; marks: number; remarks?: string; sub_category?: string }>) => {
             if (!ocId) return null;
             setLoading(true);
             try {
@@ -154,6 +156,7 @@ export function useCfeRecords(ocId: string, semestersCount = 6) {
                         cat: it.cat,
                         marks: Number(it.marks) || 0,
                         remarks: it.remarks ?? "",
+                        sub_category: it.sub_category ?? "", // Added sub_category to existing items as well to preserve it during merge
                     })),
                     remark: "",
                 };

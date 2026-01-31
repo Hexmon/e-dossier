@@ -6,6 +6,8 @@ export interface SpecialInterviewRecord {
     date: string;
     summary: string;
     interviewedBy: string;
+    rowId?: string;
+    rowIndex?: number;
 }
 
 export interface TermInterviewFormData {

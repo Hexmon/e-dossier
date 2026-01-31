@@ -97,7 +97,7 @@ export default function CFEFormPage() {
     };
 
     // replace an entire semester payload (used by inline-edit save)
-    const handleReplaceSemester = async (semesterIndex: number, items: { cat: string; marks: number; remarks?: string }[]) => {
+    const handleReplaceSemester = async (semesterIndex: number, items: { cat: string; marks: number; remarks?: string; sub_category?: string }[]) => {
         await replaceSemesterPayload(semesterIndex, items);
     };
 
@@ -121,6 +121,7 @@ export default function CFEFormPage() {
             cat: row.cat ?? "",
             marks: Number(row.mks) || 0,
             remarks: row.remarks ?? "",
+            sub_category: row.sub_category ?? "",
         }));
 
         await replaceSemesterPayload(semesterIndex, itemsToSave);
@@ -141,6 +142,7 @@ export default function CFEFormPage() {
                     cat: "",
                     mks: "",
                     remarks: "",
+                    sub_category: "",
                 },
             ],
         };
