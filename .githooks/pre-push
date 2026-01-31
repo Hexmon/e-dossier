@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# .githooks/pre-push
+# Enterprise-grade pre-push hook for lint, typecheck, and build verification
+# Works on Windows (Git Bash), macOS, and Linux
+# Usage: Automatically triggered by `git push`
+# Auto-setup: If core.hooksPath is not configured, sets it up automatically
+
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Ensure we run from the repository root
+REPO_ROOT="$(git rev-parse --show-toplevel)" || exit 1
+cd "$REPO_ROOT" || exit 1
+
+# Auto-setup: Configure core.hooksPath if not already set
+CURRENT_HOOKS_PATH=$(git config core.hooksPath || echo "")
+if [ "$CURRENT_HOOKS_PATH" != ".githooks" ]; then
+  git config core.hooksPath .githooks
+  chmod +x .githooks/pre-push 2>/dev/null || true
+  chmod +x .githooks/post-checkout 2>/dev/null || true
+fi
+
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}🔐 Pre-Push Quality Checks${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# Preflight checks
+echo -e "${YELLOW}[Preflight Checks]${NC}"
+
+# Check 1: pnpm-lock.yaml exists
+if [ ! -f pnpm-lock.yaml ]; then
+  echo -e "${RED}❌ FAILED: pnpm-lock.yaml not found${NC}"
+  echo "   Please run 'pnpm install' to generate the lock file."
+  exit 1
+fi
+echo -e "${GREEN}✓${NC} pnpm-lock.yaml exists"
+
+# Check 2: pnpm is available
+if ! command -v pnpm &> /dev/null; then
+  echo -e "${RED}❌ FAILED: pnpm not found on PATH${NC}"
+  echo "   Please install pnpm: https://pnpm.io/installation"
+  exit 1
+fi
+echo -e "${GREEN}✓${NC} pnpm is available"
+
+# Check 3: Node version >= 20
+NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+if [ "$NODE_VERSION" -lt 20 ]; then
+  echo -e "${RED}❌ FAILED: Node.js version is too old${NC}"
+  echo "   Required: Node.js >= 20"
+  echo "   Found: $(node -v)"
+  echo "   Please upgrade Node.js: https://nodejs.org/"
+  exit 1
+fi
+echo -e "${GREEN}✓${NC} Node.js version $(node -v) (required: >=20)"
+
+# Check 4: pnpm version >= 9
+PNPM_VERSION=$(pnpm -v | cut -d'.' -f1)
+if [ "$PNPM_VERSION" -lt 9 ]; then
+  echo -e "${RED}❌ FAILED: pnpm version is too old${NC}"
+  echo "   Required: pnpm >= 9"
+  echo "   Found: $(pnpm -v)"
+  echo "   Please upgrade pnpm: pnpm add -g pnpm@latest"
+  exit 1
+fi
+echo -e "${GREEN}✓${NC} pnpm version $(pnpm -v) (required: >=9)"
+
+echo ""
+echo -e "${YELLOW}[Running Verification Pipeline]${NC}"
+
+# Run the verify script (lint + typecheck + build)
+if ! pnpm run verify; then
+  echo ""
+  echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${RED}❌ VERIFICATION FAILED - Push Blocked${NC}"
+  echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo ""
+  echo "Fix the errors above and try again:"
+  echo "  • Lint errors: pnpm run lint"
+  echo "  • Type errors: pnpm run typecheck"
+  echo "  • Build errors: pnpm run build"
+  echo ""
+  echo "To bypass this check (not recommended): git push --no-verify"
+  exit 1
+fi
+
+echo ""
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✅ All Checks Passed - Push Allowed${NC}"
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+exit 0

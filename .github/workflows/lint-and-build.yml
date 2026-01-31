@@ -2,10 +2,11 @@ name: Lint & Build
 
 on:
   push:
+    branches:
+      - '**'
   pull_request:
     branches:
-      - master
-      - production
+      - '**'
 
 jobs:
   lint-and-build:
@@ -43,8 +44,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run lint
-        run: pnpm lint
-
-      - name: Run build
-        run: pnpm run build
+      - name: Run verification pipeline
+        run: pnpm run verify
