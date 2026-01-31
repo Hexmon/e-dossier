@@ -12,6 +12,7 @@ import {
   checkApiRateLimit,
   getRateLimitHeaders
 } from '@/lib/ratelimit';
+import { isRateLimitEnabled, shouldExcludeHealthCheck } from '@/config/ratelimit.config';
 // NOTE: Cannot import audit-log in middleware (Edge Runtime doesn't support database operations)
 // Audit logging for middleware events should be done in API routes instead
 
@@ -71,8 +72,11 @@ export async function middleware(req: NextRequest) {
   };
 
   // SECURITY FIX: Rate Limiting for API requests
-  // Apply rate limiting to all API endpoints
-  if (pathname.startsWith(PROTECTED_PREFIX)) {
+  // Apply rate limiting to all API endpoints (unless disabled in config)
+  const isHealthCheck = pathname === '/api/v1/health';
+  const shouldApplyRateLimit = isRateLimitEnabled() && !(isHealthCheck && shouldExcludeHealthCheck());
+
+  if (pathname.startsWith(PROTECTED_PREFIX) && shouldApplyRateLimit) {
     const clientIp = getClientIp(req);
     const rateLimitResult = await checkApiRateLimit(clientIp);
 
