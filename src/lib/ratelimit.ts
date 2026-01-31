@@ -1,8 +1,17 @@
 // src/lib/ratelimit.ts
 // SECURITY FIX: Rate Limiting Implementation using Upstash Redis
+// Now with configurable limits via environment variables
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { NextRequest } from 'next/server';
+import {
+  isRateLimitEnabled,
+  getLoginRateLimitConfig,
+  getApiRateLimitConfig,
+  getSignupRateLimitConfig,
+  getPasswordResetRateLimitConfig,
+  getRateLimitRedisKeyPrefix,
+} from '@/config/ratelimit.config';
 
 // Initialize Redis client
 // If Upstash credentials are not provided, use in-memory store (for development only)
@@ -41,54 +50,75 @@ class InMemoryStore {
 const inMemoryStore = new InMemoryStore();
 
 /**
- * Rate limiter for login attempts
- * Limit: 5 attempts per 15 minutes per IP address
+ * Helper function to convert seconds to milliseconds for Duration
  */
-export const loginRateLimiter = redis
+function secondsToMilliseconds(seconds: number): number {
+  return seconds * 1000;
+}
+
+const basePrefix = getRateLimitRedisKeyPrefix();
+
+/**
+ * Rate limiter for login attempts
+ * Configured via RATE_LIMIT_LOGIN_* environment variables
+ */
+export const loginRateLimiter = isRateLimitEnabled() && redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(5, '15 m'),
+      limiter: Ratelimit.slidingWindow(
+        getLoginRateLimitConfig().maxRequests,
+        getLoginRateLimitConfig().windowSeconds * 1000 as any
+      ),
       analytics: true,
-      prefix: 'ratelimit:login',
+      prefix: `${basePrefix}:login`,
     })
   : null;
 
 /**
  * Rate limiter for API requests
- * Limit: 100 requests per minute per IP address
+ * Configured via RATE_LIMIT_API_* environment variables
  */
-export const apiRateLimiter = redis
+export const apiRateLimiter = isRateLimitEnabled() && redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(100, '1 m'),
+      limiter: Ratelimit.slidingWindow(
+        getApiRateLimitConfig().maxRequests,
+        getApiRateLimitConfig().windowSeconds * 1000 as any
+      ),
       analytics: true,
-      prefix: 'ratelimit:api',
+      prefix: `${basePrefix}:api`,
     })
   : null;
 
 /**
  * Rate limiter for signup requests
- * Limit: 3 attempts per hour per IP address
+ * Configured via RATE_LIMIT_SIGNUP_* environment variables
  */
-export const signupRateLimiter = redis
+export const signupRateLimiter = isRateLimitEnabled() && redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(3, '1 h'),
+      limiter: Ratelimit.slidingWindow(
+        getSignupRateLimitConfig().maxRequests,
+        getSignupRateLimitConfig().windowSeconds * 1000 as any
+      ),
       analytics: true,
-      prefix: 'ratelimit:signup',
+      prefix: `${basePrefix}:signup`,
     })
   : null;
 
 /**
  * Rate limiter for password reset requests
- * Limit: 3 attempts per hour per IP address
+ * Configured via RATE_LIMIT_PASSWORD_RESET_* environment variables
  */
-export const passwordResetRateLimiter = redis
+export const passwordResetRateLimiter = isRateLimitEnabled() && redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(3, '1 h'),
+      limiter: Ratelimit.slidingWindow(
+        getPasswordResetRateLimitConfig().maxRequests,
+        getPasswordResetRateLimitConfig().windowSeconds * 1000 as any
+      ),
       analytics: true,
-      prefix: 'ratelimit:password-reset',
+      prefix: `${basePrefix}:password-reset`,
     })
   : null;
 
@@ -147,54 +177,110 @@ async function inMemoryRateLimit(
 
 /**
  * Check rate limit for login attempts
+ * If rate limiting is disabled, always returns success
  * @param identifier - Unique identifier (usually IP address)
  * @returns Rate limit result
  */
 export async function checkLoginRateLimit(identifier: string) {
+  // If rate limiting is disabled globally, allow all requests
+  if (!isRateLimitEnabled()) {
+    const loginConfig = getLoginRateLimitConfig();
+    return {
+      success: true,
+      limit: loginConfig.maxRequests,
+      remaining: loginConfig.maxRequests,
+      reset: Date.now() + loginConfig.windowMs,
+    };
+  }
+
   if (loginRateLimiter) {
     return await loginRateLimiter.limit(identifier);
   }
+
   // Fallback to in-memory rate limiting
-  return await inMemoryRateLimit(identifier, 5, 15 * 60 * 1000); // 5 per 15 minutes
+  const loginConfig = getLoginRateLimitConfig();
+  return await inMemoryRateLimit(identifier, loginConfig.maxRequests, loginConfig.windowMs);
 }
 
 /**
  * Check rate limit for API requests
+ * If rate limiting is disabled, always returns success
  * @param identifier - Unique identifier (usually IP address)
  * @returns Rate limit result
  */
 export async function checkApiRateLimit(identifier: string) {
+  // If rate limiting is disabled globally, allow all requests
+  if (!isRateLimitEnabled()) {
+    const apiConfig = getApiRateLimitConfig();
+    return {
+      success: true,
+      limit: apiConfig.maxRequests,
+      remaining: apiConfig.maxRequests,
+      reset: Date.now() + apiConfig.windowMs,
+    };
+  }
+
   if (apiRateLimiter) {
     return await apiRateLimiter.limit(identifier);
   }
+
   // Fallback to in-memory rate limiting
-  return await inMemoryRateLimit(identifier, 100, 60 * 1000); // 100 per minute
+  const apiConfig = getApiRateLimitConfig();
+  return await inMemoryRateLimit(identifier, apiConfig.maxRequests, apiConfig.windowMs);
 }
 
 /**
  * Check rate limit for signup requests
+ * If rate limiting is disabled, always returns success
  * @param identifier - Unique identifier (usually IP address)
  * @returns Rate limit result
  */
 export async function checkSignupRateLimit(identifier: string) {
+  // If rate limiting is disabled globally, allow all requests
+  if (!isRateLimitEnabled()) {
+    const signupConfig = getSignupRateLimitConfig();
+    return {
+      success: true,
+      limit: signupConfig.maxRequests,
+      remaining: signupConfig.maxRequests,
+      reset: Date.now() + signupConfig.windowMs,
+    };
+  }
+
   if (signupRateLimiter) {
     return await signupRateLimiter.limit(identifier);
   }
+
   // Fallback to in-memory rate limiting
-  return await inMemoryRateLimit(identifier, 3, 60 * 60 * 1000); // 3 per hour
+  const signupConfig = getSignupRateLimitConfig();
+  return await inMemoryRateLimit(identifier, signupConfig.maxRequests, signupConfig.windowMs);
 }
 
 /**
  * Check rate limit for password reset requests
+ * If rate limiting is disabled, always returns success
  * @param identifier - Unique identifier (usually IP address)
  * @returns Rate limit result
  */
 export async function checkPasswordResetRateLimit(identifier: string) {
+  // If rate limiting is disabled globally, allow all requests
+  if (!isRateLimitEnabled()) {
+    const prConfig = getPasswordResetRateLimitConfig();
+    return {
+      success: true,
+      limit: prConfig.maxRequests,
+      remaining: prConfig.maxRequests,
+      reset: Date.now() + prConfig.windowMs,
+    };
+  }
+
   if (passwordResetRateLimiter) {
     return await passwordResetRateLimiter.limit(identifier);
   }
+
   // Fallback to in-memory rate limiting
-  return await inMemoryRateLimit(identifier, 3, 60 * 60 * 1000); // 3 per hour
+  const prConfig = getPasswordResetRateLimitConfig();
+  return await inMemoryRateLimit(identifier, prConfig.maxRequests, prConfig.windowMs);
 }
 
 /**

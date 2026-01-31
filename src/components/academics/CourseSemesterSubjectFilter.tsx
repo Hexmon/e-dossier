@@ -38,7 +38,6 @@ export default function CourseSemesterSubjectFilter({
             console.log("Triggering fetch courses...");
             onFetchCourses();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Debug: Log when courses update
