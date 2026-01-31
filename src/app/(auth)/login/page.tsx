@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
@@ -20,6 +20,7 @@ import {
 
 import { getAppointments, Appointment } from "@/app/lib/api/appointmentApi";
 import { loginUser } from "@/app/lib/api/authApi";
+import { ApiClientError } from "@/app/lib/apiClient";
 import Image from "next/image";
 import { LoginForm } from "../../../types/login";
 
@@ -30,6 +31,10 @@ function LoginPageContent() {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [appointmentsFetchError, setAppointmentsFetchError] = useState(false);
+
+  // Use ref to prevent double calls
+  const hasFetchedRef = useRef(false);
 
   const {
     register,
@@ -54,13 +59,19 @@ function LoginPageContent() {
     try {
       const data = await getAppointments();
       setAppointments(data);
+      setAppointmentsFetchError(false);
     } catch (err) {
-      toast.error("Unable to load appointments.");
+      toast.error("Unable to load appointments. Please try again.");
+      setAppointmentsFetchError(true);
     } finally {
       setLoadingAppointments(false);
     }
   };
+
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     fetchAppointments();
   }, []);
 
@@ -76,10 +87,17 @@ function LoginPageContent() {
     return Array.from(set);
   }, [appointments]);
 
-  // Filter platoon commanders directly from appointments
   const platoonCommanders = useMemo(() => {
     return appointments.filter((a) => a.scopeType === "PLATOON");
   }, [appointments]);
+
+  const hasAppointmentsData = useMemo(() => {
+    return !loadingAppointments && !appointmentsFetchError && appointments.length > 0;
+  }, [loadingAppointments, appointmentsFetchError, appointments]);
+
+  const shouldDisableOtherFields = useMemo(() => {
+    return !hasAppointmentsData || !appointment;
+  }, [hasAppointmentsData, appointment]);
 
   const onSubmit = async (data: LoginForm) => {
     if (!data.username || !data.password || !data.appointment) {
@@ -110,13 +128,36 @@ function LoginPageContent() {
             password: data.password,
           };
 
-      await loginUser(payload);
+      const response = await loginUser(payload);
 
       toast.success(`Welcome, ${data.appointment}!`);
       router.push("/dashboard");
     } catch (err: any) {
-      toast.error(err.message || "Login failed");
-      console.error(err);
+      console.error("Login error:", err);
+
+      if (err instanceof ApiClientError) {
+        const status = err.status;
+        const message = err.message;
+
+        const errorData = (err as any).data || (err as any).response;
+        const errorType = errorData?.error;
+        const errorMessage = errorData?.message || message;
+
+        if (status === 401) {
+          if (errorType === "BAD_PASSWORD" || errorMessage === "invalid_credentials") {
+            toast.error("Invalid credentials. Please check your password and try again.");
+          } else if (errorType === "invalid_token" || errorMessage === "Unauthorized") {
+            toast.error("Session expired. Please login again.");
+          } else {
+            toast.error("Invalid credentials. Please check your username and password.");
+          }
+        } else {
+          toast.error(message || "Login failed. Please try again.");
+        }
+      } else {
+        toast.error(err.message || "Login failed. Please try again.");
+      }
+
     }
   };
 
@@ -130,6 +171,8 @@ function LoginPageContent() {
         setValue("username", "");
       }
       setValue("platoon", "");
+    } else {
+      setValue("username", "");
     }
   };
 
@@ -196,14 +239,18 @@ function LoginPageContent() {
                   <Select
                     value={appointment}
                     onValueChange={handleAppointmentChange}
-                    disabled={loadingAppointments}
+                    disabled={loadingAppointments || appointmentsFetchError || appointments.length === 0}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue
                         placeholder={
                           loadingAppointments
                             ? "Loading..."
-                            : "Select your appointment"
+                            : appointmentsFetchError
+                              ? "Failed to load appointments"
+                              : appointments.length === 0
+                                ? "No appointments available"
+                                : "Select your appointment"
                         }
                       />
                     </SelectTrigger>
@@ -215,15 +262,21 @@ function LoginPageContent() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {appointmentsFetchError && (
+                    <p className="text-sm text-destructive">
+                      Unable to load appointments. Please refresh the page.
+                    </p>
+                  )}
                 </div>
 
-                {/* Platoon Dropdown (derived from appointments) */}
+                {/* Platoon Dropdown */}
                 {(appointment ?? "") === "Platoon Commander" && (
                   <div className="space-y-2">
                     <Label htmlFor="platoon">Platoon</Label>
                     <Select
                       value={platoon}
                       onValueChange={handlePlatoonChange}
+                      disabled={shouldDisableOtherFields}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select your platoon" />
@@ -247,6 +300,7 @@ function LoginPageContent() {
                     {...register("username")}
                     placeholder="Enter username"
                     required
+                    disabled={true}
                   />
                 </div>
 
@@ -259,13 +313,14 @@ function LoginPageContent() {
                     {...register("password")}
                     placeholder="Enter password"
                     required
+                    disabled={shouldDisableOtherFields}
                   />
                 </div>
 
                 <Button
                   type="submit"
                   className="w-full bg-[var(--primary)] text-white cursor-pointer"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || shouldDisableOtherFields}
                 >
                   {isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>
