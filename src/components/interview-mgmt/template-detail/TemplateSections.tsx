@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useInterviewTemplates } from "@/hooks/Useinterviewtemplates";
+import { useInterviewTemplates } from "@/hooks/useInterviewTemplates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
