@@ -62,20 +62,15 @@ function originMatches(req: NextRequest) {
  * Same-origin check provides adequate CSRF protection for logout operations.
  */
 async function POSTHandler(req: NextRequest) {
-  const startTime = Date.now();
-  console.time(`logout-${req.headers.get('x-request-id') || 'unknown'}`);
-
   try {
     // SECURITY FIX: Enhanced same-origin validation
     if (!originMatches(req)) {
-      console.timeEnd(`logout-${req.headers.get('x-request-id') || 'unknown'}`);
       return json.forbidden('Cross-site request not allowed for logout.');
     }
 
     // Additional security: Check for suspicious headers that might indicate CSRF
     const contentType = req.headers.get('content-type');
     if (contentType && !contentType.includes('application/json') && !contentType.includes('application/x-www-form-urlencoded')) {
-      console.timeEnd(`logout-${req.headers.get('x-request-id') || 'unknown'}`);
       return json.badRequest('Invalid content type for logout request.');
     }
 
@@ -104,30 +99,18 @@ async function POSTHandler(req: NextRequest) {
     // Server-authoritative cookie clear
     clearAuthCookies(res);
 
-    // Non-blocking audit logging: defer to next tick to avoid blocking response
-    setImmediate(() => {
-      createAuditLog({
-        actorUserId,
-        eventType: AuditEventType.LOGOUT,
-        resourceType: AuditResourceType.USER,
-        resourceId: actorUserId,
-        description: 'User logged out via /api/v1/auth/logout',
-        metadata: { actorPresent: Boolean(actorUserId) },
-        request: req,
-      }).catch((err) => {
-        console.error('Failed to log logout audit event:', err);
-      });
+    void createAuditLog({
+      actorUserId,
+      eventType: AuditEventType.LOGOUT,
+      resourceType: AuditResourceType.USER,
+      resourceId: actorUserId,
+      description: 'User logged out via /api/v1/auth/logout',
+      metadata: { actorPresent: Boolean(actorUserId) },
+      request: req,
     });
-
-    const duration = Date.now() - startTime;
-    console.log(`Logout response time: ${duration}ms`);
-    console.timeEnd(`logout-${req.headers.get('x-request-id') || 'unknown'}`);
 
     return res;
   } catch (err) {
-    const duration = Date.now() - startTime;
-    console.log(`Logout error response time: ${duration}ms`);
-    console.timeEnd(`logout-${req.headers.get('x-request-id') || 'unknown'}`);
     return handleApiError(err);
   }
 }
