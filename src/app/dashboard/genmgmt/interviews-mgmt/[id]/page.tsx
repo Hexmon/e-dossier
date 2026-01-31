@@ -9,7 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { useInterviewTemplates } from "@/hooks/Useinterviewtemplates";
+import { useInterviewTemplates } from "@/hooks/useInterviewTemplates";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TemplateOverview from "@/components/interview-mgmt/template-detail/TemplateOverview";
 import TemplateSemesters from "@/components/interview-mgmt/template-detail/TemplateSemesters";
