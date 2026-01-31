@@ -18,10 +18,23 @@ git checkout -b feature/my-feature
 git push origin feature/my-feature  # Hook auto-configures on first push
 ```
 
+**After pulling master or merging master into your branch:**
+```bash
+git pull origin master
+# or
+git merge master
+# → post-checkout hook runs automatically
+# → Git hooks path is configured
+
+git checkout -b new-feature
+git push origin new-feature  # ✅ Hooks work - all checks enforced
+```
+
 Hooks automatically:
 - Configure themselves after clone (`post-checkout` hook)
+- Configure themselves after pull/merge (`post-checkout` hook)
 - Configure themselves before first push (`pre-push` hook)
-- Run lint, typecheck, and build verification on every push
+- Run lint, typecheck, and build verification on every push to any branch
 
 No manual setup script needed unless you're troubleshooting!
 
@@ -134,7 +147,25 @@ The Git hooks **auto-configure automatically**. No manual setup needed!
 ```bash
 git clone https://github.com/your-org/e-dossier.git
 # post-checkout hook runs silently and configures core.hooksPath
+# .githooks directory is present with all hooks
 ```
+
+**On any Git operation (pull, merge, checkout):**
+```bash
+git pull origin master
+git merge master
+git checkout feature/some-branch
+# → post-checkout hook runs automatically
+# → Ensures core.hooksPath is set to .githooks
+```
+
+**Important:** The hooks work on **ALL terminals and ALL platforms**:
+- ✅ **Windows:** PowerShell, CMD, Git Bash
+- ✅ **macOS/Linux:** Bash, Zsh, Fish, etc.
+- ✅ **Any branch:** Not just master
+
+The hooks are **shell-agnostic** — Git runs them directly, regardless of your terminal.
+
 
 **On first push:**
 ```bash
@@ -159,7 +190,7 @@ powershell -ExecutionPolicy Bypass -File scripts/setup-git-hooks.ps1
 
 ### Verify Setup
 
-After setup, confirm everything is configured:
+After any clone, pull, or merge, confirm hooks are configured:
 
 ```bash
 # Should output: .githooks
@@ -167,12 +198,29 @@ git config core.hooksPath
 
 # Should be executable (if on macOS/Linux)
 ls -la .githooks/pre-push
+# Should see: -rwxr-xr-x (executable)
 
 # Try a test push (create a dummy branch first)
 git checkout -b test-hook
 git push origin test-hook
 # You should see the hook run with colored output
 ```
+
+**Windows (PowerShell) verification:**
+```powershell
+git config core.hooksPath
+# Should output: .githooks
+
+dir .\.githooks\
+# Should show: pre-push, post-checkout, .gitkeep
+
+git checkout -b test-hook
+git push origin test-hook
+# PowerShell shows colored hook output
+```
+
+If `git config core.hooksPath` is empty after clone/pull, the `post-checkout` hook may not have run. Run manual setup (see below).
+
 
 ---
 
