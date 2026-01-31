@@ -1,3 +1,19 @@
+#!/usr/bin/env pwsh
+# setup-git-hooks.ps1
+# Configure repository to use the local .githooks directory and mark hooks executable
+
+try {
+  git rev-parse --show-toplevel > $null 2>&1
+} catch {
+  Write-Host "Not a git repository." -ForegroundColor Red
+  exit 1
+}
+
+git config core.hooksPath .githooks
+git update-index --add --chmod=+x .githooks/pre-push .githooks/post-checkout 2>$null
+
+Write-Host "Configured core.hooksPath to .githooks and marked hooks executable in index." -ForegroundColor Green
+exit 0
 # scripts/setup-git-hooks.ps1
 # Setup Git hooks for Windows (PowerShell)
 # Usage: powershell -ExecutionPolicy Bypass -File scripts/setup-git-hooks.ps1

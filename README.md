@@ -27,7 +27,8 @@ git clone https://github.com/your-org/e-dossier.git
 cd e-dossier
 ```
 
-> ✅ **Git hooks auto-configure after clone** — No manual setup needed!
+> ⚠️ Git hooks may not be configured automatically on every machine after clone.
+> After cloning, run `pnpm install` (this repository runs a `postinstall` that configures hooks), or run `pnpm run setup:git-hooks` manually to enable the hooks.
 
 ### Step 2: Install Dependencies
 
@@ -39,9 +40,9 @@ pnpm install
 
 **macOS/Linux/Windows (All Terminals):**
 ```bash
-# Verify hooks are configured
+# Verify hooks are configured (if not, run the setup command below)
 git config core.hooksPath
-# Should output: .githooks
+# If configured, output should be: .githooks
 
 # List the hooks
 ls -la .githooks/
@@ -86,16 +87,26 @@ git push origin feature/whatever
 
 ### Troubleshooting: Hooks Not Running
 
-If hooks don't trigger on push, manually configure them:
+If hooks don't trigger on push, the quickest fixes are:
 
-**macOS/Linux:**
+- Run the setup script installed by `postinstall`:
+
 ```bash
-bash scripts/setup-git-hooks.sh
+pnpm install
+# or run the setup directly:
+pnpm run setup:git-hooks
 ```
 
-**Windows (PowerShell):**
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/setup-git-hooks.ps1
+- Manual commands (if you prefer not to run the script):
+
+```bash
+# macOS / Linux
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-push .githooks/post-checkout || true
+
+# Windows (PowerShell)
+git config core.hooksPath .githooks
+git update-index --add --chmod=+x .githooks/pre-push .githooks/post-checkout
 ```
 
 For more details, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).

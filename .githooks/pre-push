@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 # .githooks/pre-push
 # Enterprise-grade pre-push hook for lint, typecheck, and build verification
-# Works on Windows (Git Bash), macOS, and Linux
+# Works on Windows (PowerShell), Windows (Git Bash), macOS, and Linux
 # Usage: Automatically triggered by `git push`
 # Auto-setup: If core.hooksPath is not configured, sets it up automatically
+# Platform detection: Delegates to .ps1 on native Windows, runs natively on Unix
+
+# Detect if running on Windows native PowerShell (not Git Bash)
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]] && command -v pwsh &>/dev/null; then
+  # On Windows with PowerShell available, delegate to PowerShell wrapper
+  exec pwsh -File "$(git rev-parse --show-toplevel)/.githooks/pre-push.ps1"
+fi
 
 set -euo pipefail
 

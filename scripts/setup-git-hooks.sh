@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
+# setup-git-hooks.sh
+# Configure repository to use the local .githooks directory and make hooks executable
+
+set -euo pipefail
+
+git rev-parse --show-toplevel >/dev/null 2>&1 || { echo "Not a git repository" >&2; exit 1; }
+
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-push .githooks/post-checkout || true
+
+echo "Configured core.hooksPath to .githooks and made hooks executable." 
+#!/usr/bin/env bash
 # scripts/setup-git-hooks.sh
 # Setup Git hooks for macOS and Linux
 # Usage: bash scripts/setup-git-hooks.sh
