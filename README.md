@@ -7,9 +7,53 @@
 - Backend APIs live under `/api/v1`
 
 ## Prerequisites
-- Node.js LTS (18+ recommended)
-- pnpm
+- Node.js ≥ 20 (check with `node -v`)
+- pnpm ≥ 9 (check with `pnpm -v`)
 - Docker (for Postgres/MinIO)
+
+## Code Quality & Git Hooks (Auto-Setup)
+
+This repository enforces automatic quality checks on **every `git push`** to ensure code quality across all branches.
+
+### What Happens
+
+When you run `git push`, the pre-push hook automatically:
+1. ✓ Verifies dependencies are locked (`pnpm-lock.yaml` exists)
+2. ✓ Checks Node.js and pnpm versions meet requirements
+3. ✓ Runs `pnpm run lint` (ESLint)
+4. ✓ Runs `pnpm run typecheck` (TypeScript type checking)
+5. ✓ Runs `pnpm run build` (production build validation)
+
+**If any check fails**, the push is blocked and errors are shown. Fix issues locally and push again.
+
+### Zero Setup Required
+
+Git hooks **auto-configure automatically**:
+- After `git clone` (via `post-checkout` hook)
+- Before first `git push` (via `pre-push` hook auto-setup)
+
+Just clone and push—no manual setup needed!
+
+```bash
+git clone https://github.com/your-org/e-dossier.git
+cd e-dossier
+pnpm install
+git checkout -b feature/my-feature
+git push origin feature/my-feature  # Hook auto-configures and runs verification
+```
+
+### Troubleshooting
+
+If hooks don't run:
+```bash
+# macOS/Linux
+bash scripts/setup-git-hooks.sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -File scripts/setup-git-hooks.ps1
+```
+
+For detailed setup and troubleshooting, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ## Environment Files
 - App env:
