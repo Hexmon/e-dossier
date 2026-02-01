@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
@@ -30,6 +30,10 @@ function LoginPageContent() {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [appointmentsFetchError, setAppointmentsFetchError] = useState(false);
+
+  // Use ref to prevent double calls
+  const hasFetchedRef = useRef(false);
 
   const {
     register,
@@ -54,13 +58,20 @@ function LoginPageContent() {
     try {
       const data = await getAppointments();
       setAppointments(data);
+      setAppointmentsFetchError(false);
     } catch (err) {
-      toast.error("Unable to load appointments.");
+      toast.error("Unable to load appointments. Please try again.");
+      setAppointmentsFetchError(true);
     } finally {
       setLoadingAppointments(false);
     }
   };
+
   useEffect(() => {
+    // Prevent double call in Strict Mode
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     fetchAppointments();
   }, []);
 
@@ -80,6 +91,16 @@ function LoginPageContent() {
   const platoonCommanders = useMemo(() => {
     return appointments.filter((a) => a.scopeType === "PLATOON");
   }, [appointments]);
+
+  // Check if appointments data is available
+  const hasAppointmentsData = useMemo(() => {
+    return !loadingAppointments && !appointmentsFetchError && appointments.length > 0;
+  }, [loadingAppointments, appointmentsFetchError, appointments]);
+
+  // Check if other fields should be disabled
+  const shouldDisableOtherFields = useMemo(() => {
+    return !hasAppointmentsData || !appointment;
+  }, [hasAppointmentsData, appointment]);
 
   const onSubmit = async (data: LoginForm) => {
     if (!data.username || !data.password || !data.appointment) {
@@ -196,14 +217,18 @@ function LoginPageContent() {
                   <Select
                     value={appointment}
                     onValueChange={handleAppointmentChange}
-                    disabled={loadingAppointments}
+                    disabled={loadingAppointments || appointmentsFetchError || appointments.length === 0}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue
                         placeholder={
                           loadingAppointments
                             ? "Loading..."
-                            : "Select your appointment"
+                            : appointmentsFetchError
+                              ? "Failed to load appointments"
+                              : appointments.length === 0
+                                ? "No appointments available"
+                                : "Select your appointment"
                         }
                       />
                     </SelectTrigger>
@@ -215,6 +240,11 @@ function LoginPageContent() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {appointmentsFetchError && (
+                    <p className="text-sm text-destructive">
+                      Unable to load appointments. Please refresh the page.
+                    </p>
+                  )}
                 </div>
 
                 {/* Platoon Dropdown (derived from appointments) */}
@@ -224,6 +254,7 @@ function LoginPageContent() {
                     <Select
                       value={platoon}
                       onValueChange={handlePlatoonChange}
+                      disabled={shouldDisableOtherFields}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select your platoon" />
@@ -247,6 +278,7 @@ function LoginPageContent() {
                     {...register("username")}
                     placeholder="Enter username"
                     required
+                    disabled={true}
                   />
                 </div>
 
@@ -259,13 +291,14 @@ function LoginPageContent() {
                     {...register("password")}
                     placeholder="Enter password"
                     required
+                    disabled={shouldDisableOtherFields}
                   />
                 </div>
 
                 <Button
                   type="submit"
                   className="w-full bg-[var(--primary)] text-white cursor-pointer"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || shouldDisableOtherFields}
                 >
                   {isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>
