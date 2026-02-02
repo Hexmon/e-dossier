@@ -31,7 +31,12 @@ function resolveInitialField(template: TemplateInfo, formKey: string) {
     return template.fieldsByKey.get(formKey.trim().toLowerCase()) ?? null;
 }
 
-export async function fetchLatestInterviewByTemplate(ocId: string, templateId: string, semester?: number | null) {
+export async function fetchLatestInterviewByTemplate(
+    ocId: string,
+    templateId: string,
+    semester?: number | null,
+    opts?: { onlyWithoutSemester?: boolean },
+) {
     const resp: any = await apiRequest<any>({
         method: "GET",
         endpoint: `/api/v1/oc/${ocId}/interviews`,
@@ -41,7 +46,12 @@ export async function fetchLatestInterviewByTemplate(ocId: string, templateId: s
         },
     });
 
-    return pickLatestInterview(resp?.items ?? []);
+    let items: OcInterviewItem[] = resp?.items ?? [];
+    if (opts?.onlyWithoutSemester) {
+        items = items.filter((item) => item.semester === null || item.semester === undefined);
+    }
+
+    return pickLatestInterview(items);
 }
 
 export async function fetchInitialInterviews(
@@ -68,7 +78,9 @@ export async function fetchInitialInterviews(
         const match = mappings.byKind[officer];
         if (!match) continue;
 
-        const interview = pickLatestInterview(items.filter((item) => item.templateId === match.template.id));
+        const interview = pickLatestInterview(
+            items.filter((item) => item.templateId === match.template.id && (item.semester === null || item.semester === undefined)),
+        );
         if (!interview) continue;
 
         initialIndexRef.current[officer] = {
@@ -235,7 +247,9 @@ export async function saveInitialInterview(
         });
         interview = parseInterviewResponse(resp);
     } else {
-        const existing = await fetchLatestInterviewByTemplate(ocId, match.template.id);
+        const existing = await fetchLatestInterviewByTemplate(ocId, match.template.id, undefined, {
+            onlyWithoutSemester: true,
+        });
         if (existing?.id) {
             const resp: any = await apiRequest<any>({
                 method: "PATCH",

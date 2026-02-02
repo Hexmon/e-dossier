@@ -24,7 +24,7 @@ export default function InterviewTabs() {
     const dispatch = useDispatch();
 
     const [active, setActive] = useState<InterviewOfficer>("plcdr");
-    const { fetchInitial, saveInitial, loading, templateMappings } = useInterviewForms(ocId);
+    const { fetchInitial, saveInitial, templateMappings } = useInterviewForms(ocId);
     const hydratedRef = useRef(false);
 
     // Get saved form data from Redux for current officer
@@ -33,9 +33,10 @@ export default function InterviewTabs() {
     );
     const allSavedForms = useSelector((state: RootState) => state.initialInterview.forms[ocId] || {});
     const savedFormsRef = useRef(allSavedForms);
+    const isHydratingRef = useRef(false);
 
     const form = useForm<FormWrapperFields>({
-        defaultValues: savedFormData
+        defaultValues: savedFormData,
     });
 
     useEffect(() => {
@@ -46,6 +47,7 @@ export default function InterviewTabs() {
         savedFormsRef.current = allSavedForms;
     }, [allSavedForms]);
 
+    // Load existing data once on page load for this OC
     useEffect(() => {
         if (!ocId || hydratedRef.current) return;
         hydratedRef.current = true;
@@ -80,13 +82,18 @@ export default function InterviewTabs() {
 
     // Load saved data when switching tabs
     useEffect(() => {
+        isHydratingRef.current = true;
         const savedData = savedFormData || {};
         form.reset(savedData);
+        queueMicrotask(() => {
+            isHydratingRef.current = false;
+        });
     }, [active, ocId]);
 
-    // Auto-save to Redux on form changes
+    // Auto-save unsaved changes to Redux
     useEffect(() => {
         const subscription = form.watch((value) => {
+            if (isHydratingRef.current) return;
             if (ocId && value) {
                 const formData = Object.entries(value).reduce<Record<string, string | boolean | undefined>>(
                     (acc, [key, val]) => {
@@ -96,15 +103,17 @@ export default function InterviewTabs() {
                     {}
                 );
 
-                dispatch(saveInterviewForm({
-                    ocId,
-                    officer: active,
-                    data: formData
-                }));
+                dispatch(
+                    saveInterviewForm({
+                        ocId,
+                        officer: active,
+                        data: formData,
+                    })
+                );
             }
         });
         return () => subscription.unsubscribe();
-    }, [form.watch, dispatch, ocId, active]);
+    }, [form, dispatch, ocId, active]);
 
     async function handleSave(officer: InterviewOfficer, data: FormWrapperFields) {
         const resp = await saveInitial(officer, data);
@@ -113,10 +122,6 @@ export default function InterviewTabs() {
         }
 
         return resp;
-    }
-
-    async function onSubmitAll(data: FormWrapperFields) {
-        await handleSave(active, data);
     }
 
     const handleClearForm = () => {
@@ -139,17 +144,14 @@ export default function InterviewTabs() {
                         key={id}
                         type="button"
                         onClick={() => setActive(id as InterviewOfficer)}
-                        className={`px-4 py-2 rounded-t-lg ${active === id
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-200 text-gray-700"
-                            }`}
+                        className={`px-4 py-2 rounded-t-lg ${active === id ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
                     >
                         {label}
                     </button>
                 ))}
             </div>
 
-            <form onSubmit={form.handleSubmit(onSubmitAll)}>
+            <form onSubmit={form.handleSubmit((data) => handleSave(active, data))}>
                 <div className="space-y-6">
                     {active === "plcdr" && (
                         <PLCdrCombinedForm
@@ -189,7 +191,6 @@ export default function InterviewTabs() {
                 </div>
             </form>
 
-            {/* Auto-save indicator */}
             <p className="text-sm text-muted-foreground text-center mt-4">
                 * Changes are automatically saved
             </p>
