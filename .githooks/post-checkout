@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# .githooks/post-checkout
+# Runs after clone, pull, or checkout
+# Auto-configures Git hooks path if not already set
+
+cd "$(git rev-parse --show-toplevel)" || exit 0
+
+# Silently configure hooks if not already set
+CURRENT_HOOKS_PATH=$(git config core.hooksPath || echo "")
+if [ "$CURRENT_HOOKS_PATH" != ".githooks" ]; then
+  git config core.hooksPath .githooks
+  chmod +x .githooks/pre-push 2>/dev/null || true
+  chmod +x .githooks/post-checkout 2>/dev/null || true
+fi
+
+exit 0

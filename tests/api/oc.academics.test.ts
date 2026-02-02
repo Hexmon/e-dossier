@@ -9,7 +9,7 @@ import {
   PATCH as patchAcademicSubjectRoute,
   DELETE as deleteAcademicSubjectRoute,
 } from '@/app/api/v1/oc/[ocId]/academics/[semester]/subjects/[subjectId]/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as ocChecks from '@/app/api/v1/oc/_checks';
 import * as academicServices from '@/app/services/oc-academics';
