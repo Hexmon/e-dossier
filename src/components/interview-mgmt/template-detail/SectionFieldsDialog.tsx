@@ -1,4 +1,4 @@
-// components/interview-mgmt/template-detail/SectionFieldsDialog.tsx
+// Example SectionFieldsDialog.tsx
 "use client";
 
 import { useEffect, useState } from "react";

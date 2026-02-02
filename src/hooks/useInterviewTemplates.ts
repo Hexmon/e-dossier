@@ -48,7 +48,7 @@ import {
 // ---------------------------------------------------------------------------
 // Query key factories — single source of truth so invalidation is consistent
 // ---------------------------------------------------------------------------
-const QUERY_KEYS = {
+export const QUERY_KEYS = {
     templates: (params?: ListParams) => ["interviewTemplates", params ?? {}] as const,
     templateById: (id: string) => ["interviewTemplates", id] as const,
     semesters: (templateId: string) => ["interviewTemplates", templateId, "semesters"] as const,
@@ -347,8 +347,6 @@ export function useInterviewTemplates(options?: {
             updates: FieldUpdate;
         }) => updateField(tid, fieldId, updates),
         onSuccess: () => {
-            // Invalidate all field queries under this template since we don't
-            // know whether it's a section or group field at this level
             queryClient.invalidateQueries({
                 queryKey: ["interviewTemplates", templateId, "sections"],
             });
@@ -454,7 +452,7 @@ export function useInterviewTemplates(options?: {
         groupsQuery.isLoading;
 
     // -----------------------------------------------------------------------
-    // Public API  (matches original hook surface as closely as possible)
+    // Public API
     // -----------------------------------------------------------------------
     return {
         // State
@@ -507,15 +505,29 @@ export function useInterviewTemplates(options?: {
         removeGroup: (tid: string, groupId: string, hard = false) =>
             deleteGroupMutation.mutateAsync({ tid, groupId, hard }),
 
-        // Field operations
-        fetchSectionFields: (tid: string, sectionId: string) =>
-            queryClient.invalidateQueries({
+        // Field operations - NOW RETURNS ACTUAL DATA
+        fetchSectionFields: async (tid: string, sectionId: string) => {
+            const data = await queryClient.fetchQuery({
                 queryKey: QUERY_KEYS.sectionFields(tid, sectionId),
-            }),
-        fetchGroupFields: (tid: string, groupId: string) =>
-            queryClient.invalidateQueries({
+                queryFn: async () => {
+                    const result = await listSectionFields(tid, sectionId);
+                    return result?.fields ?? [];
+                },
+                staleTime: 5 * 60 * 1000,
+            });
+            return data;
+        },
+        fetchGroupFields: async (tid: string, groupId: string) => {
+            const data = await queryClient.fetchQuery({
                 queryKey: QUERY_KEYS.groupFields(tid, groupId),
-            }),
+                queryFn: async () => {
+                    const result = await listGroupFields(tid, groupId);
+                    return result?.fields ?? [];
+                },
+                staleTime: 5 * 60 * 1000,
+            });
+            return data;
+        },
         addSectionField: (tid: string, sectionId: string, field: FieldCreate) =>
             createSectionFieldMutation.mutateAsync({ tid, sectionId, field }),
         addGroupField: (tid: string, groupId: string, field: FieldCreate) =>
@@ -526,7 +538,17 @@ export function useInterviewTemplates(options?: {
             deleteFieldMutation.mutateAsync({ tid, fieldId, hard }),
 
         // Field option operations
-        fetchFieldOptions: () => { }, // options are fetched on-demand in child components
+        fetchFieldOptions: async (tid: string, fieldId: string) => {
+            const data = await queryClient.fetchQuery({
+                queryKey: QUERY_KEYS.fieldOptions(tid, fieldId),
+                queryFn: async () => {
+                    const result = await listFieldOptions(tid, fieldId);
+                    return result?.options ?? [];
+                },
+                staleTime: 5 * 60 * 1000,
+            });
+            return data;
+        },
         addFieldOption: (tid: string, fieldId: string, option: FieldOptionCreate) =>
             createFieldOptionMutation.mutateAsync({ tid, fieldId, option }),
         editFieldOption: (tid: string, fieldId: string, optionId: string, updates: FieldOptionUpdate) =>
