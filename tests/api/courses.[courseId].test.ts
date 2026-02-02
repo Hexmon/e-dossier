@@ -4,7 +4,7 @@ import {
   PATCH as patchCourse,
   DELETE as deleteCourse,
 } from '@/app/api/v1/admin/courses/[courseId]/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as coursesQueries from '@/app/db/queries/courses';

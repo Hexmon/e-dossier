@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getWeaponTrainingRoute, PATCH as patchWeaponTrainingRoute, DELETE as deleteWeaponTrainingRoute } from '@/app/api/v1/oc/[ocId]/weapon-training/[id]/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as ocChecks from '@/app/api/v1/oc/_checks';

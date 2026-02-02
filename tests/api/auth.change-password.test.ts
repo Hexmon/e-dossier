@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { POST as postChangePassword } from '@/app/api/v1/auth/change-password/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 
@@ -44,7 +44,7 @@ describe('POST /api/v1/auth/change-password', () => {
     );
 
     const req = makeJsonRequest({ method: 'POST', path, body: {} });
-    const res = await postChangePassword(req as any);
+    const res = await postChangePassword(req as any, createRouteContext());
 
     expect(res.status).toBe(401);
     const body = await res.json();
@@ -59,7 +59,7 @@ describe('POST /api/v1/auth/change-password', () => {
       throw new Error('boom');
     };
 
-    const res = await postChangePassword(req as any);
+    const res = await postChangePassword(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -70,7 +70,7 @@ describe('POST /api/v1/auth/change-password', () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'user-1', roles: [] });
     const req = makeJsonRequest({ method: 'POST', path, body: { foo: 'bar' } });
 
-    const res = await postChangePassword(req as any);
+    const res = await postChangePassword(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -88,7 +88,7 @@ describe('POST /api/v1/auth/change-password', () => {
     };
     const req = makeJsonRequest({ method: 'POST', path, body });
 
-    const res = await postChangePassword(req as any);
+    const res = await postChangePassword(req as any, createRouteContext());
     expect(res.status).toBe(403);
     const json = await res.json();
     expect(json.ok).toBe(false);
@@ -105,7 +105,7 @@ describe('POST /api/v1/auth/change-password', () => {
     };
     const req = makeJsonRequest({ method: 'POST', path, body });
 
-    const res = await postChangePassword(req as any);
+    const res = await postChangePassword(req as any, createRouteContext());
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.ok).toBe(true);

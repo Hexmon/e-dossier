@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { GET as getHealth } from '@/app/api/v1/health/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 
 describe('GET /api/v1/health', () => {
   it('returns 200 with ok=true and service metadata', async () => {
     const req = makeJsonRequest({ path: '/api/v1/health' });
-    const res = await getHealth(req as any);
+    const res = await getHealth(req as any, createRouteContext());
 
     expect(res.status).toBe(200);
     const body = await res.json();

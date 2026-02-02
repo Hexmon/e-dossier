@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getSportsAndGamesRoute, PATCH as patchSportsAndGamesRoute, DELETE as deleteSportsAndGamesRoute } from '@/app/api/v1/oc/[ocId]/sports-and-games/[id]/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as ocChecks from '@/app/api/v1/oc/_checks';
