@@ -93,20 +93,21 @@ export default function OCManagementPage() {
     clear: clearUpload,
   } = useOCUpload();
 
-  // Fetch courses and platoons with React Query
-  const { data: courses = [] } = useQuery({
+  // Courses — same queryKey & queryFn as useCourses hook.
+  // Cache always holds raw CourseResponse[]. No select needed here
+  // because the raw shape already matches CourseLike { id, code, title }.
+  const { data: courses = [] } = useQuery<CourseLike[]>({
     queryKey: ["courses"],
     queryFn: async () => {
       const c = await getAllCourses();
       return c?.items ?? [];
     },
-    staleTime: 5 * 60 * 1000,
   });
 
+  // Platoons
   const { data: platoons = [] } = useQuery({
     queryKey: ["platoons"],
     queryFn: getPlatoons,
-    staleTime: 5 * 60 * 1000,
   });
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
@@ -317,8 +318,8 @@ export default function OCManagementPage() {
       {/* Add / Edit dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <OCForm
-          key={editingIndex !== null ? ocList[editingIndex]?.id : "new"}
-          defaultValues={editingIndex !== null ? ocList[editingIndex] : {}}
+          key={editingIndex !== null && ocList[editingIndex] ? ocList[editingIndex].id : "new"}
+          defaultValues={editingIndex !== null && ocList[editingIndex] ? ocList[editingIndex] : {}}
           courses={courses}
           platoons={platoons}
           isEditing={editingIndex !== null}

@@ -47,12 +47,13 @@ export function useCourses() {
 
     const { data: courses = [], isLoading: loading } = useQuery({
         queryKey: ["courses"],
+        // queryFn always returns the raw shape — this is what goes into the cache
         queryFn: async () => {
             const response = await getAllCourses();
-            const items: CourseResponse[] = response?.items ?? [];
-            return items.map((item) => toUICourse(item));
+            return response?.items ?? [];
         },
-        staleTime: 5 * 60 * 1000,
+        // select transforms per-consumer without touching the cache
+        select: (items: CourseResponse[]) => items.map(toUICourse),
     });
 
     const addCourseMutation = useMutation({

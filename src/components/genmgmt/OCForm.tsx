@@ -35,11 +35,10 @@ export function OCForm({
     platoons,
     isEditing,
 }: OCFormProps) {
-    // Transform defaultValues: course.id -> courseId
     const formDefaults: Partial<OCFormData> = {
         name: defaultValues.name,
         ocNo: defaultValues.ocNo,
-        courseId: defaultValues.course?.id,
+        courseId: defaultValues.courseId ?? defaultValues.course?.id,
         branch: defaultValues.branch || undefined,
         platoonId: defaultValues.platoonId || undefined,
         arrivalAtUniversity: defaultValues.arrivalAtUniversity?.slice(0, 10),
