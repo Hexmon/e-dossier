@@ -12,8 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
 import { useRouter } from "next/navigation";
 import { logout } from "@/app/lib/api/authApi";
-import { fetchMe, MeResponse } from "@/app/lib/api/me";
-import { useEffect, useState } from "react";
+import { useMe } from "@/hooks/useMe";
 
 interface PageHeaderProps {
   title: string;
@@ -36,47 +35,17 @@ const getInitials = (name: string): string => {
 };
 
 export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
+  const router = useRouter();
 
-  const [data, setData] = useState<MeResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadMeSafely = async (
-    setData: (d: any) => void,
-    setLoading: (v: boolean) => void,
-    isMounted: () => boolean
-  ) => {
-    setLoading(true);
-
-    try {
-      const res = await fetchMe();
-      if (isMounted()) {
-        setData(res);
-      }
-    } catch (err) {
-      console.error("Failed to load /me:", err);
-    } finally {
-      if (isMounted()) {
-        setLoading(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    let mounted = true;
-    const isMounted = () => mounted;
-
-    loadMeSafely(setData, setLoading, isMounted);
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  // Replaces the manual useEffect + fetchMe with a single React Query call
+  // that's shared across the entire app
+  const { data, isLoading } = useMe();
 
   const {
     user = {},
     roles = [],
     apt = {},
-  } = (data ?? {}) as Partial<MeResponse>;
+  } = data ?? {};
 
   const {
     email = "",
@@ -90,8 +59,6 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
     id = "",
     position = "",
   } = apt as any;
-
-  const router = useRouter();
 
   const handleLogout = async () => {
     const ok = await logout();
