@@ -118,20 +118,23 @@ export default function OCManagementPage() {
   const [viewId, setViewId] = useState<string | null>(null);
 
   // Form submit (add / edit) with proper error handling
-  // Changed: Remove SubmitHandler type, use explicit async function
   const onSubmit = async (data: Partial<OCRecord>): Promise<void> => {
     try {
       if (editingIndex !== null) {
         const { id } = ocList[editingIndex];
         await editOC(id, data);
+        // Toast shown by mutation's onSuccess
       } else {
         await addOC(data as Omit<OCRecord, "id" | "uid" | "createdAt">);
+        // Toast shown by mutation's onSuccess
       }
 
       // Close dialog and reset form
       setIsDialogOpen(false);
       reset();
       setEditingIndex(null);
+
+      // React Query automatically refetches via invalidateQueries
     } catch (error: any) {
       console.error("Save failed:", error);
 
@@ -164,9 +167,10 @@ export default function OCManagementPage() {
   const handleDelete = async (id: string) => {
     try {
       await removeOC(id);
+      // Toast shown by mutation's onSuccess
     } catch (error: any) {
       console.error("Delete failed:", error);
-      // Toast already shown by mutation
+      // Toast already shown by mutation's onError
     }
   };
 
