@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
+import { toast } from "sonner";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -112,20 +113,52 @@ export default function OCManagementPage() {
     })().catch((e) => console.error("fetch failed", e));
   }, [debouncedSearch, courseFilter, platoonFilter, statusFilter, branchFilter, currentPage, pageSize, fetchOCs, safeBranch]);
 
-  // form submit (add / edit)
-  const onSubmit: SubmitHandler<Partial<OCRecord>> = async (data) => {
+  // form submit (add / edit) with proper error handling
+  const onSubmit = async (data: Partial<OCRecord>) => {
     try {
       if (editingIndex !== null) {
         const { id } = ocList[editingIndex];
         await editOC(id, data);
+        toast.success("OC updated successfully");
       } else {
         await addOC(data as Omit<OCRecord, "id" | "uid" | "createdAt">);
+        toast.success("OC created successfully");
       }
-      reset();
+
+      // Close dialog and reset form
       setIsDialogOpen(false);
+      reset();
       setEditingIndex(null);
-    } catch (e) {
-      console.error("save failed", e);
+
+      // Refresh the list
+      await fetchOCs({
+        q: debouncedSearch || undefined,
+        courseId: courseFilter || undefined,
+        platoonId: platoonFilter || undefined,
+        status: safeStatus,
+        branch: safeBranch,
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
+      });
+    } catch (error: any) {
+      console.error("Save failed:", error);
+
+      // Handle validation errors
+      if (error.status === 400 && error.issues?.fieldErrors) {
+        const fieldErrors = error.issues.fieldErrors;
+        const errorMessages = Object.entries(fieldErrors)
+          .map(([field, messages]: [string, any]) => `${field}: ${messages[0]}`)
+          .join(", ");
+
+        toast.error(`Validation failed: ${errorMessages}`);
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to save OC. Please try again.");
+      }
+
+      // Re-throw so OCForm can also handle it
+      throw error;
     }
   };
 
@@ -133,29 +166,28 @@ export default function OCManagementPage() {
   const handleEdit = (index: number) => {
     const oc = ocList[index];
     setEditingIndex(index);
-
-    // setValue("name", oc.name ?? "");
-    // setValue("ocNo", oc.ocNo ?? "");
-    // setValue("courseId", oc.courseId ?? "");
-    // setValue("branch", oc.branch ?? undefined);
-    // setValue("platoonId", oc.platoonId ?? "");
-    // setValue("arrivalAtUniversity", oc.arrivalAtUniversity?.slice(0, 10) ?? "");
-
     setIsDialogOpen(true);
   };
 
   // delete
   const handleDelete = async (id: string) => {
-    await removeOC(id);
-    fetchOCs({
-      q: debouncedSearch || undefined,
-      courseId: courseFilter || undefined,
-      platoonId: platoonFilter || undefined,
-      status: safeStatus,
-      branch: safeBranch,
-      limit: pageSize,
-      offset: (currentPage - 1) * pageSize,
-    }).catch(console.error);
+    try {
+      await removeOC(id);
+      toast.success("OC deleted successfully");
+
+      await fetchOCs({
+        q: debouncedSearch || undefined,
+        courseId: courseFilter || undefined,
+        platoonId: platoonFilter || undefined,
+        status: safeStatus,
+        branch: safeBranch,
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
+      });
+    } catch (error: any) {
+      console.error("Delete failed:", error);
+      toast.error(error.message || "Failed to delete OC");
+    }
   };
 
   const handleAdd = () => {
@@ -172,6 +204,7 @@ export default function OCManagementPage() {
         limit: pageSize,
         offset: (currentPage - 1) * pageSize,
       });
+      toast.success("Bulk upload completed successfully");
     });
   };
 
