@@ -20,6 +20,7 @@ import {
 
 import { getAppointments, Appointment } from "@/app/lib/api/appointmentApi";
 import { loginUser } from "@/app/lib/api/authApi";
+import { ApiClientError } from "@/app/lib/apiClient";
 import Image from "next/image";
 import { LoginForm } from "../../../types/login";
 
@@ -68,7 +69,6 @@ function LoginPageContent() {
   };
 
   useEffect(() => {
-    // Prevent double call in Strict Mode
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
 
@@ -87,17 +87,14 @@ function LoginPageContent() {
     return Array.from(set);
   }, [appointments]);
 
-  // Filter platoon commanders directly from appointments
   const platoonCommanders = useMemo(() => {
     return appointments.filter((a) => a.scopeType === "PLATOON");
   }, [appointments]);
 
-  // Check if appointments data is available
   const hasAppointmentsData = useMemo(() => {
     return !loadingAppointments && !appointmentsFetchError && appointments.length > 0;
   }, [loadingAppointments, appointmentsFetchError, appointments]);
 
-  // Check if other fields should be disabled
   const shouldDisableOtherFields = useMemo(() => {
     return !hasAppointmentsData || !appointment;
   }, [hasAppointmentsData, appointment]);
@@ -131,13 +128,36 @@ function LoginPageContent() {
             password: data.password,
           };
 
-      await loginUser(payload);
+      const response = await loginUser(payload);
 
       toast.success(`Welcome, ${data.appointment}!`);
       router.push("/dashboard");
     } catch (err: any) {
-      toast.error(err.message || "Login failed");
-      console.error(err);
+      console.error("Login error:", err);
+
+      if (err instanceof ApiClientError) {
+        const status = err.status;
+        const message = err.message;
+
+        const errorData = (err as any).data || (err as any).response;
+        const errorType = errorData?.error;
+        const errorMessage = errorData?.message || message;
+
+        if (status === 401) {
+          if (errorType === "BAD_PASSWORD" || errorMessage === "invalid_credentials") {
+            toast.error("Invalid credentials. Please check your password and try again.");
+          } else if (errorType === "invalid_token" || errorMessage === "Unauthorized") {
+            toast.error("Session expired. Please login again.");
+          } else {
+            toast.error("Invalid credentials. Please check your username and password.");
+          }
+        } else {
+          toast.error(message || "Login failed. Please try again.");
+        }
+      } else {
+        toast.error(err.message || "Login failed. Please try again.");
+      }
+
     }
   };
 
@@ -151,6 +171,8 @@ function LoginPageContent() {
         setValue("username", "");
       }
       setValue("platoon", "");
+    } else {
+      setValue("username", "");
     }
   };
 
@@ -247,7 +269,7 @@ function LoginPageContent() {
                   )}
                 </div>
 
-                {/* Platoon Dropdown (derived from appointments) */}
+                {/* Platoon Dropdown */}
                 {(appointment ?? "") === "Platoon Commander" && (
                   <div className="space-y-2">
                     <Label htmlFor="platoon">Platoon</Label>
