@@ -159,7 +159,154 @@ You can upload the `coverage/` directory as an artifact or feed `coverage/covera
 
 ---
 
-## 7. Adding New Tests
+## 7. Rate Limiting Configuration (Configurable)
+
+### 7.1. Overview
+
+Rate limiting is now **fully configurable via environment variables**. By default, it is **disabled in development** but **enabled in production**.
+
+#### Environment Variables
+
+All rate limit settings are controlled via `.env` files:
+
+```dotenv
+# Master switch for rate limiting
+RATE_LIMIT_ENABLED=true|false
+
+# API rate limiting (general endpoints)
+RATE_LIMIT_API_MAX_REQUESTS=100           # max requests per window
+RATE_LIMIT_API_WINDOW_SECONDS=60          # time window in seconds
+
+# Login rate limiting
+RATE_LIMIT_LOGIN_MAX_REQUESTS=5
+RATE_LIMIT_LOGIN_WINDOW_SECONDS=900       # 15 minutes
+
+# Signup rate limiting
+RATE_LIMIT_SIGNUP_MAX_REQUESTS=3
+RATE_LIMIT_SIGNUP_WINDOW_SECONDS=3600     # 1 hour
+
+# Password reset rate limiting
+RATE_LIMIT_PASSWORD_RESET_MAX_REQUESTS=3
+RATE_LIMIT_PASSWORD_RESET_WINDOW_SECONDS=3600
+
+# Optional: Redis key prefix
+RATE_LIMIT_REDIS_KEY_PREFIX=ratelimit
+
+# Optional: Exclude health check from rate limiting
+RATE_LIMIT_EXCLUDE_HEALTH_CHECK=true
+```
+
+### 7.2. Environment-Specific Defaults
+
+| Environment | RATE_LIMIT_ENABLED | Notes |
+|------------|-------------------|-------|
+| Development | `false` | Disabled for easier testing |
+| QA | `true` | Enabled for behavior testing |
+| Production | `true` | **MUST be enabled for security** |
+
+See `.env.development.example`, `.env.qa.example`, and `.env.production.example` for complete examples.
+
+### 7.3. How It Works
+
+1. **When disabled** (`RATE_LIMIT_ENABLED=false`):
+   - All requests are allowed regardless of frequency.
+   - Rate limit checks return success with configured limits but don't enforce.
+   - No Redis calls are made.
+
+2. **When enabled** (`RATE_LIMIT_ENABLED=true`):
+   - Requests are tracked by client IP (via `X-Forwarded-For`, `X-Real-IP`, or fallback).
+   - Once `MAX_REQUESTS` is exceeded within `WINDOW_SECONDS`, subsequent requests are rejected with HTTP 429.
+   - Response includes rate limit headers:
+     - `X-RateLimit-Limit`: Max allowed requests
+     - `X-RateLimit-Remaining`: Requests remaining
+     - `X-RateLimit-Reset`: Unix timestamp when window resets
+     - `Retry-After`: Seconds until retry is safe
+
+3. **Storage**:
+   - **With Redis**: Uses Upstash Redis (configured via `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`).
+   - **Without Redis**: Falls back to in-memory store (development only, not persistent).
+
+### 7.4. Testing Rate Limiting
+
+#### 7.4.1. Unit Tests
+
+Tests are located in `tests/lib/ratelimit.config.test.ts` and verify:
+
+```bash
+npm test -- tests/lib/ratelimit.config.test.ts
+```
+
+Key scenarios:
+- Rate limiting disabled globally → all requests allowed.
+- Rate limiting enabled → enforces configured limits.
+- In-memory fallback works without Redis.
+- Client IP extraction from headers.
+
+#### 7.4.2. Manual Testing
+
+To **manually test rate limiting** locally:
+
+1. Enable it:
+   ```dotenv
+   # .env or .env.development.example
+   RATE_LIMIT_ENABLED=true
+   ```
+
+2. Set tight limits for quick testing:
+   ```dotenv
+   RATE_LIMIT_API_MAX_REQUESTS=3
+   RATE_LIMIT_API_WINDOW_SECONDS=10
+   ```
+
+3. Make repeated requests to any API endpoint (except health check):
+   ```bash
+   # First 3 requests will succeed
+   curl http://localhost:3000/api/v1/admin/appointments
+   
+   # 4th request should return 429
+   curl http://localhost:3000/api/v1/admin/appointments
+   # Response: {"status": 429, "ok": false, "error": "too_many_requests", "message": "..."}
+   ```
+
+4. Check response headers:
+   ```bash
+   curl -i http://localhost:3000/api/v1/admin/appointments
+   # X-RateLimit-Limit: 3
+   # X-RateLimit-Remaining: 0
+   # Retry-After: 8
+   ```
+
+#### 7.4.3. Excluding Endpoints
+
+The health check endpoint (`/api/v1/health`) is **excluded by default** when `RATE_LIMIT_EXCLUDE_HEALTH_CHECK=true`, allowing monitoring systems to poll without being rate limited.
+
+### 7.5. Deployment & Production
+
+For production deployments:
+
+1. **Always set `RATE_LIMIT_ENABLED=true`** in your production `.env`.
+2. **Provision an Upstash Redis instance**:
+   - Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+   - Without Redis, the in-memory store will not survive pod restarts (not suitable for production).
+3. **Adjust limits based on expected traffic**:
+   - API limit: `100/60s` is a baseline; adjust upward for high-traffic APIs.
+   - Login limit: `5/15m` prevents brute-force attacks.
+4. **Monitor**:
+   - Watch for excess 429 responses in logs.
+   - Set alerts if legitimate traffic is being rate limited.
+
+### 7.6. Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| All requests get 429 | Check `RATE_LIMIT_ENABLED` and verify limits are not too strict. |
+| Rate limiting not working despite `ENABLED=true` | Verify Redis credentials if using Redis, or fall back to in-memory. |
+| Health check is rate limited | Set `RATE_LIMIT_EXCLUDE_HEALTH_CHECK=true`. |
+| Different rate limits per endpoint? | Not yet supported; all API endpoints share one limit. Future enhancement: per-endpoint configs. |
+
+---
+
+## 8. Adding New Tests
 
 When new APIs are added under `src/app/api/v1/**`:
 

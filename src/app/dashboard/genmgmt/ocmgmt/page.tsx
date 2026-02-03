@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -116,8 +117,9 @@ export default function OCManagementPage() {
   const [viewOpen, setViewOpen] = useState<boolean>(false);
   const [viewId, setViewId] = useState<string | null>(null);
 
-  // Form submit (add / edit)
-  const onSubmit: SubmitHandler<Partial<OCRecord>> = async (data) => {
+  // Form submit (add / edit) with proper error handling
+  // Changed: Remove SubmitHandler type, use explicit async function
+  const onSubmit = async (data: Partial<OCRecord>): Promise<void> => {
     try {
       if (editingIndex !== null) {
         const { id } = ocList[editingIndex];
@@ -125,11 +127,30 @@ export default function OCManagementPage() {
       } else {
         await addOC(data as Omit<OCRecord, "id" | "uid" | "createdAt">);
       }
-      reset();
+
+      // Close dialog and reset form
       setIsDialogOpen(false);
+      reset();
       setEditingIndex(null);
-    } catch (e) {
-      console.error("save failed", e);
+    } catch (error: any) {
+      console.error("Save failed:", error);
+
+      // Handle validation errors
+      if (error.status === 400 && error.issues?.fieldErrors) {
+        const fieldErrors = error.issues.fieldErrors;
+        const errorMessages = Object.entries(fieldErrors)
+          .map(([field, messages]: [string, any]) => `${field}: ${messages[0]}`)
+          .join(", ");
+
+        toast.error(`Validation failed: ${errorMessages}`);
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to save OC. Please try again.");
+      }
+
+      // Re-throw so OCForm can also handle it if needed
+      throw error;
     }
   };
 
@@ -141,7 +162,12 @@ export default function OCManagementPage() {
 
   // Delete
   const handleDelete = async (id: string) => {
-    await removeOC(id);
+    try {
+      await removeOC(id);
+    } catch (error: any) {
+      console.error("Delete failed:", error);
+      // Toast already shown by mutation
+    }
   };
 
   const handleAdd = () => {
@@ -153,7 +179,8 @@ export default function OCManagementPage() {
   // Upload bulk
   const handleBulkUpload = async () => {
     await doBulkUpload(async () => {
-      // React Query will automatically refetch
+      // React Query will automatically refetch after mutations
+      toast.success("Bulk upload completed successfully");
     });
   };
 
