@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
@@ -34,12 +33,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { fetchMe, MeResponse } from "@/app/lib/api/me";
+import { fetchMe } from "@/app/lib/api/me";
 import { listAppointments } from "@/app/lib/api/AppointmentFilterApi";
 
 export default function DisciplineRecordsManagementPage() {
     const router = useRouter();
-    const { records, loading, fetchAll, updateRecord, deleteRecord } = useDisciplineRecordsAdmin();
+    const { records, loading, updateRecord, deleteRecord } = useDisciplineRecordsAdmin();
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [recordToDelete, setRecordToDelete] = useState<AdminDisciplineRow | null>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -55,9 +54,7 @@ export default function DisciplineRecordsManagementPage() {
     });
     const [isAdmin, setIsAdmin] = useState(false);
     const [checkingAdmin, setCheckingAdmin] = useState(true);
-    const hasFetchedRef = useRef(false);
 
-    // Check admin status
     useEffect(() => {
         const checkAdminStatus = async () => {
             setCheckingAdmin(true);
@@ -67,7 +64,7 @@ export default function DisciplineRecordsManagementPage() {
 
                 if (userId) {
                     const { appointments } = await listAppointments({ userId, active: true });
-                    const activeAppointment = appointments.find(apt => !apt.endsAt) || appointments[0];
+                    const activeAppointment = appointments.find((apt) => !apt.endsAt) || appointments[0];
                     if (activeAppointment) {
                         const positionName = activeAppointment.positionName || "";
                         setIsAdmin(positionName.toLowerCase() === "admin");
@@ -86,12 +83,6 @@ export default function DisciplineRecordsManagementPage() {
         };
 
         checkAdminStatus();
-    }, []);
-
-    useEffect(() => {
-        if (hasFetchedRef.current) return;
-        hasFetchedRef.current = true;
-        fetchAll();
     }, []);
 
     const handleLogout = () => {
@@ -154,8 +145,6 @@ export default function DisciplineRecordsManagementPage() {
         setRecordToEdit(null);
     };
 
-
-
     return (
         <SidebarProvider>
             <div className="min-h-screen flex w-full bg-background">
@@ -183,7 +172,6 @@ export default function DisciplineRecordsManagementPage() {
                             <TabsContent value="discipline-records" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">All Discipline Records</h2>
-
                                 </div>
 
                                 <DisciplineRecordsTable
@@ -212,10 +200,7 @@ export default function DisciplineRecordsManagementPage() {
                         <AlertDialogCancel onClick={() => setRecordToDelete(null)}>
                             Cancel
                         </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmDelete}
-                            className="bg-red-600"
-                        >
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600">
                             Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -293,9 +278,7 @@ export default function DisciplineRecordsManagementPage() {
                         <Button variant="outline" onClick={() => setEditModalOpen(false)}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveEdit}>
-                            Save Changes
-                        </Button>
+                        <Button onClick={handleSaveEdit}>Save Changes</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

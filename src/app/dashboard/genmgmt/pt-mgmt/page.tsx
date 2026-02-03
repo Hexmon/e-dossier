@@ -1,6 +1,7 @@
+// app/dashboard/genmgmt/pt-mgmt/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TabsContent } from "@/components/ui/tabs";
@@ -12,11 +13,18 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import {
     PTAttempt,
     PTTask,
-    PTGrade,
-    listPTAttempts,
-    listPTGrades,
-    listPTTasks,
-    listPTTaskScores,
+    PTAttemptCreate,
+    PTAttemptUpdate,
+    PTGradeCreate,
+    PTGradeUpdate,
+    PTTaskCreate,
+    PTTaskUpdate,
+    PTTaskScoreCreate,
+    PTTaskScoreUpdate,
+    PTTypeCreate,
+    PTTypeUpdate,
+    PTMotivationFieldCreate,
+    PTMotivationFieldUpdate,
 } from "@/app/lib/api/Physicaltrainingapi";
 import {
     Select,
@@ -31,8 +39,8 @@ import PTGradesTab from "@/components/pt-mgmt/Ptgradestab";
 import PTTasksTab from "@/components/pt-mgmt/Pttaskstab";
 import PTScoresTab from "@/components/pt-mgmt/Ptscorestab";
 import PTMotivationTab from "@/components/pt-mgmt/Ptmotivationtab";
-import { usePhysicalTrainingMgmt } from "@/hooks/usePhysicalTrainingMgmt";
 import PTTypesTab from "@/components/pt-mgmt/Pttypestab";
+import { usePhysicalTrainingMgmt } from "@/hooks/usePhysicalTrainingMgmt";
 
 const ptTabs = [
     { value: "template", title: "Template View", icon: List },
@@ -46,24 +54,25 @@ const ptTabs = [
 
 export default function PhysicalTrainingPage() {
     const router = useRouter();
+
+    // ---------------------------------------------------------------------------
+    // Selection state — this is the only local state the page needs.
+    // Changing any of these causes React Query to enable/disable the right queries.
+    // ---------------------------------------------------------------------------
     const [selectedSemester, setSelectedSemester] = useState(1);
     const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
     const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-
-    // Data states
-    const [attempts, setAttempts] = useState<PTAttempt[]>([]);
-    const [grades, setGrades] = useState<PTGrade[]>([]);
-    const [tasks, setTasks] = useState<any[]>([]);
-    const [taskScores, setTaskScores] = useState<any[]>([]);
 
     const {
         loading,
         template,
         types,
         motivationFields,
-        fetchTemplate,
-        fetchTypes,
+        attempts,
+        tasks,
+        grades,
+        taskScores,
         addType,
         editType,
         removeType,
@@ -79,257 +88,210 @@ export default function PhysicalTrainingPage() {
         addTaskScore,
         editTaskScore,
         removeTaskScore,
-        fetchMotivationFields,
         addMotivationField,
         editMotivationField,
         removeMotivationField,
-    } = usePhysicalTrainingMgmt();
+    } = usePhysicalTrainingMgmt({
+        semester: selectedSemester,
+        typeId: selectedTypeId,
+        attemptId: selectedAttemptId,
+        taskId: selectedTaskId,
+    });
 
-    useEffect(() => {
-        fetchTemplate(selectedSemester);
-        fetchTypes(selectedSemester);
-        fetchMotivationFields(selectedSemester);
-    }, [selectedSemester]);
-
-    useEffect(() => {
-        if (selectedTypeId) {
-            fetchAttemptsList(selectedTypeId);
-            fetchTasksList(selectedTypeId);
-            fetchAllGradesForType(selectedTypeId);
-        } else {
-            setAttempts([]);
-            setTasks([]);
-            setGrades([]);
-            setSelectedAttemptId(null);
-            setSelectedTaskId(null);
-        }
-    }, [selectedTypeId]);
-
-    // This useEffect is for the Grades tab when a specific attempt is selected
-    useEffect(() => {
-        if (selectedTypeId && selectedAttemptId) {
-            fetchGradesList(selectedTypeId, selectedAttemptId);
-        }
-    }, [selectedTypeId, selectedAttemptId]);
-
-    useEffect(() => {
-        if (selectedTypeId && selectedTaskId) {
-            fetchTaskScoresList(selectedTypeId, selectedTaskId);
-        } else {
-            setTaskScores([]);
-        }
-    }, [selectedTypeId, selectedTaskId]);
-
-    const fetchAttemptsList = async (typeId: string) => {
-        try {
-            const data = await listPTAttempts(typeId);
-            setAttempts(data.items || []);
-        } catch (error) {
-            console.error("Error fetching attempts:", error);
-            setAttempts([]);
-        }
-    };
-
-    const fetchGradesList = async (typeId: string, attemptId: string) => {
-        try {
-            const data = await listPTGrades(typeId, attemptId);
-            setGrades(data.items || []);
-        } catch (error) {
-            console.error("Error fetching grades:", error);
-            setGrades([]);
-        }
-    };
-
-    // NEW: Fetch all grades for all attempts of a type
-    const fetchAllGradesForType = async (typeId: string) => {
-        try {
-            const attemptsData = await listPTAttempts(typeId);
-            const attemptsList = attemptsData.items || [];
-
-            const allGrades: PTGrade[] = [];
-            for (const attempt of attemptsList) {
-                try {
-                    const gradesData = await listPTGrades(typeId, attempt.id);
-                    allGrades.push(...(gradesData.items || []));
-                } catch (error) {
-                    console.error(`Error fetching grades for attempt ${attempt.id}:`, error);
-                }
-            }
-
-            setGrades(allGrades);
-            return allGrades;
-        } catch (error) {
-            console.error("Error fetching all grades:", error);
-            setGrades([]);
-            return [];
-        }
-    };
-
-    const fetchTasksList = async (typeId: string) => {
-        try {
-            const data = await listPTTasks(typeId);
-            setTasks(data.items || []);
-        } catch (error) {
-            console.error("Error fetching tasks:", error);
-            setTasks([]);
-        }
-    };
-
-    const fetchTaskScoresList = async (typeId: string, taskId: string) => {
-        try {
-            const data = await listPTTaskScores(typeId, taskId);
-            setTaskScores(data.items || []);
-        } catch (error) {
-            console.error("Error fetching task scores:", error);
-            setTaskScores([]);
-        }
-    };
-
-    const refreshData = async () => {
-        await Promise.all([
-            fetchTemplate(selectedSemester),
-            fetchTypes(selectedSemester),
-            fetchMotivationFields(selectedSemester)
-        ]);
-        if (selectedTypeId) {
-            await fetchAttemptsList(selectedTypeId);
-            await fetchTasksList(selectedTypeId);
-            await fetchAllGradesForType(selectedTypeId);
-        }
-        if (selectedTypeId && selectedAttemptId) {
-            await fetchGradesList(selectedTypeId, selectedAttemptId);
-        }
-        if (selectedTypeId && selectedTaskId) {
-            await fetchTaskScoresList(selectedTypeId, selectedTaskId);
-        }
-    };
-
-    const handleSemesterChange = (semester: string) => {
-        setSelectedSemester(Number(semester));
+    // ---------------------------------------------------------------------------
+    // Semester change resets every downstream selection so the stale nested
+    // queries are disabled immediately (no wasted network round-trips).
+    // ---------------------------------------------------------------------------
+    const handleSemesterChange = (value: string) => {
+        setSelectedSemester(Number(value));
         setSelectedTypeId(null);
         setSelectedAttemptId(null);
         setSelectedTaskId(null);
     };
 
+    // ---------------------------------------------------------------------------
     // Type handlers
-    const handleAddType = async (data: any) => {
-        const result = await addType(data);
-        if (result) await refreshData();
-        return !!result;
+    // ---------------------------------------------------------------------------
+    const handleAddType = async (data: PTTypeCreate) => {
+        try {
+            await addType(data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleEditType = async (id: string, data: any) => {
-        const result = await editType(id, data);
-        if (result) await refreshData();
-        return !!result;
+    const handleEditType = async (id: string, data: PTTypeUpdate) => {
+        try {
+            await editType(id, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
     const handleDeleteType = async (id: string) => {
-        const result = await removeType(id, { hard: true });
-        if (result) await refreshData();
-        return result;
+        try {
+            await removeType(id, { hard: true });
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleAddAttempt = async (typeId: string, data: any) => {
-        const result = await addAttempt(typeId, data);
-
-        await fetchAttemptsList(typeId);
-
-        return !!result;
+    // ---------------------------------------------------------------------------
+    // Attempt handlers
+    // ---------------------------------------------------------------------------
+    const handleAddAttempt = async (tid: string, data: PTAttemptCreate) => {
+        try {
+            await addAttempt(tid, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleEditAttempt = async (typeId: string, attemptId: string, data: any) => {
-        const result = await editAttempt(typeId, attemptId, data);
-
-        await fetchAttemptsList(typeId);
-
-        return !!result;
+    const handleEditAttempt = async (tid: string, attemptId: string, data: PTAttemptUpdate) => {
+        try {
+            await editAttempt(tid, attemptId, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleDeleteAttempt = async (typeId: string, attemptId: string) => {
-        const result = await removeAttempt(typeId, attemptId, { hard: true });
-
-        await fetchAttemptsList(typeId);
-
-        return result;
+    const handleDeleteAttempt = async (tid: string, attemptId: string) => {
+        try {
+            await removeAttempt(tid, attemptId, { hard: true });
+            return true;
+        } catch {
+            return false;
+        }
     };
 
+    // ---------------------------------------------------------------------------
     // Grade handlers
-    const handleAddGrade = async (typeId: string, attemptId: string, data: any) => {
-        const result = await addGrade(typeId, attemptId, data);
-        await refreshData();
-        return !!result;
+    // ---------------------------------------------------------------------------
+    const handleAddGrade = async (tid: string, aid: string, data: PTGradeCreate) => {
+        try {
+            await addGrade(tid, aid, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleEditGrade = async (typeId: string, attemptId: string, gradeId: string, data: any) => {
-        const result = await editGrade(typeId, attemptId, gradeId, data);
-        await refreshData();
-        return !!result;
+    const handleEditGrade = async (tid: string, aid: string, gradeId: string, data: PTGradeUpdate) => {
+        try {
+            await editGrade(tid, aid, gradeId, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleDeleteGrade = async (typeId: string, attemptId: string, gradeId: string) => {
-        const result = await removeGrade(typeId, attemptId, gradeId, { hard: true });
-        await refreshData();
-        return result;
+    const handleDeleteGrade = async (tid: string, aid: string, gradeId: string) => {
+        try {
+            await removeGrade(tid, aid, gradeId, { hard: true });
+            return true;
+        } catch {
+            return false;
+        }
     };
 
+    // ---------------------------------------------------------------------------
     // Task handlers
-    const handleAddTask = async (typeId: string, data: any) => {
-        const result = await addTask(typeId, data);
-        await refreshData();
-        return !!result;
+    // ---------------------------------------------------------------------------
+    const handleAddTask = async (tid: string, data: PTTaskCreate) => {
+        try {
+            await addTask(tid, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleEditTask = async (typeId: string, taskId: string, data: any) => {
-        const result = await editTask(typeId, taskId, data);
-        await refreshData();
-        return !!result;
+    const handleEditTask = async (tid: string, taskId: string, data: PTTaskUpdate) => {
+        try {
+            await editTask(tid, taskId, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleDeleteTask = async (typeId: string, taskId: string) => {
-        const result = await removeTask(typeId, taskId, { hard: true });
-        await refreshData();
-        return result;
+    const handleDeleteTask = async (tid: string, taskId: string) => {
+        try {
+            await removeTask(tid, taskId, { hard: true });
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    // Task Score handlers
-    const handleAddTaskScore = async (typeId: string, taskId: string, data: any) => {
-        const result = await addTaskScore(typeId, taskId, data);
-        await refreshData();
-        return !!result;
+    // ---------------------------------------------------------------------------
+    // Task score handlers
+    // ---------------------------------------------------------------------------
+    const handleAddTaskScore = async (tid: string, tskId: string, data: PTTaskScoreCreate) => {
+        try {
+            await addTaskScore(tid, tskId, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleEditTaskScore = async (typeId: string, taskId: string, scoreId: string, data: any) => {
-        const result = await editTaskScore(typeId, taskId, scoreId, data);
-        await refreshData();
-        return !!result;
+    const handleEditTaskScore = async (tid: string, tskId: string, scoreId: string, data: PTTaskScoreUpdate) => {
+        try {
+            await editTaskScore(tid, tskId, scoreId, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleDeleteTaskScore = async (typeId: string, taskId: string, scoreId: string) => {
-        const result = await removeTaskScore(typeId, taskId, scoreId);
-        await refreshData();
-        return result;
+    const handleDeleteTaskScore = async (tid: string, tskId: string, scoreId: string) => {
+        try {
+            await removeTaskScore(tid, tskId, scoreId);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    // Motivation Field handlers
-    const handleAddField = async (data: any) => {
-        const result = await addMotivationField(data);
-        await refreshData();
-        return true;
+    // ---------------------------------------------------------------------------
+    // Motivation field handlers
+    // ---------------------------------------------------------------------------
+    const handleAddField = async (data: PTMotivationFieldCreate) => {
+        try {
+            await addMotivationField(data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const handleEditField = async (id: string, data: any) => {
-        const result = await editMotivationField(id, data);
-        await refreshData();
-        return true;
+    const handleEditField = async (id: string, data: PTMotivationFieldUpdate) => {
+        try {
+            await editMotivationField(id, data);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
     const handleDeleteField = async (id: string) => {
-        const result = await removeMotivationField(id, { hard: true });
-        await refreshData();
-        return true;
+        try {
+            await removeMotivationField(id, { hard: true });
+            return true;
+        } catch {
+            return false;
+        }
     };
 
+    // ---------------------------------------------------------------------------
+    // Render
+    // ---------------------------------------------------------------------------
     return (
         <SidebarProvider>
             <div className="min-h-screen flex w-full bg-background">
@@ -404,7 +366,7 @@ export default function PhysicalTrainingPage() {
                                     onAdd={handleAddAttempt}
                                     onEdit={handleEditAttempt}
                                     onDelete={handleDeleteAttempt}
-                                    onManageGrades={(attempt) => setSelectedAttemptId(attempt.id)}
+                                    onManageGrades={(attempt: PTAttempt) => setSelectedAttemptId(attempt.id)}
                                 />
                             </TabsContent>
 
@@ -434,7 +396,7 @@ export default function PhysicalTrainingPage() {
                                     onAdd={handleAddTask}
                                     onEdit={handleEditTask}
                                     onDelete={handleDeleteTask}
-                                    onManageScores={(task) => setSelectedTaskId(task.id)}
+                                    onManageScores={(task: PTTask) => setSelectedTaskId(task.id)}
                                 />
                             </TabsContent>
 
