@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -27,15 +27,10 @@ export default function SubjectManagementPage() {
     const {
         loading,
         subjects,
-        fetchSubjects,
         addSubject,
         editSubject,
         removeSubject,
-    } = useSubjects();
-
-    useEffect(() => {
-        fetchSubjects();
-    }, []);
+    } = useSubjects({ q: searchQuery || undefined });
 
     const handleLogout = () => {
         console.log("Logout clicked");
@@ -44,7 +39,6 @@ export default function SubjectManagementPage() {
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
-        fetchSubjects({ q: query });
     };
 
     const handleAddSubject = async (newSubject: SubjectCreate) => {
@@ -53,14 +47,12 @@ export default function SubjectManagementPage() {
         if (editingId) {
             const result = await editSubject(editingId, newSubject);
             if (result) {
-                await fetchSubjects({ q: searchQuery });
                 setIsDialogOpen(false);
                 setEditingSubject(undefined);
             }
         } else {
             const result = await addSubject(newSubject);
             if (result) {
-                await fetchSubjects({ q: searchQuery });
                 setIsDialogOpen(false);
             }
         }
@@ -77,10 +69,7 @@ export default function SubjectManagementPage() {
             action: {
                 label: "Delete",
                 onClick: async () => {
-                    const result = await removeSubject(id);
-                    if (result) {
-                        await fetchSubjects({ q: searchQuery });
-                    }
+                    await removeSubject(id);
                 },
             },
             cancel: {

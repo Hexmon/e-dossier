@@ -38,6 +38,7 @@ export interface OCRecord {
   createdAt?: string;
   course?: CourseRef;
   platoon?: PlatoonRef;
+  courseId?: string;
 }
 
 /** Optional denormalized fields the list API now returns */
