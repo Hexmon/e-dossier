@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@/app/lib/api/authApi";
 import { useMe } from "@/hooks/useMe";
 
@@ -36,6 +37,7 @@ const getInitials = (name: string): string => {
 
 export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Replaces the manual useEffect + fetchMe with a single React Query call
   // that's shared across the entire app
@@ -62,6 +64,11 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
 
   const handleLogout = async () => {
     const ok = await logout();
+
+    // CRITICAL: Clear all React Query cache on logout
+    // Without this, the next user will see cached data from the previous user
+    queryClient.clear();
+
     if (onLogout) {
       onLogout();
       return;
