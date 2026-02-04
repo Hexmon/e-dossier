@@ -54,7 +54,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.1",
-    "drizzle-orm": "^0.44.4",
+    "drizzle-orm": "^0.45.0",
     "isomorphic-dompurify": "^2.30.0",
     "jose": "^6.0.12",
     "lucide-react": "^0.546.0",
