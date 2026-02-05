@@ -33,7 +33,7 @@ export default function TemplateSections({ templateId }: TemplateSectionsProps) 
         addSection,
         editSection,
         removeSection,
-    } = useInterviewTemplates();
+    } = useInterviewTemplates({ templateId });
 
     const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
     const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
@@ -43,8 +43,8 @@ export default function TemplateSections({ templateId }: TemplateSectionsProps) 
     const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
 
     useEffect(() => {
-        fetchSections(templateId);
-    }, [templateId]);
+        fetchSections();
+    }, [templateId, fetchSections]);
 
     const handleAddSection = () => {
         setEditingSection(undefined);
@@ -64,7 +64,7 @@ export default function TemplateSections({ templateId }: TemplateSectionsProps) 
     const confirmDelete = async () => {
         if (sectionToDelete) {
             await removeSection(templateId, sectionToDelete, false);
-            await fetchSections(templateId);
+            await fetchSections();
         }
         setDeleteDialogOpen(false);
         setSectionToDelete(null);
@@ -81,7 +81,7 @@ export default function TemplateSections({ templateId }: TemplateSectionsProps) 
         } else {
             await addSection(templateId, data);
         }
-        await fetchSections(templateId);
+        await fetchSections();
         setSectionDialogOpen(false);
         setEditingSection(undefined);
     };

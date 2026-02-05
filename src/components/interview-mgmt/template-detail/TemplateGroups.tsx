@@ -35,7 +35,7 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
         addGroup,
         editGroup,
         removeGroup,
-    } = useInterviewTemplates();
+    } = useInterviewTemplates({ templateId });
 
     const [groupDialogOpen, setGroupDialogOpen] = useState(false);
     const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
@@ -45,9 +45,9 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
     const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
 
     useEffect(() => {
-        fetchGroups(templateId);
-        fetchSections(templateId);
-    }, [templateId]);
+        fetchGroups();
+        fetchSections();
+    }, [templateId, fetchGroups, fetchSections]);
 
     const handleAddGroup = () => {
         setEditingGroup(undefined);
@@ -67,7 +67,7 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
     const confirmDelete = async () => {
         if (groupToDelete) {
             await removeGroup(templateId, groupToDelete, false);
-            await fetchGroups(templateId);
+            await fetchGroups();
         }
         setDeleteDialogOpen(false);
         setGroupToDelete(null);
@@ -84,7 +84,7 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
         } else {
             await addGroup(templateId, data);
         }
-        await fetchGroups(templateId);
+        await fetchGroups();
         setGroupDialogOpen(false);
         setEditingGroup(undefined);
     };

@@ -1,7 +1,7 @@
 // app/dashboard/genmgmt/interviews-mgmt/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,11 @@ export default function InterviewTemplateManagementPage() {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
 
+    const templateListParams = useMemo(() => {
+        if (semesterFilter === "all") return undefined;
+        return { semester: parseInt(semesterFilter, 10) };
+    }, [semesterFilter]);
+
     const {
         loading,
         templates,
@@ -51,15 +56,7 @@ export default function InterviewTemplateManagementPage() {
         addTemplate,
         editTemplate,
         removeTemplate,
-    } = useInterviewTemplates();
-
-    useEffect(() => {
-        const params: Record<string, string | number | boolean> = {};
-        if (semesterFilter !== "all") {
-            params.semester = parseInt(semesterFilter);
-        }
-        fetchTemplates(params);
-    }, [semesterFilter, fetchTemplates]);
+    } = useInterviewTemplates({ listParams: templateListParams });
 
     const handleLogout = () => {
         console.log("Logout clicked");

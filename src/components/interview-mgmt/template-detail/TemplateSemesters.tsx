@@ -37,7 +37,7 @@ export default function TemplateSemesters({ templateId }: TemplateSemestersProps
         fetchTemplateSemesters,
         addSemesterToTemplate,
         removeSemesterFromTemplate,
-    } = useInterviewTemplates();
+    } = useInterviewTemplates({ templateId });
 
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -45,8 +45,8 @@ export default function TemplateSemesters({ templateId }: TemplateSemestersProps
     const [selectedSemesters, setSelectedSemesters] = useState<number[]>([]);
 
     useEffect(() => {
-        fetchTemplateSemesters(templateId);
-    }, [templateId]);
+        fetchTemplateSemesters();
+    }, [templateId, fetchTemplateSemesters]);
 
     const availableSemesters = [1, 2, 3, 4, 5, 6];
     const assignedSemesterNumbers = semesters.map((s) => s.semester);
@@ -61,7 +61,7 @@ export default function TemplateSemesters({ templateId }: TemplateSemestersProps
             await addSemesterToTemplate(templateId, semester);
         }
 
-        await fetchTemplateSemesters(templateId);
+        await fetchTemplateSemesters();
         setSelectedSemesters([]);
         setAddDialogOpen(false);
     };
@@ -74,7 +74,7 @@ export default function TemplateSemesters({ templateId }: TemplateSemestersProps
     const confirmDelete = async () => {
         if (semesterToDelete) {
             await removeSemesterFromTemplate(templateId, semesterToDelete);
-            await fetchTemplateSemesters(templateId);
+            await fetchTemplateSemesters();
         }
         setDeleteDialogOpen(false);
         setSemesterToDelete(null);
