@@ -1,7 +1,7 @@
 // app/dashboard/genmgmt/interviews-mgmt/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -44,52 +44,47 @@ export default function InterviewTemplateManagementPage() {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
 
-    const templateListParams = useMemo(() => {
-        if (semesterFilter === "all") return undefined;
-        return { semester: parseInt(semesterFilter, 10) };
-    }, [semesterFilter]);
+    // Build listParams from the semester filter — React Query re-fetches
+    // automatically whenever this object changes via the query key.
+    const listParams = semesterFilter !== "all"
+        ? { semester: parseInt(semesterFilter) }
+        : undefined;
 
     const {
         loading,
         templates,
-        fetchTemplates,
         addTemplate,
         editTemplate,
         removeTemplate,
-    } = useInterviewTemplates({ listParams: templateListParams });
+    } = useInterviewTemplates({ listParams });
+
+    // No useEffect needed — useQuery fetches on mount and whenever listParams changes.
 
     const handleLogout = () => {
         console.log("Logout clicked");
         router.push("/login");
     };
 
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-    };
-
     const handleAddTemplate = async (newTemplate: InterviewTemplateCreate) => {
         const editingId = editingTemplate?.id;
 
-        if (editingId) {
-            const result = await editTemplate(editingId, newTemplate);
-            if (result) {
-                await fetchTemplates();
-                setIsDialogOpen(false);
+        try {
+            if (editingId) {
+                // mutateAsync throws on error, so the dialog only closes on success
+                await editTemplate(editingId, newTemplate);
                 setEditingTemplate(undefined);
+            } else {
+                await addTemplate(newTemplate);
             }
-        } else {
-            const result = await addTemplate(newTemplate);
-            if (result) {
-                await fetchTemplates();
-                setIsDialogOpen(false);
-            }
+            setIsDialogOpen(false);
+        } catch {
+            // Toast is already shown by the mutation's onError — nothing else to do.
         }
     };
 
     const handleViewTemplate = (index: number) => {
         const template = filteredTemplates[index];
         if (template) {
-            // Navigate to detail page
             router.push(`/dashboard/genmgmt/interviews-mgmt/${template.id}`);
         }
     };
@@ -109,23 +104,24 @@ export default function InterviewTemplateManagementPage() {
 
     const confirmDelete = async () => {
         if (templateToDelete) {
-            const result = await removeTemplate(templateToDelete, false);
-            if (result) {
-                await fetchTemplates();
+            try {
+                await removeTemplate(templateToDelete, false);
+            } catch {
+                // Toast already shown by mutation onError.
             }
         }
         setDeleteConfirmOpen(false);
         setTemplateToDelete(null);
     };
 
-    // Client-side search filtering
+    // Client-side search filtering (runs against the already-cached list)
     const filteredTemplates = templates.filter((template) => {
         if (!searchQuery) return true;
         const query = searchQuery.toLowerCase();
         return (
-            (template.code || "").toLowerCase().includes(query) ||
-            (template.title || "").toLowerCase().includes(query) ||
-            (template.description || "").toLowerCase().includes(query)
+            (template.code ?? "").toLowerCase().includes(query) ||
+            (template.title ?? "").toLowerCase().includes(query) ||
+            (template.description ?? "").toLowerCase().includes(query)
         );
     });
 
@@ -185,7 +181,7 @@ export default function InterviewTemplateManagementPage() {
                                         <Input
                                             placeholder="Search templates..."
                                             value={searchQuery}
-                                            onChange={(e) => handleSearch(e.target.value)}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
                                             className="w-64"
                                         />
                                         <Button

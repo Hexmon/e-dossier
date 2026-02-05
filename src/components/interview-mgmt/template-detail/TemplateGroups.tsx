@@ -1,7 +1,7 @@
 // components/interview-mgmt/template-detail/TemplateGroups.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useInterviewTemplates } from "@/hooks/useInterviewTemplates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,12 +30,10 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
         loading,
         groups,
         sections,
-        fetchGroups,
-        fetchSections,
         addGroup,
         editGroup,
         removeGroup,
-    } = useInterviewTemplates({ templateId });
+    } = useInterviewTemplates({ templateId }); // Pass templateId to enable queries
 
     const [groupDialogOpen, setGroupDialogOpen] = useState(false);
     const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
@@ -44,10 +42,7 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
     const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
     const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchGroups();
-        fetchSections();
-    }, [templateId, fetchGroups, fetchSections]);
+    // No useEffect needed - React Query fetches automatically when templateId is set
 
     const handleAddGroup = () => {
         setEditingGroup(undefined);
@@ -67,7 +62,6 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
     const confirmDelete = async () => {
         if (groupToDelete) {
             await removeGroup(templateId, groupToDelete, false);
-            await fetchGroups();
         }
         setDeleteDialogOpen(false);
         setGroupToDelete(null);
@@ -84,7 +78,6 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
         } else {
             await addGroup(templateId, data);
         }
-        await fetchGroups();
         setGroupDialogOpen(false);
         setEditingGroup(undefined);
     };

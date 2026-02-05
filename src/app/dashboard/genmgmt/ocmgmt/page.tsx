@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import React, { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -11,7 +12,6 @@ import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import UploadButton, { type RawRow, type UploadedPreviewRow } from "@/components/oc/UploadButton";
 import UploadPreviewTable from "@/components/oc/UploadPreviewTable";
 import OCsTable from "@/components/oc/OCsTable";
@@ -29,13 +29,55 @@ import type { OCRecord } from "@/app/lib/api/ocApi";
 import { useOCs } from "@/hooks/useOCs";
 import OCFilters from "@/components/genmgmt/OCFilters";
 import { OCForm } from "@/components/genmgmt/OCForm";
+import { useQuery } from "@tanstack/react-query";
 
 type CourseLike = { id: string; code?: string; title?: string };
 type PlatoonLike = { id: string; name?: string };
 
 export default function OCManagementPage() {
-  // hooks
-  const { ocList, totalCount, loading, fetchOCs, addOC, editOC, removeOC, setOcList } = useOCs();
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  const [search, setSearch] = useState<string>("");
+  const [courseFilter, setCourseFilter] = useState<string>("");
+  const [platoonFilter, setPlatoonFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [branchFilter, setBranchFilter] = useState<string>("");
+
+  const debouncedSearch = useDebouncedValue(search, 350);
+
+  type BranchType = "C" | "E" | "M";
+  const allowedBranches = useMemo(() => ["C", "E", "M"] as const, []);
+  const safeBranch = ((): BranchType | undefined => {
+    return allowedBranches.includes(branchFilter as BranchType)
+      ? (branchFilter as BranchType)
+      : undefined;
+  })();
+
+  type StatusType = "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
+  const allowedStatus: StatusType[] = ["ACTIVE", "DELEGATED", "WITHDRAWN", "PASSED_OUT"];
+  const safeStatus = allowedStatus.includes(statusFilter as StatusType)
+    ? (statusFilter as StatusType)
+    : undefined;
+
+  // Build params object for React Query
+  const params = useMemo(
+    () => ({
+      q: debouncedSearch || undefined,
+      courseId: courseFilter || undefined,
+      platoonId: platoonFilter || undefined,
+      status: safeStatus,
+      branch: safeBranch,
+      active: statusFilter === "ACTIVE" ? true : undefined,
+      limit: pageSize,
+      offset: (currentPage - 1) * pageSize,
+    }),
+    [debouncedSearch, courseFilter, platoonFilter, safeStatus, safeBranch, statusFilter, currentPage, pageSize]
+  );
+
+  // Use React Query hook with params
+  const { ocList, totalCount, loading, addOC, editOC, removeOC } = useOCs(params);
+
   const {
     parsing,
     setParsing,
@@ -51,111 +93,86 @@ export default function OCManagementPage() {
     clear: clearUpload,
   } = useOCUpload();
 
-  // lookups
-  const [courses, setCourses] = useState<CourseLike[]>([]);
-  const [platoons, setPlatoons] = useState<PlatoonLike[]>([]);
+  // Courses — same queryKey & queryFn as useCourses hook.
+  // Cache always holds raw CourseResponse[]. No select needed here
+  // because the raw shape already matches CourseLike { id, code, title }.
+  const { data: courses = [] } = useQuery<CourseLike[]>({
+    queryKey: ["courses"],
+    queryFn: async () => {
+      const c = await getAllCourses();
+      return c?.items ?? [];
+    },
+  });
 
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
-
-  const [search, setSearch] = useState<string>("");
-  const [courseFilter, setCourseFilter] = useState<string>("");
-  const [platoonFilter, setPlatoonFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [branchFilter, setBranchFilter] = useState<string>("");
-
-  const debouncedSearch = useDebouncedValue(search, 350);
+  // Platoons
+  const { data: platoons = [] } = useQuery({
+    queryKey: ["platoons"],
+    queryFn: getPlatoons,
+  });
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const { register, handleSubmit, reset, setValue } = useForm<Partial<OCRecord>>();
+  const { reset } = useForm<Partial<OCRecord>>();
 
   const [viewOpen, setViewOpen] = useState<boolean>(false);
   const [viewId, setViewId] = useState<string | null>(null);
 
-  type BranchType = "C" | "E" | "M";
-
-  const allowedBranches = useMemo(() => ["C", "E", "M"] as const, []);
-  const safeBranch = ((): BranchType | undefined => {
-    return (allowedBranches.includes(branchFilter as BranchType) ? (branchFilter as BranchType) : undefined);
-  })();
-
-  type StatusType = "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
-
-  const allowedStatus: StatusType[] = ["ACTIVE", "DELEGATED", "WITHDRAWN", "PASSED_OUT"];
-  const safeStatus = allowedStatus.includes(statusFilter as StatusType)
-    ? (statusFilter as StatusType)
-    : undefined;
-
-  useEffect(() => {
-    (async () => {
-      const [c, p] = await Promise.all([getAllCourses(), getPlatoons()]);
-      setCourses(c?.items ?? []);
-      setPlatoons(p ?? []);
-    })().catch(console.error);
-  }, []);
-
-  // fetch table when filters change
-  useEffect(() => {
-    (async () => {
-      await fetchOCs({
-        q: debouncedSearch || undefined,
-        courseId: courseFilter || undefined,
-        platoonId: platoonFilter || undefined,
-        status: safeStatus,
-        branch: safeBranch,
-        active: statusFilter === "ACTIVE" ? true : undefined,
-        limit: pageSize,
-        offset: (currentPage - 1) * pageSize,
-      });
-    })().catch((e) => console.error("fetch failed", e));
-  }, [debouncedSearch, courseFilter, platoonFilter, statusFilter, branchFilter, currentPage, pageSize, fetchOCs, safeBranch]);
-
-  // form submit (add / edit)
-  const onSubmit: SubmitHandler<Partial<OCRecord>> = async (data) => {
+  // Form submit (add / edit) with proper error handling
+  const onSubmit = async (data: Partial<OCRecord>): Promise<void> => {
     try {
       if (editingIndex !== null) {
         const { id } = ocList[editingIndex];
         await editOC(id, data);
+        // Toast shown by mutation's onSuccess
       } else {
         await addOC(data as Omit<OCRecord, "id" | "uid" | "createdAt">);
+        // Toast shown by mutation's onSuccess
       }
-      reset();
+
+      // Close dialog and reset form
       setIsDialogOpen(false);
+      reset();
       setEditingIndex(null);
-    } catch (e) {
-      console.error("save failed", e);
+
+      // React Query automatically refetches via invalidateQueries
+    } catch (error: any) {
+      console.error("Save failed:", error);
+
+      // Handle validation errors
+      if (error.status === 400 && error.issues?.fieldErrors) {
+        const fieldErrors = error.issues.fieldErrors;
+        const errorMessages = Object.entries(fieldErrors)
+          .map(([field, messages]: [string, any]) => `${field}: ${messages[0]}`)
+          .join(", ");
+
+        toast.error(`Validation failed: ${errorMessages}`);
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to save OC. Please try again.");
+      }
+
+      // Re-throw so OCForm can also handle it if needed
+      throw error;
     }
   };
 
-  // open edit dialog
+  // Open edit dialog
   const handleEdit = (index: number) => {
-    const oc = ocList[index];
     setEditingIndex(index);
-
-    // setValue("name", oc.name ?? "");
-    // setValue("ocNo", oc.ocNo ?? "");
-    // setValue("courseId", oc.courseId ?? "");
-    // setValue("branch", oc.branch ?? undefined);
-    // setValue("platoonId", oc.platoonId ?? "");
-    // setValue("arrivalAtUniversity", oc.arrivalAtUniversity?.slice(0, 10) ?? "");
-
     setIsDialogOpen(true);
   };
 
-  // delete
+  // Delete
   const handleDelete = async (id: string) => {
-    await removeOC(id);
-    fetchOCs({
-      q: debouncedSearch || undefined,
-      courseId: courseFilter || undefined,
-      platoonId: platoonFilter || undefined,
-      status: safeStatus,
-      branch: safeBranch,
-      limit: pageSize,
-      offset: (currentPage - 1) * pageSize,
-    }).catch(console.error);
+    try {
+      await removeOC(id);
+      // Toast shown by mutation's onSuccess
+    } catch (error: any) {
+      console.error("Delete failed:", error);
+      // Toast already shown by mutation's onError
+    }
   };
 
   const handleAdd = () => {
@@ -164,14 +181,11 @@ export default function OCManagementPage() {
     setIsDialogOpen(true);
   };
 
-  // upload bulk - pass a callback to re-fetch page on success
+  // Upload bulk
   const handleBulkUpload = async () => {
     await doBulkUpload(async () => {
-      await fetchOCs({
-        q: debouncedSearch || undefined,
-        limit: pageSize,
-        offset: (currentPage - 1) * pageSize,
-      });
+      // React Query will automatically refetch after mutations
+      toast.success("Bulk upload completed successfully");
     });
   };
 
@@ -189,7 +203,10 @@ export default function OCManagementPage() {
 
         <main className="flex-1 flex flex-col">
           <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
-            <PageHeader title="OC Management" description="Manage all OC details across platoons and terms" />
+            <PageHeader
+              title="OC Management"
+              description="Manage all OC details across platoons and terms"
+            />
           </header>
 
           <section className="flex-1 p-6">
@@ -301,8 +318,8 @@ export default function OCManagementPage() {
       {/* Add / Edit dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <OCForm
-          key={editingIndex !== null ? ocList[editingIndex]?.id : 'new'}
-          defaultValues={editingIndex !== null ? ocList[editingIndex] : {}}
+          key={editingIndex !== null && ocList[editingIndex] ? ocList[editingIndex].id : "new"}
+          defaultValues={editingIndex !== null && ocList[editingIndex] ? ocList[editingIndex] : {}}
           courses={courses}
           platoons={platoons}
           isEditing={editingIndex !== null}

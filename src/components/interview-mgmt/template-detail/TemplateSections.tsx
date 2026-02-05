@@ -1,7 +1,7 @@
 // components/interview-mgmt/template-detail/TemplateSections.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useInterviewTemplates } from "@/hooks/useInterviewTemplates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,10 +26,14 @@ interface TemplateSectionsProps {
 }
 
 export default function TemplateSections({ templateId }: TemplateSectionsProps) {
+    // -------------------------------------------------------------------------
+    // The detail page already passed templateId into useInterviewTemplates,
+    // which enabled the sectionsQuery. No useEffect needed — the data is
+    // already being fetched and cached.
+    // -------------------------------------------------------------------------
     const {
         loading,
         sections,
-        fetchSections,
         addSection,
         editSection,
         removeSection,
@@ -41,10 +45,6 @@ export default function TemplateSections({ templateId }: TemplateSectionsProps) 
     const [editingSection, setEditingSection] = useState<Section | undefined>(undefined);
     const [selectedSection, setSelectedSection] = useState<Section | null>(null);
     const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
-
-    useEffect(() => {
-        fetchSections();
-    }, [templateId, fetchSections]);
 
     const handleAddSection = () => {
         setEditingSection(undefined);
@@ -63,8 +63,12 @@ export default function TemplateSections({ templateId }: TemplateSectionsProps) 
 
     const confirmDelete = async () => {
         if (sectionToDelete) {
-            await removeSection(templateId, sectionToDelete, false);
-            await fetchSections();
+            try {
+                await removeSection(templateId, sectionToDelete, false);
+                // Mutation's onSuccess already invalidated the sections query
+            } catch {
+                // Toast already shown by mutation onError
+            }
         }
         setDeleteDialogOpen(false);
         setSectionToDelete(null);
@@ -76,14 +80,19 @@ export default function TemplateSections({ templateId }: TemplateSectionsProps) 
     };
 
     const handleSectionSubmit = async (data: any) => {
-        if (editingSection) {
-            await editSection(templateId, editingSection.id, data);
-        } else {
-            await addSection(templateId, data);
+        try {
+            if (editingSection) {
+                await editSection(templateId, editingSection.id, data);
+            } else {
+                await addSection(templateId, data);
+            }
+            // Mutation's onSuccess already invalidated the sections query
+            setSectionDialogOpen(false);
+            setEditingSection(undefined);
+        } catch {
+            // Toast already shown by mutation onError
+            // Don't close dialog on failure
         }
-        await fetchSections();
-        setSectionDialogOpen(false);
-        setEditingSection(undefined);
     };
 
     return (

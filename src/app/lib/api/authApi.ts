@@ -79,11 +79,17 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
       payload,
       { baseURL }
     );
+
+    if (response.token) {
+      localStorage.setItem("authToken", response.token);
+    }
+
     return response;
   } catch (error) {
     if (error instanceof ApiClientError) {
-      throw new Error(error.message || "Invalid credentials");
+      throw error;
     }
+
     throw new Error("Something went wrong. Please try again later.");
   }
 }
@@ -91,6 +97,9 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
 export async function logout() {
   try {
     await api.post(endpoints.auth.logout, undefined, { skipCsrf: true });
+
+    localStorage.removeItem("authToken");
+
     return true;
   } catch (err) {
     console.error("Logout error:", err);

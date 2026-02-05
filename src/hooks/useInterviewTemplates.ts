@@ -1,4 +1,4 @@
-﻿// hooks/useInterviewTemplates.ts
+// hooks/useInterviewTemplates.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
