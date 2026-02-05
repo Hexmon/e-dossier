@@ -1,481 +1,559 @@
-import { useCallback, useState } from "react";
+// hooks/useInterviewTemplates.ts
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-    addTemplateSemester,
-    createFieldOption,
-    createGroup,
-    createGroupField,
-    createSection,
-    createSectionField,
-    createTemplate,
-    deleteField,
-    deleteFieldOption,
-    deleteGroup,
-    deleteSection,
-    deleteTemplate,
-    FieldCreate,
-    FieldOptionCreate,
-    FieldOptionUpdate,
-    FieldUpdate,
-    getTemplateById,
-    Group,
-    GroupCreate,
-    GroupUpdate,
     InterviewTemplate,
     InterviewTemplateCreate,
     InterviewTemplateUpdate,
-    listFieldOptions,
-    listGroupFields,
-    listGroups,
-    ListParams,
-    listSectionFields,
-    listSections,
-    listTemplateSemesters,
-    listTemplates,
-    removeTemplateSemester,
     Section,
     SectionCreate,
     SectionUpdate,
+    Group,
+    GroupCreate,
+    GroupUpdate,
+    FieldCreate,
+    FieldUpdate,
+    FieldOptionCreate,
+    FieldOptionUpdate,
     TemplateSemester,
-    updateField,
-    updateFieldOption,
-    updateGroup,
-    updateSection,
+    listTemplates,
+    getTemplateById,
+    createTemplate,
     updateTemplate,
+    deleteTemplate,
+    listTemplateSemesters,
+    addTemplateSemester,
+    removeTemplateSemester,
+    listSections,
+    createSection,
+    updateSection,
+    deleteSection,
+    listGroups,
+    createGroup,
+    updateGroup,
+    deleteGroup,
+    listSectionFields,
+    createSectionField,
+    listGroupFields,
+    createGroupField,
+    updateField,
+    deleteField,
+    listFieldOptions,
+    createFieldOption,
+    updateFieldOption,
+    deleteFieldOption,
+    ListParams,
 } from "@/app/lib/api/Interviewtemplateapi";
 
-export function useInterviewTemplates() {
-    const [loading, setLoading] = useState(false);
-    const [templates, setTemplates] = useState<InterviewTemplate[]>([]);
-    const [currentTemplate, setCurrentTemplate] = useState<InterviewTemplate | null>(null);
-    const [semesters, setSemesters] = useState<TemplateSemester[]>([]);
-    const [sections, setSections] = useState<Section[]>([]);
-    const [groups, setGroups] = useState<Group[]>([]);
+// ---------------------------------------------------------------------------
+// Query key factories — single source of truth so invalidation is consistent
+// ---------------------------------------------------------------------------
+export const QUERY_KEYS = {
+    templates: (params?: ListParams) => ["interviewTemplates", params ?? {}] as const,
+    templateById: (id: string) => ["interviewTemplates", id] as const,
+    semesters: (templateId: string) => ["interviewTemplates", templateId, "semesters"] as const,
+    sections: (templateId: string, params?: ListParams) =>
+        ["interviewTemplates", templateId, "sections", params ?? {}] as const,
+    groups: (templateId: string, params?: ListParams) =>
+        ["interviewTemplates", templateId, "groups", params ?? {}] as const,
+    sectionFields: (templateId: string, sectionId: string, params?: ListParams) =>
+        ["interviewTemplates", templateId, "sections", sectionId, "fields", params ?? {}] as const,
+    groupFields: (templateId: string, groupId: string, params?: ListParams) =>
+        ["interviewTemplates", templateId, "groups", groupId, "fields", params ?? {}] as const,
+    fieldOptions: (templateId: string, fieldId: string, params?: ListParams) =>
+        ["interviewTemplates", templateId, "fields", fieldId, "options", params ?? {}] as const,
+} as const;
 
-    const fetchTemplates = useCallback(async (params?: ListParams) => {
-        setLoading(true);
-        try {
-            const response = await listTemplates(params);
-            const items = response.templates || [];
-            setTemplates(items);
-            return items;
-        } catch (error) {
-            console.error("Error fetching interview templates:", error);
-            toast.error("Failed to load interview templates");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+export function useInterviewTemplates(options?: {
+    templateId?: string;
+    listParams?: ListParams;
+}) {
+    const queryClient = useQueryClient();
+    const templateId = options?.templateId ?? "";
+    const listParams = options?.listParams;
 
-    const fetchTemplateById = useCallback(async (templateId: string) => {
-        setLoading(true);
-        try {
-            const template = await getTemplateById(templateId);
-            setCurrentTemplate(template);
-            return template;
-        } catch (error) {
-            console.error("Error fetching interview template:", error);
-            toast.error("Failed to load interview template");
-            setCurrentTemplate(null);
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    // -----------------------------------------------------------------------
+    // Queries
+    // -----------------------------------------------------------------------
+    const templatesQuery = useQuery({
+        queryKey: QUERY_KEYS.templates(listParams),
+        queryFn: async () => {
+            const data = await listTemplates(listParams);
+            return data?.templates ?? [];
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const addTemplate = useCallback(async (payload: InterviewTemplateCreate) => {
-        setLoading(true);
-        try {
-            const template = await createTemplate(payload);
+    const templateByIdQuery = useQuery({
+        queryKey: QUERY_KEYS.templateById(templateId),
+        queryFn: () => getTemplateById(templateId),
+        enabled: templateId.length > 0,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const semestersQuery = useQuery({
+        queryKey: QUERY_KEYS.semesters(templateId),
+        queryFn: async () => {
+            const data = await listTemplateSemesters(templateId);
+            return data?.semesters ?? [];
+        },
+        enabled: templateId.length > 0,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const sectionsQuery = useQuery({
+        queryKey: QUERY_KEYS.sections(templateId),
+        queryFn: async () => {
+            const data = await listSections(templateId);
+            return data?.sections ?? [];
+        },
+        enabled: templateId.length > 0,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const groupsQuery = useQuery({
+        queryKey: QUERY_KEYS.groups(templateId),
+        queryFn: async () => {
+            const data = await listGroups(templateId);
+            return data?.groups ?? [];
+        },
+        enabled: templateId.length > 0,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    // -----------------------------------------------------------------------
+    // Template mutations
+    // -----------------------------------------------------------------------
+    const createTemplateMutation = useMutation({
+        mutationFn: async (template: InterviewTemplateCreate) => {
+            const created = await createTemplate(template);
+
+            if (template.semesters?.length && created.id) {
+                await Promise.all(
+                    template.semesters.map((sem) =>
+                        addTemplateSemester(created.id, { semester: sem })
+                    )
+                );
+            }
+
+            return created;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Template created successfully");
-            return template;
-        } catch (error) {
-            console.error("Error creating interview template:", error);
+        },
+        onError: (error) => {
+            console.error("Error creating template:", error);
             toast.error("Failed to create template");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const editTemplate = useCallback(async (templateId: string, payload: InterviewTemplateUpdate) => {
-        setLoading(true);
-        try {
-            const template = await updateTemplate(templateId, payload);
+    const updateTemplateMutation = useMutation({
+        mutationFn: ({ id, updates }: { id: string; updates: InterviewTemplateUpdate }) =>
+            updateTemplate(id, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Template updated successfully");
-            return template;
-        } catch (error) {
-            console.error("Error updating interview template:", error);
+        },
+        onError: (error) => {
+            console.error("Error updating template:", error);
             toast.error("Failed to update template");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const removeTemplate = useCallback(async (templateId: string, hard = false) => {
-        setLoading(true);
-        try {
-            await deleteTemplate(templateId, hard);
+    const deleteTemplateMutation = useMutation({
+        mutationFn: ({ id, hard }: { id: string; hard: boolean }) => deleteTemplate(id, hard),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Template deleted successfully");
-            return true;
-        } catch (error) {
-            console.error("Error deleting interview template:", error);
+        },
+        onError: (error) => {
+            console.error("Error deleting template:", error);
             toast.error("Failed to delete template");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const fetchTemplateSemesters = useCallback(async (templateId: string) => {
-        setLoading(true);
-        try {
-            const response = await listTemplateSemesters(templateId);
-            const items = response.semesters || [];
-            setSemesters(items);
-            return items;
-        } catch (error) {
-            console.error("Error fetching template semesters:", error);
-            toast.error("Failed to load template semesters");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const addSemesterToTemplate = useCallback(async (templateId: string, semester: number) => {
-        setLoading(true);
-        try {
-            const result = await addTemplateSemester(templateId, { semester });
-            toast.success(`Semester ${semester} added`);
-            return result;
-        } catch (error) {
-            console.error("Error adding template semester:", error);
+    // -----------------------------------------------------------------------
+    // Semester mutations
+    // -----------------------------------------------------------------------
+    const addSemesterMutation = useMutation({
+        mutationFn: ({ id, semester }: { id: string; semester: number }) =>
+            addTemplateSemester(id, { semester }),
+        onSuccess: (_, { semester }) => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.semesters(templateId) });
+            toast.success(`Semester ${semester} added successfully`);
+        },
+        onError: (error) => {
+            console.error("Error adding semester:", error);
             toast.error("Failed to add semester");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const removeSemesterFromTemplate = useCallback(async (templateId: string, semester: number) => {
-        setLoading(true);
-        try {
-            await removeTemplateSemester(templateId, semester);
-            toast.success(`Semester ${semester} removed`);
-            return true;
-        } catch (error) {
-            console.error("Error removing template semester:", error);
+    const removeSemesterMutation = useMutation({
+        mutationFn: ({ id, semester }: { id: string; semester: number }) =>
+            removeTemplateSemester(id, semester),
+        onSuccess: (_, { semester }) => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.semesters(templateId) });
+            toast.success(`Semester ${semester} removed successfully`);
+        },
+        onError: (error) => {
+            console.error("Error removing semester:", error);
             toast.error("Failed to remove semester");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const fetchSections = useCallback(async (templateId: string, params?: ListParams) => {
-        setLoading(true);
-        try {
-            const response = await listSections(templateId, params);
-            const items = response.sections || [];
-            setSections(items);
-            return items;
-        } catch (error) {
-            console.error("Error fetching sections:", error);
-            toast.error("Failed to load sections");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const addSection = useCallback(async (templateId: string, payload: SectionCreate) => {
-        setLoading(true);
-        try {
-            const section = await createSection(templateId, payload);
+    // -----------------------------------------------------------------------
+    // Section mutations
+    // -----------------------------------------------------------------------
+    const createSectionMutation = useMutation({
+        mutationFn: ({ tid, section }: { tid: string; section: SectionCreate }) =>
+            createSection(tid, section),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sections(templateId) });
             toast.success("Section created successfully");
-            return section;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error creating section:", error);
             toast.error("Failed to create section");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const editSection = useCallback(async (templateId: string, sectionId: string, payload: SectionUpdate) => {
-        setLoading(true);
-        try {
-            const section = await updateSection(templateId, sectionId, payload);
+    const updateSectionMutation = useMutation({
+        mutationFn: ({ tid, sectionId, updates }: {
+            tid: string;
+            sectionId: string;
+            updates: SectionUpdate;
+        }) => updateSection(tid, sectionId, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sections(templateId) });
             toast.success("Section updated successfully");
-            return section;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating section:", error);
             toast.error("Failed to update section");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const removeSection = useCallback(async (templateId: string, sectionId: string, hard = false) => {
-        setLoading(true);
-        try {
-            await deleteSection(templateId, sectionId, hard);
+    const deleteSectionMutation = useMutation({
+        mutationFn: ({ tid, sectionId, hard }: {
+            tid: string;
+            sectionId: string;
+            hard: boolean;
+        }) => deleteSection(tid, sectionId, hard),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sections(templateId) });
             toast.success("Section deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting section:", error);
             toast.error("Failed to delete section");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const fetchGroups = useCallback(async (templateId: string, params?: ListParams) => {
-        setLoading(true);
-        try {
-            const response = await listGroups(templateId, params);
-            const items = response.groups || [];
-            setGroups(items);
-            return items;
-        } catch (error) {
-            console.error("Error fetching groups:", error);
-            toast.error("Failed to load groups");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const addGroup = useCallback(async (templateId: string, payload: GroupCreate) => {
-        setLoading(true);
-        try {
-            const group = await createGroup(templateId, payload);
+    // -----------------------------------------------------------------------
+    // Group mutations
+    // -----------------------------------------------------------------------
+    const createGroupMutation = useMutation({
+        mutationFn: ({ tid, group }: { tid: string; group: GroupCreate }) =>
+            createGroup(tid, group),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups(templateId) });
             toast.success("Group created successfully");
-            return group;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error creating group:", error);
             toast.error("Failed to create group");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const editGroup = useCallback(async (templateId: string, groupId: string, payload: GroupUpdate) => {
-        setLoading(true);
-        try {
-            const group = await updateGroup(templateId, groupId, payload);
+    const updateGroupMutation = useMutation({
+        mutationFn: ({ tid, groupId, updates }: {
+            tid: string;
+            groupId: string;
+            updates: GroupUpdate;
+        }) => updateGroup(tid, groupId, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups(templateId) });
             toast.success("Group updated successfully");
-            return group;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating group:", error);
             toast.error("Failed to update group");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const removeGroup = useCallback(async (templateId: string, groupId: string, hard = false) => {
-        setLoading(true);
-        try {
-            await deleteGroup(templateId, groupId, hard);
+    const deleteGroupMutation = useMutation({
+        mutationFn: ({ tid, groupId, hard }: {
+            tid: string;
+            groupId: string;
+            hard: boolean;
+        }) => deleteGroup(tid, groupId, hard),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups(templateId) });
             toast.success("Group deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting group:", error);
             toast.error("Failed to delete group");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const fetchSectionFields = useCallback(async (templateId: string, sectionId: string, params?: ListParams) => {
-        setLoading(true);
-        try {
-            const response = await listSectionFields(templateId, sectionId, params);
-            return response.fields || [];
-        } catch (error) {
-            console.error("Error fetching section fields:", error);
-            toast.error("Failed to load section fields");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const addSectionField = useCallback(async (templateId: string, sectionId: string, payload: FieldCreate) => {
-        setLoading(true);
-        try {
-            const field = await createSectionField(templateId, sectionId, payload);
+    // -----------------------------------------------------------------------
+    // Field mutations
+    // -----------------------------------------------------------------------
+    const createSectionFieldMutation = useMutation({
+        mutationFn: ({ tid, sectionId, field }: {
+            tid: string;
+            sectionId: string;
+            field: FieldCreate;
+        }) => createSectionField(tid, sectionId, field),
+        onSuccess: (_, { tid, sectionId }) => {
+            queryClient.invalidateQueries({
+                queryKey: QUERY_KEYS.sectionFields(tid, sectionId),
+            });
             toast.success("Field created successfully");
-            return field;
-        } catch (error) {
-            console.error("Error creating section field:", error);
+        },
+        onError: (error) => {
+            console.error("Error creating field:", error);
             toast.error("Failed to create field");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const fetchGroupFields = useCallback(async (templateId: string, groupId: string, params?: ListParams) => {
-        setLoading(true);
-        try {
-            const response = await listGroupFields(templateId, groupId, params);
-            return response.fields || [];
-        } catch (error) {
-            console.error("Error fetching group fields:", error);
-            toast.error("Failed to load group fields");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const addGroupField = useCallback(async (templateId: string, groupId: string, payload: FieldCreate) => {
-        setLoading(true);
-        try {
-            const field = await createGroupField(templateId, groupId, payload);
+    const createGroupFieldMutation = useMutation({
+        mutationFn: ({ tid, groupId, field }: {
+            tid: string;
+            groupId: string;
+            field: FieldCreate;
+        }) => createGroupField(tid, groupId, field),
+        onSuccess: (_, { tid, groupId }) => {
+            queryClient.invalidateQueries({
+                queryKey: QUERY_KEYS.groupFields(tid, groupId),
+            });
             toast.success("Field created successfully");
-            return field;
-        } catch (error) {
-            console.error("Error creating group field:", error);
+        },
+        onError: (error) => {
+            console.error("Error creating field:", error);
             toast.error("Failed to create field");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const editField = useCallback(async (templateId: string, fieldId: string, payload: FieldUpdate) => {
-        setLoading(true);
-        try {
-            const field = await updateField(templateId, fieldId, payload);
+    const updateFieldMutation = useMutation({
+        mutationFn: ({ tid, fieldId, updates }: {
+            tid: string;
+            fieldId: string;
+            updates: FieldUpdate;
+        }) => updateField(tid, fieldId, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ["interviewTemplates", templateId, "sections"],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["interviewTemplates", templateId, "groups"],
+            });
             toast.success("Field updated successfully");
-            return field;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating field:", error);
             toast.error("Failed to update field");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const removeField = useCallback(async (templateId: string, fieldId: string, hard = false) => {
-        setLoading(true);
-        try {
-            await deleteField(templateId, fieldId, hard);
+    const deleteFieldMutation = useMutation({
+        mutationFn: ({ tid, fieldId, hard }: {
+            tid: string;
+            fieldId: string;
+            hard: boolean;
+        }) => deleteField(tid, fieldId, hard),
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ["interviewTemplates", templateId, "sections"],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["interviewTemplates", templateId, "groups"],
+            });
             toast.success("Field deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting field:", error);
             toast.error("Failed to delete field");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const fetchFieldOptions = useCallback(async (templateId: string, fieldId: string, params?: ListParams) => {
-        setLoading(true);
-        try {
-            const response = await listFieldOptions(templateId, fieldId, params);
-            return response.options || [];
-        } catch (error) {
-            console.error("Error fetching field options:", error);
-            toast.error("Failed to load field options");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    // -----------------------------------------------------------------------
+    // Field option mutations
+    // -----------------------------------------------------------------------
+    const createFieldOptionMutation = useMutation({
+        mutationFn: ({ tid, fieldId, option }: {
+            tid: string;
+            fieldId: string;
+            option: FieldOptionCreate;
+        }) => createFieldOption(tid, fieldId, option),
+        onSuccess: (_, { tid, fieldId }) => {
+            queryClient.invalidateQueries({
+                queryKey: QUERY_KEYS.fieldOptions(tid, fieldId),
+            });
+            toast.success("Option created successfully");
+        },
+        onError: (error) => {
+            console.error("Error creating option:", error);
+            toast.error("Failed to create option");
+        },
+    });
 
-    const addFieldOption = useCallback(async (templateId: string, fieldId: string, payload: FieldOptionCreate) => {
-        setLoading(true);
-        try {
-            const option = await createFieldOption(templateId, fieldId, payload);
-            toast.success("Option added successfully");
-            return option;
-        } catch (error) {
-            console.error("Error creating field option:", error);
-            toast.error("Failed to add option");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const editFieldOption = useCallback(async (templateId: string, fieldId: string, optionId: string, payload: FieldOptionUpdate) => {
-        setLoading(true);
-        try {
-            const option = await updateFieldOption(templateId, fieldId, optionId, payload);
+    const updateFieldOptionMutation = useMutation({
+        mutationFn: ({ tid, fieldId, optionId, updates }: {
+            tid: string;
+            fieldId: string;
+            optionId: string;
+            updates: FieldOptionUpdate;
+        }) => updateFieldOption(tid, fieldId, optionId, updates),
+        onSuccess: (_, { tid, fieldId }) => {
+            queryClient.invalidateQueries({
+                queryKey: QUERY_KEYS.fieldOptions(tid, fieldId),
+            });
             toast.success("Option updated successfully");
-            return option;
-        } catch (error) {
-            console.error("Error updating field option:", error);
+        },
+        onError: (error) => {
+            console.error("Error updating option:", error);
             toast.error("Failed to update option");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
-    const removeFieldOption = useCallback(async (templateId: string, fieldId: string, optionId: string, hard = false) => {
-        setLoading(true);
-        try {
-            await deleteFieldOption(templateId, fieldId, optionId, hard);
+    const deleteFieldOptionMutation = useMutation({
+        mutationFn: ({ tid, fieldId, optionId, hard }: {
+            tid: string;
+            fieldId: string;
+            optionId: string;
+            hard: boolean;
+        }) => deleteFieldOption(tid, fieldId, optionId, hard),
+        onSuccess: (_, { tid, fieldId }) => {
+            queryClient.invalidateQueries({
+                queryKey: QUERY_KEYS.fieldOptions(tid, fieldId),
+            });
             toast.success("Option deleted successfully");
-            return true;
-        } catch (error) {
-            console.error("Error deleting field option:", error);
+        },
+        onError: (error) => {
+            console.error("Error deleting option:", error);
             toast.error("Failed to delete option");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        },
+    });
 
+    // -----------------------------------------------------------------------
+    // Derived loading — true if any currently-enabled query is still fetching
+    // -----------------------------------------------------------------------
+    const loading =
+        templatesQuery.isLoading ||
+        templateByIdQuery.isLoading ||
+        semestersQuery.isLoading ||
+        sectionsQuery.isLoading ||
+        groupsQuery.isLoading;
+
+    // -----------------------------------------------------------------------
+    // Public API
+    // -----------------------------------------------------------------------
     return {
+        // State
         loading,
-        templates,
-        currentTemplate,
-        semesters,
-        sections,
-        groups,
-        fetchTemplates,
-        fetchTemplateById,
-        addTemplate,
-        editTemplate,
-        removeTemplate,
-        fetchTemplateSemesters,
-        addSemesterToTemplate,
-        removeSemesterFromTemplate,
-        fetchSections,
-        addSection,
-        editSection,
-        removeSection,
-        fetchGroups,
-        addGroup,
-        editGroup,
-        removeGroup,
-        fetchSectionFields,
-        addSectionField,
-        fetchGroupFields,
-        addGroupField,
-        editField,
-        removeField,
-        fetchFieldOptions,
-        addFieldOption,
-        editFieldOption,
-        removeFieldOption,
+        templates: templatesQuery.data ?? [],
+        currentTemplate: templateByIdQuery.data ?? null,
+        semesters: semestersQuery.data ?? [],
+        sections: sectionsQuery.data ?? [],
+        groups: groupsQuery.data ?? [],
+
+        // Manual refetch helpers (rarely needed — mutations invalidate automatically)
+        fetchTemplates: () =>
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] }),
+        fetchTemplateById: (id: string) =>
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.templateById(id) }),
+
+        // Template operations
+        addTemplate: (template: InterviewTemplateCreate) =>
+            createTemplateMutation.mutateAsync(template),
+        editTemplate: (id: string, updates: InterviewTemplateUpdate) =>
+            updateTemplateMutation.mutateAsync({ id, updates }),
+        removeTemplate: (id: string, hard = false) =>
+            deleteTemplateMutation.mutateAsync({ id, hard }),
+
+        // Semester operations
+        fetchTemplateSemesters: () =>
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.semesters(templateId) }),
+        addSemesterToTemplate: (id: string, semester: number) =>
+            addSemesterMutation.mutateAsync({ id, semester }),
+        removeSemesterFromTemplate: (id: string, semester: number) =>
+            removeSemesterMutation.mutateAsync({ id, semester }),
+
+        // Section operations
+        fetchSections: () =>
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sections(templateId) }),
+        addSection: (tid: string, section: SectionCreate) =>
+            createSectionMutation.mutateAsync({ tid, section }),
+        editSection: (tid: string, sectionId: string, updates: SectionUpdate) =>
+            updateSectionMutation.mutateAsync({ tid, sectionId, updates }),
+        removeSection: (tid: string, sectionId: string, hard = false) =>
+            deleteSectionMutation.mutateAsync({ tid, sectionId, hard }),
+
+        // Group operations
+        fetchGroups: () =>
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups(templateId) }),
+        addGroup: (tid: string, group: GroupCreate) =>
+            createGroupMutation.mutateAsync({ tid, group }),
+        editGroup: (tid: string, groupId: string, updates: GroupUpdate) =>
+            updateGroupMutation.mutateAsync({ tid, groupId, updates }),
+        removeGroup: (tid: string, groupId: string, hard = false) =>
+            deleteGroupMutation.mutateAsync({ tid, groupId, hard }),
+
+        // Field operations - NOW RETURNS ACTUAL DATA
+        fetchSectionFields: async (tid: string, sectionId: string) => {
+            const data = await queryClient.fetchQuery({
+                queryKey: QUERY_KEYS.sectionFields(tid, sectionId),
+                queryFn: async () => {
+                    const result = await listSectionFields(tid, sectionId);
+                    return result?.fields ?? [];
+                },
+                staleTime: 5 * 60 * 1000,
+            });
+            return data;
+        },
+        fetchGroupFields: async (tid: string, groupId: string) => {
+            const data = await queryClient.fetchQuery({
+                queryKey: QUERY_KEYS.groupFields(tid, groupId),
+                queryFn: async () => {
+                    const result = await listGroupFields(tid, groupId);
+                    return result?.fields ?? [];
+                },
+                staleTime: 5 * 60 * 1000,
+            });
+            return data;
+        },
+        addSectionField: (tid: string, sectionId: string, field: FieldCreate) =>
+            createSectionFieldMutation.mutateAsync({ tid, sectionId, field }),
+        addGroupField: (tid: string, groupId: string, field: FieldCreate) =>
+            createGroupFieldMutation.mutateAsync({ tid, groupId, field }),
+        editField: (tid: string, fieldId: string, updates: FieldUpdate) =>
+            updateFieldMutation.mutateAsync({ tid, fieldId, updates }),
+        removeField: (tid: string, fieldId: string, hard = false) =>
+            deleteFieldMutation.mutateAsync({ tid, fieldId, hard }),
+
+        // Field option operations
+        fetchFieldOptions: async (tid: string, fieldId: string) => {
+            const data = await queryClient.fetchQuery({
+                queryKey: QUERY_KEYS.fieldOptions(tid, fieldId),
+                queryFn: async () => {
+                    const result = await listFieldOptions(tid, fieldId);
+                    return result?.options ?? [];
+                },
+                staleTime: 5 * 60 * 1000,
+            });
+            return data;
+        },
+        addFieldOption: (tid: string, fieldId: string, option: FieldOptionCreate) =>
+            createFieldOptionMutation.mutateAsync({ tid, fieldId, option }),
+        editFieldOption: (tid: string, fieldId: string, optionId: string, updates: FieldOptionUpdate) =>
+            updateFieldOptionMutation.mutateAsync({ tid, fieldId, optionId, updates }),
+        removeFieldOption: (tid: string, fieldId: string, optionId: string, hard = false) =>
+            deleteFieldOptionMutation.mutateAsync({ tid, fieldId, optionId, hard }),
     };
 }
