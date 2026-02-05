@@ -1,4 +1,4 @@
-// hooks/useInterviewTemplates.ts
+ï»¿// hooks/useInterviewTemplates.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -46,7 +46,7 @@ import {
 } from "@/app/lib/api/Interviewtemplateapi";
 
 // ---------------------------------------------------------------------------
-// Query key factories — single source of truth so invalidation is consistent
+// Query key factories â€” single source of truth so invalidation is consistent
 // ---------------------------------------------------------------------------
 export const QUERY_KEYS = {
     templates: (params?: ListParams) => ["interviewTemplates", params ?? {}] as const,
@@ -442,7 +442,7 @@ export function useInterviewTemplates(options?: {
     });
 
     // -----------------------------------------------------------------------
-    // Derived loading — true if any currently-enabled query is still fetching
+    // Derived loading â€” true if any currently-enabled query is still fetching
     // -----------------------------------------------------------------------
     const loading =
         templatesQuery.isLoading ||
@@ -463,7 +463,7 @@ export function useInterviewTemplates(options?: {
         sections: sectionsQuery.data ?? [],
         groups: groupsQuery.data ?? [],
 
-        // Manual refetch helpers (rarely needed — mutations invalidate automatically)
+        // Manual refetch helpers (rarely needed â€” mutations invalidate automatically)
         fetchTemplates: () =>
             queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] }),
         fetchTemplateById: (id: string) =>
@@ -557,3 +557,4 @@ export function useInterviewTemplates(options?: {
             deleteFieldOptionMutation.mutateAsync({ tid, fieldId, optionId, hard }),
     };
 }
+
