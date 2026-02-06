@@ -197,7 +197,11 @@ export default function SemesterForm() {
     if (!ocId) return;
     const trimmed = cdrMarks.trim();
     const cdrValue = trimmed === "" ? undefined : Number(trimmed);
-    if (trimmed !== "" && (Number.isNaN(cdrValue) || cdrValue < 0)) {
+    if (trimmed !== "" && Number.isNaN(cdrValue)) {
+      toast.error("Cdr's Marks must be a valid number");
+      return;
+    }
+    if (cdrValue !== undefined && cdrValue < 0) {
       toast.error("Cdr's Marks must be a valid number");
       return;
     }
