@@ -54,8 +54,6 @@ export interface SemesterData {
 
 // Use this in your useAcademics hook
 export interface SemesterGPAUpdate {
-    sgpa?: number;
-    cgpa?: number;
     marksScored?: number;
 }
 

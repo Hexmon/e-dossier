@@ -77,9 +77,9 @@ export interface SubjectRecord {
 export interface SemesterRecord {
     semester: number;
     branchTag: string;
-    sgpa: number;
-    cgpa: number;
-    marksScored: number;
+    sgpa?: number;
+    cgpa?: number;
+    marksScored?: number;
     subjects: SubjectRecord[];
     createdAt: string;
     updatedAt: string;
