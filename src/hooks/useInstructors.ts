@@ -33,19 +33,6 @@ export function useInstructors(params?: ListInstructorsParams) {
         gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     });
 
-    // Fetch single instructor by ID
-    const fetchInstructorById = (instructorId: string) => {
-        return useQuery({
-            queryKey: ["instructor", instructorId],
-            queryFn: async () => {
-                const instructor = await getInstructorById(instructorId);
-                return instructor || null;
-            },
-            staleTime: 5 * 60 * 1000,
-            enabled: !!instructorId,
-        });
-    };
-
     // Create instructor mutation
     const addInstructorMutation = useMutation({
         mutationFn: (instructor: InstructorCreate) => createInstructor(instructor),
@@ -109,6 +96,12 @@ export function useInstructors(params?: ListInstructorsParams) {
         return true;
     };
 
+    // Helper function to fetch instructor by ID (non-hook)
+    const fetchInstructorById = async (instructorId: string) => {
+        const instructor = await getInstructorById(instructorId);
+        return instructor || null;
+    };
+
     return {
         loading,
         instructors,
@@ -122,4 +115,17 @@ export function useInstructors(params?: ListInstructorsParams) {
         isUpdating: editInstructorMutation.isPending,
         isDeleting: removeInstructorMutation.isPending,
     };
+}
+
+// Separate hook for fetching a single instructor (use this when you need reactive data)
+export function useInstructor(instructorId: string) {
+    return useQuery({
+        queryKey: ["instructor", instructorId],
+        queryFn: async () => {
+            const instructor = await getInstructorById(instructorId);
+            return instructor || null;
+        },
+        staleTime: 5 * 60 * 1000,
+        enabled: !!instructorId,
+    });
 }

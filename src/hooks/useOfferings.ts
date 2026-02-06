@@ -49,19 +49,6 @@ export function useOfferings(courseId: string, params?: ListOfferingsParams) {
         enabled: !!courseId, // Only run if courseId exists
     });
 
-    // Fetch single offering by ID
-    const fetchOfferingById = (offeringId: string) => {
-        return useQuery({
-            queryKey: ["offering", courseId, offeringId],
-            queryFn: async () => {
-                const offering = await getOfferingById(courseId, offeringId);
-                return offering ? transformOffering(offering) : null;
-            },
-            staleTime: 30000,
-            enabled: !!courseId && !!offeringId,
-        });
-    };
-
     // Create offering mutation
     const addOfferingMutation = useMutation({
         mutationFn: (offering: OfferingCreate) => createOffering(courseId, offering),
@@ -128,6 +115,12 @@ export function useOfferings(courseId: string, params?: ListOfferingsParams) {
         return true;
     };
 
+    // Helper function to fetch offering by ID (non-hook)
+    const fetchOfferingById = async (offeringId: string) => {
+        const offering = await getOfferingById(courseId, offeringId);
+        return offering ? transformOffering(offering) : null;
+    };
+
     return {
         loading,
         offerings,
@@ -141,4 +134,17 @@ export function useOfferings(courseId: string, params?: ListOfferingsParams) {
         isUpdating: editOfferingMutation.isPending,
         isDeleting: removeOfferingMutation.isPending,
     };
+}
+
+// Separate hook for fetching a single offering (use this when you need reactive data)
+export function useOffering(courseId: string, offeringId: string) {
+    return useQuery({
+        queryKey: ["offering", courseId, offeringId],
+        queryFn: async () => {
+            const offering = await getOfferingById(courseId, offeringId);
+            return offering ? transformOffering(offering) : null;
+        },
+        staleTime: 30000,
+        enabled: !!courseId && !!offeringId,
+    });
 }
