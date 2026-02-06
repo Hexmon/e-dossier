@@ -36,12 +36,12 @@ export function OCForm({
     isEditing,
 }: OCFormProps) {
     const formDefaults: Partial<OCFormData> = {
-        name: defaultValues.name,
-        ocNo: defaultValues.ocNo,
-        courseId: defaultValues.courseId ?? defaultValues.course?.id,
-        branch: defaultValues.branch || undefined,
-        platoonId: defaultValues.platoonId || undefined,
-        arrivalAtUniversity: defaultValues.arrivalAtUniversity?.slice(0, 10),
+        name: defaultValues.name || "",
+        ocNo: defaultValues.ocNo || "",
+        courseId: defaultValues.courseId ?? defaultValues.course?.id ?? "",
+        branch: defaultValues.branch || "",
+        platoonId: defaultValues.platoonId || "",
+        arrivalAtUniversity: defaultValues.arrivalAtUniversity?.slice(0, 10) || "",
     };
 
     const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm<OCFormData>({
@@ -49,7 +49,9 @@ export function OCForm({
     });
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(
+        defaultValues.photo ? String(defaultValues.photo) : null
+    );
     const [apiErrors, setApiErrors] = useState<Record<string, string[]> | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,14 +73,24 @@ export function OCForm({
             return;
         }
 
+        if (!data.name?.trim()) {
+            setApiErrors({ name: ["Name is required"] });
+            return;
+        }
+
+        if (!data.ocNo?.trim()) {
+            setApiErrors({ ocNo: ["TES No is required"] });
+            return;
+        }
+
         // Transform the form data to match API expectations
         const submitData: any = {
-            name: data.name,
-            ocNo: data.ocNo,
+            name: data.name.trim(),
+            ocNo: data.ocNo.trim(),
             courseId: data.courseId,
             branch: data.branch || undefined,
             platoonId: data.platoonId || undefined,
-            arrivalAtUniversity: data.arrivalAtUniversity,
+            arrivalAtUniversity: data.arrivalAtUniversity || undefined,
         };
 
         // Only include photo if a file was selected
@@ -100,6 +112,9 @@ export function OCForm({
 
     // Helper to get field error message
     const getFieldError = (fieldName: keyof OCFormData): string | null => {
+        if (errors[fieldName]?.message) {
+            return errors[fieldName]?.message as string;
+        }
         if (apiErrors && apiErrors[fieldName]) {
             return apiErrors[fieldName][0];
         }
@@ -129,19 +144,20 @@ export function OCForm({
             )}
 
             <form onSubmit={handleSubmit(handleFormSubmit)} className="grid grid-cols-2 gap-4 mb-6">
-
-                <div>
+                <div className="col-span-2">
                     <Label>Upload Photo</Label>
                     <Input
                         type="file"
                         accept="image/*"
                         onChange={handleFileChange}
                     />
-                    {selectedFile && (
+                    {(selectedFile || previewUrl) && (
                         <div className="mt-2">
-                            <p className="text-sm text-gray-600">
-                                Selected: {selectedFile.name}
-                            </p>
+                            {selectedFile && (
+                                <p className="text-sm text-gray-600">
+                                    Selected: {selectedFile.name}
+                                </p>
+                            )}
                             {previewUrl && (
                                 <img
                                     src={previewUrl}
@@ -155,7 +171,13 @@ export function OCForm({
 
                 <div>
                     <Label>Name *</Label>
-                    <Input {...register("name", { required: "Name is required" })} />
+                    <Input
+                        {...register("name", {
+                            required: "Name is required",
+                            minLength: { value: 2, message: "Name must be at least 2 characters" }
+                        })}
+                        placeholder="Enter full name"
+                    />
                     {getFieldError("name") && (
                         <p className="text-sm text-destructive mt-1">{getFieldError("name")}</p>
                     )}
@@ -163,7 +185,16 @@ export function OCForm({
 
                 <div>
                     <Label>TES No *</Label>
-                    <Input {...register("ocNo", { required: "TES No is required" })} />
+                    <Input
+                        {...register("ocNo", {
+                            required: "TES No is required",
+                            pattern: {
+                                value: /^[A-Z0-9-]+$/i,
+                                message: "TES No should contain only letters, numbers and hyphens"
+                            }
+                        })}
+                        placeholder="Enter TES number"
+                    />
                     {getFieldError("ocNo") && (
                         <p className="text-sm text-destructive mt-1">{getFieldError("ocNo")}</p>
                     )}
@@ -173,7 +204,7 @@ export function OCForm({
                     <Label>Course *</Label>
                     <select
                         {...register("courseId", { required: "Course is required" })}
-                        className="w-full border rounded-md p-2"
+                        className="w-full border rounded-md p-2 bg-white"
                     >
                         <option value="">Select Course</option>
                         {courses.map(({ id, code, title }) => (
@@ -191,12 +222,12 @@ export function OCForm({
                     <Label>Branch</Label>
                     <select
                         {...register("branch")}
-                        className="w-full border rounded-md p-2"
+                        className="w-full border rounded-md p-2 bg-white"
                     >
                         <option value="">Select Branch</option>
+                        <option value="O">O (Others)</option>
                         <option value="E">E (Electronics)</option>
                         <option value="M">M (Mechanical)</option>
-                        <option value="O">O (Others)</option>
                     </select>
                     {getFieldError("branch") && (
                         <p className="text-sm text-destructive mt-1">{getFieldError("branch")}</p>
@@ -207,7 +238,7 @@ export function OCForm({
                     <Label>Platoon</Label>
                     <select
                         {...register("platoonId")}
-                        className="w-full border rounded-md p-2"
+                        className="w-full border rounded-md p-2 bg-white"
                     >
                         <option value="">Select Platoon</option>
                         {platoons.map(({ id, name }) => (
@@ -223,7 +254,10 @@ export function OCForm({
 
                 <div>
                     <Label>Arrival Date</Label>
-                    <Input type="date" {...register("arrivalAtUniversity")} />
+                    <Input
+                        type="date"
+                        {...register("arrivalAtUniversity", { required: "Course is required" })}
+                    />
                     {getFieldError("arrivalAtUniversity") && (
                         <p className="text-sm text-destructive mt-1">{getFieldError("arrivalAtUniversity")}</p>
                     )}

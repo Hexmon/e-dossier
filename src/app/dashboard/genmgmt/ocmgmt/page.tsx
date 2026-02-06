@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -46,37 +45,50 @@ export default function OCManagementPage() {
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
-  type BranchType = "C" | "E" | "M";
-  const allowedBranches = useMemo(() => ["C", "E", "M"] as const, []);
-  const safeBranch = ((): BranchType | undefined => {
+  type BranchType = "O" | "E" | "M";
+  const allowedBranches = useMemo(() => ["O", "E", "M"] as const, []);
+
+  const safeBranch = useMemo((): BranchType | undefined => {
+    if (!branchFilter) return undefined;
     return allowedBranches.includes(branchFilter as BranchType)
       ? (branchFilter as BranchType)
       : undefined;
-  })();
+  }, [branchFilter, allowedBranches]);
 
   type StatusType = "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
   const allowedStatus: StatusType[] = ["ACTIVE", "DELEGATED", "WITHDRAWN", "PASSED_OUT"];
-  const safeStatus = allowedStatus.includes(statusFilter as StatusType)
-    ? (statusFilter as StatusType)
-    : undefined;
 
-  // Build params object for React Query
-  const params = useMemo(
-    () => ({
+  const safeStatus = useMemo((): StatusType | undefined => {
+    if (!statusFilter) return undefined;
+    return allowedStatus.includes(statusFilter as StatusType)
+      ? (statusFilter as StatusType)
+      : undefined;
+  }, [statusFilter]);
+
+  // Build params - backend will ignore most filters, we'll filter client-side
+  const params = useMemo(() => {
+    return {
       q: debouncedSearch || undefined,
       courseId: courseFilter || undefined,
       platoonId: platoonFilter || undefined,
-      status: safeStatus,
       branch: safeBranch,
-      active: statusFilter === "ACTIVE" ? true : undefined,
-      limit: pageSize,
-      offset: (currentPage - 1) * pageSize,
-    }),
-    [debouncedSearch, courseFilter, platoonFilter, safeStatus, safeBranch, statusFilter, currentPage, pageSize]
-  );
+      status: safeStatus,
+      // Backend only respects limit/offset, but we pass everything for client-side filtering
+      limit: 1000, // Fetch more records so we have enough to filter client-side
+      offset: 0,   // Always fetch from start for client-side filtering
+    };
+  }, [debouncedSearch, courseFilter, platoonFilter, safeBranch, safeStatus]);
 
-  // Use React Query hook with params
+  // Use React Query hook - it will filter client-side
   const { ocList, totalCount, loading, addOC, editOC, removeOC } = useOCs(params);
+
+  // Client-side pagination (after filters are applied)
+  const paginatedList = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return ocList.slice(startIndex, endIndex);
+  }, [ocList, currentPage, pageSize]);
+
 
   const {
     parsing,
@@ -93,9 +105,7 @@ export default function OCManagementPage() {
     clear: clearUpload,
   } = useOCUpload();
 
-  // Courses — same queryKey & queryFn as useCourses hook.
-  // Cache always holds raw CourseResponse[]. No select needed here
-  // because the raw shape already matches CourseLike { id, code, title }.
+  // Courses
   const { data: courses = [] } = useQuery<CourseLike[]>({
     queryKey: ["courses"],
     queryFn: async () => {
@@ -105,9 +115,12 @@ export default function OCManagementPage() {
   });
 
   // Platoons
-  const { data: platoons = [] } = useQuery({
+  const { data: platoons = [] } = useQuery<PlatoonLike[]>({
     queryKey: ["platoons"],
-    queryFn: getPlatoons,
+    queryFn: async () => {
+      const p = await getPlatoons();
+      return p ?? [];
+    },
   });
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
@@ -118,28 +131,20 @@ export default function OCManagementPage() {
   const [viewOpen, setViewOpen] = useState<boolean>(false);
   const [viewId, setViewId] = useState<string | null>(null);
 
-  // Form submit (add / edit) with proper error handling
   const onSubmit = async (data: Partial<OCRecord>): Promise<void> => {
     try {
       if (editingIndex !== null) {
-        const { id } = ocList[editingIndex];
+        const { id } = paginatedList[editingIndex];
         await editOC(id, data);
-        // Toast shown by mutation's onSuccess
       } else {
         await addOC(data as Omit<OCRecord, "id" | "uid" | "createdAt">);
-        // Toast shown by mutation's onSuccess
       }
 
-      // Close dialog and reset form
       setIsDialogOpen(false);
       reset();
       setEditingIndex(null);
-
-      // React Query automatically refetches via invalidateQueries
     } catch (error: any) {
-      console.error("Save failed:", error);
 
-      // Handle validation errors
       if (error.status === 400 && error.issues?.fieldErrors) {
         const fieldErrors = error.issues.fieldErrors;
         const errorMessages = Object.entries(fieldErrors)
@@ -153,25 +158,23 @@ export default function OCManagementPage() {
         toast.error("Failed to save OC. Please try again.");
       }
 
-      // Re-throw so OCForm can also handle it if needed
       throw error;
     }
   };
 
-  // Open edit dialog
   const handleEdit = (index: number) => {
     setEditingIndex(index);
     setIsDialogOpen(true);
   };
 
-  // Delete
   const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this OC?")) {
+      return;
+    }
+
     try {
       await removeOC(id);
-      // Toast shown by mutation's onSuccess
     } catch (error: any) {
-      console.error("Delete failed:", error);
-      // Toast already shown by mutation's onError
     }
   };
 
@@ -181,10 +184,8 @@ export default function OCManagementPage() {
     setIsDialogOpen(true);
   };
 
-  // Upload bulk
   const handleBulkUpload = async () => {
     await doBulkUpload(async () => {
-      // React Query will automatically refetch after mutations
       toast.success("Bulk upload completed successfully");
     });
   };
@@ -192,6 +193,11 @@ export default function OCManagementPage() {
   const openView = (id: string) => {
     setViewId(id);
     setViewOpen(true);
+  };
+
+  const handleFilterChange = (filterSetter: (val: string) => void, value: string) => {
+    filterSetter(value);
+    setCurrentPage(1); // Reset to page 1 when filter changes
   };
 
   return (
@@ -244,32 +250,17 @@ export default function OCManagementPage() {
 
                 <OCFilters
                   search={search}
-                  onSearch={(val) => {
-                    setSearch(val);
-                    setCurrentPage(1);
-                  }}
+                  onSearch={(val) => handleFilterChange(setSearch, val)}
                   courseFilter={courseFilter}
-                  onCourseChange={(val) => {
-                    setCourseFilter(val);
-                    setCurrentPage(1);
-                  }}
+                  onCourseChange={(val) => handleFilterChange(setCourseFilter, val)}
                   courses={courses}
                   platoonFilter={platoonFilter}
-                  onPlatoonChange={(val) => {
-                    setPlatoonFilter(val);
-                    setCurrentPage(1);
-                  }}
+                  onPlatoonChange={(val) => handleFilterChange(setPlatoonFilter, val)}
                   platoons={platoons}
                   branchFilter={branchFilter}
-                  onBranchChange={(val) => {
-                    setBranchFilter(val);
-                    setCurrentPage(1);
-                  }}
+                  onBranchChange={(val) => handleFilterChange(setBranchFilter, val)}
                   statusFilter={statusFilter}
-                  onStatusChange={(val) => {
-                    setStatusFilter(val);
-                    setCurrentPage(1);
-                  }}
+                  onStatusChange={(val) => handleFilterChange(setStatusFilter, val)}
                 />
 
                 <UploadPreviewTable
@@ -288,22 +279,58 @@ export default function OCManagementPage() {
 
                 <div>
                   <div className="mb-2 flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">All OCs</h3>
+                    <h3 className="font-semibold text-lg">
+                      All OCs
+                      {totalCount > 0 && (
+                        <span className="text-muted-foreground text-sm ml-2">
+                          ({paginatedList.length} showing, {totalCount} total after filters)
+                        </span>
+                      )}
+                    </h3>
+
+                    {/* Active filters display */}
+                    {(platoonFilter || branchFilter || courseFilter || statusFilter || search) && (
+                      <div className="text-xs text-muted-foreground flex gap-2 items-center">
+                        <span>Active filters:</span>
+                        {search && <span className="bg-blue-100 px-2 py-1 rounded">Search: {search}</span>}
+                        {courseFilter && <span className="bg-blue-100 px-2 py-1 rounded">Course</span>}
+                        {platoonFilter && <span className="bg-blue-100 px-2 py-1 rounded">Platoon</span>}
+                        {branchFilter && <span className="bg-blue-100 px-2 py-1 rounded">Branch: {branchFilter}</span>}
+                        {statusFilter && <span className="bg-blue-100 px-2 py-1 rounded">Status: {statusFilter}</span>}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSearch("");
+                            setCourseFilter("");
+                            setPlatoonFilter("");
+                            setBranchFilter("");
+                            setStatusFilter("");
+                            setCurrentPage(1);
+                          }}
+                        >
+                          Clear all
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <OCsTable
-                    ocList={ocList}
+                    ocList={paginatedList}
                     onView={openView}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     pagination={{
-                      mode: "server",
+                      mode: "server", // Actually client-side now, but keeps the same interface
                       currentPage,
                       pageSize,
-                      totalCount,
+                      totalCount, // This is the filtered count
                       onPageChange: (page, newPageSize) => {
                         setCurrentPage(page);
-                        if (newPageSize !== pageSize) setPageSize(newPageSize);
+                        if (newPageSize !== pageSize) {
+                          setPageSize(newPageSize);
+                          setCurrentPage(1);
+                        }
                       },
                     }}
                     loading={loading}
@@ -315,11 +342,10 @@ export default function OCManagementPage() {
         </main>
       </section>
 
-      {/* Add / Edit dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <OCForm
-          key={editingIndex !== null && ocList[editingIndex] ? ocList[editingIndex].id : "new"}
-          defaultValues={editingIndex !== null && ocList[editingIndex] ? ocList[editingIndex] : {}}
+          key={editingIndex !== null && paginatedList[editingIndex] ? paginatedList[editingIndex].id : "new"}
+          defaultValues={editingIndex !== null && paginatedList[editingIndex] ? paginatedList[editingIndex] : {}}
           courses={courses}
           platoons={platoons}
           isEditing={editingIndex !== null}

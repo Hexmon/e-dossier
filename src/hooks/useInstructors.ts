@@ -1,84 +1,105 @@
-import { createInstructor, deleteInstructor, getInstructorById, Instructor, InstructorCreate, InstructorUpdate, listInstructors, ListInstructorsParams, updateInstructor } from "@/app/lib/api/instructorsApi";
-import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+    listInstructors,
+    getInstructorById,
+    createInstructor,
+    updateInstructor,
+    deleteInstructor,
+    Instructor,
+    InstructorCreate,
+    InstructorUpdate,
+    ListInstructorsParams,
+} from "@/app/lib/api/instructorsApi";
 
-export function useInstructors() {
-    const [loading, setLoading] = useState(false);
-    const [instructors, setInstructors] = useState<Instructor[]>([]);
+export function useInstructors(params?: ListInstructorsParams) {
+    const queryClient = useQueryClient();
 
-    const fetchInstructors = async (params?: ListInstructorsParams) => {
-        setLoading(true);
-        try {
+    // Query key factory
+    const instructorsKey = ["instructors", params];
+
+    // Fetch instructors list
+    const {
+        data: instructors = [],
+        isLoading: loading,
+        refetch: fetchInstructors,
+    } = useQuery({
+        queryKey: instructorsKey,
+        queryFn: async () => {
             const data = await listInstructors(params);
-            const instructorsList = data?.instructors || [];
-            setInstructors(instructorsList);
-            return instructorsList;
-        } catch (error) {
-            console.error("Error fetching instructors:", error);
-            toast.error("Failed to load instructors");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    };
+            return data?.instructors || [];
+        },
+        staleTime: 5 * 60 * 1000, // Consider fresh for 5 minutes (instructors don't change often)
+        gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    });
 
-    const fetchInstructorById = async (instructorId: string) => {
-        setLoading(true);
-        try {
-            const instructor = await getInstructorById(instructorId);
-            return instructor || null;
-        } catch (error) {
-            console.error("Error fetching instructor:", error);
-            toast.error("Failed to load instructor details");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const addInstructor = async (instructor: InstructorCreate) => {
-        setLoading(true);
-        try {
-            const newInstructor = await createInstructor(instructor);
-            toast.success("Instructor created successfully");
-            return newInstructor || null;
-        } catch (error) {
+    // Create instructor mutation
+    const addInstructorMutation = useMutation({
+        mutationFn: (instructor: InstructorCreate) => createInstructor(instructor),
+        onSuccess: (data) => {
+            if (data) {
+                // Invalidate and refetch instructors list
+                queryClient.invalidateQueries({ queryKey: ["instructors"] });
+                toast.success("Instructor created successfully");
+            }
+        },
+        onError: (error) => {
             console.error("Error creating instructor:", error);
             toast.error("Failed to create instructor");
-            return null;
-        } finally {
-            setLoading(false);
-        }
+        },
+    });
+
+    // Update instructor mutation
+    const editInstructorMutation = useMutation({
+        mutationFn: ({ instructorId, updates }: { instructorId: string; updates: InstructorUpdate }) =>
+            updateInstructor(instructorId, updates),
+        onSuccess: (_, variables) => {
+            // Invalidate both the list and the specific instructor
+            queryClient.invalidateQueries({ queryKey: ["instructors"] });
+            queryClient.invalidateQueries({ queryKey: ["instructor", variables.instructorId] });
+            toast.success("Instructor updated successfully");
+        },
+        onError: (error) => {
+            console.error("Error updating instructor:", error);
+            toast.error("Failed to update instructor");
+        },
+    });
+
+    // Delete instructor mutation
+    const removeInstructorMutation = useMutation({
+        mutationFn: (instructorId: string) => deleteInstructor(instructorId),
+        onSuccess: (_, instructorId) => {
+            // Remove from cache and refetch
+            queryClient.invalidateQueries({ queryKey: ["instructors"] });
+            queryClient.removeQueries({ queryKey: ["instructor", instructorId] });
+            toast.success("Instructor deleted successfully");
+        },
+        onError: (error) => {
+            console.error("Error deleting instructor:", error);
+            toast.error("Failed to delete instructor");
+        },
+    });
+
+    // Wrapper functions to maintain similar API
+    const addInstructor = async (instructor: InstructorCreate) => {
+        const result = await addInstructorMutation.mutateAsync(instructor);
+        return result || null;
     };
 
     const editInstructor = async (instructorId: string, updates: InstructorUpdate) => {
-        setLoading(true);
-        try {
-            const updatedInstructor = await updateInstructor(instructorId, updates);
-            toast.success("Instructor updated successfully");
-            return updatedInstructor || null;
-        } catch (error) {
-            console.error("Error updating instructor:", error);
-            toast.error("Failed to update instructor");
-            return null;
-        } finally {
-            setLoading(false);
-        }
+        const result = await editInstructorMutation.mutateAsync({ instructorId, updates });
+        return result || null;
     };
 
     const removeInstructor = async (instructorId: string) => {
-        setLoading(true);
-        try {
-            await deleteInstructor(instructorId);
-            toast.success("Instructor deleted successfully");
-            return true;
-        } catch (error) {
-            console.error("Error deleting instructor:", error);
-            toast.error("Failed to delete instructor");
-            return false;
-        } finally {
-            setLoading(false);
-        }
+        await removeInstructorMutation.mutateAsync(instructorId);
+        return true;
+    };
+
+    // Helper function to fetch instructor by ID (non-hook)
+    const fetchInstructorById = async (instructorId: string) => {
+        const instructor = await getInstructorById(instructorId);
+        return instructor || null;
     };
 
     return {
@@ -89,5 +110,22 @@ export function useInstructors() {
         addInstructor,
         editInstructor,
         removeInstructor,
+        // Expose mutation states for more granular control
+        isCreating: addInstructorMutation.isPending,
+        isUpdating: editInstructorMutation.isPending,
+        isDeleting: removeInstructorMutation.isPending,
     };
+}
+
+// Separate hook for fetching a single instructor (use this when you need reactive data)
+export function useInstructor(instructorId: string) {
+    return useQuery({
+        queryKey: ["instructor", instructorId],
+        queryFn: async () => {
+            const instructor = await getInstructorById(instructorId);
+            return instructor || null;
+        },
+        staleTime: 5 * 60 * 1000,
+        enabled: !!instructorId,
+    });
 }

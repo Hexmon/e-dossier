@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { TableColumn, TableConfig, UniversalTable } from "../layout/TableLayout";
 import { BulkAcademicItem } from "@/app/lib/api/academicsMarksApi";
 import { useAcademicsMarks } from "@/hooks/useAcademicsMarks";
@@ -11,11 +12,12 @@ interface Props {
     courseId: string;
     semester: number;
     subjectId: string;
+    subjectBranch: string | null;
 }
 
 export type StudentRow = {
     id: string;
-    ocNumber: string;
+    ocNo: string;
     name: string;
     phase1: string;
     phase2: string;
@@ -30,11 +32,12 @@ export default function SubjectWiseStudentsTable({
     courseId,
     semester,
     subjectId,
+    subjectBranch,
 }: Props) {
     const {
         allOCs,
-        fetchAllOCs,
-        getFilteredOCs,
+        loadingOCs,
+        getFilteredOCsByBranch,
         fetchBulkAcademics,
         saveBulkAcademics,
         error,
@@ -45,32 +48,30 @@ export default function SubjectWiseStudentsTable({
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
-    // Fetch OCs and academic records when dependencies change
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-
-            // Fetch all OCs if not already loaded
-            if (allOCs.length === 0) {
-                await fetchAllOCs();
-            }
-
-            setLoading(false);
-        };
-
-        loadData();
-    }, [courseId, semester, subjectId]);
-
     // Filter OCs and fetch their academic records
     useEffect(() => {
         const loadAcademicRecords = async () => {
+            // Wait for OCs to load first
+            if (loadingOCs) {
+                setLoading(true);
+                return;
+            }
+
             if (!courseId || !semester || !subjectId || allOCs.length === 0) {
+                setRows([]);
+                setLoading(false);
                 return;
             }
 
             setLoading(true);
 
-            const filteredOCs = getFilteredOCs(courseId);
+            console.log("Filtering with branch:", subjectBranch);
+
+            // Filter by courseId AND branch
+            const filteredOCs = getFilteredOCsByBranch(courseId, subjectBranch);
+
+            console.log("Filtered OCs count:", filteredOCs.length);
+
             const ocIds = filteredOCs.map((oc) => oc.id);
 
             if (ocIds.length === 0) {
@@ -102,7 +103,7 @@ export default function SubjectWiseStudentsTable({
 
                 return {
                     id: oc.id,
-                    ocNumber: oc.ocNumber,
+                    ocNo: oc.ocNo,
                     name: oc.name,
                     phase1,
                     phase2,
@@ -120,7 +121,7 @@ export default function SubjectWiseStudentsTable({
         };
 
         loadAcademicRecords();
-    }, [allOCs, courseId, semester, subjectId]);
+    }, [allOCs, loadingOCs, courseId, semester, subjectId, subjectBranch, getFilteredOCsByBranch, fetchBulkAcademics]);
 
     const toNum = (v: string): number => {
         const num = Number(v);
@@ -142,6 +143,7 @@ export default function SubjectWiseStudentsTable({
             next[index] = row;
             return next;
         });
+        setIsSaved(false);
     };
 
     const handleSave = async () => {
@@ -170,6 +172,9 @@ export default function SubjectWiseStudentsTable({
 
         if (success) {
             setIsSaved(true);
+            toast.success(`Successfully saved marks for ${rows.length} student${rows.length > 1 ? 's' : ''}`);
+        } else {
+            toast.error("Failed to save academic records. Please try again.");
         }
 
         setSaving(false);
@@ -178,7 +183,7 @@ export default function SubjectWiseStudentsTable({
     const columns: TableColumn<StudentRow>[] = useMemo(
         () => [
             {
-                key: "ocNumber",
+                key: "ocNo",
                 label: "OC No",
                 width: "90px",
                 className: "text-xs",
@@ -269,7 +274,7 @@ export default function SubjectWiseStudentsTable({
             variant: "blue",
         },
         emptyState: {
-            message: loading ? "Loading students..." : "No students found",
+            message: loading || loadingOCs ? "Loading students..." : "No students found",
         },
     };
 
@@ -281,15 +286,25 @@ export default function SubjectWiseStudentsTable({
                 </div>
             )}
 
+            {subjectBranch && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded text-sm">
+                    {subjectBranch === "C" ? (
+                        <>Showing students from <strong>all branches</strong> (Common subject)</>
+                    ) : (
+                        <>Showing students from branch: <strong>{subjectBranch}</strong></>
+                    )}
+                </div>
+            )}
+
             <UniversalTable data={rows} config={config} />
 
             <div className="flex justify-center gap-4">
                 {isSaved ? (
-                    <Button onClick={() => setIsSaved(false)} disabled={loading}>
+                    <Button onClick={() => setIsSaved(false)} disabled={loading || loadingOCs}>
                         Edit
                     </Button>
                 ) : (
-                    <Button onClick={handleSave} disabled={saving || loading}>
+                    <Button onClick={handleSave} disabled={saving || loading || loadingOCs}>
                         {saving ? "Saving..." : "Save"}
                     </Button>
                 )}
