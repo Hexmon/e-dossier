@@ -1,3 +1,4 @@
+//DisciplineRecordsPage
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -80,10 +81,8 @@ export default function DisciplineRecordsPage() {
 
     const [activeTab, setActiveTab] = useState<number>(0);
 
-    useEffect(() => {
-        if (!ocId) return;
-        fetchAll();
-    }, [ocId, fetchAll]);
+    // React Query handles fetching automatically, no need for manual fetchAll
+    // The query will run when ocId changes due to the enabled flag in the hook
 
     // Handlers to pass to children
     const handleSubmit = async (data: DisciplineFormType) => {
@@ -135,6 +134,10 @@ export default function DisciplineRecordsPage() {
             dateOfOffence: payload.dateOfOffence,
             offence: payload.offence,
             punishmentAwarded: payload.punishmentAwarded,
+            punishmentId: payload.punishmentId,
+            numberOfPunishments: payload.numberOfPunishments !== undefined
+                ? Number(payload.numberOfPunishments)
+                : undefined,
             awardedOn: payload.dateOfAward,
             awardedBy: payload.byWhomAwarded,
             pointsDelta:
@@ -164,6 +167,8 @@ export default function DisciplineRecordsPage() {
                     dateOfOffence: "",
                     offence: "",
                     punishmentAwarded: "",
+                    punishmentId: "",
+                    numberOfPunishments: "1",
                     dateOfAward: "",
                     byWhomAwarded: "",
                     negativePts: "",
@@ -239,8 +244,8 @@ export default function DisciplineRecordsPage() {
                                                 type="button"
                                                 onClick={() => setActiveTab(index)}
                                                 className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
-                                                        ? "bg-blue-600 text-white"
-                                                        : "bg-gray-200 text-gray-700"
+                                                    ? "bg-blue-600 text-white"
+                                                    : "bg-gray-200 text-gray-700"
                                                     }`}
                                             >
                                                 {sem}

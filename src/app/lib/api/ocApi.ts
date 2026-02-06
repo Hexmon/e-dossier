@@ -12,6 +12,7 @@ export interface Course {
   updatedAt: string;
   deletedAt?: string | null;
 }
+
 export interface CourseRef {
   id: string;
   code: string;
@@ -31,7 +32,7 @@ export interface OCRecord {
   name: string;
   ocNo: string;
   uid?: string;
-  branch?: "E" | "M" | "C" | null;
+  branch?: "E" | "M" | "O" | null; // FIXED: Changed "C" to "O"
   platoonId?: string | null;
   arrivalAtUniversity: string;
   withdrawnOn?: string | null;
@@ -56,6 +57,9 @@ export interface OCDenorm {
   updatedAt?: string;
 }
 
+/** Basic list row shape (cadet + denorm) */
+export type OCListRow = OCRecord & OCDenorm;
+
 /** Full graph shape when full=true */
 export interface FullOCRecord extends OCListRow {
   personal?: Record<string, unknown> | null;
@@ -74,83 +78,6 @@ export interface FullOCRecord extends OCListRow {
   delegations?: Record<string, unknown>[];
 }
 
-export interface FetchOCParams {
-  /** quick text search on name/ocNo */
-  q?: string;
-  /** filter by course */
-  courseId?: string;
-  /** filter by platoon */
-  platoonId?: string;
-  /** filter by branch */
-  branch?: "C" | "E" | "M";
-  /** filter by status enum */
-  status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
-  /** shorthand for withdrawnOn IS NULL */
-  active?: boolean;
-  /** arrival date range filters (ISO) */
-  arrivalFrom?: string;
-  arrivalTo?: string;
-  /** pagination */
-  limit?: number;
-  offset?: number;
-  /** return the full graph */
-  full?: boolean;
-}
-
-export type BulkUploadResult = {
-  success: number;
-  failed: number;
-  errors: Array<{ row: number; error: string }>;
-};
-
-/**
- * Fetch all OCs (simple helper over fetchOCs)
- * GET {{baseURL}}/api/v1/oc
- */
-export async function getAllOCs(query?: string): Promise<OCListRow[]> {
-  const params: Record<string, string> = {};
-  if (query) params.q = query;
-  const res = await api.get<ListEnvelope<OCListRow>>(endpoints.oc.list, {
-    baseURL,
-    query: params,
-  });
-  return res.items;
-}
-
-/**
- * Fetch OC list with optional filters.
- * When `params.full === true`, returns the full graph per OC.
- * Otherwise returns list rows with denormalized fields.
- */
-
-/** Basic list row shape (cadet + denorm) */
-export type OCListRow = OCRecord & OCDenorm;
-
-/** Full graph shape when full=true */
-export interface FullOCRecord extends OCListRow {
-  personal?: Record<string, unknown> | null;
-  preCommission?: Record<string, unknown> | null;
-  commissioning?: Record<string, unknown> | null;
-  autobiography?: Record<string, unknown> | null;
-
-  familyMembers?: Record<string, unknown>[];
-  education?: Record<string, unknown>[];
-  achievements?: Record<string, unknown>[];
-  ssbReports?: Array<Record<string, unknown>>;
-  medicals?: Record<string, unknown>[];
-  medicalCategory?: Record<string, unknown>[];
-  discipline?: Record<string, unknown>[];
-  parentComms?: Record<string, unknown>[];
-  delegations?: Record<string, unknown>[];
-}
-
-export type ListEnvelope<T> = {
-  status: number;
-  ok: boolean;
-  items: T[];
-  count: number;
-};
-
 /**
  * All possible query params supported by /api/v1/oc
  */
@@ -161,8 +88,8 @@ export interface FetchOCParams {
   courseId?: string;
   /** filter by platoon */
   platoonId?: string;
-  /** filter by branch */
-  branch?: "C" | "E" | "M";
+  /** filter by branch - FIXED: Changed "C" to "O" */
+  branch?: "O" | "E" | "M";
   /** filter by status enum */
   status?: "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
   /** shorthand for withdrawnOn IS NULL */
@@ -199,6 +126,19 @@ export interface FetchOCParams {
   delegations?: boolean;
 }
 
+export type ListEnvelope<T> = {
+  status: number;
+  ok: boolean;
+  items: T[];
+  count: number;
+};
+
+export type BulkUploadResult = {
+  success: number;
+  failed: number;
+  errors: Array<{ row: number; error: string }>;
+};
+
 /**
  * Build query params for /api/v1/oc from FetchOCParams.
  * Kept internal so both helpers share identical behavior.
@@ -223,6 +163,20 @@ function buildOCQuery(params: FetchOCParams = {}): Record<string, string> {
   }
 
   return query;
+}
+
+/**
+ * Fetch all OCs (simple helper over fetchOCs)
+ * GET {{baseURL}}/api/v1/oc
+ */
+export async function getAllOCs(query?: string): Promise<OCListRow[]> {
+  const params: Record<string, string> = {};
+  if (query) params.q = query;
+  const res = await api.get<ListEnvelope<OCListRow>>(endpoints.oc.list, {
+    baseURL,
+    query: params,
+  });
+  return res.items;
 }
 
 /**
@@ -255,7 +209,6 @@ export async function fetchOCs<
   const res = await fetchOCsWithCount<T>(params);
   return res.items;
 }
-
 
 /** Convenience: fetch one OC by id with full graph */
 export async function fetchOCByIdFull(id: string): Promise<FullOCRecord | null> {
@@ -340,7 +293,6 @@ export async function fetchOCById(ocId: string): Promise<OCListRow | null> {
     );
     return res.oc;
   } catch (err) {
-    console.error("Failed to fetch OC by id:", err);
     return null;
   }
 }
