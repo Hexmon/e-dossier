@@ -22,6 +22,7 @@ async function GETHandler(req: NextRequest) {
                 punishmentAwarded: ocDiscipline.punishmentAwarded,
                 awardedOn: ocDiscipline.awardedOn,
                 awardedBy: ocDiscipline.awardedBy,
+                numberOfPunishments: ocDiscipline.numberOfPunishments,
                 pointsDelta: ocDiscipline.pointsDelta,
                 pointsCumulative: ocDiscipline.pointsCumulative,
             })

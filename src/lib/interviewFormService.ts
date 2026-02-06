@@ -16,7 +16,7 @@ import {
     type OcInterviewItem,
 } from "@/lib/interviewFieldUtils";
 
-type InitialIndex = Record<InterviewOfficer, { interviewId: string; templateId: string } | null>;
+type InitialIndex = Record<string, { interviewId: string; templateId: string } | null>;
 
 type TermIndex = Record<
     string,
@@ -65,38 +65,74 @@ export async function fetchInitialInterviews(
     });
     const items: OcInterviewItem[] = resp?.items ?? [];
 
-    const result: Record<InterviewOfficer, Record<string, string | boolean>> = {
-        plcdr: {},
-        dscoord: {},
-        dycdr: {},
-        cdr: {},
-    };
+    const result: Record<string, Record<InterviewOfficer, Record<string, string | boolean>>> = {};
+    initialIndexRef.current = {};
 
-    initialIndexRef.current = { plcdr: null, dscoord: null, dycdr: null, cdr: null };
-
-    for (const officer of Object.keys(result) as InterviewOfficer[]) {
+    const officers: InterviewOfficer[] = ["plcdr", "dscoord", "dycdr", "cdr"];
+    for (const officer of officers) {
         const match = mappings.byKind[officer];
         if (!match) continue;
 
-        const interview = pickLatestInterview(
-            items.filter((item) => item.templateId === match.template.id && (item.semester === null || item.semester === undefined)),
-        );
-        if (!interview) continue;
+        const templateItems = items.filter((item) => item.templateId === match.template.id);
+        const usesSemesters = (match.template.semesters?.length ?? 0) > 0;
 
-        initialIndexRef.current[officer] = {
-            interviewId: interview.id,
-            templateId: interview.templateId,
-        };
+        if (usesSemesters) {
+            const bySemester = new Map<number, OcInterviewItem[]>();
+            for (const item of templateItems) {
+                const semester = item.semester ?? null;
+                if (!semester || semester < 1 || semester > 6) continue;
+                if (!match.template.semesters?.includes(semester)) continue;
+                const list = bySemester.get(semester) ?? [];
+                list.push(item);
+                bySemester.set(semester, list);
+            }
 
-        const formData: Record<string, string | boolean> = {};
-        for (const fieldValue of interview.fields ?? []) {
-            const field = match.template.fieldsById.get(fieldValue.fieldId);
-            if (!field) continue;
-            const value = readFieldValue(field, fieldValue);
-            if (value !== undefined) formData[field.key] = value;
+            for (const [semester, list] of bySemester.entries()) {
+                const interview = pickLatestInterview(list);
+                if (!interview) continue;
+
+                const formData: Record<string, string | boolean> = {};
+                for (const fieldValue of interview.fields ?? []) {
+                    const field = match.template.fieldsById.get(fieldValue.fieldId);
+                    if (!field) continue;
+                    const value = readFieldValue(field, fieldValue);
+                    if (value !== undefined) formData[field.key] = value;
+                }
+
+                const semesterKey = String(semester);
+                if (!result[semesterKey]) {
+                    result[semesterKey] = { plcdr: {}, dscoord: {}, dycdr: {}, cdr: {} };
+                }
+                result[semesterKey][officer] = formData;
+                initialIndexRef.current[`${officer}:${semesterKey}`] = {
+                    interviewId: interview.id,
+                    templateId: interview.templateId,
+                };
+            }
+        } else {
+            const interview = pickLatestInterview(
+                templateItems.filter((item) => item.semester === null || item.semester === undefined),
+            );
+            if (!interview) continue;
+
+            const formData: Record<string, string | boolean> = {};
+            for (const fieldValue of interview.fields ?? []) {
+                const field = match.template.fieldsById.get(fieldValue.fieldId);
+                if (!field) continue;
+                const value = readFieldValue(field, fieldValue);
+                if (value !== undefined) formData[field.key] = value;
+            }
+
+            const semesterKey = "none";
+            if (!result[semesterKey]) {
+                result[semesterKey] = { plcdr: {}, dscoord: {}, dycdr: {}, cdr: {} };
+            }
+            result[semesterKey][officer] = formData;
+            initialIndexRef.current[`${officer}:${semesterKey}`] = {
+                interviewId: interview.id,
+                templateId: interview.templateId,
+            };
         }
-
-        result[officer] = formData;
     }
 
     return result;
@@ -216,10 +252,21 @@ export async function saveInitialInterview(
     formData: Record<string, unknown>,
     mappings: TemplateMappings,
     initialIndexRef: { current: InitialIndex },
+    semester?: number,
 ) {
     const match = mappings.byKind[officer];
     if (!match) {
         toast.error("Interview template not configured");
+        return null;
+    }
+
+    const usesSemesters = (match.template.semesters?.length ?? 0) > 0;
+    if (usesSemesters && (semester === undefined || semester === null)) {
+        toast.error("Semester is required for this interview");
+        return null;
+    }
+    if (usesSemesters && semester && !match.template.semesters?.includes(semester)) {
+        toast.error("Semester is not allowed for this interview");
         return null;
     }
 
@@ -236,25 +283,29 @@ export async function saveInitialInterview(
         valueBool?: boolean | null;
     }>;
 
-    const currentIndex = initialIndexRef.current[officer];
+    const semesterKey = usesSemesters ? String(semester) : "none";
+    const currentIndex = initialIndexRef.current[`${officer}:${semesterKey}`];
     let interview: OcInterviewItem | null = null;
 
     if (currentIndex?.interviewId) {
         const resp: any = await apiRequest<any>({
             method: "PATCH",
             endpoint: `/api/v1/oc/${ocId}/interviews/${currentIndex.interviewId}`,
-            body: { fields },
+            body: { fields, ...(usesSemesters ? { semester } : {}) },
         });
         interview = parseInterviewResponse(resp);
     } else {
-        const existing = await fetchLatestInterviewByTemplate(ocId, match.template.id, undefined, {
-            onlyWithoutSemester: true,
-        });
+        const existing = await fetchLatestInterviewByTemplate(
+            ocId,
+            match.template.id,
+            usesSemesters ? semester : undefined,
+            usesSemesters ? undefined : { onlyWithoutSemester: true }
+        );
         if (existing?.id) {
             const resp: any = await apiRequest<any>({
                 method: "PATCH",
                 endpoint: `/api/v1/oc/${ocId}/interviews/${existing.id}`,
-                body: { fields },
+                body: { fields, ...(usesSemesters ? { semester } : {}) },
             });
             interview = parseInterviewResponse(resp);
         } else {
@@ -263,6 +314,7 @@ export async function saveInitialInterview(
                 endpoint: `/api/v1/oc/${ocId}/interviews`,
                 body: {
                     templateId: match.template.id,
+                    ...(usesSemesters ? { semester } : {}),
                     fields,
                 },
             });
@@ -275,7 +327,7 @@ export async function saveInitialInterview(
         return null;
     }
 
-    initialIndexRef.current[officer] = {
+    initialIndexRef.current[`${officer}:${semesterKey}`] = {
         interviewId: interview.id,
         templateId: interview.templateId,
     };
