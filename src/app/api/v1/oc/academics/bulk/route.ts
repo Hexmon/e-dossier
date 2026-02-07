@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { academicSubjectBulkRequestSchema, Semester } from '@/app/lib/oc-validators';
-import { mustBeAdmin } from '../../_checks';
+import { mustBeAdmin, mustBeAuthed } from '../../_checks';
 import { updateOcAcademicSubject, deleteOcAcademicSubject, getOcAcademicSemester, getOcAcademics } from '@/app/services/oc-academics';
 import { withRouteLogging } from '@/lib/withRouteLogging';
 
@@ -48,7 +48,7 @@ function filterSemesterSubjects(semesterData: any, subjectIds: Set<string>) {
 
 async function GETHandler(req: NextRequest) {
     try {
-        await mustBeAdmin(req);
+        await mustBeAuthed(req);
         const sp = new URL(req.url).searchParams;
 
         const ocIds = parseCsv(sp.get('ocIds'));
@@ -103,7 +103,7 @@ async function GETHandler(req: NextRequest) {
 
 async function POSTHandler(req: NextRequest) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const body = academicSubjectBulkRequestSchema.parse(await req.json());
 
         const results: BulkResult[] = [];
@@ -122,8 +122,8 @@ async function POSTHandler(req: NextRequest) {
                         item.subjectId,
                         { hard: item.hard },
                         {
-                            actorUserId: adminCtx?.userId,
-                            actorRoles: adminCtx?.roles,
+                            actorUserId: authCtx?.userId,
+                            actorRoles: authCtx?.roles,
                             request: req,
                         },
                     );
@@ -134,8 +134,8 @@ async function POSTHandler(req: NextRequest) {
                         item.subjectId,
                         { theory: item.theory, practical: item.practical },
                         {
-                            actorUserId: adminCtx?.userId,
-                            actorRoles: adminCtx?.roles,
+                            actorUserId: authCtx?.userId,
+                            actorRoles: authCtx?.roles,
                             request: req,
                         },
                     );
