@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import {
@@ -10,10 +9,10 @@ import {
     updateTrainingCampActivity,
     deleteTrainingCampActivity,
 } from '@/app/db/queries/trainingCamps';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
         const { activityId } = trainingCampActivityParam.parse(await params);
@@ -25,7 +24,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { activityId } = trainingCampActivityParam.parse(await params);
@@ -33,18 +32,17 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
         const row = await updateTrainingCampActivity(activityId, { ...dto });
         if (!row) throw new ApiError(404, 'Training camp activity not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.TRAINING_CAMP_ACTIVITY_UPDATED,
-            resourceType: AuditResourceType.TRAINING_CAMP_ACTIVITY,
-            resourceId: row.id,
-            description: `Updated training camp activity ${row.name}`,
+        await req.audit.log({
+            action: AuditEventType.TRAINING_CAMP_ACTIVITY_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.TRAINING_CAMP_ACTIVITY, id: row.id },
             metadata: {
+                description: `Updated training camp activity ${row.name}`,
                 activityId: row.id,
                 trainingCampId: row.trainingCampId,
                 changes: Object.keys(dto),
             },
-            request: req,
         });
         return json.ok({ message: 'Training camp activity updated successfully.', activity: row });
     } catch (err) {
@@ -52,7 +50,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { activityId } = trainingCampActivityParam.parse(await params);
@@ -60,26 +58,25 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
         const row = await deleteTrainingCampActivity(activityId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Training camp activity not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.TRAINING_CAMP_ACTIVITY_DELETED,
-            resourceType: AuditResourceType.TRAINING_CAMP_ACTIVITY,
-            resourceId: row.id,
-            description: `${body?.hard ? 'Hard' : 'Soft'} deleted training camp activity ${activityId}`,
+        await req.audit.log({
+            action: AuditEventType.TRAINING_CAMP_ACTIVITY_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.TRAINING_CAMP_ACTIVITY, id: row.id },
             metadata: {
+                description: `${body?.hard ? 'Hard' : 'Soft'} deleted training camp activity ${activityId}`,
                 activityId: row.id,
                 trainingCampId: row.trainingCampId,
                 hardDeleted: body?.hard === true,
             },
-            request: req,
         });
         return json.ok({ message: 'Training camp activity deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

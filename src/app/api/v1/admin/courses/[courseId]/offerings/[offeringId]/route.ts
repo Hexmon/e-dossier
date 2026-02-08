@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
@@ -6,22 +5,36 @@ import { offeringUpdateSchema } from '@/app/lib/validators.courses';
 import { updateOffering, replaceOfferingInstructors, softDeleteOffering, hardDeleteOffering } from '@/app/db/queries/offerings';
 import { getCourseOffering } from '@/app/db/queries/courses';
 import { findMissingInstructorIds } from '@/app/db/queries/instructors';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 const Param = z.object({ courseId: z.string().uuid(), offeringId: z.string().uuid() });
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
         const { courseId, offeringId } = Param.parse(await params);
         const row = await getCourseOffering(courseId, offeringId);
         if (!row) throw new ApiError(404, 'Offering not found', 'not_found');
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OFFERING, id: row.id },
+            metadata: {
+                description: 'Course offering retrieved successfully.',
+                offeringId: row.id,
+                courseId,
+                subjectId: row.subject?.id ?? null,
+            },
+        });
+
         return json.ok({ message: 'Course offering retrieved successfully.', offering: row });
     } catch (err) { return handleApiError(err); }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { offeringId } = Param.parse(await params);
@@ -51,27 +64,19 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ co
             await replaceOfferingInstructors(offeringId, body.instructors);
         }
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.COURSE_OFFERING_UPDATED,
-            resourceType: AuditResourceType.OFFERING,
-            resourceId: updated.id,
-            description: `Updated offering ${updated.id}`,
+        await req.audit.log({
+            action: AuditEventType.COURSE_OFFERING_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OFFERING, id: updated.id },
             metadata: {
+                description: `Updated offering ${updated.id}`,
                 offeringId: updated.id,
                 courseId: updated.courseId,
                 subjectId: updated.subjectId,
                 changes: Object.keys(patch),
                 instructorsUpdated: Boolean(body.instructors),
             },
-            before: result.before,
-            after: updated,
-            changedFields: [
-                ...Object.keys(patch),
-                ...(body.instructors ? ['instructors'] : []),
-            ],
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'Course offering updated successfully.', offering: updated });
     } catch (err) { return handleApiError(err); }
@@ -87,7 +92,7 @@ type OfferingDeleteResult =
     | { before: OfferingIdentifiers; after: OfferingIdentifiers }
     | { before: OfferingIdentifiers };
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { offeringId } = Param.parse(await params);
@@ -103,29 +108,24 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ c
         }
         const resourceId = after?.id ?? before.id;
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.COURSE_OFFERING_DELETED,
-            resourceType: AuditResourceType.OFFERING,
-            resourceId,
-            description: `${hard ? 'Hard' : 'Soft'} deleted offering ${resourceId}`,
+        await req.audit.log({
+            action: AuditEventType.COURSE_OFFERING_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OFFERING, id: resourceId },
             metadata: {
+                description: `${hard ? 'Hard' : 'Soft'} deleted offering ${resourceId}`,
                 offeringId: resourceId,
                 courseId: before.courseId ?? null,
                 subjectId: before.subjectId ?? null,
                 hardDeleted: hard,
             },
-            before,
-            after,
-            changedFields: hard ? undefined : ['deletedAt'],
-            request: req,
-            required: true,
         });
         return json.ok({ message: hard ? 'Offering hard-deleted.' : 'Offering soft-deleted.', id: resourceId });
     } catch (err) { return handleApiError(err); }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);
