@@ -1,15 +1,14 @@
 // src/app/api/v1/admin/signup-requests/[id]/reject/route.ts
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { rejectSignupRequestSchema } from '@/app/lib/validators';
 import { rejectSignupRequest } from '@/app/db/queries/signupRequests';
 import { IdSchema } from '@/app/lib/apiClient';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function POSTHandler(
-  req: NextRequest,
+  req: AuditNextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -32,18 +31,16 @@ async function POSTHandler(
       auditRequestId: req.headers.get('x-request-id') ?? undefined,
     });
 
-    await createAuditLog({
-      actorUserId: adminUserId,
-      eventType: AuditEventType.SIGNUP_REQUEST_REJECTED,
-      resourceType: AuditResourceType.SIGNUP_REQUEST,
-      resourceId: id,
-      description: `Signup request ${id} rejected`,
+    await req.audit.log({
+      action: AuditEventType.SIGNUP_REQUEST_REJECTED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminUserId },
+      target: { type: AuditResourceType.SIGNUP_REQUEST, id: id },
       metadata: {
+        description: `Signup request ${id} rejected`,
         requestId: id,
         reason: dto.reason,
       },
-      request: req,
-      required: true,
     });
 
     return json.ok({ message: 'Signup request rejected successfully.' });
@@ -51,4 +48,4 @@ async function POSTHandler(
     return handleApiError(err);
   }
 }
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

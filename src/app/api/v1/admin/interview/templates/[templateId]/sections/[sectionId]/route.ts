@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewSectionParam, interviewSectionUpdateSchema } from '@/app/lib/interview-template-validators';
@@ -7,11 +6,11 @@ import {
     updateInterviewTemplateSection,
     deleteInterviewTemplateSection,
 } from '@/app/db/queries/interviewTemplates';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; sectionId: string }> },
 ) {
     try {
@@ -26,7 +25,7 @@ async function GETHandler(
 }
 
 async function PATCHHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; sectionId: string }> },
 ) {
     try {
@@ -43,19 +42,17 @@ async function PATCHHandler(
         });
         if (!row) throw new ApiError(404, 'Interview section not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_SECTION_UPDATED,
-            resourceType: AuditResourceType.INTERVIEW_SECTION,
-            resourceId: row.id,
-            description: `Updated interview section ${row.title}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_SECTION_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_SECTION, id: row.id },
             metadata: {
+                description: `Updated interview section ${row.title}`,
                 templateId,
                 sectionId: row.id,
                 changes: Object.keys(dto),
             },
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'Interview template section updated successfully.', section: row });
     } catch (err) {
@@ -64,7 +61,7 @@ async function PATCHHandler(
 }
 
 async function DELETEHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; sectionId: string }> },
 ) {
     try {
@@ -77,18 +74,17 @@ async function DELETEHandler(
         const row = await deleteInterviewTemplateSection(sectionId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Interview section not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_SECTION_DELETED,
-            resourceType: AuditResourceType.INTERVIEW_SECTION,
-            resourceId: row.id,
-            description: `${body?.hard ? 'Hard' : 'Soft'} deleted interview section ${row.title}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_SECTION_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_SECTION, id: row.id },
             metadata: {
+                description: `${body?.hard ? 'Hard' : 'Soft'} deleted interview section ${row.title}`,
                 templateId,
                 sectionId: row.id,
                 hardDeleted: body?.hard === true,
             },
-            request: req,
         });
         return json.ok({ message: 'Interview template section deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
@@ -96,6 +92,6 @@ async function DELETEHandler(
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

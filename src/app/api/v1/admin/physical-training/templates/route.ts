@@ -1,11 +1,11 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTemplateQuerySchema } from '@/app/lib/physical-training-validators';
 import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
@@ -21,4 +21,4 @@ async function GETHandler(req: NextRequest) {
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);

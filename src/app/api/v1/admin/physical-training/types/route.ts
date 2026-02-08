@@ -1,12 +1,11 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTypeCreateSchema, ptTypeQuerySchema } from '@/app/lib/physical-training-validators';
 import { listPtTypes, createPtType } from '@/app/db/queries/physicalTraining';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
@@ -24,7 +23,7 @@ async function GETHandler(req: NextRequest) {
     }
 }
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const dto = ptTypeCreateSchema.parse(await req.json());
@@ -38,19 +37,17 @@ async function POSTHandler(req: NextRequest) {
             isActive: dto.isActive ?? true,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_TYPE_CREATED,
-            resourceType: AuditResourceType.PT_TYPE,
-            resourceId: row.id,
-            description: `Created PT type ${row.code} (semester ${row.semester})`,
+        await req.audit.log({
+            action: AuditEventType.PT_TYPE_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_TYPE, id: row.id },
             metadata: {
+                description: `Created PT type ${row.code} (semester ${row.semester})`,
                 ptTypeId: row.id,
                 semester: row.semester,
                 code: row.code,
             },
-            request: req,
-            required: true,
         });
         return json.created({ message: 'PT type created successfully.', ptType: row });
     } catch (err) {
@@ -58,5 +55,5 @@ async function POSTHandler(req: NextRequest) {
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

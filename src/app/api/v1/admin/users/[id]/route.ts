@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { appointments } from '@/app/db/schema/auth/appointments';
@@ -10,8 +9,8 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import argon2 from 'argon2';
 import { IdSchema } from '@/app/lib/apiClient';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
@@ -75,7 +74,7 @@ async function selectEnrichedUserById(id: string) {
 }
 
 async function GETHandler(
-  req: NextRequest,
+  req: AuditNextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -97,7 +96,7 @@ async function GETHandler(
 // PATCH /api/v1/admin/users/:id (ADMIN)
 // body: userUpdateSchema (password optional; restore toggles soft-delete)
 async function PATCHHandler(
-  req: NextRequest,
+  req: AuditNextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -187,20 +186,21 @@ async function PATCHHandler(
       (beforeSnapshot as any)[key] = (previous as any)[key];
       (afterSnapshot as any)[key] = (updates as any)[key];
     }
-    await createAuditLog({
-      actorUserId: adminCtx.userId,
-      eventType: AuditEventType.USER_UPDATED,
-      resourceType: AuditResourceType.USER,
-      resourceId: id,
-      description: `Updated user ${id}`,
+    await req.audit.log({
+      action: AuditEventType.USER_UPDATED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminCtx.userId },
+      target: { type: AuditResourceType.USER, id: id },
       metadata: {
+        description: `Updated user ${id}`,
         userId: id,
         changedFields: Object.keys(updates),
         passwordReset: passwordProvided,
       },
-      before: Object.keys(beforeSnapshot).length ? beforeSnapshot : undefined,
-      after: Object.keys(afterSnapshot).length ? afterSnapshot : undefined,
-      request: req,
+      diff: {
+        before: Object.keys(beforeSnapshot).length ? beforeSnapshot : undefined,
+        after: Object.keys(afterSnapshot).length ? afterSnapshot : undefined,
+      },
     });
 
     return json.ok({ message: 'User updated successfully.', user: enriched });
@@ -219,7 +219,7 @@ async function PATCHHandler(
 // DELETE /api/v1/admin/users/:id (ADMIN)
 // Soft-delete by default; hard delete with ?hard=true
 async function DELETEHandler(
-  req: NextRequest,
+  req: AuditNextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -256,17 +256,16 @@ async function DELETEHandler(
       const deleted = await db.delete(users).where(eq(users.id, id)).returning({ id: users.id });
       if (!deleted.length) throw new ApiError(404, 'User not found', 'not_found');
 
-      await createAuditLog({
-        actorUserId: adminCtx.userId,
-        eventType: AuditEventType.USER_DELETED,
-        resourceType: AuditResourceType.USER,
-        resourceId: deleted[0].id,
-        description: `Hard deleted user ${id}`,
+      await req.audit.log({
+        action: AuditEventType.USER_DELETED,
+        outcome: 'SUCCESS',
+        actor: { type: 'user', id: adminCtx.userId },
+        target: { type: AuditResourceType.USER, id: deleted[0].id },
         metadata: {
+          description: `Hard deleted user ${id}`,
           userId: deleted[0].id,
           hardDeleted: true,
         },
-        request: req,
       });
 
       return json.ok({ message: 'User hard-deleted.', id: deleted[0].id });
@@ -286,25 +285,24 @@ async function DELETEHandler(
 
     if (!u) throw new ApiError(404, 'User not found', 'not_found');
 
-    await createAuditLog({
-      actorUserId: adminCtx.userId,
-      eventType: AuditEventType.USER_DELETED,
-      resourceType: AuditResourceType.USER,
-      resourceId: u.id,
-      description: `Soft deleted user ${id}`,
+    await req.audit.log({
+      action: AuditEventType.USER_DELETED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminCtx.userId },
+      target: { type: AuditResourceType.USER, id: u.id },
       metadata: {
+        description: `Soft deleted user ${id}`,
         userId: u.id,
         hardDeleted: false,
       },
-      request: req,
     });
     return json.ok({ message: 'User soft-deleted.', id: u.id });
   } catch (err) {
     return handleApiError(err);
   }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

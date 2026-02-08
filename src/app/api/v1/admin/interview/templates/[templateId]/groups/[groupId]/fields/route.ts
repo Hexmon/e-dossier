@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewGroupParam, interviewFieldCreateSchema, interviewFieldQuerySchema } from '@/app/lib/interview-template-validators';
@@ -7,11 +6,11 @@ import {
     listInterviewTemplateFieldsByGroup,
     createInterviewTemplateField,
 } from '@/app/db/queries/interviewTemplates';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; groupId: string }> },
 ) {
     try {
@@ -32,7 +31,7 @@ async function GETHandler(
 }
 
 async function POSTHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; groupId: string }> },
 ) {
     try {
@@ -57,19 +56,17 @@ async function POSTHandler(
             captureSignature: dto.captureSignature ?? false,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_FIELD_CREATED,
-            resourceType: AuditResourceType.INTERVIEW_FIELD,
-            resourceId: row.id,
-            description: `Created interview field ${row.key}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_FIELD_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_FIELD, id: row.id },
             metadata: {
+                description: `Created interview field ${row.key}`,
                 templateId,
                 groupId,
                 fieldId: row.id,
             },
-            request: req,
-            required: true,
         });
         return json.created({ message: 'Interview template field created successfully.', field: row });
     } catch (err) {
@@ -77,5 +74,5 @@ async function POSTHandler(
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

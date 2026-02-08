@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
@@ -8,13 +7,13 @@ import { userQuerySchema, userCreateSchema } from '@/app/lib/validators';
 import argon2 from 'argon2';
 import { listUsersWithActiveAppointments, UserListQuery } from '@/app/db/queries/users';
 import { eq, isNull, or, and } from 'drizzle-orm';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
 // GET /api/v1/admin/users (ADMIN)
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
         await requireAuth(req);
 
@@ -36,7 +35,7 @@ async function GETHandler(req: NextRequest) {
 
 // POST /api/v1/admin/users (ADMIN)
 // body: userCreateSchema (password optional; if provided → credentials_local)
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
         const authCtx = await requireAuth(req);
 
@@ -118,13 +117,13 @@ async function POSTHandler(req: NextRequest) {
                 .onConflictDoNothing();
         }
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.USER_CREATED,
-            resourceType: AuditResourceType.USER,
-            resourceId: u.id,
-            description: `Created user ${u.username}`,
+        await req.audit.log({
+            action: AuditEventType.USER_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.USER, id: u.id },
             metadata: {
+                description: `Created user ${u.username}`,
                 userId: u.id,
                 username: u.username,
                 email: u.email,
@@ -132,7 +131,6 @@ async function POSTHandler(req: NextRequest) {
                 rank: u.rank,
                 passwordSet: passwordProvided,
             },
-            request: req,
         });
 
         return json.created({ message: 'User created successfully.', user: u });
@@ -182,6 +180,6 @@ async function POSTHandler(req: NextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

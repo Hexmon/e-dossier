@@ -1,17 +1,15 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists } from '../../_checks';
-import { authorizeOcAccess } from '@/lib/authorization';
 import { requireAuth } from '@/app/lib/authz';
 import { ocCadets, ocCommissioning, ocImages } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { eq } from 'drizzle-orm';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
-import { getPublicObjectUrl, buildImageKey, createPresignedUploadUrl, headObject, createPresignedGetUrl } from '@/app/lib/storage';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { buildImageKey, createPresignedUploadUrl, headObject, createPresignedGetUrl } from '@/app/lib/storage';
 import { getOcImage, upsertOcImage } from '@/app/db/queries/oc';
 
 const OcIdParam = z.object({ ocId: z.string().uuid() });
@@ -24,12 +22,12 @@ const dossierSnapshotSchema = z.object({
   postedAtt: z.string().nullable().optional(),
 });
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     // Allow any authenticated user to read dossier snapshots (read-only summary data)
-    await requireAuth(req);
+    const authCtx = await requireAuth(req);
 
     // Fetch OC data
     const [ocRow] = await db
@@ -115,6 +113,18 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
       postedAtt: commissioning?.postedUnit || null,
     };
 
+    await req.audit.log({
+      action: AuditEventType.API_REQUEST,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: authCtx.userId },
+      target: { type: AuditResourceType.OC, id: ocId },
+      metadata: {
+        description: `Dossier snapshot retrieved successfully for OC ${ocId}`,
+        ocId,
+        module: 'dossier_snapshot',
+      },
+    });
+
     return json.ok({ message: 'Dossier snapshot retrieved successfully.', data });
   } catch (err) {
     return handleApiError(err);
@@ -178,7 +188,7 @@ async function uploadImage(ocId: string, file: File, kind: 'CIVIL_DRESS' | 'UNIF
   return saved;
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
     const adminCtx = await requireAuth(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
@@ -241,17 +251,16 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
 
     const [row] = await db.insert(ocCommissioning).values(insertData).returning();
 
-    await createAuditLog({
-      actorUserId: adminCtx.userId,
-      eventType: AuditEventType.OC_RECORD_CREATED,
-      resourceType: AuditResourceType.OC,
-      resourceId: ocId,
-      description: `Created dossier snapshot for ${ocId}`,
-      metadata: { ocId, module: 'dossier-snapshot' },
-      before: null,
-      after: row,
-      request: req,
-      required: true,
+    await req.audit.log({
+      action: AuditEventType.OC_RECORD_CREATED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminCtx.userId },
+      target: { type: AuditResourceType.OC, id: ocId },
+      metadata: {
+        description: `Created dossier snapshot for ${ocId}`,
+        ocId,
+        module: 'dossier-snapshot',
+      },
     });
 
     return json.ok({ message: 'Dossier snapshot created successfully.', data: row });
@@ -260,7 +269,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
   }
 }
 
-async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
     const adminCtx = await requireAuth(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
@@ -321,18 +330,17 @@ async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
     const [row] = await db.update(ocCommissioning).set(updateData).where(eq(ocCommissioning.ocId, ocId)).returning();
 
-    await createAuditLog({
-      actorUserId: adminCtx.userId,
-      eventType: AuditEventType.OC_RECORD_UPDATED,
-      resourceType: AuditResourceType.OC,
-      resourceId: ocId,
-      description: `Updated dossier snapshot for ${ocId}`,
-      metadata: { ocId, module: 'dossier-snapshot', changes: Object.keys(updateData) },
-      before: existing,
-      after: row,
-      changedFields: Object.keys(updateData),
-      request: req,
-      required: true,
+    await req.audit.log({
+      action: AuditEventType.OC_RECORD_UPDATED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminCtx.userId },
+      target: { type: AuditResourceType.OC, id: ocId },
+      metadata: {
+        description: `Updated dossier snapshot for ${ocId}`,
+        ocId,
+        module: 'dossier-snapshot',
+        changes: Object.keys(updateData),
+      },
     });
 
     return json.ok({ message: 'Dossier snapshot updated successfully.', data: row });
@@ -341,7 +349,7 @@ async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ ocId
   }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
-export const PUT = withRouteLogging('PUT', PUTHandler);
-export const PATCH = withRouteLogging('PATCH', PUTHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
+export const PUT = withAuditRoute('PUT', PUTHandler);
+export const PATCH = withAuditRoute('PATCH', PUTHandler);

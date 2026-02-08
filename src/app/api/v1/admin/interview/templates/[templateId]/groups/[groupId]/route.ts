@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewGroupParam, interviewGroupUpdateSchema } from '@/app/lib/interview-template-validators';
@@ -8,11 +7,11 @@ import {
     updateInterviewTemplateGroup,
     deleteInterviewTemplateGroup,
 } from '@/app/db/queries/interviewTemplates';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; groupId: string }> },
 ) {
     try {
@@ -27,7 +26,7 @@ async function GETHandler(
 }
 
 async function PATCHHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; groupId: string }> },
 ) {
     try {
@@ -53,19 +52,17 @@ async function PATCHHandler(
         });
         if (!row) throw new ApiError(404, 'Interview group not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_GROUP_UPDATED,
-            resourceType: AuditResourceType.INTERVIEW_GROUP,
-            resourceId: row.id,
-            description: `Updated interview group ${row.title}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_GROUP_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_GROUP, id: row.id },
             metadata: {
+                description: `Updated interview group ${row.title}`,
                 templateId,
                 groupId: row.id,
                 changes: Object.keys(dto),
             },
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'Interview template group updated successfully.', group: row });
     } catch (err) {
@@ -74,7 +71,7 @@ async function PATCHHandler(
 }
 
 async function DELETEHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; groupId: string }> },
 ) {
     try {
@@ -87,18 +84,17 @@ async function DELETEHandler(
         const row = await deleteInterviewTemplateGroup(groupId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Interview group not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_GROUP_DELETED,
-            resourceType: AuditResourceType.INTERVIEW_GROUP,
-            resourceId: row.id,
-            description: `${body?.hard ? 'Hard' : 'Soft'} deleted interview group ${row.title}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_GROUP_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_GROUP, id: row.id },
             metadata: {
+                description: `${body?.hard ? 'Hard' : 'Soft'} deleted interview group ${row.title}`,
                 templateId,
                 groupId: row.id,
                 hardDeleted: body?.hard === true,
             },
-            request: req,
         });
         return json.ok({ message: 'Interview template group deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
@@ -106,6 +102,6 @@ async function DELETEHandler(
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

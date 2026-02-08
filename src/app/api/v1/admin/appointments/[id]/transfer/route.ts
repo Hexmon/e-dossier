@@ -1,15 +1,14 @@
 // src/app/api/v1/admin/appointments/[id]/transfer/route.ts
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { appointmentTransferBody } from '@/app/lib/validators';
 import { transferAppointment } from '@/app/db/queries/appointment-transfer';
 import { IdSchema } from '@/app/lib/apiClient';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function POSTHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
@@ -43,13 +42,13 @@ async function POSTHandler(
             reason: dto.reason ?? null,
         });
 
-        await createAuditLog({
-            actorUserId: adminId,
-            eventType: AuditEventType.APPOINTMENT_TRANSFERRED,
-            resourceType: AuditResourceType.APPOINTMENT,
-            resourceId: id,
-            description: `Appointment ${id} transferred from ${result.ended.userId} to ${result.next.userId}`,
+        await req.audit.log({
+            action: AuditEventType.APPOINTMENT_TRANSFERRED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminId },
+            target: { type: AuditResourceType.APPOINTMENT, id: id },
             metadata: {
+                description: `Appointment ${id} transferred from ${result.ended.userId} to ${result.next.userId}`,
                 appointmentId: id,
                 fromAppointmentId: result.ended.id,
                 toAppointmentId: result.next.id,
@@ -63,11 +62,7 @@ async function POSTHandler(
                 transferAuditCreatedAt: result.audit.createdAt,
                 adjustedPrevEndsAt: result.adjustedPrevEndsAt ?? null,
             },
-            before: result.ended,
-            after: result.next,
-            changedFields: ['userId', 'startsAt', 'endsAt'],
-            request: req,
-            required: true,
+            diff: { before: result.ended, after: result.next },
         });
 
         return json.ok({
@@ -81,4 +76,4 @@ async function POSTHandler(
         return handleApiError(err);
     }
 }
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

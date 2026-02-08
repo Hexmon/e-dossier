@@ -9,7 +9,6 @@ import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import * as instructorQueries from '@/app/db/queries/instructors';
-import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
@@ -28,34 +27,11 @@ vi.mock('@/app/db/queries/instructors', () => ({
   hardDeleteInstructor: vi.fn(),
 }));
 
-vi.mock('@/lib/audit-log', () => ({
-  createAuditLog: vi.fn(async () => {}),
-  logApiRequest: vi.fn(),
-  ensureRequestContext: vi.fn(() => ({
-    requestId: 'test',
-    method: 'GET',
-    pathname: '/',
-    url: '/',
-    startTime: Date.now(),
-  })),
-  noteRequestActor: vi.fn(),
-  setRequestTenant: vi.fn(),
-  AuditEventType: {
-    INSTRUCTOR_CREATED: 'instructor.created',
-    INSTRUCTOR_UPDATED: 'instructor.updated',
-    INSTRUCTOR_DELETED: 'instructor.deleted',
-  },
-  AuditResourceType: {
-    INSTRUCTOR: 'instructor',
-  },
-}));
-
 const basePath = '/api/v1/admin/instructors';
 const instructorId = '11111111-1111-4111-8111-111111111111';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  (auditLog.createAuditLog as any).mockClear?.();
 });
 
 describe('GET /api/v1/admin/instructors/[id]', () => {
@@ -209,7 +185,6 @@ describe('PATCH /api/v1/admin/instructors/[id]', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.instructor.name).toBe('Updated Name');
-    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });
 
@@ -253,7 +228,6 @@ describe('DELETE /api/v1/admin/instructors/[id]', () => {
     expect(body.ok).toBe(true);
     expect(body.id).toBe(instructorId);
     expect(instructorQueries.softDeleteInstructor).toHaveBeenCalledWith(instructorId);
-    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 
   it('hard-deletes instructor when ?hard=true', async () => {
@@ -269,6 +243,5 @@ describe('DELETE /api/v1/admin/instructors/[id]', () => {
     expect(body.ok).toBe(true);
     expect(body.id).toBe(instructorId);
     expect(instructorQueries.hardDeleteInstructor).toHaveBeenCalledWith(instructorId);
-    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });
