@@ -20,7 +20,7 @@ async function GETHandler(_req: AuditNextRequest) {
             action: AuditEventType.API_REQUEST,
             outcome: 'SUCCESS',
             actor: { type: 'anonymous', id: 'unknown' },
-            target: { type: AuditResourceType.API, id: null },
+            target: { type: AuditResourceType.API, id: undefined },
             metadata: { ...payload, description: 'Health check invoked' },
         });
         return json.ok(payload);

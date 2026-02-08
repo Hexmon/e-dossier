@@ -26,7 +26,7 @@ async function POSTHandler(req: AuditNextRequest) {
         action: AuditEventType.API_REQUEST,
         outcome: 'FAILURE',
         actor: { type: 'anonymous', id: 'unknown' },
-        target: { type: AuditResourceType.API, id: null },
+        target: { type: AuditResourceType.API, id: undefined },
         metadata: { reason: 'rate_limited', clientIp, description: 'Signup attempt blocked by rate limit' },
       });
       return new Response(
@@ -55,7 +55,7 @@ async function POSTHandler(req: AuditNextRequest) {
         action: AuditEventType.API_REQUEST,
         outcome: 'FAILURE',
         actor: { type: 'anonymous', id: 'unknown' },
-        target: { type: AuditResourceType.API, id: null },
+        target: { type: AuditResourceType.API, id: undefined },
         metadata: { reason: 'validation_failed', description: 'Signup attempt rejected due to validation errors' },
       });
       return json.badRequest('Validation failed', { issues: parsed.error.flatten() });
@@ -69,7 +69,7 @@ async function POSTHandler(req: AuditNextRequest) {
         action: AuditEventType.API_REQUEST,
         outcome: 'FAILURE',
         actor: { type: 'anonymous', id: 'unknown' },
-        target: { type: AuditResourceType.API, id: null },
+        target: { type: AuditResourceType.API, id: undefined },
         metadata: { reason: 'conflict', conflicts, description: 'Signup attempt blocked by conflicts' },
       });
       return json.badRequest('Already in use', { conflicts });

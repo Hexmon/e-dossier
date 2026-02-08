@@ -40,8 +40,8 @@ async function GETHandler(req: AuditNextRequest) {
         await req.audit.log({
             action: AuditEventType.API_REQUEST,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: null },
-            target: { type: AuditResourceType.USER, id: null },
+            actor: { type: 'anonymous', id: 'unknown' },
+            target: { type: AuditResourceType.USER, id: undefined },
             metadata: {
                 description: 'Checked username availability',
                 username,

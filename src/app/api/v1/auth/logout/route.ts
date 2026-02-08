@@ -106,7 +106,7 @@ async function POSTHandler(req: AuditNextRequest) {
       action: AuditEventType.LOGOUT,
       outcome: 'SUCCESS',
       actor: actorUserId ? { type: 'user', id: actorUserId } : { type: 'anonymous', id: 'unknown' },
-      target: { type: AuditResourceType.USER, id: actorUserId },
+      target: { type: AuditResourceType.USER, id: actorUserId ?? undefined },
       metadata: { actorPresent: Boolean(actorUserId), description: 'User logged out via /api/v1/auth/logout' },
     });
 

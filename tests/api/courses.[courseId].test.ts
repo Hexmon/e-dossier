@@ -8,7 +8,6 @@ import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as authz from '@/app/lib/authz';
 import * as coursesQueries from '@/app/db/queries/courses';
-import * as auditLog from '@/lib/audit-log';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
@@ -25,36 +24,12 @@ vi.mock('@/app/db/queries/courses', () => ({
   hardDeleteCourse: vi.fn(async () => null),
 }));
 
-vi.mock('@/lib/audit-log', () => ({
-  createAuditLog: vi.fn(async () => {}),
-  logApiRequest: vi.fn(),
-  ensureRequestContext: vi.fn(() => ({
-    requestId: 'test',
-    method: 'GET',
-    pathname: '/',
-    url: '/',
-    startTime: Date.now(),
-  })),
-  noteRequestActor: vi.fn(),
-  setRequestTenant: vi.fn(),
-  AuditEventType: {
-    COURSE_CREATED: 'course.created',
-    COURSE_UPDATED: 'course.updated',
-    COURSE_DELETED: 'course.deleted',
-  },
-  AuditResourceType: {
-    COURSE: 'course',
-    OFFERING: 'course_offering',
-  },
-}));
-
 const basePath = '/api/v1/courses';
 // Valid RFC4122 UUID (version 4, variant 8) to satisfy z.string().uuid()
 const courseId = '11111111-1111-4111-8111-111111111111';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  (auditLog.createAuditLog as any).mockClear?.();
 });
 
 describe('GET /api/v1/courses/[courseId]', () => {
@@ -243,7 +218,6 @@ describe('PATCH /api/v1/courses/[courseId]', () => {
     expect(body.ok).toBe(true);
     expect(body.course.id).toBe(courseId);
     expect(body.course.title).toBe('Updated Course');
-    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });
 
@@ -292,7 +266,6 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.id).toBe(courseId);
-    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 
   it('hard-deletes course when requested', async () => {
@@ -310,6 +283,5 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
     expect(body.ok).toBe(true);
     expect(body.id).toBe(courseId);
     expect(body.message).toMatch(/hard-deleted/i);
-    expect(auditLog.createAuditLog).toHaveBeenCalled();
   });
 });

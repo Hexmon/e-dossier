@@ -141,7 +141,7 @@ async function DELETEHandler(req: AuditNextRequest) {
             action: AuditEventType.PLATOON_DELETED,
             outcome: 'SUCCESS',
             actor: { type: 'user', id: adminCtx.userId },
-            target: { type: AuditResourceType.PLATOON, id: null },
+            target: { type: AuditResourceType.PLATOON, id: undefined },
             metadata: {
                 bulk: true,
                 count: deleted.length,

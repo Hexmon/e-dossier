@@ -1,7 +1,7 @@
 // src/app/api/v1/oc/route.ts
 import { z } from 'zod';
 import { db } from '@/app/db/client';
-import { json, handleApiError, ApiError } from '@/app/lib/http';
+import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq } from 'drizzle-orm';
@@ -21,7 +21,7 @@ const createSchema = z.object({
     arrivalAtUniversity: z.coerce.date(),
 });
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
         const authCtx = await requireAuth(req);
         const body = createSchema.parse(await req.json());
@@ -77,13 +77,13 @@ async function POSTHandler(req: NextRequest) {
                 createdAt: ocCadets.createdAt,
             });
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: row.id,
-            description: `Created OC ${row.ocNo}`,
+        await req.audit.log({
+            action: AuditEventType.OC_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: row.id },
             metadata: {
+                description: `Created OC ${row.ocNo}`,
                 ocId: row.id,
                 name: row.name,
                 ocNo: row.ocNo,
@@ -91,19 +91,19 @@ async function POSTHandler(req: NextRequest) {
                 courseId: row.courseId,
                 branch: row.branch,
                 platoonId: row.platoonId,
-                arrivalAtUniversity: row.arrivalAtUniversity,
+                arrivalAtUniversity: row.arrivalAtUniversity?.toISOString?.() ?? row.arrivalAtUniversity,
             },
-            request: req,
         });
+
         return json.created({ message: 'OC created successfully.', oc: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
         const sp = new URL(req.url).searchParams;
 
         const q = (sp.get('q') || '').trim() || undefined;
@@ -215,9 +215,26 @@ async function GETHandler(req: NextRequest) {
 
         const opts = { q, courseId, active: activeOnly, limit, offset };
 
+        const writeAccessAudit = async (count: number) => {
+            await req.audit.log({
+                action: AuditEventType.API_REQUEST,
+                outcome: 'SUCCESS',
+                actor: { type: 'user', id: authCtx.userId },
+                target: { type: AuditResourceType.OC, id: 'collection' },
+                metadata: {
+                    description: 'Retrieved OC list via /api/v1/oc',
+                    count,
+                    query: { q, courseId, active: activeOnly, limit, offset },
+                    includeFlags,
+                    full: wantFullToggle,
+                },
+            });
+        };
+
         // if NO full toggle + NO per-section includes → basic list (old behavior)
         if (!wantFullToggle && !anySectionIncluded) {
             const items = await listOCsBasic(opts);
+            await writeAccessAudit(items.length);
             return json.ok({ message: 'OCs retrieved successfully.', items, count: items.length });
         }
 
@@ -225,6 +242,7 @@ async function GETHandler(req: NextRequest) {
         // (?full=true or ?include=all, but no personal=/delegations=/include=personal, etc.)
         if (wantFullToggle && !anyExplicit) {
             const items = await listOCsFull(opts);
+            await writeAccessAudit(items.length);
             return json.ok({ message: 'OCs retrieved successfully.', items, count: items.length });
         }
 
@@ -269,11 +287,12 @@ async function GETHandler(req: NextRequest) {
             return out;
         });
 
+        await writeAccessAudit(items.length);
         return json.ok({ message: 'OCs retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

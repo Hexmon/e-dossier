@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
@@ -10,23 +9,37 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { createOffering, replaceOfferingInstructors } from '@/app/db/queries/offerings';
 import { courses } from '@/app/db/schema/training/courses';
 import { findMissingInstructorIds } from '@/app/db/queries/instructors';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 const Param = z.object({ courseId: z.string().uuid() });
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
         const sp = new URL(req.url).searchParams;
         const semester = sp.get('semester') ? Number(sp.get('semester')) : undefined;
         const rows = await listCourseOfferings(courseId, semester);
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OFFERING, id: 'collection' },
+            metadata: {
+                description: 'Course offerings retrieved successfully.',
+                courseId,
+                semester: semester ?? null,
+                count: rows.length,
+            },
+        });
+
         return json.ok({ message: 'Course offerings retrieved successfully.', items: rows, count: rows.length });
     } catch (err) { return handleApiError(err); }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ courseId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
@@ -94,13 +107,13 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ cou
             await replaceOfferingInstructors(offering.id, body.instructors);
         }
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.COURSE_OFFERING_CREATED,
-            resourceType: AuditResourceType.OFFERING,
-            resourceId: offering.id,
-            description: `Created course offering ${offering.id} for course ${courseId}`,
+        await req.audit.log({
+            action: AuditEventType.COURSE_OFFERING_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OFFERING, id: offering.id },
             metadata: {
+                description: `Created course offering ${offering.id} for course ${courseId}`,
                 courseId,
                 offeringId: offering.id,
                 subjectId,
@@ -108,9 +121,6 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ cou
                 includeTheory: offering.includeTheory,
                 includePractical: offering.includePractical,
             },
-            after: offering,
-            request: req,
-            required: true,
         });
         return json.created({ message: 'Course offering created successfully.', offeringId: offering.id });
     } catch (err: any) {
@@ -123,6 +133,6 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ cou
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
