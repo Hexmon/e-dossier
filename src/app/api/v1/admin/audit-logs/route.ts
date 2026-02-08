@@ -1,13 +1,13 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { auditLogs } from '@/app/db/schema/auth/audit';
 import { desc, sql } from 'drizzle-orm';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 import { auditLogQuerySchema, buildAuditLogFilters } from '@/app/lib/auditLogsQuery';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
   try {
     await requireAuth(req);
     const { searchParams } = new URL(req.url);
@@ -70,4 +70,4 @@ async function GETHandler(req: NextRequest) {
   }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);

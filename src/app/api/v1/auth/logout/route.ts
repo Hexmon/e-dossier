@@ -1,12 +1,15 @@
 // src/app/api/v1/auth/logout/route.ts
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { clearAuthCookies } from '@/app/lib/cookies';
 import { requireAuth } from '@/app/lib/authz';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import {
+  withAuditRoute,
+  AuditEventType,
+  AuditResourceType,
+} from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-function getExpectedOrigins(req: NextRequest) {
+function getExpectedOrigins(req: AuditNextRequest) {
   const origins = new Set<string>([req.nextUrl.origin]);
   const forwardedHost = req.headers.get('x-forwarded-host');
   const host = forwardedHost ?? req.headers.get('host');
@@ -20,7 +23,7 @@ function getExpectedOrigins(req: NextRequest) {
   return origins;
 }
 
-function originMatches(req: NextRequest) {
+function originMatches(req: AuditNextRequest) {
   const expectedOrigins = getExpectedOrigins(req);
   const origin = req.headers.get('origin');
   const referer = req.headers.get('referer');
@@ -57,11 +60,11 @@ function originMatches(req: NextRequest) {
  * - Sends strict no-cache headers
  * - Uses Clear-Site-Data to wipe cookies & storage for this origin
  * - Returns 204 No Content
- * 
+ *
  * SECURITY NOTE: Kept in PUBLIC_ANY to allow logout even with expired CSRF tokens.
  * Same-origin check provides adequate CSRF protection for logout operations.
  */
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
   try {
     // SECURITY FIX: Enhanced same-origin validation
     if (!originMatches(req)) {
@@ -99,14 +102,12 @@ async function POSTHandler(req: NextRequest) {
     // Server-authoritative cookie clear
     clearAuthCookies(res);
 
-    void createAuditLog({
-      actorUserId,
-      eventType: AuditEventType.LOGOUT,
-      resourceType: AuditResourceType.USER,
-      resourceId: actorUserId,
-      description: 'User logged out via /api/v1/auth/logout',
-      metadata: { actorPresent: Boolean(actorUserId) },
-      request: req,
+    void req.audit.log({
+      action: AuditEventType.LOGOUT,
+      outcome: 'SUCCESS',
+      actor: actorUserId ? { type: 'user', id: actorUserId } : { type: 'anonymous', id: 'unknown' },
+      target: { type: AuditResourceType.USER, id: actorUserId },
+      metadata: { actorPresent: Boolean(actorUserId), description: 'User logged out via /api/v1/auth/logout' },
     });
 
     return res;
@@ -119,7 +120,7 @@ async function POSTHandler(req: NextRequest) {
  * OPTIONS preflight — no CORS advertised; keeps caches off.
  * SECURITY FIX: Enhanced OPTIONS handling
  */
-async function OPTIONSHandler(req: NextRequest) {
+async function OPTIONSHandler(req: AuditNextRequest) {
   try {
     // Same-origin check for OPTIONS as well
     if (!originMatches(req)) {
@@ -137,6 +138,6 @@ async function OPTIONSHandler(req: NextRequest) {
     return json.serverError('Unexpected error handling OPTIONS');
   }
 }
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
 
-export const OPTIONS = withRouteLogging('OPTIONS', OPTIONSHandler);
+export const OPTIONS = withAuditRoute('OPTIONS', OPTIONSHandler);

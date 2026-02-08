@@ -1,5 +1,4 @@
 // src/app/api/v1/oc/route.ts
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
@@ -9,8 +8,8 @@ import { eq } from 'drizzle-orm';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { listOCsBasic, listOCsFull } from '@/app/db/queries/oc';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 // --- Create OC (token required; no admin) -------------------------------
 const createSchema = z.object({

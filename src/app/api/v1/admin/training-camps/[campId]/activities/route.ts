@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import {
@@ -11,10 +10,10 @@ import {
     createTrainingCampActivity,
     getTrainingCamp,
 } from '@/app/db/queries/trainingCamps';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
@@ -31,7 +30,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
@@ -45,24 +44,23 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
             sortOrder: dto.sortOrder ?? 0,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.TRAINING_CAMP_ACTIVITY_CREATED,
-            resourceType: AuditResourceType.TRAINING_CAMP_ACTIVITY,
-            resourceId: row.id,
-            description: `Created training camp activity ${row.name}`,
+        await req.audit.log({
+            action: AuditEventType.TRAINING_CAMP_ACTIVITY_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.TRAINING_CAMP_ACTIVITY, id: row.id },
             metadata: {
+                description: `Created training camp activity ${row.name}`,
                 activityId: row.id,
                 trainingCampId: campId,
                 defaultMaxMarks: row.defaultMaxMarks,
             },
-            request: req,
         });
         return json.created({ message: 'Training camp activity created successfully.', activity: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

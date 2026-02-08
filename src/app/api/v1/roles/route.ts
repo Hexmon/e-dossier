@@ -181,19 +181,20 @@
 // }
 
 // src/app/api/v1/roles/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { NextResponse } from 'next/server';
+import { withAuditRoute } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
   // TODO: fetch real roles from your DB
   return NextResponse.json({ ok: true, message: 'Roles retrieved successfully.', roles: [] }, { status: 200 });
 }
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
   const body = await req.json();
   // TODO: validate & create role
   return NextResponse.json({ ok: true, message: 'Role created successfully.', created: body }, { status: 201 });
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

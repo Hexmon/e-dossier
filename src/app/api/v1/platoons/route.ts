@@ -1,19 +1,22 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { json, handleApiError } from '@/app/lib/http';
 import { platoonCreateSchema } from '@/app/lib/validators';
 import { requireAuth } from '@/app/lib/authz';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import {
+  withAuditRoute,
+  AuditEventType,
+  AuditResourceType,
+} from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 type PgError = { code?: string; detail?: string };
 
 // GET /api/v1/platoons  (PUBLIC)
 // Optional query: ?q=...  (matches key or name, case-insensitive)
 // Optional query: ?includeDeleted=true
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const q = (searchParams.get('q') || '').trim();
@@ -52,7 +55,7 @@ async function GETHandler(req: NextRequest) {
 
 // POST /api/v1/platoons  (ADMIN)
 // { key, name, about? }
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
 
@@ -66,7 +69,7 @@ async function POSTHandler(req: NextRequest) {
         const upKey = data.key.toUpperCase();
         const lcName = data.name.trim().toLowerCase();
 
-        // 🔒 Uniqueness checks (ignore soft-deleted)
+        // Uniqueness checks (ignore soft-deleted)
         const [conflict] = await db
             .select({ id: platoons.id, key: platoons.key, name: platoons.name })
             .from(platoons)
@@ -102,20 +105,17 @@ async function POSTHandler(req: NextRequest) {
                 updatedAt: platoons.updatedAt,
             });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PLATOON_CREATED,
-            resourceType: AuditResourceType.PLATOON,
-            resourceId: row.id,
-            description: `Created platoon ${row.key}`,
+        await req.audit.log({
+            action: AuditEventType.PLATOON_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PLATOON, id: row.id },
             metadata: {
                 platoonId: row.id,
                 key: row.key,
                 name: row.name,
+                description: `Created platoon ${row.key}`,
             },
-            after: row,
-            request: req,
-            required: true,
         });
         return json.created({ message: 'Platoon created successfully.', platoon: row });
     } catch (err) {
@@ -126,7 +126,7 @@ async function POSTHandler(req: NextRequest) {
 
 // DELETE /api/v1/platoons  (ADMIN)
 // Soft-delete ALL platoons (sets deleted_at = now())
-async function DELETEHandler(req: NextRequest) {
+async function DELETEHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
 
@@ -137,26 +137,24 @@ async function DELETEHandler(req: NextRequest) {
             .where(isNull(platoons.deletedAt))
             .returning({ id: platoons.id });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PLATOON_DELETED,
-            resourceType: AuditResourceType.PLATOON,
-            resourceId: null,
-            description: 'Soft-deleted all platoons',
+        await req.audit.log({
+            action: AuditEventType.PLATOON_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PLATOON, id: null },
             metadata: {
                 bulk: true,
                 count: deleted.length,
+                description: 'Soft-deleted all platoons',
             },
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'All platoons soft-deleted.', count: deleted.length });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

@@ -14,6 +14,21 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.809.0
         version: 3.965.0
+      '@hexmon_tech/audit-core':
+        specifier: ^2.0.0
+        version: 2.0.0
+      '@hexmon_tech/audit-export-postgres':
+        specifier: ^2.0.0
+        version: 2.0.0(pg@8.16.3)
+      '@hexmon_tech/audit-next':
+        specifier: ^2.0.0
+        version: 2.0.0(@hexmon_tech/audit-node@2.0.0)(next@15.4.8(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@hexmon_tech/audit-node':
+        specifier: ^2.0.0
+        version: 2.0.0
+      '@hexmon_tech/audit-sink-postgres':
+        specifier: ^2.0.0
+        version: 2.0.0(pg@8.16.3)
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.3))(@types/react@19.2.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -799,6 +814,38 @@ packages:
 
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+
+  '@hexmon_tech/audit-core@2.0.0':
+    resolution: {integrity: sha512-EPh/2/sP6I0f9BS/kDfyw8Ld+VY6FA9JdngEdaf9TFbjRASpWHTz6VraGe9CaiedLMRP7xQ6bGYR+dk6yPLGug==}
+    engines: {node: '>=20.0.0'}
+
+  '@hexmon_tech/audit-export-postgres@2.0.0':
+    resolution: {integrity: sha512-KSQ3q+11tiQSM66FTqG31/FP9NBAvFRZbbuFn2Olx4hpcAIEJkx2G/GSMBo3F584EjyJROgpK2HYekvLoDJz9Q==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      pg: ^8.12.0
+
+  '@hexmon_tech/audit-next@2.0.0':
+    resolution: {integrity: sha512-OJw4b0IkgDqOQl5wbau8qJEDrZ1TPOazCMfA12LkJADNRux4EpJWCGQcgRyiEURUtxg19wmPx4+dZPrNgRsPvQ==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      '@hexmon_tech/audit-node': 2.0.0
+      next: ^16.0.0
+      react: ^18.0.0
+      react-dom: ^18.0.0
+    peerDependenciesMeta:
+      '@hexmon_tech/audit-node':
+        optional: true
+
+  '@hexmon_tech/audit-node@2.0.0':
+    resolution: {integrity: sha512-WyoJY23j4uYd3OmYWviBwjpwCOXTEEIj80KU8p3FN9veIuVWpD7K26j2zZjwjHSxW4nmwjMtGUhMaltMFT2ckA==}
+    engines: {node: '>=20.0.0'}
+
+  '@hexmon_tech/audit-sink-postgres@2.0.0':
+    resolution: {integrity: sha512-s+pa/rG0j2UHdtZzstvInCc9SXGxKacMqiXAT+G7cEp0l7uu+3KdBUu9VajaKJ6ldhjAn77bQ2kXq522H+rlcg==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      pg: ^8.12.0
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -4908,6 +4955,29 @@ snapshots:
       react-dom: 19.1.0(react@19.1.0)
 
   '@floating-ui/utils@0.2.10': {}
+
+  '@hexmon_tech/audit-core@2.0.0': {}
+
+  '@hexmon_tech/audit-export-postgres@2.0.0(pg@8.16.3)':
+    dependencies:
+      '@hexmon_tech/audit-core': 2.0.0
+      pg: 8.16.3
+
+  '@hexmon_tech/audit-next@2.0.0(@hexmon_tech/audit-node@2.0.0)(next@15.4.8(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@hexmon_tech/audit-core': 2.0.0
+      next: 15.4.8(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
+    optionalDependencies:
+      '@hexmon_tech/audit-node': 2.0.0
+
+  '@hexmon_tech/audit-node@2.0.0': {}
+
+  '@hexmon_tech/audit-sink-postgres@2.0.0(pg@8.16.3)':
+    dependencies:
+      '@hexmon_tech/audit-core': 2.0.0
+      pg: 8.16.3
 
   '@humanfs/core@0.19.1': {}
 
