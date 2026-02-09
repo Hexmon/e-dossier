@@ -191,11 +191,16 @@ export default function AcademicTable({
     }, [data]);
 
     const handleSave = async () => {
-        const gpaSuccess = await updateSemesterGPA(semester, {
-            sgpa: parseFloat(sgpa) || undefined,
-            cgpa: parseFloat(cgpa) || undefined,
-            marksScored: parseFloat(marksScored) || undefined,
-        });
+        const trimmedMarks = (marksScored ?? "").trim();
+        let gpaSuccess = true;
+        if (trimmedMarks !== "") {
+            const ms = parseFloat(trimmedMarks);
+            if (Number.isNaN(ms)) {
+                toast.error("Marks scored must be a valid number");
+                return;
+            }
+            gpaSuccess = await updateSemesterGPA(semester, { marksScored: ms });
+        }
 
         if (!gpaSuccess) {
             toast.error("Failed to update semester GPA");
@@ -253,6 +258,13 @@ export default function AcademicTable({
             }
         }
 
+        const refreshed = await getSpecificSemester(semester);
+        if (refreshed) {
+            setSgpa(refreshed.sgpa?.toString() || "");
+            setCgpa(refreshed.cgpa?.toString() || "");
+            setMarksScored(refreshed.marksScored?.toString() || marksScored);
+        }
+
         setIsSaved(true);
         toast.success("Data saved successfully!");
     };
@@ -263,8 +275,6 @@ export default function AcademicTable({
 
     const handleReset = () => {
         setData(initialState);
-        setSgpa("");
-        setCgpa("");
         setMarksScored("");
         setIsSaved(false);
     };
@@ -439,15 +449,7 @@ export default function AcademicTable({
 
                     <tr>
                         <td className="border px-2 py-1">SGPA</td>
-                        <td className="border px-2 py-1" colSpan={11}>
-                            <input
-                                value={sgpa}
-                                disabled={isSaved}
-                                onChange={e => setSgpa(e.target.value)}
-                                className="w-full border px-1 rounded"
-                                placeholder="Enter SGPA"
-                            />
-                        </td>
+                        <td className="border px-2 py-1" colSpan={11}>{sgpa || "-"}</td>
                     </tr>
                     <tr>
                         <td className="border px-2 py-1">Marks(1350)</td>
@@ -463,15 +465,7 @@ export default function AcademicTable({
                     </tr>
                     <tr>
                         <td className="border px-2 py-1">CGPA</td>
-                        <td className="border px-2 py-1" colSpan={11}>
-                            <input
-                                value={cgpa}
-                                disabled={isSaved}
-                                onChange={e => setCgpa(e.target.value)}
-                                className="w-full border px-1 rounded"
-                                placeholder="Enter CGPA"
-                            />
-                        </td>
+                        <td className="border px-2 py-1" colSpan={11}>{cgpa || "-"}</td>
                     </tr>
                 </tbody>
             </table>
