@@ -1,10 +1,13 @@
 // src\app\api\v1\health\route.ts
-import { NextRequest } from 'next/server';
 import { json } from '@/app/lib/http';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import {
+  withAuditRoute,
+  AuditEventType,
+  AuditResourceType,
+} from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(_req: NextRequest) {
+async function GETHandler(_req: AuditNextRequest) {
     try {
         const payload = {
             message: 'Health check passed.',
@@ -13,18 +16,16 @@ async function GETHandler(_req: NextRequest) {
             ts: new Date().toISOString(),
         };
 
-        await createAuditLog({
-            actorUserId: null,
-            eventType: AuditEventType.API_REQUEST,
-            resourceType: AuditResourceType.API,
-            resourceId: null,
-            description: 'Health check invoked',
-            metadata: payload,
-            request: _req,
+        await _req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'anonymous', id: 'unknown' },
+            target: { type: AuditResourceType.API, id: undefined },
+            metadata: { ...payload, description: 'Health check invoked' },
         });
         return json.ok(payload);
     } catch (err) {
         return json.serverError('Health check failed.');
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);

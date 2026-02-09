@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError } from '@/app/lib/http';
@@ -8,8 +7,8 @@ import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq, desc, and, sql } from 'drizzle-orm';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 // Schema for creating/updating inspection
 const inspectionSchema = z.object({
@@ -18,7 +17,7 @@ const inspectionSchema = z.object({
   remarks: z.string().optional(),
 });
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
     const authCtx = await requireAuth(req);
     const { ocId } = await params;
@@ -56,6 +55,19 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
       .where(eq(dossierInspections.ocId, ocId))
       .orderBy(desc(dossierInspections.createdAt));
 
+    await req.audit.log({
+      action: AuditEventType.API_REQUEST,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: authCtx.userId },
+      target: { type: AuditResourceType.OC, id: ocId },
+      metadata: {
+        description: `Dossier inspections retrieved successfully for OC ${ocId}`,
+        ocId,
+        module: 'dossier_inspection',
+        count: inspections.length,
+      },
+    });
+
     return json.ok({
       message: 'Dossier inspections retrieved successfully.',
       inspections,
@@ -65,7 +77,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
   }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
     const authCtx = await requireAuth(req);
     const { ocId } = await params;
@@ -127,20 +139,19 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
       .where(eq(dossierInspections.id, inspection.id))
       .limit(1);
 
-    await createAuditLog({
-      actorUserId: authCtx.userId,
-      eventType: AuditEventType.OC_RECORD_CREATED,
-      resourceType: AuditResourceType.OC,
-      resourceId: ocId,
-      description: `Created dossier inspection for OC ${ocId}`,
+    await req.audit.log({
+      action: AuditEventType.OC_RECORD_CREATED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: authCtx.userId },
+      target: { type: AuditResourceType.OC, id: ocId },
       metadata: {
+        description: `Created dossier inspection for OC ${ocId}`,
         inspectionId: inspection.id,
         ocId,
         inspectorUserId: body.inspectorUserId,
         date: body.date,
         remarks: body.remarks,
       },
-      request: req,
     });
 
     return json.created({
@@ -152,7 +163,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
   }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
     const authCtx = await requireAuth(req);
     const { ocId } = await params;
@@ -218,18 +229,17 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
       .where(eq(dossierInspections.id, inspectionId))
       .limit(1);
 
-    await createAuditLog({
-      actorUserId: authCtx.userId,
-      eventType: AuditEventType.OC_RECORD_UPDATED,
-      resourceType: AuditResourceType.OC,
-      resourceId: ocId,
-      description: `Updated dossier inspection ${inspectionId}`,
+    await req.audit.log({
+      action: AuditEventType.OC_RECORD_UPDATED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: authCtx.userId },
+      target: { type: AuditResourceType.OC, id: ocId },
       metadata: {
+        description: `Updated dossier inspection ${inspectionId}`,
         inspectionId,
         ocId,
         changes: body,
       },
-      request: req,
     });
 
     return json.ok({
@@ -241,7 +251,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
   }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
     const authCtx = await requireAuth(req);
     const { ocId } = await params;
@@ -272,18 +282,17 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
       .delete(dossierInspections)
       .where(eq(dossierInspections.id, inspectionId));
 
-    await createAuditLog({
-      actorUserId: authCtx.userId,
-      eventType: AuditEventType.OC_RECORD_DELETED,
-      resourceType: AuditResourceType.OC,
-      resourceId: ocId,
-      description: `Deleted dossier inspection ${inspectionId}`,
+    await req.audit.log({
+      action: AuditEventType.OC_RECORD_DELETED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: authCtx.userId },
+      target: { type: AuditResourceType.OC, id: ocId },
       metadata: {
+        description: `Deleted dossier inspection ${inspectionId}`,
         inspectionId,
         ocId,
         deletedInspection: existing,
       },
-      request: req,
     });
 
     return json.ok({
@@ -294,7 +303,7 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
   }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

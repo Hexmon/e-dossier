@@ -5,9 +5,17 @@ import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 import type { DisciplineForm as DisciplineFormType } from "@/types/dicp-records";
 import { saveDisciplineForm } from "@/store/slices/disciplineRecordsSlice";
+import { usePunishments } from "@/hooks/usePunishments";
 
 interface Props {
     onSubmit: (data: DisciplineFormType) => Promise<void> | void;
@@ -18,6 +26,11 @@ interface Props {
 
 export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear }: Props) {
     const dispatch = useDispatch();
+    const { punishments, fetchPunishments } = usePunishments();
+
+    // useEffect(() => {
+    //     fetchPunishments();
+    // }, []);
 
     const form = useForm<DisciplineFormType>({
         defaultValues,
@@ -26,20 +39,53 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
     const { control, handleSubmit, register, watch, setValue } = form;
     const { fields, append, remove } = useFieldArray({ control, name: "records" });
 
-    // watch negativePts to compute live cumulative (only show negatives for UI)
+    // watch all records to compute negative pts and cumulative
     const watched = useWatch({ control, name: "records" }) || [];
 
     useEffect(() => {
-        // compute cumulative using the sequence of negativePts and base 0
+        // Auto-calculate negativePts and cumulative for each row
         let total = 0;
+        let hasChanges = false;
+
         for (let i = 0; i < (watched?.length ?? 0); i += 1) {
-            const rec = watched[i] ?? { negativePts: "" };
-            const delta = Number(rec.negativePts ?? 0);
-            total += delta;
-            // always set to form value (string) so backend receives a number if needed later
-            setValue(`records.${i}.cumulative`, String(total), { shouldDirty: true, shouldTouch: false });
+            const rec = watched[i] ?? {};
+
+            // Find the selected punishment to get marksDeduction
+            const selectedPunishment = punishments.find(p => p.title === rec.punishmentAwarded);
+            const marksDeduction = selectedPunishment?.marksDeduction ?? 0;
+            const numPunishments = Number(rec.numberOfPunishments ?? 1);
+
+            // Calculate negative points = marksDeduction * numberOfPunishments
+            const calculatedNegativePts = marksDeduction * numPunishments;
+
+            // Only update if the calculated value is different (prevent infinite loop)
+            if (String(calculatedNegativePts) !== rec.negativePts) {
+                setValue(`records.${i}.negativePts`, String(calculatedNegativePts), {
+                    shouldDirty: true,
+                    shouldTouch: false,
+                    shouldValidate: false
+                });
+                hasChanges = true;
+            }
+
+            // Calculate cumulative
+            total += calculatedNegativePts;
+            if (String(total) !== rec.cumulative) {
+                setValue(`records.${i}.cumulative`, String(total), {
+                    shouldDirty: true,
+                    shouldTouch: false,
+                    shouldValidate: false
+                });
+                hasChanges = true;
+            }
         }
-    }, [JSON.stringify(watched), setValue]);
+    }, [
+        watched?.length,
+        watched?.map(r => r?.punishmentAwarded).join(','),
+        watched?.map(r => r?.numberOfPunishments).join(','),
+        punishments.length,
+        setValue
+    ]);
 
     // Auto-save to Redux on form changes
     useEffect(() => {
@@ -50,6 +96,8 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
                     dateOfOffence: record?.dateOfOffence || "",
                     offence: record?.offence || "",
                     punishmentAwarded: record?.punishmentAwarded || "",
+                    punishmentId: record?.punishmentId || "",
+                    numberOfPunishments: record?.numberOfPunishments || "1",
                     dateOfAward: record?.dateOfAward || "",
                     byWhomAwarded: record?.byWhomAwarded || "",
                     negativePts: record?.negativePts || "",
@@ -69,6 +117,8 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
             dateOfOffence: "",
             offence: "",
             punishmentAwarded: "",
+            punishmentId: "",
+            numberOfPunishments: "1",
             dateOfAward: "",
             byWhomAwarded: "",
             negativePts: "",
@@ -81,20 +131,23 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
                 <table className="w-full table-fixed text-sm">
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="p-2 border">S.No</th>
-                            <th className="p-2 border">Date Of Offence</th>
+                            <th className="p-2 border w-16">S.No</th>
+                            <th className="p-2 border w-32">Date Of Offence</th>
                             <th className="p-2 border">Offence</th>
-                            <th className="p-2 border">Punishment Awarded</th>
-                            <th className="p-2 border">Date Of Award</th>
+                            <th className="p-2 border w-48">Punishment Awarded</th>
+                            <th className="p-2 border w-32">No. of Punishments</th>
+                            <th className="p-2 border w-32">Date Of Award</th>
                             <th className="p-2 border">By Whom Awarded</th>
-                            <th className="p-2 border">Negative Pts</th>
-                            <th className="p-2 border">Cumulative</th>
-                            <th className="p-2 border">Action</th>
+                            <th className="p-2 border w-24">Negative Pts</th>
+                            <th className="p-2 border w-24">Cumulative</th>
+                            <th className="p-2 border w-24">Action</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {fields.map((field, index) => {
+                            const currentRecord = watched?.[index];
+
                             return (
                                 <tr key={field.id}>
                                     <td className="p-2 border text-center">
@@ -110,7 +163,46 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Input {...register(`records.${index}.punishmentAwarded`)} />
+                                        <Select
+                                            value={currentRecord?.punishmentAwarded || ""}
+                                            onValueChange={(value) => {
+                                                // Find the selected punishment to get its ID
+                                                const selectedPunishment = punishments.find(p => p.title === value);
+
+                                                setValue(`records.${index}.punishmentAwarded`, value, {
+                                                    shouldDirty: true,
+                                                    shouldTouch: true
+                                                });
+
+                                                // Store the punishment ID
+                                                if (selectedPunishment?.id) {
+                                                    setValue(`records.${index}.punishmentId`, selectedPunishment.id, {
+                                                        shouldDirty: true,
+                                                        shouldTouch: true
+                                                    });
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select punishment" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {punishments.map((punishment) => (
+                                                    <SelectItem key={punishment.id} value={punishment.title}>
+                                                        {punishment.title} ({punishment.marksDeduction} pts)
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </td>
+
+                                    <td className="p-2 border">
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            {...register(`records.${index}.numberOfPunishments`)}
+                                            defaultValue="1"
+                                        />
                                     </td>
 
                                     <td className="p-2 border">
@@ -122,7 +214,11 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Input type="number" {...register(`records.${index}.negativePts`)} />
+                                        <Input
+                                            disabled
+                                            value={currentRecord?.negativePts || "0"}
+                                            className="bg-gray-100 text-center"
+                                        />
                                     </td>
 
                                     <td className="p-2 border">
@@ -130,8 +226,8 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
                                         <Input
                                             disabled
                                             value={
-                                                Number((watched?.[index]?.cumulative ?? "0")) < 0
-                                                    ? String(watched[index].cumulative)
+                                                Number((currentRecord?.cumulative ?? "0")) < 0
+                                                    ? String(currentRecord.cumulative)
                                                     : ""
                                             }
                                             className="bg-gray-100 text-center"

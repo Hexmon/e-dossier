@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useState, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { getAllDisciplineRecords, updateAdminDisciplineRecord, deleteAdminDisciplineRecord } from "@/app/lib/api/disciplineApi";
+import {
+    getAllDisciplineRecords,
+    updateAdminDisciplineRecord,
+    deleteAdminDisciplineRecord,
+} from "@/app/lib/api/disciplineApi";
 
 export interface AdminDisciplineRow {
     id: string;
@@ -20,74 +24,78 @@ export interface AdminDisciplineRow {
 }
 
 export function useDisciplineRecordsAdmin() {
-    const [records, setRecords] = useState<AdminDisciplineRow[]>([]);
-    const [loading, setLoading] = useState(false);
-    const hasFetchedRef = useRef(false);
+    const queryClient = useQueryClient();
 
-    const fetchAll = useCallback(async () => {
-        if (hasFetchedRef.current) return;
+    const { data: records = [], isLoading: loading } = useQuery({
+        queryKey: ["disciplineRecords"],
+        queryFn: async () => {
+            try {
+                const discRecords = await getAllDisciplineRecords();
 
-        try {
-            setLoading(true);
-            hasFetchedRef.current = true;
+                const allRecords: AdminDisciplineRow[] = discRecords.map((rec) => ({
+                    id: rec.id || `${rec.ocId}-${rec.semester}-${rec.dateOfOffence}`,
+                    ocId: rec.ocId || "",
+                    ocName: rec.ocName || "",
+                    ocNo: rec.ocNo || "",
+                    semester: rec.semester,
+                    punishment: rec.punishmentAwarded || "-",
+                    points: rec.pointsDelta || 0,
+                    dateOfOffence: rec.dateOfOffence || "-",
+                    offence: rec.offence || "-",
+                    dateOfAward: rec.awardedOn || "-",
+                    byWhomAwarded: rec.awardedBy || "-",
+                }));
 
-            const discRecords = await getAllDisciplineRecords();
+                return allRecords;
+            } catch (err) {
+                toast.error("Failed to load discipline records");
+                console.error(err);
+                return [];
+            }
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
-            const allRecords: AdminDisciplineRow[] = discRecords.map(rec => ({
-                id: rec.id || `${rec.ocId}-${rec.semester}-${rec.dateOfOffence}`,
-                ocId: rec.ocId || "",
-                ocName: rec.ocName || "",
-                ocNo: rec.ocNo || "",
-                semester: rec.semester,
-                punishment: rec.punishmentAwarded || "-",
-                points: rec.pointsDelta || 0,
-                dateOfOffence: rec.dateOfOffence || "-",
-                offence: rec.offence || "-",
-                dateOfAward: rec.awardedOn || "-",
-                byWhomAwarded: rec.awardedBy || "-",
-            }));
-
-            setRecords(allRecords);
-        } catch (err) {
-            toast.error("Failed to load discipline records");
-            console.error(err);
-            hasFetchedRef.current = false; // Allow retry on error
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const updateRecord = useCallback(async (id: string, payload: Record<string, unknown>) => {
-        try {
-            await updateAdminDisciplineRecord(id, payload);
+    const updateMutation = useMutation({
+        mutationFn: async ({
+            id,
+            payload,
+        }: {
+            id: string;
+            payload: Record<string, unknown>;
+        }) => {
+            return await updateAdminDisciplineRecord(id, payload);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["disciplineRecords"] });
             toast.success("Discipline record updated successfully");
-            // Refetch to get updated data
-            hasFetchedRef.current = false;
-            await fetchAll();
-        } catch (err) {
+        },
+        onError: (err) => {
             toast.error("Failed to update discipline record");
             console.error(err);
-        }
-    }, [fetchAll]);
+        },
+    });
 
-    const deleteRecord = useCallback(async (id: string) => {
-        try {
-            await deleteAdminDisciplineRecord(id);
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            return await deleteAdminDisciplineRecord(id);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["disciplineRecords"] });
             toast.success("Discipline record deleted successfully");
-            // Refetch to get updated data
-            hasFetchedRef.current = false;
-            await fetchAll();
-        } catch (err) {
+        },
+        onError: (err) => {
             toast.error("Failed to delete discipline record");
             console.error(err);
-        }
-    }, [fetchAll]);
+        },
+    });
 
     return {
         records,
         loading,
-        fetchAll,
-        updateRecord,
-        deleteRecord,
+        fetchAll: () => queryClient.invalidateQueries({ queryKey: ["disciplineRecords"] }),
+        updateRecord: (id: string, payload: Record<string, unknown>) =>
+            updateMutation.mutateAsync({ id, payload }),
+        deleteRecord: deleteMutation.mutateAsync,
     };
 }

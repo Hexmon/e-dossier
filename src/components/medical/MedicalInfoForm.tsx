@@ -12,6 +12,15 @@ import { saveMedicalInfoForm } from "@/store/slices/medicalInfoSlice";
 interface Props {
     onSubmit: (data: MedicalInfoForm) => void;
     disabled: boolean;
+    detailsEditing: boolean;
+    canEditDetails: boolean;
+    onDetailsEdit: () => void;
+    onDetailsCancel: () => void;
+    onDetailsSave: (details: {
+        medicalHistory: string;
+        medicalIssues: string;
+        allergies: string;
+    }) => void;
     defaultValues: MedicalInfoForm;
     ocId: string;
     onClear: () => void;
@@ -20,6 +29,11 @@ interface Props {
 export default function MedicalInfoFormComponent({
     onSubmit,
     disabled,
+    detailsEditing,
+    canEditDetails,
+    onDetailsEdit,
+    onDetailsCancel,
+    onDetailsSave,
     defaultValues,
     ocId,
     onClear
@@ -30,7 +44,7 @@ export default function MedicalInfoFormComponent({
         defaultValues,
     });
 
-    const { control, handleSubmit, register, reset, watch } = form;
+    const { control, handleSubmit, register, getValues, watch } = form;
 
     const { fields, append, remove } = useFieldArray({ control, name: "medInfo" });
 
@@ -142,6 +156,44 @@ export default function MedicalInfoFormComponent({
                     placeholder="Allergies"
                     disabled={disabled}
                 />
+            </div>
+
+            <div className="mt-3 flex justify-center gap-2">
+                {detailsEditing ? (
+                    <>
+                        <Button
+                            type="button"
+                            size="sm"
+                            onClick={() =>
+                                onDetailsSave({
+                                    medicalHistory: getValues("medicalHistory") || "",
+                                    medicalIssues: getValues("medicalIssues") || "",
+                                    allergies: getValues("allergies") || "",
+                                })
+                            }
+                        >
+                            Save Details
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={onDetailsCancel}
+                        >
+                            Cancel
+                        </Button>
+                    </>
+                ) : (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={onDetailsEdit}
+                        disabled={!canEditDetails}
+                    >
+                        Edit Details
+                    </Button>
+                )}
             </div>
 
             <div className="flex flex-col items-center mt-4 gap-2">

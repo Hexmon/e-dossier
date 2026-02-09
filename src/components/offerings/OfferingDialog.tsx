@@ -18,6 +18,7 @@ interface OfferingDialogProps {
     isLoading?: boolean;
     subjects?: Array<{ id: string; code: string; name: string }>;
     instructors?: Array<{ id: string; name: string; email: string }>;
+    defaultSemester?: number;
 }
 
 export default function OfferingDialog({
@@ -28,6 +29,7 @@ export default function OfferingDialog({
     isLoading = false,
     subjects = [],
     instructors = [],
+    defaultSemester,
 }: OfferingDialogProps) {
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -38,7 +40,6 @@ export default function OfferingDialog({
                         {offering ? "Edit Offering" : "Add New Offering"}
                     </DialogTitle>
                 </DialogHeader>
-
                 <OfferingForm
                     offering={offering}
                     onSubmit={onSubmit}
@@ -46,6 +47,7 @@ export default function OfferingDialog({
                     isLoading={isLoading}
                     subjects={subjects}
                     instructors={instructors}
+                    defaultSemester={defaultSemester}
                 />
             </DialogContent>
         </Dialog>

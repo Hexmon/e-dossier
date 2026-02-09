@@ -22,6 +22,7 @@ interface OfferingFormProps {
     isLoading?: boolean;
     subjects?: Array<{ id: string; code: string; name: string }>;
     instructors?: Array<{ id: string; name: string; email: string }>;
+    defaultSemester?: number;
 }
 
 export default function OfferingForm({
@@ -31,41 +32,42 @@ export default function OfferingForm({
     isLoading = false,
     subjects = [],
     instructors = [],
+    defaultSemester,
 }: OfferingFormProps) {
-    const [formData, setFormData] = useState<OfferingCreate>({
-        subjectId: "",
-        semester: 1,
-        includeTheory: true,
-        includePractical: false,
-        theoryCredits: 0,
-        practicalCredits: null,
-        instructors: [],
-    });
-
-    useEffect(() => {
+    const getInitialFormData = (): OfferingCreate => {
         if (offering) {
-            const { id, courseId, subjectCode, subjectName, createdAt, updatedAt, deletedAt, ...rest } = offering;
-            setFormData({
-                subjectId: rest.subjectId || "",
-                semester: rest.semester || 1,
-                includeTheory: rest.includeTheory ?? true,
-                includePractical: rest.includePractical ?? false,
-                theoryCredits: rest.theoryCredits || 0,
-                practicalCredits: rest.practicalCredits || null,
-                instructors: rest.instructors || [],
-            });
+            const subjectId = offering.subjectId || offering.subject?.id || "";
+
+            return {
+                subjectId: subjectId,
+                semester: offering.semester || 1,
+                includeTheory: offering.includeTheory ?? true,
+                includePractical: offering.includePractical ?? false,
+                theoryCredits: offering.theoryCredits || 0,
+                practicalCredits: offering.practicalCredits || null,
+                instructors: (offering.instructors || []).map(inst => ({
+                    instructorId: inst.instructorId || "",
+                    role: inst.role || "ASSISTANT",
+                })),
+            };
         } else {
-            setFormData({
+            return {
                 subjectId: "",
-                semester: 1,
+                semester: defaultSemester ?? 1,
                 includeTheory: true,
                 includePractical: false,
                 theoryCredits: 0,
                 practicalCredits: null,
                 instructors: [],
-            });
+            };
         }
-    }, [offering]);
+    };
+
+    const [formData, setFormData] = useState<OfferingCreate>(getInitialFormData);
+
+    useEffect(() => {
+        setFormData(getInitialFormData());
+    }, [offering?.id]);
 
     const handleChange = (field: keyof OfferingCreate, value: string | number | boolean | null | OfferingInstructor[]) => {
         setFormData((prev) => ({
@@ -245,7 +247,8 @@ export default function OfferingForm({
                 ) : (
                     <div className="space-y-3">
                         {formData.instructors.map((instructor, index) => {
-                            const { instructorId = "", role = "SECONDARY" } = instructor;
+                            const { instructorId = "", role = "ASSISTANT" } = instructor;
+
                             return (
                                 <div key={index} className="flex gap-2 items-start p-3 border rounded-md">
                                     <div className="flex-1 space-y-2">

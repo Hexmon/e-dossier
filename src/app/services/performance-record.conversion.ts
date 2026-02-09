@@ -1,4 +1,4 @@
-import type { SubjectKey } from './performance-record.constants';
+﻿import type { SubjectKey } from './performance-record.constants';
 
 export type ConvertInput = {
     semester: number;

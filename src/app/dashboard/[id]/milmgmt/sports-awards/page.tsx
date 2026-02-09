@@ -185,7 +185,6 @@ export default function SportsGamesPage() {
     useEffect(() => {
         const defaultVals = getDefaultValues();
         lastSavedData.current = JSON.stringify(defaultVals);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
     // Validation helper

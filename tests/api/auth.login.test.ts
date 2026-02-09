@@ -3,7 +3,6 @@ import { POST as postLogin } from '@/app/api/v1/auth/login/route';
 import { makeJsonRequest, createRouteContext } from '../utils/next';
 import * as ratelimit from '@/lib/ratelimit';
 import * as accountLockout from '@/app/db/queries/account-lockout';
-import * as auditLog from '@/lib/audit-log';
 import * as appointmentsQueries from '@/app/db/queries/appointments';
 import * as jwt from '@/app/lib/jwt';
 import * as cookies from '@/app/lib/cookies';
@@ -65,29 +64,6 @@ vi.mock('@/app/db/queries/account-lockout', () => ({
   recordLoginAttempt: vi.fn(async () => {}),
   isAccountLocked: vi.fn(async () => null),
   checkAndLockAccount: vi.fn(async () => null),
-}));
-
-vi.mock('@/lib/audit-log', () => ({
-  createAuditLog: vi.fn(async () => {}),
-  logLoginSuccess: vi.fn(async () => {}),
-  logLoginFailure: vi.fn(async () => {}),
-  logAccountLocked: vi.fn(async () => {}),
-  logApiRequest: vi.fn(),
-  ensureRequestContext: vi.fn(() => ({
-    requestId: 'test',
-    method: 'POST',
-    pathname: '/',
-    url: '/',
-    startTime: Date.now(),
-  })),
-  noteRequestActor: vi.fn(),
-  setRequestTenant: vi.fn(),
-  AuditEventType: {
-    API_REQUEST: 'api.request',
-  },
-  AuditResourceType: {
-    API: 'api',
-  },
 }));
 
 vi.mock('@/app/lib/jwt', () => ({
@@ -200,6 +176,5 @@ describe('POST /api/v1/auth/login', () => {
     expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', success: true }),
     );
-    expect(auditLog.logLoginSuccess).toHaveBeenCalled();
   });
 });

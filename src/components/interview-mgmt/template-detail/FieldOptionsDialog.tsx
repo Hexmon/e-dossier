@@ -1,7 +1,8 @@
 // components/interview-mgmt/template-detail/FieldOptionsDialog.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Dialog,
     DialogContent,
@@ -13,8 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Save } from "lucide-react";
-import { useInterviewTemplates } from "@/hooks/useInterviewTemplates";
-import { Field, FieldOption, FieldOptionCreate } from "@/app/lib/api/Interviewtemplateapi";
+import { useInterviewTemplates, QUERY_KEYS } from "@/hooks/useInterviewTemplates";
+import { Field, FieldOption, FieldOptionCreate, listFieldOptions } from "@/app/lib/api/Interviewtemplateapi";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -39,15 +40,27 @@ export default function FieldOptionsDialog({
     templateId,
     field,
 }: FieldOptionsDialogProps) {
-    const {
-        loading,
-        fetchFieldOptions,
-        addFieldOption,
-        editFieldOption,
-        removeFieldOption,
-    } = useInterviewTemplates();
+    const queryClient = useQueryClient();
+    const { addFieldOption, editFieldOption, removeFieldOption } = useInterviewTemplates();
 
-    const [options, setOptions] = useState<FieldOption[]>([]);
+    const { data: options = [], isLoading } = useQuery({
+        queryKey: QUERY_KEYS.fieldOptions(templateId, field.id),
+        queryFn: async () => {
+            const data = await listFieldOptions(templateId, field.id);
+            return data?.options ?? [];
+        },
+        enabled: open && templateId.length > 0 && field.id.length > 0,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const invalidateOptions = () =>
+        queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.fieldOptions(templateId, field.id),
+        });
+
+    // -------------------------------------------------------------------------
+    // Local UI state
+    // -------------------------------------------------------------------------
     const [isAdding, setIsAdding] = useState(false);
     const [editingOption, setEditingOption] = useState<FieldOption | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -57,17 +70,6 @@ export default function FieldOptionsDialog({
         label: "",
         sortOrder: 0,
     });
-
-    useEffect(() => {
-        if (open && field.id) {
-            loadOptions();
-        }
-    }, [open, field.id]);
-
-    const loadOptions = async () => {
-        const result = await fetchFieldOptions(templateId, field.id);
-        setOptions(result);
-    };
 
     const handleAddNew = () => {
         setEditingOption(null);
@@ -92,8 +94,11 @@ export default function FieldOptionsDialog({
 
     const confirmDelete = async () => {
         if (optionToDelete) {
-            await removeFieldOption(templateId, field.id, optionToDelete, false);
-            await loadOptions();
+            try {
+                await removeFieldOption(templateId, field.id, optionToDelete, false);
+                await invalidateOptions();
+            } catch {
+            }
         }
         setDeleteDialogOpen(false);
         setOptionToDelete(null);
@@ -102,13 +107,17 @@ export default function FieldOptionsDialog({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (editingOption) {
-            await editFieldOption(templateId, field.id, editingOption.id, formData);
-        } else {
-            await addFieldOption(templateId, field.id, formData);
+        try {
+            if (editingOption) {
+                await editFieldOption(templateId, field.id, editingOption.id, formData);
+            } else {
+                await addFieldOption(templateId, field.id, formData);
+            }
+            await invalidateOptions();
+        } catch {
+            return;
         }
 
-        await loadOptions();
         setIsAdding(false);
         setEditingOption(null);
         setFormData({ code: "", label: "", sortOrder: 0 });
@@ -190,7 +199,7 @@ export default function FieldOptionsDialog({
                                     <Button type="button" variant="outline" onClick={handleCancel}>
                                         Cancel
                                     </Button>
-                                    <Button type="submit" disabled={loading}>
+                                    <Button type="submit" disabled={isLoading}>
                                         <Save className="h-4 w-4 mr-2" />
                                         {editingOption ? "Save Changes" : "Add Option"}
                                     </Button>
@@ -198,7 +207,7 @@ export default function FieldOptionsDialog({
                             </form>
                         )}
 
-                        {loading ? (
+                        {isLoading ? (
                             <div className="text-center py-8">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                             </div>

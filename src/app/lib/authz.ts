@@ -6,7 +6,6 @@ import { verifyAccessJWT } from '@/app/lib/jwt';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { eq } from 'drizzle-orm'; 
-import { ensureRequestContext, noteRequestActor } from '@/lib/audit-log';
 
 export function hasAdminRole(roles?: string[]) {
   return Array.isArray(roles) && roles.some(r =>
@@ -37,15 +36,12 @@ export async function requireAuth(req: NextRequest) {
   if (!token) throw new ApiError(401, 'Unauthorized', 'unauthorized');
 
   try {
-    ensureRequestContext(req);
     const payload = await verifyAccessJWT(token);
-    const res = {
+    return {
       userId: String(payload.sub),
       roles: (payload.roles ?? []) as string[],
       claims: payload,
     };
-    noteRequestActor(req, res.userId, res.roles);
-    return res;
   } catch (e) {
     // signature/exp/nbf/iss/aud failure
     throw new ApiError(401, 'Unauthorized', 'invalid_token');

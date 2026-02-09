@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import {
@@ -9,12 +8,13 @@ import {
     createOlqSubtitle,
     listOlqSubtitles,
 } from '@/app/db/queries/olq';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
+        const { ocId } = await params;
 
         const sp = new URL(req.url).searchParams;
         const qp = olqSubtitleQuerySchema.parse({
@@ -26,15 +26,32 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
             categoryId: qp.categoryId,
             isActive: qp.isActive,
         });
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: 'OLQ subtitles retrieved successfully.',
+                ocId,
+                module: 'olq_subtitles',
+                categoryId: qp.categoryId,
+                isActive: qp.isActive,
+                count: items.length,
+            },
+        });
+
         return json.ok({ message: 'OLQ subtitles retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
+        const { ocId } = await params;
 
         const dto = olqSubtitleCreateSchema.parse(await req.json());
         const row = await createOlqSubtitle({
@@ -45,24 +62,23 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
             isActive: dto.isActive ?? true,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.OC_RECORD_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: null,
-            description: `Created OLQ subtitle ${row.id}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Created OLQ subtitle ${row.id}`,
                 module: 'olq_subtitles',
                 subtitleId: row.id,
                 categoryId: dto.categoryId,
             },
-            request: req,
         });
         return json.created({ message: 'OLQ subtitle created successfully.', subtitle: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

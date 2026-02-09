@@ -39,7 +39,7 @@ export default function OCFilters({
     return (
         <div className="grid grid-cols-5 gap-3">
             <Input
-                placeholder="Search name / TES no…"
+                placeholder="Search name / TES no..."
                 value={search}
                 onChange={(e) => onSearch(e.target.value)}
             />
@@ -75,7 +75,7 @@ export default function OCFilters({
                 value={branchFilter}
                 onChange={(e) => onBranchChange(e.target.value)}
             >
-                <option value="">Branch</option>
+                <option value="">All Branches</option>
                 <option value="O">O</option>
                 <option value="E">E</option>
                 <option value="M">M</option>
@@ -86,7 +86,7 @@ export default function OCFilters({
                 value={statusFilter}
                 onChange={(e) => onStatusChange(e.target.value)}
             >
-                <option value="">Status</option>
+                <option value="">All Status</option>
                 <option value="ACTIVE">ACTIVE</option>
                 <option value="DELEGATED">DELEGATED</option>
                 <option value="WITHDRAWN">WITHDRAWN</option>

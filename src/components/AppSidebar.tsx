@@ -28,9 +28,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Image from "next/image";
 import { MenuSection } from "@/types/appSidebar";
 import { menuItems } from "@/constants/app.constants";
-import { fetchMe, MeResponse } from "@/app/lib/api/me";
+import { useMe } from "@/hooks/useMe";
+import { useUserAppointments } from "@/hooks/useUserAppointments";
 import OCSelectModal from "@/components/modals/OCSelectModal";
-import { listAppointments } from "@/app/lib/api/AppointmentFilterApi";
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -40,8 +40,9 @@ export function AppSidebar() {
 
   const [openGroups, setOpenGroups] = useState<string[]>(["Interview"]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [checkingAdmin, setCheckingAdmin] = useState(true);
+
+  // Shared React Query hooks - no manual useEffect needed
+  const { data: meData, isLoading: meLoading } = useMe();
 
   const isActive = (path: string) => pathname === path;
 
@@ -53,46 +54,11 @@ export function AppSidebar() {
     );
   };
 
-  const [data, setData] = useState<MeResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadMeSafely = async (
-    setData: (d: any) => void,
-    setLoading: (v: boolean) => void,
-    isMounted: () => boolean
-  ) => {
-    setLoading(true);
-
-    try {
-      const res = await fetchMe();
-      if (isMounted()) {
-        setData(res);
-      }
-    } catch (err) {
-      console.error("Failed to load /me:", err);
-    } finally {
-      if (isMounted()) {
-        setLoading(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    let mounted = true;
-    const isMounted = () => mounted;
-
-    loadMeSafely(setData, setLoading, isMounted);
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   const {
     user = {},
     roles = [],
     apt = {},
-  } = (data ?? {}) as Partial<MeResponse>;
+  } = meData ?? {};
 
   const {
     id = "",
@@ -102,39 +68,15 @@ export function AppSidebar() {
   // Extract user ID from the data
   const userId = (user as any)?.id || "";
 
-  // Check if user is admin by fetching their appointments
-  useEffect(() => {
-    if (!userId) {
-      setCheckingAdmin(false);
-      return;
-    }
+  // Fetch user appointments and derive admin status in one query
+  // No manual useEffect needed - React Query handles caching and deduplication
+  const {
+    data: appointmentsData,
+    isLoading: appointmentsLoading,
+  } = useUserAppointments(userId);
 
-    const checkAdminStatus = async () => {
-      setCheckingAdmin(true);
-      try {
-        const { appointments } = await listAppointments({ userId, active: true });
-
-        // Get the first active appointment (or the most recent one)
-        const activeAppointment = appointments.find(apt => !apt.endsAt) || appointments[0];
-
-        if (activeAppointment) {
-          // Check if positionName is "Admin" (case-insensitive)
-          const positionName = activeAppointment.positionName || "";
-          const normalizedPosition = positionName.toLowerCase();
-          setIsAdmin(normalizedPosition === "admin" || normalizedPosition === "super admin");
-        } else {
-          setIsAdmin(false);
-        }
-      } catch (err) {
-        console.error("Failed to check admin status:", err);
-        setIsAdmin(false);
-      } finally {
-        setCheckingAdmin(false);
-      }
-    };
-
-    checkAdminStatus();
-  }, [userId]);
+  const isAdmin = appointmentsData?.isAdmin ?? false;
+  const checkingAdmin = meLoading || appointmentsLoading;
 
   // Handle menu item click
   const handleMenuItemClick = (item: any, e: React.MouseEvent, section: MenuSection) => {
