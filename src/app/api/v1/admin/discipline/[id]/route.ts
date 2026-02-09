@@ -1,14 +1,14 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { ocDiscipline } from '@/app/db/schema/training/oc';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { eq } from 'drizzle-orm';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
 
         const { id } = await params;
         const body = await req.json();
@@ -39,15 +39,27 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
             return json.notFound('Discipline record not found');
         }
 
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.API, id: `admin.discipline.${id}` },
+            metadata: {
+                description: `Discipline record ${id} updated successfully.`,
+                recordId: id,
+            },
+            diff: { before: undefined, after: updated },
+        });
+
         return json.ok({ message: 'Discipline record updated successfully.', data: updated });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
 
         const { id } = await params;
 
@@ -60,11 +72,23 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
             return json.notFound('Discipline record not found');
         }
 
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.API, id: `admin.discipline.${id}` },
+            metadata: {
+                description: `Discipline record ${id} deleted successfully.`,
+                recordId: id,
+            },
+            diff: { before: deleted, after: undefined },
+        });
+
         return json.ok({ message: 'Discipline record deleted successfully.' });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

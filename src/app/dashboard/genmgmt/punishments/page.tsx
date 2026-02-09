@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -38,15 +38,10 @@ export default function PunishmentManagementPage() {
     const {
         loading,
         punishments,
-        fetchPunishments,
         addPunishment,
         editPunishment,
         removePunishment,
-    } = usePunishments();
-
-    useEffect(() => {
-        fetchPunishments();
-    }, []);
+    } = usePunishments({ q: searchQuery });
 
     const handleLogout = () => {
         console.log("Logout clicked");
@@ -55,7 +50,6 @@ export default function PunishmentManagementPage() {
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
-        fetchPunishments({ q: query });
     };
 
     const handleAddPunishment = async (newPunishment: PunishmentCreate) => {
@@ -64,14 +58,12 @@ export default function PunishmentManagementPage() {
         if (editingId) {
             const result = await editPunishment(editingId, newPunishment);
             if (result) {
-                await fetchPunishments({ q: searchQuery });
                 setIsDialogOpen(false);
                 setEditingPunishment(undefined);
             }
         } else {
             const result = await addPunishment(newPunishment);
             if (result) {
-                await fetchPunishments({ q: searchQuery });
                 setIsDialogOpen(false);
             }
         }
@@ -92,10 +84,7 @@ export default function PunishmentManagementPage() {
 
     const confirmDelete = async () => {
         if (punishmentToDelete) {
-            const result = await removePunishment(punishmentToDelete, true);
-            if (result) {
-                await fetchPunishments({ q: searchQuery });
-            }
+            await removePunishment(punishmentToDelete, true);
         }
         setDeleteConfirmOpen(false);
         setPunishmentToDelete(null);

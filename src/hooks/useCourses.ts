@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
     getAllCourses,
     createCourse,
@@ -8,16 +9,6 @@ import {
     deleteCourse,
     CourseResponse,
 } from "@/app/lib/api/courseApi";
-
-export interface Course {
-    id: string;
-    code: string;
-    title: string;
-    notes?: string;
-    startDate?: string;
-    endDate?: string;
-    trgModel?: number;
-}
 
 export interface UICourse {
     id: string;
@@ -52,67 +43,75 @@ function toUICourse(course: CourseResponse): UICourse {
 }
 
 export function useCourses() {
-    const [courses, setCourses] = useState<UICourse[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
+    const queryClient = useQueryClient();
 
-    const fetchCourses = useCallback(async () => {
-        setLoading(true);
-        try {
+    const { data: courses = [], isLoading: loading } = useQuery({
+        queryKey: ["courses"],
+        // queryFn always returns the raw shape — this is what goes into the cache
+        queryFn: async () => {
             const response = await getAllCourses();
-            const items: CourseResponse[] = response?.items ?? [];
+            return response?.items ?? [];
+        },
+        // select transforms per-consumer without touching the cache
+        select: (items: CourseResponse[]) => items.map(toUICourse),
+    });
 
-            const mapped = items.map((item) => toUICourse(item));
-            setCourses(mapped);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const addCourse = useCallback(
-        async (data: Omit<UICourse, "id">) => {
+    const addCourseMutation = useMutation({
+        mutationFn: async (data: Omit<UICourse, "id">) => {
             const payload = {
                 code: data.courseNo ?? "",
                 title: `Course ${data.courseNo ?? ""}`,
                 notes: `Start: ${data.startDate ?? ""}, End: ${data.endDate ?? ""}`,
             };
-
-            const created = await createCourse(payload);
-            const mapped = toUICourse(created);
-
-            setCourses(prev => [...prev, mapped]);
-            return mapped;
+            return await createCourse(payload);
         },
-        []
-    );
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["courses"] });
+            toast.success("Course added successfully");
+        },
+        onError: () => {
+            toast.error("Failed to add course");
+        },
+    });
 
-    const editCourse = useCallback(
-        async (id: string, data: Omit<UICourse, "id">) => {
+    const editCourseMutation = useMutation({
+        mutationFn: async ({ id, data }: { id: string; data: Omit<UICourse, "id"> }) => {
             const payload = {
                 code: data.courseNo ?? "",
                 title: `Course ${data.courseNo ?? ""}`,
                 notes: `Start: ${data.startDate ?? ""}, End: ${data.endDate ?? ""}`,
             };
-
-            await updateCourse(id, payload);
-
-            setCourses(prev =>
-                prev.map(c => (c.id === id ? { ...c, ...data } : c))
-            );
+            return await updateCourse(id, payload);
         },
-        []
-    );
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["courses"] });
+            toast.success("Course updated successfully");
+        },
+        onError: () => {
+            toast.error("Failed to update course");
+        },
+    });
 
-    const removeCourse = useCallback(async (id: string) => {
-        await deleteCourse(id);
-        setCourses((prev) => prev.filter((c) => c.id !== id));
-    }, []);
+    const removeCourseMutation = useMutation({
+        mutationFn: async (id: string) => {
+            await deleteCourse(id);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["courses"] });
+            toast.success("Course deleted successfully");
+        },
+        onError: () => {
+            toast.error("Failed to delete course");
+        },
+    });
 
     return {
         courses,
         loading,
-        fetchCourses,
-        addCourse,
-        editCourse,
-        removeCourse,
+        fetchCourses: () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
+        addCourse: addCourseMutation.mutateAsync,
+        editCourse: (id: string, data: Omit<UICourse, "id">) =>
+            editCourseMutation.mutateAsync({ id, data }),
+        removeCourse: removeCourseMutation.mutateAsync,
     };
 }

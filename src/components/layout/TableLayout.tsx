@@ -298,7 +298,7 @@ export function UniversalTable<T extends Record<string, any>>({
     };
 
     const tableClasses = [
-        'rounded-md border border-border/50 overflow-hidden',
+        'rounded-md border border-border/50 overflow-x-auto overflow-y-hidden',
         styling.className,
     ].filter(Boolean).join(' ');
 
@@ -422,7 +422,7 @@ export function UniversalTable<T extends Record<string, any>>({
                                     ))}
                                     {actions.length > 0 && (
                                         <td className="px-3 py-2">
-                                            <div className="flex gap-2">
+                                            <div className="flex flex-wrap gap-2">
                                                 {actions.map((action) => {
                                                     if (action.condition && !action.condition(row, index)) {
                                                         return null;

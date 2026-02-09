@@ -198,7 +198,6 @@ export default function SpeedMarchPage() {
     useEffect(() => {
         const defaultVals = getDefaultValues();
         lastSavedData.current = JSON.stringify(defaultVals);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
     const handleSaveTerm = useCallback(

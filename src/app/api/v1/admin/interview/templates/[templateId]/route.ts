@@ -1,12 +1,11 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewTemplateParam, interviewTemplateUpdateSchema } from '@/app/lib/interview-template-validators';
 import { getInterviewTemplate, updateInterviewTemplate, deleteInterviewTemplate } from '@/app/db/queries/interviewTemplates';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ templateId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ templateId: string }> }) {
     try {
         await requireAuth(req);
         const { templateId } = interviewTemplateParam.parse(await params);
@@ -18,7 +17,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ temp
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ templateId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ templateId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { templateId } = interviewTemplateParam.parse(await params);
@@ -31,18 +30,16 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ te
         });
         if (!row) throw new ApiError(404, 'Interview template not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_TEMPLATE_UPDATED,
-            resourceType: AuditResourceType.INTERVIEW_TEMPLATE,
-            resourceId: row.id,
-            description: `Updated interview template ${row.code}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_TEMPLATE_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_TEMPLATE, id: row.id },
             metadata: {
+                description: `Updated interview template ${row.code}`,
                 templateId: row.id,
                 changes: Object.keys(dto),
             },
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'Interview template updated successfully.', template: row });
     } catch (err) {
@@ -50,7 +47,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ te
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ templateId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ templateId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { templateId } = interviewTemplateParam.parse(await params);
@@ -58,17 +55,16 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ t
         const row = await deleteInterviewTemplate(templateId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Interview template not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_TEMPLATE_DELETED,
-            resourceType: AuditResourceType.INTERVIEW_TEMPLATE,
-            resourceId: row.id,
-            description: `${body?.hard ? 'Hard' : 'Soft'} deleted interview template ${row.code}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_TEMPLATE_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_TEMPLATE, id: row.id },
             metadata: {
+                description: `${body?.hard ? 'Hard' : 'Soft'} deleted interview template ${row.code}`,
                 templateId: row.id,
                 hardDeleted: body?.hard === true,
             },
-            request: req,
         });
         return json.ok({ message: 'Interview template deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
@@ -76,6 +72,6 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ t
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

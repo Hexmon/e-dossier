@@ -1,12 +1,11 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists, mustBeAdmin } from '../../../_checks';
 import { OcIdParam, ocImagePresignSchema } from '@/app/lib/oc-validators';
 import { buildImageKey, createPresignedUploadUrl, getPublicObjectUrl, getStorageConfig } from '@/app/lib/storage';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const adminCtx = await mustBeAdmin(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
@@ -23,13 +22,13 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
         const config = getStorageConfig();
         const publicUrl = getPublicObjectUrl(objectKey);
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.OC_RECORD_UPDATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Generated upload URL for OC image ${body.kind}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Generated upload URL for OC image ${body.kind}`,
                 ocId,
                 module: 'images',
                 kind: body.kind,
@@ -37,7 +36,6 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
                 contentType: body.contentType,
                 sizeBytes: body.sizeBytes,
             },
-            request: req,
         });
 
         return json.ok({
@@ -55,4 +53,4 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
     }
 }
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

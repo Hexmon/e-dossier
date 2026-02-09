@@ -1,13 +1,12 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTaskScoreCreateSchema, ptTaskParam } from '@/app/lib/physical-training-validators';
 import { getPtTask, listPtTaskScores, createPtTaskScore, getPtAttempt, getPtAttemptGrade } from '@/app/db/queries/physicalTraining';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ typeId: string; taskId: string }> },
 ) {
     try {
@@ -24,7 +23,7 @@ async function GETHandler(
 }
 
 async function POSTHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ typeId: string; taskId: string }> },
 ) {
     try {
@@ -49,20 +48,18 @@ async function POSTHandler(
             maxMarks: dto.maxMarks,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_TASK_SCORE_CREATED,
-            resourceType: AuditResourceType.PT_TASK_SCORE,
-            resourceId: row.id,
-            description: `Created PT task score for task ${task.title}`,
+        await req.audit.log({
+            action: AuditEventType.PT_TASK_SCORE_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_TASK_SCORE, id: row.id },
             metadata: {
+                description: `Created PT task score for task ${task.title}`,
                 ptTaskScoreId: row.id,
                 ptTaskId: taskId,
                 ptAttemptId: dto.ptAttemptId,
                 ptAttemptGradeId: dto.ptAttemptGradeId,
             },
-            request: req,
-            required: true,
         });
         return json.created({ message: 'PT task score created successfully.', score: row });
     } catch (err) {
@@ -70,5 +67,5 @@ async function POSTHandler(
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

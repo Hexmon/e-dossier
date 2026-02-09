@@ -675,7 +675,7 @@ export const ocCounselling = pgTable('oc_counselling', {
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
 }));
 
-// SPR/FPR 
+// SPR/FPR
 export const ocSprRecords = pgTable('oc_spr_records', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id')
@@ -694,4 +694,3 @@ export const ocSprRecords = pgTable('oc_spr_records', {
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
     cdrNonNegative: { check: sql`CHECK (${t.cdrMarks.name} >= 0)` },
 }));
-

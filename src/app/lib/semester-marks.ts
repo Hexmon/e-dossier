@@ -53,9 +53,12 @@ function toIso(value?: Date | null) {
 
 function computeTheory(theory?: TheoryMarksRecord | null): TheoryMarksResponse | undefined {
     if (!theory) return undefined;
+    const tutorialRaw = typeof theory.tutorial === 'string' ? Number(theory.tutorial.replace(/[^\d.-]/g, '')) : Number(theory.tutorial ?? 0);
+    const tutorialMarks = Number.isFinite(tutorialRaw) ? tutorialRaw : 0;
     const sessional =
         (theory.phaseTest1Marks ?? 0) +
-        (theory.phaseTest2Marks ?? 0);
+        (theory.phaseTest2Marks ?? 0) +
+        tutorialMarks;
     const total = sessional + (theory.finalMarks ?? 0);
     return {
         ...theory,

@@ -1,6 +1,4 @@
 "use client";
-
-import { useEffect } from "react";
 import { Course, CourseOffering } from "@/app/lib/api/academicsMarksApi";
 
 interface Props {
@@ -14,8 +12,6 @@ interface Props {
     onCourseChange: (v: string) => void;
     onSemesterChange: (v: number) => void;
     onSubjectChange: (v: string) => void;
-    onFetchCourses: () => void;
-    onFetchOfferings: (courseId: string, semester: number) => void;
 }
 
 export default function CourseSemesterSubjectFilter({
@@ -29,30 +25,7 @@ export default function CourseSemesterSubjectFilter({
     onCourseChange,
     onSemesterChange,
     onSubjectChange,
-    onFetchCourses,
-    onFetchOfferings,
 }: Props) {
-    // Fetch courses on mount - only once
-    useEffect(() => {
-        if (courses.length === 0 && !loadingCourses) {
-            console.log("Triggering fetch courses...");
-            onFetchCourses();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Debug: Log when courses update
-    useEffect(() => {
-        console.log("Courses updated:", courses);
-    }, [courses]);
-
-    // Fetch offerings when course and semester change
-    useEffect(() => {
-        if (courseId && semester) {
-            onFetchOfferings(courseId, semester);
-        }
-    }, [courseId, semester, onFetchOfferings]);
-
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <select
@@ -64,7 +37,7 @@ export default function CourseSemesterSubjectFilter({
                 <option value="">
                     {loadingCourses ? "Loading courses..." : "Select Course"}
                 </option>
-                {(courses ?? []).map((course) => {
+                {courses.map((course) => {
                     const { id, title, code } = course;
                     return (
                         <option key={id} value={id}>
@@ -97,7 +70,7 @@ export default function CourseSemesterSubjectFilter({
                 <option value="">
                     {loadingOfferings ? "Loading subjects..." : "Select Subject"}
                 </option>
-                {(courseOfferings ?? []).map((offering) => {
+                {courseOfferings.map((offering) => {
                     const { id, subject } = offering;
                     const { name, code } = subject;
                     return (

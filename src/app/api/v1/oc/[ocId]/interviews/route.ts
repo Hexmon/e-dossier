@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
@@ -17,8 +16,8 @@ import {
     upsertOcInterviewGroupRows,
     upsertOcInterviewGroupValues,
 } from '@/app/db/queries/interviewOc';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 function cleanText(value?: string | null) {
     if (value === undefined) return undefined;
@@ -168,9 +167,9 @@ async function buildInterviewItems(ocId: string, filters: { templateId?: string;
     }));
 }
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -181,13 +180,29 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
         });
 
         const items = await buildInterviewItems(ocId, { templateId: qp.templateId, semester: qp.semester });
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: `Interview records retrieved successfully for OC ${ocId}`,
+                ocId,
+                module: 'interview',
+                templateId: qp.templateId ?? null,
+                semester: qp.semester ?? null,
+                count: items.length,
+            },
+        });
+
         return json.ok({ message: 'Interview records retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
@@ -254,19 +269,18 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
 
         const items = await buildInterviewItems(ocId, { templateId: dto.templateId, semester: dto.semester ?? undefined });
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Created interview record for OC ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Created interview record for OC ${ocId}`,
                 ocId,
                 module: 'interview',
                 templateId: dto.templateId,
                 semester: dto.semester ?? null,
             },
-            request: req,
         });
         return json.created({ message: 'Interview record created successfully.', items, count: items.length });
     } catch (err) {
@@ -274,5 +288,5 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
