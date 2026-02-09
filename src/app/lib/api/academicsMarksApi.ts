@@ -36,9 +36,10 @@ export interface CourseOffering {
 
 export interface OC {
     id: string;
-    ocNumber: string;
+    ocNo: string;
     name: string;
     courseId: string;
+    branch?: string;
 }
 
 export interface ApiListResponse<T> {

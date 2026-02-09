@@ -1,9 +1,7 @@
 "use client";
-
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import CourseSemesterSubjectFilter from "./CourseSemesterSubjectFilter";
 import SubjectWiseStudentsTable from "./SubjectWiseStudentsTable";
-import { useAcademics } from "@/hooks/useAcademics";
 import { useAcademicsMarks } from "@/hooks/useAcademicsMarks";
 
 export default function ManageMarksPageContent() {
@@ -11,14 +9,19 @@ export default function ManageMarksPageContent() {
     const [semester, setSemester] = useState<number | null>(null);
     const [subjectId, setSubjectId] = useState("");
 
+    const { courses, loadingCourses, useCourseOfferings } = useAcademicsMarks();
+
+    // Use React Query for course offerings
     const {
-        courses,
-        courseOfferings,
-        loadingCourses,
-        loadingOfferings,
-        fetchCourses,
-        fetchCourseOfferings,
-    } = useAcademicsMarks();
+        data: courseOfferings = [],
+        isLoading: loadingOfferings,
+    } = useCourseOfferings(courseId, semester);
+
+    // Get the selected subject's branch
+    const selectedSubjectBranch = useMemo(() => {
+        const offering = courseOfferings.find((co) => co.subject.id === subjectId);
+        return offering?.subject.branch || null;
+    }, [courseOfferings, subjectId]);
 
     const handleCourseChange = (value: string) => {
         setCourseId(value);
@@ -44,15 +47,13 @@ export default function ManageMarksPageContent() {
                 onCourseChange={handleCourseChange}
                 onSemesterChange={handleSemesterChange}
                 onSubjectChange={setSubjectId}
-                onFetchCourses={fetchCourses}
-                onFetchOfferings={fetchCourseOfferings}
             />
-
             {courseId && semester && subjectId && (
                 <SubjectWiseStudentsTable
                     courseId={courseId}
                     semester={semester}
                     subjectId={subjectId}
+                    subjectBranch={selectedSubjectBranch}
                 />
             )}
         </div>

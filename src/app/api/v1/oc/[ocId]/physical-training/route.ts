@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
@@ -15,8 +14,8 @@ import {
     deleteOcPtScoresByIds,
     deleteOcPtScoresBySemester,
 } from '@/app/db/queries/physicalTrainingOc';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: string; marksScored: number }>) {
     const uniqueIds = Array.from(new Set(scores.map((s) => s.ptTaskScoreId)));
@@ -61,9 +60,9 @@ async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: s
     }
 }
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -73,13 +72,28 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
         });
 
         const items = await listOcPtScores(ocId, qp.semester);
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: `PT scores retrieved for OC ${ocId}`,
+                module: 'physical_training',
+                ocId,
+                semester: qp.semester ?? null,
+                scoreCount: items.length,
+            },
+        });
+
         return json.ok({ message: 'PT scores retrieved successfully.', data: { semester: qp.semester, scores: items } });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
@@ -91,19 +105,18 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
         await upsertOcPtScores(ocId, dto.semester, dto.scores);
         const items = await listOcPtScores(ocId, dto.semester);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Created PT scores for OC ${ocId} semester ${dto.semester}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Created PT scores for OC ${ocId} semester ${dto.semester}`,
                 ocId,
                 module: 'physical_training',
                 semester: dto.semester,
                 scoreCount: dto.scores.length,
             },
-            request: req,
         });
         return json.created({ message: 'PT scores saved successfully.', data: { semester: dto.semester, scores: items } });
     } catch (err) {
@@ -111,7 +124,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
@@ -130,13 +143,13 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
 
         const items = await listOcPtScores(ocId, dto.semester);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_UPDATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Updated PT scores for OC ${ocId} semester ${dto.semester}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Updated PT scores for OC ${ocId} semester ${dto.semester}`,
                 ocId,
                 module: 'physical_training',
                 semester: dto.semester,
@@ -144,7 +157,6 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
                 deletedScores: dto.deleteScoreIds?.length ?? 0,
                 changes: Object.keys(dto),
             },
-            request: req,
         });
         return json.ok({ message: 'PT scores updated successfully.', data: { semester: dto.semester, scores: items } });
     } catch (err) {
@@ -152,7 +164,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
@@ -164,20 +176,19 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
             ? await deleteOcPtScoresByIds(ocId, dto.scoreIds)
             : await deleteOcPtScoresBySemester(ocId, dto.semester);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_DELETED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Deleted PT scores for OC ${ocId} semester ${dto.semester}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Deleted PT scores for OC ${ocId} semester ${dto.semester}`,
                 ocId,
                 module: 'physical_training',
                 semester: dto.semester,
                 deletedCount: deleted.length,
                 hardDeleted: true,
             },
-            request: req,
         });
         return json.ok({ message: 'PT scores deleted successfully.', deleted: deleted.map((row) => row.id) });
     } catch (err) {
@@ -185,7 +196,7 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

@@ -14,6 +14,21 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.809.0
         version: 3.965.0
+      '@hexmon_tech/audit-core':
+        specifier: ^2.0.0
+        version: 2.0.0
+      '@hexmon_tech/audit-export-postgres':
+        specifier: ^2.0.0
+        version: 2.0.0(pg@8.16.3)
+      '@hexmon_tech/audit-next':
+        specifier: ^2.0.0
+        version: 2.0.0(@hexmon_tech/audit-node@2.0.0)(next@15.4.8(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@hexmon_tech/audit-node':
+        specifier: ^2.0.0
+        version: 2.0.0
+      '@hexmon_tech/audit-sink-postgres':
+        specifier: ^2.0.0
+        version: 2.0.0(pg@8.16.3)
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.3))(@types/react@19.2.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -59,6 +74,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.90.5
         version: 5.90.8(react@19.1.0)
+      '@tanstack/react-query-devtools':
+        specifier: ^5.91.3
+        version: 5.91.3(@tanstack/react-query@5.90.8(react@19.1.0))(react@19.1.0)
       '@upstash/ratelimit':
         specifier: ^2.0.7
         version: 2.0.7(@upstash/redis@1.35.6)
@@ -799,6 +817,38 @@ packages:
 
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+
+  '@hexmon_tech/audit-core@2.0.0':
+    resolution: {integrity: sha512-EPh/2/sP6I0f9BS/kDfyw8Ld+VY6FA9JdngEdaf9TFbjRASpWHTz6VraGe9CaiedLMRP7xQ6bGYR+dk6yPLGug==}
+    engines: {node: '>=20.0.0'}
+
+  '@hexmon_tech/audit-export-postgres@2.0.0':
+    resolution: {integrity: sha512-KSQ3q+11tiQSM66FTqG31/FP9NBAvFRZbbuFn2Olx4hpcAIEJkx2G/GSMBo3F584EjyJROgpK2HYekvLoDJz9Q==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      pg: ^8.12.0
+
+  '@hexmon_tech/audit-next@2.0.0':
+    resolution: {integrity: sha512-OJw4b0IkgDqOQl5wbau8qJEDrZ1TPOazCMfA12LkJADNRux4EpJWCGQcgRyiEURUtxg19wmPx4+dZPrNgRsPvQ==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      '@hexmon_tech/audit-node': 2.0.0
+      next: ^16.0.0
+      react: ^18.0.0
+      react-dom: ^18.0.0
+    peerDependenciesMeta:
+      '@hexmon_tech/audit-node':
+        optional: true
+
+  '@hexmon_tech/audit-node@2.0.0':
+    resolution: {integrity: sha512-WyoJY23j4uYd3OmYWviBwjpwCOXTEEIj80KU8p3FN9veIuVWpD7K26j2zZjwjHSxW4nmwjMtGUhMaltMFT2ckA==}
+    engines: {node: '>=20.0.0'}
+
+  '@hexmon_tech/audit-sink-postgres@2.0.0':
+    resolution: {integrity: sha512-s+pa/rG0j2UHdtZzstvInCc9SXGxKacMqiXAT+G7cEp0l7uu+3KdBUu9VajaKJ6ldhjAn77bQ2kXq522H+rlcg==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      pg: ^8.12.0
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -1965,6 +2015,15 @@ packages:
 
   '@tanstack/query-core@5.90.8':
     resolution: {integrity: sha512-4E0RP/0GJCxSNiRF2kAqE/LQkTJVlL/QNU7gIJSptaseV9HP6kOuA+N11y4bZKZxa3QopK3ZuewwutHx6DqDXQ==}
+
+  '@tanstack/query-devtools@5.93.0':
+    resolution: {integrity: sha512-+kpsx1NQnOFTZsw6HAFCW3HkKg0+2cepGtAWXjiiSOJJ1CtQpt72EE2nyZb+AjAbLRPoeRmPJ8MtQd8r8gsPdg==}
+
+  '@tanstack/react-query-devtools@5.91.3':
+    resolution: {integrity: sha512-nlahjMtd/J1h7IzOOfqeyDh5LNfG0eULwlltPEonYy0QL+nqrBB+nyzJfULV+moL7sZyxc2sHdNJki+vLA9BSA==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.90.20
+      react: ^18 || ^19
 
   '@tanstack/react-query@5.90.8':
     resolution: {integrity: sha512-/3b9QGzkf4rE5/miL6tyhldQRlLXzMHcySOm/2Tm2OLEFE9P1ImkH0+OviDBSvyAvtAOJocar5xhd7vxdLi3aQ==}
@@ -4909,6 +4968,29 @@ snapshots:
 
   '@floating-ui/utils@0.2.10': {}
 
+  '@hexmon_tech/audit-core@2.0.0': {}
+
+  '@hexmon_tech/audit-export-postgres@2.0.0(pg@8.16.3)':
+    dependencies:
+      '@hexmon_tech/audit-core': 2.0.0
+      pg: 8.16.3
+
+  '@hexmon_tech/audit-next@2.0.0(@hexmon_tech/audit-node@2.0.0)(next@15.4.8(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@hexmon_tech/audit-core': 2.0.0
+      next: 15.4.8(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
+    optionalDependencies:
+      '@hexmon_tech/audit-node': 2.0.0
+
+  '@hexmon_tech/audit-node@2.0.0': {}
+
+  '@hexmon_tech/audit-sink-postgres@2.0.0(pg@8.16.3)':
+    dependencies:
+      '@hexmon_tech/audit-core': 2.0.0
+      pg: 8.16.3
+
   '@humanfs/core@0.19.1': {}
 
   '@humanfs/node@0.16.7':
@@ -6054,6 +6136,14 @@ snapshots:
       tailwindcss: 4.1.17
 
   '@tanstack/query-core@5.90.8': {}
+
+  '@tanstack/query-devtools@5.93.0': {}
+
+  '@tanstack/react-query-devtools@5.91.3(@tanstack/react-query@5.90.8(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@tanstack/query-devtools': 5.93.0
+      '@tanstack/react-query': 5.90.8(react@19.1.0)
+      react: 19.1.0
 
   '@tanstack/react-query@5.90.8(react@19.1.0)':
     dependencies:

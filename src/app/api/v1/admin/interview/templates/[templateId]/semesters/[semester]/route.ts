@@ -1,13 +1,12 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewTemplateSemesterParam } from '@/app/lib/interview-template-validators';
 import { getInterviewTemplate, removeInterviewTemplateSemester } from '@/app/db/queries/interviewTemplates';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function DELETEHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; semester: string }> },
 ) {
     try {
@@ -19,17 +18,16 @@ async function DELETEHandler(
         const row = await removeInterviewTemplateSemester(templateId, semester);
         if (!row) throw new ApiError(404, 'Template semester not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_TEMPLATE_SEMESTER_REMOVED,
-            resourceType: AuditResourceType.INTERVIEW_TEMPLATE,
-            resourceId: templateId,
-            description: `Removed semester ${semester} from interview template ${template.code}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_TEMPLATE_SEMESTER_REMOVED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_TEMPLATE, id: templateId },
             metadata: {
+                description: `Removed semester ${semester} from interview template ${template.code}`,
                 templateId,
                 semester,
             },
-            request: req,
         });
         return json.ok({ message: 'Interview template semester removed successfully.', deleted: row.id });
     } catch (err) {
@@ -37,4 +35,4 @@ async function DELETEHandler(
     }
 }
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

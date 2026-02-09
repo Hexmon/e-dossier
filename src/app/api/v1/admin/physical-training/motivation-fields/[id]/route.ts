@@ -1,12 +1,11 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ptMotivationFieldParam, ptMotivationFieldUpdateSchema } from '@/app/lib/physical-training-validators';
 import { getPtMotivationField, updatePtMotivationField, deletePtMotivationField } from '@/app/db/queries/physicalTraining';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await requireAuth(req);
         const { id } = ptMotivationFieldParam.parse(await params);
@@ -18,7 +17,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { id } = ptMotivationFieldParam.parse(await params);
@@ -29,18 +28,16 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
         });
         if (!row) throw new ApiError(404, 'PT motivation field not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_MOTIVATION_FIELD_UPDATED,
-            resourceType: AuditResourceType.PT_MOTIVATION_FIELD,
-            resourceId: row.id,
-            description: `Updated PT motivation field ${row.label}`,
+        await req.audit.log({
+            action: AuditEventType.PT_MOTIVATION_FIELD_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_MOTIVATION_FIELD, id: row.id },
             metadata: {
+                description: `Updated PT motivation field ${row.label}`,
                 ptMotivationFieldId: row.id,
                 changes: Object.keys(dto),
             },
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'PT motivation field updated successfully.', field: row });
     } catch (err) {
@@ -48,7 +45,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { id } = ptMotivationFieldParam.parse(await params);
@@ -56,17 +53,16 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
         const row = await deletePtMotivationField(id, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'PT motivation field not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_MOTIVATION_FIELD_DELETED,
-            resourceType: AuditResourceType.PT_MOTIVATION_FIELD,
-            resourceId: row.id,
-            description: `${body?.hard ? 'Hard' : 'Soft'} deleted PT motivation field ${row.label}`,
+        await req.audit.log({
+            action: AuditEventType.PT_MOTIVATION_FIELD_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_MOTIVATION_FIELD, id: row.id },
             metadata: {
+                description: `${body?.hard ? 'Hard' : 'Soft'} deleted PT motivation field ${row.label}`,
                 ptMotivationFieldId: row.id,
                 hardDeleted: body?.hard === true,
             },
-            request: req,
         });
         return json.ok({ message: 'PT motivation field deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
@@ -74,6 +70,6 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

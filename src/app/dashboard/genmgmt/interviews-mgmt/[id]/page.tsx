@@ -1,7 +1,7 @@
 // app/dashboard/genmgmt/interviews-mgmt/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -21,19 +21,11 @@ export default function TemplateDetailPage() {
     const router = useRouter();
     const templateId = params.id as string;
 
-    const { loading, currentTemplate, fetchTemplateById } = useInterviewTemplates();
+    // Passing templateId enables the templateById, semesters, sections,
+    // and groups queries automatically — no useEffect or manual fetch needed.
+    const { loading, currentTemplate } = useInterviewTemplates({ templateId });
+
     const [activeTab, setActiveTab] = useState("overview");
-
-    // Memoize the fetch function to avoid dependency warnings
-    const loadTemplate = useCallback(() => {
-        if (templateId) {
-            fetchTemplateById(templateId);
-        }
-    }, [templateId, fetchTemplateById]);
-
-    useEffect(() => {
-        loadTemplate();
-    }, [loadTemplate]);
 
     const handleLogout = () => {
         console.log("Logout clicked");

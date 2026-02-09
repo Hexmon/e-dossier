@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTaskScoreParam, ptTaskScoreUpdateSchema } from '@/app/lib/physical-training-validators';
@@ -10,11 +9,11 @@ import {
     getPtAttempt,
     getPtAttemptGrade,
 } from '@/app/db/queries/physicalTraining';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ typeId: string; taskId: string; scoreId: string }> },
 ) {
     try {
@@ -31,7 +30,7 @@ async function GETHandler(
 }
 
 async function PATCHHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ typeId: string; taskId: string; scoreId: string }> },
 ) {
     try {
@@ -62,19 +61,17 @@ async function PATCHHandler(
         });
         if (!row) throw new ApiError(404, 'PT task score not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_TASK_SCORE_UPDATED,
-            resourceType: AuditResourceType.PT_TASK_SCORE,
-            resourceId: row.id,
-            description: `Updated PT task score ${row.id}`,
+        await req.audit.log({
+            action: AuditEventType.PT_TASK_SCORE_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_TASK_SCORE, id: row.id },
             metadata: {
+                description: `Updated PT task score ${row.id}`,
                 ptTaskScoreId: row.id,
                 ptTaskId: taskId,
                 changes: Object.keys(dto),
             },
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'PT task score updated successfully.', score: row });
     } catch (err) {
@@ -83,7 +80,7 @@ async function PATCHHandler(
 }
 
 async function DELETEHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ typeId: string; taskId: string; scoreId: string }> },
 ) {
     try {
@@ -97,17 +94,16 @@ async function DELETEHandler(
         const row = await deletePtTaskScore(scoreId);
         if (!row) throw new ApiError(404, 'PT task score not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_TASK_SCORE_DELETED,
-            resourceType: AuditResourceType.PT_TASK_SCORE,
-            resourceId: row.id,
-            description: `Deleted PT task score ${row.id}`,
+        await req.audit.log({
+            action: AuditEventType.PT_TASK_SCORE_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_TASK_SCORE, id: row.id },
             metadata: {
+                description: `Deleted PT task score ${row.id}`,
                 ptTaskScoreId: row.id,
                 ptTaskId: taskId,
             },
-            request: req,
         });
         return json.ok({ message: 'PT task score deleted successfully.', deleted: row.id });
     } catch (err) {
@@ -115,6 +111,6 @@ async function DELETEHandler(
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

@@ -1,12 +1,11 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTaskParam, ptTaskUpdateSchema } from '@/app/lib/physical-training-validators';
 import { getPtTask, updatePtTask, deletePtTask } from '@/app/db/queries/physicalTraining';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string; taskId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ typeId: string; taskId: string }> }) {
     try {
         await requireAuth(req);
         const { typeId, taskId } = ptTaskParam.parse(await params);
@@ -18,7 +17,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ type
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string; taskId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ typeId: string; taskId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { typeId, taskId } = ptTaskParam.parse(await params);
@@ -32,19 +31,17 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ty
         });
         if (!row) throw new ApiError(404, 'PT task not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_TASK_UPDATED,
-            resourceType: AuditResourceType.PT_TASK,
-            resourceId: row.id,
-            description: `Updated PT task ${row.title}`,
+        await req.audit.log({
+            action: AuditEventType.PT_TASK_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_TASK, id: row.id },
             metadata: {
+                description: `Updated PT task ${row.title}`,
                 ptTaskId: row.id,
                 ptTypeId: row.ptTypeId,
                 changes: Object.keys(dto),
             },
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'PT task updated successfully.', task: row });
     } catch (err) {
@@ -52,7 +49,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ty
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string; taskId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ typeId: string; taskId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { typeId, taskId } = ptTaskParam.parse(await params);
@@ -63,18 +60,17 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ t
         const row = await deletePtTask(taskId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'PT task not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_TASK_DELETED,
-            resourceType: AuditResourceType.PT_TASK,
-            resourceId: row.id,
-            description: `${body?.hard ? 'Hard' : 'Soft'} deleted PT task ${row.title}`,
+        await req.audit.log({
+            action: AuditEventType.PT_TASK_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_TASK, id: row.id },
             metadata: {
+                description: `${body?.hard ? 'Hard' : 'Soft'} deleted PT task ${row.title}`,
                 ptTaskId: row.id,
                 ptTypeId: row.ptTypeId,
                 hardDeleted: body?.hard === true,
             },
-            request: req,
         });
         return json.ok({ message: 'PT task deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
@@ -82,6 +78,6 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ t
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import argon2 from 'argon2';
 import { db } from '@/app/db/client';
@@ -9,6 +8,12 @@ import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError } from '@/app/lib/http';
 import { passwordSchema } from '@/app/lib/validators';
 import { and, eq, ilike, isNull, or } from 'drizzle-orm';
+import {
+  withAuditRoute,
+  AuditEventType,
+  AuditResourceType,
+} from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 // Public bootstrap endpoint to create a SUPER_ADMIN user without auth.
 // REMOVE after initial deployment.
@@ -21,7 +26,7 @@ const bodySchema = z.object({
   rank: z.string().trim().min(1).max(64).optional(),
 });
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
   try {
     const parsed = bodySchema.safeParse(await req.json());
     if (!parsed.success) {
@@ -139,6 +144,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    await req.audit.log({
+      action: AuditEventType.USER_CREATED,
+      outcome: 'SUCCESS',
+      actor: { type: 'anonymous', id: 'unknown' },
+      target: { type: AuditResourceType.USER, id: userId },
+      metadata: { username, email, description: 'SUPER_ADMIN bootstrap complete' },
+    });
+
     return json.created({
       message: 'SUPER_ADMIN bootstrap complete.',
       user: { id: userId, username, email },
@@ -147,3 +160,5 @@ export async function POST(req: NextRequest) {
     return handleApiError(err);
   }
 }
+
+export const POST = withAuditRoute('POST', POSTHandler);
