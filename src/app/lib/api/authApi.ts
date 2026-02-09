@@ -77,7 +77,7 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
     const response = await api.post<LoginResponse>(
       endpoints.auth.login,
       payload,
-      { baseURL }
+      { baseURL, skipAuth: true }
     );
 
     if (response.token) {

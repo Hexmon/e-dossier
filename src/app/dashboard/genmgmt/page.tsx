@@ -9,7 +9,7 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 
-import { managementCard, managementTabs } from "@/config/app.config";
+import { managementCard, managementTabs, moduleManagementCard } from "@/config/app.config";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
@@ -120,16 +120,35 @@ export default function GeneralManagementPage() {
                   })}
                 </div>
               </TabsContent>
+              {/* Module Management Tab */}
+              <TabsContent value="module-mgmt" className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
+                  {moduleManagementCard.map((card, index) => {
+                    const IconComponent = card.icon;
+
+                    return (
+                      <DashboardCard
+                        key={index}
+                        title={card.title}
+                        description={card.description}
+                        to={card.to}
+                        icon={IconComponent}
+                        color={card.color}
+                      />
+                    );
+                  })}
+                </div>
+              </TabsContent>
 
               {/* Settings Tab */}
               <TabsContent value="settings" className="space-y-6">
                 <div className="text-center py-12">
                   <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-xl font-semibold text-foreground mb-2">
-                    General Settings
+                    Coming Soon
                   </h3>
                   <p className="text-muted-foreground">
-                    Manage system roles, permissions, and more.
+                    Settings module is under development and will be available soon.
                   </p>
                 </div>
               </TabsContent>
