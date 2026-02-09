@@ -26,6 +26,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
             punishmentAwarded: body.punishmentAwarded || null,
             awardedOn: body.awardedOn ? new Date(body.awardedOn) : null,
             awardedBy: body.awardedBy || null,
+            numberOfPunishments: body.numberOfPunishments !== undefined ? Number(body.numberOfPunishments) : null,
             pointsDelta: body.pointsDelta !== undefined ? Number(body.pointsDelta) : 0,
         };
 
