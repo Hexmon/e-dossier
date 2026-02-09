@@ -79,20 +79,37 @@ fi
 echo -e "${GREEN}✓${NC} pnpm version $(pnpm -v) (required: >=9)"
 
 echo ""
-echo -e "${YELLOW}[Running Verification Pipeline]${NC}"
+echo -e "${YELLOW}[Preparing Fresh Build]${NC}"
 
-# Run the verify script (lint + typecheck + build)
-if ! pnpm run verify; then
+# Remove prior Next.js build output so build always runs from a clean state
+if [ -d .next ]; then
+  rm -rf .next
+  echo -e "${GREEN}✓${NC} Removed existing .next directory"
+else
+  echo -e "${GREEN}✓${NC} No existing .next directory to remove"
+fi
+
+echo ""
+echo -e "${YELLOW}[Running Quality Checks]${NC}"
+
+if ! pnpm run lint; then
   echo ""
   echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  echo -e "${RED}❌ VERIFICATION FAILED - Push Blocked${NC}"
+  echo -e "${RED}❌ LINT FAILED - Push Blocked${NC}"
   echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo ""
-  echo "Fix the errors above and try again:"
-  echo "  • Lint errors: pnpm run lint"
-  echo "  • Type errors: pnpm run typecheck"
-  echo "  • Build errors: pnpm run build"
+  echo "Fix lint errors and try again: pnpm run lint"
+  echo "To bypass this check (not recommended): git push --no-verify"
+  exit 1
+fi
+
+if ! pnpm run build; then
   echo ""
+  echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${RED}❌ BUILD FAILED - Push Blocked${NC}"
+  echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo ""
+  echo "Fix build errors and try again: pnpm run build"
   echo "To bypass this check (not recommended): git push --no-verify"
   exit 1
 fi
