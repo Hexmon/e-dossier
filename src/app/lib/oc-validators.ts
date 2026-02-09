@@ -116,7 +116,7 @@ export const dossierFillingUpsertSchema = z.object({
     openedOn: z.coerce.date().optional(),
     initialInterview: z.string().optional(),
     closedBy: z.string().optional(),
-    closedOn: z.coerce.date().optional(),
+    closedOn: z.preprocess((v) => (v === '' || v === null ? undefined : v), z.coerce.date().optional()),
     finalInterview: z.string().optional(),
 });
 
