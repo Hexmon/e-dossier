@@ -10,7 +10,6 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
     try {
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
-        await authorizeOcAccess(req, ocId);
 
         const data = await getFprView(ocId);
         return json.ok({ message: 'FPR retrieved successfully.', ...data });
