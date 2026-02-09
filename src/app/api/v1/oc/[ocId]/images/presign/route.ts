@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin } from '../../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed } from '../../../_checks';
 import { OcIdParam, ocImagePresignSchema } from '@/app/lib/oc-validators';
 import { buildImageKey, createPresignedUploadUrl, getPublicObjectUrl, getStorageConfig } from '@/app/lib/storage';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
@@ -8,7 +8,7 @@ import { withRouteLogging } from '@/lib/withRouteLogging';
 
 async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -24,7 +24,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
         const publicUrl = getPublicObjectUrl(objectKey);
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_UPDATED,
             resourceType: AuditResourceType.OC,
             resourceId: ocId,

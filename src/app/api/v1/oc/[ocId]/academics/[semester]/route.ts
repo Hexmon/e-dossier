@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin } from '../../../_checks';
+import { parseParam, ensureOcExists, mustBeAdmin, mustBeAuthed } from '../../../_checks';
 import { OcIdParam, SemesterParam, academicSummaryPatchSchema } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getOcAcademicSemester, updateOcAcademicSummary, deleteOcAcademicSemester } from '@/app/services/oc-academics';
@@ -23,14 +23,14 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
         const dto = academicSummaryPatchSchema.parse(await req.json());
         const data = await updateOcAcademicSummary(ocId, semester, dto, {
-            actorUserId: adminCtx?.userId,
-            actorRoles: adminCtx?.roles,
+            actorUserId: authCtx?.userId,
+            actorRoles: authCtx?.roles,
             request: req,
         });
         return json.ok({
@@ -44,14 +44,14 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
         const hard = new URL(req.url).searchParams.get('hard') === 'true';
         const result = await deleteOcAcademicSemester(ocId, semester, { hard }, {
-            actorUserId: adminCtx?.userId,
-            actorRoles: adminCtx?.roles,
+            actorUserId: authCtx?.userId,
+            actorRoles: authCtx?.roles,
             request: req,
         });
         return json.ok({

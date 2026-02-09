@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin } from '../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed } from '../../_checks';
 import { OcIdParam, ocImageDeleteQuerySchema } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { listOcImages, getOcImage, softDeleteOcImage, hardDeleteOcImage } from '@/app/db/queries/oc';
@@ -34,7 +34,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -56,7 +56,7 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
         }
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_DELETED,
             resourceType: AuditResourceType.OC,
             resourceId: ocId,

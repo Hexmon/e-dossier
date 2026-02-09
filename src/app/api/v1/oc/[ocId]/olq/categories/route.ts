@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { mustBeAuthed } from '../../../_checks';
 import {
     olqCategoryCreateSchema,
     olqCategoryQuerySchema,
@@ -14,7 +14,7 @@ import { withRouteLogging } from '@/lib/withRouteLogging';
 
 async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAuth(req);
+        await mustBeAuthed(req);
 
         const sp = new URL(req.url).searchParams;
         const qp = olqCategoryQuerySchema.parse({
@@ -34,7 +34,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
 async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
 
         const dto = olqCategoryCreateSchema.parse(await req.json());
         const row = await createOlqCategory({
@@ -46,7 +46,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
         });
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_CREATED,
             resourceType: AuditResourceType.OC,
             resourceId: null,

@@ -53,7 +53,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
         const { id } = await parseParam({params}, IdSchema);
@@ -63,7 +63,7 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
         if (!row) throw new ApiError(404, 'Credit for excellence record not found', 'not_found');
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_DELETED,
             resourceType: AuditResourceType.OC,
             resourceId: ocId,

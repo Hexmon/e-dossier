@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { mustBeAuthed } from '../../../../_checks';
 import {
     olqCategoryUpdateSchema,
     olqCategoryQuerySchema,
@@ -18,7 +18,7 @@ const CategoryIdParam = z.object({ categoryId: z.string().uuid() });
 
 async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAuth(req);
+        await mustBeAuthed(req);
         const { categoryId } = CategoryIdParam.parse(await params);
         const sp = new URL(req.url).searchParams;
         const qp = olqCategoryQuerySchema.parse({
@@ -35,14 +35,14 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
         const { categoryId } = CategoryIdParam.parse(await params);
         const dto = olqCategoryUpdateSchema.parse(await req.json());
         const row = await updateOlqCategory(categoryId, { ...dto });
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_UPDATED,
             resourceType: AuditResourceType.OC,
             resourceId: null,
@@ -62,14 +62,14 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
         const { categoryId } = CategoryIdParam.parse(await params);
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteOlqCategory(categoryId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_DELETED,
             resourceType: AuditResourceType.OC,
             resourceId: null,

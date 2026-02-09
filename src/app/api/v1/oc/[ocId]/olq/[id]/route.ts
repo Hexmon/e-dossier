@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { mustBeAuthed } from '../../../_checks';
 import { parseParam, ensureOcExists } from '../../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { getOlqById } from '@/app/db/queries/olq';
@@ -14,7 +14,7 @@ const BoolString = z.enum(['true', 'false']).transform((v) => v === 'true');
 
 async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAuth(req);
+        await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
         const { id } = IdParam.parse({params});

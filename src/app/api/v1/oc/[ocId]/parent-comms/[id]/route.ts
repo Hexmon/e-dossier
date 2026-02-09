@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
 import { OcIdParam, commUpdateSchema } from '@/app/lib/oc-validators';
 import { getComm, updateComm, deleteComm } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -19,14 +19,14 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const { id } = await parseParam({params}, IdSchema);
         const dto = commUpdateSchema.parse(await req.json());
         const row = await updateComm(ocId, id, dto); if (!row) throw new ApiError(404, 'Communication not found', 'not_found');
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_UPDATED,
             resourceType: AuditResourceType.OC,
             resourceId: ocId,
@@ -45,13 +45,13 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const { id } = await parseParam({params}, IdSchema);
         const row = await deleteComm(ocId, id); if (!row) throw new ApiError(404, 'Communication not found', 'not_found');
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_DELETED,
             resourceType: AuditResourceType.OC,
             resourceId: ocId,

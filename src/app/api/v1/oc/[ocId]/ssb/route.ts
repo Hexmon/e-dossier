@@ -108,7 +108,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -137,7 +137,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
         const body = mapSsbDbToResponse(report, points);
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_UPDATED,
             resourceType: AuditResourceType.OC,
             resourceId: ocId,
@@ -159,12 +159,12 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const deleted = await deleteSsbReport(ocId);
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_DELETED,
             resourceType: AuditResourceType.OC,
             resourceId: ocId,

@@ -20,7 +20,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
 async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const { id } = await parseParam({params}, IdSchema);
         const dto = achieveUpdateSchema.parse(await req.json());
@@ -28,7 +28,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
         if (!row) throw new ApiError(404, 'Achievement not found', 'not_found');
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_UPDATED,
             resourceType: AuditResourceType.OC,
             resourceId: ocId,
@@ -47,14 +47,14 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
 
 async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const { id } = await parseParam({params}, IdSchema);
         const row = await deleteAchievement(ocId, id);
         if (!row) throw new ApiError(404, 'Achievement not found', 'not_found');
 
         await createAuditLog({
-            actorUserId: adminCtx.userId,
+            actorUserId: authCtx.userId,
             eventType: AuditEventType.OC_RECORD_DELETED,
             resourceType: AuditResourceType.OC,
             resourceId: ocId,
