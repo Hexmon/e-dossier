@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
@@ -20,8 +19,8 @@ import {
 } from '@/app/db/queries/oc';
 import { db } from '@/app/db/client';
 import { ocCamps, ocCampActivityScores, ocCampReviews } from '@/app/db/schema/training/oc';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function assertOcCampOwnedByOc(ocCampId: string, ocId: string) {
     const [row] = await db
@@ -78,9 +77,9 @@ async function loadAllCamps(ocId: string) {
     });
 }
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -106,13 +105,29 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
             activityName: qp.activityName,
         });
 
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: `OC camps retrieved successfully for OC ${ocId}`,
+                ocId,
+                module: 'camps',
+                semester: qp.semester ?? null,
+                ocCampId: qp.ocCampId ?? null,
+                withReviews: qp.withReviews ?? false,
+                withActivities: qp.withActivities ?? false,
+            },
+        });
+
         return json.ok({ message: 'OC camps retrieved successfully.', ...result });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -142,13 +157,13 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
         await recomputeOcCampTotal(ocCamp.id);
         const { camps, grandTotalMarksScored } = await loadAllCamps(ocId);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Upserted camp ${ocCamp.id} for OC ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Upserted camp ${ocCamp.id} for OC ${ocId}`,
                 ocId,
                 module: 'camps',
                 ocCampId: ocCamp.id,
@@ -158,7 +173,6 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
                 addedActivities: activities?.length ?? 0,
                 action: 'create_or_update',
             },
-            request: req,
         });
 
         return json.created({ message: 'OC camp created or updated successfully.', camps, grandTotalMarksScored });
@@ -167,7 +181,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
     }
 }
 
-async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -205,13 +219,13 @@ async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ ocId
         await recomputeOcCampTotal(ocCamp.id);
         const { camps, grandTotalMarksScored } = await loadAllCamps(ocId);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_UPDATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Updated camp ${ocCamp.id} for OC ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Updated camp ${ocCamp.id} for OC ${ocId}`,
                 ocId,
                 module: 'camps',
                 ocCampId: ocCamp.id,
@@ -220,7 +234,6 @@ async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ ocId
                 reviewUpdates: dto.reviews?.length ?? 0,
                 activityUpdates: dto.activities?.length ?? 0,
             },
-            request: req,
         });
 
         return json.ok({ message: 'OC camp updated successfully.', camps, grandTotalMarksScored });
@@ -229,7 +242,7 @@ async function PUTHandler(req: NextRequest, { params }: { params: Promise<{ ocId
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -261,28 +274,27 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
 
         const { camps, grandTotalMarksScored } = await loadAllCamps(ocId);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_DELETED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Deleted camp data for OC ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Deleted camp data for OC ${ocId}`,
                 ocId,
                 module: 'camps',
                 ...(deletedMeta ?? {}),
             },
-            request: req,
         });
         return json.ok({ message: 'OC camp data deleted successfully.', camps, grandTotalMarksScored });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
 
-export const PUT = withRouteLogging('PUT', PUTHandler);
+export const PUT = withAuditRoute('PUT', PUTHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

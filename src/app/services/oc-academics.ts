@@ -61,6 +61,66 @@ function determineBranchForSemester(semester: number, branch?: string | null): B
     return 'C';
 }
 
+function gradePointsFromMarks(marks: number) {
+    const m = Math.max(0, Number(marks) || 0);
+    if (m >= 80) return 9;
+    if (m >= 70) return 8;
+    if (m >= 60) return 7;
+    if (m >= 55) return 6;
+    if (m >= 50) return 5;
+    if (m >= 45) return 4;
+    if (m >= 41) return 3;
+    if (m >= 38) return 2;
+    if (m >= 35) return 1;
+    return 0;
+}
+
+function computeSemesterGpa(view: AcademicSemesterView) {
+    let totalCredits = 0;
+    let totalWeighted = 0;
+
+    for (const subject of view.subjects ?? []) {
+        if (subject.includeTheory) {
+            const credits = Number(subject.theoryCredits ?? subject.subject?.defaultTheoryCredits ?? 0);
+            const points = gradePointsFromMarks(subject.theory?.totalMarks ?? 0);
+            totalCredits += credits;
+            totalWeighted += credits * points;
+        }
+        if (subject.includePractical) {
+            const credits = Number(subject.practicalCredits ?? subject.subject?.defaultPracticalCredits ?? 0);
+            const points = gradePointsFromMarks(subject.practical?.totalMarks ?? 0);
+            totalCredits += credits;
+            totalWeighted += credits * points;
+        }
+    }
+
+    const sgpa = totalCredits > 0 ? totalWeighted / totalCredits : null;
+    return { sgpa, totalCredits, totalWeighted };
+}
+
+async function recomputeAndPersistGpa(ocId: string) {
+    const rows = await listSemesterMarksRows(ocId);
+    if (!rows.length) return;
+    const semestersWithRows = new Set(rows.map((r) => r.semester));
+    const views = (await getOcAcademics(ocId)).filter((v) => semestersWithRows.has(v.semester));
+    const ordered = [...views].sort((a, b) => a.semester - b.semester);
+
+    let cumulativeCredits = 0;
+    let cumulativeWeighted = 0;
+
+    for (const view of ordered) {
+        const { sgpa, totalCredits, totalWeighted } = computeSemesterGpa(view);
+        cumulativeCredits += totalCredits;
+        cumulativeWeighted += totalWeighted;
+        const cgpa = cumulativeCredits > 0 ? cumulativeWeighted / cumulativeCredits : null;
+        await upsertSemesterSummary(ocId, view.semester, {
+            branchTag: view.branchTag,
+            sgpa,
+            cgpa,
+        });
+    }
+}
+
 export async function getOcAcademics(ocId: string, opts?: { semester?: number }): Promise<AcademicSemesterView[]> {
     const ocInfo = await getOcCourseInfo(ocId);
     if (!ocInfo) throw new ApiError(404, 'OC not found', 'not_found');
@@ -121,7 +181,7 @@ export async function getOcAcademicSemester(ocId: string, semester: number): Pro
 export async function updateOcAcademicSummary(
     ocId: string,
     semester: number,
-    input: Omit<SemesterSummaryPatchInput, 'branchTag'>,
+    input: Omit<SemesterSummaryPatchInput, 'branchTag' | 'sgpa' | 'cgpa'>,
     auditContext?: AuditContext,
 ): Promise<AcademicSemesterView> {
     const ocInfo = await getOcCourseInfo(ocId);
@@ -129,7 +189,7 @@ export async function updateOcAcademicSummary(
 
     await upsertSemesterSummary(ocId, semester, {
         branchTag: determineBranchForSemester(semester, ocInfo.branch),
-        ...input,
+        marksScored: input.marksScored ?? undefined,
     });
 
     await logAcademicEvent(
@@ -139,11 +199,11 @@ export async function updateOcAcademicSummary(
         `Updated academic summary for semester ${semester}`,
         {
             semester,
-            sgpa: input.sgpa ?? null,
-            cgpa: input.cgpa ?? null,
             marksScored: input.marksScored ?? null,
         },
     );
+
+    await recomputeAndPersistGpa(ocId);
 
     return getOcAcademicSemester(ocId, semester);
 }
@@ -203,6 +263,8 @@ export async function updateOcAcademicSubject(
         },
     );
 
+    await recomputeAndPersistGpa(ocId);
+
     return getOcAcademicSemester(ocId, semester);
 }
 
@@ -224,6 +286,7 @@ export async function deleteOcAcademicSemester(
             hardDeleted: Boolean(opts.hard),
         },
     );
+    await recomputeAndPersistGpa(ocId);
     return { semester, hardDeleted: Boolean(opts.hard) };
 }
 
@@ -265,6 +328,8 @@ export async function deleteOcAcademicSubject(
             hardDeleted: Boolean(opts.hard),
         },
     );
+
+    await recomputeAndPersistGpa(ocId);
 
     return getOcAcademicSemester(ocId, semester);
 }

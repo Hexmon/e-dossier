@@ -1,12 +1,9 @@
-
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { QueryClient } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import ReduxProvider from "@/components/providers/ReduxProvider";
-
-const queryClient = new QueryClient();
+import QueryProvider from "@/components/providers/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,10 +30,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ReduxProvider>
-          {children}
-        </ReduxProvider>
-        {/* <GlobalLoader /> */}
+        <QueryProvider>
+          <ReduxProvider>
+            {children}
+          </ReduxProvider>
+        </QueryProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>

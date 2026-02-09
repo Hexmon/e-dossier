@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import argon2 from 'argon2';
 import { db } from '@/app/db/client';
@@ -7,8 +6,8 @@ import { requireAuth, hasAdminRole } from '@/app/lib/authz';
 import { users } from '@/app/db/schema/auth/users';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { eq, isNull } from 'drizzle-orm';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 // Body:
 // - For self-service (non-admin): { newPassword, currentPassword }  (userId optional/ignored)
@@ -19,7 +18,7 @@ const BodySchema = z.object({
   currentPassword: z.string().min(1).optional(),
 });
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
   try {
     // 1) AuthN
     const { userId: callerId, roles } = await requireAuth(req);
@@ -108,20 +107,19 @@ async function POSTHandler(req: NextRequest) {
         },
       });
 
-    await createAuditLog({
-      actorUserId: callerId,
-      eventType: AuditEventType.PASSWORD_CHANGED,
-      resourceType: AuditResourceType.USER,
-      resourceId: targetUserId,
-      description: callerIsAdmin && targetUserId !== callerId
-        ? `Admin reset password for user ${u.username ?? targetUserId}`
-        : 'User changed password',
+    await req.audit.log({
+      action: AuditEventType.PASSWORD_CHANGED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: callerId },
+      target: { type: AuditResourceType.USER, id: targetUserId },
       metadata: {
+        description: callerIsAdmin && targetUserId !== callerId
+          ? `Admin reset password for user ${u.username ?? targetUserId}`
+          : 'User changed password',
         targetUserId,
         changedBy: callerId,
         selfChange: targetUserId === callerId,
       },
-      request: req,
     });
 
     return json.ok({
@@ -134,4 +132,4 @@ async function POSTHandler(req: NextRequest) {
     return handleApiError(err);
   }
 }
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

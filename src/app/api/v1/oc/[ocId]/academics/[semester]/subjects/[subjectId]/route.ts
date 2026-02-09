@@ -1,14 +1,12 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists, mustBeAdmin } from '../../../../../_checks';
 import { OcIdParam, SemesterParam, SubjectIdParam, academicSubjectPatchSchema } from '@/app/lib/oc-validators';
 import { updateOcAcademicSubject, deleteOcAcademicSubject } from '@/app/services/oc-academics';
-import { withRouteLogging } from '@/lib/withRouteLogging';
-
-// NOTE: Subject mutations trigger createAuditLog via services/oc-academics helpers.
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function PATCHHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ ocId: string; semester: string; subjectId: string }> },
 ) {
     try {
@@ -26,6 +24,21 @@ async function PATCHHandler(
             actorRoles: adminCtx?.roles,
             request: req,
         });
+
+        await req.audit.log({
+            action: AuditEventType.OC_ACADEMICS_SUBJECT_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
+            metadata: {
+                description: `Academic subject ${subjectId} updated for OC ${ocId}, semester ${semester}`,
+                ocId,
+                semester,
+                subjectId,
+                changes: Object.keys(dto),
+            },
+        });
+
         return json.ok({
             message: 'Academic subject updated successfully.',
             data,
@@ -36,7 +49,7 @@ async function PATCHHandler(
 }
 
 async function DELETEHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ ocId: string; semester: string; subjectId: string }> },
 ) {
     try {
@@ -51,6 +64,21 @@ async function DELETEHandler(
             actorRoles: adminCtx?.roles,
             request: req,
         });
+
+        await req.audit.log({
+            action: AuditEventType.OC_ACADEMICS_SUBJECT_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
+            metadata: {
+                description: `Academic subject ${subjectId} deleted for OC ${ocId}, semester ${semester}`,
+                ocId,
+                semester,
+                subjectId,
+                hardDeleted: hard,
+            },
+        });
+
         return json.ok({
             message: hard ? 'Academic subject hard-deleted.' : 'Academic subject soft-deleted.',
             data,
@@ -59,6 +87,6 @@ async function DELETEHandler(
         return handleApiError(err);
     }
 }
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

@@ -6,6 +6,8 @@ export interface DisciplinePayloadClient {
     dateOfOffence: string | Date | null;
     offence: string | null;
     punishmentAwarded?: string | null;
+    punishmentId?: string | null;
+    numberOfPunishments?: number | string | null;
     awardedOn?: string | Date | null;
     awardedBy?: string | null;
     numberOfPunishments?: number | string | null;
@@ -15,10 +17,12 @@ export interface DisciplinePayloadClient {
 
 export interface DisciplineResponse {
     id?: string;
-    semester: number;
-    dateOfOffence: string;
-    offence: string;
+    semester?: number;
+    dateOfOffence?: string;
+    offence?: string;
     punishmentAwarded?: string | null;
+    punishmentId?: string | null;
+    numberOfPunishments?: number;
     awardedOn?: string | null;
     awardedBy?: string | null;
     numberOfPunishments?: number | null;
@@ -65,6 +69,8 @@ export async function saveDisciplineRecords(
             dateOfOffence: toISODateString(r.dateOfOffence),
             offence: r.offence ? String(r.offence).trim() : "",
             punishmentAwarded: r.punishmentAwarded ?? undefined,
+            punishmentId: r.punishmentId ?? undefined,
+            numberOfPunishments: r.numberOfPunishments !== undefined && r.numberOfPunishments !== null ? Number(r.numberOfPunishments) : undefined,
             awardedOn: toISODateString(r.awardedOn),
             awardedBy: r.awardedBy ?? undefined,
             numberOfPunishments:

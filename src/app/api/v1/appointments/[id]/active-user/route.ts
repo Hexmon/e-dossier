@@ -1,31 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getActiveAppointmentWithHolder } from '@/app/db/queries/appointments';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import {
+  withAuditRoute,
+  AuditEventType,
+  AuditResourceType,
+} from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const apt = await getActiveAppointmentWithHolder(id);
   if (!apt) {
-    await createAuditLog({
-      actorUserId: null,
-      eventType: AuditEventType.API_REQUEST,
-      resourceType: AuditResourceType.APPOINTMENT,
-      resourceId: id,
-      description: 'Appointment holder lookup failed',
-      metadata: { appointmentId: id, found: false },
-      request: req,
+    await req.audit.log({
+      action: AuditEventType.API_REQUEST,
+      outcome: 'FAILURE',
+      actor: { type: 'anonymous', id: 'unknown' },
+      target: { type: AuditResourceType.APPOINTMENT, id },
+      metadata: { appointmentId: id, found: false, description: 'Appointment holder lookup failed' },
     });
     return NextResponse.json({ error: 'not_found', message: 'Active appointment holder not found.' }, { status: 404 });
   }
-  await createAuditLog({
-    actorUserId: null,
-    eventType: AuditEventType.API_REQUEST,
-    resourceType: AuditResourceType.APPOINTMENT,
-    resourceId: id,
-    description: 'Appointment holder lookup succeeded',
-    metadata: { appointmentId: id, userId: apt.userId },
-    request: req,
+  await req.audit.log({
+    action: AuditEventType.API_REQUEST,
+    outcome: 'SUCCESS',
+    actor: { type: 'anonymous', id: 'unknown' },
+    target: { type: AuditResourceType.APPOINTMENT, id },
+    metadata: { appointmentId: id, userId: apt.userId, description: 'Appointment holder lookup succeeded' },
   });
   return NextResponse.json({
     message: 'Active appointment holder retrieved successfully.',
@@ -33,4 +33,4 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
     username: apt.username,
   }, { status: 200 });
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);

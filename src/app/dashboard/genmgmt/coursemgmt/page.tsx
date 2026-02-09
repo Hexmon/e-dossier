@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -12,22 +12,12 @@ import CourseFormModal from "@/components/courses/CourseFormModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ocTabs } from "@/config/app.config";
-import { useCourses } from "@/hooks/useCourses";
-
-// UI Type used inside the Course Management page
-export interface UICourse {
-  id: string;
-  courseNo?: string;
-  startDate?: string;
-  endDate?: string;
-  trgModel?: number;
-}
+import { useCourses, type UICourse } from "@/hooks/useCourses";
 
 export default function CourseManagement() {
   const {
     courses,
     loading,
-    fetchCourses,
     addCourse,
     editCourse,
     removeCourse,
@@ -35,18 +25,10 @@ export default function CourseManagement() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
-
-  // Strict type instead of any
   const [editCourseData, setEditCourseData] = useState<UICourse | null>(null);
 
-  useEffect(() => {
-    fetchCourses();
-  }, [fetchCourses]);
-
-  // --- Filtered list ---
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
-
     return courses.filter(({ courseNo }) =>
       (courseNo ?? "").toLowerCase().includes(q)
     );
@@ -64,19 +46,17 @@ export default function CourseManagement() {
 
   const handleDelete = async (id: string) => {
     await removeCourse(id);
-    toast.warning("Course deleted.");
   };
 
   const handleSave = async (data: Omit<UICourse, "id">) => {
     try {
       if (editCourseData) {
         await editCourse(editCourseData.id, data);
-        toast.success("Course updated.");
       } else {
         await addCourse(data);
-        toast.success("Course added.");
       }
-      await fetchCourses();
+      setIsFormOpen(false);
+      setEditCourseData(null);
     } catch {
       toast.error("Something went wrong.");
     }
@@ -106,7 +86,9 @@ export default function CourseManagement() {
               <TabsContent value="course-mgmt">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Course Sections</h2>
-                  <Button onClick={handleAdd} className="bg-[#40ba4d]">Add Course</Button>
+                  <Button onClick={handleAdd} className="bg-[#40ba4d]">
+                    Add Course
+                  </Button>
                 </div>
 
                 {loading ? (
@@ -134,7 +116,10 @@ export default function CourseManagement() {
 
       <CourseFormModal
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditCourseData(null);
+        }}
         onSave={handleSave}
         course={editCourseData}
         mode={editCourseData ? "edit" : "add"}

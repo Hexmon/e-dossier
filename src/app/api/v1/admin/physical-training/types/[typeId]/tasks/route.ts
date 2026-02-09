@@ -1,12 +1,11 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTaskCreateSchema, ptTaskQuerySchema, ptTypeParam } from '@/app/lib/physical-training-validators';
 import { getPtType, listPtTasks, createPtTask } from '@/app/db/queries/physicalTraining';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ typeId: string }> }) {
     try {
         await requireAuth(req);
         const { typeId } = ptTypeParam.parse(await params);
@@ -24,7 +23,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ type
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ typeId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ typeId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { typeId } = ptTypeParam.parse(await params);
@@ -38,18 +37,16 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ typ
             sortOrder: dto.sortOrder ?? 0,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_TASK_CREATED,
-            resourceType: AuditResourceType.PT_TASK,
-            resourceId: row.id,
-            description: `Created PT task ${row.title} for type ${type.code}`,
+        await req.audit.log({
+            action: AuditEventType.PT_TASK_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_TASK, id: row.id },
             metadata: {
+                description: `Created PT task ${row.title} for type ${type.code}`,
                 ptTaskId: row.id,
                 ptTypeId: typeId,
             },
-            request: req,
-            required: true,
         });
         return json.created({ message: 'PT task created successfully.', task: row });
     } catch (err) {
@@ -57,5 +54,5 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ typ
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

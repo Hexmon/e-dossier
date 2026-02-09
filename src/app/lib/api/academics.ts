@@ -69,8 +69,6 @@ export interface SemesterData {
 }
 
 export interface SemesterGPAUpdate {
-    sgpa?: number;
-    cgpa?: number;
     marksScored?: number;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -10,7 +10,6 @@ import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { toast } from "sonner";
 
 import { ocTabs } from "@/config/app.config";
 import UserFormDialog from "@/components/users/UserFormDialog";
@@ -21,7 +20,7 @@ import type { User } from "@/app/lib/api/userApi";
 import { useDebouncedValue } from "@/app/lib/debounce";
 
 export default function UserManagement() {
-  const { users, loading, fetchUsers, addUser, editUser, removeUser } = useUsers();
+  const { users, loading, addUser, editUser, removeUser } = useUsers();
 
   const { register, handleSubmit, reset, setValue, watch } = useForm<User>();
   const [open, setOpen] = useState(false);
@@ -36,40 +35,43 @@ export default function UserManagement() {
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  // Filter users based on search and filters (client-side filtering)
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const searchLower = debouncedSearch.toLowerCase();
+      const matchesSearch =
+        !debouncedSearch ||
+        user.name?.toLowerCase().includes(searchLower) ||
+        user.username?.toLowerCase().includes(searchLower) ||
+        user.email?.toLowerCase().includes(searchLower);
 
-  // Filter users based on search and filters
-  const filteredUsers = users.filter((user) => {
-    const searchLower = debouncedSearch.toLowerCase();
-    const matchesSearch = !debouncedSearch ||
-      user.name?.toLowerCase().includes(searchLower) ||
-      user.username?.toLowerCase().includes(searchLower) ||
-      user.email?.toLowerCase().includes(searchLower);
+      const matchesStatus =
+        !statusFilter ||
+        (statusFilter === "active" && user.isActive) ||
+        (statusFilter === "disabled" && !user.isActive);
 
-    const matchesStatus = !statusFilter ||
-      (statusFilter === "active" && user.isActive) ||
-      (statusFilter === "disabled" && !user.isActive);
+      const matchesRole = !roleFilter || user.rank?.toLowerCase() === roleFilter.toLowerCase();
 
-    const matchesRole = !roleFilter || user.rank?.toLowerCase() === roleFilter.toLowerCase();
-
-    return matchesSearch && matchesStatus && matchesRole;
-  });
+      return matchesSearch && matchesStatus && matchesRole;
+    });
+  }, [users, debouncedSearch, statusFilter, roleFilter]);
 
   /** SAVE USER */
   const onSubmit = async (data: User) => {
-    if (editingUser && editingUser.id) {
-      await editUser(editingUser.id, data);
-      toast.success("User updated successfully");
-    } else {
-      await addUser(data);
-      toast.success("User added successfully");
-    }
+    try {
+      if (editingUser && editingUser.id) {
+        await editUser(editingUser.id, data);
+      } else {
+        await addUser(data);
+      }
 
-    reset();
-    setEditingUser(null);
-    setOpen(false);
+      reset();
+      setEditingUser(null);
+      setOpen(false);
+    } catch (error) {
+      // Error already handled by mutation
+      console.error("Failed to save user:", error);
+    }
   };
 
   /** EDIT HANDLER */
@@ -82,8 +84,12 @@ export default function UserManagement() {
   /** DELETE HANDLER */
   const handleDelete = async (user: User) => {
     if (!user.id) return;
-    await removeUser(user.id);
-    toast.warning("User deleted");
+    try {
+      await removeUser(user.id);
+    } catch (error) {
+      // Error already handled by mutation
+      console.error("Failed to delete user:", error);
+    }
   };
 
   /** VIEW HANDLER */
@@ -111,7 +117,6 @@ export default function UserManagement() {
 
             <GlobalTabs tabs={ocTabs} defaultValue="user-mgmt">
               <TabsContent value="user-mgmt" className="space-y-6">
-
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold">User List</h2>
                   <Button
@@ -202,11 +207,21 @@ export default function UserManagement() {
 
           {selectedUser && (
             <div className="space-y-2">
-              <p><b>Name:</b> {selectedUser.name ?? "N/A"}</p>
-              <p><b>Email:</b> {selectedUser.email ?? "N/A"}</p>
-              <p><b>Phone:</b> {selectedUser.phone ?? "N/A"}</p>
-              <p><b>Rank:</b> {selectedUser.rank ?? "N/A"}</p>
-              <p><b>Status:</b> {selectedUser.isActive ? "Active" : "Disabled"}</p>
+              <p>
+                <b>Name:</b> {selectedUser.name ?? "N/A"}
+              </p>
+              <p>
+                <b>Email:</b> {selectedUser.email ?? "N/A"}
+              </p>
+              <p>
+                <b>Phone:</b> {selectedUser.phone ?? "N/A"}
+              </p>
+              <p>
+                <b>Rank:</b> {selectedUser.rank ?? "N/A"}
+              </p>
+              <p>
+                <b>Status:</b> {selectedUser.isActive ? "Active" : "Disabled"}
+              </p>
             </div>
           )}
         </DialogContent>

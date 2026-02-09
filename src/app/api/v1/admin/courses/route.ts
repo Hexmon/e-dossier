@@ -1,14 +1,13 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { listQuerySchema, courseCreateSchema } from '@/app/lib/validators.courses';
 import { createCourse, listCourses } from '@/app/db/queries/courses';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
         const sp = new URL(req.url).searchParams;
         const qp = listQuerySchema.parse({
             q: sp.get('q') ?? undefined,
@@ -21,11 +20,29 @@ async function GETHandler(req: NextRequest) {
             includeDeleted: qp.includeDeleted === 'true',
             limit: qp.limit, offset: qp.offset,
         });
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.COURSE, id: 'collection' },
+            metadata: {
+                description: 'Courses retrieved successfully.',
+                count: rows.length,
+                query: {
+                    q: qp.q ?? null,
+                    includeDeleted: qp.includeDeleted === 'true',
+                    limit: qp.limit ?? null,
+                    offset: qp.offset ?? null,
+                },
+            },
+        });
+
         return json.ok({ message: 'Courses retrieved successfully.', items: rows, count: rows.length });
     } catch (err) { return handleApiError(err); }
 }
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const { code, title, notes } = courseCreateSchema.parse(await req.json());
@@ -33,20 +50,17 @@ async function POSTHandler(req: NextRequest) {
         // (uq index already exists; we handle conflict error format)
         const row = await createCourse({ code, title, notes });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.COURSE_CREATED,
-            resourceType: AuditResourceType.COURSE,
-            resourceId: row.id,
-            description: `Created course ${row.code}`,
+        await req.audit.log({
+            action: AuditEventType.COURSE_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.COURSE, id: row.id },
             metadata: {
+                description: `Created course ${row.code}`,
                 courseId: row.id,
                 code: row.code,
                 title: row.title,
             },
-            after: row,
-            request: req,
-            required: true,
         });
         return json.created({ message: 'Course created successfully.', course: row });
     } catch (err: any) {
@@ -54,6 +68,6 @@ async function POSTHandler(req: NextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

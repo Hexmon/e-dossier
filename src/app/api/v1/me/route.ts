@@ -1,13 +1,16 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/guard';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { eq } from 'drizzle-orm';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import {
+  withAuditRoute,
+  AuditEventType,
+  AuditResourceType,
+} from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
   try {
     const cookieHeader = req.headers.get('cookie') ?? '';
     const cookieNames = cookieHeader
@@ -34,16 +37,15 @@ async function GETHandler(req: NextRequest) {
 
     if (!u) return json.notFound('User not found.');
 
-    await createAuditLog({
-      actorUserId: principal.userId,
-      eventType: AuditEventType.API_REQUEST,
-      resourceType: AuditResourceType.USER,
-      resourceId: principal.userId,
-      description: 'Retrieved current user profile via /api/v1/me',
+    await req.audit.log({
+      action: AuditEventType.API_REQUEST,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: principal.userId },
+      target: { type: AuditResourceType.USER, id: principal.userId },
       metadata: {
         roles: principal.roles,
+        description: 'Retrieved current user profile via /api/v1/me',
       },
-      request: req,
     });
 
     return json.ok({ message: 'User retrieved successfully.', user: u, roles: principal.roles, apt: principal.apt ?? null });
@@ -51,4 +53,4 @@ async function GETHandler(req: NextRequest) {
     return handleApiError(err);
   }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);

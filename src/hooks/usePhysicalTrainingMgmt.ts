@@ -1,4 +1,5 @@
-import { useState } from "react";
+// hooks/usePhysicalTrainingMgmt.ts
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
     getPTTemplate,
@@ -6,15 +7,19 @@ import {
     createPTType,
     updatePTType,
     deletePTType,
+    listPTAttempts,
     createPTAttempt,
     updatePTAttempt,
     deletePTAttempt,
+    listPTGrades,
     createPTGrade,
     updatePTGrade,
     deletePTGrade,
+    listPTTasks,
     createPTTask,
     updatePTTask,
     deletePTTask,
+    listPTTaskScores,
     createPTTaskScore,
     updatePTTaskScore,
     deletePTTaskScore,
@@ -22,8 +27,6 @@ import {
     createPTMotivationField,
     updatePTMotivationField,
     deletePTMotivationField,
-    PTTemplate,
-    PTType,
     PTTypeCreate,
     PTTypeUpdate,
     PTAttemptCreate,
@@ -34,403 +37,469 @@ import {
     PTTaskUpdate,
     PTTaskScoreCreate,
     PTTaskScoreUpdate,
-    PTMotivationField,
     PTMotivationFieldCreate,
     PTMotivationFieldUpdate,
     DeleteOptions,
 } from "@/app/lib/api/Physicaltrainingapi";
 
-export function usePhysicalTrainingMgmt() {
-    const [loading, setLoading] = useState(false);
-    const [template, setTemplate] = useState<PTTemplate | null>(null);
-    const [types, setTypes] = useState<PTType[]>([]);
-    const [motivationFields, setMotivationFields] = useState<PTMotivationField[]>([]);
+// ---------------------------------------------------------------------------
+// Query key factory — single source of truth for all keys + invalidation
+// ---------------------------------------------------------------------------
+const QK = {
+    template: (semester: number) => ["pt", "template", semester] as const,
+    types: (semester: number) => ["pt", "types", semester] as const,
+    motivationFields: (semester: number) => ["pt", "motivationFields", semester] as const,
+    attempts: (typeId: string) => ["pt", "attempts", typeId] as const,
+    tasks: (typeId: string) => ["pt", "tasks", typeId] as const,
+    // allGrades fetches grades across every attempt for a given type
+    allGrades: (typeId: string) => ["pt", "allGrades", typeId] as const,
+    // grades scoped to a single attempt (used by the Grades tab when an attempt is selected)
+    grades: (typeId: string, attemptId: string) => ["pt", "grades", typeId, attemptId] as const,
+    taskScores: (typeId: string, taskId: string) => ["pt", "taskScores", typeId, taskId] as const,
+} as const;
 
-    // ========================================================================
-    // TEMPLATE
-    // ========================================================================
-    const fetchTemplate = async (semester: number) => {
-        setLoading(true);
-        try {
-            const data = await getPTTemplate(semester);
-            setTemplate(data);
-            return data;
-        } catch (error) {
-            console.error("Error fetching PT template:", error);
-            toast.error("Failed to load PT template");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+// ---------------------------------------------------------------------------
+// Hook options — all IDs flow in from the page's local state
+// ---------------------------------------------------------------------------
+export interface UsePhysicalTrainingMgmtOptions {
+    semester: number;
+    typeId: string | null;
+    attemptId: string | null;
+    taskId: string | null;
+}
 
-    // ========================================================================
-    // PT TYPES
-    // ========================================================================
-    const fetchTypes = async (semester: number) => {
-        setLoading(true);
-        try {
+export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions) {
+    const { semester, typeId, attemptId, taskId } = options;
+    const queryClient = useQueryClient();
+
+    // Derived booleans — keeps every `enabled` guard readable
+    const hasType = typeId !== null && typeId.length > 0;
+    const hasAttempt = hasType && attemptId !== null && attemptId.length > 0;
+    const hasTask = hasType && taskId !== null && taskId.length > 0;
+
+    // -----------------------------------------------------------------------
+    // Queries
+    // -----------------------------------------------------------------------
+    const templateQuery = useQuery({
+        queryKey: QK.template(semester),
+        queryFn: () => getPTTemplate(semester),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const typesQuery = useQuery({
+        queryKey: QK.types(semester),
+        queryFn: async () => {
             const data = await listPTTypes(semester);
-            const typesList = data?.items || [];
-            setTypes(typesList);
-            return typesList;
-        } catch (error) {
-            console.error("Error fetching PT types:", error);
-            toast.error("Failed to load PT types");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    };
+            return data?.items ?? [];
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const addType = async (payload: PTTypeCreate) => {
-        setLoading(true);
-        try {
-            const newType = await createPTType(payload);
+    const motivationFieldsQuery = useQuery({
+        queryKey: QK.motivationFields(semester),
+        queryFn: async () => {
+            const data = await listPTMotivationFields(semester);
+            return data?.items ?? [];
+        },
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const attemptsQuery = useQuery({
+        queryKey: QK.attempts(typeId!),
+        queryFn: async () => {
+            const data = await listPTAttempts(typeId!);
+            return data?.items ?? [];
+        },
+        enabled: hasType,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const tasksQuery = useQuery({
+        queryKey: QK.tasks(typeId!),
+        queryFn: async () => {
+            const data = await listPTTasks(typeId!);
+            return data?.items ?? [];
+        },
+        enabled: hasType,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    // Fetches grades for EVERY attempt under this type (used by Scores tab and
+    // as the default Grades view before a specific attempt is picked).
+    const allGradesQuery = useQuery({
+        queryKey: QK.allGrades(typeId!),
+        queryFn: async () => {
+            const attemptsData = await listPTAttempts(typeId!);
+            const attemptsList = attemptsData?.items ?? [];
+
+            const results = await Promise.allSettled(
+                attemptsList.map((attempt) => listPTGrades(typeId!, attempt.id))
+            );
+
+            return results.flatMap((result) =>
+                result.status === "fulfilled" ? (result.value?.items ?? []) : []
+            );
+        },
+        enabled: hasType,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    // Grades scoped to one attempt — only enabled when the user picks one
+    const gradesQuery = useQuery({
+        queryKey: QK.grades(typeId!, attemptId!),
+        queryFn: async () => {
+            const data = await listPTGrades(typeId!, attemptId!);
+            return data?.items ?? [];
+        },
+        enabled: hasAttempt,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const taskScoresQuery = useQuery({
+        queryKey: QK.taskScores(typeId!, taskId!),
+        queryFn: async () => {
+            const data = await listPTTaskScores(typeId!, taskId!);
+            return data?.items ?? [];
+        },
+        enabled: hasTask,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    // -----------------------------------------------------------------------
+    // Type mutations
+    // -----------------------------------------------------------------------
+    const createTypeMutation = useMutation({
+        mutationFn: (payload: PTTypeCreate) => createPTType(payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QK.types(semester) });
             toast.success("PT Type created successfully");
-            return newType;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error creating PT type:", error);
             toast.error("Failed to create PT type");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const editType = async (typeId: string, updates: PTTypeUpdate) => {
-        setLoading(true);
-        try {
-            const updatedType = await updatePTType(typeId, updates);
+    const updateTypeMutation = useMutation({
+        mutationFn: ({ id, updates }: { id: string; updates: PTTypeUpdate }) =>
+            updatePTType(id, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QK.types(semester) });
             toast.success("PT Type updated successfully");
-            return updatedType;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating PT type:", error);
             toast.error("Failed to update PT type");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const removeType = async (typeId: string, options?: DeleteOptions) => {
-        setLoading(true);
-        try {
-            await deletePTType(typeId, options);
+    const deleteTypeMutation = useMutation({
+        mutationFn: ({ id, opts }: { id: string; opts?: DeleteOptions }) =>
+            deletePTType(id, opts),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QK.types(semester) });
             toast.success("PT Type deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting PT type:", error);
             toast.error("Failed to delete PT type");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    // ========================================================================
-    // PT ATTEMPTS
-    // ========================================================================
-    const addAttempt = async (typeId: string, payload: PTAttemptCreate) => {
-        setLoading(true);
-        try {
-            const newAttempt = await createPTAttempt(typeId, payload);
+    // -----------------------------------------------------------------------
+    // Attempt mutations
+    // -----------------------------------------------------------------------
+    const createAttemptMutation = useMutation({
+        mutationFn: ({ tid, payload }: { tid: string; payload: PTAttemptCreate }) =>
+            createPTAttempt(tid, payload),
+        onSuccess: (_, { tid }) => {
+            queryClient.invalidateQueries({ queryKey: QK.attempts(tid) });
+            // allGrades depends on the attempt list, so refresh it too
+            queryClient.invalidateQueries({ queryKey: QK.allGrades(tid) });
             toast.success("Attempt created successfully");
-            return newAttempt;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error creating attempt:", error);
             toast.error("Failed to create attempt");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const editAttempt = async (typeId: string, attemptId: string, updates: PTAttemptUpdate) => {
-        setLoading(true);
-        try {
-            const updatedAttempt = await updatePTAttempt(typeId, attemptId, updates);
+    const updateAttemptMutation = useMutation({
+        mutationFn: ({ tid, id, updates }: { tid: string; id: string; updates: PTAttemptUpdate }) =>
+            updatePTAttempt(tid, id, updates),
+        onSuccess: (_, { tid }) => {
+            queryClient.invalidateQueries({ queryKey: QK.attempts(tid) });
             toast.success("Attempt updated successfully");
-            return updatedAttempt;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating attempt:", error);
             toast.error("Failed to update attempt");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const removeAttempt = async (typeId: string, attemptId: string, options?: DeleteOptions) => {
-        setLoading(true);
-        try {
-            await deletePTAttempt(typeId, attemptId, options);
+    const deleteAttemptMutation = useMutation({
+        mutationFn: ({ tid, id, opts }: { tid: string; id: string; opts?: DeleteOptions }) =>
+            deletePTAttempt(tid, id, opts),
+        onSuccess: (_, { tid }) => {
+            queryClient.invalidateQueries({ queryKey: QK.attempts(tid) });
+            queryClient.invalidateQueries({ queryKey: QK.allGrades(tid) });
             toast.success("Attempt deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting attempt:", error);
             toast.error("Failed to delete attempt");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    // ========================================================================
-    // PT GRADES
-    // ========================================================================
-    const addGrade = async (typeId: string, attemptId: string, payload: PTGradeCreate) => {
-        setLoading(true);
-        try {
-            const newGrade = await createPTGrade(typeId, attemptId, payload);
+    // -----------------------------------------------------------------------
+    // Grade mutations
+    // -----------------------------------------------------------------------
+    const createGradeMutation = useMutation({
+        mutationFn: ({ tid, aid, payload }: { tid: string; aid: string; payload: PTGradeCreate }) =>
+            createPTGrade(tid, aid, payload),
+        onSuccess: (_, { tid, aid }) => {
+            queryClient.invalidateQueries({ queryKey: QK.grades(tid, aid) });
+            queryClient.invalidateQueries({ queryKey: QK.allGrades(tid) });
             toast.success("Grade created successfully");
-            return newGrade;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error creating grade:", error);
             toast.error("Failed to create grade");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const editGrade = async (
-        typeId: string,
-        attemptId: string,
-        gradeId: string,
-        updates: PTGradeUpdate
-    ) => {
-        setLoading(true);
-        try {
-            const updatedGrade = await updatePTGrade(typeId, attemptId, gradeId, updates);
+    const updateGradeMutation = useMutation({
+        mutationFn: ({ tid, aid, id, updates }: {
+            tid: string; aid: string; id: string; updates: PTGradeUpdate;
+        }) => updatePTGrade(tid, aid, id, updates),
+        onSuccess: (_, { tid, aid }) => {
+            queryClient.invalidateQueries({ queryKey: QK.grades(tid, aid) });
+            queryClient.invalidateQueries({ queryKey: QK.allGrades(tid) });
             toast.success("Grade updated successfully");
-            return updatedGrade;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating grade:", error);
             toast.error("Failed to update grade");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const removeGrade = async (
-        typeId: string,
-        attemptId: string,
-        gradeId: string,
-        options?: DeleteOptions
-    ) => {
-        setLoading(true);
-        try {
-            await deletePTGrade(typeId, attemptId, gradeId, options);
+    const deleteGradeMutation = useMutation({
+        mutationFn: ({ tid, aid, id, opts }: {
+            tid: string; aid: string; id: string; opts?: DeleteOptions;
+        }) => deletePTGrade(tid, aid, id, opts),
+        onSuccess: (_, { tid, aid }) => {
+            queryClient.invalidateQueries({ queryKey: QK.grades(tid, aid) });
+            queryClient.invalidateQueries({ queryKey: QK.allGrades(tid) });
             toast.success("Grade deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting grade:", error);
             toast.error("Failed to delete grade");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    // ========================================================================
-    // PT TASKS
-    // ========================================================================
-    const addTask = async (typeId: string, payload: PTTaskCreate) => {
-        setLoading(true);
-        try {
-            const newTask = await createPTTask(typeId, payload);
+    // -----------------------------------------------------------------------
+    // Task mutations
+    // -----------------------------------------------------------------------
+    const createTaskMutation = useMutation({
+        mutationFn: ({ tid, payload }: { tid: string; payload: PTTaskCreate }) =>
+            createPTTask(tid, payload),
+        onSuccess: (_, { tid }) => {
+            queryClient.invalidateQueries({ queryKey: QK.tasks(tid) });
             toast.success("Task created successfully");
-            return newTask;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error creating task:", error);
             toast.error("Failed to create task");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const editTask = async (typeId: string, taskId: string, updates: PTTaskUpdate) => {
-        setLoading(true);
-        try {
-            const updatedTask = await updatePTTask(typeId, taskId, updates);
+    const updateTaskMutation = useMutation({
+        mutationFn: ({ tid, id, updates }: { tid: string; id: string; updates: PTTaskUpdate }) =>
+            updatePTTask(tid, id, updates),
+        onSuccess: (_, { tid }) => {
+            queryClient.invalidateQueries({ queryKey: QK.tasks(tid) });
             toast.success("Task updated successfully");
-            return updatedTask;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating task:", error);
             toast.error("Failed to update task");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const removeTask = async (typeId: string, taskId: string, options?: DeleteOptions) => {
-        setLoading(true);
-        try {
-            await deletePTTask(typeId, taskId, options);
+    const deleteTaskMutation = useMutation({
+        mutationFn: ({ tid, id, opts }: { tid: string; id: string; opts?: DeleteOptions }) =>
+            deletePTTask(tid, id, opts),
+        onSuccess: (_, { tid }) => {
+            queryClient.invalidateQueries({ queryKey: QK.tasks(tid) });
             toast.success("Task deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting task:", error);
             toast.error("Failed to delete task");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    // ========================================================================
-    // PT TASK SCORES
-    // ========================================================================
-    const addTaskScore = async (typeId: string, taskId: string, payload: PTTaskScoreCreate) => {
-        setLoading(true);
-        try {
-            const newScore = await createPTTaskScore(typeId, taskId, payload);
+    // -----------------------------------------------------------------------
+    // Task score mutations
+    // -----------------------------------------------------------------------
+    const createTaskScoreMutation = useMutation({
+        mutationFn: ({ tid, taskId: tskId, payload }: {
+            tid: string; taskId: string; payload: PTTaskScoreCreate;
+        }) => createPTTaskScore(tid, tskId, payload),
+        onSuccess: (_, { tid, taskId: tskId }) => {
+            queryClient.invalidateQueries({ queryKey: QK.taskScores(tid, tskId) });
             toast.success("Task score created successfully");
-            return newScore;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error creating task score:", error);
             toast.error("Failed to create task score");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const editTaskScore = async (
-        typeId: string,
-        taskId: string,
-        scoreId: string,
-        updates: PTTaskScoreUpdate
-    ) => {
-        setLoading(true);
-        try {
-            const updatedScore = await updatePTTaskScore(typeId, taskId, scoreId, updates);
+    const updateTaskScoreMutation = useMutation({
+        mutationFn: ({ tid, taskId: tskId, id, updates }: {
+            tid: string; taskId: string; id: string; updates: PTTaskScoreUpdate;
+        }) => updatePTTaskScore(tid, tskId, id, updates),
+        onSuccess: (_, { tid, taskId: tskId }) => {
+            queryClient.invalidateQueries({ queryKey: QK.taskScores(tid, tskId) });
             toast.success("Task score updated successfully");
-            return updatedScore;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating task score:", error);
             toast.error("Failed to update task score");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const removeTaskScore = async (typeId: string, taskId: string, scoreId: string) => {
-        setLoading(true);
-        try {
-            await deletePTTaskScore(typeId, taskId, scoreId);
+    const deleteTaskScoreMutation = useMutation({
+        mutationFn: ({ tid, taskId: tskId, id }: {
+            tid: string; taskId: string; id: string;
+        }) => deletePTTaskScore(tid, tskId, id),
+        onSuccess: (_, { tid, taskId: tskId }) => {
+            queryClient.invalidateQueries({ queryKey: QK.taskScores(tid, tskId) });
             toast.success("Task score deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting task score:", error);
             toast.error("Failed to delete task score");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    // ========================================================================
-    // MOTIVATION FIELDS
-    // ========================================================================
-    const fetchMotivationFields = async (semester: number) => {
-        setLoading(true);
-        try {
-            const data = await listPTMotivationFields(semester);
-            const fieldsList = data?.items || [];
-            setMotivationFields(fieldsList);
-            return fieldsList;
-        } catch (error) {
-            console.error("Error fetching motivation fields:", error);
-            toast.error("Failed to load motivation fields");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const addMotivationField = async (payload: PTMotivationFieldCreate) => {
-        setLoading(true);
-        try {
-            const newField = await createPTMotivationField(payload);
+    // -----------------------------------------------------------------------
+    // Motivation field mutations
+    // -----------------------------------------------------------------------
+    const createMotivationFieldMutation = useMutation({
+        mutationFn: (payload: PTMotivationFieldCreate) => createPTMotivationField(payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QK.motivationFields(semester) });
             toast.success("Motivation field created successfully");
-            return newField;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error creating motivation field:", error);
             toast.error("Failed to create motivation field");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const editMotivationField = async (fieldId: string, updates: PTMotivationFieldUpdate) => {
-        setLoading(true);
-        try {
-            const updatedField = await updatePTMotivationField(fieldId, updates);
+    const updateMotivationFieldMutation = useMutation({
+        mutationFn: ({ id, updates }: { id: string; updates: PTMotivationFieldUpdate }) =>
+            updatePTMotivationField(id, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QK.motivationFields(semester) });
             toast.success("Motivation field updated successfully");
-            return updatedField;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating motivation field:", error);
             toast.error("Failed to update motivation field");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
-    const removeMotivationField = async (fieldId: string, options?: DeleteOptions) => {
-        setLoading(true);
-        try {
-            await deletePTMotivationField(fieldId, options);
+    const deleteMotivationFieldMutation = useMutation({
+        mutationFn: ({ id, opts }: { id: string; opts?: DeleteOptions }) =>
+            deletePTMotivationField(id, opts),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QK.motivationFields(semester) });
             toast.success("Motivation field deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting motivation field:", error);
             toast.error("Failed to delete motivation field");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
+    // -----------------------------------------------------------------------
+    // Derived loading state
+    // -----------------------------------------------------------------------
+    const loading =
+        templateQuery.isLoading ||
+        typesQuery.isLoading ||
+        motivationFieldsQuery.isLoading ||
+        (hasType && attemptsQuery.isLoading) ||
+        (hasType && tasksQuery.isLoading) ||
+        (hasType && allGradesQuery.isLoading) ||
+        (hasAttempt && gradesQuery.isLoading) ||
+        (hasTask && taskScoresQuery.isLoading);
+
+    // -----------------------------------------------------------------------
+    // Public API
+    // -----------------------------------------------------------------------
     return {
+        // ---- State --------------------------------------------------------
         loading,
-        template,
-        types,
-        motivationFields,
-        // Template
-        fetchTemplate,
-        // Types
-        fetchTypes,
-        addType,
-        editType,
-        removeType,
-        // Attempts
-        addAttempt,
-        editAttempt,
-        removeAttempt,
-        // Grades
-        addGrade,
-        editGrade,
-        removeGrade,
-        // Tasks
-        addTask,
-        editTask,
-        removeTask,
-        // Task Scores
-        addTaskScore,
-        editTaskScore,
-        removeTaskScore,
-        // Motivation Fields
-        fetchMotivationFields,
-        addMotivationField,
-        editMotivationField,
-        removeMotivationField,
+        template: templateQuery.data ?? null,
+        types: typesQuery.data ?? [],
+        motivationFields: motivationFieldsQuery.data ?? [],
+        attempts: attemptsQuery.data ?? [],
+        tasks: tasksQuery.data ?? [],
+        // The page uses `grades` for the per-attempt view when attemptId is
+        // set, but falls back to allGrades (every attempt) otherwise.
+        grades: hasAttempt ? (gradesQuery.data ?? []) : (allGradesQuery.data ?? []),
+        taskScores: taskScoresQuery.data ?? [],
+
+        // ---- Type operations ----------------------------------------------
+        addType: (payload: PTTypeCreate) => createTypeMutation.mutateAsync(payload),
+        editType: (id: string, updates: PTTypeUpdate) =>
+            updateTypeMutation.mutateAsync({ id, updates }),
+        removeType: (id: string, opts?: DeleteOptions) =>
+            deleteTypeMutation.mutateAsync({ id, opts }),
+
+        // ---- Attempt operations -------------------------------------------
+        addAttempt: (tid: string, payload: PTAttemptCreate) =>
+            createAttemptMutation.mutateAsync({ tid, payload }),
+        editAttempt: (tid: string, id: string, updates: PTAttemptUpdate) =>
+            updateAttemptMutation.mutateAsync({ tid, id, updates }),
+        removeAttempt: (tid: string, id: string, opts?: DeleteOptions) =>
+            deleteAttemptMutation.mutateAsync({ tid, id, opts }),
+
+        // ---- Grade operations ---------------------------------------------
+        addGrade: (tid: string, aid: string, payload: PTGradeCreate) =>
+            createGradeMutation.mutateAsync({ tid, aid, payload }),
+        editGrade: (tid: string, aid: string, id: string, updates: PTGradeUpdate) =>
+            updateGradeMutation.mutateAsync({ tid, aid, id, updates }),
+        removeGrade: (tid: string, aid: string, id: string, opts?: DeleteOptions) =>
+            deleteGradeMutation.mutateAsync({ tid, aid, id, opts }),
+
+        // ---- Task operations ----------------------------------------------
+        addTask: (tid: string, payload: PTTaskCreate) =>
+            createTaskMutation.mutateAsync({ tid, payload }),
+        editTask: (tid: string, id: string, updates: PTTaskUpdate) =>
+            updateTaskMutation.mutateAsync({ tid, id, updates }),
+        removeTask: (tid: string, id: string, opts?: DeleteOptions) =>
+            deleteTaskMutation.mutateAsync({ tid, id, opts }),
+
+        // ---- Task score operations ----------------------------------------
+        addTaskScore: (tid: string, tskId: string, payload: PTTaskScoreCreate) =>
+            createTaskScoreMutation.mutateAsync({ tid, taskId: tskId, payload }),
+        editTaskScore: (tid: string, tskId: string, id: string, updates: PTTaskScoreUpdate) =>
+            updateTaskScoreMutation.mutateAsync({ tid, taskId: tskId, id, updates }),
+        removeTaskScore: (tid: string, tskId: string, id: string) =>
+            deleteTaskScoreMutation.mutateAsync({ tid, taskId: tskId, id }),
+
+        // ---- Motivation field operations ----------------------------------
+        addMotivationField: (payload: PTMotivationFieldCreate) =>
+            createMotivationFieldMutation.mutateAsync(payload),
+        editMotivationField: (id: string, updates: PTMotivationFieldUpdate) =>
+            updateMotivationFieldMutation.mutateAsync({ id, updates }),
+        removeMotivationField: (id: string, opts?: DeleteOptions) =>
+            deleteMotivationFieldMutation.mutateAsync({ id, opts }),
     };
 }

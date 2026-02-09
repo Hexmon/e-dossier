@@ -1,17 +1,20 @@
 // src\app\api\v1\auth\signup\route.ts
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { signupSchema } from '@/app/lib/validators';
 import { signupLocal } from '@/app/db/queries/auth';
 import { createSignupRequest } from '@/app/db/queries/signupRequests';
 import { preflightConflicts } from '@/utils/preflightConflicts';
 import { getClientIp, checkSignupRateLimit, getRateLimitHeaders } from '@/lib/ratelimit';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import {
+  withAuditRoute,
+  AuditEventType,
+  AuditResourceType,
+} from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 type PgError = { code?: string; detail?: string };
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
   try {
     // SECURITY FIX: Rate limiting for signup attempts (3 per hour)
     const clientIp = getClientIp(req);
@@ -19,14 +22,12 @@ async function POSTHandler(req: NextRequest) {
 
     if (!rateLimitResult.success) {
       const headers = getRateLimitHeaders(rateLimitResult as any);
-      await createAuditLog({
-        actorUserId: null,
-        eventType: AuditEventType.API_REQUEST,
-        resourceType: AuditResourceType.API,
-        resourceId: null,
-        description: 'Signup attempt blocked by rate limit',
-        metadata: { reason: 'rate_limited', clientIp },
-        request: req,
+      await req.audit.log({
+        action: AuditEventType.API_REQUEST,
+        outcome: 'FAILURE',
+        actor: { type: 'anonymous', id: 'unknown' },
+        target: { type: AuditResourceType.API, id: undefined },
+        metadata: { reason: 'rate_limited', clientIp, description: 'Signup attempt blocked by rate limit' },
       });
       return new Response(
         JSON.stringify({
@@ -50,14 +51,12 @@ async function POSTHandler(req: NextRequest) {
     const body = await req.json();
     const parsed = signupSchema.safeParse(body);
     if (!parsed.success) {
-      await createAuditLog({
-        actorUserId: null,
-        eventType: AuditEventType.API_REQUEST,
-        resourceType: AuditResourceType.API,
-        resourceId: null,
-        description: 'Signup attempt rejected due to validation errors',
-        metadata: { reason: 'validation_failed' },
-        request: req,
+      await req.audit.log({
+        action: AuditEventType.API_REQUEST,
+        outcome: 'FAILURE',
+        actor: { type: 'anonymous', id: 'unknown' },
+        target: { type: AuditResourceType.API, id: undefined },
+        metadata: { reason: 'validation_failed', description: 'Signup attempt rejected due to validation errors' },
       });
       return json.badRequest('Validation failed', { issues: parsed.error.flatten() });
     }
@@ -66,14 +65,12 @@ async function POSTHandler(req: NextRequest) {
 
     const conflicts = await preflightConflicts(username, email, phone);
     if (conflicts.length) {
-      await createAuditLog({
-        actorUserId: null,
-        eventType: AuditEventType.API_REQUEST,
-        resourceType: AuditResourceType.API,
-        resourceId: null,
-        description: 'Signup attempt blocked by conflicts',
-        metadata: { reason: 'conflict', conflicts },
-        request: req,
+      await req.audit.log({
+        action: AuditEventType.API_REQUEST,
+        outcome: 'FAILURE',
+        actor: { type: 'anonymous', id: 'unknown' },
+        target: { type: AuditResourceType.API, id: undefined },
+        metadata: { reason: 'conflict', conflicts, description: 'Signup attempt blocked by conflicts' },
       });
       return json.badRequest('Already in use', { conflicts });
     }
@@ -99,18 +96,17 @@ async function POSTHandler(req: NextRequest) {
       payload: { username, name, email, phone, rank, note },
     });
 
-    await createAuditLog({
-      actorUserId: userId,
-      eventType: AuditEventType.SIGNUP_REQUEST_CREATED,
-      resourceType: AuditResourceType.SIGNUP_REQUEST,
-      resourceId: userId,
-      description: 'Signup request submitted',
+    await req.audit.log({
+      action: AuditEventType.SIGNUP_REQUEST_CREATED,
+      outcome: 'SUCCESS',
+      actor: { type: 'anonymous', id: 'unknown' },
+      target: { type: AuditResourceType.SIGNUP_REQUEST, id: userId },
       metadata: {
         username,
         email,
         phone,
+        description: 'Signup request submitted',
       },
-      request: req,
     });
 
     return json.created({
@@ -123,4 +119,4 @@ async function POSTHandler(req: NextRequest) {
     return handleApiError(err);
   }
 }
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

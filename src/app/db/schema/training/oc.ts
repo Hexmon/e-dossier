@@ -695,3 +695,23 @@ export const ocCounselling = pgTable('oc_counselling', {
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
 }));
+
+// SPR/FPR
+export const ocSprRecords = pgTable('oc_spr_records', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    cdrMarks: numeric('cdr_marks', { mode: 'number' }).notNull().default(0),
+    subjectRemarks: jsonb('subject_remarks').$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
+    platoonCommanderRemarks: text('platoon_commander_remarks'),
+    deputyCommanderRemarks: text('deputy_commander_remarks'),
+    commanderRemarks: text('commander_remarks'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqOcSemester: uniqueIndex('uq_oc_spr_record').on(t.ocId, t.semester),
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+    cdrNonNegative: { check: sql`CHECK (${t.cdrMarks.name} >= 0)` },
+}));
