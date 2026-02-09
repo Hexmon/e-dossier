@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
 import { OcIdParam, commUpdateSchema } from '@/app/lib/oc-validators';
 import { getComm, updateComm, deleteComm } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -36,7 +36,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const adminCtx = await mustBeAdmin(req);
+    const authCtx = await mustBeAuthed(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
@@ -47,7 +47,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     await req.audit.log({
       action: AuditEventType.OC_RECORD_UPDATED,
       outcome: 'SUCCESS',
-      actor: { type: 'user', id: adminCtx.userId },
+      actor: { type: 'user', id: authCtx.userId },
       target: { type: AuditResourceType.OC, id: ocId },
       metadata: {
         description: `Updated parent communication ${id} for OC ${ocId}`,
@@ -66,7 +66,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const adminCtx = await mustBeAdmin(req);
+    const authCtx = await mustBeAuthed(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
@@ -76,7 +76,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     await req.audit.log({
       action: AuditEventType.OC_RECORD_DELETED,
       outcome: 'SUCCESS',
-      actor: { type: 'user', id: adminCtx.userId },
+      actor: { type: 'user', id: authCtx.userId },
       target: { type: AuditResourceType.OC, id: ocId },
       metadata: {
         description: `Deleted parent communication ${id} for OC ${ocId}`,

@@ -1,6 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
-import { parseParam, ensureOcExists } from '../../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed } from '../../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { olqBySemesterQuerySchema } from '@/app/lib/olq-validators';
 import { listOlqBySemester } from '@/app/db/queries/olq';
@@ -9,7 +8,7 @@ import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 

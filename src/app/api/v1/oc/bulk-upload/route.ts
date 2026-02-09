@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
 import { ocCadets, ocPersonal } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -11,6 +10,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { checkApiRateLimit, getClientIp, getRateLimitHeaders } from '@/lib/ratelimit';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { mustBeAuthed } from '../_checks';
 
 // ---------- Body ----------
 const BodySchema = z.object({
@@ -131,7 +131,7 @@ async function existsPersonalField<K extends keyof typeof ocPersonal['_']['colum
 // ---------- Handler ----------
 async function POSTHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await mustBeAuthed(req);
 
     // Rate limit
     const ip = getClientIp(req);

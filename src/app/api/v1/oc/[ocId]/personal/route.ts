@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam, personalUpsertSchema } from '@/app/lib/oc-validators';
 import { getPersonal, upsertPersonal, deletePersonal } from '@/app/db/queries/oc';
 import { requireAuth } from '@/app/lib/authz';
@@ -12,7 +12,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
         await ensureOcExists(ocId);
 
         // SECURITY FIX: Proper authorization check to prevent IDOR
-        const authCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
 
         await req.audit.log({
             action: AuditEventType.API_REQUEST,
@@ -37,7 +37,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await ensureOcExists(ocId);
 
         // SECURITY FIX: Proper authorization check to prevent IDOR
-        const authCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
 
         const dto = personalUpsertSchema.parse(await req.json());
         const existing = await getPersonal(ocId);
@@ -62,7 +62,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const dto = personalUpsertSchema.partial().parse(await req.json());
         const saved = await upsertPersonal(ocId, dto);
@@ -70,7 +70,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         await req.audit.log({
             action: AuditEventType.OC_RECORD_UPDATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `Updated personal particulars for OC ${ocId}`,
@@ -86,14 +86,14 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const deleted = await deletePersonal(ocId);
 
         await req.audit.log({
             action: AuditEventType.OC_RECORD_DELETED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `Deleted personal particulars for OC ${ocId}`,

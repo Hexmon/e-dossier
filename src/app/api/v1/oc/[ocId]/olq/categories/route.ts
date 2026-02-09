@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { mustBeAuthed } from '../../../_checks';
 import {
     olqCategoryCreateSchema,
     olqCategoryQuerySchema,
@@ -13,7 +13,7 @@ import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await params;
 
         const sp = new URL(req.url).searchParams;
@@ -50,7 +50,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await params;
 
         const dto = olqCategoryCreateSchema.parse(await req.json());
@@ -65,7 +65,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await req.audit.log({
             action: AuditEventType.OC_RECORD_CREATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `Created OLQ category ${row.id}`,

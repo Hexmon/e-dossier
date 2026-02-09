@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin } from '../../../../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed } from '../../../../../_checks';
 import { OcIdParam, SemesterParam, SubjectIdParam, academicSubjectPatchSchema } from '@/app/lib/oc-validators';
 import { updateOcAcademicSubject, deleteOcAcademicSubject } from '@/app/services/oc-academics';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
@@ -10,7 +10,7 @@ async function PATCHHandler(
     { params }: { params: Promise<{ ocId: string; semester: string; subjectId: string }> },
 ) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         const { subjectId } = await parseParam({ params }, SubjectIdParam);
@@ -20,15 +20,15 @@ async function PATCHHandler(
             theory: dto.theory,
             practical: dto.practical,
         }, {
-            actorUserId: adminCtx?.userId,
-            actorRoles: adminCtx?.roles,
+            actorUserId: authCtx?.userId,
+            actorRoles: authCtx?.roles,
             request: req,
         });
 
         await req.audit.log({
             action: AuditEventType.OC_ACADEMICS_SUBJECT_UPDATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
             metadata: {
                 description: `Academic subject ${subjectId} updated for OC ${ocId}, semester ${semester}`,
@@ -53,22 +53,22 @@ async function DELETEHandler(
     { params }: { params: Promise<{ ocId: string; semester: string; subjectId: string }> },
 ) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         const { subjectId } = await parseParam({ params }, SubjectIdParam);
         await ensureOcExists(ocId);
         const hard = new URL(req.url).searchParams.get('hard') === 'true';
         const data = await deleteOcAcademicSubject(ocId, semester, subjectId, { hard }, {
-            actorUserId: adminCtx?.userId,
-            actorRoles: adminCtx?.roles,
+            actorUserId: authCtx?.userId,
+            actorRoles: authCtx?.roles,
             request: req,
         });
 
         await req.audit.log({
             action: AuditEventType.OC_ACADEMICS_SUBJECT_DELETED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
             metadata: {
                 description: `Academic subject ${subjectId} deleted for OC ${ocId}, semester ${semester}`,

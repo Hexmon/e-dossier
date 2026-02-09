@@ -422,13 +422,6 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "bg-teal-600"
   },
   {
-    title: "PT & Swimming Tests",
-    description: "Track cadet PT and swimming test performance",
-    icon: Dumbbell,
-    to: (id: string) => `/dashboard/${id}/milmgmt/pt-swimming`,
-    color: "bg-orange-600"
-  },
-  {
     title: "Sports & Motivation Awards",
     description: "Manage cadet sports achievements and motivation awards",
     icon: Trophy,

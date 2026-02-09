@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { mustBeAdmin, mustBeAuthed } from '../../../../_checks';
 import {
     olqCategoryUpdateSchema,
     olqCategoryQuerySchema,
@@ -17,7 +17,7 @@ const CategoryIdParam = z.object({ categoryId: z.string().uuid() });
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
         const { categoryId, ocId } = { ...(await params), ...CategoryIdParam.parse(await params) };
         const sp = new URL(req.url).searchParams;
         const qp = olqCategoryQuerySchema.parse({
@@ -48,7 +48,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const adminCtx = await mustBeAuthed(req);
         const { categoryId, ocId } = { ...(await params), ...CategoryIdParam.parse(await params) };
         const dto = olqCategoryUpdateSchema.parse(await req.json());
         const row = await updateOlqCategory(categoryId, { ...dto });
@@ -74,7 +74,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const adminCtx = await mustBeAuthed(req);
         const { categoryId, ocId } = { ...(await params), ...CategoryIdParam.parse(await params) };
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteOlqCategory(categoryId, { hard: body?.hard === true });
