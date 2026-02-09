@@ -44,7 +44,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         await req.audit.log({
             action: AuditEventType.OC_RECORD_UPDATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `Updated medical record ${id} for OC ${ocId}`,
@@ -68,7 +68,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         await req.audit.log({
             action: AuditEventType.OC_RECORD_DELETED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `Deleted medical record ${id} for OC ${ocId}`,
