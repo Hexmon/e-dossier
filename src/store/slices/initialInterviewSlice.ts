@@ -7,8 +7,8 @@ export interface InterviewFormData {
 }
 
 interface InitialInterviewState {
-    // Structure: { ocId: { officer: formData } }
-    forms: Record<string, Record<InterviewOfficer, InterviewFormData>>;
+    // Structure: { ocId: { semesterKey: { officer: formData } } }
+    forms: Record<string, Record<string, Record<InterviewOfficer, InterviewFormData>>>;
 }
 
 const initialState: InitialInterviewState = {
@@ -23,28 +23,32 @@ const initialInterviewSlice = createSlice({
             state,
             action: PayloadAction<{
                 ocId: string;
+                semesterKey: string;
                 officer: InterviewOfficer;
                 data: InterviewFormData
             }>
         ) => {
-            const { ocId, officer, data } = action.payload;
+            const { ocId, semesterKey, officer, data } = action.payload;
             if (!state.forms[ocId]) {
-                state.forms[ocId] = {
+                state.forms[ocId] = {};
+            }
+            if (!state.forms[ocId][semesterKey]) {
+                state.forms[ocId][semesterKey] = {
                     plcdr: {},
                     dscoord: {},
                     dycdr: {},
                     cdr: {},
                 };
             }
-            state.forms[ocId][officer] = data;
+            state.forms[ocId][semesterKey][officer] = data;
         },
         clearInterviewForm: (
             state,
-            action: PayloadAction<{ ocId: string; officer: InterviewOfficer }>
+            action: PayloadAction<{ ocId: string; semesterKey: string; officer: InterviewOfficer }>
         ) => {
-            const { ocId, officer } = action.payload;
-            if (state.forms[ocId]) {
-                state.forms[ocId][officer] = {};
+            const { ocId, semesterKey, officer } = action.payload;
+            if (state.forms[ocId]?.[semesterKey]) {
+                state.forms[ocId][semesterKey][officer] = {};
             }
         },
         clearAllInterviewForms: (state, action: PayloadAction<string>) => {

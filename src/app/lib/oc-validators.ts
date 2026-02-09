@@ -183,6 +183,7 @@ export const disciplineCreateSchema = z.object({
     punishmentAwarded: z.string().optional(), // restrictions/ED/gating/…
     awardedOn: z.coerce.date().optional(),
     awardedBy: z.string().optional(),
+    numberOfPunishments: z.coerce.number().int().optional(),
     pointsDelta: z.coerce.number().int().optional(),             // e.g. -3, -1, 0
     pointsCumulative: z.coerce.number().int().optional(),
 });
