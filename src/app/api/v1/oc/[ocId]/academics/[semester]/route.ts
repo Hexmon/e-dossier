@@ -49,7 +49,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         await req.audit.log({
             action: AuditEventType.OC_ACADEMICS_SUMMARY_UPDATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
             metadata: {
                 description: `Academic summary updated for OC ${ocId}, semester ${semester}`,
@@ -84,7 +84,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         await req.audit.log({
             action: AuditEventType.OC_ACADEMICS_SEMESTER_DELETED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
             metadata: {
                 description: `Academic semester ${semester} deleted for OC ${ocId}`,
