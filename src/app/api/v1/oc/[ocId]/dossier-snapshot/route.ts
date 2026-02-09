@@ -14,8 +14,11 @@ import { getOcImage, upsertOcImage } from '@/app/db/queries/oc';
 
 const OcIdParam = z.object({ ocId: z.string().uuid() });
 
+const optionalDate = z.preprocess((v) => (v === '' || v === null ? undefined : v), z.coerce.date().optional());
+
 const dossierSnapshotSchema = z.object({
-  dtOfPassingOut: z.string().optional(),
+  withdrawnOn: optionalDate,
+  dtOfPassingOut: optionalDate,
   icNo: z.string().nullable().optional(),
   orderOfMerit: z.string().nullable().optional(),
   regtArm: z.string().nullable().optional(),
@@ -309,16 +312,39 @@ async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{
       .where(eq(ocCommissioning.ocId, ocId))
       .limit(1);
 
-    if (!existing) {
-      throw new ApiError(404, 'Dossier snapshot not found.', 'not_found');
-    }
-
     // Upload images if provided
     if (arrivalPhoto) {
       await uploadImage(ocId, arrivalPhoto, 'CIVIL_DRESS');
     }
     if (departurePhoto) {
       await uploadImage(ocId, departurePhoto, 'UNIFORM');
+    }
+
+    if (!existing) {
+      const insertData: any = {
+        ocId,
+        passOutDate: dto.dtOfPassingOut ? new Date(dto.dtOfPassingOut) : null,
+        icNo: dto.icNo,
+        orderOfMerit: dto.orderOfMerit ? parseInt(dto.orderOfMerit) : null,
+        regimentOrArm: dto.regtArm,
+        postedUnit: dto.postedAtt,
+      };
+
+      const [row] = await db.insert(ocCommissioning).values(insertData).returning();
+
+      await req.audit.log({
+        action: AuditEventType.OC_RECORD_CREATED,
+        outcome: 'SUCCESS',
+        actor: { type: 'user', id: adminCtx.userId },
+        target: { type: AuditResourceType.OC, id: ocId },
+        metadata: {
+          description: `Created dossier snapshot for ${ocId}`,
+          ocId,
+          module: 'dossier-snapshot',
+        },
+      });
+
+      return json.ok({ message: 'Dossier snapshot created successfully.', data: row });
     }
 
     const updateData: any = {};
