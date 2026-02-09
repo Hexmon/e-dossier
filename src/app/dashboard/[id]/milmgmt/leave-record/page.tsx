@@ -80,11 +80,9 @@ export default function LeavePage() {
     });
 
     const handleClearForm = () => {
-        if (confirm("Are you sure you want to clear all unsaved changes?")) {
-            dispatch(clearLeaveForm(ocId));
-            methods.reset({ leaveRows: defaultLeaveRows });
-            toast.info("Form cleared");
-        }
+        dispatch(clearLeaveForm(ocId));
+        methods.reset({ leaveRows: defaultLeaveRows });
+        toast.info("Form cleared");
     };
 
     return (
@@ -315,6 +313,7 @@ function InnerLeavePage({
                             fields={fields}
                             append={append}
                             remove={remove}
+                            activeSemester={activeTab + 1}
                             savedRows={savedData[activeTab]}
                             onEditRow={beginEdit}
                             onDeleteSaved={handleDeleteSaved}

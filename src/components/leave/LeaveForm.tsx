@@ -16,6 +16,7 @@ interface Props {
     fields: FieldArrayWithId<LeaveFormValues, "leaveRows", "id">[];
     append: UseFieldArrayAppend<LeaveFormValues, "leaveRows">;
     remove: UseFieldArrayRemove;
+    activeSemester: number;
 
     savedRows: LeaveRow[];
     onEditRow: (row: LeaveRow) => void;
@@ -35,6 +36,7 @@ export default function LeaveForm({
     fields,
     append,
     remove,
+    activeSemester,
 
     savedRows,
     onEditRow,
@@ -277,7 +279,7 @@ export default function LeaveForm({
                         onClick={() =>
                             append({
                                 id: null,
-                                semester: 1,
+                                semester: activeSemester,
                                 reason: "",
                                 type: "LEAVE",
                                 dateFrom: "",
