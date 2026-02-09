@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin } from '../../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed } from '../../../_checks';
 import { OcIdParam, ocImagePresignSchema } from '@/app/lib/oc-validators';
 import { buildImageKey, createPresignedUploadUrl, getPublicObjectUrl, getStorageConfig } from '@/app/lib/storage';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
@@ -7,7 +7,7 @@ import type { AuditNextRequest } from '@/lib/audit';
 
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -25,7 +25,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await req.audit.log({
             action: AuditEventType.OC_RECORD_UPDATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `Generated upload URL for OC image ${body.kind}`,

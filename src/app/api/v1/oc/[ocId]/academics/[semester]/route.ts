@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin } from '../../../_checks';
+import { parseParam, ensureOcExists, mustBeAdmin, mustBeAuthed } from '../../../_checks';
 import { OcIdParam, SemesterParam, academicSummaryPatchSchema } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getOcAcademicSemester, updateOcAcademicSummary, deleteOcAcademicSemester } from '@/app/services/oc-academics';
@@ -35,21 +35,21 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
         const dto = academicSummaryPatchSchema.parse(await req.json());
         const data = await updateOcAcademicSummary(ocId, semester, dto, {
-            actorUserId: adminCtx?.userId,
-            actorRoles: adminCtx?.roles,
+            actorUserId: authCtx?.userId,
+            actorRoles: authCtx?.roles,
             request: req,
         });
 
         await req.audit.log({
             action: AuditEventType.OC_ACADEMICS_SUMMARY_UPDATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
             metadata: {
                 description: `Academic summary updated for OC ${ocId}, semester ${semester}`,
@@ -70,21 +70,21 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
         const hard = new URL(req.url).searchParams.get('hard') === 'true';
         const result = await deleteOcAcademicSemester(ocId, semester, { hard }, {
-            actorUserId: adminCtx?.userId,
-            actorRoles: adminCtx?.roles,
+            actorUserId: authCtx?.userId,
+            actorRoles: authCtx?.roles,
             request: req,
         });
 
         await req.audit.log({
             action: AuditEventType.OC_ACADEMICS_SEMESTER_DELETED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
             metadata: {
                 description: `Academic semester ${semester} deleted for OC ${ocId}`,

@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin } from '../../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed } from '../../../_checks';
 import { OcIdParam, ocImageCompleteSchema, ocImageKindSchema } from '@/app/lib/oc-validators';
 import { headObject, deleteObject, getPublicObjectUrl, getStorageConfig } from '@/app/lib/storage';
 import { getOcImage, upsertOcImage } from '@/app/db/queries/oc';
@@ -21,7 +21,7 @@ function assertObjectKeyMatches(ocId: string, kind: string, objectKey: string) {
 
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -79,7 +79,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await req.audit.log({
             action: existing ? AuditEventType.OC_RECORD_UPDATED : AuditEventType.OC_RECORD_CREATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `${existing ? 'Updated' : 'Created'} OC image ${kind} for ${ocId}`,
