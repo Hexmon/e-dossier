@@ -1,10 +1,9 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam, ssbReportFullSchema } from '@/app/lib/oc-validators';
 import { getSsbReport, deleteSsbReport, listSsbPoints, upsertSsbReportWithPoints } from '@/app/db/queries/oc';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 type SsbReportRow = {
     id: string;
@@ -50,9 +49,9 @@ function mapSsbDbToResponse(report: SsbReportRow, points: SsbPointRow[]): SsbRep
     };
 }
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -60,13 +59,28 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
         const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
 
         const body = mapSsbDbToResponse(report, points);
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: `SSB report retrieved successfully for OC ${ocId}`,
+                ocId,
+                module: 'ssb',
+                hasReport: Boolean(report),
+                pointsCount: points.length,
+            },
+        });
+
         return json.ok({ message: 'SSB report retrieved successfully.', ...body });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -85,20 +99,19 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
         const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
         const body = mapSsbDbToResponse(report, points);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Created SSB report for OC ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Created SSB report for OC ${ocId}`,
                 ocId,
                 module: 'ssb',
                 positives: dto.positives.length,
                 negatives: dto.negatives.length,
                 predictiveRating: dto.predictiveRating,
             },
-            request: req,
         });
         return json.created({ message: 'SSB report created successfully.', ...body });
     } catch (err) {
@@ -106,7 +119,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -136,20 +149,19 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
         const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
         const body = mapSsbDbToResponse(report, points);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_UPDATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Updated SSB report for OC ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Updated SSB report for OC ${ocId}`,
                 ocId,
                 module: 'ssb',
                 changes: Object.keys(dto),
                 positives: merged.positives.length,
                 negatives: merged.negatives.length,
             },
-            request: req,
         });
         return json.ok({ message: 'SSB report updated successfully.', ...body });
     } catch (err) {
@@ -157,33 +169,32 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const deleted = await deleteSsbReport(ocId);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_DELETED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Deleted SSB report for OC ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Deleted SSB report for OC ${ocId}`,
                 ocId,
                 module: 'ssb',
                 recordId: deleted?.id ?? null,
                 hardDeleted: true,
             },
-            request: req,
         });
         return json.ok({ message: 'SSB report deleted successfully.', deleted });
     } catch (err) { return handleApiError(err); }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

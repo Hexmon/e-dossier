@@ -1,12 +1,11 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewTemplateCreateSchema, interviewTemplateQuerySchema } from '@/app/lib/interview-template-validators';
 import { listInterviewTemplates, createInterviewTemplate } from '@/app/db/queries/interviewTemplates';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
@@ -24,7 +23,7 @@ async function GETHandler(req: NextRequest) {
     }
 }
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const dto = interviewTemplateCreateSchema.parse(await req.json());
@@ -37,18 +36,16 @@ async function POSTHandler(req: NextRequest) {
             isActive: dto.isActive ?? true,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_TEMPLATE_CREATED,
-            resourceType: AuditResourceType.INTERVIEW_TEMPLATE,
-            resourceId: row.id,
-            description: `Created interview template ${row.code}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_TEMPLATE_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_TEMPLATE, id: row.id },
             metadata: {
+                description: `Created interview template ${row.code}`,
                 templateId: row.id,
                 code: row.code,
             },
-            request: req,
-            required: true,
         });
         return json.created({ message: 'Interview template created successfully.', template: row });
     } catch (err) {
@@ -56,5 +53,5 @@ async function POSTHandler(req: NextRequest) {
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

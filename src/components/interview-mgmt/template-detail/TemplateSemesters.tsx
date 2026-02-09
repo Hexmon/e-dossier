@@ -1,7 +1,7 @@
 // components/interview-mgmt/template-detail/TemplateSemesters.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useInterviewTemplates } from "@/hooks/useInterviewTemplates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,22 +31,21 @@ interface TemplateSemestersProps {
 }
 
 export default function TemplateSemesters({ templateId }: TemplateSemestersProps) {
+    // -------------------------------------------------------------------------
+    // The detail page already passed templateId into useInterviewTemplates,
+    // which enabled the semestersQuery. No useEffect needed.
+    // -------------------------------------------------------------------------
     const {
         loading,
         semesters,
-        fetchTemplateSemesters,
         addSemesterToTemplate,
         removeSemesterFromTemplate,
-    } = useInterviewTemplates();
+    } = useInterviewTemplates({ templateId });
 
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [semesterToDelete, setSemesterToDelete] = useState<number | null>(null);
     const [selectedSemesters, setSelectedSemesters] = useState<number[]>([]);
-
-    useEffect(() => {
-        fetchTemplateSemesters(templateId);
-    }, [templateId]);
 
     const availableSemesters = [1, 2, 3, 4, 5, 6];
     const assignedSemesterNumbers = semesters.map((s) => s.semester);
@@ -57,13 +56,16 @@ export default function TemplateSemesters({ templateId }: TemplateSemestersProps
     const handleAddSemesters = async () => {
         if (selectedSemesters.length === 0) return;
 
-        for (const semester of selectedSemesters) {
-            await addSemesterToTemplate(templateId, semester);
+        try {
+            for (const semester of selectedSemesters) {
+                await addSemesterToTemplate(templateId, semester);
+            }
+            // Mutations already invalidated the semesters query
+            setSelectedSemesters([]);
+            setAddDialogOpen(false);
+        } catch {
+            // Toast already shown by mutation onError
         }
-
-        await fetchTemplateSemesters(templateId);
-        setSelectedSemesters([]);
-        setAddDialogOpen(false);
     };
 
     const handleDeleteSemester = (semester: number) => {
@@ -73,8 +75,12 @@ export default function TemplateSemesters({ templateId }: TemplateSemestersProps
 
     const confirmDelete = async () => {
         if (semesterToDelete) {
-            await removeSemesterFromTemplate(templateId, semesterToDelete);
-            await fetchTemplateSemesters(templateId);
+            try {
+                await removeSemesterFromTemplate(templateId, semesterToDelete);
+                // Mutation already invalidated the semesters query
+            } catch {
+                // Toast already shown by mutation onError
+            }
         }
         setDeleteDialogOpen(false);
         setSemesterToDelete(null);

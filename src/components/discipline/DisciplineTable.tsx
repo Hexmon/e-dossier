@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import type { DisciplineRow as HookRow } from "@/hooks/useDisciplineRecords";
+import { usePunishments } from "@/hooks/usePunishments";
 
 interface Props {
     rows: HookRow[] | undefined;
@@ -13,18 +21,27 @@ interface Props {
     onDelete: (row: HookRow) => Promise<void> | void;
 }
 
-/**
- * Table component:
- * - shows fallback "-" for empty values
- * - allows inline editing of all fields
- * - computes values via props (cumulative is already computed by hook)
- */
 export default function DisciplineTable({ rows, loading, onEditSave, onDelete }: Props) {
+    const { punishments, fetchPunishments } = usePunishments();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<HookRow> | null>(null);
 
+    // useEffect(() => {
+    //     fetchPunishments();
+    // }, [fetchPunishments]);
+
     const changeEdit = <K extends keyof HookRow>(key: K, value: HookRow[K]) => {
-        setEditForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+        const updatedForm = { ...editForm, [key]: value };
+
+        // Auto-calculate negativePts when punishment or numberOfPunishments changes
+        if (key === "punishmentAwarded" || key === "numberOfPunishments") {
+            const selectedPunishment = punishments.find(p => p.title === updatedForm.punishmentAwarded);
+            const marksDeduction = selectedPunishment?.marksDeduction ?? 0;
+            const numPunishments = Number(updatedForm.numberOfPunishments ?? 1);
+            updatedForm.negativePts = String(marksDeduction * numPunishments);
+        }
+
+        setEditForm(updatedForm as Partial<HookRow>);
     };
 
     const saveEdit = async () => {
@@ -39,16 +56,23 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
         setEditForm({ ...row });
     };
 
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditForm(null);
+    };
+
     const columns: TableColumn<HookRow>[] = [
         {
             key: "serialNo",
             label: "S.No",
+            width: "60px",
             render: (value) => value || "-"
         },
         {
             key: "dateOfOffence",
             label: "Date",
             type: "date",
+            width: "w-25",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
@@ -56,6 +80,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
                         type="date"
                         value={String(editForm?.dateOfOffence ?? (value === "-" || !value ? "" : value))}
                         onChange={(e) => changeEdit("dateOfOffence", e.target.value as any)}
+                        className="w-25"
                     />
                 ) : value || "-";
             }
@@ -79,17 +104,47 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
-                    <Input
+                    <Select
                         value={String(editForm?.punishmentAwarded ?? value)}
-                        onChange={(e) => changeEdit("punishmentAwarded", e.target.value as any)}
-                    />
+                        onValueChange={(val) => changeEdit("punishmentAwarded", val as any)}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select punishment" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {punishments.map((punishment) => (
+                                <SelectItem key={punishment.id} value={punishment.title}>
+                                    {punishment.title} ({punishment.marksDeduction} pts)
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 ) : value || "-";
+            }
+        },
+        {
+            key: "numberOfPunishments",
+            label: "No. of Punishments",
+            type: "number",
+            width: "80px",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="number"
+                        min="1"
+                        value={String(editForm?.numberOfPunishments ?? value ?? "1")}
+                        onChange={(e) => changeEdit("numberOfPunishments", e.target.value as any)}
+                        className="w-full"
+                    />
+                ) : value || "1";
             }
         },
         {
             key: "dateOfAward",
             label: "Date Awarded",
             type: "date",
+            width: "w-25",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
@@ -97,6 +152,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
                         type="date"
                         value={String(editForm?.dateOfAward ?? (value === "-" || !value ? "" : value))}
                         onChange={(e) => changeEdit("dateOfAward", e.target.value as any)}
+                        className="w-25"
                     />
                 ) : value || "-";
             }
@@ -104,6 +160,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
         {
             key: "byWhomAwarded",
             label: "By Whom",
+            width: "120px",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
@@ -118,13 +175,14 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
             key: "negativePts",
             label: "Negative Pts",
             type: "number",
+            width: "90px",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
                     <Input
-                        type="number"
+                        disabled
                         value={String(editForm?.negativePts ?? value)}
-                        onChange={(e) => changeEdit("negativePts", e.target.value as any)}
+                        className="bg-gray-100 w-full"
                     />
                 ) : value || "0";
             }
@@ -132,41 +190,48 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
         {
             key: "cumulative",
             label: "Cumulative",
+            width: "90px",
             render: (value) => value ?? "0"
         }
     ];
 
-    const actions: TableAction<HookRow>[] = [
+    // Use separate actions with conditions instead of dynamic labels
+    const actions: TableAction<HookRow>[] = useMemo(() => [
         {
-            key: "edit-cancel",
-            label: editingId ? "Cancel" : "Edit",
-            variant: editingId ? "outline" : "outline",
+            key: "edit",
+            label: "Edit",
+            variant: "outline",
             size: "sm",
-            handler: (row) => {
-                if (editingId === row.id) {
-                    setEditingId(null);
-                    setEditForm(null);
-                } else {
-                    startEdit(row);
-                }
-            }
+            condition: (row) => editingId !== row.id,
+            handler: (row) => startEdit(row)
         },
         {
-            key: "save-delete",
-            label: editingId ? "Save" : "Delete",
-            variant: editingId ? "default" : "destructive",
+            key: "delete",
+            label: "Delete",
+            variant: "destructive",
             size: "sm",
-            handler: async (row) => {
-                if (editingId === row.id) {
-                    await saveEdit();
-                } else {
-                    await onDelete(row);
-                }
-            }
+            condition: (row) => editingId !== row.id,
+            handler: (row) => onDelete(row)
+        },
+        {
+            key: "cancel",
+            label: "Cancel",
+            variant: "outline",
+            size: "sm",
+            condition: (row) => editingId === row.id,
+            handler: () => cancelEdit()
+        },
+        {
+            key: "save",
+            label: "Save",
+            variant: "default",
+            size: "sm",
+            condition: (row) => editingId === row.id,
+            handler: () => saveEdit()
         }
-    ];
+    ], [editingId, onDelete]);
 
-    const config: TableConfig<HookRow> = {
+    const config: TableConfig<HookRow> = useMemo(() => ({
         columns,
         actions,
         features: {
@@ -186,7 +251,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
             message: "No data submitted yet for this semester."
         },
         loading
-    };
+    }), [columns, actions, loading]);
 
     return (
         <div className="mb-6">

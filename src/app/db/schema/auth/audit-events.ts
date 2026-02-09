@@ -1,0 +1,28 @@
+import { pgTable, text, integer, timestamp, jsonb, boolean } from 'drizzle-orm/pg-core';
+
+export const auditEvents = pgTable('audit_events', {
+  eventId: text('event_id').primaryKey(),
+  schemaVersion: integer('schema_version').notNull(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+  action: text('action').notNull(),
+  outcome: text('outcome').notNull(),
+  actorId: text('actor_id').notNull(),
+  actorType: text('actor_type').notNull(),
+  actorDisplayName: text('actor_display_name'),
+  actorRoles: text('actor_roles').array(),
+  actorIp: text('actor_ip'),
+  actorUserAgent: text('actor_user_agent'),
+  targetId: text('target_id'),
+  targetType: text('target_type'),
+  targetDisplayName: text('target_display_name'),
+  tenantId: text('tenant_id'),
+  orgId: text('org_id'),
+  target: jsonb('target'),
+  context: jsonb('context'),
+  metadata: jsonb('metadata'),
+  diff: jsonb('diff'),
+  integrity: jsonb('integrity'),
+  retentionTag: text('retention_tag'),
+  metadataTruncated: boolean('metadata_truncated').default(false),
+  diffTruncated: boolean('diff_truncated').default(false),
+});

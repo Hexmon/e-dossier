@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewFieldOptionParam, interviewFieldOptionUpdateSchema } from '@/app/lib/interview-template-validators';
@@ -8,11 +7,11 @@ import {
     updateInterviewTemplateFieldOption,
     deleteInterviewTemplateFieldOption,
 } from '@/app/db/queries/interviewTemplates';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; fieldId: string; optionId: string }> },
 ) {
     try {
@@ -30,7 +29,7 @@ async function GETHandler(
 }
 
 async function PATCHHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; fieldId: string; optionId: string }> },
 ) {
     try {
@@ -50,20 +49,18 @@ async function PATCHHandler(
         });
         if (!row) throw new ApiError(404, 'Interview field option not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_FIELD_OPTION_UPDATED,
-            resourceType: AuditResourceType.INTERVIEW_FIELD_OPTION,
-            resourceId: row.id,
-            description: `Updated interview field option ${row.code}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_FIELD_OPTION_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_FIELD_OPTION, id: row.id },
             metadata: {
+                description: `Updated interview field option ${row.code}`,
                 templateId,
                 fieldId,
                 optionId: row.id,
                 changes: Object.keys(dto),
             },
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'Interview field option updated successfully.', option: row });
     } catch (err) {
@@ -72,7 +69,7 @@ async function PATCHHandler(
 }
 
 async function DELETEHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ templateId: string; fieldId: string; optionId: string }> },
 ) {
     try {
@@ -88,19 +85,18 @@ async function DELETEHandler(
         const row = await deleteInterviewTemplateFieldOption(optionId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Interview field option not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_FIELD_OPTION_DELETED,
-            resourceType: AuditResourceType.INTERVIEW_FIELD_OPTION,
-            resourceId: row.id,
-            description: `${body?.hard ? 'Hard' : 'Soft'} deleted interview field option ${row.code}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_FIELD_OPTION_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_FIELD_OPTION, id: row.id },
             metadata: {
+                description: `${body?.hard ? 'Hard' : 'Soft'} deleted interview field option ${row.code}`,
                 templateId,
                 fieldId,
                 optionId: row.id,
                 hardDeleted: body?.hard === true,
             },
-            request: req,
         });
         return json.ok({ message: 'Interview field option deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
@@ -108,6 +104,6 @@ async function DELETEHandler(
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

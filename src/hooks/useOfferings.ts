@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
     listOfferings,
@@ -12,88 +12,114 @@ import {
     ListOfferingsParams,
 } from "@/app/lib/api/offeringsApi";
 
-export function useOfferings(courseId: string) {
-    const [loading, setLoading] = useState(false);
-    const [offerings, setOfferings] = useState<Offering[]>([]);
+const transformOffering = (offering: any): Offering => {
+    return {
+        ...offering,
+        subjectId: offering.subjectId || offering.subject?.id,
+        subjectCode: offering.subjectCode || offering.subject?.code,
+        subjectName: offering.subjectName || offering.subject?.name,
+        instructors: (offering.instructors || []).map((inst: any) => ({
+            ...inst,
+            instructorId: inst.instructorId || inst.instructor?.id,
+            instructorName: inst.instructorName || inst.instructor?.name,
+            instructorEmail: inst.instructorEmail || inst.instructor?.email,
+        })),
+    };
+};
 
-    const fetchOfferings = useCallback(async (params?: ListOfferingsParams) => {
-        setLoading(true);
-        try {
+export function useOfferings(courseId: string, params?: ListOfferingsParams) {
+    const queryClient = useQueryClient();
+
+    // Query key factory for better cache management
+    const offeringsKey = ["offerings", courseId, params];
+
+    // Fetch offerings list
+    const {
+        data: offerings = [],
+        isLoading: loading,
+        refetch: fetchOfferings,
+    } = useQuery({
+        queryKey: offeringsKey,
+        queryFn: async () => {
             const data = await listOfferings(courseId, params);
-            // listOfferings now always returns { offerings: Offering[] }
-            const offeringsList = data.offerings || [];
-            setOfferings(offeringsList);
-            return offeringsList;
-        } catch (error) {
-            console.error("Error fetching offerings:", error);
-            toast.error("Failed to load offerings");
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, [courseId]);
+            return (data.offerings || []).map(transformOffering);
+        },
+        staleTime: 30000, // Consider data fresh for 30 seconds
+        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes (formerly cacheTime)
+        enabled: !!courseId, // Only run if courseId exists
+    });
 
-    const fetchOfferingById = useCallback(async (offeringId: string) => {
-        setLoading(true);
-        try {
-            const offering = await getOfferingById(courseId, offeringId);
-            return offering || null;
-        } catch (error) {
-            console.error("Error fetching offering:", error);
-            toast.error("Failed to load offering details");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, [courseId]);
-
-    const addOffering = useCallback(async (offering: OfferingCreate) => {
-        setLoading(true);
-        try {
-            const newOffering = await createOffering(courseId, offering);
-            if (newOffering) {
+    // Create offering mutation
+    const addOfferingMutation = useMutation({
+        mutationFn: (offering: OfferingCreate) => createOffering(courseId, offering),
+        onSuccess: (data) => {
+            if (data) {
+                // Invalidate and refetch offerings list
+                queryClient.invalidateQueries({ queryKey: ["offerings", courseId] });
                 toast.success("Offering created successfully");
-                return newOffering;
             }
-            return null;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error creating offering:", error);
             toast.error("Failed to create offering");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, [courseId]);
+        },
+    });
 
-    const editOffering = useCallback(async (offeringId: string, updates: OfferingUpdate) => {
-        setLoading(true);
-        try {
-            const updatedOffering = await updateOffering(courseId, offeringId, updates);
+    // Update offering mutation
+    const editOfferingMutation = useMutation({
+        mutationFn: ({ offeringId, updates }: { offeringId: string; updates: OfferingUpdate }) =>
+            updateOffering(courseId, offeringId, updates),
+        onSuccess: async (_, variables) => {
+            // Invalidate both the list and the specific offering
+            queryClient.invalidateQueries({ queryKey: ["offerings", courseId] });
+            queryClient.invalidateQueries({ queryKey: ["offering", courseId, variables.offeringId] });
+
             toast.success("Offering updated successfully");
-            return updatedOffering;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error updating offering:", error);
             toast.error("Failed to update offering");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, [courseId]);
+        },
+    });
 
-    const removeOffering = useCallback(async (offeringId: string) => {
-        setLoading(true);
-        try {
-            await deleteOffering(courseId, offeringId);
+    // Delete offering mutation
+    const removeOfferingMutation = useMutation({
+        mutationFn: (offeringId: string) => deleteOffering(courseId, offeringId),
+        onSuccess: (_, offeringId) => {
+            // Remove from cache and refetch
+            queryClient.invalidateQueries({ queryKey: ["offerings", courseId] });
+            queryClient.removeQueries({ queryKey: ["offering", courseId, offeringId] });
             toast.success("Offering deleted successfully");
-            return true;
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Error deleting offering:", error);
             toast.error("Failed to delete offering");
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    }, [courseId]);
+        },
+    });
+
+    // Wrapper functions to maintain similar API
+    const addOffering = async (offering: OfferingCreate) => {
+        const result = await addOfferingMutation.mutateAsync(offering);
+        return result ? transformOffering(result) : null;
+    };
+
+    const editOffering = async (offeringId: string, updates: OfferingUpdate) => {
+        await editOfferingMutation.mutateAsync({ offeringId, updates });
+        // Fetch the updated offering
+        const completeOffering = await getOfferingById(courseId, offeringId);
+        return completeOffering ? transformOffering(completeOffering) : null;
+    };
+
+    const removeOffering = async (offeringId: string) => {
+        await removeOfferingMutation.mutateAsync(offeringId);
+        return true;
+    };
+
+    // Helper function to fetch offering by ID (non-hook)
+    const fetchOfferingById = async (offeringId: string) => {
+        const offering = await getOfferingById(courseId, offeringId);
+        return offering ? transformOffering(offering) : null;
+    };
 
     return {
         loading,
@@ -103,5 +129,22 @@ export function useOfferings(courseId: string) {
         addOffering,
         editOffering,
         removeOffering,
+        // Expose mutation states for more granular control
+        isCreating: addOfferingMutation.isPending,
+        isUpdating: editOfferingMutation.isPending,
+        isDeleting: removeOfferingMutation.isPending,
     };
+}
+
+// Separate hook for fetching a single offering (use this when you need reactive data)
+export function useOffering(courseId: string, offeringId: string) {
+    return useQuery({
+        queryKey: ["offering", courseId, offeringId],
+        queryFn: async () => {
+            const offering = await getOfferingById(courseId, offeringId);
+            return offering ? transformOffering(offering) : null;
+        },
+        staleTime: 30000,
+        enabled: !!courseId && !!offeringId,
+    });
 }

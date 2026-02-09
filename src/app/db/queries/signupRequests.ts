@@ -6,11 +6,9 @@ import { ApiError } from '@/app/lib/http';
 import { db } from '@/app/db/client';
 import { signupRequests } from '@/app/db/schema/auth/signupRequests';
 import { users } from '@/app/db/schema/auth/users';
-import { platoons } from '@/app/db/schema/auth/platoons';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { positions } from '@/app/db/schema/auth/positions';
-import { auditLog } from './util.audit.ts';
-import { AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { auditLogger, AuditEventType, AuditResourceType } from '@/lib/audit';
 import { IdSchema } from '@/app/lib/apiClient';
 
 function nullIfBlank(v?: string | null) {
@@ -62,7 +60,6 @@ export async function listSignupRequests(
       email: users.email,
       phone: users.phone,
       rank: users.rank,
-      // desiredPlatoonName: platoons.name,
 
       note: signupRequests.note,
     })
@@ -253,22 +250,23 @@ export async function approveSignupRequest(
       })
       .where(eq(users.id, reqRow.userId));
 
-    await auditLog(tx, {
-      actorUserId: adminId ?? null,
-      eventType: AuditEventType.SIGNUP_REQUEST_APPROVED,
-      resourceType: AuditResourceType.SIGNUP_REQUEST,
-      resourceId: reqRow.id,
-      description: 'Signup request approved and appointment assigned',
-      metadata: {
-        positionKey: dto.positionKey,
-        scopeType: dto.scopeType,
-        scopeId: dto.scopeId ?? null,
-        apptId: appt.id,
-      },
-      requestId: auditOptions?.requestId,
-    });
-
     return { appointment: appt };
+  });
+
+  // Audit log (async, after transaction succeeds)
+  await auditLogger.log({
+    action: AuditEventType.SIGNUP_REQUEST_APPROVED,
+    outcome: 'SUCCESS',
+    actor: { type: 'user', id: adminId ?? 'system' },
+    target: { type: AuditResourceType.SIGNUP_REQUEST, id: reqRow.id },
+    metadata: {
+      description: 'Signup request approved and appointment assigned',
+      positionKey: dto.positionKey,
+      scopeType: dto.scopeType,
+      scopeId: dto.scopeId ?? null,
+      apptId: result.appointment.id,
+    },
+    context: auditOptions?.requestId ? { requestId: auditOptions.requestId } : undefined,
   });
 
   return result;
@@ -280,7 +278,7 @@ export async function approveSignupRequest(
 export async function rejectSignupRequest(opts: { requestId: string; adminUserId: string; reason: string; auditRequestId?: string }) {
   const { id } = IdSchema.parse({ id: opts.requestId });
 
-  return await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     const [req] = await tx
       .select({ id: signupRequests.id, status: signupRequests.status })
       .from(signupRequests)
@@ -299,16 +297,16 @@ export async function rejectSignupRequest(opts: { requestId: string; adminUserId
         adminReason: opts.reason,
       })
       .where(eq(signupRequests.id, id));
+  });
 
-    await auditLog(tx, {
-      actorUserId: opts.adminUserId,
-      eventType: AuditEventType.SIGNUP_REQUEST_REJECTED,
-      resourceType: AuditResourceType.SIGNUP_REQUEST,
-      resourceId: id,
-      description: 'Signup request rejected',
-      metadata: { reason: opts.reason },
-      requestId: opts.auditRequestId,
-    });
+  // Audit log (async, after transaction succeeds)
+  await auditLogger.log({
+    action: AuditEventType.SIGNUP_REQUEST_REJECTED,
+    outcome: 'SUCCESS',
+    actor: { type: 'user', id: opts.adminUserId },
+    target: { type: AuditResourceType.SIGNUP_REQUEST, id },
+    metadata: { description: 'Signup request rejected', reason: opts.reason },
+    context: opts.auditRequestId ? { requestId: opts.auditRequestId } : undefined,
   });
 }
 
@@ -318,7 +316,7 @@ export async function rejectSignupRequest(opts: { requestId: string; adminUserId
 export async function deleteSignupRequest(opts: { requestId: string; adminUserId: string; auditRequestId?: string }) {
   const { id } = IdSchema.parse({ id: opts.requestId });
 
-  return await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     const [req] = await tx
       .select({ id: signupRequests.id, status: signupRequests.status })
       .from(signupRequests)
@@ -329,14 +327,15 @@ export async function deleteSignupRequest(opts: { requestId: string; adminUserId
     if (req.status === 'pending') throw new ApiError(409, 'cannot_delete_pending', 'conflict');
 
     await tx.delete(signupRequests).where(eq(signupRequests.id, id));
+  });
 
-    await auditLog(tx, {
-      actorUserId: opts.adminUserId,
-      eventType: AuditEventType.SIGNUP_REQUEST_DELETED,
-      resourceType: AuditResourceType.SIGNUP_REQUEST,
-      resourceId: id,
-      description: 'Signup request deleted',
-      requestId: opts.auditRequestId,
-    });
+  // Audit log (async, after transaction succeeds)
+  await auditLogger.log({
+    action: AuditEventType.SIGNUP_REQUEST_DELETED,
+    outcome: 'SUCCESS',
+    actor: { type: 'user', id: opts.adminUserId },
+    target: { type: AuditResourceType.SIGNUP_REQUEST, id },
+    metadata: { description: 'Signup request deleted' },
+    context: opts.auditRequestId ? { requestId: opts.auditRequestId } : undefined,
   });
 }

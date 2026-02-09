@@ -1,15 +1,20 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { positions } from '@/app/db/schema/auth/positions';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { positionUpdateSchema } from '@/app/lib/validators';
 import { and, eq, ne} from 'drizzle-orm';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    let actor: { type: 'user' | 'anonymous'; id: string } = { type: 'anonymous', id: 'unknown' };
+    try {
+      const authCtx = await requireAuth(req);
+      actor = { type: 'user', id: authCtx.userId };
+    } catch {}
+
     const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
 
@@ -20,13 +25,25 @@ async function GETHandler(_: NextRequest, { params }: { params: Promise<{ id: st
       .limit(1);
 
     if (!row) throw new ApiError(404, 'Position not found');
+
+    await req.audit.log({
+      action: AuditEventType.API_REQUEST,
+      outcome: 'SUCCESS',
+      actor,
+      target: { type: AuditResourceType.POSITION, id: row.id },
+      metadata: {
+        description: `Position retrieved successfully: ${row.key}`,
+        positionId: row.id,
+      },
+    });
+
     return json.ok({ message: 'Position retrieved successfully.', data: row });
   } catch (err) {
     return handleApiError(err);
   }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const adminCtx = await requireAuth(req);
 
@@ -76,21 +93,16 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
 
     if (!row) throw new ApiError(404, 'Position not found');
 
-    await createAuditLog({
-      actorUserId: adminCtx.userId,
-      eventType: AuditEventType.POSITION_UPDATED,
-      resourceType: AuditResourceType.POSITION,
-      resourceId: row.id,
-      description: `Updated position ${row.key}`,
+    await req.audit.log({
+      action: AuditEventType.POSITION_UPDATED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminCtx.userId },
+      target: { type: AuditResourceType.POSITION, id: row.id },
       metadata: {
+        description: `Updated position ${row.key}`,
         positionId: row.id,
         changes: Object.keys(parsed.data),
       },
-      before: existing,
-      after: row,
-      changedFields: Object.keys(parsed.data),
-      request: req,
-      required: true,
     });
     return json.ok({ message: 'Position updated successfully.', data: row });
   } catch (err) {
@@ -98,7 +110,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const adminCtx = await requireAuth(req);
 
@@ -108,20 +120,16 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
     const [row] = await db.delete(positions).where(eq(positions.id, rawId)).returning();
     if (!row) throw new ApiError(404, 'Position not found');
 
-    await createAuditLog({
-      actorUserId: adminCtx.userId,
-      eventType: AuditEventType.POSITION_DELETED,
-      resourceType: AuditResourceType.POSITION,
-      resourceId: row.id,
-      description: `Deleted position ${rawId}`,
+    await req.audit.log({
+      action: AuditEventType.POSITION_DELETED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminCtx.userId },
+      target: { type: AuditResourceType.POSITION, id: row.id },
       metadata: {
+        description: `Deleted position ${rawId}`,
         positionId: row.id,
         hardDeleted: true,
       },
-      before: row,
-      after: null,
-      request: req,
-      required: true,
     });
 
     return json.ok({ message: 'Position deleted successfully.', data: row });
@@ -129,8 +137,8 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
     return handleApiError(err);
   }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);
