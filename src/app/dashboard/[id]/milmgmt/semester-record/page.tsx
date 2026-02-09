@@ -9,7 +9,6 @@ import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import SemesterForm from "@/components/semester-record/semesterForm";
-import SemesterReviews from "@/components/semester-record/semesterReviews";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import DossierTab from "@/components/Tabs/DossierTab";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
