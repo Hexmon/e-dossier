@@ -28,7 +28,7 @@ async function PATCHHandler(
         await req.audit.log({
             action: AuditEventType.OC_ACADEMICS_SUBJECT_UPDATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
             metadata: {
                 description: `Academic subject ${subjectId} updated for OC ${ocId}, semester ${semester}`,
@@ -68,7 +68,7 @@ async function DELETEHandler(
         await req.audit.log({
             action: AuditEventType.OC_ACADEMICS_SUBJECT_DELETED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: ocId },
             metadata: {
                 description: `Academic subject ${subjectId} deleted for OC ${ocId}, semester ${semester}`,
