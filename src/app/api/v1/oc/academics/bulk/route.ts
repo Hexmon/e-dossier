@@ -1,6 +1,6 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { academicSubjectBulkRequestSchema, Semester } from '@/app/lib/oc-validators';
-import { mustBeAdmin } from '../../_checks';
+import { mustBeAdmin, mustBeAuthed } from '../../_checks';
 import { updateOcAcademicSubject, deleteOcAcademicSubject, getOcAcademicSemester, getOcAcademics } from '@/app/services/oc-academics';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -119,7 +119,7 @@ async function GETHandler(req: AuditNextRequest) {
 
 async function POSTHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const body = academicSubjectBulkRequestSchema.parse(await req.json());
 
         const results: BulkResult[] = [];
@@ -138,8 +138,8 @@ async function POSTHandler(req: AuditNextRequest) {
                         item.subjectId,
                         { hard: item.hard },
                         {
-                            actorUserId: adminCtx?.userId,
-                            actorRoles: adminCtx?.roles,
+                            actorUserId: authCtx?.userId,
+                            actorRoles: authCtx?.roles,
                             request: req,
                         },
                     );
@@ -150,8 +150,8 @@ async function POSTHandler(req: AuditNextRequest) {
                         item.subjectId,
                         { theory: item.theory, practical: item.practical },
                         {
-                            actorUserId: adminCtx?.userId,
-                            actorRoles: adminCtx?.roles,
+                            actorUserId: authCtx?.userId,
+                            actorRoles: authCtx?.roles,
                             request: req,
                         },
                     );
@@ -187,7 +187,7 @@ async function POSTHandler(req: AuditNextRequest) {
         await req.audit.log({
             action: AuditEventType.OC_ACADEMICS_SUBJECT_UPDATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: 'collection' },
             metadata: {
                 description: 'Bulk academic subject operations processed successfully.',

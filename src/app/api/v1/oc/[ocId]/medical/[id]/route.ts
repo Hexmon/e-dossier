@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
 import { OcIdParam, medicalUpdateSchema } from '@/app/lib/oc-validators';
 import { getMedical, updateMedical, deleteMedical } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -32,7 +32,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const { id } = await parseParam({params}, IdSchema);
         const dto = medicalUpdateSchema.parse(await req.json());
@@ -44,7 +44,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         await req.audit.log({
             action: AuditEventType.OC_RECORD_UPDATED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `Updated medical record ${id} for OC ${ocId}`,
@@ -60,7 +60,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const { id } = await parseParam({params}, IdSchema);
         const row = await deleteMedical(ocId, id); if (!row) throw new ApiError(404, 'Medical record not found', 'not_found');
@@ -68,7 +68,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         await req.audit.log({
             action: AuditEventType.OC_RECORD_DELETED,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `Deleted medical record ${id} for OC ${ocId}`,

@@ -30,10 +30,9 @@ export default function MedicalInfoSection({
     const [activeTab, setActiveTab] = useState(0);
     const [savedMedInfo, setSavedMedInfo] = useState<MedInfoRow[]>([]);
     const [loading, setLoading] = useState(false);
-    const [detailsDisabled, setDetailsDisabled] = useState(false);
-
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<MedInfoRow | null>(null);
+    const [detailsEditing, setDetailsEditing] = useState(false);
 
     // Redux
     const dispatch = useDispatch();
@@ -66,16 +65,6 @@ export default function MedicalInfoSection({
 
             setSavedMedInfo(formatted);
 
-            if (formatted.length > 0) {
-                const hasDetails =
-                    Boolean(
-                        formatted[0].medicalHistory ||
-                        formatted[0].medicalIssues ||
-                        formatted[0].allergies
-                    );
-
-                setDetailsDisabled(hasDetails);
-            }
         } catch {
             toast.error("Failed to load medical info.");
         } finally {
@@ -193,6 +182,56 @@ export default function MedicalInfoSection({
         }
     };
 
+    const getLatestDetailsForActiveTab = () => {
+        const term = semesters[activeTab];
+        const rows = savedMedInfo.filter((r) => r.term === term);
+        if (rows.length === 0) return null;
+        const toTime = (v?: string) => (v ? new Date(v).getTime() : 0);
+        return rows.reduce((latest, cur) =>
+            toTime(cur.date) >= toTime(latest.date) ? cur : latest
+        );
+    };
+
+    const handleDetailsSave = async (details: {
+        medicalHistory: string;
+        medicalIssues: string;
+        allergies: string;
+    }) => {
+        if (!selectedCadet?.ocId) return toast.error("No cadet selected");
+        const activeDetails = getLatestDetailsForActiveTab();
+        if (!activeDetails?.id) return toast.error("No medical record to update");
+
+        try {
+            await updateMedicalInfo(selectedCadet.ocId, activeDetails.id, {
+                medicalHistory: details.medicalHistory,
+                hereditaryIssues: details.medicalIssues,
+                allergies: details.allergies,
+            });
+
+            setSavedMedInfo((prev) =>
+                prev.map((r) =>
+                    r.id === activeDetails.id
+                        ? {
+                            ...r,
+                            medicalHistory: details.medicalHistory,
+                            medicalIssues: details.medicalIssues,
+                            allergies: details.allergies,
+                        }
+                        : r
+                )
+            );
+
+            toast.success("Medical details updated");
+            setDetailsEditing(false);
+        } catch {
+            toast.error("Failed to update medical details");
+        }
+    };
+
+    const handleDetailsCancel = () => {
+        setDetailsEditing(false);
+    };
+
     const handleDelete = (row: MedInfoRow) => {
         if (!row.id || !selectedCadet?.ocId) return;
 
@@ -219,6 +258,7 @@ export default function MedicalInfoSection({
 
     // Get default values - prioritize Redux over saved data
     const getDefaultValues = (): MedicalInfoForm => {
+        const latestDetails = getLatestDetailsForActiveTab();
         if (savedFormData && savedFormData.medInfo.length > 0) {
             return {
                 medInfo: savedFormData.medInfo,
@@ -229,14 +269,14 @@ export default function MedicalInfoSection({
         }
 
         // If no Redux data but we have saved data, use those details
-        if (savedMedInfo.length > 0) {
+        if (latestDetails) {
             return {
                 medInfo: [
                     { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "" }
                 ],
-                medicalHistory: savedMedInfo[0].medicalHistory,
-                medicalIssues: savedMedInfo[0].medicalIssues,
-                allergies: savedMedInfo[0].allergies,
+                medicalHistory: latestDetails.medicalHistory,
+                medicalIssues: latestDetails.medicalIssues,
+                allergies: latestDetails.allergies,
             };
         }
 
@@ -250,6 +290,8 @@ export default function MedicalInfoSection({
             allergies: "",
         };
     };
+
+    const canEditDetails = Boolean(getLatestDetailsForActiveTab()?.id);
 
     return (
         <Card className="p-6 shadow-lg rounded-xl max-w-6xl mx-auto">
@@ -292,7 +334,12 @@ export default function MedicalInfoSection({
                 <MedicalInfoFormComponent
                     key={`${selectedCadet?.ocId}-${savedFormData ? 'redux' : 'default'}`}
                     onSubmit={onSubmit}
-                    disabled={detailsDisabled}
+                    disabled={!detailsEditing}
+                    detailsEditing={detailsEditing}
+                    canEditDetails={canEditDetails}
+                    onDetailsEdit={() => setDetailsEditing(true)}
+                    onDetailsCancel={handleDetailsCancel}
+                    onDetailsSave={handleDetailsSave}
                     defaultValues={getDefaultValues()}
                     ocId={selectedCadet?.ocId || ""}
                     onClear={handleClearForm}
