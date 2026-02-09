@@ -6,7 +6,7 @@ import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { catOptions } from "@/constants/app.constants";
+import { catOptionMarks, catOptions } from "@/constants/app.constants";
 
 import type { cfeFormData, cfeRow } from "@/types/cfe";
 import { saveCfeForm } from "@/store/slices/cfeRecordsSlice";
@@ -121,9 +121,14 @@ export default function CfeForm({
                                     <td className="p-2 border">
                                         <Select
                                             value={watch(`records.${idx}.cat`) ?? ""}
-                                            onValueChange={(v) =>
-                                                setValue(`records.${idx}.cat`, v, { shouldDirty: true, shouldValidate: true })
-                                            }
+                                            onValueChange={(v) => {
+                                                setValue(`records.${idx}.cat`, v, { shouldDirty: true, shouldValidate: true });
+                                                const mappedMarks = catOptionMarks[v as keyof typeof catOptionMarks];
+                                                setValue(`records.${idx}.mks`, mappedMarks !== undefined ? String(mappedMarks) : "", {
+                                                    shouldDirty: true,
+                                                    shouldValidate: true,
+                                                });
+                                            }}
                                         >
                                             <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Select category..." />
