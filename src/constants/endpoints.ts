@@ -115,6 +115,8 @@ export const endpoints = {
             deleteSubject: (ocId: string, semester: number, subjectId: string) =>
                 `/api/v1/oc/${ocId}/academics/${semester}/subjects/${subjectId}`,
         },
+        spr: (ocId: string) => `/api/v1/oc/${ocId}/spr`,
+        fpr: (ocId: string) => `/api/v1/oc/${ocId}/fpr`,
     },
     course: {
         all: "/api/v1/admin/courses"

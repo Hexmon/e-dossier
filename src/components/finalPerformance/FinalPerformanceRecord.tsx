@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { UniversalTable, TableConfig } from "@/components/layout/TableLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
+import { getFpr } from "@/app/lib/api/performanceRecordsApi";
 
-interface FinalTableData {
+type FinalTableData = {
   id: string;
   column1: number;
   column2: string;
@@ -16,18 +19,16 @@ interface FinalTableData {
   column8: string;
   column9: string;
   column10: string;
-}
+};
 
-interface SemesterMarksData {
-  SEM1: Record<string, string>;
-  SEM2: Record<string, string>;
-  SEM3: Record<string, string>;
-  SEM4: Record<string, string>;
-  SEM5: Record<string, string>;
-  SEM6: Record<string, string>;
-}
+type FprRow = {
+  subjectKey: string;
+  subjectLabel: string;
+  maxMarks: number;
+  marksBySemester?: number[];
+  marksScored: number;
+};
 
-// Base table config – 10 columns
 const finalTableConfig: TableConfig<FinalTableData> = {
   columns: [
     { key: "column1", label: "S.No", type: "number", sortable: true, width: "10%" },
@@ -40,171 +41,53 @@ const finalTableConfig: TableConfig<FinalTableData> = {
     { key: "column8", label: "V", sortable: false, width: "10%" },
     { key: "column9", label: "VI", sortable: false, width: "10%" },
     { key: "column10", label: "Total", sortable: false, width: "20%" },
-  ]
+  ],
 };
 
-const initialFinalData: FinalTableData[] = [
-  {
-    id: "1",
-    column1: 1,
-    column2: "Academics (incl Service Sub)",
-    column3: 8100,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-  {
-    id: "2",
-    column1: 2,
-    column2: "OLQ",
-    column3: 1800,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-  {
-    id: "3",
-    column1: 3,
-    column2: "PT & Swimming",
-    column3: 900,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-  {
-    id: "4",
-    column1: 4,
-    column2: "Games (incl X-Country)",
-    column3: 600,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-  {
-    id: "5",
-    column1: 5,
-    column2: "Drill",
-    column3: 90,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-  {
-    id: "6",
-    column1: 6,
-    column2: "Camp",
-    column3: 210,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-  {
-    id: "7",
-    column1: 7,
-    column2: "CFE",
-    column3: 150,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-  {
-    id: "8",
-    column1: 8,
-    column2: "Cdr's Marks",
-    column3: 150,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-  {
-    id: "9",
-    column1: 9,
-    column2: "GRAND TOTAL",
-    column3: 12000,
-    column4: "",
-    column5: "",
-    column6: "",
-    column7: "",
-    column8: "",
-    column9: "",
-    column10: "",
-  },
-];
+export default function FinalPerformanceRecord() {
+  const params = useParams();
+  const paramId = params?.ocId || params?.id;
+  const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
 
-interface FinalPerformanceRecordProps {
-  semesterMarksData?: SemesterMarksData;
-}
+  const [finalData, setFinalData] = useState<FinalTableData[]>([]);
+  const [loading, setLoading] = useState(false);
 
-export default function FinalPerformanceRecord({ semesterMarksData }: FinalPerformanceRecordProps) {
-  const [finalData, setFinalData] = useState(initialFinalData);
-
-  // Map semester marks to final table columns
   useEffect(() => {
-    if (semesterMarksData) {
-      const updatedData = initialFinalData.map((row) => ({
-        ...row,
-        column4: semesterMarksData.SEM1?.[row.id] || "",
-        column5: semesterMarksData.SEM2?.[row.id] || "",
-        column6: semesterMarksData.SEM3?.[row.id] || "",
-        column7: semesterMarksData.SEM4?.[row.id] || "",
-        column8: semesterMarksData.SEM5?.[row.id] || "",
-        column9: semesterMarksData.SEM6?.[row.id] || "",
-        column10: calculateTotal(
-          semesterMarksData.SEM1?.[row.id],
-          semesterMarksData.SEM2?.[row.id],
-          semesterMarksData.SEM3?.[row.id],
-          semesterMarksData.SEM4?.[row.id],
-          semesterMarksData.SEM5?.[row.id],
-          semesterMarksData.SEM6?.[row.id]
-        ),
-      }));
-      setFinalData(updatedData);
-    }
-  }, [semesterMarksData]);
+    const load = async () => {
+      if (!ocId) return;
+      try {
+        setLoading(true);
+        const data: any = await getFpr(ocId);
+        const rows: FprRow[] = Array.isArray(data?.rows) ? data.rows : [];
 
-  // Calculate total across semesters
-  const calculateTotal = (...marks: (string | undefined)[]): string => {
-    const validMarks = marks
-      .filter((m) => m !== undefined && m !== "")
-      .map((m) => parseFloat(m || "0"))
-      .filter((m) => !isNaN(m));
+        const mapped = rows.map((row, idx) => {
+          const m = row.marksBySemester ?? [];
+          const get = (i: number) => (m[i] === undefined || m[i] === null ? "" : String(m[i]));
+          return {
+            id: row.subjectKey,
+            column1: idx + 1,
+            column2: row.subjectLabel,
+            column3: row.maxMarks,
+            column4: get(0),
+            column5: get(1),
+            column6: get(2),
+            column7: get(3),
+            column8: get(4),
+            column9: get(5),
+            column10: row.marksScored !== undefined && row.marksScored !== null ? String(row.marksScored) : "",
+          };
+        });
 
-    if (validMarks.length === 0) return "";
-    const total = validMarks.reduce((sum, mark) => sum + mark, 0);
-    return total.toString();
-  };
+        setFinalData(mapped);
+      } catch (err: any) {
+        toast.error(err?.message ?? "Failed to load FPR data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [ocId]);
 
   return (
     <div className="space-y-6">
@@ -216,7 +99,11 @@ export default function FinalPerformanceRecord({ semesterMarksData }: FinalPerfo
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <UniversalTable data={finalData} config={finalTableConfig} />
+            {loading ? (
+              <p className="text-center text-sm text-gray-500">Loading...</p>
+            ) : (
+              <UniversalTable data={finalData} config={finalTableConfig} />
+            )}
           </div>
         </CardContent>
       </Card>
