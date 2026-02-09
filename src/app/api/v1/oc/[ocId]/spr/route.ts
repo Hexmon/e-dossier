@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { NextRequest } from 'next/server';
-=======
 ﻿import { NextRequest } from 'next/server';
->>>>>>> origin/stage
 import { json, handleApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists, mustBeAuthed } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
