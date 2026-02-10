@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
-import { ocTabs } from "@/config/app.config";
+import { moduleManagementTabs, ocTabs } from "@/config/app.config";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CampDialog from "@/components/camps/CampDialog";
@@ -261,8 +261,8 @@ export default function CampsManagement() {
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="camp-mgmt">
-                            <TabsContent value="camp-mgmt" className="space-y-6">
+                        <GlobalTabs tabs={moduleManagementTabs} defaultValue="camps">
+                            <TabsContent value="camps" className="space-y-6">
                                 <div className="flex justify-between items-center">
                                     <h2 className="text-2xl font-bold">Manage Camps</h2>
                                     <Button

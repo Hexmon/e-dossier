@@ -33,7 +33,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { ocTabs } from "@/config/app.config";
+import { moduleManagementTabs, ocTabs } from "@/config/app.config";
 
 export default function InterviewTemplateManagementPage() {
     const router = useRouter();
@@ -145,12 +145,11 @@ export default function InterviewTemplateManagementPage() {
                                 { label: "Dashboard", href: "/dashboard" },
                                 { label: "Gentlemen Management", href: "/dashboard/genmgmt" },
                                 { label: "Interview Management", href: "/dashboard/genmgmt/interviews-mgmt" },
-                                { label: "Templates" },
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="templates">
-                            <TabsContent value="templates" className="space-y-6">
+                        <GlobalTabs tabs={moduleManagementTabs} defaultValue="interviews-mgmt">
+                            <TabsContent value="interviews-mgmt" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <FileText className="h-6 w-6 text-primary" />

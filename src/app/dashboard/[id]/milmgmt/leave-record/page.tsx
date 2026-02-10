@@ -131,7 +131,7 @@ function InnerLeavePage({
     onClearForm: () => void;
 }) {
     const dispatch = useDispatch();
-    const { control, register, setValue, handleSubmit, getValues, watch } = useFormContext<LeaveFormValues>();
+    const { control, register, setValue, handleSubmit, getValues, watch, reset } = useFormContext<LeaveFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "leaveRows" });
 
     const { submitLeave, fetchLeave, deleteLeave, deleteSavedLeave } = useLeaveActions(selectedCadet);
@@ -142,9 +142,12 @@ function InnerLeavePage({
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [editingValues, setEditingValues] = useState<Partial<LeaveRow> | null>(null);
     const [refreshFlag, setRefreshFlag] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Auto-save to Redux on form changes
     useEffect(() => {
+        if (isSubmitting) return;
+
         const subscription = watch((value) => {
             if (ocId && value.leaveRows && value.leaveRows.length > 0) {
                 const formData = value.leaveRows.map(row => ({
@@ -161,7 +164,7 @@ function InnerLeavePage({
             }
         });
         return () => subscription.unsubscribe();
-    }, [watch, dispatch, ocId]);
+    }, [watch, dispatch, ocId, isSubmitting]);
 
     const handleDeleteSaved = async (index: number) => {
         const row = savedData[activeTab][index];
@@ -238,6 +241,8 @@ function InnerLeavePage({
     };
 
     const handleNewSubmit = handleSubmit(async () => {
+        setIsSubmitting(true);
+
         // Set semester for all new rows before submission
         const rows = getValues().leaveRows;
         rows.forEach((_, index) => {
@@ -251,9 +256,10 @@ function InnerLeavePage({
         dispatch(clearLeaveForm(ocId));
 
         // Reset form to defaults
-        setValue("leaveRows", defaultLeaveRows);
+        reset({ leaveRows: defaultLeaveRows });
 
         setRefreshFlag((f) => f + 1);
+        setIsSubmitting(false);
     });
 
     return (

@@ -17,7 +17,9 @@ import {
   BookOpenCheck,
   ArrowDownUp,
   Gavel,
-  Boxes
+  Boxes,
+  Package,
+  ArrowDownCircle
 } from "lucide-react";
 
 
@@ -283,13 +285,13 @@ export const managementCard = [
     to: "/dashboard/genmgmt/offerings",
     color: "bg-purple-500"
   },
-  {
-    title: "Relegation Management",
-    description: "Monitor, evaluate, and manage student relegation and promotion status",
-    icon: ArrowDownUp,
-    to: "/dashboard/genmgmt/relegation",
-    color: "bg-red-500"
-  },
+  // {
+  //   title: "Relegation Management",
+  //   description: "Monitor, evaluate, and manage student relegation and promotion status",
+  //   icon: ArrowDownUp,
+  //   to: "/dashboard/genmgmt/relegation",
+  //   color: "bg-red-500"
+  // },
   {
     title: "Platoon Management",
     description: "Create, organize, and manage platoons and assigned personnel efficiently",
@@ -304,34 +306,34 @@ export const managementCard = [
   //   to: "/dashboard/genmgmt/discipline-records",
   //   color: "bg-blue-500"
   // },
-  {
-    title: "Camps Management",
-    description: "Create and Manage Camps efficiently",
-    icon: Tent,
-    to: "/dashboard/genmgmt/camps",
-    color: "bg-green-700"
-  },
-  {
-    title: "Punishment Management",
-    description: "Track, assign, and manage disciplinary punishments",
-    icon: Gavel,
-    to: "/dashboard/genmgmt/punishments",
-    color: "bg-red-700"
-  },
-  {
-    title: "Interview Management",
-    description: "Schedule, track, and manage interviews",
-    icon: Users,
-    to: "/dashboard/genmgmt/interviews-mgmt",
-    color: "bg-blue-700"
-  },
-  {
-    title: "Physical Training Management",
-    description: "Plan, schedule, and track physical training sessions",
-    icon: Dumbbell,
-    to: "/dashboard/genmgmt/pt-mgmt",
-    color: "bg-green-700"
-  }
+  // {
+  //   title: "Camps Management",
+  //   description: "Create and Manage Camps efficiently",
+  //   icon: Tent,
+  //   to: "/dashboard/genmgmt/camps",
+  //   color: "bg-green-700"
+  // },
+  // {
+  //   title: "Punishment Management",
+  //   description: "Track, assign, and manage disciplinary punishments",
+  //   icon: Gavel,
+  //   to: "/dashboard/genmgmt/punishments",
+  //   color: "bg-red-700"
+  // },
+  // {
+  //   title: "Interview Management",
+  //   description: "Schedule, track, and manage interviews",
+  //   icon: Users,
+  //   to: "/dashboard/genmgmt/interviews-mgmt",
+  //   color: "bg-blue-700"
+  // },
+  // {
+  //   title: "Physical Training Management",
+  //   description: "Plan, schedule, and track physical training sessions",
+  //   icon: Dumbbell,
+  //   to: "/dashboard/genmgmt/pt-mgmt",
+  //   color: "bg-green-700"
+  // }
 
 
   // {
@@ -1286,26 +1288,58 @@ export const ocTabs = [
     link: "/dashboard/genmgmt/appointmentmgmt"
   },
   {
-    value: "camp-mgmt",
-    title: "Camps Management",
-    icon: Tent,
-    link: "/dashboard/genmgmt/camps"
+    value: "instructors",
+    title: "Instructor Management",
+    icon: UserCheck,
+    link: "/dashboard/genmgmt/instructors",
+  },
+  // {
+  //   value: "offerings",
+  //   title: "Offerings Management",
+  //   icon: Package,
+  //   link: "/dashboard/genmgmt/offerings",
+  // },
+  {
+    value: "platoon-management",
+    title: "Platoon Management",
+    icon: Users,
+    link: "/dashboard/genmgmt/platoon-management",
+  }
+];
+
+export const moduleManagementTabs = [
+  {
+    value: "relegation",
+    title: "Relegation Management",
+    icon: ArrowDownCircle,
+    link: "/dashboard/genmgmt/relegation",
   },
   {
-    value: "discipline-records",
-    title: "Discipline Records",
+    value: "camps",
+    title: "Camps Management",
+    icon: Tent,
+    link: "/dashboard/genmgmt/camps",
+  },
+  {
+    value: "punishments",
+    title: "Punishment Management",
     icon: ShieldAlert,
-    link: "/dashboard/genmgmt/discipline-records"
+    link: "/dashboard/genmgmt/punishments",
+  },
+  {
+    value: "interviews-mgmt",
+    title: "Interview Management",
+    icon: MessageSquare,
+    link: "/dashboard/genmgmt/interviews-mgmt",
+  },
+  {
+    value: "pt-mgmt",
+    title: "Physical Training Management",
+    icon: Dumbbell,
+    link: "/dashboard/genmgmt/pt-mgmt",
   }
-  // {
-  //   value: "instructors",
-  //   title: "Instructor Management",
-  //   icon: UserCheck,
-  //   link: "/dashboard/genmgmt/instructors",
-  // }
-
-
 ];
+
 export const ocTabsWithDropdown = [
   {
     value: "oc-mgmt",

@@ -15,7 +15,7 @@ import PunishmentDialog from "@/components/punishments/PunishmentDialog";
 import { usePunishments } from "@/hooks/usePunishments";
 import { Punishment, PunishmentCreate } from "@/app/lib/api/punishmentsApi";
 import { Input } from "@/components/ui/input";
-import { ocTabs } from "@/config/app.config";
+import { moduleManagementTabs, ocTabs } from "@/config/app.config";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -113,8 +113,8 @@ export default function PunishmentManagementPage() {
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="punishment-mgmt">
-                            <TabsContent value="punishment-mgmt" className="space-y-6">
+                        <GlobalTabs tabs={moduleManagementTabs} defaultValue="punishments">
+                            <TabsContent value="punishments" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">Punishment List</h2>
 
