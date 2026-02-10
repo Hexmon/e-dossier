@@ -113,8 +113,8 @@ export default function InstructorManagementPage() {
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="instructor-mgmt">
-                            <TabsContent value="instructor-mgmt" className="space-y-6">
+                        <GlobalTabs tabs={ocTabs} defaultValue="instructors">
+                            <TabsContent value="instructors" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">Instructor List</h2>
 
