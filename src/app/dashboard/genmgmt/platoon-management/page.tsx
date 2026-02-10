@@ -123,8 +123,8 @@ export default function PlatoonManagementPage() {
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="platoon-mgmt">
-                            <TabsContent value="platoon-mgmt" className="space-y-6">
+                        <GlobalTabs tabs={ocTabs} defaultValue="platoon-management">
+                            <TabsContent value="platoon-management" className="space-y-6">
                                 <div className="flex justify-between items-center">
                                     <h2 className="text-2xl font-bold">Platoon List</h2>
 
