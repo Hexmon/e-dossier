@@ -1,13 +1,12 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ptAttemptGradeParam, ptAttemptGradeUpdateSchema } from '@/app/lib/physical-training-validators';
 import { getPtAttempt, getPtAttemptGrade, updatePtAttemptGrade, deletePtAttemptGrade } from '@/app/db/queries/physicalTraining';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ typeId: string; attemptId: string; gradeId: string }> },
 ) {
     try {
@@ -24,7 +23,7 @@ async function GETHandler(
 }
 
 async function PATCHHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ typeId: string; attemptId: string; gradeId: string }> },
 ) {
     try {
@@ -43,19 +42,17 @@ async function PATCHHandler(
         });
         if (!row) throw new ApiError(404, 'PT grade not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_GRADE_UPDATED,
-            resourceType: AuditResourceType.PT_GRADE,
-            resourceId: row.id,
-            description: `Updated PT grade ${row.code}`,
+        await req.audit.log({
+            action: AuditEventType.PT_GRADE_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_GRADE, id: row.id },
             metadata: {
+                description: `Updated PT grade ${row.code}`,
                 ptGradeId: row.id,
                 ptAttemptId: row.ptAttemptId,
                 changes: Object.keys(dto),
             },
-            request: req,
-            required: true,
         });
         return json.ok({ message: 'PT grade updated successfully.', grade: row });
     } catch (err) {
@@ -64,7 +61,7 @@ async function PATCHHandler(
 }
 
 async function DELETEHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ typeId: string; attemptId: string; gradeId: string }> },
 ) {
     try {
@@ -79,18 +76,17 @@ async function DELETEHandler(
         const row = await deletePtAttemptGrade(gradeId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'PT grade not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PT_GRADE_DELETED,
-            resourceType: AuditResourceType.PT_GRADE,
-            resourceId: row.id,
-            description: `${body?.hard ? 'Hard' : 'Soft'} deleted PT grade ${row.code}`,
+        await req.audit.log({
+            action: AuditEventType.PT_GRADE_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PT_GRADE, id: row.id },
             metadata: {
+                description: `${body?.hard ? 'Hard' : 'Soft'} deleted PT grade ${row.code}`,
                 ptGradeId: row.id,
                 ptAttemptId: row.ptAttemptId,
                 hardDeleted: body?.hard === true,
             },
-            request: req,
         });
         return json.ok({ message: 'PT grade deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
@@ -98,6 +94,6 @@ async function DELETEHandler(
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

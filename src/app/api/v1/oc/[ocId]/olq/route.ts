@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
@@ -17,12 +16,12 @@ import {
     deleteOlqScore,
     recomputeOlqTotal,
 } from '@/app/db/queries/olq';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -38,6 +37,21 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
         if (qp.subtitleId) {
             const score = await getOlqScore(ocId, qp.semester, qp.subtitleId);
             if (!score) throw new ApiError(404, 'OLQ score not found', 'not_found');
+
+            await req.audit.log({
+                action: AuditEventType.API_REQUEST,
+                outcome: 'SUCCESS',
+                actor: { type: 'user', id: authCtx.userId },
+                target: { type: AuditResourceType.OC, id: ocId },
+                metadata: {
+                    description: `OLQ score ${qp.subtitleId} retrieved for OC ${ocId}`,
+                    ocId,
+                    module: 'olq',
+                    semester: qp.semester,
+                    subtitleId: qp.subtitleId,
+                },
+            });
+
             return json.ok({ message: 'OLQ score retrieved successfully.', data: score });
         }
 
@@ -49,13 +63,30 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
             subtitleId: qp.subtitleId,
         });
         if (!sheet) throw new ApiError(404, 'OLQ record not found', 'not_found');
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: `OLQ record retrieved for OC ${ocId}`,
+                ocId,
+                module: 'olq',
+                semester: qp.semester,
+                includeCategories: qp.includeCategories ?? true,
+                categoryId: qp.categoryId,
+                subtitleId: qp.subtitleId,
+            },
+        });
+
         return json.ok({ message: 'OLQ record retrieved successfully.', data: sheet });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -77,19 +108,18 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
             includeCategories: true,
         });
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Created OLQ record for OC ${ocId} semester ${dto.semester}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Created OLQ record for OC ${ocId} semester ${dto.semester}`,
                 ocId,
                 module: 'olq',
                 semester: dto.semester,
                 scoreCount: dto.scores?.length ?? 0,
             },
-            request: req,
         });
         return json.created({ message: 'OLQ record created successfully.', data: sheet });
     } catch (err) {
@@ -97,7 +127,7 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -120,13 +150,13 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
             includeCategories: true,
         });
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_UPDATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Updated OLQ record for OC ${ocId} semester ${dto.semester}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Updated OLQ record for OC ${ocId} semester ${dto.semester}`,
                 ocId,
                 module: 'olq',
                 semester: dto.semester,
@@ -134,7 +164,6 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
                 deletedSubtitles: dto.deleteSubtitleIds?.length ?? 0,
                 changes: Object.keys(dto),
             },
-            request: req,
         });
         return json.ok({ message: 'OLQ record updated successfully.', data: sheet });
     } catch (err) {
@@ -142,7 +171,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
@@ -162,49 +191,47 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
             if (!deleted) throw new ApiError(404, 'OLQ score not found', 'not_found');
             await recomputeOlqTotal(sheet.id);
 
-            await createAuditLog({
-                actorUserId: authCtx.userId,
-                eventType: AuditEventType.OC_RECORD_DELETED,
-                resourceType: AuditResourceType.OC,
-                resourceId: ocId,
-                description: `Deleted OLQ subtitle ${dto.subtitleId} for OC ${ocId}`,
+            await req.audit.log({
+                action: AuditEventType.OC_RECORD_DELETED,
+                outcome: 'SUCCESS',
+                actor: { type: 'user', id: authCtx.userId },
+                target: { type: AuditResourceType.OC, id: ocId },
                 metadata: {
+                    description: `Deleted OLQ subtitle ${dto.subtitleId} for OC ${ocId}`,
                     ocId,
                     module: 'olq',
                     semester: dto.semester,
                     subtitleId: dto.subtitleId,
                     hardDeleted: true,
                 },
-                request: req,
             });
             return json.ok({ message: 'OLQ score deleted successfully.', deletedScore: dto.subtitleId });
         }
 
         await deleteOlqHeader(ocId, dto.semester);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_DELETED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Deleted OLQ record for OC ${ocId} semester ${dto.semester}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Deleted OLQ record for OC ${ocId} semester ${dto.semester}`,
                 ocId,
                 module: 'olq',
                 semester: dto.semester,
                 hardDeleted: true,
             },
-            request: req,
         });
         return json.ok({ message: 'OLQ record deleted successfully.', deleted: true });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

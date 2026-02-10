@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
@@ -19,8 +18,8 @@ import {
     listInterviewTemplateFieldsByIds,
     listInterviewTemplateGroupsByIds,
 } from '@/app/db/queries/interviewOc';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 function cleanText(value?: string | null) {
     if (value === undefined) return undefined;
@@ -157,11 +156,11 @@ async function buildInterviewItem(interviewId: string) {
 }
 
 async function GETHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ ocId: string; interviewId: string }> },
 ) {
     try {
-        await mustBeAuthed(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { interviewId } = await parseParam({ params }, InterviewIdParam);
         await ensureOcExists(ocId);
@@ -170,6 +169,21 @@ async function GETHandler(
         if (!interview || interview.ocId !== ocId) throw new ApiError(404, 'Interview record not found', 'not_found');
 
         const details = await buildInterviewItem(interviewId);
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: `Interview record ${interviewId} retrieved successfully for OC ${ocId}`,
+                ocId,
+                module: 'interview',
+                interviewId,
+                templateId: interview.templateId,
+            },
+        });
+
         return json.ok({
             message: 'Interview record retrieved successfully.',
             interview: { ...interview, ...details },
@@ -180,7 +194,7 @@ async function GETHandler(
 }
 
 async function PATCHHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ ocId: string; interviewId: string }> },
 ) {
     try {
@@ -270,20 +284,19 @@ async function PATCHHandler(
 
         const details = await buildInterviewItem(interviewId);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_UPDATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Updated interview record ${interviewId} for OC ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Updated interview record ${interviewId} for OC ${ocId}`,
                 ocId,
                 module: 'interview',
                 templateId: interview.templateId,
                 interviewId,
                 changes: Object.keys(dto),
             },
-            request: req,
         });
         return json.ok({
             message: 'Interview record updated successfully.',
@@ -295,7 +308,7 @@ async function PATCHHandler(
 }
 
 async function DELETEHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ ocId: string; interviewId: string }> },
 ) {
     try {
@@ -309,20 +322,19 @@ async function DELETEHandler(
 
         await deleteOcInterview(interviewId);
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_RECORD_DELETED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `Deleted interview record ${interviewId} for OC ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Deleted interview record ${interviewId} for OC ${ocId}`,
                 ocId,
                 module: 'interview',
                 templateId: interview.templateId,
                 interviewId,
                 hardDeleted: true,
             },
-            request: req,
         });
         return json.ok({ message: 'Interview record deleted successfully.', deleted: interviewId });
     } catch (err) {
@@ -330,6 +342,6 @@ async function DELETEHandler(
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

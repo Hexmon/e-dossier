@@ -9,7 +9,7 @@ try {
 } catch {
 }
 
-Write-Host "Running pre-push verify (PowerShell)..." -ForegroundColor Cyan
+Write-Host "Running pre-push checks (PowerShell)..." -ForegroundColor Cyan
 
 $pnpm = Get-Command pnpm -ErrorAction SilentlyContinue
 if (-not $pnpm) {
@@ -17,10 +17,23 @@ if (-not $pnpm) {
   exit 1
 }
 
-# Run the same verify pipeline used by the bash hook
-& pnpm run verify
+# Remove previous Next.js build output first for a fresh build
+if (Test-Path ".next") {
+  Remove-Item -Recurse -Force ".next"
+  Write-Host "✓ Removed existing .next directory" -ForegroundColor Green
+} else {
+  Write-Host "✓ No existing .next directory to remove" -ForegroundColor Green
+}
+
+& pnpm run lint
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "❌ VERIFICATION FAILED - Push Blocked" -ForegroundColor Red
+  Write-Host "❌ LINT FAILED - Push Blocked" -ForegroundColor Red
+  exit $LASTEXITCODE
+}
+
+& pnpm run build
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ BUILD FAILED - Push Blocked" -ForegroundColor Red
   exit $LASTEXITCODE
 }
 

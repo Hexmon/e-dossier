@@ -116,7 +116,7 @@ export const dossierFillingUpsertSchema = z.object({
     openedOn: z.coerce.date().optional(),
     initialInterview: z.string().optional(),
     closedBy: z.string().optional(),
-    closedOn: z.coerce.date().optional(),
+    closedOn: z.preprocess((v) => (v === '' || v === null ? undefined : v), z.coerce.date().optional()),
     finalInterview: z.string().optional(),
 });
 
@@ -183,6 +183,7 @@ export const disciplineCreateSchema = z.object({
     punishmentAwarded: z.string().optional(), // restrictions/ED/gating/…
     awardedOn: z.coerce.date().optional(),
     awardedBy: z.string().optional(),
+    numberOfPunishments: z.coerce.number().int().optional(),
     pointsDelta: z.coerce.number().int().optional(),             // e.g. -3, -1, 0
     pointsCumulative: z.coerce.number().int().optional(),
 });
@@ -406,11 +407,9 @@ export const academicSubjectBulkRequestSchema = z.object({
 });
 
 export const academicSummaryPatchSchema = z.object({
-    sgpa: z.coerce.number().optional(),
-    cgpa: z.coerce.number().optional(),
     marksScored: z.coerce.number().optional(),
-}).refine((value) => value.sgpa !== undefined || value.cgpa !== undefined || value.marksScored !== undefined, {
-    message: 'No summary fields provided.',
+}).refine((value) => value.marksScored !== undefined, {
+    message: 'marksScored is required.',
 });
 
 // --- OC images --------------------------------------------------------------

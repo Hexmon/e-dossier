@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import {
@@ -11,10 +10,10 @@ import {
     listInterviewTemplateSections,
     createInterviewTemplateSection,
 } from '@/app/db/queries/interviewTemplates';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ templateId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ templateId: string }> }) {
     try {
         await requireAuth(req);
         const { templateId } = interviewTemplateParam.parse(await params);
@@ -32,7 +31,7 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ temp
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ templateId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ templateId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { templateId } = interviewTemplateParam.parse(await params);
@@ -47,18 +46,16 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ tem
             isActive: dto.isActive ?? true,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.INTERVIEW_SECTION_CREATED,
-            resourceType: AuditResourceType.INTERVIEW_SECTION,
-            resourceId: row.id,
-            description: `Created interview section ${row.title}`,
+        await req.audit.log({
+            action: AuditEventType.INTERVIEW_SECTION_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.INTERVIEW_SECTION, id: row.id },
             metadata: {
+                description: `Created interview section ${row.title}`,
                 templateId,
                 sectionId: row.id,
             },
-            request: req,
-            required: true,
         });
         return json.created({ message: 'Interview template section created successfully.', section: row });
     } catch (err) {
@@ -66,5 +63,5 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ tem
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
-export const POST = withRouteLogging('POST', POSTHandler);
+export const GET = withAuditRoute('GET', GETHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

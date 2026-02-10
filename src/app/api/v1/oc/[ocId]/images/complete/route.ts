@@ -1,11 +1,10 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin } from '../../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed } from '../../../_checks';
 import { OcIdParam, ocImageCompleteSchema, ocImageKindSchema } from '@/app/lib/oc-validators';
 import { headObject, deleteObject, getPublicObjectUrl, getStorageConfig } from '@/app/lib/storage';
 import { getOcImage, upsertOcImage } from '@/app/db/queries/oc';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 const MIN_BYTES = 20 * 1024;
 const MAX_BYTES = 200 * 1024;
@@ -20,9 +19,9 @@ function assertObjectKeyMatches(ocId: string, kind: string, objectKey: string) {
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -77,23 +76,19 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
             }
         }
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: existing ? AuditEventType.OC_RECORD_UPDATED : AuditEventType.OC_RECORD_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `${existing ? 'Updated' : 'Created'} OC image ${kind} for ${ocId}`,
+        await req.audit.log({
+            action: existing ? AuditEventType.OC_RECORD_UPDATED : AuditEventType.OC_RECORD_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `${existing ? 'Updated' : 'Created'} OC image ${kind} for ${ocId}`,
                 ocId,
                 module: 'images',
                 kind,
                 objectKey: body.objectKey,
                 sizeBytes,
             },
-            before: existing ?? null,
-            after: saved ?? null,
-            request: req,
-            required: true,
         });
 
         return json.ok({
@@ -106,4 +101,4 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
     }
 }
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

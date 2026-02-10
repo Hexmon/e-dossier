@@ -80,11 +80,9 @@ export default function LeavePage() {
     });
 
     const handleClearForm = () => {
-        if (confirm("Are you sure you want to clear all unsaved changes?")) {
-            dispatch(clearLeaveForm(ocId));
-            methods.reset({ leaveRows: defaultLeaveRows });
-            toast.info("Form cleared");
-        }
+        dispatch(clearLeaveForm(ocId));
+        methods.reset({ leaveRows: defaultLeaveRows });
+        toast.info("Form cleared");
     };
 
     return (
@@ -133,7 +131,7 @@ function InnerLeavePage({
     onClearForm: () => void;
 }) {
     const dispatch = useDispatch();
-    const { control, register, setValue, handleSubmit, watch } = useFormContext<LeaveFormValues>();
+    const { control, register, setValue, handleSubmit, getValues, watch } = useFormContext<LeaveFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "leaveRows" });
 
     const { submitLeave, fetchLeave, deleteLeave, deleteSavedLeave } = useLeaveActions(selectedCadet);
@@ -239,7 +237,13 @@ function InnerLeavePage({
         }
     };
 
-    const handleFormSubmit = async () => {
+    const handleNewSubmit = handleSubmit(async () => {
+        // Set semester for all new rows before submission
+        const rows = getValues().leaveRows;
+        rows.forEach((_, index) => {
+            setValue(`leaveRows.${index}.semester`, activeTab + 1);
+        });
+
         await submitLeave();
         toast.success("Leave records saved");
 
@@ -250,7 +254,7 @@ function InnerLeavePage({
         setValue("leaveRows", defaultLeaveRows);
 
         setRefreshFlag((f) => f + 1);
-    };
+    });
 
     return (
         <DossierTab
@@ -323,7 +327,7 @@ function InnerLeavePage({
                             setEditingField={setEditingField}
                             saveInlineEdit={saveInlineEdit}
                             cancelInlineEdit={cancelEdit}
-                            onSubmit={handleSubmit(handleFormSubmit)}
+                            onSubmit={handleNewSubmit}
                             onReset={onClearForm}
                         />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -12,6 +12,7 @@ import { ocTabs } from "@/config/app.config";
 
 import { useApproval } from "@/hooks/useApproval";
 import { PendingUserItem } from "@/components/approval/PendingUserItem";
+import type { PendingUser } from "@/app/lib/api/ApprovalApi";
 
 export default function ApprovalManagement() {
     const router = useRouter();
@@ -20,18 +21,11 @@ export default function ApprovalManagement() {
         pendingUsers,
         availableSlots,
         loading,
-        error,
-        fetchData,
         approve,
         reject,
     } = useApproval();
 
-    // 🔥 store selected slot per user
     const [selectedSlots, setSelectedSlots] = useState<Record<string, string>>({});
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
 
     const handleLogout = () => router.push("/login");
 

@@ -1,8 +1,8 @@
 "use client";
 
+import React, { useState } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useRouter } from "next/navigation";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -18,71 +18,140 @@ import { CampFormData } from "@/components/camps/CampForm";
 import ActivityDialog from "@/components/camps/ActivityDialog";
 import DeleteActivityDialog from "@/components/camps/DeleteActivityDialog";
 import { ActivityFormData } from "@/components/camps/ActivityForm";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     fetchTrainingCamps,
     createTrainingCamp,
     updateTrainingCamp,
     deleteTrainingCamp,
-    TrainingCamp
+    TrainingCamp,
 } from "@/app/lib/api/trainingCampsApi";
 import {
     createTrainingCampActivity,
     updateTrainingCampActivity,
     deleteTrainingCampActivity,
-    TrainingCampActivity
+    TrainingCampActivity,
 } from "@/app/lib/api/trainingCampActivitiesApi";
 import { toast } from "sonner";
 
-
 export default function CampsManagement() {
     const router = useRouter();
+    const queryClient = useQueryClient();
+
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [camps, setCamps] = useState<TrainingCamp[]>([]);
-    const [isFetchingCamps, setIsFetchingCamps] = useState(true);
     const [editingCamp, setEditingCamp] = useState<TrainingCamp | null>(null);
     const [deletingCamp, setDeletingCamp] = useState<TrainingCamp | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    // Activity management state
     const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
     const [currentCamp, setCurrentCamp] = useState<TrainingCamp | null>(null);
     const [editingActivity, setEditingActivity] = useState<TrainingCampActivity | null>(null);
     const [deletingActivity, setDeletingActivity] = useState<TrainingCampActivity | null>(null);
     const [isDeleteActivityDialogOpen, setIsDeleteActivityDialogOpen] = useState(false);
 
-    const handleLogout = () => router.push("/login");
-
-    // Fetch camps on component mount
-    useEffect(() => {
-        loadCamps();
-    }, []);
-
-    const loadCamps = async () => {
-        try {
-            setIsFetchingCamps(true);
+    const { data: camps = [], isLoading: isFetchingCamps } = useQuery({
+        queryKey: ["trainingCamps"],
+        queryFn: async () => {
             const data = await fetchTrainingCamps({ includeActivities: true });
-            setCamps(data);
-        } catch (error) {
-            toast.error("Failed to load camps");
-        } finally {
-            setIsFetchingCamps(false);
-        }
-    };
+            return data;
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const handleCreateCamp = async (formData: CampFormData) => {
-        try {
-            setIsLoading(true);
-            await createTrainingCamp(formData);
+    const createCampMutation = useMutation({
+        mutationFn: createTrainingCamp,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["trainingCamps"] });
             toast.success("Camp created successfully!");
             setIsDialogOpen(false);
-            // Reload camps list
-            await loadCamps();
-        } catch (error: any) {
+        },
+        onError: (error: any) => {
             toast.error(error.message || "Failed to create camp");
-        } finally {
-            setIsLoading(false);
-        }
+        },
+    });
+
+    const updateCampMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: CampFormData }) =>
+            updateTrainingCamp(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["trainingCamps"] });
+            toast.success("Camp updated successfully!");
+            setIsDialogOpen(false);
+            setEditingCamp(null);
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to update camp");
+        },
+    });
+
+    const deleteCampMutation = useMutation({
+        mutationFn: (id: string) => deleteTrainingCamp(id, false),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["trainingCamps"] });
+            toast.success("Camp deleted successfully!");
+            setIsDeleteDialogOpen(false);
+            setDeletingCamp(null);
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to delete camp");
+        },
+    });
+
+    const createActivityMutation = useMutation({
+        mutationFn: ({ campId, data }: { campId: string; data: ActivityFormData }) =>
+            createTrainingCampActivity(campId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["trainingCamps"] });
+            toast.success("Activity created successfully!");
+            setIsActivityDialogOpen(false);
+            setCurrentCamp(null);
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to create activity");
+        },
+    });
+
+    const updateActivityMutation = useMutation({
+        mutationFn: ({
+            campId,
+            activityId,
+            data,
+        }: {
+            campId: string;
+            activityId: string;
+            data: ActivityFormData;
+        }) => updateTrainingCampActivity(campId, activityId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["trainingCamps"] });
+            toast.success("Activity updated successfully!");
+            setIsActivityDialogOpen(false);
+            setEditingActivity(null);
+            setCurrentCamp(null);
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to update activity");
+        },
+    });
+
+    const deleteActivityMutation = useMutation({
+        mutationFn: ({ campId, activityId }: { campId: string; activityId: string }) =>
+            deleteTrainingCampActivity(campId, activityId, false),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["trainingCamps"] });
+            toast.success("Activity deleted successfully!");
+            setIsDeleteActivityDialogOpen(false);
+            setDeletingActivity(null);
+            setCurrentCamp(null);
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to delete activity");
+        },
+    });
+
+    const handleLogout = () => router.push("/login");
+
+    const handleCreateCamp = async (formData: CampFormData) => {
+        await createCampMutation.mutateAsync(formData);
     };
 
     const handleEditCamp = (camp: TrainingCamp) => {
@@ -92,20 +161,7 @@ export default function CampsManagement() {
 
     const handleUpdateCamp = async (formData: CampFormData) => {
         if (!editingCamp) return;
-
-        try {
-            setIsLoading(true);
-            await updateTrainingCamp(editingCamp.id, formData);
-            toast.success("Camp updated successfully!");
-            setIsDialogOpen(false);
-            setEditingCamp(null);
-            // Reload camps list
-            await loadCamps();
-        } catch (error: any) {
-            toast.error(error.message || "Failed to update camp");
-        } finally {
-            setIsLoading(false);
-        }
+        await updateCampMutation.mutateAsync({ id: editingCamp.id, data: formData });
     };
 
     const handleDeleteClick = (camp: TrainingCamp) => {
@@ -115,20 +171,7 @@ export default function CampsManagement() {
 
     const handleDeleteConfirm = async () => {
         if (!deletingCamp) return;
-
-        try {
-            setIsLoading(true);
-            await deleteTrainingCamp(deletingCamp.id, false); // soft delete
-            toast.success("Camp deleted successfully!");
-            setIsDeleteDialogOpen(false);
-            setDeletingCamp(null);
-            // Reload camps list
-            await loadCamps();
-        } catch (error: any) {
-            toast.error(error.message || "Failed to delete camp");
-        } finally {
-            setIsLoading(false);
-        }
+        await deleteCampMutation.mutateAsync(deletingCamp.id);
     };
 
     const handleDialogClose = (open: boolean) => {
@@ -138,7 +181,6 @@ export default function CampsManagement() {
         }
     };
 
-    // Activity handlers
     const handleAddActivity = (camp: TrainingCamp) => {
         setCurrentCamp(camp);
         setEditingActivity(null);
@@ -151,7 +193,10 @@ export default function CampsManagement() {
         setIsActivityDialogOpen(true);
     };
 
-    const handleDeleteActivityClick = (camp: TrainingCamp, activity: TrainingCampActivity) => {
+    const handleDeleteActivityClick = (
+        camp: TrainingCamp,
+        activity: TrainingCampActivity
+    ) => {
         setCurrentCamp(camp);
         setDeletingActivity(activity);
         setIsDeleteActivityDialogOpen(true);
@@ -159,52 +204,24 @@ export default function CampsManagement() {
 
     const handleCreateActivity = async (formData: ActivityFormData) => {
         if (!currentCamp) return;
-        try {
-            setIsLoading(true);
-            await createTrainingCampActivity(currentCamp.id, formData);
-            toast.success("Activity created successfully!");
-            setIsActivityDialogOpen(false);
-            setCurrentCamp(null);
-            await loadCamps();
-        } catch (error: any) {
-            toast.error(error.message || "Failed to create activity");
-        } finally {
-            setIsLoading(false);
-        }
+        await createActivityMutation.mutateAsync({ campId: currentCamp.id, data: formData });
     };
 
     const handleUpdateActivity = async (formData: ActivityFormData) => {
         if (!currentCamp || !editingActivity) return;
-        try {
-            setIsLoading(true);
-            await updateTrainingCampActivity(currentCamp.id, editingActivity.id, formData);
-            toast.success("Activity updated successfully!");
-            setIsActivityDialogOpen(false);
-            setEditingActivity(null);
-            setCurrentCamp(null);
-            await loadCamps();
-        } catch (error: any) {
-            toast.error(error.message || "Failed to update activity");
-        } finally {
-            setIsLoading(false);
-        }
+        await updateActivityMutation.mutateAsync({
+            campId: currentCamp.id,
+            activityId: editingActivity.id,
+            data: formData,
+        });
     };
 
     const handleDeleteActivityConfirm = async () => {
         if (!currentCamp || !deletingActivity) return;
-        try {
-            setIsLoading(true);
-            await deleteTrainingCampActivity(currentCamp.id, deletingActivity.id, false);
-            toast.success("Activity deleted successfully!");
-            setIsDeleteActivityDialogOpen(false);
-            setDeletingActivity(null);
-            setCurrentCamp(null);
-            await loadCamps();
-        } catch (error: any) {
-            toast.error(error.message || "Failed to delete activity");
-        } finally {
-            setIsLoading(false);
-        }
+        await deleteActivityMutation.mutateAsync({
+            campId: currentCamp.id,
+            activityId: deletingActivity.id,
+        });
     };
 
     const handleActivityDialogClose = (open: boolean) => {
@@ -214,6 +231,14 @@ export default function CampsManagement() {
             setCurrentCamp(null);
         }
     };
+
+    const isLoading =
+        createCampMutation.isPending ||
+        updateCampMutation.isPending ||
+        deleteCampMutation.isPending ||
+        createActivityMutation.isPending ||
+        updateActivityMutation.isPending ||
+        deleteActivityMutation.isPending;
 
     return (
         <SidebarProvider>
@@ -266,21 +291,23 @@ export default function CampsManagement() {
                 </div>
             </div>
 
-            {/* Create/Edit Camp Dialog */}
             <CampDialog
                 isOpen={isDialogOpen}
                 onOpenChange={handleDialogClose}
                 onSubmit={editingCamp ? handleUpdateCamp : handleCreateCamp}
                 isLoading={isLoading}
-                initialData={editingCamp ? {
-                    name: editingCamp.name,
-                    semester: editingCamp.semester,
-                    maxTotalMarks: editingCamp.maxTotalMarks,
-                } : undefined}
+                initialData={
+                    editingCamp
+                        ? {
+                            name: editingCamp.name,
+                            semester: editingCamp.semester,
+                            maxTotalMarks: editingCamp.maxTotalMarks,
+                        }
+                        : undefined
+                }
                 mode={editingCamp ? "edit" : "create"}
             />
 
-            {/* Delete Camp Dialog */}
             <DeleteCampDialog
                 isOpen={isDeleteDialogOpen}
                 onOpenChange={setIsDeleteDialogOpen}
@@ -289,22 +316,24 @@ export default function CampsManagement() {
                 isLoading={isLoading}
             />
 
-            {/* Create/Edit Activity Dialog */}
             <ActivityDialog
                 isOpen={isActivityDialogOpen}
                 onOpenChange={handleActivityDialogClose}
                 onSubmit={editingActivity ? handleUpdateActivity : handleCreateActivity}
                 isLoading={isLoading}
-                initialData={editingActivity ? {
-                    name: editingActivity.name,
-                    defaultMaxMarks: editingActivity.defaultMaxMarks,
-                    sortOrder: editingActivity.sortOrder,
-                } : undefined}
+                initialData={
+                    editingActivity
+                        ? {
+                            name: editingActivity.name,
+                            defaultMaxMarks: editingActivity.defaultMaxMarks,
+                            sortOrder: editingActivity.sortOrder,
+                        }
+                        : undefined
+                }
                 mode={editingActivity ? "edit" : "create"}
                 campName={currentCamp?.name}
             />
 
-            {/* Delete Activity Dialog */}
             <DeleteActivityDialog
                 isOpen={isDeleteActivityDialogOpen}
                 onOpenChange={setIsDeleteActivityDialogOpen}
@@ -313,5 +342,5 @@ export default function CampsManagement() {
                 isLoading={isLoading}
             />
         </SidebarProvider>
-    )
+    );
 }

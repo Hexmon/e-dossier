@@ -20,12 +20,7 @@ export function useInterviewForms(ocId?: string) {
     const [templateMappings, setTemplateMappings] = useState<TemplateMappings | null>(null);
     const mappingsRef = useRef<TemplateMappings | null>(null);
     const mountedRef = useRef(true);
-    const initialIndexRef = useRef<Record<InterviewOfficer, { interviewId: string; templateId: string } | null>>({
-        plcdr: null,
-        dscoord: null,
-        dycdr: null,
-        cdr: null,
-    });
+    const initialIndexRef = useRef<Record<string, { interviewId: string; templateId: string } | null>>({});
     const termIndexRef = useRef<
         Record<
             string,
@@ -102,7 +97,11 @@ export function useInterviewForms(ocId?: string) {
     }, [ocId, ensureMappings]);
 
     const saveInitial = useCallback(
-        async (officer: InterviewOfficer, formData: Record<string, unknown>): Promise<InterviewFormRecord | null> => {
+        async (
+            officer: InterviewOfficer,
+            formData: Record<string, unknown>,
+            semester?: number
+        ): Promise<InterviewFormRecord | null> => {
             if (!ocId) {
                 toast.error("No cadet selected");
                 return null;
@@ -111,7 +110,7 @@ export function useInterviewForms(ocId?: string) {
             setLoading(true);
             try {
                 const mappings = await ensureMappings();
-                const interview = await saveInitialInterview(ocId, officer, formData, mappings, initialIndexRef);
+                const interview = await saveInitialInterview(ocId, officer, formData, mappings, initialIndexRef, semester);
                 if (!interview) return null;
 
                 return {

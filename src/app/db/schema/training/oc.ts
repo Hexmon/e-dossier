@@ -339,11 +339,32 @@ export const ocDiscipline = pgTable('oc_discipline', {
     punishmentAwarded: varchar('punishment_awarded', { length: 160 }),  // e.g., restrictions / ED / gating / …
     awardedOn: timestamp('awarded_on', { withTimezone: true }),
     awardedBy: varchar('awarded_by', { length: 160 }),
+    numberOfPunishments: integer('number_of_punishments'),
     pointsDelta: integer('points_delta').default(0),                    // e.g., -3, -1, 0
     pointsCumulative: integer('points_cumulative'),                     // optional denorm for quick reads
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
 }));
+
+export const ocSprRecords = pgTable('oc_spr_records', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    cdrMarks: numeric('cdr_marks', { mode: 'number' }).notNull().default(0),
+    subjectRemarks: jsonb('subject_remarks').$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
+    platoonCommanderRemarks: text('platoon_commander_remarks'),
+    deputyCommanderRemarks: text('deputy_commander_remarks'),
+    commanderRemarks: text('commander_remarks'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqOcSemester: uniqueIndex('uq_oc_spr_record').on(t.ocId, t.semester),
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+    cdrNonNegative: { check: sql`CHECK (${t.cdrMarks.name} >= 0)` },
+}));
+
 
 // === Parent communications ===================================================
 export const ocParentComms = pgTable('oc_parent_comms', {

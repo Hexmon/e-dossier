@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useCallback } from "react";
 
 import {
     getDisciplineRecords,
@@ -21,6 +22,8 @@ export type DisciplineRow = {
     dateOfOffence: string;
     offence: string;
     punishmentAwarded: string;
+    punishmentId?: string;
+    numberOfPunishments: number;
     dateOfAward: string;
     byWhomAwarded: string;
     negativePts: string;
@@ -29,18 +32,15 @@ export type DisciplineRow = {
 };
 
 export function useDisciplineRecords(ocId: string, semestersCount = 6) {
-    const [groupedBySemester, setGroupedBySemester] = useState<DisciplineRow[][]>(
-        Array.from({ length: semestersCount }, () => [])
-    );
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
 
-    const fetchAll = useCallback(async () => {
-        if (!ocId) return;
-        try {
-            setLoading(true);
-            const rows = await getDisciplineRecords(ocId); // expected array of raw rows
+    // Fetch all discipline records with React Query
+    const { data: groupedBySemester = Array.from({ length: semestersCount }, () => []), isLoading: loading } = useQuery({
+        queryKey: ["disciplineRecords", ocId],
+        queryFn: async () => {
+            if (!ocId) return Array.from({ length: semestersCount }, () => []);
 
-            // prepare empty groups
+            const rows = await getDisciplineRecords(ocId);
             const groups: DisciplineRow[][] = Array.from({ length: semestersCount }, () => []);
 
             for (const r of rows) {
@@ -58,6 +58,8 @@ export function useDisciplineRecords(ocId: string, semestersCount = 6) {
                     dateOfOffence: (r.dateOfOffence ?? "").split("T")[0] || "-",
                     offence: r.offence ?? "-",
                     punishmentAwarded: r.punishmentAwarded ?? "-",
+                    punishmentId: r.punishmentId ? "" : undefined,
+                    numberOfPunishments: r.numberOfPunishments ?? 1,
                     dateOfAward: (r.awardedOn ?? "").split("T")[0] || "-",
                     byWhomAwarded: r.awardedBy ?? "-",
                     negativePts: String(r.pointsDelta ?? "0"),
@@ -66,104 +68,96 @@ export function useDisciplineRecords(ocId: string, semestersCount = 6) {
                 });
             }
 
-            setGroupedBySemester(groups);
-        } catch (err) {
-            toast.error("Failed to load discipline records");
-        } finally {
-            setLoading(false);
-        }
-    }, [ocId, semestersCount]);
-
-    const saveRecords = useCallback(
-        async (semester: number, payloadRows: DisciplineForm["records"]) => {
-            if (!ocId) return null;
-
-            try {
-                const payload = payloadRows.map((r) => ({
-                    semester,
-                    dateOfOffence: r.dateOfOffence ?? "",
-                    offence: r.offence ?? "",
-                    punishmentAwarded: r.punishmentAwarded ?? null,
-                    awardedOn: r.dateOfAward ?? null,
-                    awardedBy: r.byWhomAwarded ?? null,
-                    pointsDelta: r.negativePts ? Number(r.negativePts) : 0,
-                    pointsCumulative: r.cumulative ? Number(r.cumulative) : 0,
-                }));
-
-                const resp = await saveDisciplineRecords(ocId, payload);
-                if (!resp?.ok) {
-                    toast.error("Please check your inputs and try again");
-                    return null;
-                }
-                toast.success("Saved successfully");
-                await fetchAll();
-                return resp;
-            } catch(err) {
-                toast.error("Failed to save discipline records");
-                return null;
-            }
+            return groups;
         },
-        [ocId, fetchAll]
-    );
+        enabled: !!ocId,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const update = useCallback(
-        async (id: string, payload: Partial<RawDisciplineRow>) => {
-            if (!ocId) return null;
-            try {
-                const body: Record<string, unknown> = {
-                    punishmentAwarded: payload.punishmentAwarded ?? undefined,
-                    pointsDelta: payload.pointsDelta !== undefined ? Number(payload.pointsDelta) : undefined,
-                    awardedOn: payload.awardedOn ?? undefined,
-                    awardedBy: payload.awardedBy ?? undefined,
-                    dateOfOffence: payload.dateOfOffence ?? undefined,
-                    offence: payload.offence ?? undefined,
-                };
+    // Save mutation
+    const saveMutation = useMutation({
+        mutationFn: async ({ semester, payloadRows }: { semester: number; payloadRows: DisciplineForm["records"] }) => {
+            if (!ocId) throw new Error("No OC ID");
 
-                const resp = await updateDisciplineRecord(ocId, id, body);;
+            const payload = payloadRows.map((r) => ({
+                semester,
+                dateOfOffence: r.dateOfOffence ?? "",
+                offence: r.offence ?? "",
+                punishmentAwarded: r.punishmentAwarded ?? null,
+                punishmentId: r.punishmentId ?? null,
+                numberOfPunishments: r.numberOfPunishments ?? 1,
+                awardedOn: r.dateOfAward ?? null,
+                awardedBy: r.byWhomAwarded ?? null,
+                pointsDelta: r.negativePts ? Number(r.negativePts) : 0,
+                pointsCumulative: r.cumulative ? Number(r.cumulative) : 0,
+            }));
 
-                if (!resp) {
-                    toast.error("Failed to update record");
-                    return false;
-                }
-
-                toast.success("Record updated");
-                await fetchAll();
-                return true;
-
-            } catch {
-                toast.error("Failed to update record");
-                return false;
-            }
+            return await saveDisciplineRecords(ocId, payload);
         },
-        [ocId, fetchAll]
-    );
-
-    const remove = useCallback(
-        async (id: string) => {
-            if (!ocId) return false;
-            try {
-                const resp = await deleteDisciplineRecord(ocId, id);
-                if (!resp) {
-                    toast.error("Failed to delete");
-                    return false;
-                }
-                toast.success("Deleted");
-                await fetchAll();
-                return true;
-            } catch {
-                toast.error("Failed to delete record");
-                return false;
-            }
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["disciplineRecords", ocId] });
+            toast.success("Saved successfully");
         },
-        [ocId, fetchAll]
-    );
+        onError: () => {
+            toast.error("Failed to save discipline records");
+        },
+    });
+
+    // Update mutation
+    const updateMutation = useMutation({
+        mutationFn: async ({ id, payload }: { id: string; payload: Partial<RawDisciplineRow> }) => {
+            if (!ocId) throw new Error("No OC ID");
+
+            const body: Record<string, unknown> = {
+                punishmentAwarded: payload.punishmentAwarded ?? undefined,
+                punishmentId: payload.punishmentId ?? undefined,
+                numberOfPunishments: payload.numberOfPunishments ?? undefined,
+                pointsDelta: payload.pointsDelta !== undefined ? Number(payload.pointsDelta) : undefined,
+                awardedOn: payload.awardedOn ?? undefined,
+                awardedBy: payload.awardedBy ?? undefined,
+                dateOfOffence: payload.dateOfOffence ?? undefined,
+                offence: payload.offence ?? undefined,
+            };
+
+            return await updateDisciplineRecord(ocId, id, body);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["disciplineRecords", ocId] });
+            toast.success("Record updated");
+        },
+        onError: () => {
+            toast.error("Failed to update record");
+        },
+    });
+
+    // Delete mutation
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            if (!ocId) throw new Error("No OC ID");
+            return await deleteDisciplineRecord(ocId, id);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["disciplineRecords", ocId] });
+            toast.success("Deleted");
+        },
+        onError: () => {
+            toast.error("Failed to delete record");
+        },
+    });
+
+    // Memoize fetchAll to prevent unnecessary re-renders
+    const fetchAll = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: ["disciplineRecords", ocId] });
+    }, [queryClient, ocId]);
 
     return {
         groupedBySemester,
         loading,
         fetchAll,
-        saveRecords,
-        updateRecord: update,
-        deleteRecord: remove,
+        saveRecords: (semester: number, payloadRows: DisciplineForm["records"]) =>
+            saveMutation.mutateAsync({ semester, payloadRows }),
+        updateRecord: (id: string, payload: Partial<RawDisciplineRow>) =>
+            updateMutation.mutateAsync({ id, payload }),
+        deleteRecord: deleteMutation.mutateAsync,
     };
 }

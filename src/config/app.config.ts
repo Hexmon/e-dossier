@@ -16,7 +16,8 @@ import {
   ChartArea,
   BookOpenCheck,
   ArrowDownUp,
-  Gavel
+  Gavel,
+  Boxes
 } from "lucide-react";
 
 
@@ -296,12 +297,60 @@ export const managementCard = [
     to: "/dashboard/genmgmt/platoon-management",
     color: "bg-green-500"
   },
+  // {
+  //   title: "Discipline Management",
+  //   description: "Manage and track discipline records",
+  //   icon: ShieldAlert,
+  //   to: "/dashboard/genmgmt/discipline-records",
+  //   color: "bg-blue-500"
+  // },
   {
-    title: "Discipline Management",
-    description: "Manage and track discipline records",
-    icon: ShieldAlert,
-    to: "/dashboard/genmgmt/discipline-records",
-    color: "bg-blue-500"
+    title: "Camps Management",
+    description: "Create and Manage Camps efficiently",
+    icon: Tent,
+    to: "/dashboard/genmgmt/camps",
+    color: "bg-green-700"
+  },
+  {
+    title: "Punishment Management",
+    description: "Track, assign, and manage disciplinary punishments",
+    icon: Gavel,
+    to: "/dashboard/genmgmt/punishments",
+    color: "bg-red-700"
+  },
+  {
+    title: "Interview Management",
+    description: "Schedule, track, and manage interviews",
+    icon: Users,
+    to: "/dashboard/genmgmt/interviews-mgmt",
+    color: "bg-blue-700"
+  },
+  {
+    title: "Physical Training Management",
+    description: "Plan, schedule, and track physical training sessions",
+    icon: Dumbbell,
+    to: "/dashboard/genmgmt/pt-mgmt",
+    color: "bg-green-700"
+  }
+
+
+  // {
+  //   title: "Settings Management",
+  //   description: "Configure application preferences and settings",
+  //   icon: Settings,
+  //   to: "/dashboard/genmgmt",
+  //   color: "bg-gray-500"
+  // }
+
+];
+
+export const moduleManagementCard = [
+  {
+    title: "Relegation Management",
+    description: "Monitor, evaluate, and manage student relegation and promotion status",
+    icon: ArrowDownUp,
+    to: "/dashboard/genmgmt/relegation",
+    color: "bg-red-500"
   },
   {
     title: "Camps Management",
@@ -342,6 +391,7 @@ export const managementCard = [
   // }
 
 ];
+
 type TrainingCard = {
   title: string;
   description: string;
@@ -420,13 +470,6 @@ export const militaryTrainingCards: TrainingCard[] = [
     icon: Phone,
     to: (id: string) => `/dashboard/${id}/milmgmt/comn-parents`,
     color: "bg-teal-600"
-  },
-  {
-    title: "PT & Swimming Tests",
-    description: "Track cadet PT and swimming test performance",
-    icon: Dumbbell,
-    to: (id: string) => `/dashboard/${id}/milmgmt/pt-swimming`,
-    color: "bg-orange-600"
   },
   {
     title: "Sports & Motivation Awards",
@@ -1221,6 +1264,7 @@ export const courseSections = [
 
 export const managementTabs = [
   { value: "Gen Mgmt", title: "Admin Mgmt", icon: Shield },
+  { value: "module-mgmt", title: "Module Management", icon: Boxes },
   { value: "settings", title: "Settings", icon: Settings },
 ];
 

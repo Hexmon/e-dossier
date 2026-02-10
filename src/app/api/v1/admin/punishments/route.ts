@@ -1,14 +1,13 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { punishmentCreateSchema, punishmentListQuerySchema } from '@/app/lib/validators.punishments';
 import { createPunishment, listPunishments } from '@/app/db/queries/punishments';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
         const sp = new URL(req.url).searchParams;
         const qp = punishmentListQuerySchema.parse({
             q: sp.get('q') ?? undefined,
@@ -24,13 +23,29 @@ async function GETHandler(req: NextRequest) {
             offset: qp.offset,
         });
 
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.PUNISHMENT, id: 'collection' },
+            metadata: {
+                description: 'Punishments retrieved successfully.',
+                count: rows.length,
+                query: {
+                    q: qp.q ?? null,
+                    includeDeleted: qp.includeDeleted === 'true',
+                    limit: qp.limit ?? null,
+                    offset: qp.offset ?? null,
+                },
+            },
+        });
         return json.ok({ message: 'Punishments retrieved successfully.', items: rows, count: rows.length });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const body = punishmentCreateSchema.parse(await req.json());
@@ -39,20 +54,18 @@ async function POSTHandler(req: NextRequest) {
             marksDeduction: body.marksDeduction ?? null,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PUNISHMENT_CREATED,
-            resourceType: AuditResourceType.PUNISHMENT,
-            resourceId: row.id,
-            description: `Created punishment ${row.title}`,
+        await req.audit.log({
+            action: AuditEventType.PUNISHMENT_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PUNISHMENT, id: row.id },
             metadata: {
+                description: `Created punishment ${row.title}`,
                 punishmentId: row.id,
                 title: row.title,
                 marksDeduction: row.marksDeduction,
             },
-            after: row,
-            request: req,
-            required: true,
+            diff: { after: row },
         });
 
         return json.created({ message: 'Punishment created successfully.', punishment: row });
@@ -61,6 +74,6 @@ async function POSTHandler(req: NextRequest) {
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

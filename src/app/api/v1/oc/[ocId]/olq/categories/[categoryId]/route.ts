@@ -1,7 +1,6 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { mustBeAdmin, mustBeAuthed } from '../../../../_checks';
 import {
     olqCategoryUpdateSchema,
     olqCategoryQuerySchema,
@@ -11,15 +10,15 @@ import {
     updateOlqCategory,
     deleteOlqCategory,
 } from '@/app/db/queries/olq';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 const CategoryIdParam = z.object({ categoryId: z.string().uuid() });
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAuth(req);
-        const { categoryId } = CategoryIdParam.parse(await params);
+        const authCtx = await mustBeAuthed(req);
+        const { categoryId, ocId } = { ...(await params), ...CategoryIdParam.parse(await params) };
         const sp = new URL(req.url).searchParams;
         const qp = olqCategoryQuerySchema.parse({
             includeSubtitles: sp.get('includeSubtitles') ?? undefined,
@@ -27,32 +26,45 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
 
         const row = await getOlqCategory(categoryId, qp.includeSubtitles ?? false);
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: `OLQ category ${categoryId} retrieved successfully.`,
+                module: 'olq_categories',
+                categoryId,
+                includeSubtitles: qp.includeSubtitles ?? false,
+            },
+        });
+
         return json.ok({ message: 'OLQ category retrieved successfully.', category: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
-        const { categoryId } = CategoryIdParam.parse(await params);
+        const adminCtx = await mustBeAuthed(req);
+        const { categoryId, ocId } = { ...(await params), ...CategoryIdParam.parse(await params) };
         const dto = olqCategoryUpdateSchema.parse(await req.json());
         const row = await updateOlqCategory(categoryId, { ...dto });
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.OC_RECORD_UPDATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: null,
-            description: `Updated OLQ category ${categoryId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Updated OLQ category ${categoryId}`,
                 module: 'olq_categories',
                 categoryId,
                 changes: Object.keys(dto),
             },
-            request: req,
         });
         return json.ok({ message: 'OLQ category updated successfully.', category: row });
     } catch (err) {
@@ -60,34 +72,33 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ oc
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
-        const { categoryId } = CategoryIdParam.parse(await params);
+        const adminCtx = await mustBeAuthed(req);
+        const { categoryId, ocId } = { ...(await params), ...CategoryIdParam.parse(await params) };
         const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
         const row = await deleteOlqCategory(categoryId, { hard: body?.hard === true });
         if (!row) throw new ApiError(404, 'Category not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.OC_RECORD_DELETED,
-            resourceType: AuditResourceType.OC,
-            resourceId: null,
-            description: `Deleted OLQ category ${categoryId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Deleted OLQ category ${categoryId}`,
                 module: 'olq_categories',
                 categoryId,
                 hardDeleted: body?.hard === true,
             },
-            request: req,
         });
         return json.ok({ message: 'OLQ category deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

@@ -68,7 +68,7 @@ export default function HikePage() {
                 hikeRows: savedFormData.map(row => ({
                     ...row,
                     id: row.id ?? null,
-                    type: "HIKE",        
+                    type: "HIKE",
                 })),
             };
         }
@@ -128,7 +128,7 @@ function InnerHikePage({
     onClearForm: () => void;
 }) {
     const dispatch = useDispatch();
-    const { control, register, setValue, handleSubmit, watch } = useFormContext<HikeFormValues>();
+    const { control, register, setValue, handleSubmit, getValues, watch } = useFormContext<HikeFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "hikeRows" });
 
     const { submitHike, fetchHike, deleteFormHike, deleteSavedHike } = useHikeActions(selectedCadet);
@@ -221,6 +221,12 @@ function InnerHikePage({
     };
 
     const handleNewSubmit = handleSubmit(async () => {
+        // Set semester for all new rows before submission
+        const rows = getValues().hikeRows;
+        rows.forEach((_, index) => {
+            setValue(`hikeRows.${index}.semester`, activeTab + 1);
+        });
+
         await submitHike();
         toast.success("New hike records saved");
 

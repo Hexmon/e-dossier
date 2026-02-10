@@ -254,21 +254,23 @@ export const motivationPrefill: sportsRow[] = [
   { activity: "Blazer", string: "", maxMarks: "", obtained: "" },
 ];
 
-export const catOptions = [
-  "Sports Award Blazer",
-  "Sports Award Blue",
-  "Sports Award Half-Blue",
-  "Sports Award Merit",
-  "70%+ in Service Subjects",
-  "Academic Torches Gold",
-  "Academic Torches Silver",
-  "Academic Torches Bronze",
-  "Debate Wg",
-  "Public Speaking pl",
-  "Discipline (0-35 negative pts)",
-  "Discipline (36-70 negative pts)",
-  "Misc Activities (Adv, MC, TD, etc.)"
-];
+export const catOptionMarks = {
+  "Sports Award Blazer": 10,
+  "Sports Award Blue": 8,
+  "Sports Award Half-Blue": 7,
+  "Sports Award Merit": 5,
+  "70%+ in Service Subjects": 5,
+  "Academic Torches Gold": 5,
+  "Academic Torches Silver": 4,
+  "Academic Torches Bronze": 3,
+  "Debate Wg": 10,
+  "Public Speaking pl": 6,
+  "Discipline (0-35 negative pts)": 5,
+  "Discipline (36-70 negative pts)": 3,
+  "Misc Activities (Adv, MC, TD, etc.)": 5,
+} as const;
+
+export const catOptions = Object.keys(catOptionMarks);
 
 export const semestersCfe = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
 

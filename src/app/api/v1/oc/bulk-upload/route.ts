@@ -1,16 +1,16 @@
 // src/app/api/v1/oc/bulk-upload/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
 import { ocCadets, ocPersonal } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { checkApiRateLimit, getClientIp, getRateLimitHeaders } from '@/lib/ratelimit';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { mustBeAuthed } from '../_checks';
 
 // ---------- Body ----------
 const BodySchema = z.object({
@@ -129,9 +129,9 @@ async function existsPersonalField<K extends keyof typeof ocPersonal['_']['colum
 }
 
 // ---------- Handler ----------
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await mustBeAuthed(req);
 
     // Rate limit
     const ip = getClientIp(req);
@@ -421,13 +421,13 @@ async function POSTHandler(req: NextRequest) {
       }
     }
 
-    await createAuditLog({
-      actorUserId: authCtx.userId,
-      eventType: AuditEventType.OC_BULK_IMPORTED,
-      resourceType: AuditResourceType.OC,
-      resourceId: null,
-      description: `Bulk uploaded ${success} OC records (${errors.length} failed)`,
+    await req.audit.log({
+      action: AuditEventType.OC_BULK_IMPORTED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: authCtx.userId },
+      target: { type: AuditResourceType.OC, id: 'collection' },
       metadata: {
+        description: `Bulk uploaded ${success} OC records (${errors.length} failed)`,
         success,
         failed: errors.length,
         created: createdRecords.map((record) => ({
@@ -439,7 +439,6 @@ async function POSTHandler(req: NextRequest) {
         })),
         errorSamples: errors.slice(0, 25),
       },
-      request: req,
     });
 
     const res = json.ok({ message: 'Bulk upload processed successfully.', success, failed: errors.length, errors });
@@ -451,4 +450,4 @@ async function POSTHandler(req: NextRequest) {
     return handleApiError(err);
   }
 }
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

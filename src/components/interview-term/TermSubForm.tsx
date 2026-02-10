@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { InterviewFormRecord, InterviewOfficer } from "@/types/interview";
 import { Edit, Save, RotateCcw, X } from "lucide-react";
-import { saveTermInterviewForm, clearTermInterviewForm, SpecialInterviewRecord } from "@/store/slices/termInterviewSlice";
+import { saveTermInterviewForm, SpecialInterviewRecord } from "@/store/slices/termInterviewSlice";
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from "@/types/interview-templates";
 
 interface FormState {
@@ -138,13 +138,14 @@ export default function TermSubForm({
 
     // Sync special interviews with Redux
     useEffect(() => {
+        if (variant !== "special") return;
         setSpecialInterviews((prev) => {
             if (areSpecialInterviewsEqual(prev, normalizedSavedSpecialInterviews)) {
                 return prev;
             }
             return normalizedSavedSpecialInterviews.map((record) => ({ ...record }));
         });
-    }, [normalizedSavedSpecialInterviews]);
+    }, [variant, normalizedSavedSpecialInterviews]);
 
     // Auto-save special interviews to Redux
     useEffect(() => {
@@ -202,9 +203,6 @@ export default function TermSubForm({
 
         toast.success(`Term ${termIndex} ${variantLabels[variant] ?? ""} saved successfully!`);
 
-        if (variant !== "special") {
-            dispatch(clearTermInterviewForm({ ocId, termIndex, variant }));
-        }
         updateFormState({ isEditing: false, isSaved: true });
     };
 

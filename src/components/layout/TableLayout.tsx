@@ -298,7 +298,7 @@ export function UniversalTable<T extends Record<string, any>>({
     };
 
     const tableClasses = [
-        'rounded-md border border-border/50 overflow-hidden',
+        'rounded-md border border-border/50 overflow-x-auto overflow-y-hidden',
         styling.className,
     ].filter(Boolean).join(' ');
 
@@ -422,7 +422,7 @@ export function UniversalTable<T extends Record<string, any>>({
                                     ))}
                                     {actions.length > 0 && (
                                         <td className="px-3 py-2">
-                                            <div className="flex gap-2">
+                                            <div className="flex flex-wrap gap-2">
                                                 {actions.map((action) => {
                                                     if (action.condition && !action.condition(row, index)) {
                                                         return null;
@@ -432,6 +432,7 @@ export function UniversalTable<T extends Record<string, any>>({
                                                     return (
                                                         <Button
                                                             key={action.key}
+                                                            type="button"
                                                             variant={action.variant || 'outline'}
                                                             size={action.size || 'sm'}
                                                             onClick={() => action.handler(row, index)}
@@ -467,6 +468,7 @@ export function UniversalTable<T extends Record<string, any>>({
                     </div>
                     <div className="flex gap-2">
                         <Button
+                            type="button"
                             variant="outline"
                             size="sm"
                             disabled={effectivePage === 1}
@@ -478,6 +480,7 @@ export function UniversalTable<T extends Record<string, any>>({
                             Page {Math.max(1, effectivePage)} of {Math.max(1, totalPages)}
                         </span>
                         <Button
+                            type="button"
                             variant="outline"
                             size="sm"
                             disabled={effectivePage === totalPages || totalItems === 0}

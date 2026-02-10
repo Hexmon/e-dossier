@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
@@ -10,24 +9,35 @@ import {
     softDeletePunishment,
     hardDeletePunishment,
 } from '@/app/db/queries/punishments';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 const Id = z.object({ id: z.string().uuid() });
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
         const { id } = Id.parse(await params);
         const row = await getPunishment(id);
         if (!row) throw new ApiError(404, 'Punishment not found', 'not_found');
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.PUNISHMENT, id: row.id },
+            metadata: {
+                description: `Punishment ${row.id} retrieved successfully.`,
+                punishmentId: row.id,
+            },
+        });
         return json.ok({ message: 'Punishment retrieved successfully.', punishment: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { id } = Id.parse(await params);
@@ -43,21 +53,17 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
         const row = await updatePunishment(id, patch);
         if (!row) throw new ApiError(404, 'Punishment not found', 'not_found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PUNISHMENT_UPDATED,
-            resourceType: AuditResourceType.PUNISHMENT,
-            resourceId: row.id,
-            description: `Updated punishment ${row.title}`,
+        await req.audit.log({
+            action: AuditEventType.PUNISHMENT_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PUNISHMENT, id: row.id },
             metadata: {
+                description: `Updated punishment ${row.title}`,
                 punishmentId: row.id,
                 changes: Object.keys(patch),
             },
-            before: previous,
-            after: row,
-            changedFields: Object.keys(patch),
-            request: req,
-            required: true,
+            diff: { before: previous, after: row },
         });
 
         return json.ok({ message: 'Punishment updated successfully.', punishment: row });
@@ -70,7 +76,7 @@ type PunishmentDeleteResult =
     | { before: PunishmentRow; after: PunishmentRow }
     | { before: PunishmentRow };
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { id } = Id.parse(await params);
@@ -84,21 +90,18 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
         }
         const resourceId = after?.id ?? before?.id ?? id;
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.PUNISHMENT_DELETED,
-            resourceType: AuditResourceType.PUNISHMENT,
-            resourceId,
-            description: `${hard ? 'Hard' : 'Soft'} deleted punishment ${resourceId}`,
+        await req.audit.log({
+            action: AuditEventType.PUNISHMENT_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.PUNISHMENT, id: resourceId },
             metadata: {
+                description: `${hard ? 'Hard' : 'Soft'} deleted punishment ${resourceId}`,
                 punishmentId: resourceId,
                 hardDeleted: hard,
+                changedFields: hard ? [] : ['deletedAt'],
             },
-            before: before ?? null,
-            after: after ?? null,
-            changedFields: hard ? undefined : ['deletedAt'],
-            request: req,
-            required: true,
+            diff: { before: before ?? undefined, after: after ?? undefined },
         });
 
         return json.ok({
@@ -110,8 +113,8 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

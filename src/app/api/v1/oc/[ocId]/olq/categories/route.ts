@@ -1,6 +1,5 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { mustBeAuthed } from '../../../_checks';
 import {
     olqCategoryCreateSchema,
     olqCategoryQuerySchema,
@@ -9,12 +8,13 @@ import {
     createOlqCategory,
     listOlqCategories,
 } from '@/app/db/queries/olq';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
+        const { ocId } = await params;
 
         const sp = new URL(req.url).searchParams;
         const qp = olqCategoryQuerySchema.parse({
@@ -26,15 +26,32 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
             includeSubtitles: qp.includeSubtitles ?? false,
             isActive: qp.isActive,
         });
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: 'OLQ categories retrieved successfully.',
+                ocId,
+                module: 'olq_categories',
+                includeSubtitles: qp.includeSubtitles ?? false,
+                isActive: qp.isActive,
+                count: items.length,
+            },
+        });
+
         return json.ok({ message: 'OLQ categories retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
+        const { ocId } = await params;
 
         const dto = olqCategoryCreateSchema.parse(await req.json());
         const row = await createOlqCategory({
@@ -45,25 +62,24 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ ocI
             isActive: dto.isActive ?? true,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.OC_RECORD_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: null,
-            description: `Created OLQ category ${row.id}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `Created OLQ category ${row.id}`,
                 module: 'olq_categories',
                 categoryId: row.id,
                 code: row.code,
                 title: row.title,
             },
-            request: req,
         });
         return json.created({ message: 'OLQ category created successfully.', category: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
