@@ -74,6 +74,7 @@ export type ApiRequestOptions<B = unknown> = {
      * If omitted, a relative fetch is used and cookies still flow on same-origin.
      */
     baseURL?: string;
+    skipAuth?: boolean;
 };
 
 function applyPathParams(template: string, params?: Record<string, string | number>) {
@@ -157,6 +158,7 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
         headers,
         signal,
         skipCsrf,
+        skipAuth,
         baseURL,
     } = opts;
 
@@ -216,7 +218,7 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
     // SECURITY FIX: Handle 401 Unauthorized - redirect to login
     if (res.status === 401) {
         // Only redirect on client-side (browser environment)
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && !skipAuth) {
             // Clear any stored auth state
             document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
             // Redirect to login page

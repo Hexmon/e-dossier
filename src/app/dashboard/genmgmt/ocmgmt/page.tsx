@@ -10,7 +10,14 @@ import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import UploadButton, { type RawRow, type UploadedPreviewRow } from "@/components/oc/UploadButton";
 import UploadPreviewTable from "@/components/oc/UploadPreviewTable";
 import OCsTable from "@/components/oc/OCsTable";
@@ -24,7 +31,7 @@ import { useDebouncedValue } from "@/app/lib/debounce";
 
 import { useOCUpload } from "@/hooks/useOCUpload";
 
-import type { OCRecord } from "@/app/lib/api/ocApi";
+import type { OCListRow, OCRecord } from "@/app/lib/api/ocApi";
 import { useOCs } from "@/hooks/useOCs";
 import OCFilters from "@/components/genmgmt/OCFilters";
 import { OCForm } from "@/components/genmgmt/OCForm";
@@ -125,6 +132,10 @@ export default function OCManagementPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [deleteTarget, setDeleteTarget] = useState<OCListRow | null>(null);
+  const [deleteNameInput, setDeleteNameInput] = useState<string>("");
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const { reset } = useForm<Partial<OCRecord>>();
 
@@ -167,14 +178,36 @@ export default function OCManagementPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this OC?")) {
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+    setDeleteNameInput("");
+    setIsDeleting(false);
+  };
+
+  const handleDelete = (id: string) => {
+    const target = ocList.find((oc) => oc.id === id);
+    if (!target) {
+      toast.error("OC not found.");
       return;
     }
+    setDeleteTarget(target);
+    setDeleteNameInput("");
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget?.id) return;
+    const expectedName = (deleteTarget.name ?? "").trim();
+    const enteredName = deleteNameInput.trim();
+    if (!expectedName || enteredName !== expectedName) return;
 
     try {
-      await removeOC(id);
+      setIsDeleting(true);
+      await removeOC(deleteTarget.id);
+      closeDeleteDialog();
     } catch (error: any) {
+      setIsDeleting(false);
     }
   };
 
@@ -356,6 +389,67 @@ export default function OCManagementPage() {
           }}
           onSubmit={onSubmit}
         />
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDeleteDialog();
+          else setDeleteDialogOpen(true);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm OC Deletion</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Type the OC name exactly to enable delete.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <div className="rounded-md border p-3 bg-muted/20 space-y-1">
+              <p><span className="font-medium">Name:</span> {deleteTarget?.name ?? "-"}</p>
+              <p><span className="font-medium">TES No:</span> {deleteTarget?.ocNo ?? "-"}</p>
+              <p>
+                <span className="font-medium">Course:</span>{" "}
+                {deleteTarget?.courseCode ?? deleteTarget?.courseTitle ?? deleteTarget?.course?.title ?? "-"}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="confirm-oc-name" className="font-medium">
+                Enter OC Name to Confirm
+              </label>
+              <input
+                id="confirm-oc-name"
+                type="text"
+                value={deleteNameInput}
+                onChange={(e) => setDeleteNameInput(e.target.value)}
+                placeholder={deleteTarget?.name ?? "Type name"}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeDeleteDialog} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={
+                isDeleting ||
+                !deleteTarget?.name ||
+                deleteNameInput.trim() !== deleteTarget.name.trim()
+              }
+            >
+              {isDeleting ? "Deleting..." : "Delete OC"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       <OCDetailsModal open={viewOpen} ocId={viewId} onOpenChange={setViewOpen} />

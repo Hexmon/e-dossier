@@ -62,9 +62,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
     position = "",
   } = apt as any;
 
-  const handleLogout = async () => {
-    const ok = await logout();
-
+  const handleLogout = () => {
     // CRITICAL: Clear all React Query cache on logout
     // Without this, the next user will see cached data from the previous user
     queryClient.clear();
@@ -73,9 +71,12 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
       onLogout();
       return;
     }
-    if (ok) {
-      router.push("/login");
-    }
+
+    // Navigate immediately for instant UX.
+    // logout() clears localStorage and retries the API call (up to 3 times)
+    // to ensure the httpOnly access_token cookie is cleared server-side.
+    router.push("/login");
+    logout().catch(() => {});
   };
 
   const initials = getInitials(name);
