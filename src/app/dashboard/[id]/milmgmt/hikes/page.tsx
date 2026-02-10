@@ -81,11 +81,9 @@ export default function HikePage() {
     });
 
     const handleClearForm = () => {
-        if (confirm("Are you sure you want to clear all unsaved changes?")) {
-            dispatch(clearHikeForm(ocId));
-            methods.reset({ hikeRows: defaultHikeRows });
-            toast.info("Form cleared");
-        }
+        dispatch(clearHikeForm(ocId));
+        methods.reset({ hikeRows: defaultHikeRows });
+        toast.info("Form cleared");
     };
 
     return (
@@ -128,7 +126,7 @@ function InnerHikePage({
     onClearForm: () => void;
 }) {
     const dispatch = useDispatch();
-    const { control, register, setValue, handleSubmit, getValues, watch } = useFormContext<HikeFormValues>();
+    const { control, register, setValue, handleSubmit, getValues, watch, reset } = useFormContext<HikeFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "hikeRows" });
 
     const { submitHike, fetchHike, deleteFormHike, deleteSavedHike } = useHikeActions(selectedCadet);
@@ -140,9 +138,12 @@ function InnerHikePage({
     const [editingValues, setEditingValues] = useState<Partial<HikeRow> | null>(null);
 
     const [refreshFlag, setRefreshFlag] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Auto-save to Redux on form changes
     useEffect(() => {
+        if (isSubmitting) return;
+
         const subscription = watch((value) => {
             if (ocId && value.hikeRows && value.hikeRows.length > 0) {
                 const formData = value.hikeRows.map(row => ({
@@ -159,7 +160,7 @@ function InnerHikePage({
             }
         });
         return () => subscription.unsubscribe();
-    }, [watch, dispatch, ocId]);
+    }, [watch, dispatch, ocId, isSubmitting]);
 
     useEffect(() => {
         if (!selectedCadet) return;
@@ -221,6 +222,8 @@ function InnerHikePage({
     };
 
     const handleNewSubmit = handleSubmit(async () => {
+        setIsSubmitting(true);
+
         // Set semester for all new rows before submission
         const rows = getValues().hikeRows;
         rows.forEach((_, index) => {
@@ -234,9 +237,10 @@ function InnerHikePage({
         dispatch(clearHikeForm(ocId));
 
         // Reset form to defaults
-        setValue("hikeRows", defaultHikeRows);
+        reset({ hikeRows: defaultHikeRows });
 
         setRefreshFlag((f) => f + 1);
+        setIsSubmitting(false);
     });
 
     return (

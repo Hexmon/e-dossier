@@ -7,7 +7,7 @@ import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { ocTabs } from "@/config/app.config";
+import { moduleManagementTabs, ocTabs } from "@/config/app.config";
 import RelegationForm from "@/components/relegation/RelegationForm";
 
 export default function RelegationPage() {
@@ -40,7 +40,7 @@ export default function RelegationPage() {
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="relegation">
+                        <GlobalTabs tabs={moduleManagementTabs} defaultValue="relegation">
                             <TabsContent value="relegation" className="space-y-6">
                                 <main className="bg-white rounded-2xl p-5">
                                     <div className="flex items-center justify-center">
