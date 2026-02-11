@@ -272,6 +272,13 @@ export const managementCard = [
     color: "bg-blue-500"
   },
   {
+    title: "RBAC Management",
+    description: "Manage permissions, mappings, and field-level rules",
+    icon: Shield,
+    to: "/dashboard/genmgmt/rbac",
+    color: "bg-indigo-600"
+  },
+  {
     title: "Instructor Management",
     description: "Manage instructors, roles, and assignments efficiently",
     icon: UserCheck,

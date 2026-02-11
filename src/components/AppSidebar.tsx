@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Shield,
-  HelpCircle,
   ChevronRight,
   Lock,
 } from "lucide-react";
@@ -31,6 +30,8 @@ import { menuItems } from "@/constants/app.constants";
 import { useMe } from "@/hooks/useMe";
 import { useUserAppointments } from "@/hooks/useUserAppointments";
 import OCSelectModal from "@/components/modals/OCSelectModal";
+import { resolvePageAction } from "@/app/lib/acx/action-map";
+import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -58,6 +59,7 @@ export function AppSidebar() {
     user = {},
     roles = [],
     apt = {},
+    permissions = [],
   } = meData ?? {};
 
   const {
@@ -77,6 +79,24 @@ export function AppSidebar() {
 
   const isAdmin = appointmentsData?.isAdmin ?? false;
   const checkingAdmin = meLoading || appointmentsLoading;
+  const authzV2Enabled = isAuthzV2Enabled();
+
+  const normalizedRoles = (roles as string[]).map((role) => String(role).toUpperCase());
+  const hasSuperAdmin = normalizedRoles.includes("SUPER_ADMIN");
+  const hasAdminRole = hasSuperAdmin || normalizedRoles.includes("ADMIN");
+  const permissionSet = new Set<string>((permissions as string[]) ?? []);
+
+  const canAccessPage = (url: string) => {
+    if (!authzV2Enabled) return true;
+    if (!url.startsWith("/dashboard")) return true;
+    if (hasSuperAdmin) return true;
+
+    const actionEntry = resolvePageAction(url);
+    if (!actionEntry) return true;
+    if (hasAdminRole && actionEntry.adminBaseline) return true;
+    if (permissionSet.has("*")) return true;
+    return permissionSet.has(actionEntry.action);
+  };
 
   // Handle menu item click
   const handleMenuItemClick = (item: any, e: React.MouseEvent, section: MenuSection) => {
@@ -92,11 +112,19 @@ export function AppSidebar() {
       e.preventDefault();
       return;
     }
+
+    if (!canAccessPage(item.url)) {
+      e.preventDefault();
+      return;
+    }
   };
 
   // Determine if a section or item should be disabled
   const isDisabled = (section: MenuSection) => {
-    return section.group === "Admin" && !isAdmin;
+    if (section.group === "Admin" && !isAdmin) return true;
+    if (section.group === "Admin" && !canAccessPage("/dashboard/genmgmt")) return true;
+    if (section.group === "Academics" && !canAccessPage("/dashboard/manage-marks")) return true;
+    return false;
   };
 
   return (
@@ -170,10 +198,41 @@ export function AppSidebar() {
                             <SidebarMenu>
                               {section.items.map((item) => (
                                 <SidebarMenuItem key={item.title}>
-                                  {disabled ? (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-2 px-2 py-1 rounded-md opacity-50 cursor-not-allowed">
+                                  {(() => {
+                                    const itemDisabled = disabled || !canAccessPage(item.url);
+                                    if (itemDisabled) {
+                                      return (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="flex items-center gap-2 px-2 py-1 rounded-md opacity-50 cursor-not-allowed">
+                                              <item.icon className="h-4 w-4" />
+                                              {!collapsed && (
+                                                <div className="flex items-center justify-between w-full">
+                                                  <span>{item.title}</span>
+                                                  {item.badge && (
+                                                    <Badge variant="outline" className="text-xs">
+                                                      {item.badge}
+                                                    </Badge>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Access denied</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      );
+                                    }
+                                    return (
+                                      <SidebarMenuButton asChild>
+                                        <Link
+                                          href={item.url}
+                                          className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
+                                            ? "bg-[#1677ff] text-white"
+                                            : "hover:bg-accent/50"
+                                            }`}
+                                        >
                                           <item.icon className="h-4 w-4" />
                                           {!collapsed && (
                                             <div className="flex items-center justify-between w-full">
@@ -185,35 +244,10 @@ export function AppSidebar() {
                                               )}
                                             </div>
                                           )}
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Admin access required</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  ) : (
-                                    <SidebarMenuButton asChild>
-                                      <Link
-                                        href={item.url}
-                                        className={`flex items-center gap-2 px-2 py-1 rounded-md ${isActive(item.url)
-                                          ? "bg-[#1677ff] text-white"
-                                          : "hover:bg-accent/50"
-                                          }`}
-                                      >
-                                        <item.icon className="h-4 w-4" />
-                                        {!collapsed && (
-                                          <div className="flex items-center justify-between w-full">
-                                            <span>{item.title}</span>
-                                            {item.badge && (
-                                              <Badge variant="outline" className="text-xs">
-                                                {item.badge}
-                                              </Badge>
-                                            )}
-                                          </div>
-                                        )}
-                                      </Link>
-                                    </SidebarMenuButton>
-                                  )}
+                                        </Link>
+                                      </SidebarMenuButton>
+                                    );
+                                  })()}
                                 </SidebarMenuItem>
                               ))}
                             </SidebarMenu>
@@ -255,7 +289,7 @@ export function AppSidebar() {
                                       </div>
                                     )}
                                   </SidebarMenuButton>
-                                ) : disabled ? (
+                                ) : disabled || !canAccessPage(item.url) ? (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div className="flex items-center gap-2 px-2 py-1 rounded-md opacity-50 cursor-not-allowed">
@@ -273,7 +307,7 @@ export function AppSidebar() {
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      <p>Admin access required</p>
+                                      <p>Access denied</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 ) : (

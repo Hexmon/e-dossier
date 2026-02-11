@@ -64,6 +64,13 @@
       "when": 1770803100000,
       "tag": "0008_medicals_float_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1770810000000,
+      "tag": "0009_authz_field_rules",
+      "breakpoints": true
     }
   ]
 }
