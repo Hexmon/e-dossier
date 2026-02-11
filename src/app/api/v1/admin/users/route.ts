@@ -22,6 +22,7 @@ async function GETHandler(req: AuditNextRequest) {
             q: searchParams.get('q') ?? undefined,
             isActive: searchParams.get('isActive') ?? undefined,
             includeDeleted: searchParams.get('includeDeleted') ?? undefined,
+            scopeType: searchParams.get('scopeType') ?? undefined,
             limit: searchParams.get('limit') ?? undefined,
             offset: searchParams.get('offset') ?? undefined,
         });

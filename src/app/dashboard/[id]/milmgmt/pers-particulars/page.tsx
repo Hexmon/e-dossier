@@ -64,7 +64,7 @@ export default function PersParticularsPage() {
     // ---------------------------
     // REACT HOOK FORM
     // ---------------------------
-    const { register, handleSubmit, reset, watch } = useForm<OCPersonalRecord>({
+    const { register, handleSubmit, reset, watch, control, formState: { errors } } = useForm<OCPersonalRecord>({
         defaultValues: {} as OCPersonalRecord,
     });
 
@@ -360,6 +360,8 @@ export default function PersParticularsPage() {
                                     register={register}
                                     handleSubmit={handleSubmit}
                                     reset={reset}
+                                    control={control}
+                                    errors={errors}
                                     savedData={personal ?? null}
                                     isEditing={isEditing}
                                     setIsEditing={setIsEditing}

@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { EducationUI, EducationItem } from "@/app/lib/api/educationApi";
 import { useEducation } from "@/hooks/useEducation";
@@ -14,10 +24,13 @@ import { FormValues } from "@/types/educational-qual";
 import { Props } from "@/types/family-background";
 import type { RootState } from "@/store";
 import { saveEducationForm, clearEducationForm } from "@/store/slices/educationQualificationSlice";
+import { ApiClientError } from "@/app/lib/apiClient";
 
 export default function EducationQualifications({ ocId, cadet }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<EducationUI | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<EducationUI | null>(null);
+    const [showClearDialog, setShowClearDialog] = useState(false);
 
     // Redux
     const dispatch = useDispatch();
@@ -85,14 +98,43 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
             return;
         }
 
+        // Validate fields
+        for (let i = 0; i < filledQualifications.length; i++) {
+            const q = filledQualifications[i];
+            if (!q.school || q.school.trim() === "") {
+                toast.error(`Row ${i + 1}: School/College is required`);
+                return;
+            }
+            if (q.marks && q.marks.toString().trim() !== "") {
+                const v = q.marks.toString().trim();
+                // Allow boolean values
+                if (v !== "true" && v !== "false") {
+                    const marks = parseFloat(v);
+                    if (!Number.isFinite(marks) || marks < 0) {
+                        toast.error(`Row ${i + 1}: Marks must be a valid number or Pass/Fail`);
+                        return;
+                    }
+                }
+            }
+        }
+
         try {
-            const payload = filledQualifications.map((q) => ({
-                level: q.qualification,
-                school: q.school,
-                board: q.board,
-                subjects: q.subs,
-                percentage: q.marks ? Number(q.marks) : 0,
-            }));
+            const payload = filledQualifications.map((q) => {
+                const marksVal = q.marks?.toString().trim();
+                let percentage: number | boolean = 0;
+                if (marksVal === "true") percentage = true;
+                else if (marksVal === "false") percentage = false;
+                else if (marksVal) percentage = parseFloat(marksVal) || 0;
+
+                return {
+                    level: q.qualification,
+                    school: q.school,
+                    board: q.board,
+                    subjects: q.subs,
+                    grade: q.grade || "",
+                    percentage,
+                };
+            });
 
             const saved = await saveEducation(payload);
 
@@ -106,20 +148,40 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                 });
                 fetchEducation();
             }
-        } catch {
-            toast.error("Failed to save qualifications");
+        } catch (err) {
+            if (err instanceof ApiClientError) {
+                toast.error(err.message);
+                // Show field-level errors if available
+                const issues = err.extras?.issues as any;
+                if (issues?.fieldErrors) {
+                    Object.entries(issues.fieldErrors).forEach(([field, msgs]: [string, any]) => {
+                        if (Array.isArray(msgs)) msgs.forEach((m: string) => toast.error(`${field}: ${m}`));
+                    });
+                }
+            } else {
+                toast.error("Failed to save qualifications");
+            }
         }
     };
 
     // Clear form handler
-    const handleClearForm = () => {
-        if (confirm("Are you sure you want to clear all unsaved changes?")) {
-            dispatch(clearEducationForm(ocId));
-            qualificationForm.reset({
-                qualifications: [{ qualification: "", school: "", subs: "", board: "", marks: "", grade: "" }]
-            });
-            toast.info("Form cleared");
-        }
+    const handleClearForm = () => setShowClearDialog(true);
+    const confirmClearForm = () => {
+        dispatch(clearEducationForm(ocId));
+        qualificationForm.reset({
+            qualifications: [
+                {
+                    qualification: "",
+                    school: "",
+                    subs: "",
+                    board: "",
+                    marks: "",
+                    grade: "",
+                },
+            ],
+        });
+        toast.info("Form cleared");
+        setShowClearDialog(false);
     };
 
     // Edit handlers
@@ -142,7 +204,12 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
 
         try {
             await updateEducation(editingId, {
-                totalPercent: editForm.marks ? Number(editForm.marks) : 0,
+                level: editForm.qualification,
+                schoolOrCollege: editForm.school,
+                boardOrUniv: editForm.board,
+                subjects: editForm.subs,
+                grade: editForm.grade,
+                totalPercent: editForm.marks || null,
             });
 
             toast.success("Record updated!");
@@ -162,6 +229,8 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
             fetchEducation();
         } catch {
             toast.error("Failed to delete");
+        } finally {
+            setDeleteTarget(null);
         }
     };
 
@@ -288,7 +357,7 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                 if (editingId === row.id) {
                     await saveEdit();
                 } else {
-                    await removeRow(row);
+                    setDeleteTarget(row);
                 }
             }
         }
@@ -351,7 +420,51 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                                     <tr key={id}>
                                         <td className="border px-4 py-2 text-center">{index + 1}</td>
 
+
                                         {columns.map((field: ColumnKey) => {
+                                            if (field === "marks") {
+                                                const marksVal = qualificationForm.watch(`qualifications.${index}.marks`);
+                                                const isBool = marksVal === "true" || marksVal === "false";
+                                                return (
+                                                    <td key={field} className="border px-4 py-2">
+                                                        <div className="flex gap-1 items-center">
+                                                            {isBool ? (
+                                                                <select
+                                                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                                                                    value={marksVal}
+                                                                    onChange={(e) =>
+                                                                        qualificationForm.setValue(`qualifications.${index}.marks`, e.target.value)
+                                                                    }
+                                                                >
+                                                                    <option value="true">Pass</option>
+                                                                    <option value="false">Fail</option>
+                                                                </select>
+                                                            ) : (
+                                                                <Input
+                                                                    {...qualificationForm.register(`qualifications.${index}.marks`)}
+                                                                    placeholder="marks"
+                                                                    inputMode="decimal"
+                                                                />
+                                                            )}
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-xs px-1 shrink-0"
+                                                                title={isBool ? "Switch to numeric" : "Switch to Pass/Fail"}
+                                                                onClick={() =>
+                                                                    qualificationForm.setValue(
+                                                                        `qualifications.${index}.marks`,
+                                                                        isBool ? "" : "true"
+                                                                    )
+                                                                }
+                                                            >
+                                                                {isBool ? "123" : "P/F"}
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                );
+                                            }
                                             return (
                                                 <td key={field} className="border px-4 py-2">
                                                     <Input
@@ -365,9 +478,9 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                                         })}
 
                                         <td className="border px-4 py-2 text-center">
-                                            <Button 
-                                                variant="destructive" 
-                                                type="button" 
+                                            <Button
+                                                variant="destructive"
+                                                type="button"
                                                 size="sm"
                                                 onClick={() => remove(index)}
                                             >
@@ -417,6 +530,43 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                     </p>
                 )}
             </form>
+
+            {/* DELETE CONFIRMATION DIALOG */}
+            <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Education Record</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete this education record? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-white hover:bg-destructive/90"
+                            onClick={() => deleteTarget && removeRow(deleteTarget)}
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* CLEAR FORM CONFIRMATION DIALOG */}
+            <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Clear Form</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to clear all unsaved changes? This will reset the form.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmClearForm}>Clear</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

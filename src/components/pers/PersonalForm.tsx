@@ -5,6 +5,9 @@ import {
     UseFormRegister,
     UseFormHandleSubmit,
     UseFormReset,
+    Control,
+    Controller,
+    FieldErrors,
 } from "react-hook-form";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,11 +15,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { dsFieldMap } from "@/constants/app.constants";
 import { OCPersonalRecord } from "@/app/lib/api/ocPersonalApi";
+import CourseSearchDropdown from "@/components/pers/CourseSearchDropdown";
 
 interface Props {
     register: UseFormRegister<OCPersonalRecord>;
     handleSubmit: UseFormHandleSubmit<OCPersonalRecord>;
     reset: UseFormReset<OCPersonalRecord>;
+    control: Control<OCPersonalRecord>;
+    errors: FieldErrors<OCPersonalRecord>;
     savedData: OCPersonalRecord | null;
     isEditing: boolean;
     setIsEditing: (v: boolean) => void;
@@ -28,6 +34,8 @@ export default function PersonalForm({
     register,
     handleSubmit,
     reset,
+    control,
+    errors,
     savedData,
     isEditing,
     setIsEditing,
@@ -64,6 +72,33 @@ export default function PersonalForm({
                         "bloodGp",
                         "identMarks",
                     ].map((field) => {
+                        // Course field — use searchable dropdown when editing
+                        if (field === "course") {
+                            return (
+                                <div key={field}>
+                                    <label className="text-sm font-medium capitalize">Course</label>
+                                    {isEditing ? (
+                                        <Controller
+                                            name="course"
+                                            control={control}
+                                            render={({ field: f }) => (
+                                                <CourseSearchDropdown
+                                                    value={f.value ?? ""}
+                                                    onChange={f.onChange}
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                        />
+                                    ) : (
+                                        <Input
+                                            {...register("course")}
+                                            disabled
+                                        />
+                                    )}
+                                </div>
+                            );
+                        }
+
                         return (
                             <div key={field}>
                                 <label className="text-sm font-medium capitalize">{field}</label>
@@ -155,6 +190,30 @@ export default function PersonalForm({
                         "upscRollNo",
                         "ssbCentre",
                     ].map((field) => {
+                        // Email field — add validation
+                        if (field === "email") {
+                            return (
+                                <div key={field}>
+                                    <label className="text-sm font-medium capitalize">Email</label>
+                                    <Input
+                                        {...register("email", {
+                                            pattern: {
+                                                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                                message: "Invalid email address",
+                                            },
+                                        })}
+                                        type="email"
+                                        disabled={!isEditing}
+                                    />
+                                    {errors.email && (
+                                        <p className="text-sm text-destructive mt-1">
+                                            {errors.email.message}
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        }
+
                         return (
                             <div key={field}>
                                 <label className="text-sm font-medium capitalize">{field}</label>

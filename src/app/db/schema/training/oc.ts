@@ -233,7 +233,8 @@ export const ocEducation = pgTable('oc_education', {
     schoolOrCollege: varchar('school_or_college', { length: 160 }).notNull(),
     boardOrUniv: varchar('board_or_univ', { length: 160 }),
     subjects: text('subjects'),                                   // comma list or JSON in future
-    totalPercent: integer('total_percent'),
+    grade: varchar('grade', { length: 32 }),
+    totalPercent: text('total_percent'),
     perSubject: text('per_subject'),                              // JSON string if needed
 });
 

@@ -88,7 +88,17 @@ export const eduCreateSchema = z.object({
     schoolOrCollege: z.string().min(1),
     boardOrUniv: z.string().optional(),
     subjects: z.string().optional(),
-    totalPercent: z.coerce.number().int().min(0).max(100).optional(),
+    grade: z.string().optional(),
+    totalPercent: z.preprocess(
+        (v) => {
+            if (v === '' || v === null || v === undefined) return undefined;
+            if (v === 'true' || v === true) return true;
+            if (v === 'false' || v === false) return false;
+            const n = Number(v);
+            return Number.isFinite(n) ? n : v; // pass through for zod to reject
+        },
+        z.union([z.number().finite(), z.boolean()]).optional()
+    ),
     perSubject: z.string().optional(),            // JSON string (optional)
 });
 export const eduUpdateSchema = eduCreateSchema.partial();
@@ -238,7 +248,7 @@ export const obstacleTrainingCreateSchema = z.object({
     obstacle: z.string().min(1),
     marksObtained: z.coerce.number(),
     remark: z.string().optional(),
-}); 
+});
 export const obstacleTrainingUpdateSchema = nonEmptyPartial(obstacleTrainingCreateSchema);
 
 export const speedMarchCreateSchema = z.object({

@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { FamilyMemberRecord } from "@/app/lib/api/familyApi";
 import { FormValues, Props } from "@/types/family-background";
@@ -17,6 +27,8 @@ import { saveFamilyForm, clearFamilyForm } from "@/store/slices/familyBackground
 export default function FamilyBackground({ ocId }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<FamilyMemberRecord | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<FamilyMemberRecord | null>(null);
+    const [showClearDialog, setShowClearDialog] = useState(false);
 
     // Redux
     const dispatch = useDispatch();
@@ -41,8 +53,8 @@ export default function FamilyBackground({ ocId }: Props) {
     // React Hook Form
     const familyForm = useForm<FormValues>({
         defaultValues: {
-            family: savedFormData && savedFormData.length > 0 
-                ? savedFormData 
+            family: savedFormData && savedFormData.length > 0
+                ? savedFormData
                 : [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }],
         },
     });
@@ -82,14 +94,36 @@ export default function FamilyBackground({ ocId }: Props) {
     const submitFamily = async (values: FormValues) => {
         const { family: newMembers } = values;
 
-        // Filter out empty rows
-        const filledMembers = newMembers.filter(member => 
+        // Filter out completely empty rows
+        const filledMembers = newMembers.filter(member =>
             member.name && member.name.trim() !== ""
         );
 
         if (filledMembers.length === 0) {
             toast.error("Please add at least one family member");
             return;
+        }
+
+        // Validate fields
+        for (let i = 0; i < filledMembers.length; i++) {
+            const m = filledMembers[i];
+            if (!m.relation || m.relation.trim() === "") {
+                toast.error(`Row ${i + 1}: Relation is required`);
+                return;
+            }
+            if (m.age && m.age.toString().trim() !== "") {
+                const age = Number(m.age);
+                if (!Number.isInteger(age) || age < 0 || age > 150) {
+                    toast.error(`Row ${i + 1}: Age must be a number between 0 and 150`);
+                    return;
+                }
+            }
+            if (m.mobileNo && m.mobileNo.trim() !== "") {
+                if (!/^\d{10}$/.test(m.mobileNo.trim())) {
+                    toast.error(`Row ${i + 1}: Mobile number must be exactly 10 digits`);
+                    return;
+                }
+            }
         }
 
         try {
@@ -111,14 +145,14 @@ export default function FamilyBackground({ ocId }: Props) {
     };
 
     // Clear form handler
-    const handleClearForm = () => {
-        if (confirm("Are you sure you want to clear all unsaved changes?")) {
-            dispatch(clearFamilyForm(ocId));
-            familyForm.reset({
-                family: [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }]
-            });
-            toast.info("Form cleared");
-        }
+    const handleClearForm = () => setShowClearDialog(true);
+    const confirmClearForm = () => {
+        dispatch(clearFamilyForm(ocId));
+        familyForm.reset({
+            family: [{ name: "", relation: "", age: "", occupation: "", education: "", mobileNo: "" }]
+        });
+        toast.info("Form cleared");
+        setShowClearDialog(false);
     };
 
     // Editing handlers
@@ -160,6 +194,8 @@ export default function FamilyBackground({ ocId }: Props) {
             toast.success("Family member deleted");
         } catch {
             toast.error("Failed to delete family member");
+        } finally {
+            setDeleteTarget(null);
         }
     };
 
@@ -286,7 +322,7 @@ export default function FamilyBackground({ ocId }: Props) {
                 if (editingId === row.id) {
                     await saveEdit();
                 } else {
-                    await deleteMember(row);
+                    setDeleteTarget(row);
                 }
             }
         }
@@ -356,9 +392,9 @@ export default function FamilyBackground({ ocId }: Props) {
                                     ))}
 
                                     <td className="border px-4 py-2 text-center">
-                                        <Button 
-                                            variant="destructive" 
-                                            type="button" 
+                                        <Button
+                                            variant="destructive"
+                                            type="button"
                                             size="sm"
                                             onClick={() => remove(index)}
                                         >
@@ -407,6 +443,43 @@ export default function FamilyBackground({ ocId }: Props) {
                     </p>
                 )}
             </form>
+
+            {/* DELETE CONFIRMATION DIALOG */}
+            <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Family Member</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete{deleteTarget?.name ? ` "${deleteTarget.name}"` : " this family member"}? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-white hover:bg-destructive/90"
+                            onClick={() => deleteTarget && deleteMember(deleteTarget)}
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* CLEAR FORM CONFIRMATION DIALOG */}
+            <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Clear Form</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to clear all unsaved changes? This will reset the form.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmClearForm}>Clear</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
