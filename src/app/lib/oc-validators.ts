@@ -10,6 +10,11 @@ const nonEmptyPartial = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>
         }
     });
 
+const optionalFloat = z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? undefined : v),
+    z.coerce.number().finite().optional()
+);
+
 export const OcIdParam = z.object({ ocId: z.string().uuid() });
 export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);
@@ -160,13 +165,13 @@ export const ssbPointUpdateSchema = ssbPointCreateSchema.partial();
 export const medicalCreateSchema = z.object({
     semester: Semester,
     date: z.coerce.date(),
-    age: z.coerce.number().int().optional(),
-    heightCm: z.coerce.number().int().optional(),
-    ibwKg: z.coerce.number().int().optional(),
-    abwKg: z.coerce.number().int().optional(),
-    overwtPct: z.coerce.number().int().optional(),
-    bmi: z.coerce.number().int().optional(),
-    chestCm: z.coerce.number().int().optional(),
+    age: optionalFloat,
+    heightCm: optionalFloat,
+    ibwKg: optionalFloat,
+    abwKg: optionalFloat,
+    overwtPct: optionalFloat,
+    bmi: optionalFloat,
+    chestCm: optionalFloat,
     medicalHistory: z.string().optional(),
     hereditaryIssues: z.string().optional(),
     allergies: z.string().optional(),

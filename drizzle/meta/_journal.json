@@ -57,6 +57,13 @@
       "when": 1770801900000,
       "tag": "0007_educated_grade",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1770803100000,
+      "tag": "0008_medicals_float_columns",
+      "breakpoints": true
     }
   ]
 }
