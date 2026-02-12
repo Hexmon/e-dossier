@@ -7,6 +7,10 @@ import { PanelLeftIcon } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
+import {
+  readSidebarOpenPreference,
+  writeSidebarOpenPreference,
+} from "@/lib/ui/sidebar-state"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -73,6 +77,17 @@ function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
+
+  React.useEffect(() => {
+    // Default remains open until client hydration reads saved preference.
+    if (openProp !== undefined) return
+
+    const persisted = readSidebarOpenPreference()
+    if (persisted !== null) {
+      _setOpen(persisted)
+    }
+  }, [openProp])
+
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value
@@ -81,6 +96,8 @@ function SidebarProvider({
       } else {
         _setOpen(openState)
       }
+
+      writeSidebarOpenPreference(openState)
 
       // This sets the cookie to keep the sidebar state.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
