@@ -27,6 +27,28 @@ export type AuthContext = {
   } | null;
 };
 
+type RawAuthContext = Awaited<ReturnType<typeof requireAuth>>;
+
+function normalizeAuthContext(raw: RawAuthContext): AuthContext {
+  const claims = (raw as any)?.claims ?? {};
+  const apt = (claims as any)?.apt;
+
+  return {
+    userId: String(raw.userId ?? ''),
+    roles: Array.isArray(raw.roles) ? raw.roles : [],
+    apt: apt
+      ? {
+          id: String(apt.id ?? ''),
+          position: String(apt.position ?? ''),
+          scope: {
+            type: String(apt.scope?.type ?? ''),
+            id: apt.scope?.id == null ? null : String(apt.scope.id),
+          },
+        }
+      : null,
+  };
+}
+
 /**
  * Check if user is admin
  */
@@ -86,7 +108,7 @@ export async function authorizeUserAccess(
   req: NextRequest,
   targetUserId: string
 ): Promise<AuthContext> {
-  const context = await requireAuth(req);
+  const context = normalizeAuthContext(await requireAuth(req));
   
   // Admin can access any user
   if (isAdmin(context)) {
@@ -112,7 +134,7 @@ export async function authorizeOcAccess(
   req: NextRequest,
   ocId: string
 ): Promise<AuthContext> {
-  const context = await requireAuth(req) as AuthContext;
+  const context = normalizeAuthContext(await requireAuth(req));
   setRequestTenant(req, ocId);
   
   // Admin can access any OC record
@@ -157,7 +179,7 @@ export async function authorizeAppointmentAccess(
   req: NextRequest,
   appointmentId: string
 ): Promise<AuthContext> {
-  const context = await requireAuth(req) as AuthContext;
+  const context = normalizeAuthContext(await requireAuth(req));
   
   // Admin can access any appointment
   if (isAdmin(context)) {
@@ -195,7 +217,7 @@ export async function authorizeAppointmentAccess(
  */
 export async function authorizeCourseAccess(req: NextRequest): Promise<AuthContext> {
   // Any authenticated user can access courses
-  return await requireAuth(req);
+  return normalizeAuthContext(await requireAuth(req));
 }
 
 /**
@@ -205,7 +227,7 @@ export async function authorizeCourseAccess(req: NextRequest): Promise<AuthConte
  * @throws ApiError if not authorized
  */
 export async function authorizeCourseModification(req: NextRequest): Promise<AuthContext> {
-  const context = await requireAuth(req);
+  const context = normalizeAuthContext(await requireAuth(req));
   
   if (!isAdmin(context)) {
     throw new ApiError(403, 'Admin privileges required', 'forbidden');
@@ -221,7 +243,7 @@ export async function authorizeCourseModification(req: NextRequest): Promise<Aut
  */
 export async function authorizeInstructorAccess(req: NextRequest): Promise<AuthContext> {
   // Any authenticated user can access instructors
-  return await requireAuth(req);
+  return normalizeAuthContext(await requireAuth(req));
 }
 
 /**
@@ -231,7 +253,7 @@ export async function authorizeInstructorAccess(req: NextRequest): Promise<AuthC
  * @throws ApiError if not authorized
  */
 export async function authorizeInstructorModification(req: NextRequest): Promise<AuthContext> {
-  const context = await requireAuth(req);
+  const context = normalizeAuthContext(await requireAuth(req));
   
   if (!isAdmin(context)) {
     throw new ApiError(403, 'Admin privileges required', 'forbidden');
@@ -247,7 +269,7 @@ export async function authorizeInstructorModification(req: NextRequest): Promise
  */
 export async function authorizeSubjectAccess(req: NextRequest): Promise<AuthContext> {
   // Any authenticated user can access subjects
-  return await requireAuth(req);
+  return normalizeAuthContext(await requireAuth(req));
 }
 
 /**
@@ -257,7 +279,7 @@ export async function authorizeSubjectAccess(req: NextRequest): Promise<AuthCont
  * @throws ApiError if not authorized
  */
 export async function authorizeSubjectModification(req: NextRequest): Promise<AuthContext> {
-  const context = await requireAuth(req);
+  const context = normalizeAuthContext(await requireAuth(req));
   
   if (!isAdmin(context)) {
     throw new ApiError(403, 'Admin privileges required', 'forbidden');
@@ -273,7 +295,7 @@ export async function authorizeSubjectModification(req: NextRequest): Promise<Au
  * @throws ApiError if not authorized
  */
 export async function requireAdminAccess(req: NextRequest): Promise<AuthContext> {
-  const context = await requireAuth(req);
+  const context = normalizeAuthContext(await requireAuth(req));
   
   if (!isAdmin(context)) {
     throw new ApiError(403, 'Admin privileges required', 'forbidden');

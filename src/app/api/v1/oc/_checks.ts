@@ -5,6 +5,7 @@ import { requireAuth, hasAdminRole } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq } from 'drizzle-orm';
+import { canEditAcademics } from '@/lib/academics-access';
 
 export const Param = (name: string) => z.object({ [name]: z.string() });
 
@@ -19,22 +20,16 @@ export async function mustBeAdmin(req: NextRequest) {
     return ctx;
 }
 
-function normalizeRoleToken(value: unknown): string {
-    return String(value ?? '')
-        .trim()
-        .toUpperCase()
-        .replace(/[\s-]+/g, '_');
-}
-
-export async function mustBePlatoonCommander(req: NextRequest) {
+export async function mustBeAcademicsEditor(req: NextRequest) {
     const ctx = await requireAuth(req);
-    const roleSet = new Set<string>((ctx.roles ?? []).map(normalizeRoleToken));
-    const aptPosition = normalizeRoleToken((ctx.claims as any)?.apt?.position);
-
-    if (!roleSet.has('PLATOON_COMMANDER') && aptPosition !== 'PLATOON_COMMANDER') {
-        throw new ApiError(403, 'Platoon Commander privileges required', 'forbidden');
+    if (
+        !canEditAcademics({
+            roles: ctx.roles,
+            position: (ctx.claims as any)?.apt?.position ?? null,
+        })
+    ) {
+        throw new ApiError(403, 'You do not have permission to modify academics.', 'forbidden');
     }
-
     return ctx;
 }
 
