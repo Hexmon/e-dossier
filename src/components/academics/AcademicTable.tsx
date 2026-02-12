@@ -402,7 +402,7 @@ export default function AcademicTable({
 
       {!canEdit ? (
         <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          Read-only access: only Platoon Commander can edit, add, or delete academics records.
+          Read-only access: only Platoon Commander, ADMIN, and SUPER_ADMIN can edit, add, or delete academics records.
         </div>
       ) : null}
 

@@ -8,6 +8,7 @@ import { useParams } from "next/navigation";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import { useMe } from "@/hooks/useMe";
+import { canEditAcademics } from "@/lib/academics-access";
 import DossierTab from "@/components/Tabs/DossierTab";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
@@ -30,17 +31,10 @@ export default function AcademicsPage() {
     } = cadet || {};
 
     const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
-    const roleSet = new Set<string>([
-        ...(meData?.roles ?? []),
-        ...(meData?.apt?.position ? [meData.apt.position] : []),
-    ].map((value) =>
-        String(value ?? "")
-            .trim()
-            .toUpperCase()
-            .replace(/[\s-]+/g, "_")
-    ));
-    const canEditAcademics =
-        roleSet.has("PLATOON_COMMANDER") || roleSet.has("PLATOON_CDR");
+    const canEditAcademicsForUser = canEditAcademics({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
 
     // If no course data yet, show loading
     if (!course) {
@@ -94,7 +88,7 @@ export default function AcademicsPage() {
                     }
                 >
                     <div>
-                        <AcademicsTabs ocId={ocId} courseId={course} canEdit={canEditAcademics} />
+                        <AcademicsTabs ocId={ocId} courseId={course} canEdit={canEditAcademicsForUser} />
                     </div>
                 </DossierTab>
             </main>

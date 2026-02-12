@@ -18,7 +18,7 @@ import * as authz from '@/lib/authorization';
 vi.mock('@/app/api/v1/oc/_checks', () => ({
   parseParam: vi.fn(),
   ensureOcExists: vi.fn(),
-  mustBePlatoonCommander: vi.fn(),
+  mustBeAcademicsEditor: vi.fn(),
 }));
 
 vi.mock('@/lib/authorization', () => ({
@@ -184,8 +184,10 @@ describe('GET /api/v1/oc/:ocId/academics/:semester', () => {
 });
 
 describe('PATCH /api/v1/oc/:ocId/academics/:semester', () => {
-  it('requires platoon commander privileges', async () => {
-    (ocChecks.mustBePlatoonCommander as any).mockRejectedValueOnce(new ApiError(403, 'Forbidden', 'forbidden'));
+  it('blocks write when caller has read-only academics access', async () => {
+    (ocChecks.mustBeAcademicsEditor as any).mockRejectedValueOnce(
+      new ApiError(403, 'You do not have permission to modify academics.', 'forbidden')
+    );
     const req = makeJsonRequest({
       method: 'PATCH',
       path: `${basePath}/${ocId}/academics/1`,
@@ -194,10 +196,12 @@ describe('PATCH /api/v1/oc/:ocId/academics/:semester', () => {
     const ctx = { params: Promise.resolve({ ocId, semester: '1' }) } as any;
     const res = await patchAcademicSummaryRoute(req as any, ctx);
     expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.message).toBe('You do not have permission to modify academics.');
   });
 
   it('updates academic summary on success', async () => {
-    (ocChecks.mustBePlatoonCommander as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 });
@@ -217,7 +221,7 @@ describe('PATCH /api/v1/oc/:ocId/academics/:semester', () => {
 
 describe('DELETE /api/v1/oc/:ocId/academics/:semester', () => {
   it('soft deletes semester', async () => {
-    (ocChecks.mustBePlatoonCommander as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 });
@@ -233,7 +237,7 @@ describe('DELETE /api/v1/oc/:ocId/academics/:semester', () => {
   });
 
   it('hard deletes semester', async () => {
-    (ocChecks.mustBePlatoonCommander as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 });
@@ -255,7 +259,7 @@ describe('DELETE /api/v1/oc/:ocId/academics/:semester', () => {
 
 describe('PATCH /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () => {
   it('updates subject marks', async () => {
-    (ocChecks.mustBePlatoonCommander as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 })
@@ -285,7 +289,7 @@ describe('PATCH /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () =>
 
 describe('DELETE /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () => {
   it('deletes subject entry', async () => {
-    (ocChecks.mustBePlatoonCommander as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 })
@@ -308,7 +312,7 @@ describe('DELETE /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () =
   });
 
   it('hard deletes subject entry', async () => {
-    (ocChecks.mustBePlatoonCommander as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 })
