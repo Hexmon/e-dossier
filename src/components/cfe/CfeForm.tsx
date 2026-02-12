@@ -99,7 +99,7 @@ export default function CfeForm({
         <form onSubmit={handleSubmit(handleFormSubmit)}>
             <div className="overflow-x-auto border rounded-lg shadow">
                 <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
                             <th className="p-2 border">S No</th>
                             <th className="p-2 border">Cat</th>
@@ -115,7 +115,7 @@ export default function CfeForm({
                             return (
                                 <tr key={field.id}>
                                     <td className="p-2 border text-center">
-                                        <Input value={String(idx + 1)} disabled className="bg-gray-100 text-center" />
+                                        <Input value={String(idx + 1)} disabled className="bg-muted/70 text-center" />
                                     </td>
 
                                     <td className="p-2 border">
@@ -172,7 +172,7 @@ export default function CfeForm({
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={loading}>
+                <Button type="submit" className="bg-success hover:bg-success/90" disabled={loading}>
                     {loading ? "Submitting..." : "Submit"}
                 </Button>
 
@@ -181,7 +181,7 @@ export default function CfeForm({
                     variant="outline"
                     onClick={onClear}
                     disabled={loading}
-                    className="hover:bg-destructive hover:text-white"
+                    className="hover:bg-destructive hover:text-primary-foreground"
                 >
                     Clear Form
                 </Button>

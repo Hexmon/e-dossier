@@ -161,23 +161,23 @@ export default function Appointments({ ocId }: AppointmentsProps) {
 
     return (
         <div>
-            <h2 className="p-2 text-lg font-bold text-left text-gray-700 underline">Appointments Held, If Any</h2>
+            <h2 className="p-2 text-lg font-bold text-left text-foreground underline">Appointments Held, If Any</h2>
 
             {isEditing && (
-                <div className="text-xs text-gray-500 text-right mb-2">
+                <div className="text-xs text-muted-foreground text-right mb-2">
                     ✓ Changes are saved automatically
                 </div>
             )}
 
             <div className="overflow-x-auto">
                 <table className="w-full">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Appointments</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">From</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">To</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
-                            {isEditing && <th className="border border-gray-300 px-4 py-2 text-center">Action</th>}
+                            <th className="border border-border px-4 py-2 text-left">Appointments</th>
+                            <th className="border border-border px-4 py-2 text-left">From</th>
+                            <th className="border border-border px-4 py-2 text-left">To</th>
+                            <th className="border border-border px-4 py-2 text-left">Remarks</th>
+                            {isEditing && <th className="border border-border px-4 py-2 text-center">Action</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -185,8 +185,8 @@ export default function Appointments({ ocId }: AppointmentsProps) {
                             appointmentData.map(appointment => {
                                 const { id, appointments, from, to, remarks, isRowEditing } = appointment;
                                 return (
-                                    <tr key={id} className="hover:bg-gray-50 border-b border-gray-300">
-                                        <td className="border border-gray-300 px-4 py-2">
+                                    <tr key={id} className="hover:bg-muted/40 border-b border-border">
+                                        <td className="border border-border px-4 py-2">
                                             {isRowEditing ? (
                                                 <Input
                                                     type="text"
@@ -199,7 +199,7 @@ export default function Appointments({ ocId }: AppointmentsProps) {
                                                 <span>{appointments || "-"}</span>
                                             )}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">
+                                        <td className="border border-border px-4 py-2">
                                             {isRowEditing ? (
                                                 <Input
                                                     type="date"
@@ -212,7 +212,7 @@ export default function Appointments({ ocId }: AppointmentsProps) {
                                                 <span>{from || "-"}</span>
                                             )}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">
+                                        <td className="border border-border px-4 py-2">
                                             {isRowEditing ? (
                                                 <Input
                                                     type="date"
@@ -225,7 +225,7 @@ export default function Appointments({ ocId }: AppointmentsProps) {
                                                 <span>{to || "-"}</span>
                                             )}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">
+                                        <td className="border border-border px-4 py-2">
                                             {isRowEditing ? (
                                                 <Input
                                                     type="text"
@@ -239,13 +239,13 @@ export default function Appointments({ ocId }: AppointmentsProps) {
                                             )}
                                         </td>
                                         {isEditing && (
-                                            <td className="border border-gray-300 px-4 py-2">
+                                            <td className="border border-border px-4 py-2">
                                                 <div className="flex gap-2 justify-center">
                                                     {isRowEditing ? (
                                                         <>
                                                             <Button
                                                                 onClick={() => handleRowSave(id)}
-                                                                className="bg-blue-600 hover:bg-blue-700"
+                                                                className="bg-primary hover:bg-primary/90"
                                                                 size="sm"
                                                             >
                                                                 Save
@@ -263,7 +263,7 @@ export default function Appointments({ ocId }: AppointmentsProps) {
                                                             <Button
                                                                 onClick={() => handleRowEdit(id)}
                                                                 variant="outline"
-                                                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                                                className="border-primary text-primary hover:bg-primary/10"
                                                                 size="sm"
                                                             >
                                                                 Edit
@@ -271,7 +271,7 @@ export default function Appointments({ ocId }: AppointmentsProps) {
                                                             <Button
                                                                 onClick={() => handleDeleteAppointment(id)}
                                                                 variant="outline"
-                                                                className="text-red-600 border-red-600 hover:bg-red-50"
+                                                                className="text-destructive border-destructive hover:bg-destructive/10"
                                                                 size="sm"
                                                             >
                                                                 Delete
@@ -286,7 +286,7 @@ export default function Appointments({ ocId }: AppointmentsProps) {
                             })
                         ) : (
                             <tr>
-                                <td colSpan={isEditing ? 5 : 4} className="border border-gray-300 px-4 py-2 text-center text-gray-500">
+                                <td colSpan={isEditing ? 5 : 4} className="border border-border px-4 py-2 text-center text-muted-foreground">
                                     {isEditing ? "No appointments added. Click 'Add Appointment' to add new entries." : "No appointments"}
                                 </td>
                             </tr>
@@ -297,7 +297,7 @@ export default function Appointments({ ocId }: AppointmentsProps) {
 
             {isEditing && (
                 <div className="flex gap-3 justify-center mt-4">
-                    <Button onClick={handleAddAppointment} className="bg-green-600 hover:bg-green-700">
+                    <Button onClick={handleAddAppointment} className="bg-success hover:bg-success/90">
                         + Add Appointment
                     </Button>
                 </div>

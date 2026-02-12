@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAuthed } from '../../../../../_checks';
+import { parseParam, ensureOcExists, mustBeAdmin } from '../../../../../_checks';
 import { OcIdParam, SemesterParam, SubjectIdParam, academicSubjectPatchSchema } from '@/app/lib/oc-validators';
 import { updateOcAcademicSubject, deleteOcAcademicSubject } from '@/app/services/oc-academics';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
@@ -10,7 +10,7 @@ async function PATCHHandler(
     { params }: { params: Promise<{ ocId: string; semester: string; subjectId: string }> },
 ) {
     try {
-        const authCtx = await mustBeAuthed(req);
+        const authCtx = await mustBeAdmin(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         const { subjectId } = await parseParam({ params }, SubjectIdParam);
@@ -53,7 +53,7 @@ async function DELETEHandler(
     { params }: { params: Promise<{ ocId: string; semester: string; subjectId: string }> },
 ) {
     try {
-        const authCtx = await mustBeAuthed(req);
+        const authCtx = await mustBeAdmin(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         const { subjectId } = await parseParam({ params }, SubjectIdParam);

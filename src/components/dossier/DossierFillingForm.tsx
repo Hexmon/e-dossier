@@ -117,7 +117,7 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
     // Helper to render label/value rows (map returns JSX inside return)
     function RenderSavedRows({ dossier }: { dossier: DossierFormData | null }) {
         if (!dossier) {
-            return <p className="text-gray-500 italic text-center">No dossier data available.</p>;
+            return <p className="text-muted-foreground italic text-center">No dossier data available.</p>;
         }
 
         // Fields to display, excluding ocId, createdAt, updatedAt
@@ -166,10 +166,10 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
             <CardContent>
                 {!isEditMode ? (
                     // VIEW MODE
-                    <div className="p-6 border rounded-lg bg-gray-50">
+                    <div className="p-6 border rounded-lg bg-muted/40">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-semibold">Dossier Filling Data</h3>
-                            <Button onClick={handleEditClick} className="bg-blue-500 hover:bg-blue-600">
+                            <Button onClick={handleEditClick} className="bg-primary hover:bg-primary">
                                 Edit
                             </Button>
                         </div>
@@ -216,10 +216,10 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
                                 </div>
 
                                 <div className="flex justify-center gap-2 mt-6">
-                                    <Button type="submit" disabled={isSaving} className="bg-[#40ba4d]">
+                                    <Button type="submit" disabled={isSaving} className="bg-success">
                                         {isSaving ? "Saving..." : "Save"}
                                     </Button>
-                                    <Button variant="outline" type="button" className="hover:bg-destructive hover:text-white" onClick={handleCancel}>
+                                    <Button variant="outline" type="button" className="hover:bg-destructive hover:text-primary-foreground" onClick={handleCancel}>
                                         Cancel
                                     </Button>
                                 </div>
@@ -227,7 +227,7 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
                         </TabsContent>
 
                         <TabsContent value="view">
-                            <div className="p-6 border rounded-lg bg-gray-50">
+                            <div className="p-6 border rounded-lg bg-muted/40">
                                 <h3 className="text-lg font-semibold mb-4">Dossier Filling Data</h3>
                                 <RenderSavedRows dossier={dossierFilling} />
                             </div>

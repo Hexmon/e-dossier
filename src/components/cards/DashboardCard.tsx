@@ -4,13 +4,14 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { resolveToneClasses, type ColorTone } from "@/lib/theme-color";
 
 interface DashboardCardProps {
     title: string;
     description: string;
     to?: string;
     icon: React.ElementType;
-    color: string;
+    color: ColorTone;
     className?: string;
     onClick?: () => void;
 }
@@ -24,6 +25,9 @@ export function DashboardCard({
     className,
     onClick,
 }: DashboardCardProps) {
+    const iconTone = resolveToneClasses(color, "icon");
+    const buttonTone = resolveToneClasses("primary", "button");
+
     return (
         <Card
             onClick={onClick}
@@ -34,12 +38,12 @@ export function DashboardCard({
         >
             <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${color} text-white`}>
+                    <div className={cn("p-2 rounded-lg", iconTone)}>
                         <Icon className="h-5 w-5" />
                     </div>
 
                     <div className="flex-1">
-                        <CardTitle className="text-lg group-hover:text-[#1677ff] transition-colors">
+                        <CardTitle className="text-lg transition-colors group-hover:text-primary">
                             {title}
                         </CardTitle>
                     </div>
@@ -52,11 +56,11 @@ export function DashboardCard({
                 </p>
 
                 {to ? (
-                    <Button asChild variant="outline" size="sm" className="w-full border hover:bg-[#1677ff] hover:text-white cursor-pointer">
+                    <Button asChild size="sm" className={cn("w-full cursor-pointer", buttonTone)}>
                         <Link href={to}>Access Module →</Link>
                     </Button>
                 ) : (
-                    <Button variant="outline" size="sm" className="w-full border hover:bg-[#1677ff] hover:text-white cursor-pointer">
+                    <Button size="sm" className={cn("w-full cursor-pointer", buttonTone)}>
                         Access Module →
                     </Button>
                 )}

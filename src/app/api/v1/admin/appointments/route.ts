@@ -9,6 +9,9 @@ import { appointmentCreateSchema, appointmentListQuerySchema } from '@/app/lib/v
 import { and, eq, sql, isNull } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest) {
     try {
@@ -177,6 +180,6 @@ async function POSTHandler(req: AuditNextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withAuditRoute('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

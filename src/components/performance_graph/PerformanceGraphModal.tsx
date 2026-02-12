@@ -54,28 +54,25 @@ export default function PerformanceGraphModal({
 
   return (
     <>
-      <div
-        className="fixed inset-0 bg-gray-900 bg-opacity-30 backdrop-blur-sm z-50"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50" onClick={onClose} />
 
       <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6 pt-15">
         <div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl"
+          className="bg-background rounded-2xl shadow-2xl w-full max-w-6xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between p-6 border-b border-border">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">Performance Graphs</h2>
-              <p className="text-sm text-gray-600 mt-1">{cadetName}</p>
+              <h2 className="text-2xl font-bold text-foreground">Performance Graphs</h2>
+              <p className="text-sm text-muted-foreground mt-1">{cadetName}</p>
             </div>
 
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              className="p-2 hover:bg-muted/70 rounded-lg transition-colors duration-200"
               aria-label="Close modal"
             >
-              <X className="h-6 w-6 text-gray-600" />
+              <X className="h-6 w-6 text-muted-foreground" />
             </button>
           </div>
 
@@ -88,10 +85,10 @@ export default function PerformanceGraphModal({
             />
           </div>
 
-          <div className="border-t border-gray-200 px-6 py-4 flex justify-end">
+          <div className="border-t border-border px-6 py-4 flex justify-end">
             <button
               onClick={onClose}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+              className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors duration-200"
             >
               Close
             </button>

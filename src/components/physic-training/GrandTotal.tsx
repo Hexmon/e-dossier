@@ -56,7 +56,7 @@ export default function GrandTotal({ grandTotalMarks }: GrandTotalProps) {
     return (
         <div className="mt-3 space-y-6">
             <CardContent className="space-y-6">
-                <h2 className="text-left text-lg font-bold text-gray-700">Grand Total</h2>
+                <h2 className="text-left text-lg font-bold text-foreground">Grand Total</h2>
                 <div>
                     <UniversalTable<GrandTotalRow>
                         data={data}

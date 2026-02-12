@@ -154,7 +154,7 @@ export function OCForm({
                     {(selectedFile || previewUrl) && (
                         <div className="mt-2">
                             {selectedFile && (
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     Selected: {selectedFile.name}
                                 </p>
                             )}

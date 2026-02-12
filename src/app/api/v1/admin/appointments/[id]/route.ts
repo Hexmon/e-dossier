@@ -9,6 +9,9 @@ import { appointmentUpdateSchema } from '@/app/lib/validators';
 import { and, eq, sql } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -231,8 +234,8 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
 
-export const DELETE = withAuditRoute('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

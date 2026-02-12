@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { Achievement } from "@/types/background-detls";
 import { useAchievements } from "@/hooks/useAchievementsBackground";
@@ -22,6 +32,8 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Achievement | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<Achievement | null>(null);
+    const [showClearDialog, setShowClearDialog] = useState(false);
 
     // Redux
     const dispatch = useDispatch();
@@ -78,6 +90,19 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
             return;
         }
 
+        // Validate fields
+        const currentYear = new Date().getFullYear();
+        for (let i = 0; i < filledAchievements.length; i++) {
+            const a = filledAchievements[i];
+            if (a.year && a.year.toString().trim() !== "") {
+                const year = Number(a.year);
+                if (!Number.isInteger(year) || year < 1900 || year > currentYear + 1) {
+                    toast.error(`Row ${i + 1}: Year must be between 1900 and ${currentYear + 1}`);
+                    return;
+                }
+            }
+        }
+
         const result = await save(filledAchievements);
 
         if (result) {
@@ -93,14 +118,21 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
     };
 
     // Clear form handler
-    const handleClearForm = () => {
-        if (confirm("Are you sure you want to clear all unsaved changes?")) {
-            dispatch(clearAchievementsForm(ocId));
-            achievementForm.reset({
-                achievements: [{ event: "", year: "", level: "", prize: "" }]
-            });
-            toast.info("Form cleared");
-        }
+    const handleClearForm = () => setShowClearDialog(true);
+    const confirmClearForm = () => {
+        dispatch(clearAchievementsForm(ocId));
+        achievementForm.reset({
+            achievements: [
+                {
+                    event: "",
+                    year: "",
+                    level: "",
+                    prize: "",
+                },
+            ],
+        });
+        toast.info("Form cleared");
+        setShowClearDialog(false);
     };
 
     // Inline Edit Logic
@@ -139,6 +171,7 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
 
         const ok = await remove(id);
         if (ok) await fetch();
+        setDeleteTarget(null);
     };
 
     // UNIVERSAL TABLE CONFIGURATION
@@ -237,7 +270,7 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
                 if (editingId === row.id) {
                     await saveEdit();
                 } else {
-                    await deleteItem(row.id);
+                    setDeleteTarget(row);
                 }
             }
         }
@@ -280,12 +313,12 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
             {/* Add New Achievement Form */}
             <form onSubmit={achievementForm.handleSubmit(submitAchievements)}>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm border border-gray-300">
-                        <thead className="bg-gray-100">
+                    <table className="min-w-full text-sm border border-border">
+                        <thead className="bg-muted/70">
                             <tr>
                                 {["S.No", "Event", "Year", "Level", "Prize", "Action"].map((head) => {
                                     return (
-                                        <th key={head} className="border px-4 py-2 bg-gray-300">
+                                        <th key={head} className="border px-4 py-2 bg-muted">
                                             {head}
                                         </th>
                                     );
@@ -343,7 +376,7 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
                         Clear Form
                     </Button>
 
-                    <Button type="submit" className="bg-[#40ba4d]">
+                    <Button type="submit" className="bg-success">
                         Save
                     </Button>
                 </div>
@@ -354,6 +387,43 @@ export default function AchievementsSection({ ocId }: { ocId: string }) {
                     </p>
                 )}
             </form>
+
+            {/* DELETE CONFIRMATION DIALOG */}
+            <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Achievement</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete this achievement record? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-primary-foreground hover:bg-destructive/90"
+                            onClick={() => deleteTarget && deleteItem(deleteTarget.id)}
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* CLEAR FORM CONFIRMATION DIALOG */}
+            <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Clear Form</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to clear all unsaved changes? This will reset the form.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmClearForm}>Clear</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

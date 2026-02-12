@@ -4,13 +4,13 @@ import { endpoints } from "@/constants/endpoints";
 export interface MedicalInfoPayload {
     semester: number;
     examDate: string | null;
-    age: number;
-    heightCm: number;
-    ibwKg: number;
-    abwKg: number;
-    overwtPct: number;
-    bmi: number;
-    chestCm: number;
+    age?: number;
+    heightCm?: number;
+    ibwKg?: number;
+    abwKg?: number;
+    overwtPct?: number;
+    bmi?: number;
+    chestCm?: number;
     medicalHistory?: string | null;
     hereditaryIssues?: string | null;
     allergies?: string | null;
@@ -50,17 +50,26 @@ export async function saveMedicalInfo(
             const payload = {
                 date: cleanDate ?? "",
                 semester: Number(r.semester),
-                age: Number(r.age),
-                heightCm: Number(r.heightCm),
-                ibwKg: Number(r.ibwKg),
-                abwKg: Number(r.abwKg),
-                overwtPct: Number(r.overwtPct),
-                bmi: Number(r.bmi),
-                chestCm: Number(r.chestCm),
                 medicalHistory: r.medicalHistory ?? null,
                 hereditaryIssues: r.hereditaryIssues ?? null,
                 allergies: r.allergies ?? null,
-            };
+            } as Record<string, unknown>;
+
+            const numericFields: Array<keyof Pick<MedicalInfoPayload, "age" | "heightCm" | "ibwKg" | "abwKg" | "overwtPct" | "bmi" | "chestCm">> = [
+                "age",
+                "heightCm",
+                "ibwKg",
+                "abwKg",
+                "overwtPct",
+                "bmi",
+                "chestCm",
+            ];
+            for (const field of numericFields) {
+                const value = r[field];
+                if (typeof value === "number" && Number.isFinite(value)) {
+                    payload[field] = value;
+                }
+            }
 
             console.log("Sending payload:", payload);
             const response = (await api.post(endpoints.oc.medical(ocId), payload)) as ApiResponse;
@@ -70,7 +79,7 @@ export async function saveMedicalInfo(
         return responses;
     } catch (error: any) {
         console.error("Failed to save medical info:", error);
-        return [];
+        throw error;
     }
 }
 

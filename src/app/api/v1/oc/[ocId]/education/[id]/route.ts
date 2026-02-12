@@ -41,7 +41,11 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
     const dto = eduUpdateSchema.parse(await req.json());
-    const row = await updateEdu(ocId, id, dto);
+    // totalPercent is now text column; stringify the validated value
+    const { totalPercent, ...rest } = dto;
+    const updateData: Record<string, unknown> = { ...rest };
+    if (totalPercent !== undefined) updateData.totalPercent = String(totalPercent);
+    const row = await updateEdu(ocId, id, updateData as any);
     if (!row) throw new ApiError(404, 'Education record not found', 'not_found');
 
     await req.audit.log({

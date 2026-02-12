@@ -1,4 +1,7 @@
 import { db } from '@/app/db/client';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { users } from '@/app/db/schema/auth/users';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { json, handleApiError } from '@/app/lib/http';
@@ -22,6 +25,7 @@ async function GETHandler(req: AuditNextRequest) {
             q: searchParams.get('q') ?? undefined,
             isActive: searchParams.get('isActive') ?? undefined,
             includeDeleted: searchParams.get('includeDeleted') ?? undefined,
+            scopeType: searchParams.get('scopeType') ?? undefined,
             limit: searchParams.get('limit') ?? undefined,
             offset: searchParams.get('offset') ?? undefined,
         });
@@ -180,6 +184,6 @@ async function POSTHandler(req: AuditNextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withAuditRoute('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

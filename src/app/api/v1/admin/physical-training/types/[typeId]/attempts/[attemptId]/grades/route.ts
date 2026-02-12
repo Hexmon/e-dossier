@@ -1,4 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptAttemptGradeCreateSchema, ptAttemptGradeQuerySchema, ptAttemptParam } from '@/app/lib/physical-training-validators';
 import { getPtAttempt, listPtAttemptGrades, createPtAttemptGrade } from '@/app/db/queries/physicalTraining';
@@ -56,5 +59,5 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     }
 }
 
-export const GET = withAuditRoute('GET', GETHandler);
-export const POST = withAuditRoute('POST', POSTHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

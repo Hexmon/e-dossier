@@ -44,7 +44,7 @@ export default function RelegationPage() {
                             <TabsContent value="relegation" className="space-y-6">
                                 <main className="bg-white rounded-2xl p-5">
                                     <div className="flex items-center justify-center">
-                                        <h2 className="text-2xl font-bold text-foreground mb-5 mt-4 bg-blue-200 w-2xl text-center rounded-2xl">
+                                        <h2 className="text-2xl font-bold text-foreground mb-5 mt-4 bg-primary/20 w-2xl text-center rounded-2xl">
                                             Relegation Form
                                         </h2>
                                     </div>

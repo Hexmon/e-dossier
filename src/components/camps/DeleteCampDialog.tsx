@@ -47,7 +47,7 @@ export default function DeleteCampDialog({
                             onConfirm();
                         }}
                         disabled={isLoading}
-                        className="bg-red-500 text-white hover:bg-red-700"
+                        className="bg-destructive text-primary-foreground hover:bg-destructive/90"
                     >
                         {isLoading ? "Deleting..." : "Delete"}
                     </AlertDialogAction>

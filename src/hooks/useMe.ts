@@ -1,8 +1,11 @@
 // hooks/useMe.ts
 import { useQuery } from "@tanstack/react-query";
 import { fetchMe, MeResponse } from "@/app/lib/api/me";
+import { useDeviceRefreshInterval } from "@/hooks/useDeviceRefreshInterval";
 
 export function useMe() {
+    const { refreshIntervalMs } = useDeviceRefreshInterval();
+
     return useQuery({
         queryKey: ["me"],
         queryFn: fetchMe,
@@ -11,5 +14,7 @@ export function useMe() {
         retry: 1,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
+        refetchInterval: refreshIntervalMs,
+        refetchIntervalInBackground: false,
     });
 }

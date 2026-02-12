@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { resolveToneClasses, type ColorTone } from "@/lib/theme-color";
 
 // Core type definitions
 export interface TabItem {
@@ -32,7 +33,7 @@ export interface DropdownTabItem extends TabItem {
     label: string;
     icon?: React.ComponentType<{ className?: string }>;
     link: string;
-    color?: string;
+    color?: ColorTone;
   }>;
 }
 
@@ -157,7 +158,7 @@ export function UniversalTabPanel({
       case 'buttons':
         return {
           tabsList: `${baseClasses.tabsList} bg-transparent gap-2`,
-          tabTrigger: `${baseClasses.tabTrigger} border border-gray-300 data-[state=inactive]:bg-blue-100 text-blue-700 data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2`,
+          tabTrigger: `${baseClasses.tabTrigger} border border-border data-[state=inactive]:bg-muted data-[state=inactive]:text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:border-primary rounded-md px-3 py-2`,
         };
       default:
         return baseClasses;
@@ -206,7 +207,9 @@ export function UniversalTabPanel({
           {tab.dropdownItems.map((item) => (
             <DropdownMenuItem key={item.id} asChild>
               <Link href={item.link} className="flex items-center gap-2 w-full">
-                {item.icon && <item.icon className={`h-4 w-4 ${item.color || ''}`} />}
+                {item.icon && (
+                  <item.icon className={`h-4 w-4 ${item.color ? resolveToneClasses(item.color, "text") : "text-muted-foreground"}`} />
+                )}
                 <span>{item.label}</span>
               </Link>
             </DropdownMenuItem>

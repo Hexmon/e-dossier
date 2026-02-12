@@ -424,7 +424,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                 onClick={() => setActiveSemester(sem)}
                 disabled={isEditing}
                 className={`px-4 py-2 rounded-t-lg font-medium ${
-                  activeSemester === sem ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                  activeSemester === sem ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                 } ${isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {sem}
@@ -432,7 +432,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
             ))}
           </div>
 
-          <h2 className="text-lg font-bold text-left text-gray-700">
+          <h2 className="text-lg font-bold text-left text-foreground">
             {pptType?.title ?? "PPT"} {!pptType?.title && ` (${pptTableMaxMarks} marks)`}
           </h2>
 

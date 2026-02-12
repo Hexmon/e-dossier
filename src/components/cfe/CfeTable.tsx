@@ -196,7 +196,7 @@ export default function CfeTable({
       label: editingIndex !== null ? "Save" : "Delete",
       variant: editingIndex !== null ? "default" : "destructive",
       size: "sm",
-      className: editingIndex !== null ? "bg-green-600" : "",
+      className: editingIndex !== null ? "bg-success" : "",
       handler: async (row, index) => {
         if (editingIndex === index) {
           await saveEdit(index);

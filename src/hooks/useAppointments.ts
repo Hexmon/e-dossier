@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -279,8 +280,8 @@ export function useAppointments() {
     platoons,
     loading: loadingAppointments,
     error: null,
-    fetchAppointments: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
-    fetchUsers: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+    fetchAppointments: useCallback(() => queryClient.invalidateQueries({ queryKey: ["appointments"] }), [queryClient]),
+    fetchUsers: useCallback(() => queryClient.invalidateQueries({ queryKey: ["users"] }), [queryClient]),
     fetchUsersAndPositions: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["positions"] });

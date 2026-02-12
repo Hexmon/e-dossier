@@ -15,7 +15,7 @@ const Marquee = ({ data, speed = 20, className }: MarqueeProps) => {
   return (
     <div 
       className={cn(
-        "relative overflow-hidden bg-[#ffff00] py-3 w-full",
+        "relative overflow-hidden bg-warning py-3 w-full",
         className
       )}
     >
@@ -36,7 +36,7 @@ const Marquee = ({ data, speed = 20, className }: MarqueeProps) => {
         {extendedData.map((item, index) => (
           <span
             key={index}
-            className="text-sm font-semibold text-black inline-block shrink-0"
+            className="text-sm font-semibold text-foreground inline-block shrink-0"
           >
             {item}
           </span>

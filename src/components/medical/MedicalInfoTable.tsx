@@ -59,6 +59,9 @@ export default function MedicalInfoTable({
                 const isEditing = editingId === row.id;
                 return isEditing ? (
                     <Input
+                        type="number"
+                        step="any"
+                        inputMode="decimal"
                         value={editForm?.age ?? ""}
                         onChange={(e) => onChange("age", e.target.value)}
                     />
@@ -73,6 +76,9 @@ export default function MedicalInfoTable({
                 const isEditing = editingId === row.id;
                 return isEditing ? (
                     <Input
+                        type="number"
+                        step="any"
+                        inputMode="decimal"
                         value={editForm?.height ?? ""}
                         onChange={(e) => onChange("height", e.target.value)}
                     />
@@ -87,6 +93,9 @@ export default function MedicalInfoTable({
                 const isEditing = editingId === row.id;
                 return isEditing ? (
                     <Input
+                        type="number"
+                        step="any"
+                        inputMode="decimal"
                         value={editForm?.ibw ?? ""}
                         onChange={(e) => onChange("ibw", e.target.value)}
                     />
@@ -101,6 +110,9 @@ export default function MedicalInfoTable({
                 const isEditing = editingId === row.id;
                 return isEditing ? (
                     <Input
+                        type="number"
+                        step="any"
+                        inputMode="decimal"
                         value={editForm?.abw ?? ""}
                         onChange={(e) => onChange("abw", e.target.value)}
                     />
@@ -115,6 +127,9 @@ export default function MedicalInfoTable({
                 const isEditing = editingId === row.id;
                 return isEditing ? (
                     <Input
+                        type="number"
+                        step="any"
+                        inputMode="decimal"
                         value={editForm?.overw ?? ""}
                         onChange={(e) => onChange("overw", e.target.value)}
                     />
@@ -129,8 +144,12 @@ export default function MedicalInfoTable({
                 const isEditing = editingId === row.id;
                 return isEditing ? (
                     <Input
+                        type="number"
+                        step="any"
+                        inputMode="decimal"
+                        readOnly
+                        className="bg-muted"
                         value={editForm?.bmi ?? ""}
-                        onChange={(e) => onChange("bmi", e.target.value)}
                     />
                 ) : value;
             }
@@ -143,6 +162,9 @@ export default function MedicalInfoTable({
                 const isEditing = editingId === row.id;
                 return isEditing ? (
                     <Input
+                        type="number"
+                        step="any"
+                        inputMode="decimal"
                         value={editForm?.chest ?? ""}
                         onChange={(e) => onChange("chest", e.target.value)}
                     />

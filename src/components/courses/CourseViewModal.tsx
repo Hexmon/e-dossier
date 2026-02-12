@@ -41,9 +41,9 @@ export default function CourseViewModal({
         (res.offerings ?? []).forEach((offering) => {
           const subject: SubjectView | null =
             offering.subject ?? {
-              id: offering.subjectId,
-              code: offering.subjectCode,
-              name: offering.subjectName,
+              id: offering.subjectId ?? "",
+              code: offering.subjectCode ?? "",
+              name: offering.subjectName ?? "",
               branch: offering.subject?.branch ?? "",
             };
 

@@ -8,12 +8,14 @@ import { Search } from "lucide-react";
 import { useDebouncedValue } from "@/app/lib/debounce";
 import { fetchOCs, OCListRow } from "@/app/lib/api/ocApi";
 import { listAppointments } from "@/app/lib/api/AppointmentFilterApi";
+import { isOcSelectable } from "@/lib/oc-selection";
 
 interface OCSelectModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSelect: (oc: OCListRow) => void;
     userId?: string;
+    disabledOcId?: string | null;
 }
 
 export default function OCSelectModal({
@@ -21,6 +23,7 @@ export default function OCSelectModal({
     onOpenChange,
     onSelect,
     userId,
+    disabledOcId,
 }: OCSelectModalProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredOCs, setFilteredOCs] = useState<OCListRow[]>([]);
@@ -107,6 +110,7 @@ export default function OCSelectModal({
     };
 
     const handleSelectOC = (oc: OCListRow) => {
+        if (!isOcSelectable(oc.id, disabledOcId)) return;
         onSelect(oc);
         setShowDropdown(false);
         setSearchQuery(`${oc.name} (${oc.ocNo})`);
@@ -128,7 +132,7 @@ export default function OCSelectModal({
                 <DialogHeader>
                     <DialogTitle>
                         <p className="flex justify-center items-center">
-                            Please Select an OC before proceeding...
+                            Please Select an OC before proceeding..
                         </p>
                     </DialogTitle>
                 </DialogHeader>
@@ -174,18 +178,33 @@ export default function OCSelectModal({
                                     )}
 
                                     {!isSearching &&
-                                        filteredOCs.map((oc) => (
-                                            <li
-                                                key={oc.id}
-                                                onMouseDown={() => handleSelectOC(oc)}
-                                                className="px-3 py-2 text-sm cursor-pointer hover:bg-[#1677ff] hover:text-white"
-                                            >
-                                                <div className="font-medium">{oc.name}</div>
-                                                <div className="text-xs text-muted-foreground hover:text-white">
-                                                    {oc.ocNo} • {oc.platoonName}
-                                                </div>
-                                            </li>
-                                        ))}
+                                        filteredOCs.map((oc) => {
+                                            const isDisabled = !isOcSelectable(oc.id, disabledOcId);
+
+                                            return (
+                                                <li
+                                                    key={oc.id}
+                                                    onMouseDown={() => {
+                                                        if (isDisabled) return;
+                                                        handleSelectOC(oc);
+                                                    }}
+                                                    className={`px-3 py-2 text-sm ${isDisabled
+                                                        ? "cursor-not-allowed opacity-50"
+                                                        : "cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                                                        }`}
+                                                >
+                                                    <div className="font-medium">{oc.name}</div>
+                                                    <div
+                                                        className={`text-xs ${isDisabled
+                                                            ? "text-muted-foreground"
+                                                            : "text-muted-foreground hover:text-primary-foreground"
+                                                            }`}
+                                                    >
+                                                        {oc.ocNo} • {oc.platoonName}
+                                                    </div>
+                                                </li>
+                                            );
+                                        })}
                                 </ul>
                             )}
                         </>

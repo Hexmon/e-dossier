@@ -277,7 +277,7 @@ export default function FieldOptionsDialog({
                         <AlertDialogCancel onClick={() => setOptionToDelete(null)}>
                             Cancel
                         </AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600">
+                        <AlertDialogAction onClick={confirmDelete} className="bg-destructive">
                             Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>

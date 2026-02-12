@@ -28,8 +28,8 @@ export function useEducation(ocId: string) {
                 school: item.schoolOrCollege || "",
                 subs: item.subjects || "",
                 board: item.boardOrUniv || "",
-                marks: item.totalPercent ? item.totalPercent.toString() : "",
-                grade: "",
+                marks: item.totalPercent ?? "",
+                grade: item.grade || "",
             }));
 
             setEducation(formatted);

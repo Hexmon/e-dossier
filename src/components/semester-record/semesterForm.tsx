@@ -277,8 +277,8 @@ export default function SemesterForm() {
                 onClick={() => setActiveSemester(sem)}
                 className={`px-4 py-2 rounded-t-lg font-medium ${
                   activeSemester === sem
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-foreground"
                 }`}
               >
                 {sem}
@@ -294,29 +294,29 @@ export default function SemesterForm() {
             </div>
 
             {loading ? (
-              <p className="text-center text-sm text-gray-500">Loading...</p>
+              <p className="text-center text-sm text-muted-foreground">Loading...</p>
             ) : isEditingRemarks ? (
               <div className="space-y-4">
-                <div className="overflow-x-auto border border-gray-300 rounded-lg">
+                <div className="overflow-x-auto border border-border rounded-lg">
                   <table className="w-full">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                       <tr>
-                        <th className="border border-gray-300 px-4 py-2 text-left">S.No</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Subject</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Max Marks</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Marks Scored</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
+                        <th className="border border-border px-4 py-2 text-left">S.No</th>
+                        <th className="border border-border px-4 py-2 text-left">Subject</th>
+                        <th className="border border-border px-4 py-2 text-left">Max Marks</th>
+                        <th className="border border-border px-4 py-2 text-left">Marks Scored</th>
+                        <th className="border border-border px-4 py-2 text-left">Remarks</th>
                       </tr>
                     </thead>
                     <tbody>
                       {derivedRows.map((row, idx) => {
                         const isCdr = row.subjectKey === "cdr_marks";
                         return (
-                          <tr key={row.subjectKey} className="hover:bg-gray-50 border-b border-gray-300">
-                            <td className="border border-gray-300 px-4 py-2">{idx + 1}</td>
-                            <td className="border border-gray-300 px-4 py-2">{row.subjectLabel}</td>
-                            <td className="border border-gray-300 px-4 py-2">{row.maxMarks}</td>
-                            <td className="border border-gray-300 px-4 py-2">
+                          <tr key={row.subjectKey} className="hover:bg-muted/40 border-b border-border">
+                            <td className="border border-border px-4 py-2">{idx + 1}</td>
+                            <td className="border border-border px-4 py-2">{row.subjectLabel}</td>
+                            <td className="border border-border px-4 py-2">{row.maxMarks}</td>
+                            <td className="border border-border px-4 py-2">
                               {isCdr ? (
                                 <Input
                                   value={cdrMarks}
@@ -343,11 +343,11 @@ export default function SemesterForm() {
                                       : ""
                                   }
                                   readOnly
-                                  className="w-full bg-gray-50"
+                                  className="w-full bg-muted/40"
                                 />
                               )}
                             </td>
-                            <td className="border border-gray-300 px-4 py-2">
+                            <td className="border border-border px-4 py-2">
                               <Input
                                 value={remarksMap[row.subjectKey] ?? ""}
                                 onChange={(e) => handleRemarkChange(row.subjectKey, e.target.value)}
@@ -424,19 +424,19 @@ export default function SemesterForm() {
               <div className="space-y-2">
                 <div>
                   <Label className="font-medium">Platoon Commander</Label>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
                     {localReviews.pc || "-"}
                   </p>
                 </div>
                 <div>
                   <Label className="font-medium">Deputy Commander</Label>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
                     {localReviews.dc || "-"}
                   </p>
                 </div>
                 <div>
                   <Label className="font-medium">Commander</Label>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
                     {localReviews.commander || "-"}
                   </p>
                 </div>

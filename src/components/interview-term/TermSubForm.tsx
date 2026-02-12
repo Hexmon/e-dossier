@@ -355,7 +355,7 @@ export default function TermSubForm({
                     </div>
 
                     {specialInterviews.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
+                        <div className="text-center py-8 text-muted-foreground">
                             No interview records yet. Click \"Add Record\" to create one.
                         </div>
                     )}
@@ -363,7 +363,7 @@ export default function TermSubForm({
                     {specialInterviews.map((interview, index) => (
                         <div
                             key={interview.rowId ?? interview.rowIndex ?? index}
-                            className="border rounded-lg p-4 bg-gray-50 space-y-4"
+                            className="border rounded-lg p-4 bg-muted/40 space-y-4"
                         >
                             <div className="flex justify-between items-start">
                                 <h6 className="font-medium text-md">Record {index + 1}</h6>
@@ -373,7 +373,7 @@ export default function TermSubForm({
                                         onClick={() => removeSpecialInterview(index)}
                                         variant="ghost"
                                         size="sm"
-                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                     >
                                         <X className="h-4 w-4" />
                                     </Button>
@@ -439,9 +439,9 @@ export default function TermSubForm({
                         type="button"
                         onClick={handleEditClick}
                         variant="outline"
-                        className="flex items-center gap-2 bg-blue-950 text-white"
+                        className="flex items-center gap-2 bg-primary text-primary-foreground"
                     >
-                        <Edit className="h-4 w-4 text-white" />
+                        <Edit className="h-4 w-4 text-primary-foreground" />
                         Edit
                     </Button>
                 ) : (

@@ -21,7 +21,13 @@ import {
 import { getAppointments, Appointment } from "@/app/lib/api/appointmentApi";
 import { loginUser } from "@/app/lib/api/authApi";
 import { ApiClientError } from "@/app/lib/apiClient";
+import {
+  clearReturnUrl,
+  readReturnUrl,
+  resolvePostAuthRedirect,
+} from "@/lib/auth-return-url";
 import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
 import { LoginForm } from "../../../types/login";
 
 function LoginPageContent() {
@@ -32,6 +38,7 @@ function LoginPageContent() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [appointmentsFetchError, setAppointmentsFetchError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Use ref to prevent double calls
   const hasFetchedRef = useRef(false);
@@ -128,10 +135,16 @@ function LoginPageContent() {
             password: data.password,
           };
 
-      const response = await loginUser(payload);
+      await loginUser(payload);
 
       toast.success(`Welcome, ${data.appointment}!`);
-      router.push("/dashboard");
+      const redirectTo = resolvePostAuthRedirect({
+        nextParam: searchParams.get("next"),
+        storedReturnUrl: readReturnUrl(),
+        fallback: "/dashboard",
+      });
+      clearReturnUrl();
+      router.push(redirectTo);
     } catch (err: any) {
       console.error("Login error:", err);
 
@@ -149,7 +162,7 @@ function LoginPageContent() {
           } else if (errorType === "invalid_token" || errorMessage === "Unauthorized") {
             toast.error("Session expired. Please login again.");
           } else {
-            toast.error("Invalid credentials. Please check your username and password.");
+            toast.error("Invalid password !!");
           }
         } else {
           toast.error(message || "Login failed. Please try again.");
@@ -307,19 +320,34 @@ function LoginPageContent() {
                 {/* Password */}
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    {...register("password")}
-                    placeholder="Enter password"
-                    required
-                    disabled={shouldDisableOtherFields}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      {...register("password")}
+                      placeholder="Enter password"
+                      required
+                      disabled={shouldDisableOtherFields}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full bg-[var(--primary)] text-white cursor-pointer"
+                  className="w-full bg-[var(--primary)] text-primary-foreground cursor-pointer"
                   disabled={isSubmitting || shouldDisableOtherFields}
                 >
                   {isSubmitting ? "Signing In..." : "Sign In"}
