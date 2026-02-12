@@ -61,7 +61,7 @@ export default function DossierTab({
           const isMilTrgDropdown = isMilTrgTab;
           const showDropdown = isMilTrgTab;
           const isMilTrgActive = isMilTrgTab && (dropdownOpen || currentTab?.value === "mil-trg");
-          const moduleInactiveOverride = dropdownOpen && !isMilTrgTab;
+          const moduleInactiveOverride = isMilTrgActive && !isMilTrgTab;
 
           const TriggerContent = (
             <>
@@ -71,7 +71,7 @@ export default function DossierTab({
                 <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
               )}
 
-              {showDropdown && dropdownOpen && (
+              {showDropdown && isMilTrgActive && (
                 <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-96 rounded-md shadow-lg bg-white border max-h-64 overflow-y-auto">
                   {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
                     const href = to(ocId);
@@ -110,7 +110,7 @@ export default function DossierTab({
             <Link key={value} href={link} className="text-center hover:text-primary">
               <TabsTrigger
                 value={value}
-                className={`relative flex items-center gap-2 border border-border data-[state=inactive]:bg-primary/10 text-primary data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2 transition-colors w-full dropdown-tab-trigger ${moduleInactiveOverride ? "bg-primary/10 border-border" : ""
+                className={`relative flex items-center gap-2 border border-border data-[state=inactive]:bg-primary/10 text-primary data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2 transition-colors w-full dropdown-tab-trigger ${moduleInactiveOverride ? "data-[state=active]:bg-primary/10 data-[state=active]:border-border" : ""
                   }`}
                 onClick={() => setDropdownOpen(false)}
               >
@@ -121,7 +121,7 @@ export default function DossierTab({
             <TabsTrigger
               key={value}
               value={value}
-              className={`relative flex items-center gap-2 border border-border data-[state=inactive]:bg-primary/10 text-primary data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2 transition-colors w-full dropdown-tab-trigger ${moduleInactiveOverride ? "bg-primary/10 border-border" : ""
+              className={`relative flex items-center gap-2 border border-border data-[state=inactive]:bg-primary/10 text-primary data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2 transition-colors w-full dropdown-tab-trigger ${moduleInactiveOverride ? "data-[state=active]:bg-primary/10 data-[state=active]:border-border" : ""
                 }`}
               onClick={() => setDropdownOpen(false)}
             >
