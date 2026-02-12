@@ -165,15 +165,21 @@ export default function DisciplineRecordsPage() {
         // Validate that filled rows have required fields
         const invalidRows = filledRows.filter(row =>
             !row.dateOfOffence || row.dateOfOffence.trim() === "" ||
-            !row.offence || row.offence.trim() === ""
+            !row.offence || row.offence.trim() === "" ||
+            !row.byWhomAwarded || row.byWhomAwarded.trim() === ""
         );
 
         if (invalidRows.length > 0) {
-            toast.error("Date of Offence and Offence are required for all records");
+            toast.error("Date of Offence, Offence, and By Whom Awarded are required for all records");
             return;
         }
 
-        await saveRecords(activeTab + 1, filledRows);
+        const normalizedRows = filledRows.map((row) => ({
+            ...row,
+            numberOfPunishments: row.punishmentAwarded ? (row.numberOfPunishments || "1") : "0",
+        }));
+
+        await saveRecords(activeTab + 1, normalizedRows);
 
         // Clear Redux cache after successful save
         dispatch(clearDisciplineForm(ocId));
@@ -189,14 +195,16 @@ export default function DisciplineRecordsPage() {
     };
 
     const handleUpdate = async (idToUpdate: string, payload: Partial<DisciplineRow>) => {
+        const normalizedCount = payload.punishmentAwarded
+            ? Number(payload.numberOfPunishments ?? 1)
+            : 0;
+
         await updateRecord(idToUpdate, {
             dateOfOffence: payload.dateOfOffence,
             offence: payload.offence,
             punishmentAwarded: payload.punishmentAwarded,
             punishmentId: payload.punishmentId,
-            numberOfPunishments: payload.numberOfPunishments !== undefined
-                ? Number(payload.numberOfPunishments)
-                : undefined,
+            numberOfPunishments: normalizedCount,
             awardedOn: payload.dateOfAward,
             awardedBy: payload.byWhomAwarded,
             pointsDelta:
@@ -227,7 +235,7 @@ export default function DisciplineRecordsPage() {
                     offence: "",
                     punishmentAwarded: "",
                     punishmentId: "",
-                    numberOfPunishments: "1",
+                    numberOfPunishments: "0",
                     dateOfAward: "",
                     byWhomAwarded: "",
                     negativePts: "",

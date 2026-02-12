@@ -238,20 +238,6 @@ export const managementCard = [
     color: "warning"
   },
   {
-    title: "Course Management",
-    description: "Create, update, and track training courses",
-    icon: BookOpen,
-    to: "/dashboard/genmgmt/coursemgmt",
-    color: "info"
-  },
-  {
-    title: "Subject Management",
-    description: "Organize and maintain subjects within courses",
-    icon: BookOpen,
-    to: "/dashboard/genmgmt/subjectmgmt",
-    color: "info"
-  },
-  {
     title: "User Management",
     description: "Manage user roles, permissions, and profiles",
     icon: Users,
@@ -285,13 +271,6 @@ export const managementCard = [
     icon: UserCheck,
     to: "/dashboard/genmgmt/instructors",
     color: "success"
-  },
-  {
-    title: "Offerings Management",
-    description: "Create, update, and manage course offerings efficiently",
-    icon: BookOpenCheck,
-    to: "/dashboard/genmgmt/offerings",
-    color: "info"
   },
   // {
   //   title: "Relegation Management",
@@ -352,6 +331,30 @@ export const managementCard = [
   //   color: "muted"
   // }
 
+];
+
+export const academicManagementCards = [
+  {
+    title: "Course Management",
+    description: "Create, update, and track training courses",
+    icon: BookOpen,
+    to: "/dashboard/genmgmt/coursemgmt",
+    color: "info"
+  },
+  {
+    title: "Subject Management",
+    description: "Organize and maintain subjects within courses",
+    icon: BookOpen,
+    to: "/dashboard/genmgmt/subjectmgmt",
+    color: "info"
+  },
+  {
+    title: "Offerings Management",
+    description: "Create, update, and manage course offerings efficiently",
+    icon: BookOpenCheck,
+    to: "/dashboard/genmgmt/offerings",
+    color: "info"
+  },
 ];
 
 export const moduleManagementCard = [

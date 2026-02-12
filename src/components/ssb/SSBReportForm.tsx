@@ -62,6 +62,8 @@ export function SSBReportForm({
     // Watch form values for auto-save
     const formValues = watch();
     const debouncedFormValues = useDebounce(formValues, 500);
+    const ratingOptions = Object.values(ratingMap);
+    const currentRating = formValues.rating || "";
 
     // ---------------------------
     // PRELOAD FORM DATA - SMART MERGE
@@ -202,28 +204,30 @@ export function SSBReportForm({
                                         disabled={!isEditing}
                                         className="flex-1"
                                     />
-                                    <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="sm"
-                                        disabled={!isEditing}
-                                        onClick={() => removePositive(idx)}
-                                    >
-                                        Remove
-                                    </Button>
+                                    {isEditing && (
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => removePositive(idx)}
+                                        >
+                                            Remove
+                                        </Button>
+                                    )}
                                 </div>
                             ))}
 
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="hover:bg-success hover:text-primary-foreground"
-                                size="sm"
-                                disabled={!isEditing}
-                                onClick={() => addPositive({ trait: "" })}
-                            >
-                                + Add Positive
-                            </Button>
+                            {isEditing && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="hover:bg-success hover:text-primary-foreground"
+                                    size="sm"
+                                    onClick={() => addPositive({ trait: "" })}
+                                >
+                                    + Add Positive
+                                </Button>
+                            )}
                         </div>
                     </div>
 
@@ -256,28 +260,30 @@ export function SSBReportForm({
                                         disabled={!isEditing}
                                         className="flex-1"
                                     />
-                                    <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="sm"
-                                        disabled={!isEditing}
-                                        onClick={() => removeNegative(idx)}
-                                    >
-                                        Remove
-                                    </Button>
+                                    {isEditing && (
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => removeNegative(idx)}
+                                        >
+                                            Remove
+                                        </Button>
+                                    )}
                                 </div>
                             ))}
 
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="hover:bg-success hover:text-primary-foreground"
-                                size="sm"
-                                disabled={!isEditing}
-                                onClick={() => addNegative({ trait: "" })}
-                            >
-                                + Add Negative
-                            </Button>
+                            {isEditing && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="hover:bg-success hover:text-primary-foreground"
+                                    size="sm"
+                                    onClick={() => addNegative({ trait: "" })}
+                                >
+                                    + Add Negative
+                                </Button>
+                            )}
                         </div>
                     </div>
 
@@ -300,16 +306,34 @@ export function SSBReportForm({
                 {/* RATING */}
                 <div className="mb-6">
                     <label className="text-sm font-semibold">Predictive Rating</label>
-                    <select
-                        {...register("rating")}
-                        disabled={!isEditing}
-                        className="w-full rounded-md border p-2 mt-1"
-                    >
-                        <option value="">Select Rating</option>
-                        {Object.keys(reverseRatingMap).map((key) => (
-                            <option key={key} value={key}>{key}</option>
-                        ))}
-                    </select>
+                    {isEditing ? (
+                        <select
+                            {...register("rating")}
+                            className="w-full rounded-md border p-2 mt-1"
+                        >
+                            <option value="">Select Rating</option>
+                            {Object.keys(reverseRatingMap).map((key) => (
+                                <option key={key} value={key}>{key}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            {ratingOptions.map((label) => {
+                                const isActive = label === currentRating;
+                                return (
+                                    <span
+                                        key={label}
+                                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${isActive
+                                            ? "border-primary bg-primary/10 text-primary"
+                                            : "border-muted text-muted-foreground"
+                                            }`}
+                                    >
+                                        {label}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 {/* IMPROVEMENT */}
@@ -330,7 +354,7 @@ export function SSBReportForm({
                             type="button"
                             onClick={() => setIsEditing(true)}
                         >
-                            Edit
+                            Edit & Add More
                         </Button>
                     ) : (
                         <>

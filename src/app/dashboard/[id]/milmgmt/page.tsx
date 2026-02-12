@@ -13,7 +13,7 @@ import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import { militaryTrainingCards, miltrgTabs } from "@/config/app.config";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
+import { Search, Settings } from "lucide-react";
 
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Marquee from "@/components/Dashboard/Marquee";
@@ -125,12 +125,17 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
       >
         <TabsContent value="basic-details" className="space-y-6">
           <div className="flex items-center justify-end">
-            <Input
-              placeholder="Search modules..."
-              value={basicSearch}
-              onChange={(e) => setBasicSearch(e.target.value)}
-              className="w-64"
-            />
+            <div className="relative w-64">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md bg-primary/10 p-1">
+                <Search className="h-4 w-4 text-primary" />
+              </span>
+              <Input
+                placeholder="Search modules..."
+                value={basicSearch}
+                onChange={(e) => setBasicSearch(e.target.value)}
+                className="w-full pl-10"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
             {basicCards.map((card, index) => {
@@ -160,8 +165,8 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                     </p>
 
                     <a href={url}>
-                      <Button type="button" variant="default" className="w-full">
-                        Access Module →
+                      <Button type="button" variant="default" className="w-full cursor-pointer">
+                        Access Module {"->"}
                       </Button>
                     </a>
                   </CardContent>
@@ -176,12 +181,17 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
 
         <TabsContent value="mil-trg" className="space-y-6">
           <div className="flex items-center justify-end">
-            <Input
-              placeholder="Search modules..."
-              value={miltrgSearch}
-              onChange={(e) => setMiltrgSearch(e.target.value)}
-              className="w-64"
-            />
+            <div className="relative w-64">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md bg-primary/10 p-1">
+                <Search className="h-4 w-4 text-primary" />
+              </span>
+              <Input
+                placeholder="Search modules..."
+                value={miltrgSearch}
+                onChange={(e) => setMiltrgSearch(e.target.value)}
+                className="w-full pl-10"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
             {miltrgCards.map((card, index) => {
@@ -211,8 +221,8 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                     </p>
 
                     <a href={url}>
-                      <Button type="button" variant="default" className="w-full">
-                        Access Module →
+                      <Button type="button" variant="default" className="w-full cursor-pointer">
+                        Access Module {"->"}
                       </Button>
                     </a>
                   </CardContent>
@@ -254,8 +264,8 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                     </p>
 
                     <a href={url}>
-                      <Button type="button" variant="default" className="w-full">
-                        Access Module →
+                      <Button type="button" variant="default" className="w-full cursor-pointer">
+                        Access Module {"->"}
                       </Button>
                     </a>
                   </CardContent>
