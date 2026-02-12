@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import TechSeminarForm from "./TechSeminarForm";
 import MiniProjectForm from "./MiniProjectForm";
 import { SemesterTableI, SemesterTableII, SemesterTableIII, SemesterTableIV, SemesterTableV_Mech, SemesterTableVI_Mech } from "./SemesterTables";
@@ -10,9 +10,10 @@ type SubTab = "mech" | "tech" | "mini" | "single";
 interface AcademicsTabsProps {
     ocId: string;
     courseId: string;
+    canEdit?: boolean;
 }
 
-export default function AcademicsTabs({ ocId, courseId }: AcademicsTabsProps) {
+export default function AcademicsTabs({ ocId, courseId, canEdit = false }: AcademicsTabsProps) {
     const [selectedTerm, setSelectedTerm] = useState(1);
     const [subTab, setSubTab] = useState<Record<number, SubTab>>({
         1: "single",
@@ -31,6 +32,18 @@ export default function AcademicsTabs({ ocId, courseId }: AcademicsTabsProps) {
         5: "V",
         6: "VI"
     };
+
+    useEffect(() => {
+        setSelectedTerm(1);
+        setSubTab({
+            1: "single",
+            2: "single",
+            3: "single",
+            4: "single",
+            5: "mech",
+            6: "mech",
+        });
+    }, [ocId, courseId]);
 
     return (
         <div>
@@ -88,15 +101,15 @@ export default function AcademicsTabs({ ocId, courseId }: AcademicsTabsProps) {
             </div>
 
             <div>
-                {selectedTerm === 1 && <SemesterTableI ocId={ocId} courseId={courseId} />}
-                {selectedTerm === 2 && <SemesterTableII ocId={ocId} courseId={courseId} />}
-                {selectedTerm === 3 && <SemesterTableIII ocId={ocId} courseId={courseId} />}
-                {selectedTerm === 4 && <SemesterTableIV ocId={ocId} courseId={courseId} />}
+                {selectedTerm === 1 && <SemesterTableI ocId={ocId} courseId={courseId} canEdit={canEdit} />}
+                {selectedTerm === 2 && <SemesterTableII ocId={ocId} courseId={courseId} canEdit={canEdit} />}
+                {selectedTerm === 3 && <SemesterTableIII ocId={ocId} courseId={courseId} canEdit={canEdit} />}
+                {selectedTerm === 4 && <SemesterTableIV ocId={ocId} courseId={courseId} canEdit={canEdit} />}
 
-                {selectedTerm === 5 && subTab[5] === "mech" && <SemesterTableV_Mech ocId={ocId} courseId={courseId} />}
+                {selectedTerm === 5 && subTab[5] === "mech" && <SemesterTableV_Mech ocId={ocId} courseId={courseId} canEdit={canEdit} />}
                 {selectedTerm === 5 && subTab[5] === "tech" && <TechSeminarForm ocId={ocId} />}
 
-                {selectedTerm === 6 && subTab[6] === "mech" && <SemesterTableVI_Mech ocId={ocId} courseId={courseId} />}
+                {selectedTerm === 6 && subTab[6] === "mech" && <SemesterTableVI_Mech ocId={ocId} courseId={courseId} canEdit={canEdit} />}
                 {selectedTerm === 6 && subTab[6] === "mini" && <MiniProjectForm ocId={ocId} />}
             </div>
         </div>

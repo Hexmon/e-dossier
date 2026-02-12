@@ -115,13 +115,15 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     try {
         const adminCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
-        const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
+        const searchParams = new URL(req.url).searchParams;
+        const hard = (searchParams.get('hard') || '').toLowerCase() === 'true'
+            || (searchParams.get('mode') || '').toLowerCase() === 'hard';
         const assignedOcCount = await countAssignedOCsForCourse(courseId);
 
         if (assignedOcCount > 0) {
             return json.conflict(
-                `Cannot delete course. ${assignedOcCount} OC(s) are already assigned to this course.`,
-                { ocCount: assignedOcCount },
+                `Cannot delete course: Officers are enrolled/assigned to this course (${assignedOcCount} OC(s)).`,
+                { ocCount: assignedOcCount, reason: 'COURSE_IN_USE' },
             );
         }
 

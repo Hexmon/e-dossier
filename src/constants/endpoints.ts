@@ -24,8 +24,16 @@ export const endpoints = {
         disciplineById: (id: string) => `/api/v1/admin/discipline/${id}`,
         courseOfferings: (courseId: string) =>
             `/api/v1/admin/courses/${courseId}/offerings`,
+        courseOfferingsAssign: (courseId: string) =>
+            `/api/v1/admin/courses/${courseId}/offerings/assign`,
         courseOfferingById: (courseId: string, offeringId: string) =>
             `/api/v1/admin/courses/${courseId}/offerings/${offeringId}`,
+        relegation: {
+            ocOptions: "/api/v1/admin/relegation/ocs",
+            nextCourses: "/api/v1/admin/relegation/courses",
+            presign: "/api/v1/admin/relegation/presign",
+            transfer: "/api/v1/admin/relegation/transfer",
+        },
         trainingCamps: {
             list: "/api/v1/admin/training-camps",
             getById: (campId: string) => `/api/v1/admin/training-camps/${campId}`,

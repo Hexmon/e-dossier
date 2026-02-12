@@ -8,12 +8,14 @@ interface DynamicSemesterTableProps {
     ocId: string;
     courseId: string;
     semester: number;
+    canEdit?: boolean;
 }
 
 export default function DynamicSemesterTable({
     ocId,
     courseId,
-    semester
+    semester,
+    canEdit = false,
 }: DynamicSemesterTableProps) {
     const { loading, offerings } = useOfferings(courseId);
     const [rows, setRows] = useState<AcademicRow[]>([]);
@@ -21,13 +23,6 @@ export default function DynamicSemesterTable({
 
     useEffect(() => {
         const loadOfferings = () => {
-            if (!Array.isArray(offerings)) {
-                console.error("Expected array from offerings, got:", offerings);
-                return;
-            }
-
-            console.log("All offerings:", offerings);
-
             // Filter offerings by semester and ensure they have the subject property
             const semesterOfferings = offerings.filter(
                 (offering: Offering) => {
@@ -36,10 +31,7 @@ export default function DynamicSemesterTable({
                 }
             );
 
-            console.log(`Semester ${semester} offerings:`, semesterOfferings);
-
             if (semesterOfferings.length === 0) {
-                console.warn(`No offerings found for semester ${semester}`);
                 setRows([]);
                 setTotalCredits(0);
                 return;
@@ -55,7 +47,6 @@ export default function DynamicSemesterTable({
                 practicalCredit: offering.includePractical ? offering.practicalCredits : null,
             }));
 
-            console.log("Transformed rows:", transformedRows);
             setRows(transformedRows);
 
             // Calculate total credits with null checks
@@ -89,7 +80,7 @@ export default function DynamicSemesterTable({
     if (rows.length === 0) {
         return (
             <div className="p-4 text-center text-muted-foreground">
-                No subjects found for Semester {semester}
+                No subjects are configured for Semester {semester} in the current course offerings.
             </div>
         );
     }
@@ -101,6 +92,7 @@ export default function DynamicSemesterTable({
             rows={rows}
             totalCredits={totalCredits}
             title={`Semester ${semester}`}
+            canEdit={canEdit}
         />
     );
 }

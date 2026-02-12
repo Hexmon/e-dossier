@@ -3,7 +3,7 @@ import { courses } from '@/app/db/schema/training/courses';
 import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
 import { subjects } from '@/app/db/schema/training/subjects';
 import { ocCadets } from '@/app/db/schema/training/oc';
-import { and, eq, ilike, isNull, like, ne, sql } from 'drizzle-orm';
+import { and, eq, ilike, isNull, like, sql } from 'drizzle-orm';
 
 export type CourseRow = typeof courses.$inferSelect;
 
@@ -105,10 +105,7 @@ export async function countAssignedOCsForCourse(courseId: string): Promise<numbe
     const [row] = await db
         .select({ count: sql<number>`count(*)` })
         .from(ocCadets)
-        .where(and(
-            eq(ocCadets.courseId, courseId),
-            ne(ocCadets.status, 'INACTIVE'),
-        ));
+        .where(eq(ocCadets.courseId, courseId));
 
     return Number(row?.count ?? 0);
 }

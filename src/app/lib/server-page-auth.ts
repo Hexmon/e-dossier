@@ -54,3 +54,13 @@ export async function requireAdminDashboardAccess(): Promise<AdminPageAuthContex
 
   return authContext;
 }
+
+export async function requireNonAdminDashboardAccess(): Promise<AdminPageAuthContext> {
+  const authContext = await requireDashboardAccess();
+
+  if (authContext.roleGroup !== "OTHER_USERS") {
+    redirect("/dashboard");
+  }
+
+  return authContext;
+}

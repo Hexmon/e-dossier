@@ -61,6 +61,30 @@ export interface OfferingUpdate {
     instructors?: OfferingInstructor[];
 }
 
+export interface AssignOfferingsRequest {
+    sourceCourseId: string;
+    mode: "copy";
+    semester?: number;
+    subjectIds?: string[];
+}
+
+export interface AssignOfferingsItem {
+    subjectId: string;
+    semester: number;
+    reason?: "duplicate";
+}
+
+export interface AssignOfferingsResponse {
+    message: string;
+    sourceCourseId: string;
+    targetCourseId: string;
+    createdCount: number;
+    skippedCount: number;
+    created: AssignOfferingsItem[];
+    skipped: Array<AssignOfferingsItem & { reason: "duplicate" }>;
+    conflicts: Array<AssignOfferingsItem & { reason: "duplicate" }>;
+}
+
 export interface ListOfferingsParams {
     semester?: number;
     includeDeleted?: boolean;
@@ -181,4 +205,14 @@ export async function deleteOffering(
     offeringId: string
 ): Promise<{ id: string; message: string }> {
     return await api.delete(endpoints.admin.courseOfferingById(courseId, offeringId));
+}
+
+export async function assignOfferings(
+    targetCourseId: string,
+    payload: AssignOfferingsRequest
+): Promise<AssignOfferingsResponse> {
+    return await api.post<AssignOfferingsResponse, AssignOfferingsRequest>(
+        endpoints.admin.courseOfferingsAssign(targetCourseId),
+        payload
+    );
 }
