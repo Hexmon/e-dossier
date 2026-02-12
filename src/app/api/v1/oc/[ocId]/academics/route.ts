@@ -1,7 +1,6 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists } from '../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
-import { authorizeOcAccess } from '@/lib/authorization';
 import { getOcAcademics } from '@/app/services/oc-academics';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -9,8 +8,8 @@ import type { AuditNextRequest } from '@/lib/audit';
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const { ocId } = await parseParam({ params }, OcIdParam);
-        const authCtx = await authorizeOcAccess(req, ocId);
         await ensureOcExists(ocId);
+        const authCtx = await mustBeAuthed(req);
         const sp = new URL(req.url).searchParams;
         const semester = sp.get('semester') ? Number(sp.get('semester')) : undefined;
         const semesters = await getOcAcademics(ocId, { semester });

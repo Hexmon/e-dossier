@@ -12,7 +12,7 @@ import CourseFormModal from "@/components/courses/CourseFormModal";
 import CourseViewModal from "@/components/courses/CourseViewModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ocTabs } from "@/config/app.config";
+import { academicsTabs } from "@/config/app.config";
 import { useCourses, type UICourse } from "@/hooks/useCourses";
 
 export default function CourseManagement() {
@@ -90,7 +90,7 @@ export default function CourseManagement() {
               ]}
             />
 
-            <GlobalTabs tabs={ocTabs} defaultValue="course-mgmt">
+            <GlobalTabs tabs={academicsTabs} defaultValue="course-mgmt">
               <TabsContent value="course-mgmt">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Course Sections</h2>

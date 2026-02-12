@@ -37,7 +37,12 @@ export function useUsers() {
             toast.success("User added successfully");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to add user");
+            const messages = Array.isArray(error?.extras?.messages) ? error.extras.messages : [];
+            const detail =
+                messages.length > 0
+                    ? messages.join(" ")
+                    : error?.message || error?.extras?.detail || "Failed to add user";
+            toast.error(detail);
         },
     });
 

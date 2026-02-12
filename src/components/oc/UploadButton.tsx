@@ -1,10 +1,19 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { toDisplayDMY } from "@/app/lib/dateUtils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export type RawRow = Record<string, unknown>;
 export type UploadedPreviewRow = {
@@ -25,6 +34,13 @@ type Props = {
 
 export default function UploadButton({ disabled, onParsed, onParsingStateChange, label = "Upload CSV / Excel" }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+
+  const openAlert = (message: string) => {
+    setAlertMessage(message);
+    setAlertOpen(true);
+  };
 
   const norm = (s: string) => s.toLowerCase().replace(/['`’]/g, "'").replace(/[^a-z0-9]+/g, " ").trim();
   const pick = (row: RawRow, aliases: string[]): unknown => {
@@ -87,7 +103,7 @@ export default function UploadButton({ disabled, onParsed, onParsingStateChange,
       reader.readAsArrayBuffer(file);
     } else {
       onParsingStateChange?.(false);
-      alert("Unsupported file type! Please upload CSV or Excel.");
+      openAlert("Unsupported file type! Please upload CSV or Excel.");
     }
 
     // reset so same file can be chosen again
@@ -106,6 +122,18 @@ export default function UploadButton({ disabled, onParsed, onParsingStateChange,
       <Button className="bg-success cursor-pointer" disabled={disabled} onClick={() => inputRef.current?.click()}>
         {label}
       </Button>
+
+      <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Notice</AlertDialogTitle>
+            <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

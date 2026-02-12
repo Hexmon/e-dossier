@@ -41,6 +41,7 @@ import { positions } from '@/app/db/schema/auth/positions';
 import { and, eq, ilike, inArray, isNull, or, sql, desc } from 'drizzle-orm';
 
 type ListOpts = {
+    id?: string;
     q?: string;
     courseId?: string;
     active?: boolean;
@@ -1183,9 +1184,10 @@ export async function deleteCreditForExcellence(
 }
 
 export async function listOCsBasic(opts: ListOpts = {}) {
-    const { q, courseId, active, limit = 200, offset = 0 } = opts;
+    const { id, q, courseId, active, limit = 200, offset = 0 } = opts;
 
     const wh: any[] = [];
+    if (id && id.trim()) wh.push(eq(ocCadets.id, id.trim()));
     if (q && q.trim()) {
         const pattern = likeEscape(q.trim());
         wh.push(or(ilike(ocCadets.name, pattern), ilike(ocCadets.ocNo, pattern)));

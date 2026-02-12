@@ -186,6 +186,17 @@ export default function MedicalInfoFormComponent({
                 </Button>
             </div>
 
+            <div className="flex flex-col items-center mt-4 gap-2">
+                <Button type="submit" className="w-64 bg-primary">
+                    Submit Medical Info
+                </Button>
+
+                {/* Show auto-save indicator */}
+                <p className="text-sm text-muted-foreground text-center">
+                    * Changes are automatically saved
+                </p>
+            </div>
+
             <div className="mt-6 space-y-4">
                 <Textarea
                     {...register("medicalHistory")}
@@ -240,17 +251,6 @@ export default function MedicalInfoFormComponent({
                         Edit Details
                     </Button>
                 )}
-            </div>
-
-            <div className="flex flex-col items-center mt-4 gap-2">
-                <Button type="submit" className="w-64 bg-primary">
-                    Submit Medical Info
-                </Button>
-
-                {/* Show auto-save indicator */}
-                <p className="text-sm text-muted-foreground text-center">
-                    * Changes are automatically saved
-                </p>
             </div>
         </form>
     );

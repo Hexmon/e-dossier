@@ -17,7 +17,7 @@ import { useCourses } from "@/hooks/useCourses";
 import { useOfferings } from "@/hooks/useOfferings";
 import { Subject, SubjectCreate } from "@/app/lib/api/subjectsApi";
 import { Input } from "@/components/ui/input";
-import { ocTabs } from "@/config/app.config";
+import { academicsTabs } from "@/config/app.config";
 import { toast } from "sonner";
 import {
     Select,
@@ -164,7 +164,7 @@ export default function SubjectManagementPage() {
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="subject-mgmt">
+                        <GlobalTabs tabs={academicsTabs} defaultValue="subject-mgmt">
                             <TabsContent value="subject-mgmt" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">Subject List</h2>

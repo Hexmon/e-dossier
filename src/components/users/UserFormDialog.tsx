@@ -15,6 +15,7 @@ interface Props {
     setValue: UseFormSetValue<User>;
     editingUser: User | null;
     isActive: boolean;
+    usernameValue: string;
 }
 
 export default function UserFormDialog({
@@ -25,7 +26,10 @@ export default function UserFormDialog({
     setValue,
     editingUser,
     isActive,
+    usernameValue,
 }: Props) {
+    const usernameTooShort = usernameValue.trim().length > 0 && usernameValue.trim().length < 3;
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
@@ -35,7 +39,11 @@ export default function UserFormDialog({
 
                 <form onSubmit={onSubmit} className="space-y-3">
 
-                    <Input placeholder="Username" {...register("username")} />
+                    <Input
+                        placeholder="Username"
+                        {...register("username")}
+                        className={usernameTooShort ? "border-red-600 border-dotted focus-visible:ring-red-600" : undefined}
+                    />
                     <Input placeholder="Full Name" {...register("name")} />
                     <Input placeholder="Email" {...register("email")} />
                     <Input placeholder="Phone" {...register("phone")} />

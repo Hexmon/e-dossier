@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { catOptionMarks, catOptions } from "@/constants/app.constants";
 
 import type { cfeFormData, cfeRow } from "@/types/cfe";
@@ -31,6 +40,13 @@ export default function CfeForm({
     onClear
 }: Props) {
     const dispatch = useDispatch();
+    const [alertOpen, setAlertOpen] = useState(false);
+    const [alertMessage, setAlertMessage] = useState("");
+
+    const openAlert = (message: string) => {
+        setAlertMessage(message);
+        setAlertOpen(true);
+    };
 
     const form = useForm<cfeFormData>({
         defaultValues,
@@ -77,7 +93,7 @@ export default function CfeForm({
         });
 
         if (filledRows.length === 0) {
-            alert("Please fill in at least one CFE record with data");
+            openAlert("Please fill in at least one CFE record with data");
             return;
         }
 
@@ -88,7 +104,7 @@ export default function CfeForm({
         );
 
         if (invalidRows.length > 0) {
-            alert("Category and Marks are required for all records");
+            openAlert("Category and Marks are required for all records");
             return;
         }
 
@@ -191,6 +207,18 @@ export default function CfeForm({
             <p className="text-sm text-muted-foreground text-center mt-2">
                 * Changes are automatically saved
             </p>
+
+            <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Notice</AlertDialogTitle>
+                        <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction>OK</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </form>
     );
 }

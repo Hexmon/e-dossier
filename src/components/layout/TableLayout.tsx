@@ -429,6 +429,17 @@ export function UniversalTable<T extends Record<string, any>>({
                                                     }
 
                                                     const IconComponent = action.icon;
+                                                    const actionKey = action.key?.toLowerCase?.() ?? "";
+                                                    const actionLabel = action.label?.toLowerCase?.() ?? "";
+                                                    const iconOnly =
+                                                        (actionKey === "edit" || actionKey === "delete" || actionKey === "view" ||
+                                                            actionLabel === "edit" || actionLabel === "delete" || actionLabel === "view") &&
+                                                        !!IconComponent;
+                                                    const showLabel = !iconOnly;
+                                                    const iconClass = `h-3 w-3${showLabel ? " mr-1" : ""}`;
+                                                    const buttonTitle = iconOnly ? action.label : undefined;
+                                                    const buttonClass =
+                                                        `${action.className ?? ""} ${iconOnly ? "px-2" : ""}`.trim();
                                                     return (
                                                         <Button
                                                             key={action.key}
@@ -436,10 +447,13 @@ export function UniversalTable<T extends Record<string, any>>({
                                                             variant={action.variant || 'outline'}
                                                             size={action.size || 'sm'}
                                                             onClick={() => action.handler(row, index)}
-                                                            className={action.className}
+                                                            className={buttonClass || undefined}
+                                                            title={buttonTitle}
+                                                            aria-label={iconOnly ? action.label : undefined}
                                                         >
-                                                            {IconComponent && <IconComponent className="h-3 w-3 mr-1" />}
-                                                            {action.label}
+                                                            {IconComponent && <IconComponent className={iconClass} />}
+                                                            {showLabel && action.label}
+                                                            {iconOnly && <span className="sr-only">{action.label}</span>}
                                                         </Button>
                                                     );
                                                 })}

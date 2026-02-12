@@ -109,6 +109,7 @@ async function GETHandler(req: AuditNextRequest) {
         const authCtx = await requireAuth(req);
         const sp = new URL(req.url).searchParams;
 
+        const id = (sp.get('id') || '').trim() || undefined;
         const q = (sp.get('q') || '').trim() || undefined;
         const courseId = (sp.get('courseId') || '').trim() || undefined;
         const activeOnly = (sp.get('active') || '').toLowerCase() === 'true';
@@ -216,7 +217,7 @@ async function GETHandler(req: AuditNextRequest) {
         const limit = Math.min(parseInt(sp.get('limit') || '200', 10) || 200, 1000);
         const offset = parseInt(sp.get('offset') || '0', 10) || 0;
 
-        const opts = { q, courseId, active: activeOnly, limit, offset };
+        const opts = { id, q, courseId, active: activeOnly, limit, offset };
 
         const writeAccessAudit = async (count: number) => {
             await req.audit.log({
@@ -227,7 +228,7 @@ async function GETHandler(req: AuditNextRequest) {
                 metadata: {
                     description: 'Retrieved OC list via /api/v1/oc',
                     count,
-                    query: { q, courseId, active: activeOnly, limit, offset },
+                    query: { id, q, courseId, active: activeOnly, limit, offset },
                     includeFlags,
                     full: wantFullToggle,
                 },

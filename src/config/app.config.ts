@@ -367,6 +367,13 @@ export const academicManagementCards: ManagementCardConfig[] = [
 
 export const moduleManagementCard: ManagementCardConfig[] = [
   {
+    title: "Academics Management",
+    description: "Manage courses, subjects, and offerings",
+    icon: BookOpen,
+    to: "/dashboard/genmgmt/academics",
+    color: "info"
+  },
+  {
     title: "Relegation Management",
     description: "Monitor, evaluate, and manage student relegation and promotion status",
     icon: ArrowDownUp,
@@ -1291,14 +1298,6 @@ export const managementTabs = [
 
 export const ocTabs = [
   { value: "oc-mgmt", title: "OC Management", icon: Users, link: "/dashboard/genmgmt/ocmgmt" },
-  { value: "course-mgmt", title: "Course Management", icon: FileText, link: "/dashboard/genmgmt/coursemgmt" },
-  {
-    value: "offerings",
-    title: "Offerings Management",
-    icon: Package,
-    action: "offerings" as const,
-  },
-  { value: "subject-mgmt", title: "Subject Management", icon: Book, link: "/dashboard/genmgmt/subjectmgmt" },
   { value: "user-mgmt", title: "User Management", icon: Shield, link: "/dashboard/genmgmt/usersmgmt" },
   {
     value: "approval-mgmt",
@@ -1330,6 +1329,17 @@ export const ocTabs = [
     icon: Users,
     link: "/dashboard/genmgmt/platoon-management",
   }
+];
+
+export const academicsTabs = [
+  { value: "course-mgmt", title: "Course Management", icon: FileText, link: "/dashboard/genmgmt/coursemgmt" },
+  {
+    value: "offerings",
+    title: "Offerings Management",
+    icon: Package,
+    action: "offerings" as const,
+  },
+  { value: "subject-mgmt", title: "Subject Management", icon: Book, link: "/dashboard/genmgmt/subjectmgmt" },
 ];
 
 export const moduleManagementTabs = [
@@ -1371,18 +1381,6 @@ export const ocTabsWithDropdown = [
     title: "OC Management",
     icon: Users,
     link: "/dashboard/genmgmt/ocmgmt"
-  },
-  {
-    value: "course-mgmt",
-    title: "Course Management",
-    icon: FileText,
-    link: "/dashboard/genmgmt/coursemgmt"
-  },
-  {
-    value: "subject-mgmt",
-    title: "Subject Management",
-    icon: Book,
-    link: "/dashboard/genmgmt/subjectmgmt"
   },
   {
     value: "admin-mgmt",
