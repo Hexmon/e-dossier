@@ -94,7 +94,7 @@ export function useCourses() {
 
     const removeCourseMutation = useMutation({
         mutationFn: async (id: string) => {
-            await deleteCourse(id);
+            await deleteCourse(id, { hard: true });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["courses"] });

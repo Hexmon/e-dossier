@@ -94,8 +94,14 @@ export async function updateCourse(
  * Delete a course
  * @param courseId - ID of the course to delete
  */
-export async function deleteCourse(courseId: string): Promise<void> {
-    return api.delete<void>(`${endpoints.course.all}/${courseId}`, { baseURL });
+export async function deleteCourse(
+    courseId: string,
+    opts?: { hard?: boolean }
+): Promise<void> {
+    return api.delete<void>(`${endpoints.course.all}/${courseId}`, {
+        baseURL,
+        query: opts?.hard ? { hard: "true" } : undefined,
+    });
 }
 
 export async function fetchCourseById(courseId: string) {
