@@ -3,7 +3,7 @@ import { courses } from '@/app/db/schema/training/courses';
 import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
 import { subjects } from '@/app/db/schema/training/subjects';
 import { ocCadets } from '@/app/db/schema/training/oc';
-import { and, eq, ilike, isNull, like, sql } from 'drizzle-orm';
+import { and, eq, ilike, isNull, like, ne, sql } from 'drizzle-orm';
 
 export type CourseRow = typeof courses.$inferSelect;
 
@@ -99,6 +99,18 @@ export async function hardDeleteCourse(id: string): Promise<{ before: CourseRow 
         await tx.delete(courses).where(eq(courses.id, id));
         return { before };
     });
+}
+
+export async function countAssignedOCsForCourse(courseId: string): Promise<number> {
+    const [row] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ocCadets)
+        .where(and(
+            eq(ocCadets.courseId, courseId),
+            ne(ocCadets.status, 'INACTIVE'),
+        ));
+
+    return Number(row?.count ?? 0);
 }
 
 export async function listCourseOfferings(courseId: string, semester?: number) {

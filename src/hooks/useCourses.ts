@@ -100,8 +100,8 @@ export function useCourses() {
             queryClient.invalidateQueries({ queryKey: ["courses"] });
             toast.success("Course deleted successfully");
         },
-        onError: () => {
-            toast.error("Failed to delete course");
+        onError: (error: any) => {
+            toast.error(error?.message || "Failed to delete course");
         },
     });
 
