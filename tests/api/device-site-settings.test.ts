@@ -68,6 +68,11 @@ beforeEach(() => {
     roles: ["ADMIN"],
     claims: {},
   } as Awaited<ReturnType<typeof authz.requireAdmin>>);
+  vi.mocked(authz.requireAuth).mockResolvedValue({
+    userId: "user-1",
+    roles: ["PLATOON_COMMANDER"],
+    claims: {},
+  } as Awaited<ReturnType<typeof authz.requireAuth>>);
 });
 
 describe("Admin device site settings API", () => {
@@ -241,7 +246,7 @@ describe("Admin device site settings API", () => {
 });
 
 describe("Legacy /api/v1/settings/device-site alias", () => {
-  it("GET delegates to admin handlers", async () => {
+  it("GET allows authenticated users", async () => {
     const req = makeJsonRequest({ method: "GET", path: `${legacyPath}?deviceId=device-1234` });
     const res = await getLegacySettings(req as any, createRouteContext());
     const body = await res.json();
@@ -250,7 +255,7 @@ describe("Legacy /api/v1/settings/device-site alias", () => {
     expect(body.settings.deviceId).toBe("device-1234");
   });
 
-  it("PUT delegates to admin handlers", async () => {
+  it("PUT allows authenticated users", async () => {
     const req = makeJsonRequest({
       method: "PUT",
       path: legacyPath,

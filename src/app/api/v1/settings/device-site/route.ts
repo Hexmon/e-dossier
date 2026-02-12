@@ -1,7 +1,7 @@
 // Deprecated compatibility alias.
 // Prefer: /api/v1/admin/device-site-settings
 import { withAuditRoute } from "@/lib/audit";
-import { GETHandler, PUTHandler } from "@/app/api/v1/admin/device-site-settings/handlers";
+import { GETHandler, PUTHandler } from "./handlers";
 
 export const runtime = "nodejs";
 
