@@ -111,7 +111,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
               type="button"
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-2 dark:hover:text-primary"
               onClick={() => setSwitchUserOpen(true)}
             >
               <Repeat className="h-4 w-4" />
@@ -122,6 +122,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
                 type="button"
                 variant="outline"
                 size="sm"
+                className="dark:hover:text-primary"
                 onClick={() => setSwitchOcOpen(true)}
               >
                 Switch OC

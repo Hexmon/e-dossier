@@ -305,7 +305,7 @@ export default function OlqAssessment() {
 
     return (
         <div className="space-y-6 p-6">
-            <Card className="rounded-2xl shadow-xl bg-white">
+            <Card className="rounded-2xl shadow-xl bg-card">
                 <CardHeader>
                     <CardTitle className="text-xl font-bold text-center text-primary">
                         Overall Assessment

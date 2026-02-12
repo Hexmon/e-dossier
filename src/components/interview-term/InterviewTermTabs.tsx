@@ -248,7 +248,7 @@ export default function InterviewTermTabs() {
     };
 
     return (
-        <div className="max-w-6xl mx-auto p-6 bg-white rounded-xl shadow">
+        <div className="max-w-6xl mx-auto p-6 bg-card rounded-xl shadow">
             {/* TERM TABS */}
             <div className="mb-4 flex gap-2 justify-center">
                 {renderTermTabs()}

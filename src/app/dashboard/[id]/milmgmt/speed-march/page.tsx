@@ -336,7 +336,7 @@ export default function SpeedMarchPage() {
                     </DropdownMenu>
                 }>
                     <TabsContent value="speed-march">
-                        <Card className="max-w-7xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+                        <Card className="max-w-7xl mx-auto p-6 rounded-2xl shadow-xl bg-card">
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold text-center text-primary">
                                     SPEED MARCH / RUN BACK

@@ -225,7 +225,7 @@ export default function CFEFormPage() {
                     }
                 >
                     <TabsContent value="credit-excellence">
-                        <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow bg-white">
+                        <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow bg-card">
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold text-center">
                                     CREDIT FOR EXCELLENCE (CFE)

@@ -187,6 +187,26 @@
   body {
     @apply bg-background text-foreground;
   }
+  button {
+    @apply cursor-pointer;
+  }
+  .dark input:focus,
+  .dark input:focus-visible,
+  .dark textarea:focus,
+  .dark textarea:focus-visible,
+  .dark select:focus,
+  .dark select:focus-visible,
+  .dark [contenteditable="true"]:focus,
+  .dark [contenteditable="true"]:focus-visible,
+  .dark [data-slot="input"]:focus,
+  .dark [data-slot="input"]:focus-visible,
+  .dark [data-slot="textarea"]:focus,
+  .dark [data-slot="textarea"]:focus-visible {
+    outline: 2px solid var(--muted-foreground);
+    outline-offset: 2px;
+    border-color: var(--muted-foreground);
+    --tw-ring-color: var(--muted-foreground);
+  }
 }
 
 input[type="number"]::-webkit-outer-spin-button,

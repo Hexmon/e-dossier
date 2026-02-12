@@ -200,7 +200,7 @@ export default function OcCampReviews({
   }, [campName]);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+    <div className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-card">
       <div className="flex flex-row items-center justify-between mb-6">
         <h2 className="text-lg font-semibold">
           CAMP REVIEWS
