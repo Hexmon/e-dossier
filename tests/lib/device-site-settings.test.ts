@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  applyDeviceSiteSettingsToDocument,
   clampRefreshIntervalSec,
   resolveAppliedTheme,
   sanitizeDeviceSiteSettings,
@@ -34,5 +35,39 @@ describe("device site settings helpers", () => {
     expect(settings.density).toBe("comfortable");
     expect(settings.refreshIntervalSec).toBe(10);
     expect(settings.timezone).toBe("Asia/Kolkata");
+  });
+
+  it("applies accent tokens on document root", () => {
+    const setAttribute = vi.fn();
+    const setProperty = vi.fn();
+    const toggle = vi.fn();
+
+    vi.stubGlobal("document", {
+      documentElement: {
+        setAttribute,
+        style: { setProperty },
+        classList: { toggle },
+      },
+    });
+
+    vi.stubGlobal("window", {
+      matchMedia: vi.fn(() => ({ matches: false })),
+    });
+
+    const settings = sanitizeDeviceSiteSettings({
+      deviceId: "device-1234",
+      themeMode: "light",
+      accentPalette: "teal",
+    });
+
+    applyDeviceSiteSettingsToDocument(settings);
+
+    expect(setAttribute).toHaveBeenCalledWith("data-accent", "teal");
+    expect(setProperty).toHaveBeenCalledWith("--primary", "hsl(172 66% 45%)");
+    expect(setProperty).toHaveBeenCalledWith("--accent", "hsl(172 55% 38%)");
+    expect(setProperty).toHaveBeenCalledWith("--ring", "hsl(172 66% 45%)");
+    expect(toggle).toHaveBeenCalledWith("dark", false);
+
+    vi.unstubAllGlobals();
   });
 });

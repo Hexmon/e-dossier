@@ -27,6 +27,7 @@ import { termPrefill } from "@/types/wpn-trg";
 import type { RootState } from "@/store";
 import { saveWeaponTrainingForm, clearWeaponTrainingForm } from "@/store/slices/weaponTrainingSlice";
 import Link from "next/link";
+import { resolveTabStateClasses, resolveToneClasses } from "@/lib/theme-color";
 
 export default function WpnTrgPage() {
     const { id } = useParams();
@@ -276,7 +277,7 @@ export default function WpnTrgPage() {
                                 const link = card.to(ocId);
                                 return (
                                     <DropdownMenuItem key={card.title} asChild>
-                                        <Link href={link} className="flex items-center gap-2"><card.icon className={`h-4 w-4 ${card.color}`} />{card.title}</Link>
+                                        <Link href={link} className="flex items-center gap-2"><card.icon className={`h-4 w-4 ${resolveToneClasses(card.color, "text")}`} />{card.title}</Link>
                                     </DropdownMenuItem>
                                 );
                             })}
@@ -298,7 +299,7 @@ export default function WpnTrgPage() {
                                                     setActiveTab(i);
                                                     loadAll();
                                                 }}
-                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === i ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                                className={`px-4 py-2 rounded-t-lg font-medium ${resolveTabStateClasses(activeTab === i)}`}
                                             >
                                                 {t}
                                             </button>

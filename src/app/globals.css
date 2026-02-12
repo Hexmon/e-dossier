@@ -20,6 +20,12 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success-foreground: var(--success-foreground);
+  --color-success: var(--success);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning: var(--warning);
+  --color-info-foreground: var(--info-foreground);
+  --color-info: var(--info);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -42,8 +48,8 @@
   /* ========= BASE COLOR SYSTEM ========= */
   --radius: 0.5rem;
 
-  --background: oklch(0.97 0.015 240); /* #F7F9FC */
-  --foreground: oklch(0.2 0.04 240); /* #1F2937 */
+  --background: oklch(0.97 0.015 240);
+  --foreground: oklch(0.2 0.04 240);
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.2 0.04 240);
@@ -52,25 +58,31 @@
   --popover-foreground: oklch(0.2 0.04 240);
 
   /* ========= MILITARY BLUE PRIMARY ========= */
-  --primary: oklch(0.32 0.18 240); /* #0B3D91 */
+  --primary: oklch(0.32 0.18 240);
   --primary-foreground: oklch(0.985 0 0);
-  --primary-hover: oklch(0.28 0.16 240); /* slightly darker */
+  --primary-hover: oklch(0.28 0.16 240);
 
   /* ========= LIGHT BLUE SECONDARY ========= */
   --secondary: oklch(0.94 0.03 240);
   --secondary-foreground: oklch(0.32 0.18 240);
 
   /* ========= GRAYS ========= */
-  --muted: oklch(0.9 0.02 240); /* #E5E7EB */
-  --muted-foreground: oklch(0.55 0.03 240); /* #6B7280 */
+  --muted: oklch(0.9 0.02 240);
+  --muted-foreground: oklch(0.55 0.03 240);
 
   /* ========= GOLD ACCENT ========= */
-  --accent: oklch(0.78 0.15 90); /* #D4AF37 */
+  --accent: oklch(0.78 0.15 90);
   --accent-foreground: oklch(0.2 0.04 240);
 
   /* ========= OTHERS ========= */
   --destructive: oklch(0.6 0.25 27.325);
   --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.65 0.19 149);
+  --success-foreground: oklch(0.98 0.01 240);
+  --warning: oklch(0.78 0.16 83);
+  --warning-foreground: oklch(0.16 0.03 240);
+  --info: oklch(0.63 0.14 250);
+  --info-foreground: oklch(0.98 0.01 240);
 
   --border: oklch(0.9 0.01 240);
   --input: oklch(0.9 0.01 240);
@@ -104,11 +116,11 @@
   --sidebar-accent-foreground: oklch(0.1 0.02 240);
   --sidebar-border: oklch(0.9 0.01 240);
   --sidebar-ring: oklch(0.5 0.12 240);
-  --primary: oklch(0.32 0.18 240) !important;
-  --primary-foreground: oklch(0.985 0 0) !important;
-  --primary-hover: oklch(0.28 0.16 240) !important;
-  --color-primary: var(--primary) !important;
-  --color-primary-foreground: var(--primary-foreground) !important;
+  --primary: oklch(0.32 0.18 240);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.28 0.16 240);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
   --sidebar: hsl(0 0% 98%);
 
 }
@@ -137,6 +149,12 @@
 
   --destructive: oklch(0.45 0.18 27);
   --destructive-foreground: oklch(0.98 0.01 240);
+  --success: oklch(0.7 0.16 149);
+  --success-foreground: oklch(0.16 0.03 240);
+  --warning: oklch(0.75 0.15 83);
+  --warning-foreground: oklch(0.16 0.03 240);
+  --info: oklch(0.7 0.11 250);
+  --info-foreground: oklch(0.16 0.03 240);
 
   --border: oklch(0.25 0.02 240);
   --input: oklch(0.25 0.02 240);
@@ -239,37 +257,37 @@ html[data-theme="dark"] {
   --ring: hsl(217 91% 60%);
 }
 
-html.dark[data-accent="blue"],
-html[data-theme="dark"][data-accent="blue"] {
+html[data-accent="blue"] {
   --primary: hsl(217 91% 60%);
-  --accent: hsl(220 15% 22%);
+  --accent: hsl(217 70% 52%);
   --ring: hsl(217 91% 60%);
+  --primary-hover: hsl(217 70% 52%);
 }
 
-html.dark[data-accent="teal"],
-html[data-theme="dark"][data-accent="teal"] {
-  --primary: hsl(174 72% 46%);
-  --accent: hsl(174 45% 20%);
-  --ring: hsl(174 72% 46%);
+html[data-accent="teal"] {
+  --primary: hsl(172 66% 45%);
+  --accent: hsl(172 55% 38%);
+  --ring: hsl(172 66% 45%);
+  --primary-hover: hsl(172 55% 38%);
 }
 
-html.dark[data-accent="amber"],
-html[data-theme="dark"][data-accent="amber"] {
+html[data-accent="amber"] {
   --primary: hsl(38 92% 50%);
-  --accent: hsl(38 60% 20%);
+  --accent: hsl(38 80% 45%);
   --ring: hsl(38 92% 50%);
+  --primary-hover: hsl(38 80% 45%);
 }
 
-html.dark[data-accent="purple"],
-html[data-theme="dark"][data-accent="purple"] {
-  --primary: hsl(271 81% 56%);
-  --accent: hsl(271 45% 22%);
-  --ring: hsl(271 81% 56%);
+html[data-accent="purple"] {
+  --primary: hsl(262 83% 58%);
+  --accent: hsl(262 70% 52%);
+  --ring: hsl(262 83% 58%);
+  --primary-hover: hsl(262 70% 52%);
 }
 
-html.dark[data-accent="red"],
-html[data-theme="dark"][data-accent="red"] {
+html[data-accent="red"] {
   --primary: hsl(0 84% 60%);
-  --accent: hsl(0 48% 22%);
+  --accent: hsl(0 72% 55%);
   --ring: hsl(0 84% 60%);
+  --primary-hover: hsl(0 72% 55%);
 }

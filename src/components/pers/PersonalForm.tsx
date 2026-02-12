@@ -312,7 +312,7 @@ export default function PersonalForm({
                     <>
                         <Button
                             variant="outline"
-                            className="w-[200px] hover:bg-destructive hover:text-white"
+                            className="w-[200px] hover:bg-destructive hover:text-primary-foreground"
                             type="button"
                             onClick={handleCancel}
                         >
@@ -330,7 +330,7 @@ export default function PersonalForm({
                             </Button>
                         )}
 
-                        <Button type="submit" className="w-[200px] bg-[#40ba4d]">
+                        <Button type="submit" className="w-[200px] bg-success">
                             Save
                         </Button>
                     </>

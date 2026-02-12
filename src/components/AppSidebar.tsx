@@ -125,7 +125,7 @@ export function AppSidebar() {
     return (
       <Sidebar className="w-64">
         <SidebarContent className="p-4">
-          <div className="text-red-500 flex items-center gap-2">
+          <div className="text-destructive flex items-center gap-2">
             <Lock className="h-4 w-4" />
             <span>Failed to load navigation</span>
           </div>
@@ -150,7 +150,7 @@ export function AppSidebar() {
               />
               {!collapsed && (
                 <div>
-                  <h3 className="font-semibold text-[#1677ff]">MCEME CTW</h3>
+                  <h3 className="font-semibold text-primary">MCEME CTW</h3>
                   <p className="text-xs text-muted-foreground">Dashboard</p>
                 </div>
               )}
@@ -160,7 +160,7 @@ export function AppSidebar() {
           {/* User Role Badge */}
           {!collapsed && (
             <div className="p-4 border-b border-border">
-              <Badge className="w-full justify-center bg-[#1677ff]">
+              <Badge className="w-full justify-center bg-primary text-primary-foreground">
                 <Shield className="h-3 w-3 mr-1" />
                 {position}
               </Badge>
@@ -198,7 +198,7 @@ export function AppSidebar() {
                                   href={item.url}
                                   onClick={(e) => handleItemClick(e, item)}
                                   className={`flex items-center gap-2 px-[var(--density-sidebar-link-px)] py-[var(--density-sidebar-link-py)] rounded-md ${isActive(item.url)
-                                    ? "bg-[#1677ff] text-white"
+                                    ? "bg-primary text-primary-foreground"
                                     : "hover:bg-accent/50"
                                     }`}
                                 >
@@ -237,7 +237,7 @@ export function AppSidebar() {
                                 href={item.url}
                                 onClick={(e) => handleItemClick(e, item)}
                                 className={`flex items-center gap-2 px-[var(--density-sidebar-link-px)] py-[var(--density-sidebar-link-py)] rounded-md ${isActive(item.url)
-                                  ? "bg-[#1677ff] text-white"
+                                  ? "bg-primary text-primary-foreground"
                                   : "hover:bg-accent/50"
                                   }`}
                               >

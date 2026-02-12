@@ -22,6 +22,11 @@ import {
   sanitizeDeviceSiteSettings,
   type DeviceSiteSettings,
 } from "@/lib/device-site-settings";
+import {
+  ACCENT_PALETTE_KEYS,
+  ACCENT_PALETTE_META,
+  type AccentPaletteKey,
+} from "@/lib/accent-palette";
 import { formatInDefaultTimezone } from "@/lib/timezone";
 
 type FormState = {
@@ -43,6 +48,17 @@ const DEFAULT_FORM_STATE: FormState = {
   timezone: DEFAULT_DEVICE_SITE_SETTINGS.timezone,
   refreshIntervalSec: DEFAULT_DEVICE_SITE_SETTINGS.refreshIntervalSec,
 };
+
+function AccentSwatch({ palette }: { palette: AccentPaletteKey }) {
+  const meta = ACCENT_PALETTE_META[palette];
+  return (
+    <span
+      className="inline-block h-[10px] w-[10px] rounded-full border border-border/60"
+      style={{ backgroundColor: meta.swatch }}
+      aria-hidden
+    />
+  );
+}
 
 export default function DeviceSiteSettingsPage() {
   const [currentDeviceId, setCurrentDeviceId] = useState("");
@@ -226,14 +242,20 @@ export default function DeviceSiteSettingsPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select accent palette" />
+                    <span className="flex items-center gap-2">
+                      <AccentSwatch palette={form.accentPalette} />
+                      <span>{ACCENT_PALETTE_META[form.accentPalette].label}</span>
+                    </span>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="blue">Blue</SelectItem>
-                    <SelectItem value="teal">Teal</SelectItem>
-                    <SelectItem value="amber">Amber</SelectItem>
-                    <SelectItem value="purple">Purple</SelectItem>
-                    <SelectItem value="red">Red</SelectItem>
+                    {ACCENT_PALETTE_KEYS.map((palette) => (
+                      <SelectItem key={palette} value={palette}>
+                        <span className="flex items-center gap-2">
+                          <AccentSwatch palette={palette} />
+                          <span>{ACCENT_PALETTE_META[palette].label}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -104,7 +104,7 @@ export default function CounsellingForm({
         <form onSubmit={handleSubmit(onSubmit)}>
             <div className="overflow-x-auto border rounded-lg shadow mb-4">
                 <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
                             <th className="p-2 border text-center">S No</th>
                             <th className="p-2 border">Reason (Attach copy)</th>
@@ -123,7 +123,7 @@ export default function CounsellingForm({
                                         <Input
                                             value={String(idx + 1)}
                                             disabled
-                                            className="bg-gray-100 text-center"
+                                            className="bg-muted/70 text-center"
                                         />
                                     </td>
 
@@ -165,7 +165,7 @@ export default function CounsellingForm({
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                <Button type="submit" className="bg-success hover:bg-success/90">
                     Submit
                 </Button>
 

@@ -138,7 +138,7 @@ export default function DisciplineForm({
         <form onSubmit={handleSubmit(onSubmit)}>
             <div className="overflow-x-auto border rounded-lg shadow">
                 <table className="w-full min-w-[1200px] table-fixed text-sm">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
                             <th className="p-2 border w-16">S.No</th>
                             <th className="p-2 border w-32">Date Of Offence</th>
@@ -160,7 +160,7 @@ export default function DisciplineForm({
                             return (
                                 <tr key={field.id}>
                                     <td className="p-2 border text-center">
-                                        <Input disabled value={String(index + 1)} className="w-full min-w-0 bg-gray-100 text-center" />
+                                        <Input disabled value={String(index + 1)} className="w-full min-w-0 bg-muted/70 text-center" />
                                     </td>
 
                                     <td className="p-2 border">
@@ -273,7 +273,7 @@ export default function DisciplineForm({
                                         <Input
                                             disabled
                                             value={currentRecord?.negativePts || "0"}
-                                            className="w-full min-w-0 bg-gray-100 text-center"
+                                            className="w-full min-w-0 bg-muted/70 text-center"
                                         />
                                     </td>
 
@@ -286,7 +286,7 @@ export default function DisciplineForm({
                                                     ? String(currentRecord.cumulative)
                                                     : ""
                                             }
-                                            className="w-full min-w-0 bg-gray-100 text-center"
+                                            className="w-full min-w-0 bg-muted/70 text-center"
                                         />
                                     </td>
 
@@ -294,7 +294,7 @@ export default function DisciplineForm({
                                         <button
                                             type="button"
                                             onClick={() => remove(index)}
-                                            className="inline-block whitespace-nowrap px-2 py-1 bg-red-600 text-white rounded text-xs"
+                                            className="inline-block whitespace-nowrap px-2 py-1 bg-destructive text-primary-foreground rounded text-xs"
                                         >
                                             Remove
                                         </button>
@@ -311,14 +311,14 @@ export default function DisciplineForm({
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-[#40ba4d]">
+                <Button type="submit" className="bg-success">
                     Submit
                 </Button>
 
                 <Button
                     type="button"
                     variant="outline"
-                    className="hover:bg-destructive hover:text-white"
+                    className="hover:bg-destructive hover:text-primary-foreground"
                     onClick={onClear}
                 >
                     Clear Form

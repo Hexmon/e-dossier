@@ -400,12 +400,12 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
             {/* ADD NEW QUALIFICATIONS FORM */}
             <form onSubmit={qualificationForm.handleSubmit(submitQualifications)}>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm border border-gray-300">
-                        <thead className="bg-gray-100">
+                    <table className="min-w-full text-sm border border-border">
+                        <thead className="bg-muted/70">
                             <tr>
                                 {["S.No", "Qualification", "School", "Subs", "Board", "Marks", "Grade", "Action"].map((head) => {
                                     return (
-                                        <th key={head} className="border px-4 py-2 bg-gray-300">
+                                        <th key={head} className="border px-4 py-2 bg-muted">
                                             {head}
                                         </th>
                                     );
@@ -519,7 +519,7 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                         Clear Form
                     </Button>
 
-                    <Button type="submit" className="bg-[#40ba4d]">
+                    <Button type="submit" className="bg-success">
                         Save
                     </Button>
                 </div>
@@ -543,7 +543,7 @@ export default function EducationQualifications({ ocId, cadet }: Props) {
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            className="bg-destructive text-white hover:bg-destructive/90"
+                            className="bg-destructive text-primary-foreground hover:bg-destructive/90"
                             onClick={() => deleteTarget && removeRow(deleteTarget)}
                         >
                             Delete

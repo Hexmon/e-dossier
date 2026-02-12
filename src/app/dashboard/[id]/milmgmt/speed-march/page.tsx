@@ -25,6 +25,7 @@ import { useSpeedMarch } from "@/hooks/useSpeedMarch";
 import SpeedMarchForm from "@/components/speedMarch/SpeedMarchForm";
 import type { RootState } from "@/store";
 import { saveSpeedMarchForm, clearSpeedMarchForm } from "@/store/slices/speedMarchSlice";
+import { resolveTabStateClasses, resolveToneClasses } from "@/lib/theme-color";
 
 type Row = {
     id?: string;
@@ -303,7 +304,7 @@ export default function SpeedMarchPage() {
                                 return (
                                     <DropdownMenuItem key={card.title} asChild>
                                         <Link href={link} className="flex items-center gap-2">
-                                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                                            <card.icon className={`h-4 w-4 ${resolveToneClasses(card.color, "text")}`} />
                                             {card.title}
                                         </Link>
                                     </DropdownMenuItem>
@@ -328,7 +329,7 @@ export default function SpeedMarchPage() {
                                                 key={term}
                                                 type="button"
                                                 onClick={() => handleTabChange(idx)}
-                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                                className={`px-4 py-2 rounded-t-lg font-medium ${resolveTabStateClasses(activeTab === idx)}`}
                                             >
                                                 {term}
                                             </button>

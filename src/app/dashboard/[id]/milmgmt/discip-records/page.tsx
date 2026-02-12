@@ -277,8 +277,8 @@ export default function DisciplineRecordsPage() {
                                                 type="button"
                                                 onClick={() => setActiveTab(index)}
                                                 className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-gray-200 text-gray-700"
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "bg-muted text-foreground"
                                                     }`}
                                             >
                                                 {sem}

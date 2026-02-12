@@ -111,7 +111,7 @@ export default function ParentCommForm({ onSubmit, defaultValues, ocId, onClear 
         <form onSubmit={handleSubmit(onSubmit)}>
             <div className="overflow-x-auto border rounded-lg shadow">
                 <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
                             {["S.No", "Letter No", "Date", "Tele/Corres", "Brief Contents", "Sig PI Cdr", "Action"].map((h) => (
                                 <th key={h} className="p-2 border text-center">{h}</th>
@@ -124,7 +124,7 @@ export default function ParentCommForm({ onSubmit, defaultValues, ocId, onClear 
                             return (
                                 <tr key={field.id}>
                                     <td className="p-2 border text-center">
-                                        <Input disabled value={String(i + 1)} className="bg-gray-100 text-center" />
+                                        <Input disabled value={String(i + 1)} className="bg-muted/70 text-center" />
                                     </td>
 
                                     <td className="p-2 border">
@@ -167,14 +167,14 @@ export default function ParentCommForm({ onSubmit, defaultValues, ocId, onClear 
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-[#40ba4d]">
+                <Button type="submit" className="bg-success">
                     Submit
                 </Button>
 
                 <Button
                     type="button"
                     variant="outline"
-                    className="hover:bg-destructive hover:text-white"
+                    className="hover:bg-destructive hover:text-primary-foreground"
                     onClick={handleReset}
                 >
                     {onClear ? "Clear Form" : "Reset"}

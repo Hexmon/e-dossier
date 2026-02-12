@@ -157,7 +157,7 @@ export default function Appointments() {
         <div className="container mx-auto py-2">
             <Card className='shadow-xl'>
                 <CardHeader>
-                    <CardTitle className="text-2xl font-semibold text-white bg-[#1677ff] p-2 rounded">Appointments</CardTitle>
+                    <CardTitle className="text-2xl font-semibold text-primary-foreground bg-primary p-2 rounded">Appointments</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <UniversalTable<Appointment>

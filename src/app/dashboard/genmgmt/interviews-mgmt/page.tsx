@@ -248,7 +248,7 @@ export default function InterviewTemplateManagementPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-red-600"
+                            className="bg-destructive"
                         >
                             Delete
                         </AlertDialogAction>

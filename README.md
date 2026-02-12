@@ -110,6 +110,7 @@ git update-index --add --chmod=+x .githooks/pre-push .githooks/post-checkout
 ```
 
 For more details, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
+For token-based UI color rules, see [THEMING_GUIDE.md](docs/THEMING_GUIDE.md).
 
 
 ## Code Quality & Git Hooks (Auto-Setup)

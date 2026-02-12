@@ -315,7 +315,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
     return (
         <Card className="shadow-lg rounded-2xl border border-border w-full max-w-4xl mx-auto">
             <CardHeader>
-                <CardTitle className="text-xl font-bold text-center uppercase text-[#1677ff]">
+                <CardTitle className="text-xl font-bold text-center uppercase text-primary">
                     Confidential – Autobiography Form
                 </CardTitle>
             </CardHeader>
@@ -404,7 +404,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="w-[200px] hover:bg-destructive hover:text-white"
+                                    className="w-[200px] hover:bg-destructive hover:text-primary-foreground"
                                     onClick={handleCancel}
                                 >
                                     Cancel
@@ -419,7 +419,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                                     Clear Form
                                 </Button>
 
-                                <Button type="submit" className="w-[200px] bg-[#40ba4d]">
+                                <Button type="submit" className="w-[200px] bg-success">
                                     Save
                                 </Button>
                             </>

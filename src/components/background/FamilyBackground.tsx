@@ -366,11 +366,11 @@ export default function FamilyBackground({ ocId }: Props) {
             {/* ADD NEW FORM */}
             <form onSubmit={familyForm.handleSubmit(submitFamily)}>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm border border-gray-300">
-                        <thead className="bg-gray-100">
+                    <table className="min-w-full text-sm border border-border">
+                        <thead className="bg-muted/70">
                             <tr>
                                 {["S.No", "Name", "Relation", "Age", "Occupation", "Edn Qual", "Mobile", "Action"].map((head) => (
-                                    <th key={head} className="border px-4 py-2 bg-gray-300">
+                                    <th key={head} className="border px-4 py-2 bg-muted">
                                         {head}
                                     </th>
                                 ))}
@@ -432,7 +432,7 @@ export default function FamilyBackground({ ocId }: Props) {
                         Clear Form
                     </Button>
 
-                    <Button type="submit" className="bg-[#40ba4d]">
+                    <Button type="submit" className="bg-success">
                         Save
                     </Button>
                 </div>
@@ -456,7 +456,7 @@ export default function FamilyBackground({ ocId }: Props) {
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            className="bg-destructive text-white hover:bg-destructive/90"
+                            className="bg-destructive text-primary-foreground hover:bg-destructive/90"
                             onClick={() => deleteTarget && deleteMember(deleteTarget)}
                         >
                             Delete

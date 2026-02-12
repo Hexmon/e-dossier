@@ -281,13 +281,13 @@ export default function SubjectWiseStudentsTable({
     return (
         <div className="space-y-4 mt-6">
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded">
                     {error}
                 </div>
             )}
 
             {subjectBranch && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded text-sm">
+                <div className="bg-primary/10 border border-primary/30 text-primary px-4 py-2 rounded text-sm">
                     {subjectBranch === "C" ? (
                         <>Showing students from <strong>all branches</strong> (Common subject)</>
                     ) : (

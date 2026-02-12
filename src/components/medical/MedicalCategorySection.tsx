@@ -215,7 +215,7 @@ export default function MedicalCategorySection({ selectedCadet, semesters }: Pro
                             <button
                                 key={sem}
                                 onClick={() => setActiveTab(idx)}
-                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200"
+                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-primary text-primary-foreground" : "bg-muted"
                                     }`}
                             >
                                 {sem}
@@ -243,7 +243,7 @@ export default function MedicalCategorySection({ selectedCadet, semesters }: Pro
                     onClear={handleClearForm}
                 />
 
-                <p className="text-xs text-gray-600 mt-4 italic">
+                <p className="text-xs text-muted-foreground mt-4 italic">
                     * Name of hospital must be written in PI Cdr Initial field.
                 </p>
             </CardContent>

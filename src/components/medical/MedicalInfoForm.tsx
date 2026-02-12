@@ -178,7 +178,7 @@ export default function MedicalInfoFormComponent({
 
                 <Button
                     variant="outline"
-                    className="hover:bg-destructive hover:text-white"
+                    className="hover:bg-destructive hover:text-primary-foreground"
                     type="button"
                     onClick={onClear}
                 >
@@ -243,7 +243,7 @@ export default function MedicalInfoFormComponent({
             </div>
 
             <div className="flex flex-col items-center mt-4 gap-2">
-                <Button type="submit" className="w-64 bg-blue-600">
+                <Button type="submit" className="w-64 bg-primary">
                     Submit Medical Info
                 </Button>
 

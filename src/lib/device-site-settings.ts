@@ -1,8 +1,14 @@
 import { getOrCreateDeviceIdClient, setDeviceIdCookie } from "@/lib/device-context";
+import {
+  ACCENT_PALETTE_META,
+  ACCENT_PALETTE_KEYS,
+  isAccentPaletteKey,
+  type AccentPaletteKey,
+} from "@/lib/accent-palette";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type ThemePreset = "navy-steel";
-export type AccentPalette = "blue" | "teal" | "amber" | "purple" | "red";
+export type AccentPalette = AccentPaletteKey;
 export type DensityMode = "compact" | "comfortable";
 export type LanguageCode = "en";
 
@@ -35,7 +41,7 @@ export const DEFAULT_DEVICE_SITE_SETTINGS: DeviceSiteSettings = {
   updatedBy: null,
 };
 
-const ACCENT_VALUES = new Set<AccentPalette>(["blue", "teal", "amber", "purple", "red"]);
+const ACCENT_VALUES = new Set<AccentPalette>(ACCENT_PALETTE_KEYS);
 const THEME_VALUES = new Set<ThemeMode>(["light", "dark", "system"]);
 const DENSITY_VALUES = new Set<DensityMode>(["compact", "comfortable"]);
 
@@ -85,6 +91,22 @@ export function resolveAppliedTheme(themeMode: ThemeMode, prefersDark: boolean):
   return prefersDark ? "dark" : "light";
 }
 
+export function applyAccentPaletteToDocument(accentPalette: AccentPalette): void {
+  if (typeof document === "undefined") return;
+
+  const html = document.documentElement;
+  const palette: AccentPalette = isAccentPaletteKey(accentPalette)
+    ? accentPalette
+    : DEFAULT_DEVICE_SITE_SETTINGS.accentPalette;
+  const tokens = ACCENT_PALETTE_META[palette].tokens;
+
+  html.setAttribute("data-accent", palette);
+  html.style.setProperty("--primary", `hsl(${tokens.primary})`);
+  html.style.setProperty("--accent", `hsl(${tokens.accent})`);
+  html.style.setProperty("--ring", `hsl(${tokens.ring})`);
+  html.style.setProperty("--primary-hover", `hsl(${tokens.accent})`);
+}
+
 export function applyDeviceSiteSettingsToDocument(settings: DeviceSiteSettings): void {
   if (typeof document === "undefined") return;
 
@@ -98,9 +120,9 @@ export function applyDeviceSiteSettingsToDocument(settings: DeviceSiteSettings):
   html.setAttribute("data-theme-mode", settings.themeMode);
   html.setAttribute("data-theme", appliedTheme);
   html.setAttribute("data-density", settings.density);
-  html.setAttribute("data-accent", settings.accentPalette);
   html.setAttribute("data-theme-preset", settings.themePreset);
   html.classList.toggle("dark", appliedTheme === "dark");
+  applyAccentPaletteToDocument(settings.accentPalette);
 }
 
 export function readStoredDeviceSiteSettings(): DeviceSiteSettings | null {

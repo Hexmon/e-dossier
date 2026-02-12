@@ -91,7 +91,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
           <div className="flex items-center gap-4">
             <SidebarTrigger className="h-8 w-8" />
             <div>
-              <h1 className="text-lg font-semibold text-[#1677ff]">{title}</h1>
+              <h1 className="text-lg font-semibold text-primary">{title}</h1>
               {description && (
                 <p className="text-sm text-muted-foreground">{description}</p>
               )}
@@ -114,8 +114,8 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-[#1677ff] text-primary-foreground">
+                    <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
                       {initials}
                     </AvatarFallback>
                   </Avatar>

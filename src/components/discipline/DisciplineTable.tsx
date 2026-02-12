@@ -231,7 +231,7 @@ export default function DisciplineTable({
                     <Input
                         disabled
                         value={String(editForm?.negativePts ?? value)}
-                        className="bg-gray-100 w-full"
+                        className="bg-muted/70 w-full"
                     />
                 ) : value || "0";
             }

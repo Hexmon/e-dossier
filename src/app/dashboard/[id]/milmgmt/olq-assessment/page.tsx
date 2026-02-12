@@ -288,7 +288,7 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
                                     key={t}
                                     type="button"
                                     onClick={() => { setActiveSemIndex(idx); setActiveInnerTab("input"); }}
-                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeSemIndex === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeSemIndex === idx ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                                 >{t}</button>
                             )
                         })}

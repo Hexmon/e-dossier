@@ -158,6 +158,20 @@ describe("Admin device site settings API", () => {
     expect(res.status).toBe(400);
   });
 
+  it("PUT rejects unknown accentPalette values", async () => {
+    const req = makeJsonRequest({
+      method: "PUT",
+      path: adminPath,
+      body: {
+        deviceId: "device-1234",
+        accentPalette: "cyan",
+      },
+    });
+
+    const res = await putAdminSettings(req as any, createRouteContext());
+    expect(res.status).toBe(400);
+  });
+
   it("PUT enforces refresh interval bounds", async () => {
     const req = makeJsonRequest({
       method: "PUT",
@@ -176,6 +190,28 @@ describe("Admin device site settings API", () => {
 
     const res = await putAdminSettings(req as any, createRouteContext());
     expect(res.status).toBe(400);
+  });
+
+  it("PUT defaults accentPalette to blue when omitted", async () => {
+    const req = makeJsonRequest({
+      method: "PUT",
+      path: adminPath,
+      body: {
+        deviceId: "device-1234",
+        themeMode: "dark",
+        themePreset: "navy-steel",
+        density: "compact",
+        language: "en",
+        timezone: "Asia/Kolkata",
+        refreshIntervalSec: 120,
+      },
+    });
+
+    const res = await putAdminSettings(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.settings.accentPalette).toBe("blue");
   });
 
   it("PUT upserts device settings", async () => {

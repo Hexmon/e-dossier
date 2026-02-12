@@ -18,11 +18,11 @@ export default function OLQView({ structure, submission }: Props) {
             <table className="min-w-[850px] border-collapse">
                 <thead>
                     <tr>
-                        <th className="border p-2 bg-gray-100">Attribute</th>
+                        <th className="border p-2 bg-muted/70">Attribute</th>
                         {GRADE_BRACKETS.map((b) => {
                             const { key } = b;
                             return (
-                                <th key={key} className="border p-2 bg-gray-50">
+                                <th key={key} className="border p-2 bg-muted/40">
                                     <div className="font-semibold">{b.label}</div>
                                     <div className="text-xs">{b.rangeLabel}</div>
                                 </th>
@@ -36,7 +36,7 @@ export default function OLQView({ structure, submission }: Props) {
                         return (
                             <React.Fragment key={section}>
                                 <tr>
-                                    <td colSpan={GRADE_BRACKETS.length + 1} className="border p-2 bg-blue-50 font-semibold text-center">
+                                    <td colSpan={GRADE_BRACKETS.length + 1} className="border p-2 bg-primary/10 font-semibold text-center">
                                         {section}
                                     </td>
                                 </tr>
@@ -45,10 +45,10 @@ export default function OLQView({ structure, submission }: Props) {
                                     const val = submission.marks[attr.id] ?? 0;
                                     return (
                                         <tr key={attr.id}>
-                                            <td className="border p-2 bg-white font-medium">{attr.subtitle}</td>
+                                            <td className="border p-2 bg-card font-medium">{attr.subtitle}</td>
 
                                             {GRADE_BRACKETS.map((b) => (
-                                                <td key={b.key} className={`border p-2 text-center ${submission.bracketKey === b.key ? "bg-yellow-50" : ""}`}>
+                                                <td key={b.key} className={`border p-2 text-center ${submission.bracketKey === b.key ? "bg-warning/20" : ""}`}>
                                                     {submission.bracketKey === b.key ? val : ""}
                                                 </td>
                                             ))}
@@ -59,13 +59,13 @@ export default function OLQView({ structure, submission }: Props) {
                         )
                     })}
 
-                    <tr className="bg-gray-50">
+                    <tr className="bg-muted/40">
                         <td className="border p-2 font-semibold">TOTAL</td>
 
                         {GRADE_BRACKETS.map((b) => {
                             const { key } = b;
                             return (
-                                <td key={key} className={`border p-2 text-center ${submission.bracketKey === b.key ? "bg-yellow-100" : ""}`}>
+                                <td key={key} className={`border p-2 text-center ${submission.bracketKey === b.key ? "bg-warning/20" : ""}`}>
                                     {submission.bracketKey === b.key && (
                                         <>
                                             <div className="font-bold">{submission.total}</div>

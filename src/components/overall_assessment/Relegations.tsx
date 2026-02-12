@@ -157,22 +157,22 @@ export default function Relegations({ ocId }: RelegationsProps) {
 
     return (
         <div>
-            <h2 className="p-2 text-lg font-bold text-left text-gray-700 underline">Relegations, If Any</h2>
+            <h2 className="p-2 text-lg font-bold text-left text-foreground underline">Relegations, If Any</h2>
 
             {isEditing && (
-                <div className="text-xs text-gray-500 text-right mb-2">
+                <div className="text-xs text-muted-foreground text-right mb-2">
                     ✓ Changes are saved automatically
                 </div>
             )}
 
             <div className="overflow-x-auto">
                 <table className="w-full">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Date of Relegations</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Course Relegated to</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Reason</th>
-                            {isEditing && <th className="border border-gray-300 px-4 py-2 text-center">Action</th>}
+                            <th className="border border-border px-4 py-2 text-left">Date of Relegations</th>
+                            <th className="border border-border px-4 py-2 text-left">Course Relegated to</th>
+                            <th className="border border-border px-4 py-2 text-left">Reason</th>
+                            {isEditing && <th className="border border-border px-4 py-2 text-center">Action</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -180,8 +180,8 @@ export default function Relegations({ ocId }: RelegationsProps) {
                             relegationData.map(relegation => {
                                 const { id, dateOfRelegation, courseRelegatedTo, reason, isRowEditing } = relegation;
                                 return (
-                                    <tr key={id} className="hover:bg-gray-50 border-b border-gray-300">
-                                        <td className="border border-gray-300 px-4 py-2">
+                                    <tr key={id} className="hover:bg-muted/40 border-b border-border">
+                                        <td className="border border-border px-4 py-2">
                                             {isRowEditing ? (
                                                 <Input
                                                     type="date"
@@ -194,7 +194,7 @@ export default function Relegations({ ocId }: RelegationsProps) {
                                                 <span>{dateOfRelegation || "-"}</span>
                                             )}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">
+                                        <td className="border border-border px-4 py-2">
                                             {isRowEditing ? (
                                                 <Input
                                                     type="text"
@@ -207,7 +207,7 @@ export default function Relegations({ ocId }: RelegationsProps) {
                                                 <span>{courseRelegatedTo || "-"}</span>
                                             )}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">
+                                        <td className="border border-border px-4 py-2">
                                             {isRowEditing ? (
                                                 <Input
                                                     type="text"
@@ -221,13 +221,13 @@ export default function Relegations({ ocId }: RelegationsProps) {
                                             )}
                                         </td>
                                         {isEditing && (
-                                            <td className="border border-gray-300 px-4 py-2">
+                                            <td className="border border-border px-4 py-2">
                                                 <div className="flex gap-2 justify-center">
                                                     {isRowEditing ? (
                                                         <>
                                                             <Button
                                                                 onClick={() => handleRowSave(id)}
-                                                                className="bg-blue-600 hover:bg-blue-700"
+                                                                className="bg-primary hover:bg-primary/90"
                                                                 size="sm"
                                                             >
                                                                 Save
@@ -245,7 +245,7 @@ export default function Relegations({ ocId }: RelegationsProps) {
                                                             <Button
                                                                 onClick={() => handleRowEdit(id)}
                                                                 variant="outline"
-                                                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                                                className="border-primary text-primary hover:bg-primary/10"
                                                                 size="sm"
                                                             >
                                                                 Edit
@@ -253,7 +253,7 @@ export default function Relegations({ ocId }: RelegationsProps) {
                                                             <Button
                                                                 onClick={() => handleDeleteRelegation(id)}
                                                                 variant="outline"
-                                                                className="text-red-600 border-red-600 hover:bg-red-50"
+                                                                className="text-destructive border-destructive hover:bg-destructive/10"
                                                                 size="sm"
                                                             >
                                                                 Delete
@@ -268,7 +268,7 @@ export default function Relegations({ ocId }: RelegationsProps) {
                             })
                         ) : (
                             <tr>
-                                <td colSpan={isEditing ? 4 : 3} className="border border-gray-300 px-4 py-2 text-center text-gray-500">
+                                <td colSpan={isEditing ? 4 : 3} className="border border-border px-4 py-2 text-center text-muted-foreground">
                                     {isEditing ? "No relegations added. Click 'Add Relegation' to add new entries." : "No relegations"}
                                 </td>
                             </tr>
@@ -279,7 +279,7 @@ export default function Relegations({ ocId }: RelegationsProps) {
 
             {isEditing && (
                 <div className="flex gap-3 justify-center mt-4">
-                    <Button onClick={handleAddRelegation} className="bg-green-600 hover:bg-green-700">
+                    <Button onClick={handleAddRelegation} className="bg-success hover:bg-success/90">
                         + Add Relegation
                     </Button>
                 </div>

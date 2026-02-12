@@ -127,7 +127,7 @@
 //     }
 
 //     if (error) {
-//         return <div className="p-4 text-center text-red-600">Error: {error}</div>;
+//         return <div className="p-4 text-center text-destructive">Error: {error}</div>;
 //     }
 
 //     return (
@@ -217,7 +217,7 @@
 //                     <button
 //                         type="button"
 //                         onClick={handleEdit}
-//                         className="px-4 py-2 rounded bg-yellow-500 text-black"
+//                         className="px-4 py-2 rounded bg-warning text-foreground"
 //                     >
 //                         Edit
 //                     </button>
@@ -225,7 +225,7 @@
 //                     <>
 //                         <button
 //                             type="submit"
-//                             className="px-4 py-2 rounded bg-blue-600 text-white"
+//                             className="px-4 py-2 rounded bg-primary text-primary-foreground"
 //                             disabled={loading}
 //                         >
 //                             {loading ? "Saving..." : "Save Tech Seminar"}
@@ -233,7 +233,7 @@
 //                         <button
 //                             type="button"
 //                             onClick={handleReset}
-//                             className="px-4 py-2 rounded bg-gray-200"
+//                             className="px-4 py-2 rounded bg-muted"
 //                         >
 //                             Reset
 //                         </button>
@@ -451,7 +451,7 @@ export default function TechSeminarForm({ ocId }: TechSeminarFormProps) {
                     <button
                         type="button"
                         onClick={handleEdit}
-                        className="px-4 py-2 rounded bg-yellow-500 text-black"
+                        className="px-4 py-2 rounded bg-warning text-foreground"
                     >
                         Edit
                     </button>
@@ -459,14 +459,14 @@ export default function TechSeminarForm({ ocId }: TechSeminarFormProps) {
                     <>
                         <button
                             type="submit"
-                            className="px-4 py-2 rounded bg-blue-600 text-white"
+                            className="px-4 py-2 rounded bg-primary text-primary-foreground"
                         >
                             Save Tech Seminar
                         </button>
                         <button
                             type="button"
                             onClick={handleReset}
-                            className="px-4 py-2 rounded bg-gray-200"
+                            className="px-4 py-2 rounded bg-muted"
                         >
                             Reset
                         </button>

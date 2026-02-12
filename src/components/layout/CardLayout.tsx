@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { resolveToneClasses, type ColorTone } from "@/lib/theme-color";
 
 // Core type definitions
 export interface CardIcon {
-    component: React.ComponentType<{ className?: string }>;
-    className?: string;
-    background?: string;
-    size?: 'sm' | 'md' | 'lg';
+  component: React.ComponentType<{ className?: string }>;
+  className?: string;
+  background?: string | ColorTone;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export interface CardBadge {
@@ -209,14 +210,17 @@ export function CardLayout({ config, children, className }: UniversalCardProps) 
         };
 
         if (background) {
+            const backgroundClass = isColorTone(background)
+                ? resolveToneClasses(background, "icon")
+                : background;
             return (
                 <div className={cn(
                     'flex items-center justify-center rounded-lg',
                     sizeClasses[iconSize],
-                    background,
+                    backgroundClass,
                     iconClassName
                 )}>
-                    <IconComponent className={cn('text-white', iconSizes[iconSize])} />
+                    <IconComponent className={iconSizes[iconSize]} />
                 </div>
             );
         }
@@ -467,3 +471,6 @@ export function createListCard(
         },
     };
 }
+    const isColorTone = (value: unknown): value is ColorTone =>
+        typeof value === "string" &&
+        ["primary", "secondary", "muted", "success", "warning", "info", "destructive"].includes(value);

@@ -124,7 +124,7 @@ export default function OCsTable({
             },
             condition: (row) => !!row.id,
             className:
-                "text-destructive hover:bg-red-500 hover:text-white",
+                "text-destructive hover:bg-destructive hover:text-primary-foreground",
         },
     ];
 

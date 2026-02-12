@@ -22,6 +22,7 @@ import { useMe } from "@/hooks/useMe";
 import { resolvePageAction } from "@/app/lib/acx/action-map";
 import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
 import { deriveSidebarRoleGroup } from "@/lib/sidebar-visibility";
+import { resolveToneClasses, type ColorTone } from "@/lib/theme-color";
 
 export default function GeneralManagementPage() {
   const router = useRouter();
@@ -88,7 +89,7 @@ export default function GeneralManagementPage() {
             </nav>
             {/* Welcome section */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-[#1677ff] mb-2">
+              <h2 className="text-2xl font-bold text-primary mb-2">
                 Admin Management
               </h2>
               <p className="text-muted-foreground">
@@ -103,19 +104,22 @@ export default function GeneralManagementPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
                   {managementCard.map((card, index) => {
                     const IconComponent = card.icon;
-                    const { title = "", description = "", to = "", color = "" } = card;
+                    const title = card.title ?? "";
+                    const description = card.description ?? "";
+                    const to = card.to ?? "";
+                    const color = card.color as ColorTone;
+                    const iconTone = resolveToneClasses(color, "icon");
 
                     if (title === "Offerings Management") {
                       return (
                         <Card
                           key={index}
-                          className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4"
-                          style={{ borderLeftColor: color }}
+                          className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4 border-l-primary"
                           onClick={() => setCourseModalOpen(true)}
                         >
                           <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                            <div className={`${color} p-2 rounded-lg`}>
-                              <IconComponent className="h-5 w-5 text-white" />
+                            <div className={`${iconTone} p-2 rounded-lg`}>
+                              <IconComponent className="h-5 w-5" />
                             </div>
                             <CardTitle className="text-lg font-semibold">{title}</CardTitle>
 
@@ -124,7 +128,7 @@ export default function GeneralManagementPage() {
                             <p className="text-sm text-muted-foreground">{description}</p>
                           </CardContent>
                           <CardFooter>
-                            <Button variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
+                            <Button variant="outline" size="sm" className="w-full border-border cursor-pointer">
                               Access Module →
                             </Button>
                           </CardFooter>
@@ -158,7 +162,7 @@ export default function GeneralManagementPage() {
                         description={card.description}
                         to={card.to}
                         icon={IconComponent}
-                        color={card.color}
+                        color={card.color as ColorTone}
                       />
                     );
                   })}

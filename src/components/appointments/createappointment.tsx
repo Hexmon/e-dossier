@@ -109,7 +109,7 @@ export const CreateAppointment = () => {
     <div>
       <Button
         onClick={handleOpenDialog}
-        className="bg-blue-500 hover:bg-blue-600"
+        className="bg-primary hover:bg-primary"
       >
         <Plus className="h-4 w-4 mr-2" />
         Create Appointment
@@ -122,7 +122,7 @@ export const CreateAppointment = () => {
           </DialogHeader>
 
           {loading ? (
-            <div className="py-8 text-center text-gray-500">
+            <div className="py-8 text-center text-muted-foreground">
               Loading users...
             </div>
           ) : (
@@ -148,14 +148,14 @@ export const CreateAppointment = () => {
                         </SelectItem>
                       ))
                     ) : (
-                      <div className="p-2 text-sm text-gray-500">
+                      <div className="p-2 text-sm text-muted-foreground">
                         No users available
                       </div>
                     )}
                   </SelectContent>
                 </Select>
                 {errors.userId && (
-                  <p className="text-sm text-red-500">{errors.userId}</p>
+                  <p className="text-sm text-destructive">{errors.userId}</p>
                 )}
               </div>
 
@@ -173,7 +173,7 @@ export const CreateAppointment = () => {
                   }}
                 />
                 {errors.appointmentName && (
-                  <p className="text-sm text-red-500">{errors.appointmentName}</p>
+                  <p className="text-sm text-destructive">{errors.appointmentName}</p>
                 )}
               </div>
 
@@ -219,14 +219,14 @@ export const CreateAppointment = () => {
                           </SelectItem>
                         ))
                       ) : (
-                        <div className="p-2 text-sm text-gray-500">
+                        <div className="p-2 text-sm text-muted-foreground">
                           No platoons available
                         </div>
                       )}
                     </SelectContent>
                   </Select>
                   {errors.platoonId && (
-                    <p className="text-sm text-red-500">{errors.platoonId}</p>
+                    <p className="text-sm text-destructive">{errors.platoonId}</p>
                   )}
                 </div>
               )}
@@ -244,7 +244,7 @@ export const CreateAppointment = () => {
                   }}
                 />
                 {errors.startsAt && (
-                  <p className="text-sm text-red-500">{errors.startsAt}</p>
+                  <p className="text-sm text-destructive">{errors.startsAt}</p>
                 )}
               </div>
 

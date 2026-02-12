@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronUp, ChevronDown, Search } from "lucide-react";
+import { resolveStatusToneClasses } from "@/lib/theme-color";
 
 // Core type definitions
 export interface TableColumn<T = any> {
@@ -127,28 +128,28 @@ export function UniversalTable<T extends Record<string, any>>({
             headerTextColor: 'text-foreground',
         },
         dark: {
-            headerBg: 'bg-slate-800',
-            rowBg: 'bg-slate-700',
-            rowAltBg: 'bg-slate-800/50',
-            borderColor: 'border-slate-700',
-            textColor: 'text-slate-100',
-            headerTextColor: 'text-slate-900',
+            headerBg: 'bg-muted',
+            rowBg: 'bg-card',
+            rowAltBg: 'bg-muted/40',
+            borderColor: 'border-border',
+            textColor: 'text-foreground',
+            headerTextColor: 'text-foreground',
         },
         blue: {
-            headerBg: 'bg-blue-100',
-            rowBg: 'bg-blue-50',
-            rowAltBg: 'bg-white',
-            borderColor: 'border-blue-200',
-            textColor: 'text-slate-900 ',
-            headerTextColor: 'text-blue-900',
+            headerBg: 'bg-primary/10',
+            rowBg: 'bg-background',
+            rowAltBg: 'bg-primary/5',
+            borderColor: 'border-primary/20',
+            textColor: 'text-foreground',
+            headerTextColor: 'text-foreground',
         },
         green: {
-            headerBg: 'bg-emerald-100',
-            rowBg: 'bg-emerald-400',
-            rowAltBg: 'bg-emerald-100',
-            borderColor: 'border-emerald-200',
-            textColor: 'text-slate-900',
-            headerTextColor: 'text-emerald-900',
+            headerBg: 'bg-success/15',
+            rowBg: 'bg-background',
+            rowAltBg: 'bg-success/10',
+            borderColor: 'border-success/30',
+            textColor: 'text-foreground',
+            headerTextColor: 'text-foreground',
         },
         custom: theme,
     };
@@ -285,8 +286,7 @@ export function UniversalTable<T extends Record<string, any>>({
                 return value ? new Date(value).toLocaleDateString() : '';
             case 'status':
                 return (
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${value === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${resolveStatusToneClasses(String(value ?? ""))}`}>
                         {value}
                     </span>
                 );
@@ -335,7 +335,7 @@ export function UniversalTable<T extends Record<string, any>>({
             <div className={tableClasses}>
                 <table className="min-w-full text-sm ">
                     <thead className={`text-left ${activeTheme.headerTextColor}`}>
-                        <tr className="text-left">
+                        <tr className={`text-left ${activeTheme.headerBg}`}>
                             {features.selection && (
                                 <th className="px-3 py-[var(--density-table-header-py)] w-12">
                                     <input

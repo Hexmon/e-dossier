@@ -347,7 +347,7 @@ function LoginPageContent() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-[var(--primary)] text-white cursor-pointer"
+                  className="w-full bg-[var(--primary)] text-primary-foreground cursor-pointer"
                   disabled={isSubmitting || shouldDisableOtherFields}
                 >
                   {isSubmitting ? "Signing In..." : "Sign In"}

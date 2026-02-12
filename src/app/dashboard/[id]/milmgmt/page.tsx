@@ -12,11 +12,13 @@ import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 
 import { militaryTrainingCards, miltrgTabs } from "@/config/app.config";
 import { TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Marquee from "@/components/Dashboard/Marquee";
 import { marqueeData2 } from "@/components/Dashboard/MarqueeData";
+import { resolveToneClasses } from "@/lib/theme-color";
 
 export default function MilitaryTrainingPage(props: { params: Promise<{ id: string }> }) {
   const { id } = use(props.params);
@@ -56,7 +58,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
       )}
 
       {error && (
-        <p className="text-center text-sm text-red-500 mb-4">{error}</p>
+        <p className="text-center text-sm text-destructive mb-4">{error}</p>
       )}
 
       {cadet && (
@@ -79,7 +81,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                 >
                   <CardHeader>
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${card.color} text-white`}>
+                      <div className={`p-2 rounded-lg ${resolveToneClasses(card.color, "icon")}`}>
                         <Icon className="h-5 w-5" />
                       </div>
 
@@ -95,9 +97,9 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                     </p>
 
                     <a href={url}>
-                      <button className="w-full border rounded-md p-2 hover:bg-[#1677ff] hover:text-white transition">
+                      <Button type="button" variant="default" className="w-full">
                         Access Module →
-                      </button>
+                      </Button>
                     </a>
                   </CardContent>
                 </Card>
@@ -118,7 +120,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                 >
                   <CardHeader>
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${card.color} text-white`}>
+                      <div className={`p-2 rounded-lg ${resolveToneClasses(card.color, "icon")}`}>
                         <Icon className="h-5 w-5" />
                       </div>
 
@@ -134,9 +136,9 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                     </p>
 
                     <a href={url}>
-                      <button className="w-full border rounded-md p-2 hover:bg-[#1677ff] hover:text-white transition">
+                      <Button type="button" variant="default" className="w-full">
                         Access Module →
-                      </button>
+                      </Button>
                     </a>
                   </CardContent>
                 </Card>
@@ -157,7 +159,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                 >
                   <CardHeader>
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${card.color} text-white`}>
+                      <div className={`p-2 rounded-lg ${resolveToneClasses(card.color, "icon")}`}>
                         <Icon className="h-5 w-5" />
                       </div>
 
@@ -173,9 +175,9 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                     </p>
 
                     <a href={url}>
-                      <button className="w-full border rounded-md p-2 hover:bg-[#1677ff] hover:text-white transition">
+                      <Button type="button" variant="default" className="w-full">
                         Access Module →
-                      </button>
+                      </Button>
                     </a>
                   </CardContent>
                 </Card>

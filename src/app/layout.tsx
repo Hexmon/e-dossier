@@ -14,7 +14,8 @@ const DEVICE_SETTINGS_BOOTSTRAP_SCRIPT = `
     const parsed = JSON.parse(raw);
     const themeMode = parsed?.themeMode || "system";
     const density = parsed?.density || "comfortable";
-    const accent = parsed?.accentPalette || "blue";
+    const allowedAccents = ["blue", "teal", "amber", "purple", "red"];
+    const accent = allowedAccents.includes(parsed?.accentPalette) ? parsed.accentPalette : "blue";
     const preset = parsed?.themePreset || "navy-steel";
 
     const prefersDark =

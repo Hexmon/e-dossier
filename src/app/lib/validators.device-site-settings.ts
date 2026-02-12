@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { ACCENT_PALETTE_KEYS } from "@/lib/accent-palette";
 
 export const DEVICE_SITE_TIMEZONE = "Asia/Kolkata" as const;
 
 export const deviceThemeModeSchema = z.enum(["light", "dark", "system"]);
 export const deviceThemePresetSchema = z.literal("navy-steel");
-export const deviceAccentPaletteSchema = z.enum(["blue", "teal", "amber", "purple", "red"]);
+export const deviceAccentPaletteSchema = z.enum(ACCENT_PALETTE_KEYS);
 export const deviceDensitySchema = z.enum(["compact", "comfortable"]);
 export const deviceLanguageSchema = z.literal("en");
 

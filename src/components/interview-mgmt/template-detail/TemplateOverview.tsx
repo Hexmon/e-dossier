@@ -55,7 +55,7 @@ export default function TemplateOverview({ template }: TemplateOverviewProps) {
                             </label>
                             <div className="mt-1">
                                 {template.isActive ? (
-                                    <Badge className="bg-green-600">Active</Badge>
+                                    <Badge className="bg-success">Active</Badge>
                                 ) : (
                                     <Badge variant="secondary">Inactive</Badge>
                                 )}

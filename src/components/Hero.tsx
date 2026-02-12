@@ -48,14 +48,14 @@ const Hero = ({
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button asChild variant="link" size="lg" className="bg-yellow-500">
+              <Button asChild variant="link" size="lg" className="bg-warning">
                 <Link href="/login?role=staff">Commander / Staff Login</Link>
               </Button>
               <Button
                 asChild
                 variant="outline"
                 size="lg"
-                className="bg-white/10 text-white border-white/30 hover:bg-white hover:text-primary"
+                className="bg-white/10 text-primary-foreground border-white/30 hover:bg-white hover:text-primary"
               >
                 <Link href="/login?role=oc">OC Corner</Link>
               </Button>

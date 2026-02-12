@@ -215,8 +215,8 @@ export default function CFEFormPage() {
                                                 type="button"
                                                 onClick={() => setActiveTab(idx)}
                                                 className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === idx
-                                                        ? "bg-blue-600 text-white"
-                                                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-muted text-foreground hover:bg-muted/80"
                                                     }`}
                                             >
                                                 {s}
@@ -227,7 +227,7 @@ export default function CFEFormPage() {
 
                                 {/* Display all existing records for selected semester */}
                                 <div className="mb-8">
-                                    <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                                    <h3 className="text-sm font-semibold text-foreground mb-3">
                                         {semesters[activeTab]} - All Records
                                     </h3>
                                     <CfeTable
@@ -241,7 +241,7 @@ export default function CFEFormPage() {
 
                                 {/* Form to add new records */}
                                 <div className="mt-6">
-                                    <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                                    <h3 className="text-sm font-semibold text-foreground mb-3">
                                         Add New Records for {semesters[activeTab]}
                                     </h3>
                                     <CfeForm
