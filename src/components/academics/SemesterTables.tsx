@@ -6,28 +6,29 @@ import DynamicSemesterTable from "./DynamicSemesterTable";
 interface SemesterTableProps {
     ocId: string;
     courseId: string;
+    canEdit?: boolean;
 }
 
-export function SemesterTableI({ ocId, courseId }: SemesterTableProps) {
-    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={1} />;
+export function SemesterTableI({ ocId, courseId, canEdit = false }: SemesterTableProps) {
+    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={1} canEdit={canEdit} />;
 }
 
-export function SemesterTableII({ ocId, courseId }: SemesterTableProps) {
-    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={2} />;
+export function SemesterTableII({ ocId, courseId, canEdit = false }: SemesterTableProps) {
+    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={2} canEdit={canEdit} />;
 }
 
-export function SemesterTableIII({ ocId, courseId }: SemesterTableProps) {
-    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={3} />;
+export function SemesterTableIII({ ocId, courseId, canEdit = false }: SemesterTableProps) {
+    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={3} canEdit={canEdit} />;
 }
 
-export function SemesterTableIV({ ocId, courseId }: SemesterTableProps) {
-    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={4} />;
+export function SemesterTableIV({ ocId, courseId, canEdit = false }: SemesterTableProps) {
+    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={4} canEdit={canEdit} />;
 }
 
-export function SemesterTableV_Mech({ ocId, courseId }: SemesterTableProps) {
-    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={5} />;
+export function SemesterTableV_Mech({ ocId, courseId, canEdit = false }: SemesterTableProps) {
+    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={5} canEdit={canEdit} />;
 }
 
-export function SemesterTableVI_Mech({ ocId, courseId }: SemesterTableProps) {
-    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={6} />;
+export function SemesterTableVI_Mech({ ocId, courseId, canEdit = false }: SemesterTableProps) {
+    return <DynamicSemesterTable ocId={ocId} courseId={courseId} semester={6} canEdit={canEdit} />;
 }

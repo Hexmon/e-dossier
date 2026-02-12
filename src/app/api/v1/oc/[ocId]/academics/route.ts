@@ -1,10 +1,15 @@
 import { json, handleApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists } from '../../_checks';
-import { OcIdParam } from '@/app/lib/oc-validators';
+import { OcIdParam, Semester } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getOcAcademics } from '@/app/services/oc-academics';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { z } from 'zod';
+
+const academicsListQuerySchema = z.object({
+    semester: Semester.optional(),
+});
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
@@ -12,7 +17,9 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
         const authCtx = await authorizeOcAccess(req, ocId);
         await ensureOcExists(ocId);
         const sp = new URL(req.url).searchParams;
-        const semester = sp.get('semester') ? Number(sp.get('semester')) : undefined;
+        const { semester } = academicsListQuerySchema.parse({
+            semester: sp.get('semester') ?? undefined,
+        });
         const semesters = await getOcAcademics(ocId, { semester });
 
         await req.audit.log({
