@@ -1,13 +1,15 @@
 // src/app/api/v1/auth/logout/route.ts
 import { json, handleApiError } from '@/app/lib/http';
-import { clearAuthCookies } from '@/app/lib/cookies';
-import { requireAuth } from '@/app/lib/authz';
+import { clearAuthCookies, readAccessToken } from '@/app/lib/cookies';
+import { decodeJwtPayloadUnsafe } from '@/app/lib/jwt-unsafe';
 import {
   withAuditRoute,
   AuditEventType,
   AuditResourceType,
 } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+
+const LOGOUT_TIMING_DEBUG = process.env.LOGOUT_TIMING_DEBUG === 'true';
 
 function getExpectedOrigins(req: AuditNextRequest) {
   const origins = new Set<string>([req.nextUrl.origin]);
@@ -66,10 +68,13 @@ function originMatches(req: AuditNextRequest) {
  */
 async function POSTHandler(req: AuditNextRequest) {
   try {
+    const startedAt = performance.now();
+
     // SECURITY FIX: Enhanced same-origin validation
     if (!originMatches(req)) {
       return json.forbidden('Cross-site request not allowed for logout.');
     }
+    const originValidatedAt = performance.now();
 
     // Additional security: Check for suspicious headers that might indicate CSRF
     const contentType = req.headers.get('content-type');
@@ -77,13 +82,8 @@ async function POSTHandler(req: AuditNextRequest) {
       return json.badRequest('Invalid content type for logout request.');
     }
 
-    let actorUserId: string | null = null;
-    try {
-      const ctx = await requireAuth(req);
-      actorUserId = ctx.userId;
-    } catch {
-      actorUserId = null;
-    }
+    const payload = decodeJwtPayloadUnsafe(readAccessToken(req));
+    const actorUserId = typeof payload?.sub === 'string' ? payload.sub : null;
 
     // Prepare a 204 response with security headers
     const res = json.noContent({
@@ -101,6 +101,7 @@ async function POSTHandler(req: AuditNextRequest) {
 
     // Server-authoritative cookie clear
     clearAuthCookies(res);
+    const responseBuiltAt = performance.now();
 
     void req.audit.log({
       action: AuditEventType.LOGOUT,
@@ -108,7 +109,24 @@ async function POSTHandler(req: AuditNextRequest) {
       actor: actorUserId ? { type: 'user', id: actorUserId } : { type: 'anonymous', id: 'unknown' },
       target: { type: AuditResourceType.USER, id: actorUserId ?? undefined },
       metadata: { actorPresent: Boolean(actorUserId), description: 'User logged out via /api/v1/auth/logout' },
+    }).catch((error) => {
+      console.warn('[logout] audit logging failed (non-blocking)', error);
     });
+    const auditScheduledAt = performance.now();
+
+    if (LOGOUT_TIMING_DEBUG) {
+      const requestId = req.headers.get('x-request-id') ?? '';
+      console.info(
+        JSON.stringify({
+          type: 'logout.timing',
+          requestId,
+          originValidationMs: Number((originValidatedAt - startedAt).toFixed(2)),
+          responseBuildMs: Number((responseBuiltAt - originValidatedAt).toFixed(2)),
+          auditScheduleMs: Number((auditScheduledAt - responseBuiltAt).toFixed(2)),
+          totalMs: Number((auditScheduledAt - startedAt).toFixed(2)),
+        })
+      );
+    }
 
     return res;
   } catch (err) {
