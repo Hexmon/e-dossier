@@ -7,8 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { navItems } from "@/config/app.config";
 import Image from "next/image";
+import SafeImage from "@/components/site-settings/SafeImage";
 
-const Navbar = () => {
+type NavbarProps = {
+  logoUrl?: string | null;
+  siteTitle?: string;
+  siteSubtitle?: string;
+};
+
+const Navbar = ({
+  logoUrl = null,
+  siteTitle = "MCEME",
+  siteSubtitle = "CTW Portal",
+}: NavbarProps) => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isActive = (path: string) => {
@@ -21,16 +32,17 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
-            <Image
-              src="/images/army_logo.jpeg"
-              alt="Army Logo"
+            <SafeImage
+              src={logoUrl}
+              fallbackSrc="/images/army_logo.jpeg"
+              alt="Site Logo"
               width={50}
-              height={10}
-              className="object-contain "
+              height={50}
+              className="h-10 w-10 object-contain"
             />
             <div className="hidden sm:block">
-              <h1 className="text-lg font-semibold text-primary">MCEME</h1>
-              <p className="text-xs text-muted-foreground">CTW Portal</p>
+              <h1 className="text-lg font-semibold text-primary">{siteTitle}</h1>
+              <p className="text-xs text-muted-foreground">{siteSubtitle}</p>
             </div>
           </Link>
 

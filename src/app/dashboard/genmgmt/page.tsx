@@ -167,7 +167,23 @@ export default function GeneralManagementPage() {
 
               {/* Settings Tab */}
               <TabsContent value="settings" className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Admin Site Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Manage landing page content including logo, hero text, commanders, awards, and history.
+                      </p>
+                    </CardContent>
+                    <CardFooter>
+                      <Button asChild className="w-full">
+                        <Link href="/dashboard/genmgmt/settings/site">Open Site Settings</Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+
                   <Card>
                     <CardHeader>
                       <CardTitle>Device Site Settings</CardTitle>
