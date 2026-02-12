@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { AppSidebar } from "@/components/AppSidebar";
@@ -26,9 +26,31 @@ import { resolveToneClasses, type ColorTone } from "@/lib/theme-color";
 
 export default function GeneralManagementPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const { data: meData, isLoading: meLoading } = useMe();
   const authzV2Enabled = isAuthzV2Enabled();
+  const tabParam = searchParams.get("tab");
+  const validTabs = managementTabs.map((tab) => tab.value);
+  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : "Gen Mgmt";
+  const activeTabLabel =
+    managementTabs.find((tab) => tab.value === activeTab)?.title ?? "Admin Management";
+
+  const updateTab = (value: string) => {
+    if (value === activeTab) return;
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set("tab", value);
+    router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
+  };
+
+  const withTab = (href: string, tab: string) => {
+    const [path, query = ""] = href.split("?");
+    const params = new URLSearchParams(query);
+    params.set("tab", tab);
+    const queryString = params.toString();
+    return queryString ? `${path}?${queryString}` : path;
+  };
 
   const hasPageAccess = useMemo(() => {
     if (!authzV2Enabled) return true;
@@ -114,8 +136,10 @@ export default function GeneralManagementPage() {
                     const to = card.to ?? "";
                     const color = card.color as ColorTone;
                     const iconTone = resolveToneClasses(color, "icon");
+                    const isOfferings = title === "Offerings Management";
+                    const tabbedTo = to ? withTab(to, activeTab) : to;
 
-                    if (title === "Offerings Management") {
+                    if (isOfferings) {
                       return (
                         <Card
                           key={index}

@@ -54,7 +54,7 @@ export default function BreadcrumbNav({ paths }: BreadcrumbNavProps) {
               <li key={index} className="inline-flex items-center">
                 {!isLast && href ? (
                   <Link
-                    href={path.href}
+                    href={href}
                     className="text-muted-foreground hover:text-primary"
                   >
                     {path.label}
