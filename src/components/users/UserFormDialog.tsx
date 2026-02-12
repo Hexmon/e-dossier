@@ -42,7 +42,7 @@ export default function UserFormDialog({
                     <Input
                         placeholder="Username"
                         {...register("username")}
-                        className={usernameTooShort ? "border-red-600 border-dotted focus-visible:ring-red-600" : undefined}
+                        className={usernameTooShort ? "border-destructive border-dotted focus-visible:ring-destructive" : undefined}
                     />
                     <Input placeholder="Full Name" {...register("name")} />
                     <Input placeholder="Email" {...register("email")} />
