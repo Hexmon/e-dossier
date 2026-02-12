@@ -3616,6 +3616,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "route": "/dashboard/genmgmt/academics",
+    "action": "page:dashboard:genmgmt:academics:view",
+    "resourceType": "page:dashboard:genmgmt:academics",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
     "route": "/dashboard/genmgmt/camps",
     "action": "page:dashboard:genmgmt:camps:view",
     "resourceType": "page:dashboard:genmgmt:camps",
