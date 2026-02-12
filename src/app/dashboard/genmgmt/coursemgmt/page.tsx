@@ -9,6 +9,7 @@ import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import CourseCard from "@/components/courses/CourseCard";
 import CourseFormModal from "@/components/courses/CourseFormModal";
+import CourseViewModal from "@/components/courses/CourseViewModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ocTabs } from "@/config/app.config";
@@ -26,6 +27,8 @@ export default function CourseManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editCourseData, setEditCourseData] = useState<UICourse | null>(null);
+  const [viewCourse, setViewCourse] = useState<UICourse | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -42,6 +45,11 @@ export default function CourseManagement() {
   const handleEdit = (course: UICourse) => {
     setEditCourseData(course);
     setIsFormOpen(true);
+  };
+
+  const handleView = (course: UICourse) => {
+    setViewCourse(course);
+    setIsViewOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -103,7 +111,7 @@ export default function CourseManagement() {
                         course={course}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
-                        onView={() => { }}
+                        onView={handleView}
                       />
                     ))}
                   </div>
@@ -123,6 +131,16 @@ export default function CourseManagement() {
         onSave={handleSave}
         course={editCourseData}
         mode={editCourseData ? "edit" : "add"}
+      />
+
+      <CourseViewModal
+        open={isViewOpen}
+        courseId={viewCourse?.id ?? null}
+        courseName={viewCourse?.courseNo ?? null}
+        onOpenChange={(open) => {
+          setIsViewOpen(open);
+          if (!open) setViewCourse(null);
+        }}
       />
     </SidebarProvider>
   );

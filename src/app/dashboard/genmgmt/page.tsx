@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Settings } from "lucide-react";
 
@@ -16,12 +16,14 @@ import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { DashboardCard } from "@/components/cards/DashboardCard";
 import CourseSelectModal from "@/components/modals/CourseSelectModal";
+import { Input } from "@/components/ui/input";
 
 export default function GeneralManagementPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [adminSearch, setAdminSearch] = useState("");
+  const [moduleSearch, setModuleSearch] = useState("");
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const offeringsParam = searchParams.get("offerings");
   const tabValues = managementTabs.map((tab) => tab.value);
@@ -48,6 +50,29 @@ export default function GeneralManagementPage() {
   const handleLogout = () => {
     console.log("Logout clicked");
   };
+
+  const filterCards = <T extends { title?: string; description?: string }>(
+    cards: T[],
+    query: string
+  ) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return cards;
+    return cards.filter((card) => {
+      const title = (card.title ?? "").toLowerCase();
+      const description = (card.description ?? "").toLowerCase();
+      return title.includes(q) || description.includes(q);
+    });
+  };
+
+  const filteredAdminCards = useMemo(
+    () => filterCards(managementCard, adminSearch),
+    [adminSearch]
+  );
+
+  const filteredModuleCards = useMemo(
+    () => filterCards(moduleManagementCard, moduleSearch),
+    [moduleSearch]
+  );
 
   useEffect(() => {
     if (offeringsParam) {
@@ -80,7 +105,7 @@ export default function GeneralManagementPage() {
             </nav>
             {/* Welcome section */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-[#1677ff] mb-2">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
                 Admin Management
               </h2>
               <p className="text-muted-foreground">
@@ -97,8 +122,16 @@ export default function GeneralManagementPage() {
             >
               {/* General Management Tab */}
               <TabsContent value="Gen Mgmt" className="space-y-6">
+                <div className="flex items-center justify-end">
+                  <Input
+                    placeholder="Search modules..."
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                    className="w-64"
+                  />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
-                  {managementCard.map((card, index) => {
+                  {filteredAdminCards.map((card, index) => {
                     const IconComponent = card.icon;
                     const { title = "", description = "", to = "", color = "" } = card;
                     const isOfferings = title === "Offerings Management";
@@ -117,11 +150,22 @@ export default function GeneralManagementPage() {
                     );
                   })}
                 </div>
+                {filteredAdminCards.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center">No modules found.</p>
+                )}
               </TabsContent>
               {/* Module Management Tab */}
               <TabsContent value="module-mgmt" className="space-y-6">
+                <div className="flex items-center justify-end">
+                  <Input
+                    placeholder="Search modules..."
+                    value={moduleSearch}
+                    onChange={(e) => setModuleSearch(e.target.value)}
+                    className="w-64"
+                  />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
-                  {moduleManagementCard.map((card, index) => {
+                  {filteredModuleCards.map((card, index) => {
                     const IconComponent = card.icon;
 
                     const tabbedTo = card.to ? withTab(card.to, activeTab) : card.to;
@@ -137,6 +181,9 @@ export default function GeneralManagementPage() {
                     );
                   })}
                 </div>
+                {filteredModuleCards.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center">No modules found.</p>
+                )}
               </TabsContent>
 
               {/* Settings Tab */}

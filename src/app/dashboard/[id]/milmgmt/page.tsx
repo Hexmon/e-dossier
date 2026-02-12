@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useMemo, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -17,6 +17,7 @@ import { Settings } from "lucide-react";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Marquee from "@/components/Dashboard/Marquee";
 import { marqueeData2 } from "@/components/Dashboard/MarqueeData";
+import { Input } from "@/components/ui/input";
 
 export default function MilitaryTrainingPage(props: { params: Promise<{ id: string }> }) {
   const { id } = use(props.params);
@@ -32,6 +33,8 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
   const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : "basic-details";
   const activeTabLabel =
     miltrgTabs.find((tab) => tab.value === activeTab)?.title ?? "Basic Details";
+  const [basicSearch, setBasicSearch] = useState("");
+  const [miltrgSearch, setMiltrgSearch] = useState("");
 
   const updateTab = (value: string) => {
     if (value === activeTab) return;
@@ -47,6 +50,29 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
     const queryString = params.toString();
     return queryString ? `${path}?${queryString}` : path;
   };
+
+  const filterCards = (
+    cards: typeof militaryTrainingCards,
+    query: string
+  ) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return cards;
+    return cards.filter((card) => {
+      const title = card.title.toLowerCase();
+      const description = card.description.toLowerCase();
+      return title.includes(q) || description.includes(q);
+    });
+  };
+
+  const basicCards = useMemo(
+    () => filterCards(militaryTrainingCards.slice(0, 7), basicSearch),
+    [basicSearch]
+  );
+
+  const miltrgCards = useMemo(
+    () => filterCards(militaryTrainingCards.slice(7, 29), miltrgSearch),
+    [miltrgSearch]
+  );
 
   return (
     <DashboardLayout
@@ -96,8 +122,16 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
         onValueChange={updateTab}
       >
         <TabsContent value="basic-details" className="space-y-6">
+          <div className="flex items-center justify-end">
+            <Input
+              placeholder="Search modules..."
+              value={basicSearch}
+              onChange={(e) => setBasicSearch(e.target.value)}
+              className="w-64"
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
-            {militaryTrainingCards.slice(0, 7).map((card, index) => {
+            {basicCards.map((card, index) => {
               const Icon = card.icon;
               const url = typeof card.to === "function" ? card.to(ocId) : card.to;
               const tabbedUrl = withTab(url, "basic-details");
@@ -133,11 +167,22 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
               );
             })}
           </div>
+          {basicCards.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center">No modules found.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="mil-trg" className="space-y-6">
+          <div className="flex items-center justify-end">
+            <Input
+              placeholder="Search modules..."
+              value={miltrgSearch}
+              onChange={(e) => setMiltrgSearch(e.target.value)}
+              className="w-64"
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
-            {militaryTrainingCards.slice(7, 29).map((card, index) => {
+            {miltrgCards.map((card, index) => {
               const Icon = card.icon;
               const url = typeof card.to === "function" ? card.to(ocId) : card.to;
               const tabbedUrl = withTab(url, "mil-trg");
@@ -173,6 +218,9 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
               );
             })}
           </div>
+          {miltrgCards.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center">No modules found.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">
