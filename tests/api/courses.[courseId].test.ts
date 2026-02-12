@@ -19,6 +19,7 @@ vi.mock('@/app/db/queries/courses', () => ({
   createCourse: vi.fn(),
   getCourse: vi.fn(async () => null),
   listCourseOfferings: vi.fn(async () => []),
+  countAssignedOCsForCourse: vi.fn(async () => 0),
   softDeleteCourse: vi.fn(async () => null),
   updateCourse: vi.fn(async () => null),
   hardDeleteCourse: vi.fn(async () => null),
@@ -239,6 +240,7 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
 
   it('returns 404 when course to delete is not found', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(0);
     (coursesQueries.softDeleteCourse as any).mockResolvedValueOnce(null);
 
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}` });
@@ -251,8 +253,27 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
     expect(body.error).toBe('not_found');
   });
 
+  it('returns 409 with OC count when cadets are assigned to the course', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(7);
+
+    const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}` });
+    const ctx = { params: Promise.resolve({ courseId }) } as any;
+
+    const res = await deleteCourse(req as any, ctx);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('conflict');
+    expect(body.ocCount).toBe(7);
+    expect(body.message).toMatch(/7 OC\(s\)/);
+    expect(coursesQueries.softDeleteCourse).not.toHaveBeenCalled();
+    expect(coursesQueries.hardDeleteCourse).not.toHaveBeenCalled();
+  });
+
   it('soft-deletes course on happy path', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(0);
     (coursesQueries.softDeleteCourse as any).mockResolvedValueOnce({
       before: { id: courseId, code: 'TES-50' },
       after: { id: courseId, code: 'TES-50', deletedAt: new Date().toISOString() },
@@ -270,6 +291,7 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
 
   it('hard-deletes course when requested', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(0);
     (coursesQueries.hardDeleteCourse as any).mockResolvedValueOnce({
       before: { id: courseId, code: 'TES-50' },
     });

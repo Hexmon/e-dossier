@@ -52,7 +52,26 @@ export const deviceSiteSettingsApi = {
     });
   },
 
+  getForCurrentUser: async (deviceId?: string) => {
+    return api.get<GetAdminResponse>("/api/v1/settings/device-site", {
+      baseURL,
+      query: deviceId ? { deviceId } : undefined,
+      headers: deviceId ? { "x-device-id": deviceId } : undefined,
+    });
+  },
+
+  upsertForCurrentUser: async (input: UpsertDeviceSiteSettingsInput) => {
+    return api.put<GetAdminResponse, UpsertDeviceSiteSettingsInput>(
+      "/api/v1/settings/device-site",
+      input,
+      {
+        baseURL,
+        headers: { "x-device-id": input.deviceId },
+      }
+    );
+  },
+
   // Backward-compatible API wrappers for existing hook/component call sites.
-  get: async (deviceId: string) => deviceSiteSettingsApi.getForDevice(deviceId),
-  upsert: async (input: UpsertDeviceSiteSettingsInput) => deviceSiteSettingsApi.upsertForDevice(input),
+  get: async (deviceId: string) => deviceSiteSettingsApi.getForCurrentUser(deviceId),
+  upsert: async (input: UpsertDeviceSiteSettingsInput) => deviceSiteSettingsApi.upsertForCurrentUser(input),
 };

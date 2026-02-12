@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
-import { getCourse, listCourseOfferings, softDeleteCourse, updateCourse, hardDeleteCourse } from '@/app/db/queries/courses';
+import { countAssignedOCsForCourse, getCourse, listCourseOfferings, softDeleteCourse, updateCourse, hardDeleteCourse } from '@/app/db/queries/courses';
 import type { CourseRow } from '@/app/db/queries/courses';
 import { courseUpdateSchema } from '@/app/lib/validators.courses';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
@@ -116,6 +116,15 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         const adminCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
         const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
+        const assignedOcCount = await countAssignedOCsForCourse(courseId);
+
+        if (assignedOcCount > 0) {
+            return json.conflict(
+                `Cannot delete course. ${assignedOcCount} OC(s) are already assigned to this course.`,
+                { ocCount: assignedOcCount },
+            );
+        }
+
         const result = (hard ? await hardDeleteCourse(courseId) : await softDeleteCourse(courseId)) as CourseDeleteResult | null;
         if (!result) throw new ApiError(404, 'Course not found', 'not_found');
         const before: CourseRow = result.before;

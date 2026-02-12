@@ -10,7 +10,7 @@ type AdminPageAuthContext = {
   position: string | null;
 };
 
-export async function requireAdminDashboardAccess(): Promise<AdminPageAuthContext> {
+export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
 
@@ -37,14 +37,20 @@ export async function requireAdminDashboardAccess(): Promise<AdminPageAuthContex
     typeof (payload as any).apt?.position === "string" ? (payload as any).apt.position : null;
   const roleGroup = deriveSidebarRoleGroup({ roles, position });
 
-  if (roleGroup === "OTHER_USERS") {
-    redirect("/dashboard");
-  }
-
   return {
     userId,
     roles,
     roleGroup,
     position,
   };
+}
+
+export async function requireAdminDashboardAccess(): Promise<AdminPageAuthContext> {
+  const authContext = await requireDashboardAccess();
+
+  if (authContext.roleGroup === "OTHER_USERS") {
+    redirect("/dashboard");
+  }
+
+  return authContext;
 }
