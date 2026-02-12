@@ -76,7 +76,7 @@ export default function SemesterReviews({
             <div className="space-y-2">
               <Label className="font-medium">Platoon Commander</Label>
               {disabled || !isEditing ? (
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                <p className="text-sm text-foreground whitespace-pre-wrap">
                   {remarks[activeSemester]?.pc || "-"}
                 </p>
               ) : (
@@ -93,7 +93,7 @@ export default function SemesterReviews({
             <div className="space-y-2">
               <Label className="font-medium">Deputy Commander</Label>
               {disabled || !isEditing ? (
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                <p className="text-sm text-foreground whitespace-pre-wrap">
                   {remarks[activeSemester]?.dc || "-"}
                 </p>
               ) : (
@@ -110,7 +110,7 @@ export default function SemesterReviews({
             <div className="space-y-2">
               <Label className="font-medium">Commander</Label>
               {disabled || !isEditing ? (
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                <p className="text-sm text-foreground whitespace-pre-wrap">
                   {remarks[activeSemester]?.commander || "-"}
                 </p>
               ) : (

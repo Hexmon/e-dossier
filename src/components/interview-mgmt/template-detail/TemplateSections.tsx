@@ -137,7 +137,7 @@ export default function TemplateSections({ templateId }: TemplateSectionsProps) 
                                                 Order: {section.sortOrder}
                                             </Badge>
                                             {section.isActive ? (
-                                                <Badge className="bg-green-600 text-xs">Active</Badge>
+                                                <Badge className="bg-success text-xs">Active</Badge>
                                             ) : (
                                                 <Badge variant="secondary" className="text-xs">
                                                     Inactive
@@ -211,7 +211,7 @@ export default function TemplateSections({ templateId }: TemplateSectionsProps) 
                         <AlertDialogCancel onClick={() => setSectionToDelete(null)}>
                             Cancel
                         </AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600">
+                        <AlertDialogAction onClick={confirmDelete} className="bg-destructive">
                             Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>

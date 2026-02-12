@@ -158,7 +158,7 @@ export default function InterviewTabs() {
                             key={term}
                             type="button"
                             onClick={() => setSelectedTerm(term)}
-                            className={`px-4 py-2 rounded-t-lg ${isActive ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                            className={`px-4 py-2 rounded-t-lg ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                         >
                             {`TERM ${label}`}
                         </button>
@@ -177,7 +177,7 @@ export default function InterviewTabs() {
                         key={id}
                         type="button"
                         onClick={() => setActive(id as InterviewOfficer)}
-                        className={`px-4 py-2 rounded-t-lg ${active === id ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                        className={`px-4 py-2 rounded-t-lg ${active === id ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                     >
                         {label}
                     </button>
@@ -225,7 +225,7 @@ export default function InterviewTabs() {
                     </div>
                 </form>
             ) : (
-                <div className="border rounded-lg p-6 bg-gray-50 text-center text-sm text-gray-600">
+                <div className="border rounded-lg p-6 bg-muted/40 text-center text-sm text-muted-foreground">
                     The selected interview template is not configured for this term.
                 </div>
             )}

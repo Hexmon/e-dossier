@@ -1,4 +1,7 @@
 import { json, handleApiError } from '@/app/lib/http';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { auditLogs } from '@/app/db/schema/auth/audit';
@@ -160,4 +163,4 @@ async function GETHandler(req: AuditNextRequest) {
   }
 }
 
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));

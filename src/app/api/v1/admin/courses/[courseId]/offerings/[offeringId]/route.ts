@@ -7,6 +7,9 @@ import { getCourseOffering } from '@/app/db/queries/courses';
 import { findMissingInstructorIds } from '@/app/db/queries/instructors';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 const Param = z.object({ courseId: z.string().uuid(), offeringId: z.string().uuid() });
 
@@ -124,8 +127,8 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         return json.ok({ message: hard ? 'Offering hard-deleted.' : 'Offering soft-deleted.', id: resourceId });
     } catch (err) { return handleApiError(err); }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
 
-export const DELETE = withAuditRoute('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

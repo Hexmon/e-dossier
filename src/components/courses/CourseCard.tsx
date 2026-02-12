@@ -45,7 +45,7 @@ export default function CourseCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 group-hover:from-blue-200 group-hover:to-blue-100">
-              <ClipboardList className="h-5 w-5 text-blue-600" />
+              <ClipboardList className="h-5 w-5 text-primary" />
             </div>
             <div>
               <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
@@ -58,7 +58,7 @@ export default function CourseCard({
           </div>
           <Badge
             variant="outline"
-            className="text-xs font-medium border-blue-200 text-blue-700 bg-blue-50"
+            className="text-xs font-medium border-primary/30 text-primary bg-primary/10"
           >
             Active
           </Badge>
@@ -67,7 +67,7 @@ export default function CourseCard({
 
       <CardContent className="space-y-2 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-blue-500" />
+          <Calendar className="h-4 w-4 text-primary" />
           <span>Start: {course.startDate}</span>
         </div>
         <div className="flex items-center gap-2">

@@ -1,4 +1,7 @@
 import { json, handleApiError } from '@/app/lib/http';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { deleteSignupRequest } from '@/app/db/queries/signupRequests';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
@@ -31,4 +34,4 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     return handleApiError(err);
   }
 }
-export const DELETE = withAuditRoute('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

@@ -10,7 +10,8 @@ export interface EducationRecord {
     school: string;
     board: string;
     subjects: string;
-    percentage: number;
+    grade: string;
+    percentage: number | boolean;
 }
 
 export interface EducationUpdate extends EducationRecord {
@@ -39,7 +40,8 @@ export interface EducationRecordResponse {
     schoolOrCollege: string | null;
     boardOrUniv: string | null;
     subjects: string | null;
-    totalPercent: number | null;
+    grade: string | null;
+    totalPercent: string | null;
 }
 
 
@@ -63,6 +65,7 @@ export async function saveEducationDetails(
                 schoolOrCollege: record.school,
                 boardOrUniv: record.board,
                 subjects: record.subjects,
+                grade: record.grade,
                 totalPercent: record.percentage,
             };
 
@@ -101,7 +104,14 @@ export async function getEducationDetails(ocId: string): Promise<EducationRecord
 export async function updateEducationRecord(
     ocId: string,
     eduId: string,
-    payload: Partial<{ totalPercent: number }>
+    payload: Partial<{
+        level: string;
+        schoolOrCollege: string;
+        boardOrUniv: string;
+        subjects: string;
+        grade: string;
+        totalPercent: number | boolean | string | null;
+    }>
 ) {
     return api.patch(`${endpoints.oc.education(ocId)}/${eduId}`, payload);
 }

@@ -48,11 +48,11 @@ export default async function AuditLogsPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Audit Logs</h1>
-          <p className="text-sm text-gray-500">Search by actor, event, or request ID.</p>
+          <p className="text-sm text-muted-foreground">Search by actor, event, or request ID.</p>
         </div>
         <Link
           href="/dashboard/audit-logs"
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm text-primary hover:underline"
         >
           Clear filters
         </Link>
@@ -99,7 +99,7 @@ export default async function AuditLogsPage({
         </label>
         <button
           type="submit"
-          className="mt-6 rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white"
+          className="mt-6 rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
         >
           Apply Filters
         </button>
@@ -107,13 +107,13 @@ export default async function AuditLogsPage({
 
       <div className="overflow-x-auto rounded border">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-muted/40">
             <tr>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">Timestamp</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">Event</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">Actor</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">Resource</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">Request</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Timestamp</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Event</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Actor</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Resource</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Request</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
@@ -122,7 +122,7 @@ export default async function AuditLogsPage({
                 <td className="px-3 py-2">{new Date(row.createdAt).toLocaleString()}</td>
                 <td className="px-3 py-2">
                   <div className="font-mono text-xs">{row.eventType}</div>
-                  <div className="text-gray-500">{row.description}</div>
+                  <div className="text-muted-foreground">{row.description}</div>
                 </td>
                 <td className="px-3 py-2">
                   {row.actorUserId ?? 'system'}
@@ -135,7 +135,7 @@ export default async function AuditLogsPage({
                   <div className="font-mono text-xs">
                     {row.method} {row.path}
                   </div>
-                  <div className="text-gray-500 text-xs">
+                  <div className="text-muted-foreground text-xs">
                     requestId: {row.requestId ?? 'n/a'}
                   </div>
                 </td>
@@ -143,7 +143,7 @@ export default async function AuditLogsPage({
             ))}
             {!data.items.length && (
               <tr>
-                <td colSpan={5} className="px-3 py-4 text-center text-gray-500">
+                <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground">
                   No audit entries found for the selected filters.
                 </td>
               </tr>

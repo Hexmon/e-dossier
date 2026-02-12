@@ -50,6 +50,24 @@ export async function getAllCourses(
 }
 
 /**
+ * Search courses by query string
+ * GET /api/v1/courses?includeDeleted=false&q=SEARCH
+ */
+export type SearchCoursesResponse = {
+    items: CourseResponse[];
+    count: number;
+};
+
+export async function searchCourses(
+    query: string
+): Promise<SearchCoursesResponse> {
+    return api.get<SearchCoursesResponse>(endpoints.course.all, {
+        baseURL,
+        query: { includeDeleted: "false", q: query },
+    });
+}
+
+/**
  * Create a new course
  */
 export async function createCourse(

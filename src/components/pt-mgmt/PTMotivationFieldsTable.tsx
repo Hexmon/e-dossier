@@ -62,8 +62,8 @@ export default function PTMotivationFieldsTable({
                                     <td className="text-center p-4">
                                         <span
                                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${field.isActive
-                                                    ? "bg-green-100 text-green-800"
-                                                    : "bg-gray-100 text-gray-800"
+                                                    ? "bg-success/15 text-success"
+                                                    : "bg-muted/70 text-foreground"
                                                 }`}
                                         >
                                             {field.isActive ? "Active" : "Inactive"}
@@ -83,7 +83,7 @@ export default function PTMotivationFieldsTable({
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => onDelete(field.id)}
-                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

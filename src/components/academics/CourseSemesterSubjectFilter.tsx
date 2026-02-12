@@ -29,7 +29,7 @@ export default function CourseSemesterSubjectFilter({
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <select
-                className="border px-3 py-2 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="border px-3 py-2 rounded disabled:bg-muted/70 disabled:cursor-not-allowed"
                 value={courseId}
                 onChange={(e) => onCourseChange(e.target.value)}
                 disabled={loadingCourses}
@@ -48,7 +48,7 @@ export default function CourseSemesterSubjectFilter({
             </select>
 
             <select
-                className="border px-3 py-2 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="border px-3 py-2 rounded disabled:bg-muted/70 disabled:cursor-not-allowed"
                 value={semester ?? ""}
                 disabled={!courseId}
                 onChange={(e) => onSemesterChange(Number(e.target.value))}
@@ -62,7 +62,7 @@ export default function CourseSemesterSubjectFilter({
             </select>
 
             <select
-                className="border px-3 py-2 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="border px-3 py-2 rounded disabled:bg-muted/70 disabled:cursor-not-allowed"
                 value={subjectId}
                 disabled={!semester || loadingOfferings}
                 onChange={(e) => onSubjectChange(e.target.value)}

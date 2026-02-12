@@ -57,7 +57,7 @@ export default function LeaveForm({
                 <Input
                     value={String(index + 1)}
                     disabled
-                    className="bg-gray-100 text-center"
+                    className="bg-muted/70 text-center"
                 />
             )
         },
@@ -186,7 +186,7 @@ export default function LeaveForm({
                 <Input
                     value={String(index + 1)}
                     disabled
-                    className="bg-gray-100 text-center"
+                    className="bg-muted/70 text-center"
                 />
             )
         },
@@ -289,7 +289,7 @@ export default function LeaveForm({
                         + Add Row
                     </Button>
 
-                    <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                    <Button type="submit" className="bg-success hover:bg-success/90">
                         Submit
                     </Button>
 

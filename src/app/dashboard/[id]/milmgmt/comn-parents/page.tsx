@@ -181,7 +181,7 @@ export default function ParentCommnPage() {
                                                     key={sem}
                                                     type="button"
                                                     onClick={() => setActiveTab(index)}
-                                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                                                 >
                                                     {sem}
                                                 </button>
@@ -194,7 +194,7 @@ export default function ParentCommnPage() {
                                         {loading ? (
                                             <p className="text-center p-4">Loading...</p>
                                         ) : grouped[activeTab]?.length === 0 ? (
-                                            <p className="text-center p-4 text-gray-500">No data submitted yet for this semester.</p>
+                                            <p className="text-center p-4 text-muted-foreground">No data submitted yet for this semester.</p>
                                         ) : (
                                             <ParentCommTable
                                                 rows={grouped[activeTab]}

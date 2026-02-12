@@ -35,7 +35,8 @@ const PUBLIC_BY_METHOD: Record<string, string[]> = {
     //  '/api/v1/roles',
     '/api/v1/admin/appointments',
     '/api/v1/admin/positions',
-    '/api/v1/platoons'
+    '/api/v1/platoons',
+    '/api/v1/site-settings',
   ],
   // If you ever want some POST public, add here:
   // POST: [ '/api/v1/some/public/post' ],

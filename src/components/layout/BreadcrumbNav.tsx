@@ -54,15 +54,15 @@ export default function BreadcrumbNav({ paths }: BreadcrumbNavProps) {
               <li key={index} className="inline-flex items-center">
                 {!isLast && href ? (
                   <Link
-                    href={href}
-                    className="text-muted-foreground hover:text-[#1677ff]"
+                    href={path.href}
+                    className="text-muted-foreground hover:text-primary"
                   >
                     {path.label}
                   </Link>
                 ) : (
                   <span
                     className={`${
-                      isLast ? "text-[#1677ff]" : "text-muted-foreground"
+                      isLast ? "text-primary" : "text-muted-foreground"
                     }`}
                     aria-current={isLast ? "page" : undefined}
                   >

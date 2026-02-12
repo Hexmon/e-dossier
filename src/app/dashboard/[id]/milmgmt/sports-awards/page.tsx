@@ -324,7 +324,7 @@ export default function SportsGamesPage() {
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {semesters.map((sem, idx) => {
                                         return (
-                                            <button key={sem} type="button" onClick={() => setActiveTab(idx)} className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}>
+                                            <button key={sem} type="button" onClick={() => setActiveTab(idx)} className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
                                                 {sem}
                                             </button>
                                         );

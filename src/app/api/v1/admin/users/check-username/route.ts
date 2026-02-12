@@ -1,4 +1,7 @@
 import { db } from '@/app/db/client';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { users } from '@/app/db/schema/auth/users';
 import { and, isNull, eq } from 'drizzle-orm';
 import { ApiError, handleApiError, json } from '@/app/lib/http';
@@ -53,4 +56,4 @@ async function GETHandler(req: AuditNextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));

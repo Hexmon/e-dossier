@@ -8,6 +8,9 @@ import { users } from '@/app/db/schema/auth/users';
 import { and, eq, isNull } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest) {
     try {
@@ -105,6 +108,6 @@ async function POSTHandler(req: AuditNextRequest) {
         return json.created({ message: 'Instructor created successfully.', instructor: row });
     } catch (err) { return handleApiError(err); }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withAuditRoute('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

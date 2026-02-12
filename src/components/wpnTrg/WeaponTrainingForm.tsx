@@ -158,7 +158,7 @@ export default function WeaponTrainingForm({
                         <Button
                             type="submit"
                             disabled={isSaving}
-                            className="bg-[#40ba4d]"
+                            className="bg-success"
                         >
                             {isSaving ? "Saving..." : "Save Training"}
                         </Button>
@@ -178,7 +178,7 @@ export default function WeaponTrainingForm({
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="hover:bg-destructive hover:text-white"
+                                className="hover:bg-destructive hover:text-primary-foreground"
                                 onClick={onReset}
                                 disabled={isSaving}
                             >

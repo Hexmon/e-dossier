@@ -67,9 +67,9 @@ export default function GlobalTabs({
             <Link key={value} href={link} className="text-center hover:text-primary min-w-0">
               <TabsTrigger
                 value={value}
-                className="flex items-center gap-2 border border-gray-300 
-                data-[state=inactive]:bg-blue-100 text-[#1677ff] 
-                data-[state=active]:bg-white data-[state=active]:border-primary 
+                className="flex items-center gap-2 border border-border 
+                data-[state=inactive]:bg-muted data-[state=inactive]:text-muted-foreground 
+                data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border-primary 
                 rounded-md px-3 py-2 transition-colors w-full shrink min-w-0 truncate"
               >
                 {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
@@ -80,9 +80,9 @@ export default function GlobalTabs({
             <TabsTrigger
               key={value}
               value={value}
-              className="flex items-center gap-2 border border-gray-300 
-              data-[state=inactive]:bg-blue-100 text-blue-700 
-              data-[state=active]:bg-white data-[state=active]:border-primary 
+              className="flex items-center gap-2 border border-border 
+              data-[state=inactive]:bg-muted data-[state=inactive]:text-muted-foreground 
+              data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border-primary 
               rounded-md px-3 py-2 transition-colors w-full shrink min-w-0 truncate"
             >
               {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}

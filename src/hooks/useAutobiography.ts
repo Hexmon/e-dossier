@@ -10,6 +10,7 @@ import {
     patchAutobiography,
     AutoBioPayload,
 } from "@/app/lib/api/autobiographyApi";
+import { ApiClientError } from "@/app/lib/apiClient";
 
 export function useAutobiography(ocId: string) {
     const [autoBio, setAutoBio] = useState<AutoBioPayload | null>(null);
@@ -48,7 +49,9 @@ export function useAutobiography(ocId: string) {
 
             toast.success(exists ? "Autobiography updated" : "Autobiography created");
             return response.data;
-        } catch {
+        } catch (err) {
+            // Rethrow ApiClientError so component can surface field-level errors
+            if (err instanceof ApiClientError) throw err;
             toast.error("Unexpected error while saving.");
             return null;
         }

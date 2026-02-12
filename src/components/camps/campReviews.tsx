@@ -205,11 +205,11 @@ export default function OcCampReviews({
         <h2 className="text-lg font-semibold">
           CAMP REVIEWS
           {disabled ? (
-            <span className="text-sm font-normal text-gray-500 ml-2">
+            <span className="text-sm font-normal text-muted-foreground ml-2">
               (View Mode)
             </span>
           ) : (
-            <span className="text-sm font-normal text-blue-600 ml-2">
+            <span className="text-sm font-normal text-primary ml-2">
               (Edit Mode)
             </span>
           )}
@@ -224,7 +224,7 @@ export default function OcCampReviews({
               Basic DS
             </Label>
             {disabled ? (
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <p className="text-sm text-foreground whitespace-pre-wrap">
                 {formReviews[0]?.reviewText || "-"}
               </p>
             ) : (
@@ -256,7 +256,7 @@ export default function OcCampReviews({
               Camp OIC
             </Label>
             {disabled ? (
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <p className="text-sm text-foreground whitespace-pre-wrap">
                 {formReviews[1]?.reviewText || "-"}
               </p>
             ) : (
@@ -288,7 +288,7 @@ export default function OcCampReviews({
               Platoon Commander
             </Label>
             {disabled ? (
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <p className="text-sm text-foreground whitespace-pre-wrap">
                 {formReviews[2]?.reviewText || "-"}
               </p>
             ) : (

@@ -10,6 +10,9 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { listOCsBasic, listOCsFull } from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 // --- Create OC (token required; no admin) -------------------------------
 const createSchema = z.object({
@@ -293,6 +296,6 @@ async function GETHandler(req: AuditNextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withAuditRoute('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

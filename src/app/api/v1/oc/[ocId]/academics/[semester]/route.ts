@@ -35,7 +35,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        const authCtx = await mustBeAuthed(req);
+        const authCtx = await mustBeAdmin(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
@@ -70,7 +70,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        const authCtx = await mustBeAuthed(req);
+        const authCtx = await mustBeAdmin(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);

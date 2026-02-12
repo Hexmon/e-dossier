@@ -284,7 +284,7 @@ export default function AcademicTable({
     }
 
     if (error) {
-        return <div className="p-4 text-center text-red-600">Error: {error}</div>;
+        return <div className="p-4 text-center text-destructive">Error: {error}</div>;
     }
 
     return (
@@ -294,18 +294,18 @@ export default function AcademicTable({
             <table className="w-full table-auto border-collapse">
                 <thead>
                     <tr>
-                        <th className="border px-2 py-2 bg-gray-50">S No.</th>
-                        <th className="border px-2 py-2 bg-gray-50">Sub</th>
-                        <th className="border px-2 py-2 bg-gray-50">Exam</th>
-                        <th className="border px-2 py-2 bg-gray-50">Credit</th>
-                        <th className="border px-2 py-2 bg-gray-50">Phase I</th>
-                        <th className="border px-2 py-2 bg-gray-50">Phase II</th>
-                        <th className="border px-2 py-2 bg-gray-50">Tutorial</th>
-                        <th className="border px-2 py-2 bg-gray-50">Sessional</th>
-                        <th className="border px-2 py-2 bg-gray-50">Final</th>
-                        <th className="border px-2 py-2 bg-gray-50">Practical</th>
-                        <th className="border px-2 py-2 bg-gray-50">Total</th>
-                        <th className="border px-2 py-2 bg-gray-50">Grade</th>
+                        <th className="border px-2 py-2 bg-muted/40">S No.</th>
+                        <th className="border px-2 py-2 bg-muted/40">Sub</th>
+                        <th className="border px-2 py-2 bg-muted/40">Exam</th>
+                        <th className="border px-2 py-2 bg-muted/40">Credit</th>
+                        <th className="border px-2 py-2 bg-muted/40">Phase I</th>
+                        <th className="border px-2 py-2 bg-muted/40">Phase II</th>
+                        <th className="border px-2 py-2 bg-muted/40">Tutorial</th>
+                        <th className="border px-2 py-2 bg-muted/40">Sessional</th>
+                        <th className="border px-2 py-2 bg-muted/40">Final</th>
+                        <th className="border px-2 py-2 bg-muted/40">Practical</th>
+                        <th className="border px-2 py-2 bg-muted/40">Total</th>
+                        <th className="border px-2 py-2 bg-muted/40">Grade</th>
                     </tr>
                 </thead>
 
@@ -334,7 +334,7 @@ export default function AcademicTable({
                                     ))}
 
                                     <td className="border px-2 py-1">
-                                        <input value={state.sessional} disabled className="w-full border px-1 bg-gray-100" />
+                                        <input value={state.sessional} disabled className="w-full border px-1 bg-muted/70" />
                                     </td>
 
                                     <td className="border px-2 py-1">
@@ -350,12 +350,12 @@ export default function AcademicTable({
                                         <input
                                             value={state.practical}
                                             disabled
-                                            className="w-full border px-1 rounded bg-gray-100"
+                                            className="w-full border px-1 rounded bg-muted/70"
                                         />
                                     </td>
 
                                     <td className="border px-2 py-1">
-                                        <input value={state.total} disabled className="w-full border px-1 bg-gray-100" />
+                                        <input value={state.total} disabled className="w-full border px-1 bg-muted/70" />
                                     </td>
 
                                     <td className="border px-2 py-1">
@@ -368,7 +368,7 @@ export default function AcademicTable({
                                     </td>
                                 </tr>
 
-                                <tr className="bg-gray-50">
+                                <tr className="bg-muted/40">
                                     <td className="border px-2 py-1">
                                         {r.practicalExam || "Practical"}
                                     </td>
@@ -381,14 +381,14 @@ export default function AcademicTable({
                                         <input
                                             value={state.practicalPhase1}
                                             disabled
-                                            className="w-full border px-1 rounded bg-gray-100"
+                                            className="w-full border px-1 rounded bg-muted/70"
                                         />
                                     </td>
                                     <td className="border px-2 py-1">
                                         <input
                                             value={state.practicalPhase2}
                                             disabled
-                                            className="w-full border px-1 rounded bg-gray-100"
+                                            className="w-full border px-1 rounded bg-muted/70"
                                         />
                                     </td>
                                     <td className="border px-2 py-1">
@@ -403,7 +403,7 @@ export default function AcademicTable({
                                         <input
                                             value={state.practicalSessional}
                                             disabled
-                                            className="w-full border px-1 rounded bg-gray-100"
+                                            className="w-full border px-1 rounded bg-muted/70"
                                         />
                                     </td>
                                     <td className="border px-2 py-1">
@@ -418,12 +418,12 @@ export default function AcademicTable({
                                         <input
                                             value={state.practicalPractical}
                                             disabled
-                                            className="w-full border px-1 rounded bg-gray-100"
+                                            className="w-full border px-1 rounded bg-muted/70"
                                         />
                                     </td>
 
                                     <td className="border px-2 py-1">
-                                        <input value={state.practicalTotal} disabled className="w-full border px-1 bg-gray-100" />
+                                        <input value={state.practicalTotal} disabled className="w-full border px-1 bg-muted/70" />
                                     </td>
 
                                     <td className="border px-2 py-1">
@@ -472,15 +472,15 @@ export default function AcademicTable({
 
             <div className="flex gap-3 mt-4 justify-center items-center">
                 {isSaved ? (
-                    <button onClick={handleEdit} className="px-4 py-2 bg-blue-600 !text-white rounded">
+                    <button onClick={handleEdit} className="px-4 py-2 bg-primary !text-primary-foreground rounded">
                         Edit
                     </button>
                 ) : (
                     <>
-                        <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded" disabled={loading}>
+                        <button onClick={handleSave} className="px-4 py-2 bg-primary text-primary-foreground rounded" disabled={loading}>
                             {loading ? "Saving..." : "Save"}
                         </button>
-                        <button onClick={handleReset} className="px-4 py-2 bg-gray-300 rounded">
+                        <button onClick={handleReset} className="px-4 py-2 bg-muted rounded">
                             Reset
                         </button>
                     </>
