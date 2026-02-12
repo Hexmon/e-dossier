@@ -12,7 +12,6 @@ import CourseFormModal from "@/components/courses/CourseFormModal";
 import CourseViewModal from "@/components/courses/CourseViewModal";
 import AssignOfferingsDialog from "@/components/offerings/AssignOfferingsDialog";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { ocTabs } from "@/config/app.config";
 import { useCourses, type UICourse } from "@/hooks/useCourses";
 import {
@@ -99,7 +98,7 @@ export default function CourseManagement() {
       setIsFormOpen(false);
       setEditCourseData(null);
     } catch {
-      toast.error("Something went wrong.");
+      // Error toast is handled in useCourses mutations.
     }
   };
 
