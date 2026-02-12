@@ -54,6 +54,7 @@ const MANAGE_MARKS_ACTION_ALLOWLIST = new Set(
       entry.path === '/api/v1/oc/academics/bulk' ||
       entry.path === '/api/v1/admin/courses' ||
       entry.path === '/api/v1/admin/courses/:courseId/offerings' ||
+      entry.path === '/api/v1/admin/courses/:courseId/offerings/assign' ||
       entry.path === '/api/v1/oc'
   ).map((entry) => entry.action)
 );

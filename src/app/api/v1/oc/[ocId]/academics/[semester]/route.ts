@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin, mustBeAuthed } from '../../../_checks';
+import { parseParam, ensureOcExists, mustBePlatoonCommander } from '../../../_checks';
 import { OcIdParam, SemesterParam, academicSummaryPatchSchema } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getOcAcademicSemester, updateOcAcademicSummary, deleteOcAcademicSemester } from '@/app/services/oc-academics';
@@ -35,7 +35,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        const authCtx = await mustBeAdmin(req);
+        const authCtx = await mustBePlatoonCommander(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
@@ -70,7 +70,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
-        const authCtx = await mustBeAdmin(req);
+        const authCtx = await mustBePlatoonCommander(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);

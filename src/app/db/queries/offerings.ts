@@ -1,5 +1,5 @@
 import { db } from '@/app/db/client';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { courseOfferings, courseOfferingInstructors } from '@/app/db/schema/training/courseOfferings';
 
@@ -102,4 +102,110 @@ export async function hardDeleteOffering(offeringId: string): Promise<{ before: 
     if (!before) return null;
     await db.delete(courseOfferings).where(eq(courseOfferings.id, offeringId));
     return { before };
+}
+
+type OfferingAssignmentEntry = {
+    subjectId: string;
+    semester: number;
+};
+
+export type AssignOfferingsResult = {
+    created: OfferingAssignmentEntry[];
+    skipped: Array<OfferingAssignmentEntry & { reason: 'duplicate' }>;
+    createdCount: number;
+    skippedCount: number;
+};
+
+export async function assignOfferingsToCourse(opts: {
+    sourceCourseId: string;
+    targetCourseId: string;
+    semester?: number;
+    subjectIds?: string[];
+}): Promise<AssignOfferingsResult> {
+    return db.transaction(async (tx) => {
+        const whereClause = [eq(courseOfferings.courseId, opts.sourceCourseId), isNull(courseOfferings.deletedAt)];
+        if (opts.semester !== undefined) {
+            whereClause.push(eq(courseOfferings.semester, opts.semester));
+        }
+        if (opts.subjectIds?.length) {
+            whereClause.push(inArray(courseOfferings.subjectId, opts.subjectIds));
+        }
+
+        const sourceOfferings = await tx
+            .select({
+                subjectId: courseOfferings.subjectId,
+                semester: courseOfferings.semester,
+                includeTheory: courseOfferings.includeTheory,
+                includePractical: courseOfferings.includePractical,
+                theoryCredits: courseOfferings.theoryCredits,
+                practicalCredits: courseOfferings.practicalCredits,
+            })
+            .from(courseOfferings)
+            .where(and(...whereClause))
+            .orderBy(courseOfferings.semester, courseOfferings.subjectId);
+
+        if (sourceOfferings.length === 0) {
+            return {
+                created: [],
+                skipped: [],
+                createdCount: 0,
+                skippedCount: 0,
+            };
+        }
+
+        const now = new Date();
+        const inserted = await tx
+            .insert(courseOfferings)
+            .values(
+                sourceOfferings.map((offering) => ({
+                    courseId: opts.targetCourseId,
+                    subjectId: offering.subjectId,
+                    semester: offering.semester,
+                    includeTheory: offering.includeTheory,
+                    includePractical: offering.includePractical,
+                    theoryCredits: offering.theoryCredits,
+                    practicalCredits: offering.practicalCredits,
+                    createdAt: now,
+                    updatedAt: now,
+                    deletedAt: null,
+                }))
+            )
+            .onConflictDoNothing({
+                target: [
+                    courseOfferings.courseId,
+                    courseOfferings.subjectId,
+                    courseOfferings.semester,
+                ],
+            })
+            .returning({
+                subjectId: courseOfferings.subjectId,
+                semester: courseOfferings.semester,
+            });
+
+        const toKey = (entry: OfferingAssignmentEntry) => `${entry.subjectId}::${entry.semester}`;
+        const createdKeys = new Set(inserted.map((entry) => toKey(entry)));
+
+        const created: OfferingAssignmentEntry[] = [];
+        const skipped: Array<OfferingAssignmentEntry & { reason: 'duplicate' }> = [];
+
+        for (const offering of sourceOfferings) {
+            const key = toKey({ subjectId: offering.subjectId, semester: offering.semester });
+            if (createdKeys.has(key)) {
+                created.push({ subjectId: offering.subjectId, semester: offering.semester });
+            } else {
+                skipped.push({
+                    subjectId: offering.subjectId,
+                    semester: offering.semester,
+                    reason: 'duplicate',
+                });
+            }
+        }
+
+        return {
+            created,
+            skipped,
+            createdCount: created.length,
+            skippedCount: skipped.length,
+        };
+    });
 }

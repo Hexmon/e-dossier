@@ -38,13 +38,16 @@ import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
-import { and, eq, ilike, inArray, isNull, or, sql, desc } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 
 type ListOpts = {
     id?: string;
     q?: string;
     courseId?: string;
+    platoonId?: string;
+    platoonKey?: string;
     active?: boolean;
+    sort?: 'name_asc' | 'updated_desc' | 'created_asc';
     limit?: number;
     offset?: number;
 };
@@ -1184,16 +1187,33 @@ export async function deleteCreditForExcellence(
 }
 
 export async function listOCsBasic(opts: ListOpts = {}) {
-    const { id, q, courseId, active, limit = 200, offset = 0 } = opts;
+    const {
+        q,
+        courseId,
+        platoonId,
+        platoonKey,
+        active,
+        sort = 'created_asc',
+        limit = 200,
+        offset = 0,
+    } = opts;
 
     const wh: any[] = [];
-    if (id && id.trim()) wh.push(eq(ocCadets.id, id.trim()));
     if (q && q.trim()) {
         const pattern = likeEscape(q.trim());
         wh.push(or(ilike(ocCadets.name, pattern), ilike(ocCadets.ocNo, pattern)));
     }
     if (courseId && courseId.trim()) wh.push(eq(ocCadets.courseId, courseId.trim()));
+    if (platoonId && platoonId.trim()) wh.push(eq(ocCadets.platoonId, platoonId.trim()));
+    if (platoonKey && platoonKey.trim()) wh.push(eq(platoons.key, platoonKey.trim().toUpperCase()));
     if (active) wh.push(isNull(ocCadets.withdrawnOn));
+
+    const orderByClause =
+        sort === 'name_asc'
+            ? asc(ocCadets.name)
+            : sort === 'updated_desc'
+              ? desc(ocCadets.updatedAt)
+              : asc(ocCadets.createdAt);
 
     const rows = await db
         .select({
@@ -1221,7 +1241,7 @@ export async function listOCsBasic(opts: ListOpts = {}) {
         .leftJoin(courses, eq(courses.id, ocCadets.courseId))
         .leftJoin(platoons, eq(platoons.id, ocCadets.platoonId))
         .where(wh.length ? and(...wh) : undefined)
-        .orderBy(ocCadets.createdAt)
+        .orderBy(orderByClause)
         .limit(Math.min(limit, 1000))
         .offset(offset);
 

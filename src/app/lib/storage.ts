@@ -1,5 +1,13 @@
 import { randomUUID } from 'crypto';
-import { S3Client, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+    S3Client,
+    PutObjectCommand,
+    HeadObjectCommand,
+    DeleteObjectCommand,
+    GetObjectCommand,
+    HeadBucketCommand,
+    CreateBucketCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const REQUIRED_ENV = [
@@ -63,11 +71,53 @@ export function createStorageClient() {
         region: config.region,
         endpoint: config.endpoint,
         forcePathStyle: true,
+        // Avoid signing optional checksum headers into presigned PUT URLs.
+        // MinIO/browser uploads can fail when SDK injects a fixed checksum
+        // query value (e.g. x-amz-checksum-crc32=AAAAAA==) for unknown payloads.
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
         credentials: {
             accessKeyId: config.accessKeyId,
             secretAccessKey: config.secretAccessKey,
         },
     });
+}
+
+let bucketReadyPromise: Promise<void> | null = null;
+
+async function ensureBucketExists(client: S3Client, bucket: string) {
+    if (!bucketReadyPromise) {
+        bucketReadyPromise = (async () => {
+            try {
+                await client.send(new HeadBucketCommand({ Bucket: bucket }));
+                return;
+            } catch (error) {
+                const code = (error as { name?: string; Code?: string })?.name ?? (error as { Code?: string })?.Code;
+                const shouldCreate =
+                    code === 'NotFound' ||
+                    code === 'NoSuchBucket' ||
+                    code === '404' ||
+                    code === 'UnknownError';
+                if (!shouldCreate) {
+                    throw error;
+                }
+            }
+
+            try {
+                await client.send(new CreateBucketCommand({ Bucket: bucket }));
+            } catch (createError) {
+                const code = (createError as { name?: string; Code?: string })?.name ?? (createError as { Code?: string })?.Code;
+                if (code !== 'BucketAlreadyOwnedByYou' && code !== 'BucketAlreadyExists') {
+                    throw createError;
+                }
+            }
+        })().catch((error) => {
+            bucketReadyPromise = null;
+            throw error;
+        });
+    }
+
+    await bucketReadyPromise;
 }
 
 const EXT_BY_TYPE: Record<string, string> = {
@@ -94,6 +144,7 @@ export async function createPresignedUploadUrl(params: {
 }) {
     const config = getStorageConfig();
     const client = createStorageClient();
+    await ensureBucketExists(client, config.bucket);
     const command = new PutObjectCommand({
         Bucket: config.bucket,
         Key: params.key,

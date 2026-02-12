@@ -19,6 +19,25 @@ export async function mustBeAdmin(req: NextRequest) {
     return ctx;
 }
 
+function normalizeRoleToken(value: unknown): string {
+    return String(value ?? '')
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, '_');
+}
+
+export async function mustBePlatoonCommander(req: NextRequest) {
+    const ctx = await requireAuth(req);
+    const roleSet = new Set<string>((ctx.roles ?? []).map(normalizeRoleToken));
+    const aptPosition = normalizeRoleToken((ctx.claims as any)?.apt?.position);
+
+    if (!roleSet.has('PLATOON_COMMANDER') && aptPosition !== 'PLATOON_COMMANDER') {
+        throw new ApiError(403, 'Platoon Commander privileges required', 'forbidden');
+    }
+
+    return ctx;
+}
+
 export async function parseParam<T extends z.ZodTypeAny>(
     { params }: { params: { [k: string]: string } } | { params: Promise<{ [k: string]: string }> },
     schema: T

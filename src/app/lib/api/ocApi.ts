@@ -86,8 +86,12 @@ export interface FetchOCParams {
   id?: string;
   /** quick text search on name/ocNo */
   q?: string;
+  /** alias for q */
+  query?: string;
   /** filter by course */
   courseId?: string;
+  /** filter by platoon (id or key) */
+  platoon?: string;
   /** filter by platoon */
   platoonId?: string;
   /** filter by branch - FIXED: Changed "C" to "O" */
@@ -102,6 +106,8 @@ export interface FetchOCParams {
   /** pagination */
   limit?: number;
   offset?: number;
+  /** list ordering */
+  sort?: "name_asc" | "updated_desc" | "created_asc";
 
   /** return the full graph (all sections) */
   full?: boolean;
@@ -147,8 +153,22 @@ export type BulkUploadResult = {
  */
 function buildOCQuery(params: FetchOCParams = {}): Record<string, string> {
   const query: Record<string, string> = {};
+  const normalized: FetchOCParams = { ...params };
 
-  for (const [k, v] of Object.entries(params)) {
+  if (!normalized.q && normalized.query) {
+    normalized.q = normalized.query;
+  }
+  if (normalized.q) {
+    normalized.query = undefined;
+  }
+  if (!normalized.platoon && normalized.platoonId) {
+    normalized.platoon = normalized.platoonId;
+  }
+  if (normalized.platoon) {
+    normalized.platoonId = undefined;
+  }
+
+  for (const [k, v] of Object.entries(normalized)) {
     if (v === undefined || v === null) continue;
 
     // special handling for include (can be string or string[])

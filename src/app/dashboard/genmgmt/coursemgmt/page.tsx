@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -10,10 +10,22 @@ import { TabsContent } from "@/components/ui/tabs";
 import CourseCard from "@/components/courses/CourseCard";
 import CourseFormModal from "@/components/courses/CourseFormModal";
 import CourseViewModal from "@/components/courses/CourseViewModal";
+import AssignOfferingsDialog from "@/components/offerings/AssignOfferingsDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { academicsTabs } from "@/config/app.config";
+import { ocTabs } from "@/config/app.config";
 import { useCourses, type UICourse } from "@/hooks/useCourses";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function CourseManagement() {
   const {
@@ -29,6 +41,10 @@ export default function CourseManagement() {
   const [editCourseData, setEditCourseData] = useState<UICourse | null>(null);
   const [viewCourse, setViewCourse] = useState<UICourse | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState<UICourse | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -52,8 +68,26 @@ export default function CourseManagement() {
     setIsViewOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    await removeCourse(id);
+  const handleDelete = (id: string) => {
+    const target = courses.find((course) => course.id === id) ?? null;
+    setCourseToDelete(target);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    if (!courseToDelete || deleteLoading) return;
+
+    setDeleteLoading(true);
+    try {
+      await removeCourse(courseToDelete.id);
+      setDeleteConfirmOpen(false);
+      setCourseToDelete(null);
+    } catch {
+      // Toast is handled by the mutation hook.
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const handleSave = async (data: Omit<UICourse, "id">) => {
@@ -66,7 +100,7 @@ export default function CourseManagement() {
       setIsFormOpen(false);
       setEditCourseData(null);
     } catch {
-      toast.error("Something went wrong.");
+      // Error toast is handled in useCourses mutations.
     }
   };
 
@@ -94,9 +128,14 @@ export default function CourseManagement() {
               <TabsContent value="course-mgmt">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Course Sections</h2>
-                  <Button onClick={handleAdd} className="bg-success">
-                    Add Course
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setAssignDialogOpen(true)}>
+                      Assign Offerings
+                    </Button>
+                    <Button onClick={handleAdd} className="bg-success">
+                      Add Course
+                    </Button>
+                  </div>
                 </div>
 
                 {loading ? (
@@ -142,6 +181,49 @@ export default function CourseManagement() {
           if (!open) setViewCourse(null);
         }}
       />
+
+      <AssignOfferingsDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        courses={courses}
+      />
+
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          if (deleteLoading) return;
+          setDeleteConfirmOpen(open);
+          if (!open) setCourseToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete course?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+              {courseToDelete?.courseNo ? ` (${courseToDelete.courseNo})` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deleteLoading}
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setCourseToDelete(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLoading ? "Deleting..." : "Yes, Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarProvider>
   );
 }

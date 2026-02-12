@@ -271,6 +271,23 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
     expect(coursesQueries.hardDeleteCourse).not.toHaveBeenCalled();
   });
 
+  it('blocks hard-delete when cadets are assigned to the course', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(2);
+
+    const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}?hard=true` });
+    const ctx = { params: Promise.resolve({ courseId }) } as any;
+
+    const res = await deleteCourse(req as any, ctx);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('conflict');
+    expect(body.ocCount).toBe(2);
+    expect(body.reason).toBe('COURSE_IN_USE');
+    expect(coursesQueries.hardDeleteCourse).not.toHaveBeenCalled();
+  });
+
   it('soft-deletes course on happy path', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(0);
@@ -297,6 +314,24 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
     });
 
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}?hard=true` });
+    const ctx = { params: Promise.resolve({ courseId }) } as any;
+
+    const res = await deleteCourse(req as any, ctx);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.id).toBe(courseId);
+    expect(body.message).toMatch(/hard-deleted/i);
+  });
+
+  it('hard-deletes course when mode=hard is requested', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(0);
+    (coursesQueries.hardDeleteCourse as any).mockResolvedValueOnce({
+      before: { id: courseId, code: 'TES-50' },
+    });
+
+    const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}?mode=hard` });
     const ctx = { params: Promise.resolve({ courseId }) } as any;
 
     const res = await deleteCourse(req as any, ctx);
