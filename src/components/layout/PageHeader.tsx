@@ -11,11 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@/app/lib/api/authApi";
 import { useMe } from "@/hooks/useMe";
 import SwitchUserModal from "@/components/auth/SwitchUserModal";
+import OCSelectModal from "@/components/modals/OCSelectModal";
+import { buildDossierPathForOc, extractDossierContext, isDossierManagementRoute } from "@/lib/dossier-route";
 
 interface PageHeaderProps {
   title: string;
@@ -39,8 +41,11 @@ const getInitials = (name: string): string => {
 
 export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [switchUserOpen, setSwitchUserOpen] = useState(false);
+  const [switchOcOpen, setSwitchOcOpen] = useState(false);
 
   // Replaces the manual useEffect + fetchMe with a single React Query call
   // that's shared across the entire app
@@ -62,6 +67,8 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
     id: appointmentId = "",
     position = "",
   } = apt as any;
+  const isDossierRoute = isDossierManagementRoute(pathname);
+  const dossierContext = extractDossierContext(pathname);
 
   const handleLogout = () => {
     // CRITICAL: Clear all React Query cache on logout
@@ -108,8 +115,18 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
               onClick={() => setSwitchUserOpen(true)}
             >
               <Repeat className="h-4 w-4" />
-              <span>Switch User</span>
+              <span>Switch Account</span>
             </Button>
+            {isDossierRoute && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSwitchOcOpen(true)}
+              >
+                Switch OC
+              </Button>
+            )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -154,6 +171,17 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
           appointmentId: appointmentId || null,
           roleKey: position || null,
           username: username || null,
+        }}
+      />
+      <OCSelectModal
+        open={switchOcOpen}
+        onOpenChange={setSwitchOcOpen}
+        disabledOcId={dossierContext?.ocId ?? null}
+        userId={id || undefined}
+        onSelect={(oc) => {
+          setSwitchOcOpen(false);
+          const targetPath = buildDossierPathForOc(oc.id, pathname, searchParams.toString());
+          router.push(targetPath);
         }}
       />
     </>

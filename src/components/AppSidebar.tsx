@@ -42,6 +42,7 @@ import {
   deriveSidebarRoleGroup,
   filterSidebarSectionsForRoleGroup,
 } from "@/lib/sidebar-visibility";
+import { buildCurrentDossierRoot, isDossierManagementRoute } from "@/lib/dossier-route";
 
 // Map string icon keys to Lucide components
 const ICON_MAP: Record<string, any> = {
@@ -73,11 +74,15 @@ export function AppSidebar() {
   const { apt = {}, roles: meRoles = [] } = meData ?? {};
   const { position = "" } = apt as any;
   const userId = (meData?.user as any)?.id || "";
+  const isDossierRouteActive = isDossierManagementRoute(pathname);
   const effectiveRoles = meRoles.length > 0 ? meRoles : navData?.userRoleSummary ?? [];
   const roleGroup = deriveSidebarRoleGroup({ roles: effectiveRoles, position });
   const visibleSections = filterSidebarSectionsForRoleGroup(navData?.sections ?? [], roleGroup);
 
-  const isActive = (path: string) => pathname === path;
+  const isItemActive = (item: NavItem) => {
+    if (item.specialAction === "OPEN_OC_MODAL") return isDossierRouteActive;
+    return pathname === item.url;
+  };
 
   const toggleGroup = (groupName: string) => {
     setOpenGroups((prev) =>
@@ -90,6 +95,13 @@ export function AppSidebar() {
   const handleItemClick = (e: React.MouseEvent, item: NavItem) => {
     if (item.specialAction === "OPEN_OC_MODAL") {
       e.preventDefault();
+      if (isDossierRouteActive) {
+        const dossierRoot = buildCurrentDossierRoot(pathname);
+        if (dossierRoot) {
+          router.push(dossierRoot);
+        }
+        return;
+      }
       setModalOpen(true);
     }
   };
@@ -197,7 +209,7 @@ export function AppSidebar() {
                                 <Link
                                   href={item.url}
                                   onClick={(e) => handleItemClick(e, item)}
-                                  className={`flex items-center gap-2 px-[var(--density-sidebar-link-px)] py-[var(--density-sidebar-link-py)] rounded-md ${isActive(item.url)
+                                  className={`flex items-center gap-2 px-[var(--density-sidebar-link-px)] py-[var(--density-sidebar-link-py)] rounded-md ${isItemActive(item)
                                     ? "bg-primary text-primary-foreground"
                                     : "hover:bg-accent/50"
                                     }`}
@@ -236,7 +248,7 @@ export function AppSidebar() {
                               <Link
                                 href={item.url}
                                 onClick={(e) => handleItemClick(e, item)}
-                                className={`flex items-center gap-2 px-[var(--density-sidebar-link-px)] py-[var(--density-sidebar-link-py)] rounded-md ${isActive(item.url)
+                                className={`flex items-center gap-2 px-[var(--density-sidebar-link-px)] py-[var(--density-sidebar-link-py)] rounded-md ${isItemActive(item)
                                   ? "bg-primary text-primary-foreground"
                                   : "hover:bg-accent/50"
                                   }`}

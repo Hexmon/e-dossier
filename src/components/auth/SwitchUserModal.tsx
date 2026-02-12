@@ -296,7 +296,7 @@ export default function SwitchUserModal({
         }}
       >
         <DialogHeader>
-          <DialogTitle>Switch User</DialogTitle>
+          <DialogTitle>Switch Account</DialogTitle>
           <DialogDescription>
             Sign in as another user. Your current session will be replaced.
           </DialogDescription>
@@ -409,7 +409,7 @@ export default function SwitchUserModal({
               Cancel
             </Button>
             <Button type="submit" disabled={isBusy || shouldDisableOtherFields}>
-              {isSubmitting ? "Switching..." : "Switch User"}
+              {isSubmitting ? "Switching..." : "Switch Account"}
             </Button>
           </div>
         </form>
