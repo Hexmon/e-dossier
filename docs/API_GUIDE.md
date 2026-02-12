@@ -29,7 +29,7 @@
 
 ## Handler Patterns
 - Wrapper:
-  - Primary: `withAuditRoute` (`src/lib/audit.ts`)
+  - Primary: `withAuditRoute` + `withAuthz` (`src/lib/audit.ts`, `src/app/lib/acx/withAuthz.ts`)
   - Legacy-only in two routes: `withRouteLogging` (`/oc/[ocId]/spr`, `/oc/[ocId]/fpr`)
 - Error model:
   - `ApiError` + `handleApiError` (`src/app/lib/http.ts`)
@@ -63,14 +63,18 @@
 1. Pick route namespace under `src/app/api/v1/...`.
 2. Add/extend Zod schemas in `src/app/lib/validators*.ts`.
 3. Keep DB work in `src/app/db/queries/*`.
-4. Use `withAuditRoute` and log at least one domain audit event.
-5. Use `requireAuth` (and explicit role/scope checks where needed).
-6. Return standardized envelopes via `json.*` from `src/app/lib/http.ts`.
+4. Add/update action mapping in `src/app/lib/acx/action-map.ts` (or regenerate via `pnpm tsx scripts/rbac/phase0-generate.ts`).
+5. Use `withAuditRoute` + `withAuthz` and log at least one domain audit event.
+6. Use `requireAuth` (and explicit role/scope checks where needed).
+7. Return standardized envelopes via `json.*` from `src/app/lib/http.ts`.
+8. Run `pnpm run validate:action-map` before opening PR.
 
 ## Recommended Guarding Baseline For New Routes
 - Always call `requireAuth` in protected routes even if middleware already gated token presence.
 - For admin routes, add explicit admin check (`hasAdminRole`/`requireAdmin` pattern).
 - For OC scoped resources, reuse `authorizeOcAccess` where applicable.
+- Keep protected handlers on Node runtime where required:
+  - `export const runtime = 'nodejs';`
 
 ## How To Test New Routes
 - Add Vitest route tests in `tests/api/<feature>.test.ts`.

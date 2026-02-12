@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -13,7 +13,7 @@ async function PATCHHandler(
   { params }: { params: Promise<{ permissionId: string }> }
 ) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await requireAdmin(req);
     const { permissionId } = await params;
     if (!permissionId) throw new ApiError(400, 'permissionId is required', 'bad_request');
 
@@ -43,7 +43,7 @@ async function DELETEHandler(
   { params }: { params: Promise<{ permissionId: string }> }
 ) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await requireAdmin(req);
     const { permissionId } = await params;
     if (!permissionId) throw new ApiError(400, 'permissionId is required', 'bad_request');
 

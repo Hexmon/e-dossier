@@ -5,6 +5,35 @@ import { Toaster } from "sonner";
 import ReduxProvider from "@/components/providers/ReduxProvider";
 import QueryProvider from "@/components/providers/QueryProvider";
 
+const DEVICE_SETTINGS_BOOTSTRAP_SCRIPT = `
+(() => {
+  try {
+    const raw = window.localStorage.getItem("e_dossier_device_site_settings");
+    if (!raw) return;
+
+    const parsed = JSON.parse(raw);
+    const themeMode = parsed?.themeMode || "system";
+    const density = parsed?.density || "comfortable";
+    const accent = parsed?.accentPalette || "blue";
+    const preset = parsed?.themePreset || "navy-steel";
+
+    const prefersDark =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const appliedTheme =
+      themeMode === "system" ? (prefersDark ? "dark" : "light") : themeMode;
+
+    const html = document.documentElement;
+    html.setAttribute("data-theme-mode", themeMode);
+    html.setAttribute("data-theme", appliedTheme);
+    html.setAttribute("data-density", density);
+    html.setAttribute("data-accent", accent);
+    html.setAttribute("data-theme-preset", preset);
+    html.classList.toggle("dark", appliedTheme === "dark");
+  } catch {}
+})();
+`;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -26,10 +55,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <script dangerouslySetInnerHTML={{ __html: DEVICE_SETTINGS_BOOTSTRAP_SCRIPT }} />
         <QueryProvider>
           <ReduxProvider>
             {children}

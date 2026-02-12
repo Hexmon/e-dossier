@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await requireAdmin(req);
     const sp = new URL(req.url).searchParams;
 
     const permissionId = sp.get('permissionId') ?? undefined;
@@ -38,7 +38,7 @@ async function GETHandler(req: AuditNextRequest) {
 
 async function POSTHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await requireAdmin(req);
     const body = rbacFieldRuleCreateSchema.parse(await req.json());
     const created = await createFieldRule(body);
 

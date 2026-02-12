@@ -9,3 +9,4 @@ export * from './schema/auth/audit';
 export * from './schema/auth/platoons';
 export * from './schema/auth/signupRequests';
 export * from './schema/auth/login_attempts';
+export * from './schema/auth/deviceSiteSettings';

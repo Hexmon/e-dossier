@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-11T19:37:09.119Z",
-  "filesScanned": 144,
+  "generatedAt": "2026-02-11T20:29:53.416Z",
+  "filesScanned": 145,
   "methodEntries": [
     {
       "key": "DELETE /api/v1/admin/appointments/:id",
@@ -21,7 +21,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/courses/:courseId",
@@ -42,7 +42,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/courses/:courseId/offerings/:offeringId",
@@ -63,7 +63,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/discipline/:id",
@@ -82,7 +82,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/instructors/:id",
@@ -103,7 +103,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/interview/templates/:templateId",
@@ -124,7 +124,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/interview/templates/:templateId/fields/:fieldId",
@@ -145,7 +145,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/interview/templates/:templateId/fields/:fieldId/options/:optionId",
@@ -166,7 +166,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/interview/templates/:templateId/groups/:groupId",
@@ -187,7 +187,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/interview/templates/:templateId/sections/:sectionId",
@@ -208,7 +208,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/interview/templates/:templateId/semesters/:semester",
@@ -227,7 +227,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/physical-training/motivation-fields/:id",
@@ -248,7 +248,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/physical-training/types/:typeId",
@@ -269,7 +269,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/physical-training/types/:typeId/attempts/:attemptId",
@@ -290,7 +290,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/physical-training/types/:typeId/attempts/:attemptId/grades/:gradeId",
@@ -311,7 +311,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/physical-training/types/:typeId/tasks/:taskId",
@@ -332,7 +332,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/physical-training/types/:typeId/tasks/:taskId/scores/:scoreId",
@@ -353,7 +353,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/positions/:id",
@@ -374,7 +374,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/punishments/:id",
@@ -395,7 +395,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/rbac/field-rules/:ruleId",
@@ -440,6 +440,27 @@
       "hasNodeRuntimeExport": true
     },
     {
+      "key": "DELETE /api/v1/admin/rbac/roles/:roleId",
+      "method": "DELETE",
+      "path": "/api/v1/admin/rbac/roles/:roleId",
+      "file": "src/app/api/v1/admin/rbac/roles/[roleId]/route.ts",
+      "category": "admin",
+      "middlewarePublic": false,
+      "isWriteMethod": true,
+      "fieldLevelCandidate": false,
+      "requestBodyLikely": true,
+      "requestBodySchemaHints": [
+        "rbacRoleUpdateSchema"
+      ],
+      "guardHints": [
+        "requireAuth"
+      ],
+      "wrapperHints": [
+        "withAuditRoute"
+      ],
+      "hasNodeRuntimeExport": true
+    },
+    {
       "key": "DELETE /api/v1/admin/signup-requests/:id",
       "method": "DELETE",
       "path": "/api/v1/admin/signup-requests/:id",
@@ -456,7 +477,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/subjects/:id",
@@ -477,7 +498,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/training-camps/:campId",
@@ -499,7 +520,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/training-camps/:campId/activities/:activityId",
@@ -520,7 +541,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/admin/users/:id",
@@ -542,7 +563,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "DELETE /api/v1/oc/:ocId",
@@ -603,7 +624,7 @@
         "academicSubjectPatchSchema"
       ],
       "guardHints": [
-        "mustBeAuthed"
+        "mustBeAdmin"
       ],
       "wrapperHints": [
         "withAuditRoute"
@@ -1420,7 +1441,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/audit-logs",
@@ -1441,7 +1462,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/courses",
@@ -1484,7 +1505,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/courses/:courseId/offerings",
@@ -1526,7 +1547,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/discipline",
@@ -1545,7 +1566,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/instructors",
@@ -1567,7 +1588,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/instructors/:id",
@@ -1588,7 +1609,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates",
@@ -1610,7 +1631,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId",
@@ -1631,7 +1652,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/fields/:fieldId",
@@ -1652,7 +1673,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/fields/:fieldId/options",
@@ -1674,7 +1695,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/fields/:fieldId/options/:optionId",
@@ -1695,7 +1716,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/groups",
@@ -1717,7 +1738,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/groups/:groupId",
@@ -1738,7 +1759,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/groups/:groupId/fields",
@@ -1760,7 +1781,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/sections",
@@ -1782,7 +1803,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/sections/:sectionId",
@@ -1803,7 +1824,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/sections/:sectionId/fields",
@@ -1825,7 +1846,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/interview/templates/:templateId/semesters",
@@ -1846,7 +1867,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/motivation-fields",
@@ -1868,7 +1889,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/motivation-fields/:id",
@@ -1889,7 +1910,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/templates",
@@ -1910,7 +1931,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types",
@@ -1932,7 +1953,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types/:typeId",
@@ -1953,7 +1974,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types/:typeId/attempts",
@@ -1975,7 +1996,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types/:typeId/attempts/:attemptId",
@@ -1996,7 +2017,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types/:typeId/attempts/:attemptId/grades",
@@ -2018,7 +2039,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types/:typeId/attempts/:attemptId/grades/:gradeId",
@@ -2039,7 +2060,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types/:typeId/tasks",
@@ -2061,7 +2082,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types/:typeId/tasks/:taskId",
@@ -2082,7 +2103,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types/:typeId/tasks/:taskId/scores",
@@ -2103,7 +2124,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/physical-training/types/:typeId/tasks/:taskId/scores/:scoreId",
@@ -2124,7 +2145,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/positions",
@@ -2145,7 +2166,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/positions/:id",
@@ -2166,7 +2187,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/positions/active-holder",
@@ -2185,7 +2206,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/positions/slots",
@@ -2202,7 +2223,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/punishments",
@@ -2224,7 +2245,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/punishments/:id",
@@ -2245,7 +2266,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/rbac/field-rules",
@@ -2320,7 +2341,9 @@
       "isWriteMethod": false,
       "fieldLevelCandidate": false,
       "requestBodyLikely": false,
-      "requestBodySchemaHints": [],
+      "requestBodySchemaHints": [
+        "rbacRoleCreateSchema"
+      ],
       "guardHints": [
         "requireAuth"
       ],
@@ -2346,7 +2369,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/subjects",
@@ -2368,7 +2391,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/subjects/:id",
@@ -2389,7 +2412,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/training-camps",
@@ -2411,7 +2434,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/training-camps/:campId",
@@ -2433,7 +2456,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/training-camps/:campId/activities",
@@ -2455,7 +2478,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/training-camps/:campId/activities/:activityId",
@@ -2476,7 +2499,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/users",
@@ -2498,7 +2521,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/users/:id",
@@ -2520,7 +2543,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/admin/users/check-username",
@@ -2537,7 +2560,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "GET /api/v1/appointments/:id/active-user",
@@ -4118,7 +4141,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/courses/:courseId",
@@ -4139,7 +4162,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/courses/:courseId/offerings/:offeringId",
@@ -4160,7 +4183,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/discipline/:id",
@@ -4179,7 +4202,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/instructors/:id",
@@ -4200,7 +4223,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/interview/templates/:templateId",
@@ -4221,7 +4244,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/interview/templates/:templateId/fields/:fieldId",
@@ -4242,7 +4265,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/interview/templates/:templateId/fields/:fieldId/options/:optionId",
@@ -4263,7 +4286,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/interview/templates/:templateId/groups/:groupId",
@@ -4284,7 +4307,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/interview/templates/:templateId/sections/:sectionId",
@@ -4305,7 +4328,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/physical-training/motivation-fields/:id",
@@ -4326,7 +4349,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/physical-training/types/:typeId",
@@ -4347,7 +4370,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/physical-training/types/:typeId/attempts/:attemptId",
@@ -4368,7 +4391,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/physical-training/types/:typeId/attempts/:attemptId/grades/:gradeId",
@@ -4389,7 +4412,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/physical-training/types/:typeId/tasks/:taskId",
@@ -4410,7 +4433,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/physical-training/types/:typeId/tasks/:taskId/scores/:scoreId",
@@ -4431,7 +4454,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/positions/:id",
@@ -4452,7 +4475,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/punishments/:id",
@@ -4473,7 +4496,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/rbac/field-rules/:ruleId",
@@ -4518,6 +4541,27 @@
       "hasNodeRuntimeExport": true
     },
     {
+      "key": "PATCH /api/v1/admin/rbac/roles/:roleId",
+      "method": "PATCH",
+      "path": "/api/v1/admin/rbac/roles/:roleId",
+      "file": "src/app/api/v1/admin/rbac/roles/[roleId]/route.ts",
+      "category": "admin",
+      "middlewarePublic": false,
+      "isWriteMethod": true,
+      "fieldLevelCandidate": true,
+      "requestBodyLikely": true,
+      "requestBodySchemaHints": [
+        "rbacRoleUpdateSchema"
+      ],
+      "guardHints": [
+        "requireAuth"
+      ],
+      "wrapperHints": [
+        "withAuditRoute"
+      ],
+      "hasNodeRuntimeExport": true
+    },
+    {
       "key": "PATCH /api/v1/admin/subjects/:id",
       "method": "PATCH",
       "path": "/api/v1/admin/subjects/:id",
@@ -4536,7 +4580,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/training-camps/:campId",
@@ -4558,7 +4602,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/training-camps/:campId/activities/:activityId",
@@ -4579,7 +4623,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/admin/users/:id",
@@ -4601,7 +4645,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "PATCH /api/v1/oc/:ocId",
@@ -4662,7 +4706,7 @@
         "academicSubjectPatchSchema"
       ],
       "guardHints": [
-        "mustBeAuthed"
+        "mustBeAdmin"
       ],
       "wrapperHints": [
         "withAuditRoute"
@@ -5457,7 +5501,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/courses",
@@ -5522,7 +5566,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/interview/templates",
@@ -5544,7 +5588,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/interview/templates/:templateId/fields/:fieldId/options",
@@ -5566,7 +5610,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/interview/templates/:templateId/groups",
@@ -5588,7 +5632,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/interview/templates/:templateId/groups/:groupId/fields",
@@ -5610,7 +5654,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/interview/templates/:templateId/sections",
@@ -5632,7 +5676,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/interview/templates/:templateId/sections/:sectionId/fields",
@@ -5654,7 +5698,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/interview/templates/:templateId/semesters",
@@ -5675,7 +5719,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/physical-training/motivation-fields",
@@ -5697,7 +5741,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/physical-training/types",
@@ -5719,7 +5763,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/physical-training/types/:typeId/attempts",
@@ -5741,7 +5785,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/physical-training/types/:typeId/attempts/:attemptId/grades",
@@ -5763,7 +5807,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/physical-training/types/:typeId/tasks",
@@ -5785,7 +5829,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/physical-training/types/:typeId/tasks/:taskId/scores",
@@ -5806,7 +5850,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/positions",
@@ -5827,7 +5871,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/punishments",
@@ -5849,7 +5893,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/rbac/field-rules",
@@ -5894,6 +5938,27 @@
       "hasNodeRuntimeExport": true
     },
     {
+      "key": "POST /api/v1/admin/rbac/roles",
+      "method": "POST",
+      "path": "/api/v1/admin/rbac/roles",
+      "file": "src/app/api/v1/admin/rbac/roles/route.ts",
+      "category": "admin",
+      "middlewarePublic": false,
+      "isWriteMethod": true,
+      "fieldLevelCandidate": false,
+      "requestBodyLikely": true,
+      "requestBodySchemaHints": [
+        "rbacRoleCreateSchema"
+      ],
+      "guardHints": [
+        "requireAuth"
+      ],
+      "wrapperHints": [
+        "withAuditRoute"
+      ],
+      "hasNodeRuntimeExport": true
+    },
+    {
       "key": "POST /api/v1/admin/signup-requests/:id/approve",
       "method": "POST",
       "path": "/api/v1/admin/signup-requests/:id/approve",
@@ -5913,7 +5978,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/signup-requests/:id/reject",
@@ -5935,7 +6000,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/subjects",
@@ -5957,7 +6022,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/training-camps",
@@ -5979,7 +6044,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/training-camps/:campId/activities",
@@ -6001,7 +6066,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/admin/users",
@@ -6023,7 +6088,7 @@
       "wrapperHints": [
         "withAuditRoute"
       ],
-      "hasNodeRuntimeExport": false
+      "hasNodeRuntimeExport": true
     },
     {
       "key": "POST /api/v1/auth/change-password",

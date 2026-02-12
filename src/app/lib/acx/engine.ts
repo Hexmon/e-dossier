@@ -63,6 +63,22 @@ const BASE_POLICY: PolicySet = {
         set: { ref: 'principal.attrs.permissions' },
       },
     },
+    {
+      id: 'allow-sidebar-platoon',
+      effect: 'allow',
+      priority: 810,
+      actions: ['sidebar:academics', 'sidebar:reports', 'sidebar:dossier'],
+      resourceTypes: ['navigation_item'],
+      when: {
+        op: 'or',
+        args: [
+          { op: 'in', item: 'PLATOON CDR', set: { ref: 'principal.roles' } },
+          { op: 'in', item: 'PLATOON_COMMANDER', set: { ref: 'principal.roles' } },
+          { op: 'in', item: 'PL_CDR', set: { ref: 'principal.roles' } },
+          { op: 'in', item: 'Platoon Cdr', set: { ref: 'principal.roles' } },
+        ],
+      },
+    },
   ],
 };
 

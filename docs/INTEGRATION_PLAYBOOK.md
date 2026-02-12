@@ -89,13 +89,15 @@
 ### 10) Verification Checklist
 Run in order:
 1. `pnpm install`
-2. `pnpm lint`
-3. `pnpm typecheck`
-4. `pnpm test`
-5. `pnpm build`
-6. `pnpm check`
-7. `pnpm db:migrate` (if schema changed)
-8. `pnpm seed:rbac` / `pnpm seed:admins` (when relevant)
+2. `pnpm run validate:action-map`
+3. `pnpm lint`
+4. `pnpm typecheck`
+5. `pnpm test`
+6. `pnpm build`
+7. `pnpm check`
+8. `pnpm db:migrate` or `pnpm db:push` (if schema changed)
+9. `pnpm seed:permissions` (or `pnpm import:permissions [parsed-json-path]`) when permission matrix changes
+10. `pnpm seed:admins` (when relevant)
 
 Expected outcomes:
 - lint/typecheck/build complete with exit code 0.

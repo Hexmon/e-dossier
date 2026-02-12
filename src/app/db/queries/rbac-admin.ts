@@ -85,6 +85,66 @@ export async function listRbacRoles() {
     .orderBy(asc(roles.key));
 }
 
+export async function getRbacRoleById(roleId: string) {
+  const [row] = await db
+    .select({ id: roles.id, key: roles.key, description: roles.description })
+    .from(roles)
+    .where(eq(roles.id, roleId))
+    .limit(1);
+  return row;
+}
+
+export async function createRbacRole(input: { key: string; description?: string | null }) {
+  const [created] = await db
+    .insert(roles)
+    .values({
+      key: input.key.trim().toLowerCase(),
+      description: input.description ?? null,
+    })
+    .returning({
+      id: roles.id,
+      key: roles.key,
+      description: roles.description,
+    });
+
+  await bumpPolicyVersionAndInvalidate();
+  return created;
+}
+
+export async function updateRbacRole(
+  roleId: string,
+  input: { key?: string; description?: string | null }
+) {
+  const [updated] = await db
+    .update(roles)
+    .set({
+      ...(input.key !== undefined ? { key: input.key.trim().toLowerCase() } : {}),
+      ...(input.description !== undefined ? { description: input.description ?? null } : {}),
+    })
+    .where(eq(roles.id, roleId))
+    .returning({
+      id: roles.id,
+      key: roles.key,
+      description: roles.description,
+    });
+
+  await bumpPolicyVersionAndInvalidate();
+  return updated;
+}
+
+export async function deleteRbacRole(roleId: string) {
+  const [deleted] = await db
+    .delete(roles)
+    .where(eq(roles.id, roleId))
+    .returning({
+      id: roles.id,
+      key: roles.key,
+    });
+
+  await bumpPolicyVersionAndInvalidate();
+  return deleted;
+}
+
 export async function listRbacPositions() {
   return db
     .select({ id: positions.id, key: positions.key, displayName: positions.displayName })
@@ -310,4 +370,3 @@ async function bumpPolicyVersionAndInvalidate() {
 
   clearEffectivePermissionsCache();
 }
-

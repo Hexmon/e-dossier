@@ -423,8 +423,10 @@ export const academicSubjectBulkRequestSchema = z.object({
 
 export const academicSummaryPatchSchema = z.object({
     marksScored: z.coerce.number().optional(),
-}).refine((value) => value.marksScored !== undefined, {
-    message: 'marksScored is required.',
+    sgpa: z.coerce.number().optional(),
+    cgpa: z.coerce.number().optional(),
+}).refine((value) => value.marksScored !== undefined || value.sgpa !== undefined || value.cgpa !== undefined, {
+    message: 'At least one summary field is required.',
 });
 
 // --- OC images --------------------------------------------------------------

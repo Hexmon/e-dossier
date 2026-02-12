@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -17,7 +17,7 @@ export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await requireAdmin(req);
     const sp = new URL(req.url).searchParams;
     const roleId = sp.get('roleId') ?? undefined;
     const positionId = sp.get('positionId') ?? undefined;
@@ -57,7 +57,7 @@ async function GETHandler(req: AuditNextRequest) {
 
 async function PUTHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await requireAdmin(req);
     const body = rbacMappingsUpdateSchema.parse(await req.json());
 
     if (!body.roleId && !body.positionId) {

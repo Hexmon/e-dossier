@@ -6,6 +6,9 @@ import { rejectSignupRequest } from '@/app/db/queries/signupRequests';
 import { IdSchema } from '@/app/lib/apiClient';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 async function POSTHandler(
   req: AuditNextRequest,
@@ -48,4 +51,4 @@ async function POSTHandler(
     return handleApiError(err);
   }
 }
-export const POST = withAuditRoute('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

@@ -210,6 +210,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "DELETE",
+    "path": "/api/v1/admin/rbac/roles/:roleId",
+    "action": "admin:rbac:roles:delete",
+    "resourceType": "admin:rbac:roles",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
     "path": "/api/v1/admin/signup-requests/:id",
     "action": "admin:signup-requests:delete",
     "resourceType": "admin:signup-requests",
@@ -1920,6 +1929,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PATCH",
+    "path": "/api/v1/admin/rbac/roles/:roleId",
+    "action": "admin:rbac:roles:update",
+    "resourceType": "admin:rbac:roles",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PATCH",
     "path": "/api/v1/admin/subjects/:id",
     "action": "admin:subjects:update",
     "resourceType": "admin:subjects",
@@ -2481,6 +2499,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/rbac/permissions",
     "action": "admin:rbac:permissions:create",
     "resourceType": "admin:rbac:permissions",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/rbac/roles",
+    "action": "admin:rbac:roles:create",
+    "resourceType": "admin:rbac:roles",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true

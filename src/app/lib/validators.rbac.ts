@@ -20,6 +20,31 @@ export const rbacMappingsUpdateSchema = z.object({
   permissionIds: z.array(z.string().uuid()).default([]),
 });
 
+export const rbacRoleCreateSchema = z.object({
+  key: z
+    .string()
+    .trim()
+    .min(2)
+    .max(64)
+    .regex(/^[a-zA-Z0-9_:-]+$/, 'Role key can contain letters, numbers, "_", ":" and "-" only.'),
+  description: z.string().trim().max(1000).nullable().optional(),
+});
+
+export const rbacRoleUpdateSchema = z
+  .object({
+    key: z
+      .string()
+      .trim()
+      .min(2)
+      .max(64)
+      .regex(/^[a-zA-Z0-9_:-]+$/, 'Role key can contain letters, numbers, "_", ":" and "-" only.')
+      .optional(),
+    description: z.string().trim().max(1000).nullable().optional(),
+  })
+  .refine((payload) => Object.keys(payload).length > 0, {
+    message: 'Provide at least one field to update.',
+  });
+
 export const rbacFieldRuleCreateSchema = z
   .object({
     permissionId: z.string().uuid(),
@@ -44,4 +69,3 @@ export const rbacFieldRuleUpdateSchema = z
   .refine((payload) => Object.keys(payload).length > 0, {
     message: 'Provide at least one field to update.',
   });
-

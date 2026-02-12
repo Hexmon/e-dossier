@@ -81,6 +81,26 @@ export const rbacApi = {
     );
   },
 
+  createRole: async (input: { key: string; description?: string | null }) => {
+    return api.post<{ message: string; role: RbacRole }, typeof input>(
+      '/api/v1/admin/rbac/roles',
+      input
+    );
+  },
+
+  updateRole: async (roleId: string, input: { key?: string; description?: string | null }) => {
+    return api.patch<{ message: string; role: RbacRole }, typeof input>(
+      `/api/v1/admin/rbac/roles/${roleId}`,
+      input
+    );
+  },
+
+  deleteRole: async (roleId: string) => {
+    return api.delete<{ message: string; role: Pick<RbacRole, 'id' | 'key'> }>(
+      `/api/v1/admin/rbac/roles/${roleId}`
+    );
+  },
+
   listMappings: async (params?: { roleId?: string; positionId?: string }) => {
     return api.get<{
       message: string;
@@ -144,4 +164,3 @@ export const rbacApi = {
     );
   },
 };
-

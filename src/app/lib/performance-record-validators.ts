@@ -19,7 +19,8 @@ const subjectRemarksArraySchema = z.array(
     }),
 );
 
-const subjectRemarksMapSchema = z.record(subjectKeySchema, z.string());
+// Accept legacy/free-form remark keys from older clients; service safely maps known keys.
+const subjectRemarksMapSchema = z.record(z.string(), z.string());
 
 export const sprUpsertSchema = z.object({
     cdrMarks: z.coerce.number().min(0).max(25).optional(),

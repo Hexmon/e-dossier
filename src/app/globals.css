@@ -170,3 +170,106 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Device Site Settings runtime tokens */
+:root {
+  --density-input-height: 2.25rem;
+  --density-input-height-sm: 2rem;
+  --density-input-px: 0.75rem;
+  --density-input-py: 0.25rem;
+  --density-button-height: 2.25rem;
+  --density-button-px: 1rem;
+  --density-button-py: 0.5rem;
+  --density-card-py: 1.5rem;
+  --density-card-px: 1.5rem;
+  --density-card-gap: 1.5rem;
+  --density-sidebar-group-padding: 0.5rem;
+  --density-sidebar-group-label-height: 2rem;
+  --density-sidebar-group-label-px: 0.5rem;
+  --density-sidebar-menu-gap: 0.25rem;
+  --density-sidebar-item-height: 2rem;
+  --density-sidebar-item-padding: 0.5rem;
+  --density-sidebar-link-px: 0.5rem;
+  --density-sidebar-link-py: 0.25rem;
+  --density-table-header-py: 0.5rem;
+  --density-table-cell-py: 0.5rem;
+}
+
+html[data-density="compact"] {
+  --density-input-height: 2rem;
+  --density-input-height-sm: 1.75rem;
+  --density-input-px: 0.625rem;
+  --density-input-py: 0.125rem;
+  --density-button-height: 2rem;
+  --density-button-px: 0.875rem;
+  --density-button-py: 0.375rem;
+  --density-card-py: 1rem;
+  --density-card-px: 1rem;
+  --density-card-gap: 1rem;
+  --density-sidebar-group-padding: 0.375rem;
+  --density-sidebar-group-label-height: 1.75rem;
+  --density-sidebar-group-label-px: 0.375rem;
+  --density-sidebar-menu-gap: 0.125rem;
+  --density-sidebar-item-height: 1.75rem;
+  --density-sidebar-item-padding: 0.375rem;
+  --density-sidebar-link-px: 0.375rem;
+  --density-sidebar-link-py: 0.125rem;
+  --density-table-header-py: 0.375rem;
+  --density-table-cell-py: 0.375rem;
+}
+
+html.dark,
+html[data-theme="dark"] {
+  --background: hsl(220 20% 10%);
+  --card: hsl(220 18% 14%);
+  --foreground: hsl(210 20% 90%);
+  --muted: hsl(220 15% 18%);
+  --muted-foreground: hsl(215 15% 55%);
+  --primary: hsl(217 91% 60%);
+  --primary-foreground: hsl(0 0% 100%);
+  --border: hsl(220 15% 20%);
+  --accent: hsl(220 15% 22%);
+  --accent-foreground: hsl(210 20% 90%);
+  --sidebar-background: hsl(220 22% 8%);
+  --sidebar-foreground: hsl(210 20% 90%);
+  --sidebar-border: hsl(220 15% 20%);
+  --sidebar-accent: hsl(220 15% 22%);
+  --sidebar-accent-foreground: hsl(210 20% 90%);
+  --destructive: hsl(0 72% 51%);
+  --ring: hsl(217 91% 60%);
+}
+
+html.dark[data-accent="blue"],
+html[data-theme="dark"][data-accent="blue"] {
+  --primary: hsl(217 91% 60%);
+  --accent: hsl(220 15% 22%);
+  --ring: hsl(217 91% 60%);
+}
+
+html.dark[data-accent="teal"],
+html[data-theme="dark"][data-accent="teal"] {
+  --primary: hsl(174 72% 46%);
+  --accent: hsl(174 45% 20%);
+  --ring: hsl(174 72% 46%);
+}
+
+html.dark[data-accent="amber"],
+html[data-theme="dark"][data-accent="amber"] {
+  --primary: hsl(38 92% 50%);
+  --accent: hsl(38 60% 20%);
+  --ring: hsl(38 92% 50%);
+}
+
+html.dark[data-accent="purple"],
+html[data-theme="dark"][data-accent="purple"] {
+  --primary: hsl(271 81% 56%);
+  --accent: hsl(271 45% 22%);
+  --ring: hsl(271 81% 56%);
+}
+
+html.dark[data-accent="red"],
+html[data-theme="dark"][data-accent="red"] {
+  --primary: hsl(0 84% 60%);
+  --accent: hsl(0 48% 22%);
+  --ring: hsl(0 84% 60%);
+}

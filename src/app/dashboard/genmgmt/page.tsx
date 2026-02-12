@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings } from "lucide-react";
+import Link from "next/link";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import {
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useMe } from "@/hooks/useMe";
 import { resolvePageAction } from "@/app/lib/acx/action-map";
 import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
+import { deriveSidebarRoleGroup } from "@/lib/sidebar-visibility";
 
 export default function GeneralManagementPage() {
   const router = useRouter();
@@ -43,6 +44,13 @@ export default function GeneralManagementPage() {
     if (permissions.has("*")) return true;
     return permissions.has(page.action);
   }, [authzV2Enabled, meData?.permissions, meData?.roles, meLoading]);
+
+  const roleGroup = useMemo(() => {
+    return deriveSidebarRoleGroup({
+      roles: meData?.roles ?? [],
+      position: meData?.apt?.position ?? null,
+    });
+  }, [meData?.apt?.position, meData?.roles]);
 
   useEffect(() => {
     if (!authzV2Enabled || meLoading) return;
@@ -159,14 +167,44 @@ export default function GeneralManagementPage() {
 
               {/* Settings Tab */}
               <TabsContent value="settings" className="space-y-6">
-                <div className="text-center py-12">
-                  <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Coming Soon
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Settings module is under development and will be available soon.
-                  </p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Device Site Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Configure theme, language, timezone, refresh interval, and layout density per device.
+                      </p>
+                    </CardContent>
+                    <CardFooter>
+                      <Button asChild className="w-full">
+                        <Link href="/dashboard/settings/device">Open Device Settings</Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Permission Management</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Manage roles, permissions, mappings, and field-level rules for user access control.
+                      </p>
+                    </CardContent>
+                    <CardFooter>
+                      {roleGroup === "ADMIN" || roleGroup === "SUPER_ADMIN" ? (
+                        <Button asChild className="w-full">
+                          <Link href="/dashboard/genmgmt/rbac">Open RBAC Management</Link>
+                        </Button>
+                      ) : (
+                        <Button disabled className="w-full">
+                          Restricted
+                        </Button>
+                      )}
+                    </CardFooter>
+                  </Card>
                 </div>
               </TabsContent>
             </GlobalTabs>

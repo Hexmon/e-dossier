@@ -233,3 +233,19 @@ VM-1 (App)
 ## Operational Checks
 - `pnpm run check` verifies Postgres and MinIO connectivity.
 - If schema changes: `pnpm db:generate` then `pnpm db:migrate`.
+
+## RBAC Permissions Sync & Verification
+Use this flow after RBAC/action-map changes and after `pnpm db:push`.
+
+1. Seed permissions from parsed matrix:
+   - `pnpm seed:permissions`
+2. Optional alternative import command (use if you want explicit parsed-matrix path control):
+   - `pnpm import:permissions`
+   - Example with explicit path:
+     - `pnpm import:permissions docs/rbac/permission-matrix.parsed.json`
+3. Seed admins only if this environment needs admin bootstrap:
+   - `pnpm seed:admins`
+4. Validate action-map coverage:
+   - `pnpm run validate:action-map`
+5. Full verification:
+   - `pnpm lint && pnpm typecheck && pnpm test && pnpm build`

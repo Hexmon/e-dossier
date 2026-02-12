@@ -7,13 +7,15 @@ import {
   DELETE as deletePermission,
 } from '@/app/api/v1/admin/rbac/permissions/[permissionId]/route';
 import { GET as getMappings, PUT as putMappings } from '@/app/api/v1/admin/rbac/mappings/route';
-import { GET as getRoles } from '@/app/api/v1/admin/rbac/roles/route';
+import { GET as getRoles, POST as postRole } from '@/app/api/v1/admin/rbac/roles/route';
+import { PATCH as patchRole, DELETE as deleteRole } from '@/app/api/v1/admin/rbac/roles/[roleId]/route';
 import { GET as getFieldRules, POST as postFieldRule } from '@/app/api/v1/admin/rbac/field-rules/route';
 
 import * as authz from '@/app/lib/authz';
 import * as rbacAdminQueries from '@/app/db/queries/rbac-admin';
 
 vi.mock('@/app/lib/authz', () => ({
+  requireAdmin: vi.fn(),
   requireAuth: vi.fn(),
 }));
 
@@ -33,6 +35,18 @@ vi.mock('@/app/db/queries/rbac-admin', () => ({
     id: permissionId,
     key: 'admin:rbac:permissions:read',
   })),
+  createRbacRole: vi.fn(async (input: { key: string; description?: string | null }) => ({
+    id: 'role-2',
+    key: input.key,
+    description: input.description ?? null,
+  })),
+  getRbacRoleById: vi.fn(async () => ({ id: 'role-2', key: 'hoat', description: 'HOAT' })),
+  updateRbacRole: vi.fn(async (roleId: string, input: { key?: string; description?: string | null }) => ({
+    id: roleId,
+    key: input.key ?? 'hoat',
+    description: input.description ?? 'Updated HOAT',
+  })),
+  deleteRbacRole: vi.fn(async (roleId: string) => ({ id: roleId, key: 'hoat' })),
   listRbacRoles: vi.fn(async () => [{ id: 'role-1', key: 'admin', description: 'Admin' }]),
   listRbacPositions: vi.fn(async () => [{ id: 'pos-1', key: 'ADMIN', displayName: 'Admin' }]),
   listRolePermissionMappings: vi.fn(async () => []),
@@ -60,11 +74,16 @@ beforeEach(() => {
     roles: ['ADMIN'],
     claims: {},
   } as Awaited<ReturnType<typeof authz.requireAuth>>);
+  vi.mocked(authz.requireAdmin).mockResolvedValue({
+    userId: 'admin-1',
+    roles: ['ADMIN'],
+    claims: {},
+  } as Awaited<ReturnType<typeof authz.requireAdmin>>);
 });
 
 describe('RBAC permissions routes', () => {
   it('GET /api/v1/admin/rbac/permissions returns 401 when auth fails', async () => {
-    vi.mocked(authz.requireAuth).mockRejectedValueOnce(new ApiError(401, 'Unauthorized', 'unauthorized'));
+    vi.mocked(authz.requireAdmin).mockRejectedValueOnce(new ApiError(401, 'Unauthorized', 'unauthorized'));
 
     const req = makeJsonRequest({ method: 'GET', path: basePermissionsPath });
     const res = await getPermissions(req as any, createRouteContext());
@@ -132,6 +151,17 @@ describe('RBAC permissions routes', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('GET /api/v1/admin/rbac/permissions returns 403 for non-admin', async () => {
+    vi.mocked(authz.requireAdmin).mockRejectedValueOnce(
+      new ApiError(403, 'Admin privileges required', 'forbidden')
+    );
+
+    const req = makeJsonRequest({ method: 'GET', path: basePermissionsPath });
+    const res = await getPermissions(req as any, createRouteContext());
+
+    expect(res.status).toBe(403);
+  });
 });
 
 describe('RBAC mappings, roles, and field rules routes', () => {
@@ -175,6 +205,56 @@ describe('RBAC mappings, roles, and field rules routes', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.roles[0].id).toBe('role-1');
+  });
+
+  it('POST /api/v1/admin/rbac/roles validates payload', async () => {
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/admin/rbac/roles',
+      body: { key: '' },
+    });
+
+    const res = await postRole(req as any, createRouteContext());
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /api/v1/admin/rbac/roles creates role', async () => {
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/admin/rbac/roles',
+      body: { key: 'hoat', description: 'HOAT role' },
+    });
+    const res = await postRole(req as any, createRouteContext());
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.role.key).toBe('hoat');
+  });
+
+  it('PATCH /api/v1/admin/rbac/roles/:roleId updates role', async () => {
+    const req = makeJsonRequest({
+      method: 'PATCH',
+      path: '/api/v1/admin/rbac/roles/role-2',
+      body: { description: 'Updated HOAT' },
+    });
+    const res = await patchRole(req as any, createRouteContext({ roleId: 'role-2' }));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.role.id).toBe('role-2');
+  });
+
+  it('DELETE /api/v1/admin/rbac/roles/:roleId rejects immutable roles', async () => {
+    vi.mocked(rbacAdminQueries.getRbacRoleById).mockResolvedValueOnce({
+      id: 'role-1',
+      key: 'admin',
+      description: 'Admin',
+    });
+
+    const req = makeJsonRequest({ method: 'DELETE', path: '/api/v1/admin/rbac/roles/role-1' });
+    const res = await deleteRole(req as any, createRouteContext({ roleId: 'role-1' }));
+
+    expect(res.status).toBe(403);
   });
 
   it('GET /api/v1/admin/rbac/field-rules returns field rules', async () => {

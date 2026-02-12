@@ -66,10 +66,15 @@ Examples:
 - Page surface inventory:
   - `docs/rbac/surface-inventory.pages.json`
 
+## Guardrails
+- CI/local guard is implemented:
+  - `pnpm run validate:action-map`
+  - script: `scripts/validate-action-map.ts`
+  - validates `src/app/api/v1/**/route.ts` method coverage and `src/app/dashboard/**/page.tsx` route coverage against `action-map.ts`.
+
 ## Future Tightening (Phase 2+)
 - Add explicit override table for exceptional routes where static-segment mapping is too coarse.
 - Add per-action metadata:
   - `scopeKind` (`GLOBAL|WING|SQUADRON|PLATOON|OC`),
   - `resourceBuilder` key,
   - `fieldRuleSet` key.
-- Add CI guard to fail if any new `route.ts`/`page.tsx` is missing a mapped action.

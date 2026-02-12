@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useRbacPermissions } from '@/hooks/useRbacPermissions';
 import { useRbacMappings } from '@/hooks/useRbacMappings';
 import { useRbacFieldRules } from '@/hooks/useRbacFieldRules';
+import { useRbacRoles } from '@/hooks/useRbacRoles';
 
 type FieldRuleMode = 'ALLOW' | 'DENY' | 'OMIT' | 'MASK';
 
@@ -13,6 +14,7 @@ export default function RbacManagement() {
   const permissionsQuery = useRbacPermissions();
   const mappings = useRbacMappings();
   const fieldRules = useRbacFieldRules();
+  const rolesQuery = useRbacRoles();
 
   const permissions = permissionsQuery.data ?? [];
   const roleMappings = mappings.mappings.data?.roleMappings ?? [];
@@ -22,6 +24,8 @@ export default function RbacManagement() {
 
   const [permissionKey, setPermissionKey] = useState('');
   const [permissionDescription, setPermissionDescription] = useState('');
+  const [roleKey, setRoleKey] = useState('');
+  const [roleDescription, setRoleDescription] = useState('');
 
   const [selectedRoleId, setSelectedRoleId] = useState('');
   const [selectedPositionId, setSelectedPositionId] = useState('');
@@ -53,6 +57,16 @@ export default function RbacManagement() {
     });
     setPermissionKey('');
     setPermissionDescription('');
+  };
+
+  const handleCreateRole = async () => {
+    if (!roleKey.trim()) return;
+    await rolesQuery.createRole.mutateAsync({
+      key: roleKey.trim(),
+      description: roleDescription.trim() || null,
+    });
+    setRoleKey('');
+    setRoleDescription('');
   };
 
   const handleSetRoleMappings = async () => {
@@ -94,6 +108,65 @@ export default function RbacManagement() {
   return (
     <div className="space-y-8">
       <section className="rounded-lg border p-4">
+        <h3 className="text-lg font-semibold">Roles</h3>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Manage role keys used for RBAC mappings and principal role assignment.
+        </p>
+
+        <div className="mb-4 flex gap-2">
+          <Input
+            placeholder="role key (e.g. hoat)"
+            value={roleKey}
+            onChange={(event) => setRoleKey(event.target.value)}
+          />
+          <Input
+            placeholder="description"
+            value={roleDescription}
+            onChange={(event) => setRoleDescription(event.target.value)}
+          />
+          <Button
+            onClick={handleCreateRole}
+            disabled={rolesQuery.createRole.isPending || !roleKey.trim()}
+          >
+            Add
+          </Button>
+        </div>
+
+        <div className="max-h-72 overflow-auto rounded border">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-muted">
+              <tr>
+                <th className="p-2 text-left">Key</th>
+                <th className="p-2 text-left">Description</th>
+                <th className="p-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {roles.map((role) => {
+                const immutable = ['admin', 'super_admin'].includes(role.key.toLowerCase());
+                return (
+                  <tr key={role.id} className="border-t">
+                    <td className="p-2 font-mono text-xs">{role.key}</td>
+                    <td className="p-2">{role.description ?? '-'}</td>
+                    <td className="p-2">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={immutable || rolesQuery.deleteRole.isPending}
+                        onClick={() => rolesQuery.deleteRole.mutate(role.id)}
+                      >
+                        Delete
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-lg border p-4">
         <h3 className="text-lg font-semibold">Permissions</h3>
         <p className="mb-4 text-sm text-muted-foreground">
           Create and review action keys used by authorization checks.
@@ -124,6 +197,7 @@ export default function RbacManagement() {
               <tr>
                 <th className="p-2 text-left">Key</th>
                 <th className="p-2 text-left">Description</th>
+                <th className="p-2 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -131,6 +205,16 @@ export default function RbacManagement() {
                 <tr key={permission.id} className="border-t">
                   <td className="p-2 font-mono text-xs">{permission.key}</td>
                   <td className="p-2">{permission.description ?? '-'}</td>
+                  <td className="p-2">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={permissionsQuery.deletePermission.isPending}
+                      onClick={() => permissionsQuery.deletePermission.mutate(permission.id)}
+                    >
+                      Delete
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -319,6 +403,7 @@ export default function RbacManagement() {
                 <th className="p-2 text-left">Scope</th>
                 <th className="p-2 text-left">Mode</th>
                 <th className="p-2 text-left">Fields</th>
+                <th className="p-2 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -328,6 +413,16 @@ export default function RbacManagement() {
                   <td className="p-2">{rule.positionKey ?? rule.roleKey ?? '-'}</td>
                   <td className="p-2">{rule.mode}</td>
                   <td className="p-2">{(rule.fields ?? []).join(', ') || '-'}</td>
+                  <td className="p-2">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={fieldRules.deleteRule.isPending}
+                      onClick={() => fieldRules.deleteRule.mutate(rule.id)}
+                    >
+                      Delete
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>

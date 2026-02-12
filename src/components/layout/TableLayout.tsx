@@ -337,7 +337,7 @@ export function UniversalTable<T extends Record<string, any>>({
                     <thead className={`text-left ${activeTheme.headerTextColor}`}>
                         <tr className="text-left">
                             {features.selection && (
-                                <th className="px-3 py-2 w-12">
+                                <th className="px-3 py-[var(--density-table-header-py)] w-12">
                                     <input
                                         type="checkbox"
                                         onChange={(e) => {
@@ -353,7 +353,7 @@ export function UniversalTable<T extends Record<string, any>>({
                             {columns.map((column) => (
                                 <th
                                     key={String(column.key)}
-                                    className={`px-3 py-2 ${column.className || ''} ${column.sortable && features.sorting ? 'cursor-pointer hover:bg-muted/70' : ''
+                                    className={`px-3 py-[var(--density-table-header-py)] ${column.className || ''} ${column.sortable && features.sorting ? 'cursor-pointer hover:bg-muted/70' : ''
                                         }`}
                                     style={{ width: column.width }}
                                     onClick={() => column.sortable && handleSort(String(column.key))}
@@ -374,14 +374,14 @@ export function UniversalTable<T extends Record<string, any>>({
                                             placeholder={`Filter ${column.label}`}
                                             value={filters[String(column.key)] || ''}
                                             onChange={(e) => handleFilter(String(column.key), e.target.value)}
-                                            className="mt-1 h-8"
+                                            className="mt-1 h-[var(--density-input-height-sm)]"
                                             onClick={(e) => e.stopPropagation()}
                                         />
                                     )}
                                 </th>
                             ))}
                             {actions.length > 0 && (
-                                <th className="px-3 py-2">Actions</th>
+                                <th className="px-3 py-[var(--density-table-header-py)]">Actions</th>
                             )}
                         </tr>
                     </thead>
@@ -404,7 +404,7 @@ export function UniversalTable<T extends Record<string, any>>({
                                         }`}
                                 >
                                     {features.selection && (
-                                        <td className="px-3 py-2">
+                                        <td className="px-3 py-[var(--density-table-cell-py)]">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedRows.has(index)}
@@ -415,13 +415,13 @@ export function UniversalTable<T extends Record<string, any>>({
                                     {columns.map((column) => (
                                         <td
                                             key={String(column.key)}
-                                            className={`px-3 py-2 ${styling.compact ? 'py-1' : ''} ${column.className || ''}`}
+                                            className={`px-3 py-[var(--density-table-cell-py)] ${styling.compact ? 'py-1' : ''} ${column.className || ''}`}
                                         >
                                             {renderCell(column, row, index)}
                                         </td>
                                     ))}
                                     {actions.length > 0 && (
-                                        <td className="px-3 py-2">
+                                        <td className="px-3 py-[var(--density-table-cell-py)]">
                                             <div className="flex flex-wrap gap-2">
                                                 {actions.map((action) => {
                                                     if (action.condition && !action.condition(row, index)) {
