@@ -60,6 +60,11 @@ function isPublic(pathname: string, method: string) {
   return false;
 }
 
+export function shouldSkipRateLimit(pathname: string, method: string) {
+  if (method !== 'POST' && method !== 'OPTIONS') return false;
+  return matchPrefix(pathname, '/api/v1/auth/logout');
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method.toUpperCase();
@@ -75,7 +80,10 @@ export async function middleware(req: NextRequest) {
   // SECURITY FIX: Rate Limiting for API requests
   // Apply rate limiting to all API endpoints (unless disabled in config)
   const isHealthCheck = pathname === '/api/v1/health';
-  const shouldApplyRateLimit = isRateLimitEnabled() && !(isHealthCheck && shouldExcludeHealthCheck());
+  const shouldApplyRateLimit =
+    isRateLimitEnabled() &&
+    !(isHealthCheck && shouldExcludeHealthCheck()) &&
+    !shouldSkipRateLimit(pathname, method);
 
   if (pathname.startsWith(PROTECTED_PREFIX) && shouldApplyRateLimit) {
     const clientIp = getClientIp(req);
