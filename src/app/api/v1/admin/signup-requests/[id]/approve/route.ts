@@ -6,6 +6,9 @@ import { approveSignupRequest } from '@/app/db/queries/signupRequests';
 import { IdSchema } from '@/app/lib/apiClient';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 /**
  * POST /api/v1/admin/signup-requests/:id/approve
@@ -56,4 +59,4 @@ async function POSTHandler(
         return handleApiError(err);
     }
 }
-export const POST = withAuditRoute('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

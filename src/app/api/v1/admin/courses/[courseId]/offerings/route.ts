@@ -11,6 +11,9 @@ import { courses } from '@/app/db/schema/training/courses';
 import { findMissingInstructorIds } from '@/app/db/queries/instructors';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 const Param = z.object({ courseId: z.string().uuid() });
 
@@ -133,6 +136,6 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withAuditRoute('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

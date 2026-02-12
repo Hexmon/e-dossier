@@ -97,11 +97,11 @@ export default function PTTaskScoresTable({
                                     </td>
                                     <td className="text-center p-4">
                                         {isCompensatory(score.ptAttemptId) ? (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning-foreground">
                                                 Compensatory
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                                                 Regular
                                             </span>
                                         )}
@@ -124,7 +124,7 @@ export default function PTTaskScoresTable({
                                                     console.log("Delete clicked for score ID:", score.id);
                                                     onDelete(score.id);
                                                 }}
-                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                 title="Delete score entry"
                                             >
                                                 <Trash2 className="h-4 w-4" />

@@ -9,6 +9,9 @@ import { hardDeleteInstructor, softDeleteInstructor } from '@/app/db/queries/ins
 import type { InstructorRow } from '@/app/db/queries/instructors';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 const Id = z.object({ id: z.string().uuid() });
 
@@ -95,8 +98,8 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         });
     } catch (err) { return handleApiError(err); }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
 
-export const DELETE = withAuditRoute('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

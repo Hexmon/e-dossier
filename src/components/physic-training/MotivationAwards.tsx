@@ -115,7 +115,7 @@ export default function MotivationAwards({ activeSemester, ocId, fields }: Motiv
 
     if (error) {
         return (
-            <div className="p-4 text-red-600">
+            <div className="p-4 text-destructive">
                 Error loading motivation awards: {error}
             </div>
         );
@@ -143,7 +143,7 @@ export default function MotivationAwards({ activeSemester, ocId, fields }: Motiv
                     value={value}
                     onChange={(e) => handleChange(row.fieldId, e.target.value)}
                     placeholder="Enter Motivation Award"
-                    className="border border-gray-300 px-4 py-2"
+                    className="border border-border px-4 py-2"
                     disabled={!isEditing}
                 />
             )
@@ -170,7 +170,7 @@ export default function MotivationAwards({ activeSemester, ocId, fields }: Motiv
     return (
         <div>
             <div>
-                <h2 className="mt-4 text-left text-lg font-bold text-gray-700">Motivation Awards</h2>
+                <h2 className="mt-4 text-left text-lg font-bold text-foreground">Motivation Awards</h2>
             </div>
 
             <div className="mt-4">

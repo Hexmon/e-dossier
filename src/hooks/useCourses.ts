@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -9,6 +10,7 @@ import {
     deleteCourse,
     CourseResponse,
 } from "@/app/lib/api/courseApi";
+import { ApiClientError } from "@/app/lib/apiClient";
 
 export interface UICourse {
     id: string;
@@ -42,10 +44,23 @@ function toUICourse(course: CourseResponse): UICourse {
     };
 }
 
+function getApiErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof ApiClientError) {
+        const detail = typeof error.extras?.detail === "string" ? error.extras.detail : null;
+        return detail || error.message || fallback;
+    }
+
+    if (error instanceof Error) {
+        return error.message || fallback;
+    }
+
+    return fallback;
+}
+
 export function useCourses() {
     const queryClient = useQueryClient();
 
-    const { data: courses = [], isLoading: loading } = useQuery({
+    const coursesQuery = useQuery({
         queryKey: ["courses"],
         // queryFn always returns the raw shape — this is what goes into the cache
         queryFn: async () => {
@@ -55,6 +70,13 @@ export function useCourses() {
         // select transforms per-consumer without touching the cache
         select: (items: CourseResponse[]) => items.map(toUICourse),
     });
+
+    const { data: courses = [], isLoading: loading } = coursesQuery;
+
+    useEffect(() => {
+        if (!coursesQuery.isError) return;
+        toast.error(getApiErrorMessage(coursesQuery.error, "Failed to load courses"));
+    }, [coursesQuery.isError, coursesQuery.error]);
 
     const addCourseMutation = useMutation({
         mutationFn: async (data: Omit<UICourse, "id">) => {
@@ -69,8 +91,8 @@ export function useCourses() {
             queryClient.invalidateQueries({ queryKey: ["courses"] });
             toast.success("Course added successfully");
         },
-        onError: () => {
-            toast.error("Failed to add course");
+        onError: (error) => {
+            toast.error(getApiErrorMessage(error, "Failed to add course"));
         },
     });
 
@@ -87,21 +109,21 @@ export function useCourses() {
             queryClient.invalidateQueries({ queryKey: ["courses"] });
             toast.success("Course updated successfully");
         },
-        onError: () => {
-            toast.error("Failed to update course");
+        onError: (error) => {
+            toast.error(getApiErrorMessage(error, "Failed to update course"));
         },
     });
 
     const removeCourseMutation = useMutation({
         mutationFn: async (id: string) => {
-            await deleteCourse(id);
+            await deleteCourse(id, { hard: true });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["courses"] });
             toast.success("Course deleted successfully");
         },
-        onError: () => {
-            toast.error("Failed to delete course");
+        onError: (error) => {
+            toast.error(getApiErrorMessage(error, "Failed to delete course"));
         },
     });
 

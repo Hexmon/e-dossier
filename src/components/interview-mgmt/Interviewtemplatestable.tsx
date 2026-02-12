@@ -100,7 +100,7 @@ export default function InterviewTemplatesTable({
             render: (value) => {
                 const active = value as boolean;
                 return active ? (
-                    <Badge variant="default" className="bg-green-600 text-xs">
+                    <Badge variant="default" className="bg-success text-xs">
                         Active
                     </Badge>
                 ) : (
@@ -120,7 +120,7 @@ export default function InterviewTemplatesTable({
             variant: "outline",
             size: "sm",
             handler: (_row, index) => onView(index),
-            className: "text-blue-600 hover:bg-blue-50 hover:text-blue-700",
+            className: "text-primary hover:bg-primary/10 hover:text-primary",
         },
         {
             key: "edit",

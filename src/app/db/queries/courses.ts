@@ -101,6 +101,15 @@ export async function hardDeleteCourse(id: string): Promise<{ before: CourseRow 
     });
 }
 
+export async function countAssignedOCsForCourse(courseId: string): Promise<number> {
+    const [row] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ocCadets)
+        .where(eq(ocCadets.courseId, courseId));
+
+    return Number(row?.count ?? 0);
+}
+
 export async function listCourseOfferings(courseId: string, semester?: number) {
     const wh: any[] = [eq(courseOfferings.courseId, courseId), isNull(courseOfferings.deletedAt)];
     if (semester) wh.push(eq(courseOfferings.semester, semester));

@@ -25,13 +25,13 @@ export default function DossierSection({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-emerald-500/10 text-emerald-700 border-emerald-200";
+        return "bg-success/15 text-success border-success/30";
       case "in-progress":
-        return "bg-blue-500/10 text-blue-700 border-blue-200";
+        return "bg-primary/10 text-primary border-primary/30";
       case "pending":
-        return "bg-amber-500/10 text-amber-700 border-amber-200";
+        return "bg-warning/20 text-warning-foreground border-warning/30";
       default:
-        return "bg-gray-500/10 text-gray-700 border-gray-200";
+        return "bg-muted text-foreground border-border";
     }
   };
 

@@ -50,7 +50,7 @@ export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onC
         <form onSubmit={handleSubmit(onSubmit)}>
             <div className="overflow-x-auto border rounded-lg shadow">
                 <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
                             {[
                                 "Date",
@@ -137,14 +137,14 @@ export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onC
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-blue-600">
+                <Button type="submit" className="bg-primary">
                     Submit MED CAT
                 </Button>
 
                 <Button
                     type="button"
                     variant="outline"
-                    className="hover:bg-destructive hover:text-white"
+                    className="hover:bg-destructive hover:text-primary-foreground"
                     onClick={onClear}
                 >
                     Clear Form

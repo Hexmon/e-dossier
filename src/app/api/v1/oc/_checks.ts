@@ -5,6 +5,7 @@ import { requireAuth, hasAdminRole } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq } from 'drizzle-orm';
+import { canEditAcademics } from '@/lib/academics-access';
 
 export const Param = (name: string) => z.object({ [name]: z.string() });
 
@@ -16,6 +17,19 @@ export async function mustBeAuthed(req: NextRequest) {
 export async function mustBeAdmin(req: NextRequest) {
     const ctx = await requireAuth(req);
     if (!hasAdminRole(ctx.roles)) throw new ApiError(403, 'Admin privileges required', 'forbidden');
+    return ctx;
+}
+
+export async function mustBeAcademicsEditor(req: NextRequest) {
+    const ctx = await requireAuth(req);
+    if (
+        !canEditAcademics({
+            roles: ctx.roles,
+            position: (ctx.claims as any)?.apt?.position ?? null,
+        })
+    ) {
+        throw new ApiError(403, 'You do not have permission to modify academics.', 'forbidden');
+    }
     return ctx;
 }
 

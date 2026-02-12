@@ -216,7 +216,7 @@ export default function TemplateSemesters({ templateId }: TemplateSemestersProps
                         <AlertDialogCancel onClick={() => setSemesterToDelete(null)}>
                             Cancel
                         </AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600">
+                        <AlertDialogAction onClick={confirmDelete} className="bg-destructive">
                             Remove
                         </AlertDialogAction>
                     </AlertDialogFooter>

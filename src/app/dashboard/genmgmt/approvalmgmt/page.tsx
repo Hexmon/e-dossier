@@ -47,7 +47,7 @@ export default function ApprovalManagement() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                                { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                                 { label: "Approval Management" },
                             ]}
                         />

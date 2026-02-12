@@ -308,12 +308,12 @@ export default function OcCampActivitiesTable({
         label: "Remarks",
         render: (_value, row, index = 0) => {
           if (row?.isTotal) {
-            return <span className="text-gray-500">-</span>;
+            return <span className="text-muted-foreground">-</span>;
           }
 
           if (disabled) {
             return (
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 {row.remark || "-"}
               </span>
             );
@@ -348,11 +348,11 @@ export default function OcCampActivitiesTable({
         <CardTitle className="text-lg font-semibold">
           ACTIVITY MARKS - {campName}
           {disabled ? (
-            <span className="text-sm font-normal text-gray-500 ml-2">
+            <span className="text-sm font-normal text-muted-foreground ml-2">
               (View Mode)
             </span>
           ) : (
-            <span className="text-sm font-normal text-blue-600 ml-2">
+            <span className="text-sm font-normal text-primary ml-2">
               (Edit Mode)
             </span>
           )}

@@ -1,67 +1,92 @@
+"use client";
 
-import Image from "next/image";
+import { useMemo, useState } from "react";
+
+import SafeImage from "@/components/site-settings/SafeImage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { awards } from "@/config/app.config";
+import { Button } from "@/components/ui/button";
 
-const GallantryAwards = () => {
+type AwardItem = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  imageUrl?: string | null;
+};
+
+type GallantryAwardsProps = {
+  title?: string;
+  description?: string;
+  awards?: AwardItem[];
+};
+
+const FALLBACK_DESCRIPTION =
+  "Honoring the brave souls who exemplify courage, valor, and sacrifice in service to the nation";
+
+const GallantryAwards = ({
+  title = "Gallantry Awards",
+  description = FALLBACK_DESCRIPTION,
+  awards = [],
+}: GallantryAwardsProps) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const visibleAwards = useMemo(() => {
+    if (expanded) return awards;
+    return awards.slice(0, 6);
+  }, [awards, expanded]);
+
   return (
     <section id="gallantry-awards" className="py-16 bg-muted/30">
       <div className="container mx-auto px-4">
-        {/* Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold text-primary mb-4">
-            Gallantry Awards
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Honoring the brave souls who exemplify courage, valor, and sacrifice in service to the nation
-          </p>
+          <h2 className="text-3xl lg:text-4xl font-bold text-primary mb-4">{title}</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{description}</p>
         </div>
 
-        {/* Featured Image */}
-        <div className="mb-12 text-center">
-          <div className="relative mx-auto rounded-lg overflow-hidden shadow-elegant max-w-2xl w-full h-64">
-            <Image
-              src="/images/gallantry-awards.jpg"
-              alt="Military Gallantry Awards"
-              fill
-              className="object-cover"
-              priority
-            />
+        {awards.length === 0 ? (
+          <div className="rounded-md border bg-background p-6 text-center text-muted-foreground">
+            No awards available.
           </div>
-        </div>
-
-        {/* Awards Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {awards.map(({icon, name, category, description}) => {
-            const IconComponent = icon;
-            return (
-              <Card
-                key={name}
-                className="group hover:shadow-command transition-all duration-300"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-full bg-primary/10">
-                      <IconComponent className="h-6 w-6 text-primary" />
+        ) : (
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visibleAwards.map((award) => (
+                <Card key={award.id} className="group hover:shadow-command transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3 mb-2">
+                      <SafeImage
+                        src={award.imageUrl}
+                        alt={award.title}
+                        fallbackSrc="/images/gallantry-awards.jpg"
+                        width={44}
+                        height={44}
+                        className="h-11 w-11 rounded border object-cover"
+                      />
+                      <Badge variant="secondary" className="text-xs">
+                        {award.category}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {category}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                    {name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {description}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                    <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                      {award.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">{award.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {awards.length > 6 && (
+              <div className="mt-6 text-center">
+                <Button type="button" variant="outline" onClick={() => setExpanded((prev) => !prev)}>
+                  {expanded ? "Show less" : `Show more (${awards.length - 6})`}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </section>
   );

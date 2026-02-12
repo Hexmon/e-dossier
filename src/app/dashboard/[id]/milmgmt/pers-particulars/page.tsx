@@ -31,6 +31,7 @@ import Link from "next/link";
 import type { RootState } from "@/store";
 import { savePersonalForm, clearPersonalForm } from "@/store/slices/personalParticularsSlice";
 import { useDebounce } from "@/hooks/useDebounce";
+import { resolveToneClasses } from "@/lib/theme-color";
 
 export default function PersParticularsPage() {
 
@@ -64,7 +65,7 @@ export default function PersParticularsPage() {
     // ---------------------------
     // REACT HOOK FORM
     // ---------------------------
-    const { register, handleSubmit, reset, watch } = useForm<OCPersonalRecord>({
+    const { register, handleSubmit, reset, watch, control, formState: { errors } } = useForm<OCPersonalRecord>({
         defaultValues: {} as OCPersonalRecord,
     });
 
@@ -333,7 +334,7 @@ export default function PersParticularsPage() {
                                     return (
                                         <DropdownMenuItem key={card.title} asChild>
                                             <Link href={link} className="flex items-center gap-2">
-                                                <card.icon className={`h-4 w-4 ${card.color}`} />
+                                                <card.icon className={`h-4 w-4 ${resolveToneClasses(card.color, "text")}`} />
                                                 {card.title}
                                             </Link>
                                         </DropdownMenuItem>
@@ -351,7 +352,7 @@ export default function PersParticularsPage() {
 
                             <CardContent>
                                 {isEditing && (
-                                    <div className="text-xs text-gray-500 text-right mb-4">
+                                    <div className="text-xs text-muted-foreground text-right mb-4">
                                         ✓ Changes are saved automatically
                                     </div>
                                 )}
@@ -360,6 +361,8 @@ export default function PersParticularsPage() {
                                     register={register}
                                     handleSubmit={handleSubmit}
                                     reset={reset}
+                                    control={control}
+                                    errors={errors}
                                     savedData={personal ?? null}
                                     isEditing={isEditing}
                                     setIsEditing={setIsEditing}

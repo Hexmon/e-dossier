@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronUp, ChevronDown, Search } from "lucide-react";
+import { resolveStatusToneClasses } from "@/lib/theme-color";
 
 // Core type definitions
 export interface TableColumn<T = any> {
@@ -127,28 +128,28 @@ export function UniversalTable<T extends Record<string, any>>({
             headerTextColor: 'text-foreground',
         },
         dark: {
-            headerBg: 'bg-slate-800',
-            rowBg: 'bg-slate-700',
-            rowAltBg: 'bg-slate-800/50',
-            borderColor: 'border-slate-700',
-            textColor: 'text-slate-100',
-            headerTextColor: 'text-slate-900',
+            headerBg: 'bg-muted',
+            rowBg: 'bg-card',
+            rowAltBg: 'bg-muted/40',
+            borderColor: 'border-border',
+            textColor: 'text-foreground',
+            headerTextColor: 'text-foreground',
         },
         blue: {
-            headerBg: 'bg-blue-100',
-            rowBg: 'bg-blue-50',
-            rowAltBg: 'bg-white',
-            borderColor: 'border-blue-200',
-            textColor: 'text-slate-900 ',
-            headerTextColor: 'text-blue-900',
+            headerBg: 'bg-primary/10',
+            rowBg: 'bg-background',
+            rowAltBg: 'bg-primary/5',
+            borderColor: 'border-primary/20',
+            textColor: 'text-foreground',
+            headerTextColor: 'text-foreground',
         },
         green: {
-            headerBg: 'bg-emerald-100',
-            rowBg: 'bg-emerald-400',
-            rowAltBg: 'bg-emerald-100',
-            borderColor: 'border-emerald-200',
-            textColor: 'text-slate-900',
-            headerTextColor: 'text-emerald-900',
+            headerBg: 'bg-success/15',
+            rowBg: 'bg-background',
+            rowAltBg: 'bg-success/10',
+            borderColor: 'border-success/30',
+            textColor: 'text-foreground',
+            headerTextColor: 'text-foreground',
         },
         custom: theme,
     };
@@ -285,8 +286,7 @@ export function UniversalTable<T extends Record<string, any>>({
                 return value ? new Date(value).toLocaleDateString() : '';
             case 'status':
                 return (
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${value === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${resolveStatusToneClasses(String(value ?? ""))}`}>
                         {value}
                     </span>
                 );
@@ -335,9 +335,9 @@ export function UniversalTable<T extends Record<string, any>>({
             <div className={tableClasses}>
                 <table className="min-w-full text-sm ">
                     <thead className={`text-left ${activeTheme.headerTextColor}`}>
-                        <tr className="text-left">
+                        <tr className={`text-left ${activeTheme.headerBg}`}>
                             {features.selection && (
-                                <th className="px-3 py-2 w-12">
+                                <th className="px-3 py-[var(--density-table-header-py)] w-12">
                                     <input
                                         type="checkbox"
                                         onChange={(e) => {
@@ -353,7 +353,7 @@ export function UniversalTable<T extends Record<string, any>>({
                             {columns.map((column) => (
                                 <th
                                     key={String(column.key)}
-                                    className={`px-3 py-2 ${column.className || ''} ${column.sortable && features.sorting ? 'cursor-pointer hover:bg-muted/70' : ''
+                                    className={`px-3 py-[var(--density-table-header-py)] ${column.className || ''} ${column.sortable && features.sorting ? 'cursor-pointer hover:bg-muted/70' : ''
                                         }`}
                                     style={{ width: column.width }}
                                     onClick={() => column.sortable && handleSort(String(column.key))}
@@ -374,14 +374,14 @@ export function UniversalTable<T extends Record<string, any>>({
                                             placeholder={`Filter ${column.label}`}
                                             value={filters[String(column.key)] || ''}
                                             onChange={(e) => handleFilter(String(column.key), e.target.value)}
-                                            className="mt-1 h-8"
+                                            className="mt-1 h-[var(--density-input-height-sm)]"
                                             onClick={(e) => e.stopPropagation()}
                                         />
                                     )}
                                 </th>
                             ))}
                             {actions.length > 0 && (
-                                <th className="px-3 py-2">Actions</th>
+                                <th className="px-3 py-[var(--density-table-header-py)]">Actions</th>
                             )}
                         </tr>
                     </thead>
@@ -404,7 +404,7 @@ export function UniversalTable<T extends Record<string, any>>({
                                         }`}
                                 >
                                     {features.selection && (
-                                        <td className="px-3 py-2">
+                                        <td className="px-3 py-[var(--density-table-cell-py)]">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedRows.has(index)}
@@ -415,13 +415,13 @@ export function UniversalTable<T extends Record<string, any>>({
                                     {columns.map((column) => (
                                         <td
                                             key={String(column.key)}
-                                            className={`px-3 py-2 ${styling.compact ? 'py-1' : ''} ${column.className || ''}`}
+                                            className={`px-3 py-[var(--density-table-cell-py)] ${styling.compact ? 'py-1' : ''} ${column.className || ''}`}
                                         >
                                             {renderCell(column, row, index)}
                                         </td>
                                     ))}
                                     {actions.length > 0 && (
-                                        <td className="px-3 py-2">
+                                        <td className="px-3 py-[var(--density-table-cell-py)]">
                                             <div className="flex flex-wrap gap-2">
                                                 {actions.map((action) => {
                                                     if (action.condition && !action.condition(row, index)) {
@@ -429,6 +429,17 @@ export function UniversalTable<T extends Record<string, any>>({
                                                     }
 
                                                     const IconComponent = action.icon;
+                                                    const actionKey = action.key?.toLowerCase?.() ?? "";
+                                                    const actionLabel = action.label?.toLowerCase?.() ?? "";
+                                                    const iconOnly =
+                                                        (actionKey === "edit" || actionKey === "delete" || actionKey === "view" ||
+                                                            actionLabel === "edit" || actionLabel === "delete" || actionLabel === "view") &&
+                                                        !!IconComponent;
+                                                    const showLabel = !iconOnly;
+                                                    const iconClass = `h-3 w-3${showLabel ? " mr-1" : ""}`;
+                                                    const buttonTitle = iconOnly ? action.label : undefined;
+                                                    const buttonClass =
+                                                        `${action.className ?? ""} ${iconOnly ? "px-2" : ""}`.trim();
                                                     return (
                                                         <Button
                                                             key={action.key}
@@ -436,10 +447,13 @@ export function UniversalTable<T extends Record<string, any>>({
                                                             variant={action.variant || 'outline'}
                                                             size={action.size || 'sm'}
                                                             onClick={() => action.handler(row, index)}
-                                                            className={action.className}
+                                                            className={buttonClass || undefined}
+                                                            title={buttonTitle}
+                                                            aria-label={iconOnly ? action.label : undefined}
                                                         >
-                                                            {IconComponent && <IconComponent className="h-3 w-3 mr-1" />}
-                                                            {action.label}
+                                                            {IconComponent && <IconComponent className={iconClass} />}
+                                                            {showLabel && action.label}
+                                                            {iconOnly && <span className="sr-only">{action.label}</span>}
                                                         </Button>
                                                     );
                                                 })}

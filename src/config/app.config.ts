@@ -21,6 +21,7 @@ import {
   Package,
   ArrowDownCircle
 } from "lucide-react";
+import type { ColorTone } from "@/lib/theme-color";
 
 
 export const CommandersData = [
@@ -92,37 +93,37 @@ export const platoons = [
     id: 1,
     name: "ARJUN",
     tradition: "Embodies precision, strength, and discipline in all training exercises. Known for tactical excellence and unwavering commitment to duty.",
-    color: "bg-gradient-to-br from-red-500 to-red-600"
+    color: "destructive"
   },
   {
     id: 2,
     name: "CHANDRAGUPT",
     tradition: "Strategic thinking and leadership under pressure. Masters of planning and execution with a focus on innovative solutions.",
-    color: "bg-gradient-to-br from-blue-500 to-blue-600"
+    color: "info"
   },
   {
     id: 3,
     name: "RANAPRATAP",
     tradition: "Courage, resilience, and duty before self. Exemplifies the warrior spirit and protective instincts of true defenders.",
-    color: "bg-gradient-to-br from-green-500 to-green-600"
+    color: "success"
   },
   {
     id: 4,
     name: "SHIVAJI",
     tradition: "Ingenuity, rapid maneuver, and mission focus. Known for quick thinking and adaptive strategies in challenging scenarios.",
-    color: "bg-gradient-to-br from-purple-500 to-purple-600"
+    color: "info"
   },
   {
     id: 5,
     name: "KARNA",
     tradition: "Honor, generosity, and steadfast commitment. Upholds the highest standards of integrity and selfless service.",
-    color: "bg-gradient-to-br from-orange-500 to-orange-600"
+    color: "warning"
   },
   {
     id: 6,
     name: "PRITHVIRAJ",
     tradition: "Valor, integrity, and esprit de corps. Fosters unity and brotherhood while maintaining operational excellence.",
-    color: "bg-gradient-to-br from-indigo-500 to-indigo-600"
+    color: "info"
   }
 ]
 
@@ -187,14 +188,14 @@ export const dashboardCards = [
     description: "Oversee overall administration and workflows",
     icon: ClipboardList,
     to: "/dashboard/genmgmt",
-    color: "bg-blue-500"
+    color: "info"
   },
   {
     title: "Dossier",
     description: "Organize, manage, and securely store essential documents and files",
     icon: FileText,
     to: "/dashboard/milmgmt",
-    color: "bg-blue-500"
+    color: "info"
   },
 
   // {
@@ -202,137 +203,131 @@ export const dashboardCards = [
   //   description: "Handle user accounts and permissions",
   //   icon: Users,
   //   to: "/dashboard/users",
-  //   color: "bg-red-500"
+  //   color: "destructive"
   // },
   {
     title: "Site Settings",
     description: "Update system preferences and configurations",
     icon: Settings,
     to: "/dashboard/settings",
-    color: "bg-gray-500"
+    color: "muted"
   },
   {
     title: "Appointment Management",
     description: "Assign and manage official appointments and roles",
     icon: Users,
     to: "/dashboard/appointments",
-    color: "bg-indigo-500"
+    color: "info"
   },
   {
     title: "Help / How-To",
     description: "Guides, FAQs, and support resources",
     icon: HelpCircle,
     to: "/dashboard/help",
-    color: "bg-teal-500"
+    color: "info"
   }
 ];
 
 
-export const managementCard = [
+type ManagementCardConfig = {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  to: string;
+  color: ColorTone;
+};
+
+export const managementCard: ManagementCardConfig[] = [
   {
     title: "OC Management",
     description: "Manage Officer Cadets and their records",
     icon: UserCheck,
     to: "/dashboard/genmgmt/ocmgmt",
-    color: "bg-orange-500 "
-  },
-  {
-    title: "Course Management",
-    description: "Create, update, and track training courses",
-    icon: BookOpen,
-    to: "/dashboard/genmgmt/coursemgmt",
-    color: "bg-purple-500"
-  },
-  {
-    title: "Subject Management",
-    description: "Organize and maintain subjects within courses",
-    icon: BookOpen,
-    to: "/dashboard/genmgmt/subjectmgmt",
-    color: "bg-blue-500"
+    color: "warning"
   },
   {
     title: "User Management",
     description: "Manage user roles, permissions, and profiles",
     icon: Users,
     to: "/dashboard/genmgmt/usersmgmt",
-    color: "bg-red-500"
+    color: "destructive"
   },
   {
     title: "Approval Management",
     description: "Handle user approvals and verification processes",
     icon: CheckCircle,
     to: "/dashboard/genmgmt/approvalmgmt",
-    color: "bg-green-500"
+    color: "success"
   },
   {
     title: "Appointment Management",
     description: "Schedule, track, and manage appointments efficiently",
     icon: CalendarDays,
     to: "/dashboard/genmgmt/appointmentmgmt",
-    color: "bg-blue-500"
+    color: "info"
+  },
+  {
+    title: "RBAC Management",
+    description: "Manage permissions, mappings, and field-level rules",
+    icon: Shield,
+    to: "/dashboard/genmgmt/rbac",
+    color: "info"
   },
   {
     title: "Instructor Management",
     description: "Manage instructors, roles, and assignments efficiently",
     icon: UserCheck,
     to: "/dashboard/genmgmt/instructors",
-    color: "bg-green-500"
-  },
-  {
-    title: "Offerings Management",
-    description: "Create, update, and manage course offerings efficiently",
-    icon: BookOpenCheck,
-    to: "/dashboard/genmgmt/offerings",
-    color: "bg-purple-500"
+    color: "success"
   },
   // {
   //   title: "Relegation Management",
   //   description: "Monitor, evaluate, and manage student relegation and promotion status",
   //   icon: ArrowDownUp,
   //   to: "/dashboard/genmgmt/relegation",
-  //   color: "bg-red-500"
+  //   color: "destructive"
   // },
   {
     title: "Platoon Management",
     description: "Create, organize, and manage platoons and assigned personnel efficiently",
     icon: Users,
     to: "/dashboard/genmgmt/platoon-management",
-    color: "bg-green-500"
+    color: "success"
   },
   // {
   //   title: "Discipline Management",
   //   description: "Manage and track discipline records",
   //   icon: ShieldAlert,
   //   to: "/dashboard/genmgmt/discipline-records",
-  //   color: "bg-blue-500"
+  //   color: "info"
   // },
   // {
   //   title: "Camps Management",
   //   description: "Create and Manage Camps efficiently",
   //   icon: Tent,
   //   to: "/dashboard/genmgmt/camps",
-  //   color: "bg-green-700"
+  //   color: "success"
   // },
   // {
   //   title: "Punishment Management",
   //   description: "Track, assign, and manage disciplinary punishments",
   //   icon: Gavel,
   //   to: "/dashboard/genmgmt/punishments",
-  //   color: "bg-red-700"
+  //   color: "destructive"
   // },
   // {
   //   title: "Interview Management",
   //   description: "Schedule, track, and manage interviews",
   //   icon: Users,
   //   to: "/dashboard/genmgmt/interviews-mgmt",
-  //   color: "bg-blue-700"
+  //   color: "info"
   // },
   // {
   //   title: "Physical Training Management",
   //   description: "Plan, schedule, and track physical training sessions",
   //   icon: Dumbbell,
   //   to: "/dashboard/genmgmt/pt-mgmt",
-  //   color: "bg-green-700"
+  //   color: "success"
   // }
 
 
@@ -341,46 +336,77 @@ export const managementCard = [
   //   description: "Configure application preferences and settings",
   //   icon: Settings,
   //   to: "/dashboard/genmgmt",
-  //   color: "bg-gray-500"
+  //   color: "muted"
   // }
 
 ];
 
-export const moduleManagementCard = [
+export const academicManagementCards: ManagementCardConfig[] = [
+  {
+    title: "Course Management",
+    description: "Create, update, and track training courses",
+    icon: BookOpen,
+    to: "/dashboard/genmgmt/coursemgmt",
+    color: "info"
+  },
+  {
+    title: "Subject Management",
+    description: "Organize and maintain subjects within courses",
+    icon: BookOpen,
+    to: "/dashboard/genmgmt/subjectmgmt",
+    color: "info"
+  },
+  {
+    title: "Offerings Management",
+    description: "Create, update, and manage course offerings efficiently",
+    icon: BookOpenCheck,
+    to: "/dashboard/genmgmt/offerings",
+    color: "info"
+  },
+];
+
+export const moduleManagementCard: ManagementCardConfig[] = [
+  {
+    title: "Academics Management",
+    description: "Manage courses, subjects, and offerings",
+    icon: BookOpen,
+    to: "/dashboard/genmgmt/academics",
+    color: "info"
+  },
   {
     title: "Relegation Management",
     description: "Monitor, evaluate, and manage student relegation and promotion status",
     icon: ArrowDownUp,
     to: "/dashboard/genmgmt/relegation",
-    color: "bg-red-500"
+    color: "destructive"
   },
   {
     title: "Camps Management",
     description: "Create and Manage Camps efficiently",
     icon: Tent,
     to: "/dashboard/genmgmt/camps",
-    color: "bg-green-700"
+    color: "success"
   },
   {
     title: "Punishment Management",
     description: "Track, assign, and manage disciplinary punishments",
     icon: Gavel,
     to: "/dashboard/genmgmt/punishments",
-    color: "bg-red-700"
+    color: "destructive"
   },
   {
     title: "Interview Management",
     description: "Schedule, track, and manage interviews",
     icon: Users,
     to: "/dashboard/genmgmt/interviews-mgmt",
-    color: "bg-blue-700"
+    color: "info"
   },
   {
     title: "Physical Training Management",
     description: "Plan, schedule, and track physical training sessions",
     icon: Dumbbell,
     to: "/dashboard/genmgmt/pt-mgmt",
-    color: "bg-green-700"
+    color: "success"
   }
 
 
@@ -389,7 +415,7 @@ export const moduleManagementCard = [
   //   description: "Configure application preferences and settings",
   //   icon: Settings,
   //   to: "/dashboard/genmgmt",
-  //   color: "bg-gray-500"
+  //   color: "muted"
   // }
 
 ];
@@ -399,7 +425,7 @@ type TrainingCard = {
   description: string;
   icon: LucideIcon;
   to: ((id: string) => string);
-  color: string;
+  color: ColorTone;
 };
 
 export const militaryTrainingCards: TrainingCard[] = [
@@ -408,203 +434,203 @@ export const militaryTrainingCards: TrainingCard[] = [
     description: "Visual performance tracking and analytics",
     icon: ChartArea,
     to: (id: string) => `/dashboard/${id}/milmgmt/performance-graph`,
-    color: "bg-blue-700"
+    color: "info"
   },
   {
     title: "Dossier Snapshot",
     description: "Quickly view and analyze OC details",
     icon: Camera,
     to: (id: string) => `/dashboard/${id}/milmgmt/dossier-snapshot`,
-    color: "bg-blue-600"
+    color: "info"
   },
   {
     title: "Dossier Filling",
     description: "Maintain detailed dossier filling records",
     icon: FileText,
     to: (id: string) => `/dashboard/${id}/milmgmt/dossier-filling`,
-    color: "bg-green-600"
+    color: "success"
   },
   {
     title: "Dossier Inspection",
     description: "Track and review dossier inspection sheets",
     icon: ClipboardCheck,
     to: (id: string) => `/dashboard/${id}/milmgmt/dossier-insp`,
-    color: "bg-blue-600"
+    color: "info"
   },
   {
     title: "Personal Particulars",
     description: "Record and manage cadet personal particulars",
     icon: User,
     to: (id: string) => `/dashboard/${id}/milmgmt/pers-particulars`,
-    color: "bg-indigo-600"
+    color: "info"
   },
   {
     title: "Background Details",
     description: "Capture cadet family and background information",
     icon: FileSearch,
     to: (id: string) => `/dashboard/${id}/milmgmt/background-detls`,
-    color: "bg-cyan-600"
+    color: "info"
   },
   {
     title: "SSB Reports",
     description: "Capture cadet reports information",
     icon: FileText,
     to: (id: string) => `/dashboard/${id}/milmgmt/ssb-reports`,
-    color: "bg-cyan-600",
+    color: "info",
   },
   {
     title: "Medical Records",
     description: "Manage cadet health and medical documentation",
     icon: HeartPulse,
     to: (id: string) => `/dashboard/${id}/milmgmt/med-record`,
-    color: "bg-red-600"
+    color: "destructive"
   },
   {
     title: "Discipline Records",
     description: "Log disciplinary actions and observations",
     icon: ShieldAlert,
     to: (id: string) => `/dashboard/${id}/milmgmt/discip-records`,
-    color: "bg-yellow-600"
+    color: "warning"
   },
   {
     title: "Parent Communication",
     description: "Record communication with parents and guardians",
     icon: Phone,
     to: (id: string) => `/dashboard/${id}/milmgmt/comn-parents`,
-    color: "bg-teal-600"
+    color: "info"
   },
   {
     title: "Sports & Motivation Awards",
     description: "Manage cadet sports achievements and motivation awards",
     icon: Trophy,
     to: (id: string) => `/dashboard/${id}/milmgmt/sports-awards`,
-    color: "bg-yellow-600"
+    color: "warning"
   },
   {
     title: "Weapon Training",
     description: "Record weapon training performance",
     icon: Target,
     to: (id: string) => `/dashboard/${id}/milmgmt/wpn-trg`,
-    color: "bg-gray-700"
+    color: "muted"
   },
   {
     title: "Obstacle Training",
     description: "Maintain obstacle course training records",
     icon: Mountain,
     to: (id: string) => `/dashboard/${id}/milmgmt/obstacle-trg`,
-    color: "bg-pink-600"
+    color: "destructive"
   },
   {
     title: "Speed March / Runs",
     description: "Track cadet march and run-back timings",
     icon: Timer,
     to: (id: string) => `/dashboard/${id}/milmgmt/speed-march`,
-    color: "bg-purple-600"
+    color: "info"
   },
   {
     title: "Camps",
     description: "Maintain participation and performance in camps",
     icon: Tent,
     to: (id: string) => `/dashboard/${id}/milmgmt/camps`,
-    color: "bg-green-700"
+    color: "success"
   },
   {
     title: "Club Details",
     description: "Record cadet participation in clubs and activities",
     icon: BookMarked,
     to: (id: string) => `/dashboard/${id}/milmgmt/club-detls`,
-    color: "bg-blue-700"
+    color: "info"
   },
   {
     title: "Leave Records",
     description: "Manage and track cadet leave history",
     icon: Calendar,
     to: (id: string) => `/dashboard/${id}/milmgmt/leave-record`,
-    color: "bg-indigo-700"
+    color: "info"
   },
   {
     title: "Hikes",
     description: "Track participation and performance in hikes",
     icon: Footprints,
     to: (id: string) => `/dashboard/${id}/milmgmt/hikes`,
-    color: "bg-emerald-600"
+    color: "success"
   },
   {
     title: "Detention",
     description: "Record and manage detention instances",
     icon: Ban,
     to: (id: string) => `/dashboard/${id}/milmgmt/detention`,
-    color: "bg-red-700"
+    color: "destructive"
   },
   {
     title: "Counselling",
     description: "Document cadet counselling sessions",
     icon: MessageSquare,
     to: (id: string) => `/dashboard/${id}/milmgmt/counselling`,
-    color: "bg-yellow-700"
+    color: "warning"
   },
   {
     title: "OLQ Assessment",
     description: "Conduct, manage, and review assessments",
     icon: FileText,
     to: (id: string) => `/dashboard/${id}/milmgmt/olq-assessment`,
-    color: "bg-green-500"
+    color: "success"
   },
   {
     title: "Initial Interview",
     description: "Schedule and manage candidate interviews",
     icon: UserCheck,
     to: (id: string) => `/dashboard/${id}/milmgmt/initial-interview`,
-    color: "bg-orange-500"
+    color: "warning"
   },
   {
     title: "Terms Interview",
     description: "Schedule and manage candidate interviews",
     icon: UserCheck,
     to: (id: string) => `/dashboard/${id}/milmgmt/interview-term`,
-    color: "bg-green-500"
+    color: "success"
   },
   {
     title: "Credit for Excellence",
     description: "Manage cadet CFE scores and evaluation records",
     icon: FileBadge,
     to: (id: string) => `/dashboard/${id}/milmgmt/credit-excellence`,
-    color: "bg-violet-600"
+    color: "info"
   },
   {
     title: "Physical Training",
     description: "Manage cadet physical training records",
     icon: Dumbbell,
     to: (id: string) => `/dashboard/${id}/milmgmt/physical-training`,
-    color: "bg-gray-700"
+    color: "muted"
   },
   {
     title: "Semester Record",
     description: "Manage cadet semester records",
     icon: FileText,
     to: (id: string) => `/dashboard/${id}/milmgmt/semester-record`,
-    color: "bg-green-700"
+    color: "success"
   },
   {
     title: "Final Performance",
     description: "Manage cadet final performance records",
     icon: Medal,
     to: (id: string) => `/dashboard/${id}/milmgmt/final-performance`,
-    color: "bg-yellow-700"
+    color: "warning"
   },
   {
     title: "Overall Assessment",
     description: "Manage cadet overall assessment records",
     icon: ClipboardCheck,
     to: (id: string) => `/dashboard/${id}/milmgmt/overall-assessment`,
-    color: "bg-yellow-700"
+    color: "warning"
   },
   {
     title: "Academics",
     description: "Manage academic subjects, topics, and study material",
     icon: BookOpen,
     to: (id: string) => `/dashboard/${id}/milmgmt/academics`,
-    color: "bg-purple-500"
+    color: "info"
   }
 
 ];
@@ -1265,15 +1291,13 @@ export const courseSections = [
 ]
 
 export const managementTabs = [
-  { value: "Gen Mgmt", title: "Admin Mgmt", icon: Shield },
+  { value: "Gen Mgmt", title: "Admin Management", icon: Shield },
   { value: "module-mgmt", title: "Module Management", icon: Boxes },
   { value: "settings", title: "Settings", icon: Settings },
 ];
 
 export const ocTabs = [
   { value: "oc-mgmt", title: "OC Management", icon: Users, link: "/dashboard/genmgmt/ocmgmt" },
-  { value: "course-mgmt", title: "Course Management", icon: FileText, link: "/dashboard/genmgmt/coursemgmt" },
-  { value: "subject-mgmt", title: "Subject Management", icon: Book, link: "/dashboard/genmgmt/subjectmgmt" },
   { value: "user-mgmt", title: "User Management", icon: Shield, link: "/dashboard/genmgmt/usersmgmt" },
   {
     value: "approval-mgmt",
@@ -1305,6 +1329,17 @@ export const ocTabs = [
     icon: Users,
     link: "/dashboard/genmgmt/platoon-management",
   }
+];
+
+export const academicsTabs = [
+  { value: "course-mgmt", title: "Course Management", icon: FileText, link: "/dashboard/genmgmt/coursemgmt" },
+  {
+    value: "offerings",
+    title: "Offerings Management",
+    icon: Package,
+    action: "offerings" as const,
+  },
+  { value: "subject-mgmt", title: "Subject Management", icon: Book, link: "/dashboard/genmgmt/subjectmgmt" },
 ];
 
 export const moduleManagementTabs = [
@@ -1348,18 +1383,6 @@ export const ocTabsWithDropdown = [
     link: "/dashboard/genmgmt/ocmgmt"
   },
   {
-    value: "course-mgmt",
-    title: "Course Management",
-    icon: FileText,
-    link: "/dashboard/genmgmt/coursemgmt"
-  },
-  {
-    value: "subject-mgmt",
-    title: "Subject Management",
-    icon: Book,
-    link: "/dashboard/genmgmt/subjectmgmt"
-  },
-  {
     value: "admin-mgmt",
     title: "Admin",
     icon: Settings,
@@ -1367,25 +1390,25 @@ export const ocTabsWithDropdown = [
       {
         title: "User Management",
         icon: Shield,
-        color: "text-blue-600",
+        color: "info",
         href: "/dashboard/genmgmt/usersmgmt"
       },
       {
         title: "Approval Management",
         icon: CheckCircle,
-        color: "text-green-600",
+        color: "success",
         href: "/dashboard/genmgmt/approvalmgmt"
       },
       {
         title: "Appointment Management",
         icon: CalendarDays,
-        color: "text-purple-600",
+        color: "info",
         href: "/dashboard/genmgmt/appointmentmgmt"
       },
       {
         title: "Instructor Management",
         icon: UserCheck,
-        color: "text-orange-600",
+        color: "warning",
         href: "/dashboard/genmgmt/instructors"
       }
     ]
@@ -1642,16 +1665,16 @@ export const navItems = [
   { name: "Events & News", path: "/#events-news" },
 ];
 
-export const getTypeColor = (type: string) => {
-  const colors: Record<string, string> = {
-    ceremony: "bg-purple-100 text-purple-800",
-    sports: "bg-green-100 text-green-800",
-    academic: "bg-blue-100 text-blue-800",
-    training: "bg-orange-100 text-orange-800",
-    inspection: "bg-red-100 text-red-800",
-    cultural: "bg-pink-100 text-pink-800",
+export const getTypeColor = (type: string): ColorTone => {
+  const colors: Record<string, ColorTone> = {
+    ceremony: "info",
+    sports: "success",
+    academic: "primary",
+    training: "warning",
+    inspection: "destructive",
+    cultural: "muted",
   };
-  return colors[type] || "bg-gray-100 text-gray-800";
+  return colors[type] || "muted";
 };
 
 export const ratingMap: Record<number, string> = {

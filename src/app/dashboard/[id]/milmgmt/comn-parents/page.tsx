@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -24,6 +24,9 @@ import { clearParentCommForm } from "@/store/slices/parentCommSlice";
 export default function ParentCommnPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     // Redux
     const dispatch = useDispatch();
@@ -44,7 +47,30 @@ export default function ParentCommnPage() {
     const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course }), [name, courseName, ocNumber, cadetOcId, course]);
 
     const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
-    const [activeTab, setActiveTab] = useState<number>(0);
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - 1;
+        if (idx < 0 || idx >= semesters.length) return 0;
+        return idx;
+    }, [semParam, semesters.length]);
+    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + 1));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleSemesterChange = (index: number) => {
+        setActiveTab(index);
+        updateSemesterParam(index);
+    };
 
     const { grouped, loading, fetch, save, update, remove } = useParentComms(ocId, semesters.length);
 
@@ -180,8 +206,8 @@ export default function ParentCommnPage() {
                                                 <button
                                                     key={sem}
                                                     type="button"
-                                                    onClick={() => setActiveTab(index)}
-                                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                                    onClick={() => handleSemesterChange(index)}
+                                                    className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                                                 >
                                                     {sem}
                                                 </button>
@@ -194,7 +220,7 @@ export default function ParentCommnPage() {
                                         {loading ? (
                                             <p className="text-center p-4">Loading...</p>
                                         ) : grouped[activeTab]?.length === 0 ? (
-                                            <p className="text-center p-4 text-gray-500">No data submitted yet for this semester.</p>
+                                            <p className="text-center p-4 text-muted-foreground">No data submitted yet for this semester.</p>
                                         ) : (
                                             <ParentCommTable
                                                 rows={grouped[activeTab]}

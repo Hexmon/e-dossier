@@ -50,6 +50,24 @@ export async function getAllCourses(
 }
 
 /**
+ * Search courses by query string
+ * GET /api/v1/courses?includeDeleted=false&q=SEARCH
+ */
+export type SearchCoursesResponse = {
+    items: CourseResponse[];
+    count: number;
+};
+
+export async function searchCourses(
+    query: string
+): Promise<SearchCoursesResponse> {
+    return api.get<SearchCoursesResponse>(endpoints.course.all, {
+        baseURL,
+        query: { includeDeleted: "false", q: query },
+    });
+}
+
+/**
  * Create a new course
  */
 export async function createCourse(
@@ -76,8 +94,14 @@ export async function updateCourse(
  * Delete a course
  * @param courseId - ID of the course to delete
  */
-export async function deleteCourse(courseId: string): Promise<void> {
-    return api.delete<void>(`${endpoints.course.all}/${courseId}`, { baseURL });
+export async function deleteCourse(
+    courseId: string,
+    opts?: { hard?: boolean }
+): Promise<void> {
+    return api.delete<void>(`${endpoints.course.all}/${courseId}`, {
+        baseURL,
+        query: opts?.hard ? { hard: "true" } : undefined,
+    });
 }
 
 export async function fetchCourseById(courseId: string) {

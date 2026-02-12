@@ -307,19 +307,19 @@ export default function OlqAssessment() {
         <div className="space-y-6 p-6">
             <Card className="rounded-2xl shadow-xl bg-white">
                 <CardHeader>
-                    <CardTitle className="text-xl font-bold text-center text-blue-600">
+                    <CardTitle className="text-xl font-bold text-center text-primary">
                         Overall Assessment
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {(isEditingTable || isEditingObservations) && (
-                        <div className="text-xs text-gray-500 text-center">
+                        <div className="text-xs text-muted-foreground text-center">
                             ✓ Changes are saved automatically
                         </div>
                     )}
 
                     <div>
-                        <h2 className="p-2 text-lg font-bold text-left text-gray-700 underline">OLQ Assessment</h2>
+                        <h2 className="p-2 text-lg font-bold text-left text-foreground underline">OLQ Assessment</h2>
                         <UniversalTable<Row>
                             data={displayData}
                             config={config}
@@ -341,12 +341,12 @@ export default function OlqAssessment() {
                     </div>
 
                     <div className="mt-4">
-                        <h2 className="p-2 text-lg text-left font-bold text-gray-700 underline">Observations on Moral Conduct</h2>
+                        <h2 className="p-2 text-lg text-left font-bold text-foreground underline">Observations on Moral Conduct</h2>
                         <textarea
                             value={observations}
                             onChange={(e) => setObservations(e.target.value)}
                             placeholder="Enter observations"
-                            className="w-full h-32 border border-gray-300 rounded-lg px-3 py-2"
+                            className="w-full h-32 border border-border rounded-lg px-3 py-2"
                             disabled={!isEditingObservations}
                         />
                     </div>

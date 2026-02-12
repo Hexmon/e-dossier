@@ -17,11 +17,20 @@ import { usePunishments } from "@/hooks/usePunishments";
 interface Props {
     rows: HookRow[] | undefined;
     loading: boolean;
+    appointmentOptions: Array<{ value: string; label: string }>;
+    appointmentsLoading: boolean;
     onEditSave: (id: string, payload: Partial<HookRow>) => Promise<void> | void;
     onDelete: (row: HookRow) => Promise<void> | void;
 }
 
-export default function DisciplineTable({ rows, loading, onEditSave, onDelete }: Props) {
+export default function DisciplineTable({
+    rows,
+    loading,
+    appointmentOptions,
+    appointmentsLoading,
+    onEditSave,
+    onDelete,
+}: Props) {
     const { punishments, fetchPunishments } = usePunishments();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<HookRow> | null>(null);
@@ -72,7 +81,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
             key: "dateOfOffence",
             label: "Date",
             type: "date",
-            width: "w-25",
+            width: "140px",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
@@ -80,7 +89,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
                         type="date"
                         value={String(editForm?.dateOfOffence ?? (value === "-" || !value ? "" : value))}
                         onChange={(e) => changeEdit("dateOfOffence", e.target.value as any)}
-                        className="w-25"
+                        className="w-full min-w-0"
                     />
                 ) : value || "-";
             }
@@ -88,6 +97,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
         {
             key: "offence",
             label: "Offence",
+            width: "220px",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
@@ -101,6 +111,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
         {
             key: "punishmentAwarded",
             label: "Punishment",
+            width: "260px",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
@@ -108,12 +119,16 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
                         value={String(editForm?.punishmentAwarded ?? value)}
                         onValueChange={(val) => changeEdit("punishmentAwarded", val as any)}
                     >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select punishment" />
+                        <SelectTrigger className="w-full min-w-0">
+                            <SelectValue className="truncate" placeholder="Select punishment" />
                         </SelectTrigger>
                         <SelectContent>
                             {punishments.map((punishment) => (
-                                <SelectItem key={punishment.id} value={punishment.title}>
+                                <SelectItem
+                                    key={punishment.id}
+                                    value={punishment.title}
+                                    className="max-w-[360px] truncate"
+                                >
                                     {punishment.title} ({punishment.marksDeduction} pts)
                                 </SelectItem>
                             ))}
@@ -144,7 +159,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
             key: "dateOfAward",
             label: "Date Awarded",
             type: "date",
-            width: "w-25",
+            width: "140px",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
@@ -152,7 +167,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
                         type="date"
                         value={String(editForm?.dateOfAward ?? (value === "-" || !value ? "" : value))}
                         onChange={(e) => changeEdit("dateOfAward", e.target.value as any)}
-                        className="w-25"
+                        className="w-full min-w-0"
                     />
                 ) : value || "-";
             }
@@ -160,14 +175,48 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
         {
             key: "byWhomAwarded",
             label: "By Whom",
-            width: "120px",
+            width: "280px",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
-                    <Input
-                        value={String(editForm?.byWhomAwarded ?? value)}
-                        onChange={(e) => changeEdit("byWhomAwarded", e.target.value as any)}
-                    />
+                    <Select
+                        value={String(editForm?.byWhomAwarded ?? value) || undefined}
+                        onValueChange={(val) => changeEdit("byWhomAwarded", val as any)}
+                        disabled={appointmentsLoading}
+                    >
+                        <SelectTrigger className="w-full min-w-0">
+                            <SelectValue
+                                className="truncate"
+                                placeholder={
+                                    appointmentsLoading
+                                        ? "Loading appointments..."
+                                        : "Select appointment holder"
+                                }
+                            />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {String(editForm?.byWhomAwarded ?? value) &&
+                                !appointmentOptions.some(
+                                    (option) => option.value === String(editForm?.byWhomAwarded ?? value)
+                                ) && (
+                                    <SelectItem
+                                        value={String(editForm?.byWhomAwarded ?? value)}
+                                        className="max-w-[360px] truncate"
+                                    >
+                                        {String(editForm?.byWhomAwarded ?? value)}
+                                    </SelectItem>
+                                )}
+                            {appointmentOptions.map((option) => (
+                                <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                    className="max-w-[360px] truncate"
+                                >
+                                    {option.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 ) : value || "-";
             }
         },
@@ -182,7 +231,7 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
                     <Input
                         disabled
                         value={String(editForm?.negativePts ?? value)}
-                        className="bg-gray-100 w-full"
+                        className="bg-muted/70 w-full"
                     />
                 ) : value || "0";
             }
@@ -245,7 +294,8 @@ export default function DisciplineTable({ rows, loading, onEditSave, onDelete }:
             compact: false,
             bordered: true,
             striped: false,
-            hover: false
+            hover: false,
+            className: "overflow-x-auto"
         },
         emptyState: {
             message: "No data submitted yet for this semester."

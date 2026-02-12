@@ -1,4 +1,7 @@
 import { json, handleApiError } from '@/app/lib/http';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTemplateQuerySchema } from '@/app/lib/physical-training-validators';
 import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
@@ -21,4 +24,4 @@ async function GETHandler(req: AuditNextRequest) {
     }
 }
 
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));

@@ -185,9 +185,9 @@ export default function DyCdrForm({ form, tabName = "DY CDR", template, onClearF
                         type="button"
                         onClick={handleEdit}
                         variant="outline"
-                        className="flex items-center gap-2 bg-blue-950 text-white"
+                        className="flex items-center gap-2 bg-primary text-primary-foreground"
                     >
-                        <Edit className="h-4 w-4 text-white" />
+                        <Edit className="h-4 w-4 text-primary-foreground" />
                         Edit
                     </Button>
                 ) : (

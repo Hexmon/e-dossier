@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { ocTabs } from "@/config/app.config";
+import { academicsTabs } from "@/config/app.config";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -162,13 +162,13 @@ export default function OfferingManagementPage() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Courses", href: "/dashboard/genmgmt" },
+                                { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                                 { label: "Offerings" },
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="offering-mgmt">
-                            <TabsContent value="offering-mgmt" className="space-y-6">
+                        <GlobalTabs tabs={academicsTabs} defaultValue="offerings">
+                            <TabsContent value="offerings" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">Offering List</h2>
 
@@ -257,7 +257,7 @@ export default function OfferingManagementPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-destructive hover:bg-destructive/90"
                             disabled={isDeleting}
                         >
                             {isDeleting ? "Deleting..." : "Delete"}

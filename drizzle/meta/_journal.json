@@ -43,6 +43,62 @@
       "when": 1769107991988,
       "tag": "0005_oc_interviews",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1770798536737,
+      "tag": "0006_flat_proudstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1770801900000,
+      "tag": "0007_educated_grade",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1770803100000,
+      "tag": "0008_medicals_float_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1770810000000,
+      "tag": "0009_authz_field_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1770900000000,
+      "tag": "0010_device_site_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1770903600000,
+      "tag": "0011_device_site_settings_v2",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1771000000000,
+      "tag": "0012_admin_site_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1771200000000,
+      "tag": "0013_oc_relegations",
+      "breakpoints": true
     }
   ]
 }

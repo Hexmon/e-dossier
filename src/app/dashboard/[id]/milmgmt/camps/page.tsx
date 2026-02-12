@@ -9,6 +9,7 @@ import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import DossierTab from "@/components/Tabs/DossierTab";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
+import { resolveToneClasses } from "@/lib/theme-color";
 
 import {
   DropdownMenu,
@@ -120,7 +121,7 @@ export default function OcCampsPage() {
                       return (
                         <DropdownMenuItem key={card.title} asChild>
                           <a href={link} className="flex items-center gap-2">
-                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                            <card.icon className={`h-4 w-4 ${resolveToneClasses(card.color, "text")}`} />
                             {card.title}
                           </a>
                         </DropdownMenuItem>

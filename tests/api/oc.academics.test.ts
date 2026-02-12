@@ -18,7 +18,7 @@ import * as authz from '@/lib/authorization';
 vi.mock('@/app/api/v1/oc/_checks', () => ({
   parseParam: vi.fn(),
   ensureOcExists: vi.fn(),
-  mustBeAdmin: vi.fn(),
+  mustBeAcademicsEditor: vi.fn(),
 }));
 
 vi.mock('@/lib/authorization', () => ({
@@ -152,6 +152,20 @@ describe('GET /api/v1/oc/:ocId/academics', () => {
     expect(body.ok).toBe(true);
     expect(body.items).toHaveLength(1);
   });
+
+  it('returns 400 for invalid semester query', async () => {
+    (ocChecks.parseParam as any).mockResolvedValueOnce({ ocId });
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `${basePath}/${ocId}/academics?semester=invalid`,
+    });
+    const ctx = { params: Promise.resolve({ ocId }) } as any;
+    const res = await listAcademicsRoute(req as any, ctx);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.message).toBe('Validation failed');
+  });
 });
 
 describe('GET /api/v1/oc/:ocId/academics/:semester', () => {
@@ -166,11 +180,14 @@ describe('GET /api/v1/oc/:ocId/academics/:semester', () => {
     const body = await res.json();
     expect(body.data.semester).toBe(1);
   });
+
 });
 
 describe('PATCH /api/v1/oc/:ocId/academics/:semester', () => {
-  it('requires admin privileges', async () => {
-    (ocChecks.mustBeAdmin as any).mockRejectedValueOnce(new ApiError(403, 'Forbidden', 'forbidden'));
+  it('blocks write when caller has read-only academics access', async () => {
+    (ocChecks.mustBeAcademicsEditor as any).mockRejectedValueOnce(
+      new ApiError(403, 'You do not have permission to modify academics.', 'forbidden')
+    );
     const req = makeJsonRequest({
       method: 'PATCH',
       path: `${basePath}/${ocId}/academics/1`,
@@ -179,10 +196,12 @@ describe('PATCH /api/v1/oc/:ocId/academics/:semester', () => {
     const ctx = { params: Promise.resolve({ ocId, semester: '1' }) } as any;
     const res = await patchAcademicSummaryRoute(req as any, ctx);
     expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.message).toBe('You do not have permission to modify academics.');
   });
 
   it('updates academic summary on success', async () => {
-    (ocChecks.mustBeAdmin as any).mockResolvedValueOnce({ userId: 'admin' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 });
@@ -202,7 +221,7 @@ describe('PATCH /api/v1/oc/:ocId/academics/:semester', () => {
 
 describe('DELETE /api/v1/oc/:ocId/academics/:semester', () => {
   it('soft deletes semester', async () => {
-    (ocChecks.mustBeAdmin as any).mockResolvedValueOnce({ userId: 'admin' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 });
@@ -216,11 +235,31 @@ describe('DELETE /api/v1/oc/:ocId/academics/:semester', () => {
     const body = await res.json();
     expect(body.semester).toBe(1);
   });
+
+  it('hard deletes semester', async () => {
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (ocChecks.parseParam as any)
+      .mockResolvedValueOnce({ ocId })
+      .mockResolvedValueOnce({ semester: 1 });
+    (academicServices.deleteOcAcademicSemester as any).mockResolvedValueOnce({
+      semester: 1,
+      hardDeleted: true,
+    });
+    const req = makeJsonRequest({
+      method: 'DELETE',
+      path: `${basePath}/${ocId}/academics/1?hard=true`,
+    });
+    const ctx = { params: Promise.resolve({ ocId, semester: '1' }) } as any;
+    const res = await deleteAcademicSemesterRoute(req as any, ctx);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.message).toMatch(/hard-deleted/i);
+  });
 });
 
 describe('PATCH /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () => {
   it('updates subject marks', async () => {
-    (ocChecks.mustBeAdmin as any).mockResolvedValueOnce({ userId: 'admin' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 })
@@ -250,7 +289,7 @@ describe('PATCH /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () =>
 
 describe('DELETE /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () => {
   it('deletes subject entry', async () => {
-    (ocChecks.mustBeAdmin as any).mockResolvedValueOnce({ userId: 'admin' });
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
     (ocChecks.parseParam as any)
       .mockResolvedValueOnce({ ocId })
       .mockResolvedValueOnce({ semester: 1 })
@@ -270,5 +309,28 @@ describe('DELETE /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () =
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data.semester).toBe(1);
+  });
+
+  it('hard deletes subject entry', async () => {
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (ocChecks.parseParam as any)
+      .mockResolvedValueOnce({ ocId })
+      .mockResolvedValueOnce({ semester: 1 })
+      .mockResolvedValueOnce({ subjectId: '22222222-2222-4222-8222-222222222222' });
+    const req = makeJsonRequest({
+      method: 'DELETE',
+      path: `${basePath}/${ocId}/academics/1/subjects/22222222-2222-4222-8222-222222222222?hard=true`,
+    });
+    const ctx = {
+      params: Promise.resolve({
+        ocId,
+        semester: '1',
+        subjectId: '22222222-2222-4222-8222-222222222222',
+      }),
+    } as any;
+    const res = await deleteAcademicSubjectRoute(req as any, ctx);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.message).toMatch(/hard-deleted/i);
   });
 });

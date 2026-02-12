@@ -10,6 +10,11 @@ const nonEmptyPartial = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>
         }
     });
 
+const optionalFloat = z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? undefined : v),
+    z.coerce.number().finite().optional()
+);
+
 export const OcIdParam = z.object({ ocId: z.string().uuid() });
 export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);
@@ -88,7 +93,17 @@ export const eduCreateSchema = z.object({
     schoolOrCollege: z.string().min(1),
     boardOrUniv: z.string().optional(),
     subjects: z.string().optional(),
-    totalPercent: z.coerce.number().int().min(0).max(100).optional(),
+    grade: z.string().optional(),
+    totalPercent: z.preprocess(
+        (v) => {
+            if (v === '' || v === null || v === undefined) return undefined;
+            if (v === 'true' || v === true) return true;
+            if (v === 'false' || v === false) return false;
+            const n = Number(v);
+            return Number.isFinite(n) ? n : v; // pass through for zod to reject
+        },
+        z.union([z.number().finite(), z.boolean()]).optional()
+    ),
     perSubject: z.string().optional(),            // JSON string (optional)
 });
 export const eduUpdateSchema = eduCreateSchema.partial();
@@ -150,13 +165,13 @@ export const ssbPointUpdateSchema = ssbPointCreateSchema.partial();
 export const medicalCreateSchema = z.object({
     semester: Semester,
     date: z.coerce.date(),
-    age: z.coerce.number().int().optional(),
-    heightCm: z.coerce.number().int().optional(),
-    ibwKg: z.coerce.number().int().optional(),
-    abwKg: z.coerce.number().int().optional(),
-    overwtPct: z.coerce.number().int().optional(),
-    bmi: z.coerce.number().int().optional(),
-    chestCm: z.coerce.number().int().optional(),
+    age: optionalFloat,
+    heightCm: optionalFloat,
+    ibwKg: optionalFloat,
+    abwKg: optionalFloat,
+    overwtPct: optionalFloat,
+    bmi: optionalFloat,
+    chestCm: optionalFloat,
     medicalHistory: z.string().optional(),
     hereditaryIssues: z.string().optional(),
     allergies: z.string().optional(),
@@ -238,7 +253,7 @@ export const obstacleTrainingCreateSchema = z.object({
     obstacle: z.string().min(1),
     marksObtained: z.coerce.number(),
     remark: z.string().optional(),
-}); 
+});
 export const obstacleTrainingUpdateSchema = nonEmptyPartial(obstacleTrainingCreateSchema);
 
 export const speedMarchCreateSchema = z.object({
@@ -408,8 +423,10 @@ export const academicSubjectBulkRequestSchema = z.object({
 
 export const academicSummaryPatchSchema = z.object({
     marksScored: z.coerce.number().optional(),
-}).refine((value) => value.marksScored !== undefined, {
-    message: 'marksScored is required.',
+    sgpa: z.coerce.number().optional(),
+    cgpa: z.coerce.number().optional(),
+}).refine((value) => value.marksScored !== undefined || value.sgpa !== undefined || value.cgpa !== undefined, {
+    message: 'At least one summary field is required.',
 });
 
 // --- OC images --------------------------------------------------------------

@@ -8,6 +8,9 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, or, eq, isNull, lte, gte, inArray, sql } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest) {
   try {
@@ -181,4 +184,4 @@ async function GETHandler(req: AuditNextRequest) {
     return handleApiError(err);
   }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));

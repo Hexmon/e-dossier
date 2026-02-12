@@ -21,15 +21,29 @@ interface Props {
   defaultValues?: { inspections: InspFormData[]; savedData: InspFormData[] };
 }
 
+function areInspectionRowsEqual(a: InspFormData[], b: InspFormData[]) {
+  if (a.length !== b.length) return false;
+
+  return a.every((row, index) => {
+    const next = b[index];
+    if (!next) return false;
+
+    return (
+      row.id === next.id &&
+      row.date === next.date &&
+      row.rk === next.rk &&
+      row.name === next.name &&
+      row.appointment === next.appointment &&
+      row.remarks === next.remarks &&
+      row.initials === next.initials
+    );
+  });
+}
+
 export default function InspFormComponent({ ocId, onSubmit, disabled = false, defaultValues }: Props) {
   const { inspections, loading, createInspection, updateInspection, deleteInspection } = useDossierInspections(ocId);
-  const { users, loading: usersLoading, fetchUsers } = useUsers();
-  const { appointments, fetchAppointments } = useAppointments();
-
-  useEffect(() => {
-    fetchUsers();
-    fetchAppointments();
-  }, [fetchUsers, fetchAppointments]);
+  const { users, loading: usersLoading } = useUsers();
+  const { appointments } = useAppointments();
 
   const form = useForm<{ inspections: InspFormData[]; savedData: InspFormData[] }>({
     defaultValues: defaultValues || {
@@ -55,26 +69,30 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
 
   const savedData = watch("savedData");
 
-  // Map API inspections to InspFormData for display
+  // Map API inspections to InspFormData for display and avoid writing identical form state.
   useEffect(() => {
-    if (inspections.length > 0) {
-      const mapped = inspections.map((insp) => {
-        const app = appointments.find(a => a.userId === insp.inspector.id);
-        return {
-          id: insp.id,
-          date: insp.date,
-          rk: insp.inspector.rank,
-          name: insp.inspector.name,
-          appointment: app?.positionName || insp.inspector.appointment || "",
-          remarks: insp.remarks || "",
-          initials: insp.initials,
-        };
-      });
-      setValue("savedData", mapped);
-    } else {
-      setValue("savedData", []);
-    }
-  }, [inspections, appointments, setValue]);
+    const mapped = inspections.map((insp) => {
+      const app = appointments.find((a) => a.userId === insp.inspector.id);
+      return {
+        id: insp.id,
+        date: insp.date,
+        rk: insp.inspector.rank,
+        name: insp.inspector.name,
+        appointment: app?.positionName || insp.inspector.appointment || "",
+        remarks: insp.remarks || "",
+        initials: insp.initials,
+      };
+    });
+
+    const current = getValues("savedData");
+    if (areInspectionRowsEqual(current, mapped)) return;
+
+    setValue("savedData", mapped, {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false,
+    });
+  }, [inspections, appointments, getValues, setValue]);
 
   //Reset form whenever defaultValues change
   useEffect(() => {
@@ -210,7 +228,7 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
         <div className="overflow-x-auto border rounded-lg shadow mt-2">
           <CardTitle className="text-xl text-center font-semibold p-4">Add  Inspection Records</CardTitle>
           <table className="w-full border text-sm">
-            <thead className="bg-gray-100">
+            <thead className="bg-muted/70">
               <tr>
                 <th className="p-2 border">S No</th>
                 <th className="p-2 border">Date</th>
@@ -228,7 +246,7 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
                 return (
                   <tr key={field.id}>
                     <td className="p-2 border text-center">
-                      <Input value={String(idx + 1)} disabled className="bg-gray-100 text-center" />
+                      <Input value={String(idx + 1)} disabled className="bg-muted/70 text-center" />
                     </td>
                     <td className="p-2 border">
                       <Input
@@ -250,7 +268,7 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
                               const app = appointments.find(a => a.userId === user.id);
                               setValue(`inspections.${idx}.appointment`, app?.positionName || '');
                             }
-                          }} value={field.value}>
+                          }} value={field.value || undefined}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select Inspector" />
                             </SelectTrigger>
@@ -316,7 +334,7 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
             + Add Row
           </Button>
 
-          <Button type="button" className="bg-green-600 hover:bg-green-700" onClick={handleSave} disabled={disabled}>
+          <Button type="button" className="bg-success hover:bg-success/90" onClick={handleSave} disabled={disabled}>
             {disabled ? "Submitting..." : "Submit"}
           </Button>
 

@@ -143,7 +143,7 @@ export default function InterviewTemplateManagementPage() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Gentlemen Management", href: "/dashboard/genmgmt" },
+                                { label: "Module Mgmt", href: "/dashboard/genmgmt?tab=module-mgmt" },
                                 { label: "Interview Management", href: "/dashboard/genmgmt/interviews-mgmt" },
                             ]}
                         />
@@ -248,7 +248,7 @@ export default function InterviewTemplateManagementPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-red-600"
+                            className="bg-destructive"
                         >
                             Delete
                         </AlertDialogAction>
@@ -258,3 +258,4 @@ export default function InterviewTemplateManagementPage() {
         </SidebarProvider>
     );
 }
+

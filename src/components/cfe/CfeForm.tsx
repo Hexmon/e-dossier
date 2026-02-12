@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { catOptionMarks, catOptions } from "@/constants/app.constants";
 
 import type { cfeFormData, cfeRow } from "@/types/cfe";
@@ -31,6 +40,13 @@ export default function CfeForm({
     onClear
 }: Props) {
     const dispatch = useDispatch();
+    const [alertOpen, setAlertOpen] = useState(false);
+    const [alertMessage, setAlertMessage] = useState("");
+
+    const openAlert = (message: string) => {
+        setAlertMessage(message);
+        setAlertOpen(true);
+    };
 
     const form = useForm<cfeFormData>({
         defaultValues,
@@ -77,7 +93,7 @@ export default function CfeForm({
         });
 
         if (filledRows.length === 0) {
-            alert("Please fill in at least one CFE record with data");
+            openAlert("Please fill in at least one CFE record with data");
             return;
         }
 
@@ -88,7 +104,7 @@ export default function CfeForm({
         );
 
         if (invalidRows.length > 0) {
-            alert("Category and Marks are required for all records");
+            openAlert("Category and Marks are required for all records");
             return;
         }
 
@@ -99,7 +115,7 @@ export default function CfeForm({
         <form onSubmit={handleSubmit(handleFormSubmit)}>
             <div className="overflow-x-auto border rounded-lg shadow">
                 <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
                             <th className="p-2 border">S No</th>
                             <th className="p-2 border">Cat</th>
@@ -115,7 +131,7 @@ export default function CfeForm({
                             return (
                                 <tr key={field.id}>
                                     <td className="p-2 border text-center">
-                                        <Input value={String(idx + 1)} disabled className="bg-gray-100 text-center" />
+                                        <Input value={String(idx + 1)} disabled className="bg-muted/70 text-center" />
                                     </td>
 
                                     <td className="p-2 border">
@@ -172,7 +188,7 @@ export default function CfeForm({
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={loading}>
+                <Button type="submit" className="bg-success hover:bg-success/90" disabled={loading}>
                     {loading ? "Submitting..." : "Submit"}
                 </Button>
 
@@ -181,7 +197,7 @@ export default function CfeForm({
                     variant="outline"
                     onClick={onClear}
                     disabled={loading}
-                    className="hover:bg-destructive hover:text-white"
+                    className="hover:bg-destructive hover:text-primary-foreground"
                 >
                     Clear Form
                 </Button>
@@ -191,6 +207,18 @@ export default function CfeForm({
             <p className="text-sm text-muted-foreground text-center mt-2">
                 * Changes are automatically saved
             </p>
+
+            <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Notice</AlertDialogTitle>
+                        <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction>OK</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </form>
     );
 }
