@@ -55,9 +55,9 @@ export default function GlobalTabs({
               key={value}
               type="button"
               onClick={() => setOfferingsOpen(true)}
-              className={`inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-2 border border-gray-300 
+              className={`inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-2 border border-border 
               rounded-md px-3 py-2 transition-colors w-full shrink min-w-0 truncate hover:text-primary ${
-                isOfferingsPage ? "bg-white border-primary text-blue-700" : "bg-blue-100 text-blue-700"
+                isOfferingsPage ? "bg-background border-primary text-primary" : "bg-primary/10 text-primary"
               }`}
             >
               {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
