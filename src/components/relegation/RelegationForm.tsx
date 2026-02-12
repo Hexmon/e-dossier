@@ -153,7 +153,11 @@ export default function RelegationForm() {
         });
 
         if (!uploadResponse.ok) {
-          throw new Error("PDF upload failed.");
+          const errorText = await uploadResponse.text().catch(() => "");
+          const suffix = errorText ? ` ${errorText.slice(0, 200)}` : "";
+          throw new Error(
+            `PDF upload failed (${uploadResponse.status} ${uploadResponse.statusText}).${suffix}`
+          );
         }
 
         pdfObjectKey = presign.objectKey;
