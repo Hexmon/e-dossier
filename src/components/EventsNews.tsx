@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin } from "lucide-react";
 import { events, getTypeColor } from "@/config/app.config";
+import { resolveToneClasses } from "@/lib/theme-color";
 
 const EventsNews = () => {
   return (
@@ -38,7 +39,7 @@ const EventsNews = () => {
                       })}
                     </span>
                   </div>
-                  <Badge className={getTypeColor(event.type)}>
+                  <Badge className={resolveToneClasses(getTypeColor(event.type), "subtle")}>
                     {event.type}
                   </Badge>
                 </div>

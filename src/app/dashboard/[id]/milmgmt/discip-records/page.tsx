@@ -1,9 +1,10 @@
 //DisciplineRecordsPage
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -22,7 +23,6 @@ import {
 
 import { Shield, ChevronDown, Link } from "lucide-react";
 
-import { useOcPersonal } from "@/hooks/useOcPersonal";
 import { semesters as SEMESTERS_CONST } from "@/constants/app.constants";
 
 import type { DisciplineForm as DisciplineFormType, DisciplineRow } from "@/types/dicp-records";
@@ -30,6 +30,7 @@ import { useDisciplineRecords } from "@/hooks/useDisciplineRecords";
 import DisciplineTable from "@/components/discipline/DisciplineTable";
 import DisciplineForm from "@/components/discipline/DisciplineForm";
 import { useOcDetails } from "@/hooks/useOcDetails";
+import { getAppointments } from "@/app/lib/api/appointmentApi";
 
 import type { RootState } from "@/store";
 import { clearDisciplineForm } from "@/store/slices/disciplineRecordsSlice";
@@ -38,6 +39,9 @@ export default function DisciplineRecordsPage() {
     // dynamic route param
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     // Redux
     const dispatch = useDispatch();
@@ -73,13 +77,68 @@ export default function DisciplineRecordsPage() {
     const {
         groupedBySemester,
         loading,
-        fetchAll,
         saveRecords,
         updateRecord,
         deleteRecord,
     } = useDisciplineRecords(ocId, semesters.length);
 
-    const [activeTab, setActiveTab] = useState<number>(0);
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - 1;
+        if (idx < 0 || idx >= semesters.length) return 0;
+        return idx;
+    }, [semParam, semesters.length]);
+    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + 1));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleSemesterChange = (index: number) => {
+        setActiveTab(index);
+        updateSemesterParam(index);
+    };
+
+    const { data: appointmentOptions = [], isLoading: appointmentsLoading } = useQuery({
+        queryKey: ["discipline-awarded-by-options"],
+        queryFn: async () => {
+            try {
+                const appointments = await getAppointments();
+                const uniqueByUser = new Map<string, string>();
+
+                for (const appt of appointments) {
+                    const username = (appt.username || "").trim();
+                    if (!username) continue;
+
+                    if (!uniqueByUser.has(username)) {
+                        const position = (appt.positionName || "").trim();
+                        const platoon = (appt.platoonName || "").trim();
+                        const label = [username, position ? `- ${position}` : "", platoon ? `(${platoon})` : ""]
+                            .filter(Boolean)
+                            .join(" ")
+                            .trim();
+                        uniqueByUser.set(username, label || username);
+                    }
+                }
+
+                return Array.from(uniqueByUser.entries())
+                    .map(([value, label]) => ({ value, label }))
+                    .sort((a, b) => a.label.localeCompare(b.label));
+            } catch {
+                toast.error("Failed to load appointments for awarder dropdown");
+                return [];
+            }
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
     // React Query handles fetching automatically, no need for manual fetchAll
     // The query will run when ocId changes due to the enabled flag in the hook
@@ -106,15 +165,21 @@ export default function DisciplineRecordsPage() {
         // Validate that filled rows have required fields
         const invalidRows = filledRows.filter(row =>
             !row.dateOfOffence || row.dateOfOffence.trim() === "" ||
-            !row.offence || row.offence.trim() === ""
+            !row.offence || row.offence.trim() === "" ||
+            !row.byWhomAwarded || row.byWhomAwarded.trim() === ""
         );
 
         if (invalidRows.length > 0) {
-            toast.error("Date of Offence and Offence are required for all records");
+            toast.error("Date of Offence, Offence, and By Whom Awarded are required for all records");
             return;
         }
 
-        await saveRecords(activeTab + 1, filledRows);
+        const normalizedRows = filledRows.map((row) => ({
+            ...row,
+            numberOfPunishments: row.punishmentAwarded ? (row.numberOfPunishments || "1") : "0",
+        }));
+
+        await saveRecords(activeTab + 1, normalizedRows);
 
         // Clear Redux cache after successful save
         dispatch(clearDisciplineForm(ocId));
@@ -130,14 +195,16 @@ export default function DisciplineRecordsPage() {
     };
 
     const handleUpdate = async (idToUpdate: string, payload: Partial<DisciplineRow>) => {
+        const normalizedCount = payload.punishmentAwarded
+            ? Number(payload.numberOfPunishments ?? 1)
+            : 0;
+
         await updateRecord(idToUpdate, {
             dateOfOffence: payload.dateOfOffence,
             offence: payload.offence,
             punishmentAwarded: payload.punishmentAwarded,
             punishmentId: payload.punishmentId,
-            numberOfPunishments: payload.numberOfPunishments !== undefined
-                ? Number(payload.numberOfPunishments)
-                : undefined,
+            numberOfPunishments: normalizedCount,
             awardedOn: payload.dateOfAward,
             awardedBy: payload.byWhomAwarded,
             pointsDelta:
@@ -168,7 +235,7 @@ export default function DisciplineRecordsPage() {
                     offence: "",
                     punishmentAwarded: "",
                     punishmentId: "",
-                    numberOfPunishments: "1",
+                    numberOfPunishments: "0",
                     dateOfAward: "",
                     byWhomAwarded: "",
                     negativePts: "",
@@ -242,10 +309,10 @@ export default function DisciplineRecordsPage() {
                                             <button
                                                 key={sem}
                                                 type="button"
-                                                onClick={() => setActiveTab(index)}
+                                                onClick={() => handleSemesterChange(index)}
                                                 className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-gray-200 text-gray-700"
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "bg-muted text-foreground"
                                                     }`}
                                             >
                                                 {sem}
@@ -257,6 +324,8 @@ export default function DisciplineRecordsPage() {
                                 <DisciplineTable
                                     rows={groupedBySemester[activeTab]}
                                     loading={loading}
+                                    appointmentOptions={appointmentOptions}
+                                    appointmentsLoading={appointmentsLoading}
                                     onEditSave={handleUpdate}
                                     onDelete={handleDelete}
                                 />
@@ -267,6 +336,8 @@ export default function DisciplineRecordsPage() {
                                         onSubmit={handleSubmit}
                                         defaultValues={getDefaultValues()}
                                         ocId={ocId}
+                                        appointmentOptions={appointmentOptions}
+                                        appointmentsLoading={appointmentsLoading}
                                         onClear={handleClearForm}
                                     />
                                 </div>

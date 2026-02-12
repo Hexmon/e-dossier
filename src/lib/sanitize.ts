@@ -263,7 +263,7 @@ export function escapeHtml(input: string | null | undefined): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/'/g, "&apos;");
 }
 
 /**
@@ -281,4 +281,3 @@ export function sanitizeJson(input: string | null | undefined): any {
     return null;
   }
 }
-

@@ -379,11 +379,11 @@ export default function HigherTests({
 
   return (
     <CardContent className="space-y-4">
-      <h2 className="text-lg font-bold text-left text-gray-700">
+      <h2 className="text-lg font-bold text-left text-foreground">
         {typeTitle ?? `Higher Tests (${totalMaxMarks || 30} Marks)`}
       </h2>
 
-      <div className="border border-gray-300 rounded-lg">
+      <div className="border border-border rounded-lg">
         <UniversalTable<PTTableRow> data={displayData} config={config} />
       </div>
 

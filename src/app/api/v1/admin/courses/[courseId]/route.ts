@@ -2,11 +2,14 @@
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
-import { getCourse, listCourseOfferings, softDeleteCourse, updateCourse, hardDeleteCourse } from '@/app/db/queries/courses';
+import { countAssignedOCsForCourse, getCourse, listCourseOfferings, softDeleteCourse, updateCourse, hardDeleteCourse } from '@/app/db/queries/courses';
 import type { CourseRow } from '@/app/db/queries/courses';
 import { courseUpdateSchema } from '@/app/lib/validators.courses';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 const Param = z.object({ courseId: z.string().uuid() });
 
@@ -112,7 +115,18 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     try {
         const adminCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
-        const hard = (new URL(req.url).searchParams.get('hard') || '').toLowerCase() === 'true';
+        const searchParams = new URL(req.url).searchParams;
+        const hard = (searchParams.get('hard') || '').toLowerCase() === 'true'
+            || (searchParams.get('mode') || '').toLowerCase() === 'hard';
+        const assignedOcCount = await countAssignedOCsForCourse(courseId);
+
+        if (assignedOcCount > 0) {
+            return json.conflict(
+                `Cannot delete course: Officers are enrolled/assigned to this course (${assignedOcCount} OC(s)).`,
+                { ocCount: assignedOcCount, reason: 'COURSE_IN_USE' },
+            );
+        }
+
         const result = (hard ? await hardDeleteCourse(courseId) : await softDeleteCourse(courseId)) as CourseDeleteResult | null;
         if (!result) throw new ApiError(404, 'Course not found', 'not_found');
         const before: CourseRow = result.before;
@@ -148,8 +162,8 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
 
-export const DELETE = withAuditRoute('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

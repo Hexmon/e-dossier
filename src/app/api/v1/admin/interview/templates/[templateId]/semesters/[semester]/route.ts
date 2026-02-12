@@ -1,4 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewTemplateSemesterParam } from '@/app/lib/interview-template-validators';
 import { getInterviewTemplate, removeInterviewTemplateSemester } from '@/app/db/queries/interviewTemplates';
@@ -35,4 +38,4 @@ async function DELETEHandler(
     }
 }
 
-export const DELETE = withAuditRoute('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

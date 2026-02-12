@@ -4,6 +4,9 @@ import { mustBeAdmin, mustBeAuthed } from '../../_checks';
 import { updateOcAcademicSubject, deleteOcAcademicSubject, getOcAcademicSemester, getOcAcademics } from '@/app/services/oc-academics';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 type BulkResult = {
     index: number;
@@ -213,6 +216,6 @@ async function POSTHandler(req: AuditNextRequest) {
     }
 }
 
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withAuditRoute('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

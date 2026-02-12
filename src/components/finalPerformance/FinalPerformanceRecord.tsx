@@ -100,7 +100,7 @@ export default function FinalPerformanceRecord() {
         <CardContent className="space-y-6">
           <div>
             {loading ? (
-              <p className="text-center text-sm text-gray-500">Loading...</p>
+              <p className="text-center text-sm text-muted-foreground">Loading...</p>
             ) : (
               <UniversalTable data={finalData} config={finalTableConfig} />
             )}

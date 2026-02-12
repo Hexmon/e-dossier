@@ -211,7 +211,7 @@ export default function InterviewTermTabs() {
                     key={term}
                     type="button"
                     onClick={() => setSelectedTerm(term)}
-                    className={`px-4 py-2 rounded-t-lg ${isActive ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                    className={`px-4 py-2 rounded-t-lg ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                 >
                     {`TERM ${label}`}
                 </button>
@@ -239,7 +239,7 @@ export default function InterviewTermTabs() {
                     key={variant}
                     type="button"
                     onClick={() => setSubTab((prev) => ({ ...prev, [selectedTerm]: variant }))}
-                    className={`px-3 py-2 rounded ${isActive ? "bg-blue-600 text-white" : "bg-gray-100"}`}
+                    className={`px-3 py-2 rounded ${isActive ? "bg-primary text-primary-foreground" : "bg-muted/70"}`}
                 >
                     {label}
                 </button>
@@ -286,7 +286,7 @@ export default function InterviewTermTabs() {
                     onClearForm={handleClearForm}
                 />
             ) : (
-                <div className="border rounded-lg p-6 bg-gray-50 text-center text-sm text-gray-600">
+                <div className="border rounded-lg p-6 bg-muted/40 text-center text-sm text-muted-foreground">
                     {!templatesLoaded ? (
                         <p>Loading templates... please wait a moment.</p>
                     ) : specialGroupMissing ? (

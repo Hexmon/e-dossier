@@ -304,8 +304,8 @@ export default function CampContent({ ocId }: CampContentProps) {
     return (
       <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <span className="ml-3 text-gray-600">Loading camps...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-3 text-muted-foreground">Loading camps...</span>
         </CardContent>
       </Card>
     );
@@ -315,11 +315,11 @@ export default function CampContent({ ocId }: CampContentProps) {
     return (
       <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
         <CardContent className="py-12">
-          <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-red-800 font-medium">Error Loading Camps</p>
-              <p className="text-sm text-red-700 mt-1">{campsError}</p>
+              <p className="text-sm text-destructive font-medium">Error Loading Camps</p>
+              <p className="text-sm text-destructive mt-1">{campsError}</p>
             </div>
           </div>
         </CardContent>
@@ -345,8 +345,8 @@ export default function CampContent({ ocId }: CampContentProps) {
                 type="button"
                 onClick={() => handleSemesterChange(idx)}
                 className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeSemester === idx
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-foreground hover:bg-muted/80"
                   }`}
               >
                 {semester}
@@ -386,7 +386,7 @@ export default function CampContent({ ocId }: CampContentProps) {
             <span className="text-md font-bold underline">
               Performance during Camp:
             </span>
-            <span className="text-sm font-semibold text-gray-500 block mt-2">
+            <span className="text-sm font-semibold text-muted-foreground block mt-2">
               (To include application of theoretical knowledge, tactical acumen,
               logical approach, briefing/orders, appointment held, runback,
               strengths/weaknesses etc.)
@@ -397,11 +397,11 @@ export default function CampContent({ ocId }: CampContentProps) {
         {/* Mutation Error */}
         {mutationError && (
           <CardContent className="mb-4">
-            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm text-red-800 font-medium">Error</p>
-                <p className="text-sm text-red-700 mt-1">{mutationError}</p>
+                <p className="text-sm text-destructive font-medium">Error</p>
+                <p className="text-sm text-destructive mt-1">{mutationError}</p>
               </div>
             </div>
           </CardContent>
@@ -410,11 +410,11 @@ export default function CampContent({ ocId }: CampContentProps) {
         {/* Warning/Info Notice */}
         {showWarning && (
           <CardContent className="mb-4">
-            <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/30 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm text-blue-800 font-medium">New Camp</p>
-                <p className="text-sm text-blue-700 mt-1">
+                <p className="text-sm text-primary font-medium">New Camp</p>
+                <p className="text-sm text-primary mt-1">
                   This camp hasn't been created yet. Fill in the details below
                   to create it.
                 </p>
@@ -427,8 +427,8 @@ export default function CampContent({ ocId }: CampContentProps) {
         {loadingCamp && selectedCampName && (
           <CardContent>
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-              <span className="ml-3 text-gray-600">Loading camp data...</span>
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="ml-3 text-muted-foreground">Loading camp data...</span>
             </div>
           </CardContent>
         )}
@@ -436,7 +436,7 @@ export default function CampContent({ ocId }: CampContentProps) {
         {/* No Camp Selected */}
         {!selectedCampName && availableCamps.length > 0 && (
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <p>Please select a camp from the options above.</p>
             </div>
           </CardContent>
@@ -445,7 +445,7 @@ export default function CampContent({ ocId }: CampContentProps) {
         {/* No Camps Available */}
         {availableCamps.length === 0 && (
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <p>No training camps available for this semester.</p>
               <p className="text-sm mt-2">
                 Please check back later or contact administration.
@@ -570,51 +570,51 @@ export default function CampContent({ ocId }: CampContentProps) {
             <CardContent>
               {loadingAllCamps ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-                  <span className="ml-3 text-gray-600">Loading totals...</span>
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="ml-3 text-muted-foreground">Loading totals...</span>
                 </div>
               ) : Object.keys(campTotals).length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <p>No camp data available for totals calculation.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300">
-                    <thead className="bg-gray-100">
+                  <table className="w-full border-collapse border border-border">
+                    <thead className="bg-muted/70">
                       <tr>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">
+                        <th className="border border-border px-4 py-2 text-left font-medium">
                           Camp
                         </th>
-                        <th className="border border-gray-300 px-4 py-2 text-center font-medium">
+                        <th className="border border-border px-4 py-2 text-center font-medium">
                           Marks Obtained
                         </th>
-                        <th className="border border-gray-300 px-4 py-2 text-center font-medium">
+                        <th className="border border-border px-4 py-2 text-center font-medium">
                           Max Marks
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {Object.entries(campTotals).map(([campName, { obtained, max }]) => (
-                        <tr key={campName} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 px-4 py-2">
+                        <tr key={campName} className="hover:bg-muted/40">
+                          <td className="border border-border px-4 py-2">
                             {campName}
                           </td>
-                          <td className="border border-gray-300 px-4 py-2 text-center">
+                          <td className="border border-border px-4 py-2 text-center">
                             {obtained}
                           </td>
-                          <td className="border border-gray-300 px-4 py-2 text-center">
+                          <td className="border border-border px-4 py-2 text-center">
                             {max}
                           </td>
                         </tr>
                       ))}
-                      <tr className="bg-gray-50">
-                        <td className="border border-gray-300 px-4 py-2 font-semibold">
+                      <tr className="bg-muted/40">
+                        <td className="border border-border px-4 py-2 font-semibold">
                           TOTAL
                         </td>
-                        <td className="border border-gray-300 px-4 py-2 text-center font-semibold">
+                        <td className="border border-border px-4 py-2 text-center font-semibold">
                           {totalSum.obtained}
                         </td>
-                        <td className="border border-gray-300 px-4 py-2 text-center font-semibold">
+                        <td className="border border-border px-4 py-2 text-center font-semibold">
                           {totalSum.max}
                         </td>
                       </tr>

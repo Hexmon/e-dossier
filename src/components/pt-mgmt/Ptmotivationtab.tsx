@@ -134,7 +134,7 @@ export default function PTMotivationTab({
                         <AlertDialogCancel onClick={() => setItemToDelete(null)}>
                             Cancel
                         </AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600">
+                        <AlertDialogAction onClick={confirmDelete} className="bg-destructive">
                             Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>

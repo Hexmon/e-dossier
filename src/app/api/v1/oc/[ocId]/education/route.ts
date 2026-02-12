@@ -43,7 +43,12 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const dto = eduCreateSchema.parse(await req.json());
-    const row = await createEdu(ocId, dto);
+    // totalPercent is now text column; stringify the validated value
+    const insertData = {
+      ...dto,
+      totalPercent: dto.totalPercent !== undefined ? String(dto.totalPercent) : null,
+    };
+    const row = await createEdu(ocId, insertData);
 
     await req.audit.log({
       action: AuditEventType.OC_RECORD_CREATED,

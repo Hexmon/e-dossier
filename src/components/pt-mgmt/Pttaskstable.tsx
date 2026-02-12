@@ -68,7 +68,7 @@ export default function PTTasksTable({
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => onManageScores(index)}
-                                                className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
                                                 title="Manage Score Matrix"
                                             >
                                                 <Grid className="h-4 w-4 mr-1" />
@@ -86,7 +86,7 @@ export default function PTTasksTable({
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => onDelete(task.id)}
-                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

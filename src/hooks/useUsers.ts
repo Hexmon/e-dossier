@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -36,7 +37,12 @@ export function useUsers() {
             toast.success("User added successfully");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to add user");
+            const messages = Array.isArray(error?.extras?.messages) ? error.extras.messages : [];
+            const detail =
+                messages.length > 0
+                    ? messages.join(" ")
+                    : error?.message || error?.extras?.detail || "Failed to add user";
+            toast.error(detail);
         },
     });
 
@@ -71,7 +77,7 @@ export function useUsers() {
     return {
         users,
         loading,
-        fetchUsers: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+        fetchUsers: useCallback(() => queryClient.invalidateQueries({ queryKey: ["users"] }), [queryClient]),
         addUser: addUserMutation.mutateAsync,
         editUser: (id: string, data: User) => editUserMutation.mutateAsync({ id, data }),
         removeUser: removeUserMutation.mutateAsync,

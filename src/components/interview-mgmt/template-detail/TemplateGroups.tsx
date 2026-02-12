@@ -127,7 +127,7 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
                                                 Order: {group.sortOrder}
                                             </Badge>
                                             {group.isActive ? (
-                                                <Badge className="bg-green-600 text-xs">Active</Badge>
+                                                <Badge className="bg-success text-xs">Active</Badge>
                                             ) : (
                                                 <Badge variant="secondary" className="text-xs">
                                                     Inactive
@@ -200,7 +200,7 @@ export default function TemplateGroups({ templateId }: TemplateGroupsProps) {
                         <AlertDialogCancel onClick={() => setGroupToDelete(null)}>
                             Cancel
                         </AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600">
+                        <AlertDialogAction onClick={confirmDelete} className="bg-destructive">
                             Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>

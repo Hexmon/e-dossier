@@ -376,12 +376,12 @@ export default function IpetForm({
   return (
     <div className="mt-3 space-y-6">
       <CardContent className="space-y-6">
-        <h2 className="text-lg font-bold text-left text-gray-700">
+        <h2 className="text-lg font-bold text-left text-foreground">
           {typeTitle ?? "IPET"}
           {!typeTitle && ` (${totalMaxMarks} Marks)`}
         </h2>
 
-        <div className="border border-gray-300 rounded-lg">
+        <div className="border border-border rounded-lg">
           <UniversalTable<PTTableRow> data={displayData} config={config} />
         </div>
 

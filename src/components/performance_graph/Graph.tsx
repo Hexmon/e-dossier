@@ -16,6 +16,7 @@ import {
 } from "chart.js";
 import { labels } from "@/constants/app.constants";
 import { computeAverageMarks } from "@/components/performance_graph/Data";
+import { addThemeChangedListener, getChartThemePalette, withAlpha } from "@/components/performance_graph/chartTheme";
 
 ChartJS.register(
   CategoryScale,
@@ -39,6 +40,7 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
     highestTerm: "",
   });
   const [averageData] = useState(computeAverageMarks("academics"));
+  const [themeVersion, setThemeVersion] = useState(0);
 
   useEffect(() => {
     if (!Array.isArray(academics) || academics.length === 0) return;
@@ -57,6 +59,13 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
   }, [academics]);
 
   useEffect(() => {
+    const cleanup = addThemeChangedListener(() => {
+      setThemeVersion((prev) => prev + 1);
+    });
+    return cleanup;
+  }, []);
+
+  useEffect(() => {
     if (!chartRef.current) return;
 
     if (chartInstance.current) {
@@ -66,14 +75,15 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
 
     const ctx = chartRef.current.getContext("2d");
     if (!ctx) return;
+    const theme = getChartThemePalette();
 
     const gradientBg = ctx.createLinearGradient(0, 0, 0, 400);
-    gradientBg.addColorStop(0, "rgba(99, 102, 241, 0.15)");
-    gradientBg.addColorStop(1, "rgba(99, 102, 241, 0)");
+    gradientBg.addColorStop(0, withAlpha(theme.primary, 0.15));
+    gradientBg.addColorStop(1, withAlpha(theme.primary, 0));
 
     const gradientAvgBg = ctx.createLinearGradient(0, 0, 0, 400);
-    gradientAvgBg.addColorStop(0, "rgba(239, 68, 68, 0.15)");
-    gradientAvgBg.addColorStop(1, "rgba(239, 68, 68, 0)");
+    gradientAvgBg.addColorStop(0, withAlpha(theme.destructive, 0.15));
+    gradientAvgBg.addColorStop(1, withAlpha(theme.destructive, 0));
 
     chartInstance.current = new ChartJS(ctx as any, {
       type: "line",
@@ -83,33 +93,33 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
           {
             label: "Cadet CGPA",
             data: academics,
-            borderColor: "rgb(99, 102, 241)",
+            borderColor: theme.primary,
             backgroundColor: gradientBg,
             borderWidth: 3,
             fill: true,
             tension: 0.4,
             pointRadius: 6,
-            pointBackgroundColor: "rgb(99, 102, 241)",
-            pointBorderColor: "#fff",
+            pointBackgroundColor: theme.primary,
+            pointBorderColor: theme.pointBorder,
             pointBorderWidth: 2,
             pointHoverRadius: 8,
-            pointHoverBackgroundColor: "rgb(67, 56, 202)",
+            pointHoverBackgroundColor: theme.info,
             hoverBorderWidth: 4,
           },
           {
             label: "Course Average",
             data: averageData,
-            borderColor: "rgb(239, 68, 68)",
+            borderColor: theme.destructive,
             backgroundColor: gradientAvgBg,
             borderWidth: 3,
             fill: true,
             tension: 0.4,
             pointRadius: 6,
-            pointBackgroundColor: "rgb(239, 68, 68)",
-            pointBorderColor: "#fff",
+            pointBackgroundColor: theme.destructive,
+            pointBorderColor: theme.pointBorder,
             pointBorderWidth: 2,
             pointHoverRadius: 8,
-            pointHoverBackgroundColor: "rgb(220, 38, 38)",
+            pointHoverBackgroundColor: theme.destructive,
             hoverBorderWidth: 4,
             borderDash: [6, 6],
           },
@@ -125,19 +135,19 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
             position: "top",
             labels: {
               font: { size: 12, weight: "600" as any },
-              color: "rgb(75, 85, 99)",
+              color: theme.mutedForeground,
               padding: 20,
               usePointStyle: true,
               pointStyle: "circle",
             },
           },
           tooltip: {
-            backgroundColor: "rgba(0,0,0,0.8)",
+            backgroundColor: theme.tooltipBackground,
             titleFont: { size: 13, weight: "bold" as any },
             bodyFont: { size: 12 },
             padding: 12,
             displayColors: true,
-            borderColor: "rgb(99,102,241)",
+            borderColor: theme.primary,
             borderWidth: 1,
             callbacks: {
               label: function (context: any) {
@@ -148,10 +158,10 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
         },
         scales: {
           x: {
-            grid: { display: true, color: "rgba(0,0,0,0.05)" },
+            grid: { display: true, color: withAlpha(theme.border, 0.55) },
             ticks: {
               font: { size: 11, weight: "500" as any },
-              color: "rgb(75,85,99)",
+              color: theme.mutedForeground,
               padding: 8,
             },
           },
@@ -161,10 +171,10 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
             ticks: {
               stepSize: 3,
               font: { size: 11, weight: "500" as any },
-              color: "rgb(75,85,99)",
+              color: theme.mutedForeground,
               padding: 8,
             },
-            grid: { color: "rgba(0,0,0,0.08)" },
+            grid: { color: withAlpha(theme.border, 0.75) },
           },
         },
       },
@@ -176,40 +186,40 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
         chartInstance.current = null;
       }
     };
-  }, [academics, averageData]);
+  }, [academics, averageData, themeVersion]);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
-      <div className="bg-linear-to-br from-white to-slate-50 rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+      <div className="bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
         {/* Header */}
-        <div className="bg-linear-to-r from-indigo-600 to-indigo-700 px-6 py-6">
-          <h2 className="text-2xl font-bold text-white tracking-tight">📚 ACADEMICS</h2>
-          <p className="text-indigo-100 text-sm mt-1">Academic Performance Tracking (CGPA)</p>
+        <div className="bg-primary px-6 py-6">
+          <h2 className="text-2xl font-bold text-primary-foreground tracking-tight">📚 ACADEMICS</h2>
+          <p className="text-primary-foreground/80 text-sm mt-1">Academic Performance Tracking (CGPA)</p>
         </div>
 
         {/* Chart Container */}
         <div className="p-6">
-          <div className="relative w-full h-96 bg-white rounded-xl shadow-sm border border-slate-100">
+          <div className="relative w-full h-96 bg-background rounded-xl shadow-sm border border-border">
             <canvas ref={chartRef}></canvas>
           </div>
         </div>
 
         {/* Stats Footer */}
         <div className="grid grid-cols-3 gap-4 px-6 pb-6">
-          <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
-            <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">Course Highest</p>
-            <p className="text-2xl font-bold text-indigo-600 mt-1">{stats.highest}/10</p>
-            <p className="text-xs text-indigo-600 mt-1">{stats.highestTerm}</p>
+          <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
+            <p className="text-xs font-semibold text-primary uppercase tracking-wide">Course Highest</p>
+            <p className="text-2xl font-bold text-primary mt-1">{stats.highest}/10</p>
+            <p className="text-xs text-primary mt-1">{stats.highestTerm}</p>
           </div>
-          <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Course Average</p>
-            <p className="text-2xl font-bold text-green-600 mt-1">{stats.average.toFixed(1)}</p>
-            <p className="text-xs text-green-600 mt-1">Overall</p>
+          <div className="bg-success/10 rounded-lg p-4 border border-success/20">
+            <p className="text-xs font-semibold text-success uppercase tracking-wide">Course Average</p>
+            <p className="text-2xl font-bold text-success mt-1">{stats.average.toFixed(1)}</p>
+            <p className="text-xs text-success mt-1">Overall</p>
           </div>
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Course Lowest</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.lowest}/10</p>
-            <p className="text-xs text-blue-600 mt-1">Term 1</p>
+          <div className="bg-info/10 rounded-lg p-4 border border-info/20">
+            <p className="text-xs font-semibold text-info uppercase tracking-wide">Course Lowest</p>
+            <p className="text-2xl font-bold text-info mt-1">{stats.lowest}/10</p>
+            <p className="text-xs text-info mt-1">Term 1</p>
           </div>
         </div>
       </div>

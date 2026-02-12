@@ -65,7 +65,7 @@ export default function DossierInspSheetPage() {
                     extraTabs={
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button className="flex items-center gap-2 px-3 py-2 border border-transparent hover:border-blue-700 rounded-md">
+                                <button className="flex items-center gap-2 px-3 py-2 border border-transparent hover:border-primary rounded-md">
                                     <Shield className="h-4 w-4" />
                                     Mil-Trg
                                     <ChevronDown className="h-4 w-4" />

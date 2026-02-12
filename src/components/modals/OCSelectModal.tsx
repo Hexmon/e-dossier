@@ -1,197 +1,271 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, Search } from "lucide-react";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDebouncedValue } from "@/app/lib/debounce";
-import { fetchOCs, OCListRow } from "@/app/lib/api/ocApi";
-import { listAppointments } from "@/app/lib/api/AppointmentFilterApi";
+import { fetchOCs, type OCListRow } from "@/app/lib/api/ocApi";
+import { getPlatoons, type Platoon } from "@/app/lib/api/platoonApi";
+import { useMe } from "@/hooks/useMe";
+import { isOcSelectable } from "@/lib/oc-selection";
+import { buildOcModalQueryParams, resolveOcModalScope, type OcModalSort } from "@/lib/oc-modal-scope";
+import { ApiClientError } from "@/app/lib/apiClient";
 
 interface OCSelectModalProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onSelect: (oc: OCListRow) => void;
-    userId?: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (oc: OCListRow) => void;
+  userId?: string;
+  disabledOcId?: string | null;
+}
+
+const ALL_PLATOONS_VALUE = "__all__";
+
+function toErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiClientError) return error.message || fallback;
+  if (error instanceof Error) return error.message || fallback;
+  return fallback;
 }
 
 export default function OCSelectModal({
-    open,
-    onOpenChange,
-    onSelect,
-    userId,
+  open,
+  onOpenChange,
+  onSelect,
+  disabledOcId,
 }: OCSelectModalProps) {
-    const [searchQuery, setSearchQuery] = useState("");
-    const [filteredOCs, setFilteredOCs] = useState<OCListRow[]>([]);
-    const [showDropdown, setShowDropdown] = useState(false);
-    const [isSearching, setIsSearching] = useState(false);
-    const [userPlatoonName, setUserPlatoonName] = useState<string | null>(null);
-    const [loadingPlatoon, setLoadingPlatoon] = useState(false);
+  const { data: meData, isLoading: meLoading } = useMe();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPlatoon, setSelectedPlatoon] = useState("");
+  const [sortBy, setSortBy] = useState<OcModalSort>("name_asc");
+  const [showOcDropdown, setShowOcDropdown] = useState(false);
+  const debouncedSearch = useDebouncedValue(searchQuery, 400);
 
-    /** Debounce Logic */
-    const debouncedSearch = useDebouncedValue(searchQuery, 400);
+  const { isPlatoonScoped, platoonId: scopePlatoonId } = resolveOcModalScope((meData?.apt as any) ?? null);
+  const missingScopedPlatoon = isPlatoonScoped && !scopePlatoonId;
 
-    // Fetch user's platoon name when modal opens
-    useEffect(() => {
-        if (open && userId && !userPlatoonName) {
-            const fetchUserPlatoon = async () => {
-                setLoadingPlatoon(true);
-                try {
-                    const { appointments } = await listAppointments({ userId, active: true });
+  const platoonsQuery = useQuery({
+    queryKey: ["oc-select-modal", "platoons", open],
+    queryFn: getPlatoons,
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
 
-                    const activeAppointment = appointments.find(apt => !apt.endsAt) || appointments[0];
+  const ocQuery = useQuery({
+    queryKey: [
+      "oc-select-modal",
+      "ocs",
+      open,
+      selectedPlatoon || null,
+      debouncedSearch.trim(),
+      sortBy,
+    ],
+    enabled: open && !missingScopedPlatoon,
+    queryFn: () =>
+      fetchOCs<OCListRow>(
+        buildOcModalQueryParams({
+          platoonId: selectedPlatoon || undefined,
+          query: debouncedSearch,
+          sort: sortBy,
+          limit: 20,
+        })
+      ),
+    staleTime: 30 * 1000,
+  });
 
-                    if (activeAppointment) {
-                        setUserPlatoonName(activeAppointment.platoonName);
-                    }
-                } catch (err) {
-                    console.error("Failed to fetch user appointments:", err);
-                } finally {
-                    setLoadingPlatoon(false);
-                }
-            };
+  useEffect(() => {
+    if (!open) return;
 
-            fetchUserPlatoon();
-        }
-    }, [open, userId, userPlatoonName]);
+    if (isPlatoonScoped) {
+      setSelectedPlatoon(scopePlatoonId ?? "");
+    }
+  }, [open, isPlatoonScoped, scopePlatoonId]);
 
-    useEffect(() => {
-        let cancelled = false;
+  useEffect(() => {
+    if (!open) {
+      setSearchQuery("");
+      setShowOcDropdown(false);
+      setSortBy("name_asc");
+      if (!isPlatoonScoped) {
+        setSelectedPlatoon("");
+      }
+    }
+  }, [open, isPlatoonScoped]);
 
-        const run = async () => {
-            const trimmed = debouncedSearch.trim();
+  const platoonItems = platoonsQuery.data ?? [];
+  const selectedPlatoonRecord = useMemo(
+    () => platoonItems.find((item) => item.id === selectedPlatoon) ?? null,
+    [platoonItems, selectedPlatoon]
+  );
+  const selectedPlatoonLabel =
+    selectedPlatoonRecord?.name ??
+    selectedPlatoonRecord?.key ??
+    (isPlatoonScoped ? scopePlatoonId ?? "Assigned platoon" : "All platoons");
 
-            if (!trimmed) {
-                setFilteredOCs([]);
-                setIsSearching(false);
-                return;
-            }
+  const ocOptions = useMemo(() => {
+    const rows = ocQuery.data ?? [];
+    return rows.filter((row) => !row.withdrawnOn);
+  }, [ocQuery.data]);
 
-            if (!userPlatoonName) {
-                return;
-            }
+  const handleOcSelect = (oc: OCListRow) => {
+    const isDisabled = !isOcSelectable(oc.id, disabledOcId);
+    if (isDisabled) return;
+    onSelect(oc);
+    setShowOcDropdown(false);
+    setSearchQuery(`${oc.name} (${oc.ocNo})`);
+  };
 
-            setIsSearching(true);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            <p className="flex items-center justify-center">
+              Please Select an OC before proceeding..
+            </p>
+          </DialogTitle>
+        </DialogHeader>
 
-            try {
-                const items = await fetchOCs<OCListRow>({
-                    active: true,
-                    q: trimmed,
-                    limit: 50,
-                });
+        <div className="mx-auto w-full max-w-md space-y-4">
+          {meLoading ? (
+            <div className="py-2 text-center text-sm text-muted-foreground">
+              Loading user scope...
+            </div>
+          ) : null}
 
-                // Filter OCs by platoon name
-                const filteredByPlatoon = items.filter(
-                    (oc) => oc.platoonName === userPlatoonName
-                );
+          {missingScopedPlatoon ? (
+            <div className="py-2 text-center text-sm text-destructive">
+              Unable to determine platoon scope. Please contact support.
+            </div>
+          ) : null}
 
-                if (!cancelled) setFilteredOCs(filteredByPlatoon);
-            } catch (err) {
-                if (!cancelled) console.error("Failed to fetch OCs:", err);
-            } finally {
-                if (!cancelled) setIsSearching(false);
-            }
-        };
+          {!missingScopedPlatoon ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="oc-platoon-select">Platoon</Label>
+                <Select
+                  value={selectedPlatoon || ALL_PLATOONS_VALUE}
+                  onValueChange={(value) => {
+                    const next = value === ALL_PLATOONS_VALUE ? "" : value;
+                    setSelectedPlatoon(next);
+                    setSearchQuery("");
+                    setShowOcDropdown(false);
+                  }}
+                  disabled={isPlatoonScoped || platoonsQuery.isLoading}
+                >
+                  <SelectTrigger id="oc-platoon-select">
+                    <SelectValue placeholder="Select platoon">
+                      {isPlatoonScoped ? selectedPlatoonLabel : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!isPlatoonScoped ? (
+                      <SelectItem value={ALL_PLATOONS_VALUE}>All platoons</SelectItem>
+                    ) : null}
+                    {platoonItems.map((platoon: Platoon) => (
+                      <SelectItem key={platoon.id} value={platoon.id}>
+                        {platoon.key} | {platoon.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {platoonsQuery.isError ? (
+                  <p className="text-sm text-destructive">
+                    {toErrorMessage(platoonsQuery.error, "Failed to load platoons.")}
+                  </p>
+                ) : null}
+              </div>
 
-        run();
+              <div className="space-y-2">
+                <Label htmlFor="oc-sort-select">Sort By</Label>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value: OcModalSort) => setSortBy(value)}
+                >
+                  <SelectTrigger id="oc-sort-select">
+                    <SelectValue placeholder="Select sorting" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+                    <SelectItem value="updated_desc">Recently Updated</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        return () => {
-            cancelled = true;
-        };
-    }, [debouncedSearch, userPlatoonName]);
-
-    const handleSearchChange = (e: any) => {
-        setSearchQuery(e.target.value);
-        setShowDropdown(true);
-    };
-
-    const handleSelectOC = (oc: OCListRow) => {
-        onSelect(oc);
-        setShowDropdown(false);
-        setSearchQuery(`${oc.name} (${oc.ocNo})`);
-    };
-
-    // Reset state when modal closes
-    useEffect(() => {
-        if (!open) {
-            setSearchQuery("");
-            setFilteredOCs([]);
-            setShowDropdown(false);
-            setUserPlatoonName(null);
-        }
-    }, [open]);
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>
-                        <p className="flex justify-center items-center">
-                            Please Select an OC before proceeding...
-                        </p>
-                    </DialogTitle>
-                </DialogHeader>
-
-                <div className="relative w-80 mx-auto h-50 overflow-hidden">
-                    {loadingPlatoon ? (
-                        <div className="text-center py-4 text-sm text-muted-foreground">
-                            Loading your platoon information...
-                        </div>
-                    ) : !userPlatoonName ? (
-                        <div className="text-center py-4 text-sm text-destructive">
-                            Unable to determine your platoon. Please contact support.
-                        </div>
-                    ) : (
-                        <>
-                            <div className="mb-2 text-xs text-muted-foreground text-center">
-                                Showing OCs from <span className="font-semibold">{userPlatoonName}</span> platoon
-                            </div>
-
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-
-                                <Input
-                                    placeholder="Search or select OC..."
-                                    value={searchQuery}
-                                    onChange={handleSearchChange}
-                                    onFocus={() => setShowDropdown(true)}
-                                    onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                                    className="pl-10 w-full"
-                                />
-                            </div>
-
-                            {showDropdown && (
-                                <ul className="absolute left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto z-40">
-                                    {isSearching && (
-                                        <li className="px-3 py-2 text-xs text-muted-foreground">Searching...</li>
-                                    )}
-
-                                    {!isSearching && filteredOCs.length === 0 && (
-                                        <li className="px-3 py-2 text-xs text-muted-foreground">
-                                            No OCs found in your platoon
-                                        </li>
-                                    )}
-
-                                    {!isSearching &&
-                                        filteredOCs.map((oc) => (
-                                            <li
-                                                key={oc.id}
-                                                onMouseDown={() => handleSelectOC(oc)}
-                                                className="px-3 py-2 text-sm cursor-pointer hover:bg-[#1677ff] hover:text-white"
-                                            >
-                                                <div className="font-medium">{oc.name}</div>
-                                                <div className="text-xs text-muted-foreground hover:text-white">
-                                                    {oc.ocNo} • {oc.platoonName}
-                                                </div>
-                                            </li>
-                                        ))}
-                                </ul>
-                            )}
-                        </>
-                    )}
+              <div className="space-y-2">
+                <Label htmlFor="oc-search-input">OC</Label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="oc-search-input"
+                    placeholder="Search OC by name or OC No..."
+                    value={searchQuery}
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      setShowOcDropdown(true);
+                    }}
+                    onFocus={() => setShowOcDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowOcDropdown(false), 150)}
+                    className="pl-10"
+                  />
                 </div>
-            </DialogContent>
-        </Dialog>
-    );
+
+                {showOcDropdown ? (
+                  <ul className="max-h-56 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                    {ocQuery.isFetching ? (
+                      <li className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Searching...
+                      </li>
+                    ) : null}
+
+                    {!ocQuery.isFetching && ocQuery.isError ? (
+                      <li className="px-3 py-2 text-xs text-destructive">
+                        {toErrorMessage(ocQuery.error, "Failed to load OCs.")}
+                      </li>
+                    ) : null}
+
+                    {!ocQuery.isFetching && !ocQuery.isError && ocOptions.length === 0 ? (
+                      <li className="px-3 py-2 text-xs text-muted-foreground">No results found.</li>
+                    ) : null}
+
+                    {!ocQuery.isFetching &&
+                      !ocQuery.isError &&
+                      ocOptions.map((oc) => {
+                        const isDisabled = !isOcSelectable(oc.id, disabledOcId);
+                        return (
+                          <li
+                            key={oc.id}
+                            onMouseDown={() => handleOcSelect(oc)}
+                            className={`px-3 py-2 ${isDisabled
+                              ? "cursor-not-allowed opacity-50"
+                              : "cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                              }`}
+                          >
+                            <div className="text-sm font-medium">{oc.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {oc.ocNo} • {oc.platoonName ?? oc.platoonKey ?? "No platoon"}
+                            </div>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }

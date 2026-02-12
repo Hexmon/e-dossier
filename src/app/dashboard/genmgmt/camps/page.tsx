@@ -256,7 +256,7 @@ export default function CampsManagement() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                                { label: "Module Mgmt", href: "/dashboard/genmgmt?tab=module-mgmt" },
                                 { label: "Camps Management" },
                             ]}
                         />
@@ -267,7 +267,7 @@ export default function CampsManagement() {
                                     <h2 className="text-2xl font-bold">Manage Camps</h2>
                                     <Button
                                         onClick={() => setIsDialogOpen(true)}
-                                        className="bg-blue-500 hover:bg-blue-600"
+                                        className="bg-primary hover:bg-primary"
                                     >
                                         <Plus className="h-4 w-4 mr-2" />
                                         Create Camp

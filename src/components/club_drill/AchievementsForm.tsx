@@ -35,7 +35,7 @@ export default function AchievementsForm({
 }: Props) {
     return (
         <form onSubmit={onSubmit ?? ((e) => e.preventDefault())}>
-            <p className="mt-4 font-bold text-gray-700">
+            <p className="mt-4 font-bold text-foreground">
                 <u>Spl Achievement</u> (Cane Orderly, Samman Toli, Nishan Toli, Best in Drill)
             </p>
 
@@ -74,7 +74,7 @@ export default function AchievementsForm({
                 <div className="flex justify-center items-center">
                     <Button
                         type="button"
-                        className="mt-3 bg-green-600 text-white text-[12px]"
+                        className="mt-3 bg-success text-primary-foreground text-[12px]"
                         onClick={() => append({ id: null, achievement: "" })}
                     >
                         + Add Achievement
@@ -87,7 +87,7 @@ export default function AchievementsForm({
                 <div className="flex justify-center items-center mt-4">
                     <Button
                         type="button"
-                        className="bg-blue-600 text-white"
+                        className="bg-primary text-primary-foreground"
                         onClick={onEdit}
                     >
                         Edit Achievements
@@ -95,7 +95,7 @@ export default function AchievementsForm({
                 </div>
             ) : (
                 <div className="flex justify-center gap-4 mt-6">
-                    <Button type="submit" className="bg-blue-600 text-white">
+                    <Button type="submit" className="bg-primary text-primary-foreground">
                         Save Achievements
                     </Button>
 

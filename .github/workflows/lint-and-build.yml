@@ -44,5 +44,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate action-map coverage
+        run: pnpm run validate:action-map
+
       - name: Run verification pipeline
         run: pnpm run verify

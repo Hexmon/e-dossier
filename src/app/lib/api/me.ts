@@ -14,6 +14,9 @@ export interface MeResponse {
         currentAppointmentId: string | null;
     };
     roles: string[];
+    permissions?: string[];
+    deniedPermissions?: string[];
+    policyVersion?: number | null;
     apt: {
         id: string;
         position: string;
