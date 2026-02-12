@@ -10,6 +10,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import CourseCard from "@/components/courses/CourseCard";
 import CourseFormModal from "@/components/courses/CourseFormModal";
 import CourseViewModal from "@/components/courses/CourseViewModal";
+import AssignOfferingsDialog from "@/components/offerings/AssignOfferingsDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ocTabs } from "@/config/app.config";
@@ -42,6 +43,7 @@ export default function CourseManagement() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<UICourse | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -125,9 +127,14 @@ export default function CourseManagement() {
               <TabsContent value="course-mgmt">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Course Sections</h2>
-                  <Button onClick={handleAdd} className="bg-success">
-                    Add Course
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setAssignDialogOpen(true)}>
+                      Assign Offerings
+                    </Button>
+                    <Button onClick={handleAdd} className="bg-success">
+                      Add Course
+                    </Button>
+                  </div>
                 </div>
 
                 {loading ? (
@@ -172,6 +179,12 @@ export default function CourseManagement() {
           setIsViewOpen(open);
           if (!open) setViewCourse(null);
         }}
+      />
+
+      <AssignOfferingsDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        courses={courses}
       />
 
       <AlertDialog

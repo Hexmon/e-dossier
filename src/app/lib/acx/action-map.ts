@@ -2568,6 +2568,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/courses/:courseId/offerings/assign",
+    "action": "admin:courses:offerings:assign:create",
+    "resourceType": "admin:courses:offerings:assign",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/instructors",
     "action": "admin:instructors:create",
     "resourceType": "admin:instructors",

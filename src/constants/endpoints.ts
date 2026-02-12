@@ -24,6 +24,8 @@ export const endpoints = {
         disciplineById: (id: string) => `/api/v1/admin/discipline/${id}`,
         courseOfferings: (courseId: string) =>
             `/api/v1/admin/courses/${courseId}/offerings`,
+        courseOfferingsAssign: (courseId: string) =>
+            `/api/v1/admin/courses/${courseId}/offerings/assign`,
         courseOfferingById: (courseId: string, offeringId: string) =>
             `/api/v1/admin/courses/${courseId}/offerings/${offeringId}`,
         trainingCamps: {
