@@ -741,6 +741,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/relegation/courses",
+    "action": "admin:relegation:courses:read",
+    "resourceType": "admin:relegation:courses",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/relegation/ocs",
+    "action": "admin:relegation:ocs:read",
+    "resourceType": "admin:relegation:ocs",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/discipline",
     "action": "admin:discipline:read",
     "resourceType": "admin:discipline",
@@ -2715,6 +2733,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/punishments",
     "action": "admin:punishments:create",
     "resourceType": "admin:punishments",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/relegation/presign",
+    "action": "admin:relegation:presign:create",
+    "resourceType": "admin:relegation:presign",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/relegation/transfer",
+    "action": "admin:relegation:transfer:create",
+    "resourceType": "admin:relegation:transfer",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true

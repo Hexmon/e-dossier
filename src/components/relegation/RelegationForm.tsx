@@ -1,180 +1,359 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Controller, SubmitHandler, useForm } from "react-hook-form";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import { useRelegationModule } from "@/hooks/useRelegation";
+import { ApiClientError } from "@/app/lib/apiClient";
 
 interface RelegationFormValues {
-    ocName: string;
-    ocNo: string;
-    courseNo: string;
-    transferTo: string;
-    reason: string;
-    remark: string;
-    pdfFile: FileList | null;
+  ocId: string;
+  ocName: string;
+  courseNo: string;
+  currentCourseId: string;
+  transferTo: string;
+  reason: string;
+  remark: string;
+  pdfFile: FileList | null;
+}
+
+function parseApiError(error: unknown, fallback: string): string {
+  if (error instanceof ApiClientError) {
+    return error.message || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  return fallback;
 }
 
 export default function RelegationForm() {
-    const {
-        register,
-        handleSubmit,
-        reset,
-        control,
-    } = useForm<RelegationFormValues>({
-        defaultValues: {
-            ocName: "",
-            ocNo: "",
-            courseNo: "",
-            transferTo: "",
-            reason: "",
-            remark: "",
-            pdfFile: null,
-        },
-    });
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    resetField,
+    watch,
+    formState: { errors },
+  } = useForm<RelegationFormValues>({
+    defaultValues: {
+      ocId: "",
+      ocName: "",
+      courseNo: "",
+      currentCourseId: "",
+      transferTo: "",
+      reason: "",
+      remark: "",
+      pdfFile: null,
+    },
+  });
 
-    const onSubmit: SubmitHandler<RelegationFormValues> = (data) => {
-        const {
-            ocName,
-            ocNo,
-            courseNo,
-            transferTo,
-            reason,
-            remark,
-            pdfFile,
-        } = data;
+  const selectedOcId = watch("ocId");
+  const currentCourseId = watch("currentCourseId");
 
-        const payload = {
-            ocName: ocName || "N/A",
-            ocNo: ocNo || "N/A",
-            courseNo: courseNo || "N/A",
-            transferTo: transferTo || "N/A",
-            reason: reason || "N/A",
-            remark: remark || "N/A",
-            pdfFileName: pdfFile?.[0]?.name ?? "No file selected",
-        };
+  const { ocOptionsQuery, nextCoursesQuery, presignMutation, transferMutation } =
+    useRelegationModule(currentCourseId || null);
 
-        console.log("Relegation Payload:", payload);
-        reset();
+  const ocOptions = ocOptionsQuery.data ?? [];
+  const transferOptions = nextCoursesQuery.data ?? [];
+  const [ocNameSearch, setOcNameSearch] = useState("");
+  const [isOcNameDropdownOpen, setIsOcNameDropdownOpen] = useState(false);
+  const ocNameDropdownRef = useRef<HTMLDivElement>(null);
+
+  const isBusy = presignMutation.isPending || transferMutation.isPending;
+
+  const selectedOc = useMemo(
+    () => ocOptions.find((item) => item.ocId === selectedOcId) ?? null,
+    [ocOptions, selectedOcId]
+  );
+
+  useEffect(() => {
+    setOcNameSearch(selectedOc?.ocName ?? "");
+  }, [selectedOc?.ocName]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        ocNameDropdownRef.current &&
+        !ocNameDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOcNameDropdownOpen(false);
+      }
     };
 
-    return (
-        <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="w-2xl space-y-6 bg-white p-4 rounded-2xl shadow-2xl"
-        >
-            {/* OC Name */}
-            <div className="space-y-2">
-                <Label htmlFor="ocName">Name of the OC</Label>
-                <Input
-                    id="ocName"
-                    placeholder="Enter OC name"
-                    {...register("ocName")}
-                />
-            </div>
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-            {/* OC No */}
-            <div className="space-y-2">
-                <Label htmlFor="ocNo">OC No</Label>
-                <Input
-                    id="ocNo"
-                    placeholder="Enter OC number"
-                    {...register("ocNo")}
-                />
-            </div>
+  const filteredOcOptions = useMemo(() => {
+    const query = ocNameSearch.trim().toLowerCase();
+    const results = query
+      ? ocOptions.filter(
+          (oc) =>
+            oc.ocName.toLowerCase().includes(query) || oc.ocNo.toLowerCase().includes(query)
+        )
+      : ocOptions;
 
-            {/* Course No */}
-            <div className="space-y-2">
-                <Label htmlFor="courseNo">Course No</Label>
-                <Controller
-                    name="courseNo"
-                    control={control}
-                    render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger id="courseNo">
-                                <SelectValue placeholder="Select course number" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="TES-50">TES-50</SelectItem>
-                                <SelectItem value="TES-51">TES-51</SelectItem>
-                                <SelectItem value="TES-52">TES-52</SelectItem>
-                                <SelectItem value="TES-53">TES-53</SelectItem>
-                                <SelectItem value="TES-54">TES-54</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    )}
-                />
-            </div>
+    return results.slice(0, 50);
+  }, [ocNameSearch, ocOptions]);
 
-            {/* Transfer To */}
-            <div className="space-y-2">
-                <Label htmlFor="transferTo">Transfer To</Label>
-                <Controller
-                    name="transferTo"
-                    control={control}
-                    render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger id="transferTo">
-                                <SelectValue placeholder="Select transfer destination" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="TES-50">TES-50</SelectItem>
-                                <SelectItem value="TES-51">TES-51</SelectItem>
-                                <SelectItem value="TES-52">TES-52</SelectItem>
-                                <SelectItem value="TES-53">TES-53</SelectItem>
-                                <SelectItem value="TES-54">TES-54</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    )}
-                />
-            </div>
+  const handleOcSelect = (ocId: string) => {
+    const option = ocOptions.find((item) => item.ocId === ocId);
+    setValue("ocId", ocId, { shouldValidate: true, shouldDirty: true });
+    setValue("transferTo", "", { shouldDirty: true });
 
-            {/* Reason */}
-            <div className="space-y-2">
-                <Label htmlFor="reason">Reason</Label>
-                <Textarea
-                    id="reason"
-                    placeholder="Enter reason"
-                    {...register("reason")}
-                    rows={4}
-                />
-            </div>
+    if (!option) {
+      setValue("ocName", "");
+      setValue("courseNo", "");
+      setValue("currentCourseId", "");
+      return;
+    }
 
-            {/* PDF Upload */}
-            <div className="space-y-2">
-                <Label htmlFor="pdfFile">Choose PDF</Label>
-                <Input
-                    id="pdfFile"
-                    type="file"
-                    accept="application/pdf"
-                    {...register("pdfFile")}
-                />
-            </div>
+    setValue("ocName", option.ocName, { shouldDirty: true });
+    setValue("courseNo", option.currentCourseCode, { shouldDirty: true });
+    setValue("currentCourseId", option.currentCourseId, { shouldDirty: true });
+    setOcNameSearch(option.ocName);
+    setIsOcNameDropdownOpen(false);
+  };
 
-            {/* Remark */}
-            <div className="space-y-2">
-                <Label htmlFor="remark">Remark</Label>
-                <Input
-                    id="remark"
-                    placeholder="Additional remarks"
-                    {...register("remark")}
-                />
-            </div>
+  const onSubmit: SubmitHandler<RelegationFormValues> = async (formData) => {
+    try {
+      let pdfObjectKey: string | null = null;
+      let pdfUrl: string | null = null;
 
-            {/* Submit */}
-            <div className="pt-4 flex justify-center">
-                <Button type="submit">
-                    Submit
-                </Button>
+      const file = formData.pdfFile?.[0];
+      if (file) {
+        const presign = await presignMutation.mutateAsync({
+          fileName: file.name,
+          contentType: "application/pdf",
+          sizeBytes: file.size,
+        });
+
+        const uploadResponse = await fetch(presign.uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/pdf",
+          },
+          body: file,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("PDF upload failed.");
+        }
+
+        pdfObjectKey = presign.objectKey;
+        pdfUrl = presign.publicUrl;
+      }
+
+      const response = await transferMutation.mutateAsync({
+        ocId: formData.ocId,
+        toCourseId: formData.transferTo,
+        reason: formData.reason.trim(),
+        remark: formData.remark?.trim() ? formData.remark.trim() : null,
+        pdfObjectKey,
+        pdfUrl,
+      });
+
+      const transfer = response.transfer;
+      setValue("courseNo", transfer.toCourse.courseCode, { shouldDirty: false });
+      setValue("currentCourseId", transfer.toCourse.courseId, { shouldDirty: false });
+      setValue("transferTo", "", { shouldDirty: false });
+      setValue("reason", "", { shouldDirty: false });
+      setValue("remark", "", { shouldDirty: false });
+      resetField("pdfFile");
+
+      toast.success(
+        `OC ${transfer.oc.ocNo} transferred from ${transfer.fromCourse.courseCode} to ${transfer.toCourse.courseCode}.`
+      );
+    } catch (error) {
+      toast.error(parseApiError(error, "Failed to submit relegation transfer."));
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="w-2xl space-y-6 rounded-2xl border border-border bg-card p-4 shadow-sm"
+    >
+      <div className="space-y-2">
+        <Label htmlFor="ocId">OC No</Label>
+        <Controller
+          name="ocId"
+          control={control}
+          rules={{ required: "OC selection is required" }}
+          render={({ field }) => (
+            <Select
+              value={field.value || undefined}
+              onValueChange={(value) => {
+                field.onChange(value);
+                handleOcSelect(value);
+              }}
+              disabled={ocOptionsQuery.isLoading || isBusy}
+            >
+              <SelectTrigger id="ocId">
+                <SelectValue placeholder="Select OC" />
+              </SelectTrigger>
+              <SelectContent>
+                {ocOptions.map((oc) => (
+                  <SelectItem key={oc.ocId} value={oc.ocId}>
+                    {`${oc.ocNo} | ${oc.ocName} | Active: ${oc.isActive ? "Yes" : "No"}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.ocId ? <p className="text-sm text-destructive">{errors.ocId.message}</p> : null}
+        {ocOptionsQuery.isError ? (
+          <p className="text-sm text-destructive">
+            {parseApiError(ocOptionsQuery.error, "Failed to load OC options.")}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="ocName">Name of the OC</Label>
+        <div ref={ocNameDropdownRef} className="relative">
+          <Input
+            id="ocName"
+            placeholder="Search OC name"
+            value={ocNameSearch}
+            onChange={(event) => {
+              setOcNameSearch(event.target.value);
+              setIsOcNameDropdownOpen(true);
+            }}
+            onFocus={() => setIsOcNameDropdownOpen(true)}
+            disabled={ocOptionsQuery.isLoading || isBusy}
+          />
+          {isOcNameDropdownOpen && (
+            <div className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+              {filteredOcOptions.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-muted-foreground">No OC found.</div>
+              ) : (
+                filteredOcOptions.map((oc) => (
+                  <button
+                    key={oc.ocId}
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                    onClick={() => handleOcSelect(oc.ocId)}
+                  >
+                    <span>{oc.ocName}</span>
+                    <span className="text-xs text-muted-foreground">{`${oc.ocNo} | Active: ${oc.isActive ? "Yes" : "No"}`}</span>
+                  </button>
+                ))
+              )}
             </div>
-        </form>
-    );
+          )}
+        </div>
+        <input type="hidden" {...register("ocName")} />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="courseNo">Course No</Label>
+        <Input id="courseNo" placeholder="Auto-filled from OC selection" {...register("courseNo")} disabled />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="transferTo">Transfer To</Label>
+        <Controller
+          name="transferTo"
+          control={control}
+          rules={{ required: "Transfer course is required" }}
+          render={({ field }) => (
+            <Select
+              value={field.value || undefined}
+              onValueChange={field.onChange}
+              disabled={!selectedOc || nextCoursesQuery.isLoading || isBusy}
+            >
+              <SelectTrigger id="transferTo">
+                <SelectValue placeholder="Select immediate next course" />
+              </SelectTrigger>
+              <SelectContent>
+                {transferOptions.map((course) => (
+                  <SelectItem key={course.courseId} value={course.courseId}>
+                    {`${course.courseCode} | ${course.courseName}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.transferTo ? (
+          <p className="text-sm text-destructive">{errors.transferTo.message}</p>
+        ) : null}
+        {selectedOc && !nextCoursesQuery.isLoading && transferOptions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No immediate next course is available from {selectedOc.currentCourseCode}.
+          </p>
+        ) : null}
+        {nextCoursesQuery.isError ? (
+          <p className="text-sm text-destructive">
+            {parseApiError(nextCoursesQuery.error, "Failed to load transfer options.")}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="reason">Reason</Label>
+        <Textarea
+          id="reason"
+          placeholder="Enter reason"
+          rows={4}
+          {...register("reason", {
+            required: "Reason is required",
+            minLength: {
+              value: 2,
+              message: "Reason is required",
+            },
+          })}
+          disabled={isBusy}
+        />
+        {errors.reason ? <p className="text-sm text-destructive">{errors.reason.message}</p> : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="pdfFile">Choose PDF</Label>
+        <Input
+          id="pdfFile"
+          type="file"
+          accept="application/pdf"
+          {...register("pdfFile")}
+          disabled={isBusy}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="remark">Remark</Label>
+        <Input
+          id="remark"
+          placeholder="Additional remarks"
+          {...register("remark")}
+          disabled={isBusy}
+        />
+      </div>
+
+      <input type="hidden" {...register("currentCourseId")} />
+
+      <div className="flex justify-center pt-4">
+        <Button type="submit" disabled={isBusy || !selectedOc}>
+          {isBusy ? "Submitting..." : "Submit"}
+        </Button>
+      </div>
+    </form>
+  );
 }

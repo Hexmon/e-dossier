@@ -67,7 +67,8 @@ async function POSTHandler(req: AuditNextRequest) {
         });
         return json.created({ message: 'Course created successfully.', course: row });
     } catch (err: any) {
-        if (err?.code === '23505') return json.conflict('Course code already exists.');
+        const pgCode = err?.code ?? err?.cause?.code;
+        if (pgCode === '23505') return json.conflict('Course code already exists.');
         return handleApiError(err);
     }
 }
