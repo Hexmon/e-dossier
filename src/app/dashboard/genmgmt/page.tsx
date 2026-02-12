@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Settings } from "lucide-react";
 
 import { AppSidebar } from "@/components/AppSidebar";
@@ -16,27 +16,44 @@ import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { DashboardCard } from "@/components/cards/DashboardCard";
 import CourseSelectModal from "@/components/modals/CourseSelectModal";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 export default function GeneralManagementPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [courseModalOpen, setCourseModalOpen] = useState(false);
+  const offeringsParam = searchParams.get("offerings");
+  const tabValues = managementTabs.map((tab) => tab.value);
+  const tabParam = searchParams.get("tab");
+  const activeTab = tabParam && tabValues.includes(tabParam) ? tabParam : "Gen Mgmt";
+  const activeTabLabel =
+    managementTabs.find((tab) => tab.value === activeTab)?.title ?? "Admin Management";
+
+  const updateTab = (value: string) => {
+    if (value === activeTab) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const withTab = (href: string, tab: string) => {
+    const [path, query = ""] = href.split("?");
+    const params = new URLSearchParams(query);
+    params.set("tab", tab);
+    const queryString = params.toString();
+    return queryString ? `${path}?${queryString}` : path;
+  };
 
   const handleLogout = () => {
     console.log("Logout clicked");
   };
 
-  const handleCardClick = (to: string, title: string, e?: React.MouseEvent) => {
-    // Check if this is the Offerings Management card
-    if (title === "Offerings Management") {
-      if (e) e.preventDefault();
+  useEffect(() => {
+    if (offeringsParam) {
       setCourseModalOpen(true);
-    } else {
-      router.push(to);
     }
-  };
+  }, [offeringsParam]);
 
   return (
     <SidebarProvider>
@@ -57,7 +74,7 @@ export default function GeneralManagementPage() {
               <BreadcrumbNav
                 paths={[
                   { label: "Dashboard", href: "/dashboard" },
-                  { label: "Admin Mgmt" },
+                  { label: activeTabLabel },
                 ]}
               />
             </nav>
@@ -72,49 +89,30 @@ export default function GeneralManagementPage() {
             </div>
 
             {/* Tabs Section */}
-            <GlobalTabs defaultValue="Gen Mgmt" tabs={managementTabs}>
+            <GlobalTabs
+              defaultValue="Gen Mgmt"
+              value={activeTab}
+              onValueChange={updateTab}
+              tabs={managementTabs}
+            >
               {/* General Management Tab */}
               <TabsContent value="Gen Mgmt" className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
                   {managementCard.map((card, index) => {
                     const IconComponent = card.icon;
                     const { title = "", description = "", to = "", color = "" } = card;
-
-                    if (title === "Offerings Management") {
-                      return (
-                        <Card
-                          key={index}
-                          className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4"
-                          style={{ borderLeftColor: color }}
-                          onClick={() => setCourseModalOpen(true)}
-                        >
-                          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                            <div className={`${color} p-2 rounded-lg`}>
-                              <IconComponent className="h-5 w-5 text-white" />
-                            </div>
-                            <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-
-                          </CardHeader>
-                          <CardContent>
-                            <p className="text-sm text-muted-foreground">{description}</p>
-                          </CardContent>
-                          <CardFooter>
-                            <Button variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
-                              Access Module →
-                            </Button>
-                          </CardFooter>
-                        </Card>
-                      );
-                    }
+                    const isOfferings = title === "Offerings Management";
+                    const tabbedTo = to ? withTab(to, activeTab) : to;
 
                     return (
                       <DashboardCard
                         key={index}
                         title={title}
                         description={description}
-                        to={to}
+                        to={isOfferings ? undefined : tabbedTo}
                         icon={IconComponent}
                         color={color}
+                        onClick={isOfferings ? () => setCourseModalOpen(true) : undefined}
                       />
                     );
                   })}
@@ -126,12 +124,13 @@ export default function GeneralManagementPage() {
                   {moduleManagementCard.map((card, index) => {
                     const IconComponent = card.icon;
 
+                    const tabbedTo = card.to ? withTab(card.to, activeTab) : card.to;
                     return (
                       <DashboardCard
                         key={index}
                         title={card.title}
                         description={card.description}
-                        to={card.to}
+                        to={tabbedTo}
                         icon={IconComponent}
                         color={card.color}
                       />
@@ -161,7 +160,9 @@ export default function GeneralManagementPage() {
       <CourseSelectModal
         open={courseModalOpen}
         onOpenChange={setCourseModalOpen}
-        onSelect={(course) => router.push(`/dashboard/genmgmt/coursemgmt/${course.id}/offerings`)}
+        onSelect={(course) =>
+          router.push(withTab(`/dashboard/genmgmt/coursemgmt/${course.id}/offerings`, activeTab))
+        }
       />
     </SidebarProvider>
   );
