@@ -65,11 +65,11 @@ export default function PTAttemptsTable({
                                     <td className="p-4">{attempt.label}</td>
                                     <td className="text-center p-4">
                                         {attempt.isCompensatory ? (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning-foreground">
                                                 Yes
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                                                 No
                                             </span>
                                         )}
@@ -78,8 +78,8 @@ export default function PTAttemptsTable({
                                     <td className="text-center p-4">
                                         <span
                                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${attempt.isActive
-                                                    ? "bg-green-100 text-green-800"
-                                                    : "bg-gray-100 text-gray-800"
+                                                    ? "bg-success/15 text-success"
+                                                    : "bg-muted/70 text-foreground"
                                                 }`}
                                         >
                                             {attempt.isActive ? "Active" : "Inactive"}
@@ -91,7 +91,7 @@ export default function PTAttemptsTable({
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => onManageGrades(index)}
-                                                className="h-8 px-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                                className="h-8 px-2 text-info hover:text-info hover:bg-info/10"
                                                 title="Manage Grades"
                                             >
                                                 <Award className="h-4 w-4 mr-1" />
@@ -109,7 +109,7 @@ export default function PTAttemptsTable({
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => onDelete(attempt.id)}
-                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

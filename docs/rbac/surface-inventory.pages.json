@@ -1,0 +1,318 @@
+{
+  "generatedAt": "2026-02-11T20:29:53.421Z",
+  "filesScanned": 52,
+  "pages": [
+    {
+      "route": "/dashboard",
+      "file": "src/app/dashboard/page.tsx",
+      "category": "dashboard",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt",
+      "file": "src/app/dashboard/[id]/milmgmt/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/academics",
+      "file": "src/app/dashboard/[id]/milmgmt/academics/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/background-detls",
+      "file": "src/app/dashboard/[id]/milmgmt/background-detls/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/camps",
+      "file": "src/app/dashboard/[id]/milmgmt/camps/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/club-detls",
+      "file": "src/app/dashboard/[id]/milmgmt/club-detls/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/comn-parents",
+      "file": "src/app/dashboard/[id]/milmgmt/comn-parents/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/counselling",
+      "file": "src/app/dashboard/[id]/milmgmt/counselling/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/credit-excellence",
+      "file": "src/app/dashboard/[id]/milmgmt/credit-excellence/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/detention",
+      "file": "src/app/dashboard/[id]/milmgmt/detention/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/discip-records",
+      "file": "src/app/dashboard/[id]/milmgmt/discip-records/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/dossier-filling",
+      "file": "src/app/dashboard/[id]/milmgmt/dossier-filling/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/dossier-insp",
+      "file": "src/app/dashboard/[id]/milmgmt/dossier-insp/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/dossier-snapshot",
+      "file": "src/app/dashboard/[id]/milmgmt/dossier-snapshot/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/final-performance",
+      "file": "src/app/dashboard/[id]/milmgmt/final-performance/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/hikes",
+      "file": "src/app/dashboard/[id]/milmgmt/hikes/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/initial-interview",
+      "file": "src/app/dashboard/[id]/milmgmt/initial-interview/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/interview-term",
+      "file": "src/app/dashboard/[id]/milmgmt/interview-term/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/leave-record",
+      "file": "src/app/dashboard/[id]/milmgmt/leave-record/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/med-record",
+      "file": "src/app/dashboard/[id]/milmgmt/med-record/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/obstacle-trg",
+      "file": "src/app/dashboard/[id]/milmgmt/obstacle-trg/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/olq-assessment",
+      "file": "src/app/dashboard/[id]/milmgmt/olq-assessment/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/overall-assessment",
+      "file": "src/app/dashboard/[id]/milmgmt/overall-assessment/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/performance-graph",
+      "file": "src/app/dashboard/[id]/milmgmt/performance-graph/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/pers-particulars",
+      "file": "src/app/dashboard/[id]/milmgmt/pers-particulars/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/physical-training",
+      "file": "src/app/dashboard/[id]/milmgmt/physical-training/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/semester-record",
+      "file": "src/app/dashboard/[id]/milmgmt/semester-record/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/speed-march",
+      "file": "src/app/dashboard/[id]/milmgmt/speed-march/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/sports-awards",
+      "file": "src/app/dashboard/[id]/milmgmt/sports-awards/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/ssb-reports",
+      "file": "src/app/dashboard/[id]/milmgmt/ssb-reports/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/:id/milmgmt/wpn-trg",
+      "file": "src/app/dashboard/[id]/milmgmt/wpn-trg/page.tsx",
+      "category": ":id",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/audit-logs",
+      "file": "src/app/dashboard/audit-logs/page.tsx",
+      "category": "audit-logs",
+      "isAdminBaseline": false
+    },
+    {
+      "route": "/dashboard/genmgmt",
+      "file": "src/app/dashboard/genmgmt/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/appointmentmgmt",
+      "file": "src/app/dashboard/genmgmt/appointmentmgmt/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/approvalmgmt",
+      "file": "src/app/dashboard/genmgmt/approvalmgmt/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/camps",
+      "file": "src/app/dashboard/genmgmt/camps/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/coursemgmt",
+      "file": "src/app/dashboard/genmgmt/coursemgmt/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/coursemgmt/:courseId/offerings",
+      "file": "src/app/dashboard/genmgmt/coursemgmt/[courseId]/offerings/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/discipline-records",
+      "file": "src/app/dashboard/genmgmt/discipline-records/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/instructors",
+      "file": "src/app/dashboard/genmgmt/instructors/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/interviews-mgmt",
+      "file": "src/app/dashboard/genmgmt/interviews-mgmt/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/interviews-mgmt/:id",
+      "file": "src/app/dashboard/genmgmt/interviews-mgmt/[id]/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/ocmgmt",
+      "file": "src/app/dashboard/genmgmt/ocmgmt/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/platoon-management",
+      "file": "src/app/dashboard/genmgmt/platoon-management/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/pt-mgmt",
+      "file": "src/app/dashboard/genmgmt/pt-mgmt/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/punishments",
+      "file": "src/app/dashboard/genmgmt/punishments/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/rbac",
+      "file": "src/app/dashboard/genmgmt/rbac/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/relegation",
+      "file": "src/app/dashboard/genmgmt/relegation/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/subjectmgmt",
+      "file": "src/app/dashboard/genmgmt/subjectmgmt/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/genmgmt/usersmgmt",
+      "file": "src/app/dashboard/genmgmt/usersmgmt/page.tsx",
+      "category": "genmgmt",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/manage-marks",
+      "file": "src/app/dashboard/manage-marks/page.tsx",
+      "category": "manage-marks",
+      "isAdminBaseline": true
+    },
+    {
+      "route": "/dashboard/reports",
+      "file": "src/app/dashboard/reports/page.tsx",
+      "category": "reports",
+      "isAdminBaseline": false
+    }
+  ]
+}

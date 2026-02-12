@@ -207,7 +207,7 @@ export function AppointmentTable({
                       </SelectItem>
                     ))
                   ) : (
-                    <div className="p-2 text-sm text-gray-500">
+                    <div className="p-2 text-sm text-muted-foreground">
                       No users available
                     </div>
                   )}

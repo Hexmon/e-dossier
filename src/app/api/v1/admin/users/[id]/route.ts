@@ -1,4 +1,7 @@
 import { db } from '@/app/db/client';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { users } from '@/app/db/schema/auth/users';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
@@ -301,8 +304,8 @@ async function DELETEHandler(
     return handleApiError(err);
   }
 }
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const PATCH = withAuditRoute('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
 
-export const DELETE = withAuditRoute('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

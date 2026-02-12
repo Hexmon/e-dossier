@@ -29,7 +29,7 @@ export default function SportsGamesTable({
 
             <div className="overflow-x-auto border rounded-lg shadow">
                 <table className="w-full border-collapse text-sm">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
                             <th className="p-2 border text-center font-semibold">Games / Awards</th>
                             {!hideStringAndMaxMarks && (
@@ -43,7 +43,7 @@ export default function SportsGamesTable({
                     </thead>
                     <tbody>
                         {rows.map((row, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
+                            <tr key={index} className="hover:bg-muted/40">
                                 <td className="p-2 border">
                                     {row.activity ?? "-"}
                                 </td>

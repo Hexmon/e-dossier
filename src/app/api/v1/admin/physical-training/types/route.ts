@@ -1,4 +1,7 @@
 import { json, handleApiError } from '@/app/lib/http';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTypeCreateSchema, ptTypeQuerySchema } from '@/app/lib/physical-training-validators';
 import { listPtTypes, createPtType } from '@/app/db/queries/physicalTraining';
@@ -55,5 +58,5 @@ async function POSTHandler(req: AuditNextRequest) {
     }
 }
 
-export const GET = withAuditRoute('GET', GETHandler);
-export const POST = withAuditRoute('POST', POSTHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

@@ -78,7 +78,7 @@ export default function DossierTab({
                       <Link
                         key={title}
                         href={href}
-                        className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 w-full"
+                        className="flex items-center gap-2 px-4 py-2 hover:bg-primary/10 w-full"
                       >
                         <Icon className={`h-4 w-4 ${color}`} />
                         <span>{title}</span>
@@ -102,7 +102,7 @@ export default function DossierTab({
             <Link key={value} href={link} className="text-center hover:text-primary">
               <TabsTrigger
                 value={value}
-                className="relative flex items-center gap-2 border border-gray-300 data-[state=inactive]:bg-blue-100 text-blue-700 data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2 transition-colors w-full dropdown-tab-trigger"
+                className="relative flex items-center gap-2 border border-border data-[state=inactive]:bg-primary/10 text-primary data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2 transition-colors w-full dropdown-tab-trigger"
                 onClick={handleClick}
               >
                 {TriggerContent}
@@ -112,7 +112,7 @@ export default function DossierTab({
             <TabsTrigger
               key={value}
               value={value}
-              className="relative flex items-center gap-2 border border-gray-300 data-[state=inactive]:bg-blue-100 text-blue-700 data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2 transition-colors w-full dropdown-tab-trigger"
+              className="relative flex items-center gap-2 border border-border data-[state=inactive]:bg-primary/10 text-primary data-[state=active]:bg-white data-[state=active]:border-primary rounded-md px-3 py-2 transition-colors w-full dropdown-tab-trigger"
               onClick={handleClick}
             >
               {TriggerContent}

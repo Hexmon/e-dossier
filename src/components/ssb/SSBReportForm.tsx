@@ -184,7 +184,7 @@ export function SSBReportForm({
             <div className="rounded-2xl shadow-lg bg-white px-5 py-5">
 
                 {isEditing && (
-                    <div className="text-xs text-gray-500 text-right mb-4">
+                    <div className="text-xs text-muted-foreground text-right mb-4">
                         ✓ Changes are saved automatically
                     </div>
                 )}
@@ -217,7 +217,7 @@ export function SSBReportForm({
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="hover:bg-[#40ba4d] hover:text-white"
+                                className="hover:bg-success hover:text-primary-foreground"
                                 size="sm"
                                 disabled={!isEditing}
                                 onClick={() => addPositive({ trait: "" })}
@@ -271,7 +271,7 @@ export function SSBReportForm({
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="hover:bg-[#40ba4d] hover:text-white"
+                                className="hover:bg-success hover:text-primary-foreground"
                                 size="sm"
                                 disabled={!isEditing}
                                 onClick={() => addNegative({ trait: "" })}
@@ -337,7 +337,7 @@ export function SSBReportForm({
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="hover:bg-destructive hover:text-white"
+                                className="hover:bg-destructive hover:text-primary-foreground"
                                 onClick={handleCancel}
                             >
                                 Cancel
@@ -353,7 +353,7 @@ export function SSBReportForm({
                                 </Button>
                             )}
 
-                            <Button type="submit" className="bg-[#40ba4d]">
+                            <Button type="submit" className="bg-success">
                                 Save
                             </Button>
                         </>

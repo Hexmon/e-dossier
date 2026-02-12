@@ -1,4 +1,7 @@
 import { db } from '@/app/db/client';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { ocDiscipline, ocCadets } from '@/app/db/schema/training/oc';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
@@ -47,4 +50,4 @@ async function GETHandler(req: AuditNextRequest) {
     }
 }
 
-export const GET = withAuditRoute('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));

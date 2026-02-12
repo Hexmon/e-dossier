@@ -39,7 +39,7 @@ export default function ClubForm({
                         {...register(`clubRows.${index}.semester` as const)}
                         readOnly
                         disabled
-                        className="bg-gray-100 cursor-not-allowed"
+                        className="bg-muted/70 cursor-not-allowed"
                     />
                 </>
             )
@@ -109,7 +109,7 @@ export default function ClubForm({
                 <div className="flex justify-center mt-4">
                     <Button
                         type="button"
-                        className="bg-blue-600 text-white"
+                        className="bg-primary text-primary-foreground"
                         onClick={onEdit}
                     >
                         Edit Club
@@ -117,7 +117,7 @@ export default function ClubForm({
                 </div>
             ) : (
                 <div className="flex justify-center gap-4 mt-6">
-                    <Button type="submit" className="bg-blue-600 text-white">
+                    <Button type="submit" className="bg-primary text-primary-foreground">
                         Save Club
                     </Button>
                     <Button

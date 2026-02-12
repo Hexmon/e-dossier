@@ -37,6 +37,20 @@ export async function getAllUsers(): Promise<User[]> {
     return response.items;
 }
 
+export async function getUsersByQuery(q: string, limit: number = 100): Promise<User[]> {
+    const query = q.trim();
+    if (!query) return [];
+
+    const response = await api.get<GetUsersResponse>(endpoints.admin.users, {
+        baseURL,
+        query: {
+            q: query,
+            limit: String(limit),
+        },
+    });
+    return response.items;
+}
+
 /* ============================================================
     Add or Edit User
 ============================================================ */
@@ -66,4 +80,29 @@ export async function saveUser(user: User): Promise<User> {
 ============================================================ */
 export async function deleteUser(id: string): Promise<void> {
     await api.delete(`${endpoints.admin.users}/${id}`, { baseURL });
+}
+
+/**
+ * Search users for dropdowns.
+ * GET /api/v1/admin/users?q=QUERY&isActive=true
+ */
+export async function searchUsers(
+    query: string,
+    scopeType?: string,
+    limit: number = 20
+): Promise<User[]> {
+    const q = query.trim();
+    if (!q) return [];
+
+    const queryParams: Record<string, string> = {
+        q,
+        isActive: "true",
+        limit: String(limit),
+    };
+    if (scopeType) queryParams.scopeType = scopeType;
+    const response = await api.get<{ items: User[]; count: number }>(
+        endpoints.admin.users,
+        { baseURL, query: queryParams }
+    );
+    return response.items;
 }

@@ -88,7 +88,7 @@ export default function DynamicSemesterTable({
 
     if (rows.length === 0) {
         return (
-            <div className="p-4 text-center text-gray-500">
+            <div className="p-4 text-center text-muted-foreground">
                 No subjects found for Semester {semester}
             </div>
         );

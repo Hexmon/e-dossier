@@ -53,7 +53,7 @@ export default function ActivitiesList({
                     {activities.map((activity) => (
                         <div
                             key={activity.id}
-                            className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-blue-200 transition-colors"
+                            className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-primary/20 transition-colors"
                         >
                             <div className="flex-1 min-w-0">
                                 <div className="text-sm font-medium truncate">
@@ -89,4 +89,3 @@ export default function ActivitiesList({
         </div>
     );
 }
-

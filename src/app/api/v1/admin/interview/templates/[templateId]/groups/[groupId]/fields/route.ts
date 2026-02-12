@@ -1,4 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewGroupParam, interviewFieldCreateSchema, interviewFieldQuerySchema } from '@/app/lib/interview-template-validators';
 import {
@@ -74,5 +77,5 @@ async function POSTHandler(
     }
 }
 
-export const GET = withAuditRoute('GET', GETHandler);
-export const POST = withAuditRoute('POST', POSTHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

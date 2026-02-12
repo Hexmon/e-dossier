@@ -1,4 +1,7 @@
 import { db } from '@/app/db/client';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { ocDiscipline } from '@/app/db/schema/training/oc';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
@@ -91,5 +94,5 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     }
 }
 
-export const PATCH = withAuditRoute('PATCH', PATCHHandler);
-export const DELETE = withAuditRoute('DELETE', DELETEHandler);
+export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

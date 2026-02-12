@@ -1,4 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewFieldParam, interviewFieldUpdateSchema } from '@/app/lib/interview-template-validators';
 import { getInterviewTemplateField, updateInterviewTemplateField, deleteInterviewTemplateField } from '@/app/db/queries/interviewTemplates';
@@ -90,6 +93,6 @@ async function DELETEHandler(
     }
 }
 
-export const GET = withAuditRoute('GET', GETHandler);
-export const PATCH = withAuditRoute('PATCH', PATCHHandler);
-export const DELETE = withAuditRoute('DELETE', DELETEHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

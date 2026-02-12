@@ -265,7 +265,7 @@ export default function OCManagementPage() {
                   <h2 className="text-2xl font-bold text-foreground">OCs</h2>
 
                   <div className="flex gap-2">
-                    <Button className="bg-[#40ba4d] cursor-pointer" onClick={handleAdd}>
+                    <Button className="bg-success cursor-pointer" onClick={handleAdd}>
                       Add OC
                     </Button>
 
@@ -325,11 +325,11 @@ export default function OCManagementPage() {
                     {(platoonFilter || branchFilter || courseFilter || statusFilter || search) && (
                       <div className="text-xs text-muted-foreground flex gap-2 items-center">
                         <span>Active filters:</span>
-                        {search && <span className="bg-blue-100 px-2 py-1 rounded">Search: {search}</span>}
-                        {courseFilter && <span className="bg-blue-100 px-2 py-1 rounded">Course</span>}
-                        {platoonFilter && <span className="bg-blue-100 px-2 py-1 rounded">Platoon</span>}
-                        {branchFilter && <span className="bg-blue-100 px-2 py-1 rounded">Branch: {branchFilter}</span>}
-                        {statusFilter && <span className="bg-blue-100 px-2 py-1 rounded">Status: {statusFilter}</span>}
+                        {search && <span className="bg-primary/10 px-2 py-1 rounded">Search: {search}</span>}
+                        {courseFilter && <span className="bg-primary/10 px-2 py-1 rounded">Course</span>}
+                        {platoonFilter && <span className="bg-primary/10 px-2 py-1 rounded">Platoon</span>}
+                        {branchFilter && <span className="bg-primary/10 px-2 py-1 rounded">Branch: {branchFilter}</span>}
+                        {statusFilter && <span className="bg-primary/10 px-2 py-1 rounded">Status: {statusFilter}</span>}
                         <Button
                           variant="ghost"
                           size="sm"

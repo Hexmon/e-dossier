@@ -57,10 +57,10 @@ export default function DetentionForm({
             {/* Saved Table */}
             <div className="overflow-x-auto border rounded-lg shadow mb-6">
                 {savedRows.length === 0 ? (
-                    <p className="text-center p-4 text-gray-500">No detention records.</p>
+                    <p className="text-center p-4 text-muted-foreground">No detention records.</p>
                 ) : (
                     <table className="w-full border text-sm">
-                        <thead className="bg-gray-100">
+                        <thead className="bg-muted/70">
                             <tr>
                                 <th className="p-2 border text-center">S No</th>
                                 <th className="p-2 border">Reason</th>
@@ -150,7 +150,7 @@ export default function DetentionForm({
             {/* New entries */}
             <form onSubmit={onSubmit}>
                 <table className="w-full border text-sm">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                         <tr>
                             <th className="p-2 border">S No</th>
                             <th className="p-2 border">Reason</th>
@@ -204,7 +204,7 @@ export default function DetentionForm({
                         + Add Row
                     </Button>
 
-                    <Button type="submit" className="bg-green-600">Submit</Button>
+                    <Button type="submit" className="bg-success">Submit</Button>
                     <Button type="button" variant="outline" onClick={onReset}>
                         Reset
                     </Button>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings } from "lucide-react";
+import Link from "next/link";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import {
@@ -18,25 +18,51 @@ import { DashboardCard } from "@/components/cards/DashboardCard";
 import CourseSelectModal from "@/components/modals/CourseSelectModal";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useMe } from "@/hooks/useMe";
+import { resolvePageAction } from "@/app/lib/acx/action-map";
+import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
+import { deriveSidebarRoleGroup } from "@/lib/sidebar-visibility";
+import { resolveToneClasses, type ColorTone } from "@/lib/theme-color";
 
 export default function GeneralManagementPage() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
   const [courseModalOpen, setCourseModalOpen] = useState(false);
+  const { data: meData, isLoading: meLoading } = useMe();
+  const authzV2Enabled = isAuthzV2Enabled();
 
-  const handleLogout = () => {
-    console.log("Logout clicked");
-  };
+  const hasPageAccess = useMemo(() => {
+    if (!authzV2Enabled) return true;
+    if (meLoading) return true;
 
-  const handleCardClick = (to: string, title: string, e?: React.MouseEvent) => {
-    // Check if this is the Offerings Management card
-    if (title === "Offerings Management") {
-      if (e) e.preventDefault();
-      setCourseModalOpen(true);
-    } else {
-      router.push(to);
+    const page = resolvePageAction("/dashboard/genmgmt");
+    if (!page) return true;
+
+    const roles = (meData?.roles ?? []).map((role) => String(role).toUpperCase());
+    const permissions = new Set<string>((meData?.permissions ?? []) as string[]);
+
+    if (roles.includes("SUPER_ADMIN")) return true;
+    if (roles.includes("ADMIN") && page.adminBaseline) return true;
+    if (permissions.has("*")) return true;
+    return permissions.has(page.action);
+  }, [authzV2Enabled, meData?.permissions, meData?.roles, meLoading]);
+
+  const roleGroup = useMemo(() => {
+    return deriveSidebarRoleGroup({
+      roles: meData?.roles ?? [],
+      position: meData?.apt?.position ?? null,
+    });
+  }, [meData?.apt?.position, meData?.roles]);
+
+  useEffect(() => {
+    if (!authzV2Enabled || meLoading) return;
+    if (!hasPageAccess) {
+      router.replace("/dashboard");
     }
-  };
+  }, [authzV2Enabled, hasPageAccess, meLoading, router]);
+
+  if (authzV2Enabled && !meLoading && !hasPageAccess) {
+    return null;
+  }
 
   return (
     <SidebarProvider>
@@ -63,7 +89,7 @@ export default function GeneralManagementPage() {
             </nav>
             {/* Welcome section */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-[#1677ff] mb-2">
+              <h2 className="text-2xl font-bold text-primary mb-2">
                 Admin Management
               </h2>
               <p className="text-muted-foreground">
@@ -78,19 +104,22 @@ export default function GeneralManagementPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
                   {managementCard.map((card, index) => {
                     const IconComponent = card.icon;
-                    const { title = "", description = "", to = "", color = "" } = card;
+                    const title = card.title ?? "";
+                    const description = card.description ?? "";
+                    const to = card.to ?? "";
+                    const color = card.color as ColorTone;
+                    const iconTone = resolveToneClasses(color, "icon");
 
                     if (title === "Offerings Management") {
                       return (
                         <Card
                           key={index}
-                          className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4"
-                          style={{ borderLeftColor: color }}
+                          className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-l-4 border-l-primary"
                           onClick={() => setCourseModalOpen(true)}
                         >
                           <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                            <div className={`${color} p-2 rounded-lg`}>
-                              <IconComponent className="h-5 w-5 text-white" />
+                            <div className={`${iconTone} p-2 rounded-lg`}>
+                              <IconComponent className="h-5 w-5" />
                             </div>
                             <CardTitle className="text-lg font-semibold">{title}</CardTitle>
 
@@ -99,7 +128,7 @@ export default function GeneralManagementPage() {
                             <p className="text-sm text-muted-foreground">{description}</p>
                           </CardContent>
                           <CardFooter>
-                            <Button variant="outline" size="sm" className="w-full border border-blue-700 cursor-pointer">
+                            <Button variant="outline" size="sm" className="w-full border-border cursor-pointer">
                               Access Module →
                             </Button>
                           </CardFooter>
@@ -133,7 +162,7 @@ export default function GeneralManagementPage() {
                         description={card.description}
                         to={card.to}
                         icon={IconComponent}
-                        color={card.color}
+                        color={card.color as ColorTone}
                       />
                     );
                   })}
@@ -142,14 +171,60 @@ export default function GeneralManagementPage() {
 
               {/* Settings Tab */}
               <TabsContent value="settings" className="space-y-6">
-                <div className="text-center py-12">
-                  <Settings className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Coming Soon
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Settings module is under development and will be available soon.
-                  </p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Admin Site Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Manage landing page content including logo, hero text, commanders, awards, and history.
+                      </p>
+                    </CardContent>
+                    <CardFooter>
+                      <Button asChild className="w-full">
+                        <Link href="/dashboard/genmgmt/settings/site">Open Site Settings</Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Device Site Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Configure theme, language, timezone, refresh interval, and layout density per device.
+                      </p>
+                    </CardContent>
+                    <CardFooter>
+                      <Button asChild className="w-full">
+                        <Link href="/dashboard/settings/device">Open Device Settings</Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Permission Management</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Manage roles, permissions, mappings, and field-level rules for user access control.
+                      </p>
+                    </CardContent>
+                    <CardFooter>
+                      {roleGroup === "ADMIN" || roleGroup === "SUPER_ADMIN" ? (
+                        <Button asChild className="w-full">
+                          <Link href="/dashboard/genmgmt/rbac">Open RBAC Management</Link>
+                        </Button>
+                      ) : (
+                        <Button disabled className="w-full">
+                          Restricted
+                        </Button>
+                      )}
+                    </CardFooter>
+                  </Card>
                 </div>
               </TabsContent>
             </GlobalTabs>

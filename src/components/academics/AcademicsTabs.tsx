@@ -46,8 +46,8 @@ export default function AcademicsTabs({ ocId, courseId }: AcademicsTabsProps) {
                                 key={term}
                                 onClick={() => setSelectedTerm(term)}
                                 className={`px-4 py-2 rounded-t-lg ${isActive
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-gray-200 text-gray-700"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-foreground"
                                     }`}
                             >
                                 {`TERM ${label}`}
@@ -62,8 +62,8 @@ export default function AcademicsTabs({ ocId, courseId }: AcademicsTabsProps) {
                         <button
                             onClick={() => setSubTab(prev => ({ ...prev, [selectedTerm]: "mech" }))}
                             className={`px-3 py-2 rounded ${subTab[selectedTerm] === "mech"
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-100"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted/70"
                                 }`}
                         >
                             Mech Engg / Elect Engg
@@ -75,8 +75,8 @@ export default function AcademicsTabs({ ocId, courseId }: AcademicsTabsProps) {
                                 [selectedTerm]: selectedTerm === 5 ? "tech" : "mini"
                             }))}
                             className={`px-3 py-2 rounded ml-2 ${subTab[selectedTerm] === (selectedTerm === 5 ? "tech" : "mini")
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-100"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted/70"
                                 }`}
                         >
                             {selectedTerm === 5 ? "Tech Seminar" : "Mini Project"}

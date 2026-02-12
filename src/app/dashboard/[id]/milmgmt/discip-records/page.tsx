@@ -1,9 +1,10 @@
 //DisciplineRecordsPage
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -22,7 +23,6 @@ import {
 
 import { Shield, ChevronDown, Link } from "lucide-react";
 
-import { useOcPersonal } from "@/hooks/useOcPersonal";
 import { semesters as SEMESTERS_CONST } from "@/constants/app.constants";
 
 import type { DisciplineForm as DisciplineFormType, DisciplineRow } from "@/types/dicp-records";
@@ -30,6 +30,7 @@ import { useDisciplineRecords } from "@/hooks/useDisciplineRecords";
 import DisciplineTable from "@/components/discipline/DisciplineTable";
 import DisciplineForm from "@/components/discipline/DisciplineForm";
 import { useOcDetails } from "@/hooks/useOcDetails";
+import { getAppointments } from "@/app/lib/api/appointmentApi";
 
 import type { RootState } from "@/store";
 import { clearDisciplineForm } from "@/store/slices/disciplineRecordsSlice";
@@ -73,13 +74,45 @@ export default function DisciplineRecordsPage() {
     const {
         groupedBySemester,
         loading,
-        fetchAll,
         saveRecords,
         updateRecord,
         deleteRecord,
     } = useDisciplineRecords(ocId, semesters.length);
 
     const [activeTab, setActiveTab] = useState<number>(0);
+
+    const { data: appointmentOptions = [], isLoading: appointmentsLoading } = useQuery({
+        queryKey: ["discipline-awarded-by-options"],
+        queryFn: async () => {
+            try {
+                const appointments = await getAppointments();
+                const uniqueByUser = new Map<string, string>();
+
+                for (const appt of appointments) {
+                    const username = (appt.username || "").trim();
+                    if (!username) continue;
+
+                    if (!uniqueByUser.has(username)) {
+                        const position = (appt.positionName || "").trim();
+                        const platoon = (appt.platoonName || "").trim();
+                        const label = [username, position ? `- ${position}` : "", platoon ? `(${platoon})` : ""]
+                            .filter(Boolean)
+                            .join(" ")
+                            .trim();
+                        uniqueByUser.set(username, label || username);
+                    }
+                }
+
+                return Array.from(uniqueByUser.entries())
+                    .map(([value, label]) => ({ value, label }))
+                    .sort((a, b) => a.label.localeCompare(b.label));
+            } catch {
+                toast.error("Failed to load appointments for awarder dropdown");
+                return [];
+            }
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
     // React Query handles fetching automatically, no need for manual fetchAll
     // The query will run when ocId changes due to the enabled flag in the hook
@@ -244,8 +277,8 @@ export default function DisciplineRecordsPage() {
                                                 type="button"
                                                 onClick={() => setActiveTab(index)}
                                                 className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === index
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-gray-200 text-gray-700"
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "bg-muted text-foreground"
                                                     }`}
                                             >
                                                 {sem}
@@ -257,6 +290,8 @@ export default function DisciplineRecordsPage() {
                                 <DisciplineTable
                                     rows={groupedBySemester[activeTab]}
                                     loading={loading}
+                                    appointmentOptions={appointmentOptions}
+                                    appointmentsLoading={appointmentsLoading}
                                     onEditSave={handleUpdate}
                                     onDelete={handleDelete}
                                 />
@@ -267,6 +302,8 @@ export default function DisciplineRecordsPage() {
                                         onSubmit={handleSubmit}
                                         defaultValues={getDefaultValues()}
                                         ocId={ocId}
+                                        appointmentOptions={appointmentOptions}
+                                        appointmentsLoading={appointmentsLoading}
                                         onClear={handleClearForm}
                                     />
                                 </div>

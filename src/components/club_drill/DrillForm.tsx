@@ -27,7 +27,7 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
                         {...register(`drillRows.${index}.semester` as const)}
                         readOnly
                         disabled
-                        className="bg-gray-100 cursor-not-allowed"
+                        className="bg-muted/70 cursor-not-allowed"
                     />
                 </>
             )
@@ -140,13 +140,13 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
 
             {disabled ? (
                 <div className="flex justify-center mt-4">
-                    <Button type="button" className="bg-blue-600 text-white" onClick={onEdit}>
+                    <Button type="button" className="bg-primary text-primary-foreground" onClick={onEdit}>
                         Edit Drill
                     </Button>
                 </div>
             ) : (
                 <div className="flex justify-center gap-4 mt-6">
-                    <Button type="submit" className="bg-blue-600 text-white">
+                    <Button type="submit" className="bg-primary text-primary-foreground">
                         Save Drill
                     </Button>
                     <Button type="button" variant="outline" onClick={onReset}>

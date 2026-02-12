@@ -1,7 +1,7 @@
 // app/dashboard/[id]/milmgmt/background-detls/page.tsx
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
@@ -29,8 +29,17 @@ import Link from "next/link";
 export default function BackgroundDetlsPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const searchParams = useSearchParams();
+    const router = useRouter();
 
     const { cadet } = useOcPersonal(ocId);
+
+    const activeTab = searchParams.get("tab") || "family-bgrnd";
+    const setActiveTab = (tab: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("tab", tab);
+        router.replace(`?${params.toString()}`, { scroll: false });
+    };
 
     return (
         <DashboardLayout
@@ -88,7 +97,7 @@ export default function BackgroundDetlsPage() {
                         </DropdownMenu>
                     }
                     nestedTabs={
-                        <Tabs defaultValue="family-bgrnd">
+                        <Tabs value={activeTab} onValueChange={setActiveTab}>
                             <TabsList className="grid grid-cols-4 sticky top-[11.5rem] z-30 w-full mb-2">
                                 <TabsTrigger value="family-bgrnd">Family Background</TabsTrigger>
                                 <TabsTrigger value="edn-qlf">Educational Qualification</TabsTrigger>

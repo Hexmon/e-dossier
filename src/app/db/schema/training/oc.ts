@@ -233,7 +233,8 @@ export const ocEducation = pgTable('oc_education', {
     schoolOrCollege: varchar('school_or_college', { length: 160 }).notNull(),
     boardOrUniv: varchar('board_or_univ', { length: 160 }),
     subjects: text('subjects'),                                   // comma list or JSON in future
-    totalPercent: integer('total_percent'),
+    grade: varchar('grade', { length: 32 }),
+    totalPercent: text('total_percent'),
     perSubject: text('per_subject'),                              // JSON string if needed
 });
 
@@ -295,13 +296,13 @@ export const ocMedicals = pgTable('oc_medicals', {
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
     semester: integer('semester').notNull(),                         // 1..6
     date: timestamp('date', { withTimezone: true }).notNull(),
-    age: integer('age'),
-    heightCm: integer('height_cm'),
-    ibwKg: integer('ibw_kg'),
-    abwKg: integer('abw_kg'),
-    overwtPct: integer('overwt_pct'),
-    bmi: integer('bmi'),
-    chestCm: integer('chest_cm'),
+    age: numeric('age', { mode: 'number' }),
+    heightCm: numeric('height_cm', { mode: 'number' }),
+    ibwKg: numeric('ibw_kg', { mode: 'number' }),
+    abwKg: numeric('abw_kg', { mode: 'number' }),
+    overwtPct: numeric('overwt_pct', { mode: 'number' }),
+    bmi: numeric('bmi', { mode: 'number' }),
+    chestCm: numeric('chest_cm', { mode: 'number' }),
     medicalHistory: text('medical_history'),
     hereditaryIssues: text('hereditary_issues'),
     allergies: text('allergies'),
