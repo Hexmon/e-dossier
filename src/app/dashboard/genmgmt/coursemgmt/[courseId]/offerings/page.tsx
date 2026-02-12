@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { ocTabs } from "@/config/app.config";
+import { academicsTabs } from "@/config/app.config";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -167,7 +167,7 @@ export default function OfferingManagementPage() {
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="offerings">
+                        <GlobalTabs tabs={academicsTabs} defaultValue="offerings">
                             <TabsContent value="offerings" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">Offering List</h2>

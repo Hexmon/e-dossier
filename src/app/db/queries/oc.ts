@@ -41,6 +41,7 @@ import { positions } from '@/app/db/schema/auth/positions';
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 
 type ListOpts = {
+    id?: string;
     q?: string;
     courseId?: string;
     platoonId?: string;

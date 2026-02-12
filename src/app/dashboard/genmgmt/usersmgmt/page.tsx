@@ -196,6 +196,7 @@ export default function UserManagement() {
         setValue={setValue}
         editingUser={editingUser}
         isActive={watch("isActive") ?? true}
+        usernameValue={watch("username") ?? ""}
       />
 
       {/* View Dialog */}

@@ -9,7 +9,7 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 
-import { academicManagementCards, managementCard, managementTabs, moduleManagementCard } from "@/config/app.config";
+import { managementCard, managementTabs, moduleManagementCard } from "@/config/app.config";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
@@ -102,17 +102,6 @@ export default function GeneralManagementPage() {
     () => filterCards(moduleManagementCard, moduleSearch),
     [moduleSearch]
   );
-  const filteredAcademicCards = useMemo(
-    () => filterCards(academicManagementCards, moduleSearch),
-    [moduleSearch]
-  );
-  const moduleQuery = moduleSearch.trim().toLowerCase();
-  const showAcademicsGroup =
-    !moduleQuery || moduleQuery.includes("academ") || filteredAcademicCards.length > 0;
-  const academicCardsToShow =
-    !moduleQuery || moduleQuery.includes("academ")
-      ? academicManagementCards
-      : filteredAcademicCards;
 
   useEffect(() => {
     if (!authzV2Enabled || meLoading) return;
@@ -249,35 +238,6 @@ export default function GeneralManagementPage() {
                     />
                   </div>
                 </div>
-                {showAcademicsGroup && (
-                  <Card className="shadow-lg rounded-2xl">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-foreground">
-                        Academics Management
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
-                        {academicCardsToShow.map((card, index) => {
-                          const IconComponent = card.icon;
-                          const isOfferings = card.title === "Offerings Management";
-                          const tabbedTo = card.to ? withTab(card.to, activeTab) : card.to;
-                          return (
-                            <DashboardCard
-                              key={`${card.title}-${index}`}
-                              title={card.title}
-                              description={card.description}
-                              to={isOfferings ? undefined : tabbedTo}
-                              icon={IconComponent}
-                              color={card.color}
-                              onClick={isOfferings ? () => setCourseModalOpen(true) : undefined}
-                            />
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
                   {filteredModuleCards.map((card, index) => {
                     const IconComponent = card.icon;
@@ -295,7 +255,7 @@ export default function GeneralManagementPage() {
                     );
                   })}
                 </div>
-                {filteredModuleCards.length === 0 && !showAcademicsGroup && (
+                {filteredModuleCards.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center">No modules found.</p>
                 )}
               </TabsContent>

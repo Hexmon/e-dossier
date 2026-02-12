@@ -1,21 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useDispatch, useSelector } from "react-redux";
-import { useDebounce } from "@/hooks/useDebounce";
 
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useDossierFilling } from "@/hooks/useDossierFilling";
 
 import type { DossierFormData } from "@/types/dossierFilling";
-import { saveDossierForm, clearDossierForm } from "@/store/slices/dossierFillingSlice";
-import type { RootState } from "@/store";
 
 interface DossierFillingFormProps {
     ocId: string;
@@ -47,7 +43,22 @@ function formatDate(dateString: string | null | undefined): string {
 export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
     const [isEditMode, setIsEditMode] = useState(false);
 
-    const handleEditClick = () => setIsEditMode(true);
+    const buildFormValues = useCallback(
+        (source?: DossierFormData | null): DossierFormData => ({
+            initiatedBy: source?.initiatedBy ?? "",
+            openedOn: toInputDate(source?.openedOn ?? ""),
+            initialInterview: source?.initialInterview ?? "",
+            closedBy: source?.closedBy ?? "",
+            closedOn: toInputDate(source?.closedOn ?? ""),
+            finalInterview: source?.finalInterview ?? "",
+        }),
+        []
+    );
+
+    const handleEditClick = () => {
+        reset(buildFormValues(dossierFilling));
+        setIsEditMode(true);
+    };
 
     const { dossierFilling, loading, isSaving, saveDossierFilling } = useDossierFilling(ocId);
 
@@ -62,20 +73,12 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
         },
     });
 
-    const { register, handleSubmit, reset, setValue } = form;
-
-    const dispatch = useDispatch();
+    const { register, handleSubmit, reset } = form;
 
     // Set form values when dossierFilling loads
     useEffect(() => {
-        if (dossierFilling) {
-            Object.entries(dossierFilling).forEach(([key, value]) => {
-                setValue(key as keyof DossierFormData, value || "");
-            });
-        } else {
-            reset();
-        }
-    }, [dossierFilling, setValue, reset]);
+        reset(buildFormValues(dossierFilling));
+    }, [buildFormValues, dossierFilling, reset]);
 
     const onSubmit = async (data: DossierFormData) => {
         // simple validation example
@@ -93,25 +96,9 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
         }
     };
 
-    const handleReset = () => {
-        if (!confirm("Clear all form data?")) return;
-
-        reset({
-            initiatedBy: "",
-            openedOn: "",
-            initialInterview: "",
-            closedBy: "",
-            closedOn: "",
-            finalInterview: "",
-        });
-
-        dispatch(clearDossierForm(ocId));
-        toast.info("Form cleared");
-    };
-
     const handleCancel = () => {
         setIsEditMode(false);
-        reset();
+        reset(buildFormValues(dossierFilling));
     };
 
     // Helper to render label/value rows (map returns JSX inside return)
@@ -235,6 +222,14 @@ export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
                     </Tabs>
                 )}
             </CardContent>
+
         </Card>
     );
+}
+
+function toInputDate(value: string | null | undefined): string {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
 }

@@ -14,8 +14,8 @@ const academicsListQuerySchema = z.object({
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const { ocId } = await parseParam({ params }, OcIdParam);
-        const authCtx = await authorizeOcAccess(req, ocId);
         await ensureOcExists(ocId);
+        const authCtx = await authorizeOcAccess(req, ocId);
         const sp = new URL(req.url).searchParams;
         const { semester } = academicsListQuerySchema.parse({
             semester: sp.get('semester') ?? undefined,

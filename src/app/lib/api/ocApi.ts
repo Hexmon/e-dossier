@@ -82,6 +82,8 @@ export interface FullOCRecord extends OCListRow {
  * All possible query params supported by /api/v1/oc
  */
 export interface FetchOCParams {
+  /** filter by OC id */
+  id?: string;
   /** quick text search on name/ocNo */
   q?: string;
   /** alias for q */
@@ -232,7 +234,7 @@ export async function fetchOCs<
 
 /** Convenience: fetch one OC by id with full graph */
 export async function fetchOCByIdFull(id: string): Promise<FullOCRecord | null> {
-  const rows = await fetchOCs<FullOCRecord>({ id, full: true, limit: 1 } as any);
+  const rows = await fetchOCs<FullOCRecord>({ id, full: true, limit: 1 });
   return rows[0] ?? null;
 }
 

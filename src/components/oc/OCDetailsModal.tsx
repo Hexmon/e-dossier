@@ -136,11 +136,24 @@ export default function OCDetailsModal({ open, ocId, onOpenChange }: Props) {
   const [oc, setOc] = useState<FullOCRecord | null>(null);
 
   useEffect(() => {
-    if (!open || !ocId) return;
+    if (!open || !ocId) {
+      setOc(null);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setOc(null);
     setLoading(true);
     fetchOCByIdFull(ocId)
-      .then(setOc)
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!cancelled) setOc(data);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open, ocId]);
 
   return (

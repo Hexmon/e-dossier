@@ -137,6 +137,7 @@ async function GETHandler(req: AuditNextRequest) {
             sort: sp.get('sort') ?? undefined,
         });
 
+        const id = (sp.get('id') || '').trim() || undefined;
         if (!parsedQuery.success) {
             return json.badRequest('Validation failed.', { issues: parsedQuery.error.flatten() });
         }

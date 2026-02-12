@@ -86,10 +86,12 @@ export const UserListItem = ({
               e.stopPropagation();
               onView?.(id);
             }}
-            className="text-xs"
+            className="text-xs px-2"
+            title="View"
+            aria-label="View"
           >
-            <Eye className="h-3 w-3 mr-1" />
-            View
+            <Eye className="h-4 w-4" />
+            <span className="sr-only">View</span>
           </Button>
           <Button
             variant="outline"
@@ -98,10 +100,12 @@ export const UserListItem = ({
               e.stopPropagation();
               onEdit?.(id);
             }}
-            className="text-xs"
+            className="text-xs px-2"
+            title="Edit"
+            aria-label="Edit"
           >
-            <Edit3 className="h-3 w-3 mr-1" />
-            Edit
+            <Edit3 className="h-4 w-4" />
+            <span className="sr-only">Edit</span>
           </Button>
           <Button
             variant="outline"
@@ -110,10 +114,12 @@ export const UserListItem = ({
               e.stopPropagation();
               onDelete?.(id);
             }}
-            className="text-xs text-destructive hover:text-destructive-foreground"
+            className="text-xs px-2 text-destructive hover:text-destructive-foreground"
+            title="Delete"
+            aria-label="Delete"
           >
-            <Trash2 className="h-3 w-3 mr-1" />
-            Delete
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Delete</span>
           </Button>
         </div>
       </div>

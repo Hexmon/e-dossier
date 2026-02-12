@@ -2,7 +2,7 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, Shield } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { militaryTrainingCards } from "@/config/app.config";
@@ -35,6 +35,16 @@ export default function DossierTab({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const pathname = usePathname();
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest(".mil-trg-dropdown") || target.closest(".mil-trg-trigger")) return;
+      setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Determine current page tab based on URL
   const currentPath = pathname.split("/").pop();
   const currentTab = tabs.find((tab) => tab.value === currentPath);
@@ -60,8 +70,13 @@ export default function DossierTab({
           const isMilTrgTab = value === "mil-trg";
           const isMilTrgDropdown = isMilTrgTab;
           const showDropdown = isMilTrgTab;
-          const isMilTrgActive = isMilTrgTab && (dropdownOpen || currentTab?.value === "mil-trg");
+          const isMilTrgActive = isMilTrgTab && dropdownOpen;
           const moduleInactiveOverride = isMilTrgActive && !isMilTrgTab;
+          const dropdownCards = currentTab?.value
+            ? militaryTrainingCards.filter(
+              (card) => !card.to(ocId).endsWith(`/${currentTab.value}`)
+            )
+            : militaryTrainingCards;
 
           const TriggerContent = (
             <>
@@ -72,8 +87,8 @@ export default function DossierTab({
               )}
 
               {showDropdown && isMilTrgActive && (
-                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-96 rounded-md shadow-lg bg-white border max-h-64 overflow-y-auto">
-                  {militaryTrainingCards.map(({ title, icon: Icon, color, to }) => {
+                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-96 rounded-md shadow-lg bg-white border max-h-64 overflow-y-auto mil-trg-dropdown">
+                  {dropdownCards.map(({ title, icon: Icon, color, to }) => {
                     const href = to(ocId);
                     return (
                       <Link
@@ -97,9 +112,9 @@ export default function DossierTab({
               <button
                 key={value}
                 type="button"
-                className={`relative flex items-center justify-center gap-2 border border-border rounded-md px-3 py-2 transition-colors w-full min-w-0 dropdown-tab-trigger ${isMilTrgActive ? "bg-white border-primary text-primary" : "bg-primary/10 text-primary"
+                className={`relative flex items-center justify-center gap-2 border border-border rounded-md px-3 py-2 transition-colors w-full min-w-0 dropdown-tab-trigger mil-trg-trigger ${isMilTrgActive ? "bg-white border-primary text-primary" : "bg-primary/10 text-primary"
                   }`}
-                onClick={() => setDropdownOpen(true)}
+                onClick={() => setDropdownOpen((prev) => !prev)}
               >
                 {TriggerContent}
               </button>
