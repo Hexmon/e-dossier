@@ -228,6 +228,69 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/awards/:id",
+    "action": "admin:site-settings:awards:delete",
+    "resourceType": "admin:site-settings:awards",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/awards/:id/hard",
+    "action": "admin:site-settings:awards:hard:delete",
+    "resourceType": "admin:site-settings:awards:hard",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/commanders/:id",
+    "action": "admin:site-settings:commanders:delete",
+    "resourceType": "admin:site-settings:commanders",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/commanders/:id/hard",
+    "action": "admin:site-settings:commanders:hard:delete",
+    "resourceType": "admin:site-settings:commanders:hard",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/history/:id",
+    "action": "admin:site-settings:history:delete",
+    "resourceType": "admin:site-settings:history",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/history/:id/hard",
+    "action": "admin:site-settings:history:hard:delete",
+    "resourceType": "admin:site-settings:history:hard",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/logo",
+    "action": "admin:site-settings:logo:delete",
+    "resourceType": "admin:site-settings:logo",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
     "path": "/api/v1/admin/subjects/:id",
     "action": "admin:subjects:delete",
     "resourceType": "admin:subjects",
@@ -669,6 +732,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/device-site-settings",
+    "action": "admin:device-site-settings:read",
+    "resourceType": "admin:device-site-settings",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/discipline",
     "action": "admin:discipline:read",
     "resourceType": "admin:discipline",
@@ -1020,6 +1092,69 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/site-settings",
+    "action": "admin:site-settings:read",
+    "resourceType": "admin:site-settings",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/awards",
+    "action": "admin:site-settings:awards:read",
+    "resourceType": "admin:site-settings:awards",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/awards/:id",
+    "action": "admin:site-settings:awards:read",
+    "resourceType": "admin:site-settings:awards",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/commanders",
+    "action": "admin:site-settings:commanders:read",
+    "resourceType": "admin:site-settings:commanders",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/commanders/:id",
+    "action": "admin:site-settings:commanders:read",
+    "resourceType": "admin:site-settings:commanders",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/history",
+    "action": "admin:site-settings:history:read",
+    "resourceType": "admin:site-settings:history",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/history/:id",
+    "action": "admin:site-settings:history:read",
+    "resourceType": "admin:site-settings:history",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/subjects",
     "action": "admin:subjects:read",
     "resourceType": "admin:subjects",
@@ -1122,6 +1257,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/me",
     "action": "me:read",
     "resourceType": "me",
+    "category": "me",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/me/device-site-settings",
+    "action": "me:device-site-settings:read",
+    "resourceType": "me:device-site-settings",
     "category": "me",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -1739,6 +1883,51 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "method": "GET",
+    "path": "/api/v1/settings/device-site",
+    "action": "settings:device-site:read",
+    "resourceType": "settings:device-site",
+    "category": "settings",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/site-settings",
+    "action": "site-settings:read",
+    "resourceType": "site-settings",
+    "category": "site-settings",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/site-settings/awards",
+    "action": "site-settings:awards:read",
+    "resourceType": "site-settings:awards",
+    "category": "site-settings",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/site-settings/commanders",
+    "action": "site-settings:commanders:read",
+    "resourceType": "site-settings:commanders",
+    "category": "site-settings",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/site-settings/history",
+    "action": "site-settings:history:read",
+    "resourceType": "site-settings:history",
+    "category": "site-settings",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
     "method": "OPTIONS",
     "path": "/api/v1/auth/logout",
     "action": "auth:logout:read",
@@ -1932,6 +2121,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/rbac/roles/:roleId",
     "action": "admin:rbac:roles:update",
     "resourceType": "admin:rbac:roles",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/site-settings/awards/reorder",
+    "action": "admin:site-settings:awards:reorder:update",
+    "resourceType": "admin:site-settings:awards:reorder",
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true
@@ -2532,6 +2730,42 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/site-settings/awards",
+    "action": "admin:site-settings:awards:create",
+    "resourceType": "admin:site-settings:awards",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/site-settings/commanders",
+    "action": "admin:site-settings:commanders:create",
+    "resourceType": "admin:site-settings:commanders",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/site-settings/history",
+    "action": "admin:site-settings:history:create",
+    "resourceType": "admin:site-settings:history",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/site-settings/logo/presign",
+    "action": "admin:site-settings:logo:presign:create",
+    "resourceType": "admin:site-settings:logo:presign",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/subjects",
     "action": "admin:subjects:create",
     "resourceType": "admin:subjects",
@@ -2982,9 +3216,54 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PUT",
+    "path": "/api/v1/admin/device-site-settings",
+    "action": "admin:device-site-settings:update",
+    "resourceType": "admin:device-site-settings",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
     "path": "/api/v1/admin/rbac/mappings",
     "action": "admin:rbac:mappings:update",
     "resourceType": "admin:rbac:mappings",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/site-settings",
+    "action": "admin:site-settings:update",
+    "resourceType": "admin:site-settings",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/site-settings/awards/:id",
+    "action": "admin:site-settings:awards:update",
+    "resourceType": "admin:site-settings:awards",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/site-settings/commanders/:id",
+    "action": "admin:site-settings:commanders:update",
+    "resourceType": "admin:site-settings:commanders",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/site-settings/history/:id",
+    "action": "admin:site-settings:history:update",
+    "resourceType": "admin:site-settings:history",
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true
@@ -3006,8 +3285,17 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "category": "oc",
     "fieldLevelCandidate": true,
     "adminBaseline": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/settings/device-site",
+    "action": "settings:device-site:update",
+    "resourceType": "settings:device-site",
+    "category": "settings",
+    "fieldLevelCandidate": true,
+    "adminBaseline": false
   }
-];
+]
 
 export const PAGE_ACTION_MAP: PageActionEntry[] = [
   {
@@ -3347,6 +3635,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "route": "/dashboard/genmgmt/settings/site",
+    "action": "page:dashboard:genmgmt:settings:site:view",
+    "resourceType": "page:dashboard:genmgmt:settings:site",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
     "route": "/dashboard/genmgmt/subjectmgmt",
     "action": "page:dashboard:genmgmt:subjectmgmt:view",
     "resourceType": "page:dashboard:genmgmt:subjectmgmt",
@@ -3373,8 +3668,22 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "resourceType": "page:dashboard:reports",
     "category": "reports",
     "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/settings",
+    "action": "page:dashboard:settings:view",
+    "resourceType": "page:dashboard:settings",
+    "category": "settings",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/settings/device",
+    "action": "page:dashboard:settings:device:view",
+    "resourceType": "page:dashboard:settings:device",
+    "category": "settings",
+    "adminBaseline": false
   }
-];
+]
 
 function templateToRegExp(pathTemplate: string): RegExp {
   const escaped = Array.from(pathTemplate)
