@@ -68,6 +68,10 @@ export default function DeviceSiteSettingsPage() {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM_STATE);
 
   const { query, update } = useDeviceSiteSettings(activeDeviceId);
+  const isEditingCurrentDevice = useMemo(
+    () => Boolean(activeDeviceId) && activeDeviceId === currentDeviceId,
+    [activeDeviceId, currentDeviceId]
+  );
 
   useEffect(() => {
     const resolvedDeviceId = ensureClientDeviceContext();
@@ -97,10 +101,7 @@ export default function DeviceSiteSettingsPage() {
     });
   }, [query.data?.settings, isEditingCurrentDevice]);
 
-  const isEditingCurrentDevice = useMemo(
-    () => Boolean(activeDeviceId) && activeDeviceId === currentDeviceId,
-    [activeDeviceId, currentDeviceId]
-  );
+  
 
   const applyPreviewForCurrentDevice = (next: FormState) => {
     if (!isEditingCurrentDevice || !currentDeviceId) {
