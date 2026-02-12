@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -26,7 +26,7 @@ import OLQView from "@/components/olq/OLQView";
 import { useOlqActions } from "@/hooks/useOlqActions";
 import { GRADE_BRACKETS } from "@/constants/app.constants";
 import { useOcDetails } from "@/hooks/useOcDetails";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Cadet } from "@/types/cadet";
 
@@ -85,10 +85,21 @@ export default function OLQPage() {
 
 function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: string; }) {
     const { register, reset, getValues, handleSubmit, setValue } = useForm<OlqFormValues>();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     const { fetchCategories, fetchSemester, createRecord, updateRecord, deleteSemester } = useOlqActions(selectedCadet);
 
-    const [activeSemIndex, setActiveSemIndex] = useState<number>(0);
+    const semParam = searchParams.get("semester");
+    const resolvedSemIndex = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - 1;
+        if (idx < 0 || idx >= TERMS.length) return 0;
+        return idx;
+    }, [semParam]);
+    const [activeSemIndex, setActiveSemIndex] = useState<number>(resolvedSemIndex);
     const [activeInnerTab, setActiveInnerTab] = useState<"input" | "view">("input");
 
     const [structure, setStructure] = useState<Record<string, any[]>>({});
@@ -98,6 +109,22 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
     const [submissions, setSubmissions] = useState<(any | null)[]>(Array(6).fill(null));
     const [refreshFlag, setRefreshFlag] = useState<number>(0);
     const [loadingSemester, setLoadingSemester] = useState<boolean>(false);
+
+    useEffect(() => {
+        setActiveSemIndex(resolvedSemIndex);
+    }, [resolvedSemIndex]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + 1));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleSemesterChange = (index: number) => {
+        setActiveSemIndex(index);
+        updateSemesterParam(index);
+        setActiveInnerTab("input");
+    };
 
     useEffect(() => {
         if (!selectedCadet) return;
@@ -287,7 +314,7 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
                                 <button
                                     key={t}
                                     type="button"
-                                    onClick={() => { setActiveSemIndex(idx); setActiveInnerTab("input"); }}
+                                    onClick={() => handleSemesterChange(idx)}
                                     className={`px-4 py-2 rounded-t-lg font-medium ${activeSemIndex === idx ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                                 >{t}</button>
                             )

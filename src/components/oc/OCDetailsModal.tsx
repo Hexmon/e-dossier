@@ -47,11 +47,29 @@ function toLabel(key: string): string {
     .replace(/^./, (c) => c.toUpperCase());
 }
 
+const HIDDEN_KEYS = new Set(["id", "ocid", "reportid", "authoruserid"]);
+
+function normalizeKey(key: string): string {
+  return key.replace(/[_\s-]+/g, "").toLowerCase();
+}
+
+function shouldHideKey(key: string): boolean {
+  return HIDDEN_KEYS.has(normalizeKey(key));
+}
+
+function formatDateString(value: string): string | null {
+  const dateLikePattern = /(\d{4}-\d{2}-\d{2})([T\s].*)?|(\d{2}[/-]\d{2}[/-]\d{4})/;
+  if (!dateLikePattern.test(value)) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-GB");
+}
+
 function formatCellValue(value: unknown): string {
   if (value === null || value === undefined) return "-";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "number") return String(value);
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return formatDateString(value) ?? value;
   if (Array.isArray(value)) {
     if (!value.length) return "-";
     const allPrimitive = value.every((v) => v === null || ["string", "number", "boolean"].includes(typeof v));
@@ -63,14 +81,16 @@ function formatCellValue(value: unknown): string {
 }
 
 function KeyValueTable({ data }: { data: Record<string, unknown> | null | undefined }) {
-  const entries = data ? Object.entries(data) : [];
+  const entries = data
+    ? Object.entries(data).filter(([key]) => !shouldHideKey(key))
+    : [];
   if (!entries.length) {
     return <p className="text-sm text-muted-foreground">No data available.</p>;
   }
 
   return (
-    <div className="rounded-md border overflow-x-auto">
-      <table className="min-w-full text-sm">
+    <div className="rounded-md border">
+      <table className="w-full text-sm table-fixed">
         <thead className="bg-muted/40">
           <tr>
             <th className="px-3 py-2 text-left font-medium w-64">Field</th>
@@ -91,41 +111,22 @@ function KeyValueTable({ data }: { data: Record<string, unknown> | null | undefi
 }
 
 function RecordsTable({ rows }: { rows: Record<string, unknown>[] | null | undefined }) {
-  if (!rows || rows.length === 0) {
+  const cleanedRows = (rows ?? [])
+    .map((row) => Object.fromEntries(Object.entries(row).filter(([key]) => !shouldHideKey(key))))
+    .filter((row) => Object.keys(row).length > 0);
+
+  if (cleanedRows.length === 0) {
     return <p className="text-sm text-muted-foreground">No records available.</p>;
   }
 
-  const columns = Array.from(
-    rows.reduce((set, row) => {
-      Object.keys(row).forEach((key) => set.add(key));
-      return set;
-    }, new Set<string>()),
-  );
-
   return (
-    <div className="rounded-md border overflow-x-auto">
-      <table className="min-w-full text-sm">
-        <thead className="bg-muted/40">
-          <tr>
-            {columns.map((col) => (
-              <th key={col} className="px-3 py-2 text-left font-medium whitespace-nowrap">
-                {toLabel(col)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, idx) => (
-            <tr key={idx} className="border-t">
-              {columns.map((col) => (
-                <td key={`${idx}-${col}`} className="px-3 py-2 align-top break-words">
-                  {formatCellValue(row[col])}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      {cleanedRows.map((row, idx) => (
+        <div key={idx} className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground">Record {idx + 1}</div>
+          <KeyValueTable data={row} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -144,7 +145,7 @@ export default function OCDetailsModal({ open, ocId, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[96vw] max-w-[1500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[98vw] max-w-[1700px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>OC Details</DialogTitle>
         </DialogHeader>
@@ -167,26 +168,24 @@ export default function OCDetailsModal({ open, ocId, onOpenChange }: Props) {
               <KeyValueTable data={oc.personal ?? null} />
             </section>
 
-            <section className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold mb-2">Education</h4>
-                <RecordsTable rows={oc.education ?? []} />
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Achievements</h4>
-                <RecordsTable rows={oc.achievements ?? []} />
-              </div>
+            <section>
+              <h4 className="font-semibold mb-2">Education</h4>
+              <RecordsTable rows={oc.education ?? []} />
             </section>
 
-            <section className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold mb-2">Medicals</h4>
-                <RecordsTable rows={oc.medicals ?? []} />
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Discipline</h4>
-                <RecordsTable rows={oc.discipline ?? []} />
-              </div>
+            <section>
+              <h4 className="font-semibold mb-2">Achievements</h4>
+              <RecordsTable rows={oc.achievements ?? []} />
+            </section>
+
+            <section>
+              <h4 className="font-semibold mb-2">Medicals</h4>
+              <RecordsTable rows={oc.medicals ?? []} />
+            </section>
+
+            <section>
+              <h4 className="font-semibold mb-2">Discipline</h4>
+              <RecordsTable rows={oc.discipline ?? []} />
             </section>
 
             <section>

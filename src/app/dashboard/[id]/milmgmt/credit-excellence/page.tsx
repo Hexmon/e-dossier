@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 
@@ -36,6 +36,9 @@ import { clearCfeForm } from "@/store/slices/cfeRecordsSlice";
 export default function CFEFormPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     // Redux
     const dispatch = useDispatch();
@@ -69,7 +72,30 @@ export default function CFEFormPage() {
         deleteRecordById,
     } = useCfeRecords(ocId, semesters.length);
 
-    const [activeTab, setActiveTab] = useState<number>(0);
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - 1;
+        if (idx < 0 || idx >= semesters.length) return 0;
+        return idx;
+    }, [semParam, semesters.length]);
+    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + 1));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleSemesterChange = (index: number) => {
+        setActiveTab(index);
+        updateSemesterParam(index);
+    };
 
     useEffect(() => {
         if (!ocId) {
@@ -213,7 +239,7 @@ export default function CFEFormPage() {
                                             <button
                                                 key={s}
                                                 type="button"
-                                                onClick={() => setActiveTab(idx)}
+                                                onClick={() => handleSemesterChange(idx)}
                                                 className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === idx
                                                         ? "bg-primary text-primary-foreground"
                                                         : "bg-muted text-foreground hover:bg-muted/80"

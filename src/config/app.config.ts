@@ -229,27 +229,21 @@ export const dashboardCards = [
 ];
 
 
-export const managementCard = [
+type ManagementCardConfig = {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  to: string;
+  color: ColorTone;
+};
+
+export const managementCard: ManagementCardConfig[] = [
   {
     title: "OC Management",
     description: "Manage Officer Cadets and their records",
     icon: UserCheck,
     to: "/dashboard/genmgmt/ocmgmt",
     color: "warning"
-  },
-  {
-    title: "Course Management",
-    description: "Create, update, and track training courses",
-    icon: BookOpen,
-    to: "/dashboard/genmgmt/coursemgmt",
-    color: "info"
-  },
-  {
-    title: "Subject Management",
-    description: "Organize and maintain subjects within courses",
-    icon: BookOpen,
-    to: "/dashboard/genmgmt/subjectmgmt",
-    color: "info"
   },
   {
     title: "User Management",
@@ -285,13 +279,6 @@ export const managementCard = [
     icon: UserCheck,
     to: "/dashboard/genmgmt/instructors",
     color: "success"
-  },
-  {
-    title: "Offerings Management",
-    description: "Create, update, and manage course offerings efficiently",
-    icon: BookOpenCheck,
-    to: "/dashboard/genmgmt/offerings",
-    color: "info"
   },
   // {
   //   title: "Relegation Management",
@@ -354,7 +341,31 @@ export const managementCard = [
 
 ];
 
-export const moduleManagementCard = [
+export const academicManagementCards: ManagementCardConfig[] = [
+  {
+    title: "Course Management",
+    description: "Create, update, and track training courses",
+    icon: BookOpen,
+    to: "/dashboard/genmgmt/coursemgmt",
+    color: "info"
+  },
+  {
+    title: "Subject Management",
+    description: "Organize and maintain subjects within courses",
+    icon: BookOpen,
+    to: "/dashboard/genmgmt/subjectmgmt",
+    color: "info"
+  },
+  {
+    title: "Offerings Management",
+    description: "Create, update, and manage course offerings efficiently",
+    icon: BookOpenCheck,
+    to: "/dashboard/genmgmt/offerings",
+    color: "info"
+  },
+];
+
+export const moduleManagementCard: ManagementCardConfig[] = [
   {
     title: "Relegation Management",
     description: "Monitor, evaluate, and manage student relegation and promotion status",
