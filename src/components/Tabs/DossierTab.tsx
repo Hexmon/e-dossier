@@ -55,7 +55,7 @@ export default function DossierTab({
 
   return (
     <Tabs defaultValue={defaultValue} className="space-y-6">
-      <TabsList className="grid w-full grid-cols-2 sticky top-38 z-40">
+      <TabsList className="grid w-full grid-cols-2 sticky top-38 z-40 overflow-visible">
         {visibleTabs.map(({ value, title, icon: Icon, link }) => {
           const isMilTrgTab = value === "mil-trg";
           const isMilTrgDropdown = isMilTrgTab;
@@ -66,7 +66,7 @@ export default function DossierTab({
           const TriggerContent = (
             <>
               {Icon && <Icon className="h-4 w-4" />}
-              {title}
+              <span className="truncate">{title}</span>
               {showDropdown && (
                 <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
               )}
@@ -97,7 +97,7 @@ export default function DossierTab({
               <button
                 key={value}
                 type="button"
-                className={`relative flex items-center justify-center gap-2 border border-border rounded-md px-3 py-2 transition-colors w-full min-w-0 truncate dropdown-tab-trigger ${isMilTrgActive ? "bg-white border-primary text-primary" : "bg-primary/10 text-primary"
+                className={`relative flex items-center justify-center gap-2 border border-border rounded-md px-3 py-2 transition-colors w-full min-w-0 dropdown-tab-trigger ${isMilTrgActive ? "bg-white border-primary text-primary" : "bg-primary/10 text-primary"
                   }`}
                 onClick={() => setDropdownOpen(true)}
               >

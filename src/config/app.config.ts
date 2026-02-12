@@ -229,7 +229,15 @@ export const dashboardCards = [
 ];
 
 
-export const managementCard = [
+type ManagementCardConfig = {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  to: string;
+  color: ColorTone;
+};
+
+export const managementCard: ManagementCardConfig[] = [
   {
     title: "OC Management",
     description: "Manage Officer Cadets and their records",
@@ -333,7 +341,7 @@ export const managementCard = [
 
 ];
 
-export const academicManagementCards = [
+export const academicManagementCards: ManagementCardConfig[] = [
   {
     title: "Course Management",
     description: "Create, update, and track training courses",
@@ -357,7 +365,7 @@ export const academicManagementCards = [
   },
 ];
 
-export const moduleManagementCard = [
+export const moduleManagementCard: ManagementCardConfig[] = [
   {
     title: "Relegation Management",
     description: "Monitor, evaluate, and manage student relegation and promotion status",
