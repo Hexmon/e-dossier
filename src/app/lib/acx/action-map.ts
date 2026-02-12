@@ -1245,6 +1245,33 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/dashboard/data/appointments",
+    "action": "dashboard:data:appointments:read",
+    "resourceType": "dashboard:data:appointments",
+    "category": "dashboard",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/data/course",
+    "action": "dashboard:data:course:read",
+    "resourceType": "dashboard:data:course",
+    "category": "dashboard",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard/data/platoon",
+    "action": "dashboard:data:platoon:read",
+    "resourceType": "dashboard:data:platoon",
+    "category": "dashboard",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/health",
     "action": "health:read",
     "resourceType": "health",

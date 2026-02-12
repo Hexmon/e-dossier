@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -23,9 +23,32 @@ import { resolveToneClasses } from "@/lib/theme-color";
 export default function MilitaryTrainingPage(props: { params: Promise<{ id: string }> }) {
   const { id } = use(props.params);
   const params = useParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const ocId = Array.isArray(params.id) ? params.id[0] : params.id || "";
   const { cadet, loading, error } = useOcDetails(ocId);
+  const tabParam = searchParams.get("tab");
+  const validTabs = miltrgTabs.map((tab) => tab.value);
+  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : "basic-details";
+  const activeTabLabel =
+    miltrgTabs.find((tab) => tab.value === activeTab)?.title ?? "Basic Details";
+
+  const updateTab = (value: string) => {
+    if (value === activeTab) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const withTab = (href: string, tab: string) => {
+    const [path, query = ""] = href.split("?");
+    const params = new URLSearchParams(query);
+    params.set("tab", tab);
+    const queryString = params.toString();
+    return queryString ? `${path}?${queryString}` : path;
+  };
 
   return (
     <DashboardLayout
@@ -37,7 +60,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
         <BreadcrumbNav
           paths={[
             { label: "Dashboard", href: "/dashboard" },
-            { label: "Dossier" },
+            { label: activeTabLabel },
           ]}
         />
       </div>
@@ -68,12 +91,18 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
       )}
 
       {/* Tabs */}
-      <GlobalTabs tabs={miltrgTabs} defaultValue="basic-details">
+      <GlobalTabs
+        tabs={miltrgTabs}
+        defaultValue="basic-details"
+        value={activeTab}
+        onValueChange={updateTab}
+      >
         <TabsContent value="basic-details" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
             {militaryTrainingCards.slice(0, 7).map((card, index) => {
               const Icon = card.icon;
               const url = typeof card.to === "function" ? card.to(ocId) : card.to;
+              const tabbedUrl = withTab(url, "basic-details");
               return (
                 <Card
                   key={index}
@@ -113,6 +142,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
             {militaryTrainingCards.slice(7, 29).map((card, index) => {
               const Icon = card.icon;
               const url = typeof card.to === "function" ? card.to(ocId) : card.to;
+              const tabbedUrl = withTab(url, "mil-trg");
               return (
                 <Card
                   key={index}
@@ -152,6 +182,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
             {militaryTrainingCards.slice(29, 30).map((card, index) => {
               const Icon = card.icon;
               const url = typeof card.to === "function" ? card.to(ocId) : card.to;
+              const tabbedUrl = withTab(url, "settings");
               return (
                 <Card
                   key={index}

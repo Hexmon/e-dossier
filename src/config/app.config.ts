@@ -1273,7 +1273,7 @@ export const courseSections = [
 ]
 
 export const managementTabs = [
-  { value: "Gen Mgmt", title: "Admin Mgmt", icon: Shield },
+  { value: "Gen Mgmt", title: "Admin Management", icon: Shield },
   { value: "module-mgmt", title: "Module Management", icon: Boxes },
   { value: "settings", title: "Settings", icon: Settings },
 ];
@@ -1281,6 +1281,12 @@ export const managementTabs = [
 export const ocTabs = [
   { value: "oc-mgmt", title: "OC Management", icon: Users, link: "/dashboard/genmgmt/ocmgmt" },
   { value: "course-mgmt", title: "Course Management", icon: FileText, link: "/dashboard/genmgmt/coursemgmt" },
+  {
+    value: "offerings",
+    title: "Offerings Management",
+    icon: Package,
+    action: "offerings" as const,
+  },
   { value: "subject-mgmt", title: "Subject Management", icon: Book, link: "/dashboard/genmgmt/subjectmgmt" },
   { value: "user-mgmt", title: "User Management", icon: Shield, link: "/dashboard/genmgmt/usersmgmt" },
   {

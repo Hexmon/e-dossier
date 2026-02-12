@@ -1,30 +1,54 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { api } from "@/app/lib/apiClient";
 import { UniversalTable, TableConfig } from "@/components/layout/TableLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Define the Course data type
-interface Course {
-    course: string;
+type CourseRow = {
+    courseCode: string;
     strength: number;
-    currentSemester: number;
-}
+    currentSemester: number | null;
+};
 
-// Sample data for 6 courses (TES-50 to TES-55)
-const coursesData: Course[] = [
-    { course: 'TES-50', strength: 27, currentSemester: 4 },
-    { course: 'TES-51', strength: 29, currentSemester: 3 },
-    { course: 'TES-52', strength: 29, currentSemester: 2 },
-    { course: 'TES-53', strength: 29, currentSemester: 1 },
-];
+type DashboardCoursesResponse = {
+    items: CourseRow[];
+};
 
 export default function Courses() {
+    const [coursesData, setCoursesData] = useState<CourseRow[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const didFetch = useRef(false);
+
+    useEffect(() => {
+        if (didFetch.current) return;
+        didFetch.current = true;
+
+        const loadCourses = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const res = await api.get<DashboardCoursesResponse>("/api/v1/dashboard/data/course");
+                setCoursesData(res.items ?? []);
+            } catch (err) {
+                const message = err instanceof Error ? err.message : "Failed to load courses";
+                setError(message);
+                setCoursesData([]);
+                console.error("Failed to load courses", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadCourses();
+    }, []);
+
     // Configure the table
-    const tableConfig: TableConfig<Course> = {
+    const tableConfig: TableConfig<CourseRow> = {
         columns: [
             {
-                key: 'course',
+                key: 'courseCode',
                 label: 'Course',
                 type: 'text',
                 sortable: true,
@@ -40,9 +64,10 @@ export default function Courses() {
             {
                 key: 'currentSemester',
                 label: 'Current Semester',
-                type: 'number',
+                type: 'custom',
                 sortable: true,
                 filterable: false,
+                render: (value) => (value === null || value === undefined ? '-' : value),
             },
         ],
         theme: {
@@ -53,7 +78,11 @@ export default function Courses() {
             bordered: true,
             striped: true,
             hover: true,
-        }
+        },
+        loading: isLoading,
+        emptyState: {
+            message: error ?? 'No courses found',
+        },
     };
 
     return (
@@ -63,7 +92,7 @@ export default function Courses() {
                     <CardTitle className="text-2xl font-semibold text-primary-foreground bg-primary p-2 rounded">Courses</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <UniversalTable<Course>
+                    <UniversalTable<CourseRow>
                         data={coursesData}
                         config={tableConfig}
                     />

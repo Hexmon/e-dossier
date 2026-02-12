@@ -108,7 +108,7 @@ export default function PunishmentManagementPage() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                                { label: "Module Mgmt", href: "/dashboard/genmgmt?tab=module-mgmt" },
                                 { label: "Punishment Management" },
                             ]}
                         />

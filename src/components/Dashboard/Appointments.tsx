@@ -1,101 +1,22 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { api } from "@/app/lib/apiClient";
 import { UniversalTable, TableConfig } from "@/components/layout/TableLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Define the Appointment data type
-interface Appointment {
-    appointment: string;
-    officersDetails: string;
-    assumptionInCharge: string; // Date stored as ISO string
-    remarks: string;
-}
+type AppointmentRow = {
+    positionName: string;
+    officerName: string;
+    startsAt: string | null;
+};
 
-// Sample data for 10 appointments with realistic military positions
-const appointmentsData: Appointment[] = [
-    {
-        appointment: 'COMDT',
-        officersDetails: 'Lt Gen Neeraj Varshney',
-        assumptionInCharge: '2024-08-15',
-        remarks: '---'
-    },
-    {
-        appointment: 'DCCI',
-        officersDetails: 'Maj Gen Puneet Kapoor',
-        assumptionInCharge: '2024-09-01',
-        remarks: '---'
-    },
-    {
-        appointment: 'CDR',
-        officersDetails: 'Brig Atul Jaiswal',
-        assumptionInCharge: '2024-10-10',
-        remarks: '---'
-    },
-    {
-        appointment: 'Dy CDR',
-        officersDetails: 'Lt Col Raman',
-        assumptionInCharge: '2024-07-22',
-        remarks: 'Offg.'
-    },
-    {
-        appointment: 'DS CORD',
-        officersDetails: 'Lt Col Neeraj Tiwari',
-        assumptionInCharge: '2024-11-05',
-        remarks: '---'
-    },
-    {
-        appointment: 'HOAT',
-        officersDetails: 'Maj Sourav',
-        assumptionInCharge: '2024-12-01',
-        remarks: '---'
-    },
-    {
-        appointment: 'CCO',
-        officersDetails: 'Maj Puneet',
-        assumptionInCharge: '2024-11-05',
-        remarks: '---'
-    },
-    {
-        appointment: 'Arjun Pl Cdr',
-        officersDetails: 'Capt. Praveen Singh',
-        assumptionInCharge: '2024-11-05',
-        remarks: '---'
-    },
-    {
-        appointment: 'Karna Pl Cdr',
-        officersDetails: 'Maj Puneet Yadav',
-        assumptionInCharge: '2024-11-05',
-        remarks: '---'
-    },
-    {
-        appointment: 'Chandragupt Pl Cdr',
-        officersDetails: 'Maj R Krishnan',
-        assumptionInCharge: '2024-11-05',
-        remarks: '---'
-    },
-    {
-        appointment: 'Prithviraj Pl Cdr',
-        officersDetails: 'Capt. Vaibhav Gusain',
-        assumptionInCharge: '2024-11-05',
-        remarks: '---'
-    },
-    {
-        appointment: 'Ranapratap Pl Cdr',
-        officersDetails: 'Maj AS Dhaliwal',
-        assumptionInCharge: '2024-11-05',
-        remarks: '---'
-    },
-    {
-        appointment: 'Shivaji Pl Cdr',
-        officersDetails: 'Maj SB Bundel',
-        assumptionInCharge: '2024-11-05',
-        remarks: '---'
-    },
-];
+type DashboardAppointmentsResponse = {
+    items: AppointmentRow[];
+};
 
 // Helper function to format date consistently
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string | null | undefined): string => {
     if (!dateString) return '';
     const date = new Date(dateString);
     const year = date.getFullYear();
@@ -105,41 +26,61 @@ const formatDate = (dateString: string): string => {
 };
 
 export default function Appointments() {
+    const [appointmentsData, setAppointmentsData] = useState<AppointmentRow[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const didFetch = useRef(false);
+
+    useEffect(() => {
+        if (didFetch.current) return;
+        didFetch.current = true;
+
+        const loadAppointments = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const res = await api.get<DashboardAppointmentsResponse>("/api/v1/dashboard/data/appointments");
+                setAppointmentsData(res.items ?? []);
+            } catch (err) {
+                const message = err instanceof Error ? err.message : "Failed to load appointments";
+                setError(message);
+                setAppointmentsData([]);
+                console.error("Failed to load appointments", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadAppointments();
+    }, []);
+
     // Configure the table
-    const tableConfig: TableConfig<Appointment> = {
+    const tableConfig: TableConfig<AppointmentRow> = {
         columns: [
             {
-                key: 'appointment',
+                key: 'positionName',
                 label: 'Appointment Name',
                 type: 'text',
                 sortable: true,
                 filterable: false,
-                width: '20%',
+                width: '35%',
             },
             {
-                key: 'officersDetails',
+                key: 'officerName',
                 label: 'Officer Name',
                 type: 'text',
                 sortable: true,
                 filterable: false,
-                width: '25%',
+                width: '35%',
             },
             {
-                key: 'assumptionInCharge',
+                key: 'startsAt',
                 label: 'Assumption Of Charge',
                 type: 'custom', // Changed from 'date' to 'custom'
                 sortable: true,
                 filterable: false,
-                width: '25%',
-                render: (value) => formatDate(value), // Custom render function
-            },
-            {
-                key: 'remarks',
-                label: 'Remarks',
-                type: 'text',
-                sortable: false,
-                filterable: false,
                 width: '30%',
+                render: (value) => formatDate(value), // Custom render function
             },
         ],
         theme: {
@@ -150,7 +91,11 @@ export default function Appointments() {
             bordered: true,
             striped: true,
             hover: true,
-        }
+        },
+        loading: isLoading,
+        emptyState: {
+            message: error ?? 'No appointments found',
+        },
     };
 
     return (
@@ -160,7 +105,7 @@ export default function Appointments() {
                     <CardTitle className="text-2xl font-semibold text-primary-foreground bg-primary p-2 rounded">Appointments</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <UniversalTable<Appointment>
+                    <UniversalTable<AppointmentRow>
                         data={appointmentsData}
                         config={tableConfig}
                     />

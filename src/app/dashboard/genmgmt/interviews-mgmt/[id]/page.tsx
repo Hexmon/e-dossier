@@ -99,7 +99,7 @@ export default function TemplateDetailPage() {
                             <BreadcrumbNav
                                 paths={[
                                     { label: "Dashboard", href: "/dashboard" },
-                                    { label: "Gentlemen Management", href: "/dashboard/genmgmt" },
+                                    { label: "Module Mgmt", href: "/dashboard/genmgmt?tab=module-mgmt" },
                                     { label: "Interview Management", href: "/dashboard/genmgmt/interviews-mgmt" },
                                     { label: currentTemplate.code },
                                 ]}

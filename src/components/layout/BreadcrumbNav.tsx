@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,20 @@ interface BreadcrumbNavProps {
 
 export default function BreadcrumbNav({ paths }: BreadcrumbNavProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab");
+
+  const withTab = (href?: string) => {
+    if (!href || !activeTab) return href;
+    if (!href.includes("/dashboard/genmgmt") && !href.includes("/milmgmt")) {
+      return href;
+    }
+    const [path, query = ""] = href.split("?");
+    const params = new URLSearchParams(query);
+    if (!params.has("tab")) params.set("tab", activeTab);
+    const queryString = params.toString();
+    return queryString ? `${path}?${queryString}` : path;
+  };
 
   return (
     <div className="mb-6 flex items-center gap-2">
@@ -34,12 +48,13 @@ export default function BreadcrumbNav({ paths }: BreadcrumbNavProps) {
         <ol className="inline-flex items-center space-x-1 md:space-x-3">
           {paths.map((path, index) => {
             const isLast = index === paths.length - 1;
+            const href = withTab(path.href);
 
             return (
               <li key={index} className="inline-flex items-center">
-                {!isLast && path.href ? (
+                {!isLast && href ? (
                   <Link
-                    href={path.href}
+                    href={href}
                     className="text-muted-foreground hover:text-primary"
                   >
                     {path.label}

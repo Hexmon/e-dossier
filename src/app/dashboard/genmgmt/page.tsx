@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { AppSidebar } from "@/components/AppSidebar";
@@ -26,9 +26,31 @@ import { resolveToneClasses, type ColorTone } from "@/lib/theme-color";
 
 export default function GeneralManagementPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const { data: meData, isLoading: meLoading } = useMe();
   const authzV2Enabled = isAuthzV2Enabled();
+  const tabParam = searchParams.get("tab");
+  const validTabs = managementTabs.map((tab) => tab.value);
+  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : "Gen Mgmt";
+  const activeTabLabel =
+    managementTabs.find((tab) => tab.value === activeTab)?.title ?? "Admin Management";
+
+  const updateTab = (value: string) => {
+    if (value === activeTab) return;
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set("tab", value);
+    router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
+  };
+
+  const withTab = (href: string, tab: string) => {
+    const [path, query = ""] = href.split("?");
+    const params = new URLSearchParams(query);
+    params.set("tab", tab);
+    const queryString = params.toString();
+    return queryString ? `${path}?${queryString}` : path;
+  };
 
   const hasPageAccess = useMemo(() => {
     if (!authzV2Enabled) return true;
@@ -83,7 +105,7 @@ export default function GeneralManagementPage() {
               <BreadcrumbNav
                 paths={[
                   { label: "Dashboard", href: "/dashboard" },
-                  { label: "Admin Mgmt" },
+                  { label: activeTabLabel },
                 ]}
               />
             </nav>
@@ -98,7 +120,12 @@ export default function GeneralManagementPage() {
             </div>
 
             {/* Tabs Section */}
-            <GlobalTabs defaultValue="Gen Mgmt" tabs={managementTabs}>
+            <GlobalTabs
+              defaultValue="Gen Mgmt"
+              value={activeTab}
+              onValueChange={updateTab}
+              tabs={managementTabs}
+            >
               {/* General Management Tab */}
               <TabsContent value="Gen Mgmt" className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
@@ -109,8 +136,10 @@ export default function GeneralManagementPage() {
                     const to = card.to ?? "";
                     const color = card.color as ColorTone;
                     const iconTone = resolveToneClasses(color, "icon");
+                    const isOfferings = title === "Offerings Management";
+                    const tabbedTo = to ? withTab(to, activeTab) : to;
 
-                    if (title === "Offerings Management") {
+                    if (isOfferings) {
                       return (
                         <Card
                           key={index}
@@ -141,9 +170,10 @@ export default function GeneralManagementPage() {
                         key={index}
                         title={title}
                         description={description}
-                        to={to}
+                        to={isOfferings ? undefined : tabbedTo}
                         icon={IconComponent}
                         color={color}
+                        onClick={isOfferings ? () => setCourseModalOpen(true) : undefined}
                       />
                     );
                   })}
@@ -155,12 +185,13 @@ export default function GeneralManagementPage() {
                   {moduleManagementCard.map((card, index) => {
                     const IconComponent = card.icon;
 
+                    const tabbedTo = card.to ? withTab(card.to, activeTab) : card.to;
                     return (
                       <DashboardCard
                         key={index}
                         title={card.title}
                         description={card.description}
-                        to={card.to}
+                        to={tabbedTo}
                         icon={IconComponent}
                         color={card.color as ColorTone}
                       />
@@ -236,7 +267,9 @@ export default function GeneralManagementPage() {
       <CourseSelectModal
         open={courseModalOpen}
         onOpenChange={setCourseModalOpen}
-        onSelect={(course) => router.push(`/dashboard/genmgmt/coursemgmt/${course.id}/offerings`)}
+        onSelect={(course) =>
+          router.push(withTab(`/dashboard/genmgmt/coursemgmt/${course.id}/offerings`, activeTab))
+        }
       />
     </SidebarProvider>
   );

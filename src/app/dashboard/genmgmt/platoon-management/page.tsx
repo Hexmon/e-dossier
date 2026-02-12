@@ -118,7 +118,7 @@ export default function PlatoonManagementPage() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                                { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                                 { label: "Platoon Management" },
                             ]}
                         />
