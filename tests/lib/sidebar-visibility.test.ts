@@ -56,7 +56,13 @@ describe("sidebar visibility matrix", () => {
   });
 
   it("defines OTHER_USERS sections in required order", () => {
-    expect(sectionKeysFor("OTHER_USERS")).toEqual(["dashboard", "academics", "reports", "dossier"]);
+    expect(sectionKeysFor("OTHER_USERS")).toEqual([
+      "dashboard",
+      "dossier",
+      "academics",
+      "reports",
+      "settings",
+    ]);
   });
 
   it("filters sections by role group and preserves matrix order", () => {
@@ -80,7 +86,13 @@ describe("sidebar visibility matrix", () => {
       "reports",
       "extra",
     ]);
-    expect(otherVisible).toEqual(["dashboard", "academics", "reports", "dossier"]);
+    expect(otherVisible).toEqual([
+      "dashboard",
+      "dossier",
+      "academics",
+      "reports",
+      "settings",
+    ]);
   });
 
   it("skips missing sections without changing the canonical order", () => {

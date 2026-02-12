@@ -13,7 +13,7 @@ export const SIDEBAR_SECTIONS_BY_ROLE_GROUP: Record<
   readonly SidebarSectionKey[]
 > = {
   ADMIN: ["dashboard", "admin", "settings"],
-  OTHER_USERS: ["dashboard", "academics", "reports", "dossier"],
+  OTHER_USERS: ["dashboard", "dossier", "academics", "reports", "settings"],
 };
 
 type RoleGroupInput = {

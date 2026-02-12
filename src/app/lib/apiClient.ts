@@ -9,6 +9,11 @@
  */
 
 import z from "zod";
+import {
+    buildLoginUrlWithNext,
+    getCurrentDashboardPathWithQuery,
+    storeReturnUrl,
+} from "@/lib/auth-return-url";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -110,6 +115,60 @@ function isFormLike(x: unknown): x is FormData | Blob | File {
 
 let csrfToken: string | null = null;
 let csrfPromise: Promise<void> | null = null;
+let authRedirectInProgress = false;
+const AUTH_ENDPOINT_PATHS = new Set(["/api/v1/auth/login", "/api/v1/auth/logout"]);
+
+function getPathnameFromUrl(input: string): string | null {
+    try {
+        const base =
+            typeof window !== "undefined" ? window.location.origin : "http://localhost";
+        return new URL(input, base).pathname;
+    } catch {
+        return null;
+    }
+}
+
+function shouldHandleUnauthorizedInBrowser(params: {
+    endpoint: string;
+    requestUrl: string;
+    skipAuth?: boolean;
+}): boolean {
+    if (typeof window === "undefined" || params.skipAuth) return false;
+    if (authRedirectInProgress) return false;
+    if (window.location.pathname === "/login") return false;
+
+    const endpointPath = getPathnameFromUrl(params.endpoint);
+    const requestPath = getPathnameFromUrl(params.requestUrl);
+
+    if (endpointPath && AUTH_ENDPOINT_PATHS.has(endpointPath)) return false;
+    if (requestPath && AUTH_ENDPOINT_PATHS.has(requestPath)) return false;
+
+    return true;
+}
+
+async function handleUnauthorizedInBrowser(): Promise<void> {
+    if (typeof window === "undefined" || authRedirectInProgress) return;
+    authRedirectInProgress = true;
+
+    const returnUrl = getCurrentDashboardPathWithQuery();
+    if (returnUrl) {
+        storeReturnUrl(returnUrl);
+    }
+
+    try {
+        await fetch("/api/v1/auth/logout", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+    } catch {
+        // Best effort only; login redirect still proceeds.
+    }
+
+    window.location.assign(buildLoginUrlWithNext(returnUrl));
+}
 
 /**
  * Ensure a CSRF token is available in the browser by performing a
@@ -215,16 +274,18 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
         csrfToken = resCsrf;
     }
 
-    // SECURITY FIX: Handle 401 Unauthorized - redirect to login
+    // SECURITY FIX: Handle 401 Unauthorized - capture return URL and redirect to login.
     if (res.status === 401) {
-        // Only redirect on client-side (browser environment)
-        if (typeof window !== 'undefined' && !skipAuth) {
-            // Clear any stored auth state
-            document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-            // Redirect to login page
-            window.location.href = '/';
+        if (
+            shouldHandleUnauthorizedInBrowser({
+                endpoint,
+                requestUrl: url,
+                skipAuth,
+            })
+        ) {
+            void handleUnauthorizedInBrowser();
         }
-        // Still throw error for proper error handling
+
         throw new ApiClientError(
             'Unauthorized - Please log in',
             401,

@@ -7,20 +7,10 @@ vi.mock('@/app/lib/acx/principal', () => ({
     buildPrincipalFromRequest: vi.fn(),
 }));
 
-// We use the real engine logic for rules now in integration-style unit test,
-// OR we keep mocking engine if we only want to test route.ts logic.
-// However, since we added rules to engine.ts, we should assume the engine behaves as configured.
-// But `createAuthzEngine` is mocked! We must update the mock to reflect our new policy decisions.
-vi.mock('@/app/lib/acx/engine', () => ({
-    createAuthzEngine: vi.fn(),
-}));
-
 import { buildPrincipalFromRequest } from '@/app/lib/acx/principal';
-import { createAuthzEngine } from '@/app/lib/acx/engine';
 
 describe('GET /api/v1/me/navigation', () => {
     const mockBuildPrincipal = buildPrincipalFromRequest as any;
-    const mockCreateEngine = createAuthzEngine as any;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -33,10 +23,6 @@ describe('GET /api/v1/me/navigation', () => {
             permissions: [],
         });
 
-        mockCreateEngine.mockReturnValue({
-            authorize: vi.fn().mockResolvedValue({ allow: false }),
-        });
-
         const req = new NextRequest('http://localhost/api/v1/me/navigation');
         const res = await GET(req);
         const data = await res.json();
@@ -46,23 +32,11 @@ describe('GET /api/v1/me/navigation', () => {
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
     });
 
-    it('should return correct view for PLATOON CDR', async () => {
+    it('should return correct view for OTHER roles', async () => {
         mockBuildPrincipal.mockResolvedValue({
             id: 'pl-cdr-1',
             roles: ['PLATOON CDR'],
             permissions: [],
-        });
-
-        // Mock engine decisions for PLATOON CDR
-        mockCreateEngine.mockReturnValue({
-            authorize: vi.fn().mockImplementation(async ({ action }: any) => {
-                const name = action?.name;
-                // Platoon Cdr can access sidebar items via new policy
-                if (['sidebar:academics', 'sidebar:reports', 'sidebar:dossier', 'dashboard:view'].includes(name)) {
-                    return { allow: true };
-                }
-                return { allow: false };
-            }),
         });
 
         const req = new NextRequest('http://localhost/api/v1/me/navigation');
@@ -78,24 +52,18 @@ describe('GET /api/v1/me/navigation', () => {
 
         // Academics Visible
         expect(data.sections.find((s: any) => s.key === 'academics')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
+
+        const settingsSection = data.sections.find((s: any) => s.key === 'settings');
+        expect(settingsSection.items.some((i: any) => i.label === 'Device Site Settings')).toBe(true);
     });
 
-    it('should return correct view for ADMIN (No Dossier)', async () => {
+    it('should return correct view for ADMIN (No Dossier/Academics/Reports)', async () => {
         mockBuildPrincipal.mockResolvedValue({
             id: 'admin-1',
             roles: ['ADMIN'],
             permissions: [],
-        });
-
-        mockCreateEngine.mockReturnValue({
-            authorize: vi.fn().mockImplementation(async ({ action, resource }: any) => {
-                // Admin baseline allowed (handled in route.ts, but engine check might happen too)
-                // Dossier has adminBaseline: false, so it hits this mock.
-                if (action?.name === 'sidebar:dossier') return { allow: false };
-                if (action?.name === 'dashboard:view') return { allow: true };
-                // For others, if adminBaseline is true, route.ts might skip engine call!
-                return { allow: true };
-            }),
         });
 
         const req = new NextRequest('http://localhost/api/v1/me/navigation');
@@ -108,8 +76,9 @@ describe('GET /api/v1/me/navigation', () => {
         // Dossier Hidden (Goal!)
         expect(data.sections.find((s: any) => s.key === 'dossier')).toBeUndefined();
 
-        // Academics Visible
-        expect(data.sections.find((s: any) => s.key === 'academics')).toBeDefined();
+        // Academics / Reports Hidden
+        expect(data.sections.find((s: any) => s.key === 'academics')).toBeUndefined();
+        expect(data.sections.find((s: any) => s.key === 'reports')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
     });
 });

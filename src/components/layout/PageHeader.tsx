@@ -1,6 +1,7 @@
 "use client";
 
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Repeat } from "lucide-react";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@/app/lib/api/authApi";
 import { useMe } from "@/hooks/useMe";
+import SwitchUserModal from "@/components/auth/SwitchUserModal";
 
 interface PageHeaderProps {
   title: string;
@@ -38,27 +40,26 @@ const getInitials = (name: string): string => {
 export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [switchUserOpen, setSwitchUserOpen] = useState(false);
 
   // Replaces the manual useEffect + fetchMe with a single React Query call
   // that's shared across the entire app
-  const { data, isLoading } = useMe();
+  const { data } = useMe();
 
   const {
     user = {},
-    roles = [],
     apt = {},
   } = data ?? {};
 
   const {
     email = "",
     name = "",
+    id = "",
     username = "",
-    phone = "",
-    rank = "",
   } = user as any;
 
   const {
-    id = "",
+    id: appointmentId = "",
     position = "",
   } = apt as any;
 
@@ -82,56 +83,79 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   const initials = getInitials(name);
 
   return (
-    <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
-      <div className="flex items-center justify-between px-4 h-full">
+    <>
+      <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
+        <div className="flex items-center justify-between px-4 h-full">
 
-        {/* Left side */}
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="h-8 w-8" />
-          <div>
-            <h1 className="text-lg font-semibold text-[#1677ff]">{title}</h1>
-            {description && (
-              <p className="text-sm text-muted-foreground">{description}</p>
-            )}
+          {/* Left side */}
+          <div className="flex items-center gap-4">
+            <SidebarTrigger className="h-8 w-8" />
+            <div>
+              <h1 className="text-lg font-semibold text-[#1677ff]">{title}</h1>
+              {description && (
+                <p className="text-sm text-muted-foreground">{description}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setSwitchUserOpen(true)}
+            >
+              <Repeat className="h-4 w-4" />
+              <span>Switch User</span>
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-[#1677ff] text-primary-foreground">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    <p className="font-medium">{position}</p>
+                    <p className="w-[200px] truncate text-sm text-muted-foreground">
+                      {email}
+                    </p>
+                  </div>
+                </div>
+
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile Settings</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-
-        {/* Right side */}
-        <div className="flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-[#1677ff] text-primary-foreground">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="flex items-center justify-start gap-2 p-2">
-                <div className="flex flex-col space-y-1 leading-none">
-                  <p className="font-medium">{position}</p>
-                  <p className="w-[200px] truncate text-sm text-muted-foreground">
-                    {email}
-                  </p>
-                </div>
-              </div>
-
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile Settings</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-    </header>
+      </header>
+      <SwitchUserModal
+        open={switchUserOpen}
+        onOpenChange={setSwitchUserOpen}
+        currentIdentity={{
+          userId: id || null,
+          appointmentId: appointmentId || null,
+          roleKey: position || null,
+          username: username || null,
+        }}
+      />
+    </>
   );
 }

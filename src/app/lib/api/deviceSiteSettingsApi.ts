@@ -49,7 +49,6 @@ export const deviceSiteSettingsApi = {
       baseURL,
       query: deviceId ? { deviceId } : undefined,
       headers: deviceId ? { "x-device-id": deviceId } : undefined,
-      skipAuth: true,
     });
   },
 

@@ -21,6 +21,11 @@ import {
 import { getAppointments, Appointment } from "@/app/lib/api/appointmentApi";
 import { loginUser } from "@/app/lib/api/authApi";
 import { ApiClientError } from "@/app/lib/apiClient";
+import {
+  clearReturnUrl,
+  readReturnUrl,
+  resolvePostAuthRedirect,
+} from "@/lib/auth-return-url";
 import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
 import { LoginForm } from "../../../types/login";
@@ -130,10 +135,16 @@ function LoginPageContent() {
             password: data.password,
           };
 
-      const response = await loginUser(payload);
+      await loginUser(payload);
 
       toast.success(`Welcome, ${data.appointment}!`);
-      router.push("/dashboard");
+      const redirectTo = resolvePostAuthRedirect({
+        nextParam: searchParams.get("next"),
+        storedReturnUrl: readReturnUrl(),
+        fallback: "/dashboard",
+      });
+      clearReturnUrl();
+      router.push(redirectTo);
     } catch (err: any) {
       console.error("Login error:", err);
 
