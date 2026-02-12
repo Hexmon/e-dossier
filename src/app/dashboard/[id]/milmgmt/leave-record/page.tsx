@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 
@@ -25,7 +25,7 @@ import { Shield, ChevronDown } from "lucide-react";
 
 import { updateOcLeaveRecord } from "@/app/lib/api/leaveApi";
 import { toast } from "sonner";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Link from "next/link";
 import { clearLeaveForm, saveLeaveForm } from "@/store/slices/leaveRecordsSlice";
@@ -130,19 +130,46 @@ function InnerLeavePage({
     ocId: string;
     onClearForm: () => void;
 }) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const dispatch = useDispatch();
     const { control, register, setValue, handleSubmit, getValues, watch, reset } = useFormContext<LeaveFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "leaveRows" });
 
     const { submitLeave, fetchLeave, deleteLeave, deleteSavedLeave } = useLeaveActions(selectedCadet);
 
-    const [activeTab, setActiveTab] = useState<number>(0);
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - 1;
+        if (idx < 0 || idx >= semesters.length) return 0;
+        return idx;
+    }, [semParam]);
+    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
     const [savedData, setSavedData] = useState<LeaveRow[][]>(semesters.map(() => []));
 
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [editingValues, setEditingValues] = useState<Partial<LeaveRow> | null>(null);
     const [refreshFlag, setRefreshFlag] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + 1));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleSemesterChange = (index: number) => {
+        setActiveTab(index);
+        updateSemesterParam(index);
+        cancelEdit();
+    };
 
     // Auto-save to Redux on form changes
     useEffect(() => {
@@ -307,10 +334,7 @@ function InnerLeavePage({
                                 return (
                                     <button
                                         key={term}
-                                        onClick={() => {
-                                            setActiveTab(idx);
-                                            cancelEdit();
-                                        }}
+                                        onClick={() => handleSemesterChange(idx)}
                                         className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                                             }`}
                                     >

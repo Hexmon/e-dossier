@@ -1,7 +1,7 @@
 // /app/dashboard/hike/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 
@@ -28,7 +28,7 @@ import Link from "next/link";
 import { updateOcHikeRecord } from "@/app/lib/api/hikeApi";
 import { toast } from "sonner";
 import { useOcDetails } from "@/hooks/useOcDetails";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { saveHikeForm, clearHikeForm } from "@/store/slices/hikeRecordsSlice";
 import { Cadet } from "@/types/cadet";
 
@@ -125,13 +125,24 @@ function InnerHikePage({
     ocId: string;
     onClearForm: () => void;
 }) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const dispatch = useDispatch();
     const { control, register, setValue, handleSubmit, getValues, watch, reset } = useFormContext<HikeFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "hikeRows" });
 
     const { submitHike, fetchHike, deleteFormHike, deleteSavedHike } = useHikeActions(selectedCadet);
 
-    const [activeTab, setActiveTab] = useState<number>(0);
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - 1;
+        if (idx < 0 || idx >= semesters.length) return 0;
+        return idx;
+    }, [semParam]);
+    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
     const [savedData, setSavedData] = useState<HikeRow[][]>(semesters.map(() => []));
 
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
@@ -139,6 +150,22 @@ function InnerHikePage({
 
     const [refreshFlag, setRefreshFlag] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + 1));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleSemesterChange = (index: number) => {
+        setActiveTab(index);
+        updateSemesterParam(index);
+        cancelEdit();
+    };
 
     // Auto-save to Redux on form changes
     useEffect(() => {
@@ -287,10 +314,7 @@ function InnerHikePage({
                             {semesters.map((term, idx) => (
                                 <button
                                     key={term}
-                                    onClick={() => {
-                                        setActiveTab(idx);
-                                        cancelEdit();
-                                    }}
+                                    onClick={() => handleSemesterChange(idx)}
                                     className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
                                         ? "bg-primary text-primary-foreground"
                                         : "bg-muted text-foreground"

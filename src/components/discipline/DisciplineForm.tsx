@@ -61,8 +61,21 @@ export default function DisciplineForm({
 
             // Find the selected punishment to get marksDeduction
             const selectedPunishment = punishments.find(p => p.title === rec.punishmentAwarded);
+            const hasPunishment = Boolean(rec.punishmentAwarded);
             const marksDeduction = selectedPunishment?.marksDeduction ?? 0;
-            const numPunishments = Number(rec.numberOfPunishments ?? 1);
+            const rawNum = Number(rec.numberOfPunishments);
+            const numPunishments = hasPunishment
+                ? Math.max(1, Number.isFinite(rawNum) ? rawNum : 1)
+                : 0;
+
+            if (!hasPunishment && rec.numberOfPunishments !== "0") {
+                setValue(`records.${i}.numberOfPunishments`, "0", {
+                    shouldDirty: true,
+                    shouldTouch: false,
+                    shouldValidate: false
+                });
+                hasChanges = true;
+            }
 
             // Calculate negative points = marksDeduction * numberOfPunishments
             const calculatedNegativePts = marksDeduction * numPunishments;
@@ -106,7 +119,7 @@ export default function DisciplineForm({
                     offence: record?.offence || "",
                     punishmentAwarded: record?.punishmentAwarded || "",
                     punishmentId: record?.punishmentId || "",
-                    numberOfPunishments: record?.numberOfPunishments || "1",
+                    numberOfPunishments: record?.punishmentAwarded ? (record?.numberOfPunishments || "1") : "0",
                     dateOfAward: record?.dateOfAward || "",
                     byWhomAwarded: record?.byWhomAwarded || "",
                     negativePts: record?.negativePts || "",
@@ -127,7 +140,7 @@ export default function DisciplineForm({
             offence: "",
             punishmentAwarded: "",
             punishmentId: "",
-            numberOfPunishments: "1",
+            numberOfPunishments: "0",
             dateOfAward: "",
             byWhomAwarded: "",
             negativePts: "",
@@ -190,6 +203,20 @@ export default function DisciplineForm({
                                                         shouldTouch: true
                                                     });
                                                 }
+                                                if (value) {
+                                                    const currentNum = Number(currentRecord?.numberOfPunishments ?? 0);
+                                                    if (!Number.isFinite(currentNum) || currentNum <= 0) {
+                                                        setValue(`records.${index}.numberOfPunishments`, "1", {
+                                                            shouldDirty: true,
+                                                            shouldTouch: true
+                                                        });
+                                                    }
+                                                } else {
+                                                    setValue(`records.${index}.numberOfPunishments`, "0", {
+                                                        shouldDirty: true,
+                                                        shouldTouch: true
+                                                    });
+                                                }
                                             }}
                                         >
                                             <SelectTrigger className="w-full min-w-0">
@@ -212,10 +239,10 @@ export default function DisciplineForm({
                                     <td className="p-2 border">
                                         <Input
                                             type="number"
-                                            min="1"
+                                            min="0"
                                             className="w-full min-w-0"
                                             {...register(`records.${index}.numberOfPunishments`)}
-                                            defaultValue="1"
+                                            defaultValue="0"
                                         />
                                     </td>
 

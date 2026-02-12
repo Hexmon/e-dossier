@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -28,6 +29,9 @@ interface Props {
 
 export default function MedicalCategorySection({ selectedCadet, semesters }: Props) {
     const { ocId = "" } = selectedCadet;
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     // Redux
     const dispatch = useDispatch();
@@ -44,9 +48,32 @@ export default function MedicalCategorySection({ selectedCadet, semesters }: Pro
         remove: deleteRecord,
     } = useMedicalCategory(ocId);
 
-    const [activeTab, setActiveTab] = useState(0);
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - 1;
+        if (idx < 0 || idx >= semesters.length) return 0;
+        return idx;
+    }, [semParam, semesters.length]);
+    const [activeTab, setActiveTab] = useState(resolvedTab);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<MedCatRow | null>(null);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + 1));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleSemesterChange = (index: number) => {
+        setActiveTab(index);
+        updateSemesterParam(index);
+    };
 
     const loadData = useCallback(async () => {
         await fetchRecords();
@@ -214,7 +241,7 @@ export default function MedicalCategorySection({ selectedCadet, semesters }: Pro
                         return (
                             <button
                                 key={sem}
-                                onClick={() => setActiveTab(idx)}
+                                onClick={() => handleSemesterChange(idx)}
                                 className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-primary text-primary-foreground" : "bg-muted"
                                     }`}
                             >

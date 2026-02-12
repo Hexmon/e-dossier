@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -13,24 +13,72 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import SubjectCard from "@/components/subjects/SubjectCard";
 import SubjectDialog from "@/components/subjects/SubjectDialog";
 import { useSubjects } from "@/hooks/useSubjects";
+import { useCourses } from "@/hooks/useCourses";
+import { useOfferings } from "@/hooks/useOfferings";
 import { Subject, SubjectCreate } from "@/app/lib/api/subjectsApi";
 import { Input } from "@/components/ui/input";
 import { ocTabs } from "@/config/app.config";
 import { toast } from "sonner";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 export default function SubjectManagementPage() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSubject, setEditingSubject] = useState<Subject | undefined>(undefined);
+    const [selectedCourseId, setSelectedCourseId] = useState<string>("all");
+    const [selectedBranch, setSelectedBranch] = useState<string>("all");
 
     const {
-        loading,
+        loading: subjectsLoading,
         subjects,
         addSubject,
         editSubject,
         removeSubject,
     } = useSubjects({ q: searchQuery || undefined });
+
+    const { courses, loading: coursesLoading } = useCourses();
+    const {
+        offerings,
+        loading: offeringsLoading,
+    } = useOfferings(selectedCourseId === "all" ? "" : selectedCourseId);
+
+    const branchOptions = useMemo(() => {
+        const set = new Set<string>();
+        subjects.forEach((subject) => {
+            if (subject.branch) set.add(subject.branch);
+        });
+        return Array.from(set).sort();
+    }, [subjects]);
+
+    const courseSubjectIds = useMemo(() => {
+        if (selectedCourseId === "all") return null;
+        const set = new Set<string>();
+        offerings.forEach((offering) => {
+            if (offering.subjectId) set.add(offering.subjectId);
+        });
+        return set;
+    }, [offerings, selectedCourseId]);
+
+    const filteredSubjects = useMemo(() => {
+        let data = subjects;
+        if (selectedBranch !== "all") {
+            data = data.filter((subject) => subject.branch === selectedBranch);
+        }
+        if (selectedCourseId !== "all") {
+            if (!courseSubjectIds) return [];
+            data = data.filter((subject) => subject.id && courseSubjectIds.has(subject.id));
+        }
+        return data;
+    }, [subjects, selectedBranch, selectedCourseId, courseSubjectIds]);
+
+    const loading = subjectsLoading || (selectedCourseId !== "all" && offeringsLoading) || coursesLoading;
 
     const handleLogout = () => {
         console.log("Logout clicked");
@@ -80,7 +128,7 @@ export default function SubjectManagementPage() {
     };
 
     const renderSubjectCards = () => {
-        return subjects.map((subject) => {
+        return filteredSubjects.map((subject) => {
             const { id = "" } = subject;
             return (
                 <SubjectCard
@@ -128,6 +176,38 @@ export default function SubjectManagementPage() {
                                             onChange={(e) => handleSearch(e.target.value)}
                                             className="w-64"
                                         />
+                                        <Select
+                                            value={selectedCourseId}
+                                            onValueChange={setSelectedCourseId}
+                                        >
+                                            <SelectTrigger className="w-44">
+                                                <SelectValue placeholder="All Courses" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Courses</SelectItem>
+                                                {courses.map((course) => (
+                                                    <SelectItem key={course.id} value={course.id}>
+                                                        {course.courseNo ?? course.id}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Select
+                                            value={selectedBranch}
+                                            onValueChange={setSelectedBranch}
+                                        >
+                                            <SelectTrigger className="w-40">
+                                                <SelectValue placeholder="All Branches" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Branches</SelectItem>
+                                                {branchOptions.map((branch) => (
+                                                    <SelectItem key={branch} value={branch}>
+                                                        {branch}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <Button
                                             variant="outline"
                                             onClick={() => {
