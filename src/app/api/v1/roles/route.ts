@@ -4,7 +4,7 @@
 // import { and, eq, sql } from 'drizzle-orm';
 // import { z } from 'zod';
 // import { json, handleApiError, ApiError } from '@/app/lib/http';
-// import { requireAdmin, requireAuth } from '@/app/lib/authz'; // make sure this reads cookie OR Bearer
+// import { requireAuth } from '@/app/lib/authz'; // make sure this reads cookie OR Bearer
 // // If you don't have hasAdminRole exported, keep a local helper:
 // const hasAdminRole = (r?: string[]) =>
 //     Array.isArray(r) && r.some(k => ['ADMIN', 'SUPER_ADMIN', 'COMMANDANT'].includes(k));
@@ -75,7 +75,7 @@
 // // ---------- POST (ADMIN) ----------
 // async function POSTHandler(req: NextRequest) {
 //     try {
-//         await requireAdmin(req);
+//         await requireAuth(req);
 
 //         const body = await req.json();
 //         const dto = RoleCreateSchema.parse(body);
@@ -104,7 +104,7 @@
 // // ---------- PATCH (ADMIN) ----------
 // async function PATCHHandler(req: NextRequest) {
 //     try {
-//         await requireAdmin(req);
+//         await requireAuth(req);
 
 //         const body = await req.json();
 //         const dto = RoleUpdateSchema.parse(body);
@@ -149,7 +149,7 @@
 // // ---------- DELETE (ADMIN) ----------
 // async function DELETEHandler(req: NextRequest) {
 //     try {
-//         await requireAdmin(req);
+//         await requireAuth(req);
 
 //         const { searchParams } = new URL(req.url);
 //         const dto = RoleDeleteSchema.parse({
@@ -181,19 +181,56 @@
 // }
 
 // src/app/api/v1/roles/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { NextResponse } from 'next/server';
+import { requireAuth } from '@/app/lib/authz';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+type AuditActor = { type: 'user' | 'anonymous'; id: string };
+
+async function resolveActor(req: AuditNextRequest): Promise<AuditActor> {
+  try {
+    const authCtx = await requireAuth(req);
+    return { type: 'user', id: authCtx.userId };
+  } catch {
+    return { type: 'anonymous', id: 'unknown' };
+  }
+}
+
+async function GETHandler(req: AuditNextRequest) {
+  const actor = await resolveActor(req);
+
+  await req.audit.log({
+    action: AuditEventType.API_REQUEST,
+    outcome: 'SUCCESS',
+    actor,
+    target: { type: AuditResourceType.ROLE, id: 'collection' },
+    metadata: { description: 'Roles list retrieved via /api/v1/roles' },
+  });
+
   // TODO: fetch real roles from your DB
   return NextResponse.json({ ok: true, message: 'Roles retrieved successfully.', roles: [] }, { status: 200 });
 }
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
+  const actor = await resolveActor(req);
+
   const body = await req.json();
+
+  await req.audit.log({
+    action: AuditEventType.API_REQUEST,
+    outcome: 'SUCCESS',
+    actor,
+    target: { type: AuditResourceType.ROLE, id: 'collection' },
+    metadata: {
+      description: 'Role created via /api/v1/roles',
+      keys: Object.keys((body ?? {}) as Record<string, unknown>),
+    },
+  });
+
   // TODO: validate & create role
   return NextResponse.json({ ok: true, message: 'Role created successfully.', created: body }, { status: 201 });
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);

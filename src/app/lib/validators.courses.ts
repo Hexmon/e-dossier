@@ -89,6 +89,13 @@ export const offeringUpdateSchema = z.object({
     })).optional(),
 }).refine(v => Object.keys(v).length > 0, { message: 'No changes provided' });
 
+export const offeringAssignSchema = z.object({
+    sourceCourseId: z.string().uuid(),
+    mode: z.literal('copy').default('copy'),
+    semester: z.coerce.number().int().min(1).max(8).optional(),
+    subjectIds: z.array(z.string().uuid()).min(1).optional(),
+});
+
 export const listQuerySchema = z.object({
     q: z.string().trim().optional(),
     branch: z.enum(['C', 'E', 'M']).optional(),

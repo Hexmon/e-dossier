@@ -1,5 +1,4 @@
 // src/app/api/v1/positions/slots/route.ts
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { json, handleApiError } from '@/app/lib/http';
 import { positions } from '@/app/db/schema/auth/positions';
@@ -7,10 +6,13 @@ import { appointments } from '@/app/db/schema/auth/appointments';
 import { users } from '@/app/db/schema/auth/users';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, or, eq, isNull, lte, gte, inArray, sql } from 'drizzle-orm';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 
-async function GETHandler(req: NextRequest) {
+export const runtime = 'nodejs';
+
+async function GETHandler(req: AuditNextRequest) {
   try {
     const url = new URL(req.url);
 
@@ -164,23 +166,22 @@ async function GETHandler(req: NextRequest) {
           : null,
       }));
 
-    await createAuditLog({
-      actorUserId: null,
-      eventType: AuditEventType.API_REQUEST,
-      resourceType: AuditResourceType.POSITION,
-      resourceId: null,
-      description: 'Listed position slots',
+    await req.audit.log({
+      action: AuditEventType.API_REQUEST,
+      outcome: 'SUCCESS',
+      actor: { type: 'anonymous', id: 'unknown' },
+      target: { type: AuditResourceType.POSITION, id: 'slots' },
       metadata: {
+        description: 'Listed position slots',
         count: slots.length,
         onlyAvailable,
         positionKeys: positionKeys.length ? positionKeys : undefined,
         platoonKeys: platoonKeys.length ? platoonKeys : undefined,
       },
-      request: req,
     });
     return json.ok({ message: 'Position slots retrieved successfully.', count: slots.length, slots });
   } catch (err) {
     return handleApiError(err);
   }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));

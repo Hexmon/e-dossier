@@ -1,17 +1,19 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { appointmentCreateSchema, appointmentListQuerySchema } from '@/app/lib/validators';
 import { and, eq, sql, isNull } from 'drizzle-orm';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 
-async function GETHandler(req: NextRequest) {
+export const runtime = 'nodejs';
+
+async function GETHandler(req: AuditNextRequest) {
     try {
         const url = new URL(req.url);
         const qp = appointmentListQuerySchema.parse({
@@ -74,9 +76,9 @@ async function GETHandler(req: NextRequest) {
 }
 
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const body = await req.json();
         const parsed = appointmentCreateSchema.safeParse(body);
@@ -155,13 +157,13 @@ async function POSTHandler(req: NextRequest) {
             })
             .returning();
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.APPOINTMENT_CREATED,
-            resourceType: AuditResourceType.APPOINTMENT,
-            resourceId: row.id,
-            description: `Created appointment ${row.id} for user ${row.userId}`,
+        await req.audit.log({
+            action: AuditEventType.APPOINTMENT_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.APPOINTMENT, id: row.id },
             metadata: {
+                description: `Created appointment ${row.id} for user ${row.userId}`,
                 appointmentId: row.id,
                 userId: row.userId,
                 positionId: row.positionId,
@@ -170,9 +172,7 @@ async function POSTHandler(req: NextRequest) {
                 startsAt: row.startsAt,
                 endsAt: row.endsAt,
             },
-            after: row,
-            request: req,
-            required: true,
+            diff: { after: row },
         });
 
         return json.created({ message: 'Appointment created successfully.', data: row });
@@ -180,6 +180,6 @@ async function POSTHandler(req: NextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

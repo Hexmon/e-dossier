@@ -210,7 +210,7 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
             label: editingIndex !== null ? "Save" : "Delete",
             variant: editingIndex !== null ? "default" : "destructive",
             size: "sm",
-            className: editingIndex !== null ? "bg-green-600" : "",
+            className: editingIndex !== null ? "bg-success" : "",
             handler: (row, index) => {
                 if (editingIndex === index) {
                     saveEdit(index);

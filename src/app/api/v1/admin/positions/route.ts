@@ -1,16 +1,24 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { positions } from '@/app/db/schema/auth/positions';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { positionCreateSchema } from '@/app/lib/validators';
 import { asc, eq, isNull } from 'drizzle-orm';
 import { platoons } from '@/app/db/schema/auth/platoons';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 
-async function GETHandler(req: NextRequest) {
+export const runtime = 'nodejs';
+
+async function GETHandler(req: AuditNextRequest) {
     try {
+        let actor: { type: 'user' | 'anonymous'; id: string } = { type: 'anonymous', id: 'unknown' };
+        try {
+            const authCtx = await requireAuth(req);
+            actor = { type: 'user', id: authCtx.userId };
+        } catch {}
+
         const url = new URL(req.url);
         const includePlatoons =
             (url.searchParams.get('includePlatoons') || '').toLowerCase() === 'true';
@@ -30,6 +38,17 @@ async function GETHandler(req: NextRequest) {
             .orderBy(asc(positions.key));
 
         if (!includePlatoons) {
+            await req.audit.log({
+                action: AuditEventType.API_REQUEST,
+                outcome: 'SUCCESS',
+                actor,
+                target: { type: AuditResourceType.POSITION, id: 'collection' },
+                metadata: {
+                    description: 'Positions retrieved successfully.',
+                    includePlatoons: false,
+                    count: posRows.length,
+                },
+            });
             return json.ok({ message: 'Positions retrieved successfully.', data: posRows });
         }
 
@@ -57,6 +76,18 @@ async function GETHandler(req: NextRequest) {
             return p;
         });
 
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor,
+            target: { type: AuditResourceType.POSITION, id: 'collection' },
+            metadata: {
+                description: 'Positions retrieved successfully.',
+                includePlatoons: true,
+                count: data.length,
+            },
+        });
+
         return json.ok({ message: 'Positions retrieved successfully.', data });
     } catch (err) {
         return handleApiError(err);
@@ -64,9 +95,9 @@ async function GETHandler(req: NextRequest) {
 }
 
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
 
         const body = await req.json();
         const parsed = positionCreateSchema.safeParse(body);
@@ -113,22 +144,19 @@ async function POSTHandler(req: NextRequest) {
             })
             .returning();
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.POSITION_CREATED,
-            resourceType: AuditResourceType.POSITION,
-            resourceId: row.id,
-            description: `Created position ${row.key}`,
+        await req.audit.log({
+            action: AuditEventType.POSITION_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.POSITION, id: row.id },
             metadata: {
+                description: `Created position ${row.key}`,
                 positionId: row.id,
                 key: row.key,
                 displayName: row.displayName,
                 defaultScope: row.defaultScope,
                 singleton: row.singleton,
             },
-            after: row,
-            request: req,
-            required: true,
         });
 
         return json.created({ message: 'Position created successfully.', data: row });
@@ -136,6 +164,6 @@ async function POSTHandler(req: NextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { FieldDef } from "@/types/interview-term";
 import { InterviewFormRecord, InterviewOfficer } from "@/types/interview";
 import { Edit, Save, RotateCcw, X } from "lucide-react";
-import { saveTermInterviewForm, clearTermInterviewForm, SpecialInterviewRecord } from "@/store/slices/termInterviewSlice";
+import { saveTermInterviewForm, SpecialInterviewRecord } from "@/store/slices/termInterviewSlice";
+import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from "@/types/interview-templates";
 
 interface FormState {
     isEditing: boolean;
@@ -21,7 +21,8 @@ interface Props {
     form: UseFormReturn<Record<string, string>>;
     termIndex: number;
     variant: "beginning" | "postmid" | "special";
-    fields: FieldDef[];
+    template?: TemplateInfo | null;
+    specialGroup?: TemplateGroup | null;
     isEditing: boolean;
     isSaved: boolean;
     onSave: (payload: InterviewFormRecord) => Promise<InterviewFormRecord | null>;
@@ -31,11 +32,81 @@ interface Props {
     onClearForm: () => void;
 }
 
+const specialFieldAliases: Record<string, string[]> = {
+    date: ["date", "interviewdate", "interview_date"],
+    summary: ["summary", "details", "remarks", "interviewsummary", "interview_summary"],
+    interviewedby: ["interviewedby", "interviewer", "interviewed_by", "interviewedbyname"],
+};
+
+function normalizeKey(value: string) {
+    return value.trim().toLowerCase();
+}
+
+function normalizeSpecialInterviews(records?: SpecialInterviewRecord[]) {
+    return (records ?? []).map((record, index) => ({
+        date: record.date ?? "",
+        summary: record.summary ?? "",
+        interviewedBy: record.interviewedBy ?? "",
+        rowIndex: record.rowIndex ?? index,
+        rowId: record.rowId,
+    }));
+}
+
+function areSpecialInterviewsEqual(a: SpecialInterviewRecord[], b: SpecialInterviewRecord[]) {
+    if (a.length !== b.length) return false;
+    return a.every((record, index) => {
+        const other = b[index];
+        if (!other) return false;
+        return (
+            record.date === other.date &&
+            record.summary === other.summary &&
+            record.interviewedBy === other.interviewedBy &&
+            (record.rowIndex ?? -1) === (other.rowIndex ?? -1) &&
+            (record.rowId ?? null) === (other.rowId ?? null)
+        );
+    });
+}
+
+function getTemplateSections(template?: TemplateInfo | null): TemplateSection[] {
+    if (!template) return [];
+    if (template.sections?.length) return template.sections;
+
+    const fields = Array.from(template.fieldsByKey.values())
+        .filter((field) => !field.groupId)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    if (!fields.length) return [];
+    return [
+        {
+            id: `${template.id}-fields`,
+            title: template.title,
+            description: null,
+            sortOrder: 0,
+            fields,
+        },
+    ];
+}
+
+function getSpecialLabel(group: TemplateGroup | null | undefined, key: "date" | "summary" | "interviewedBy") {
+    if (!group) return undefined;
+    const target = normalizeKey(key);
+    const aliases = specialFieldAliases[target] ?? [target];
+    const normalizedAliases = new Set(aliases.map(normalizeKey));
+
+    for (const field of group.fields) {
+        if (normalizedAliases.has(normalizeKey(field.key))) {
+            return field.label || field.key;
+        }
+    }
+    return undefined;
+}
+
 export default function TermSubForm({
     form,
     termIndex,
     variant,
-    fields,
+    template,
+    specialGroup,
     isEditing,
     isSaved,
     onSave,
@@ -45,45 +116,62 @@ export default function TermSubForm({
     onClearForm,
 }: Props) {
     const dispatch = useDispatch();
-    const { register, getValues, reset, handleSubmit } = form;
+    const { register, getValues, reset } = form;
 
     const prefix = `term${termIndex}_${variant}_`;
-    const dateKey = `${prefix}date`;
-    const interviewedByKey = `${prefix}interviewedBy`;
 
-    // Additional fields for beginning of term (3 sets)
-    const remarks1Key = `${prefix}remarks1`;
-    const remarksName1Key = `${prefix}remarksName1`;
-    const remarks2Key = `${prefix}remarks2`;
-    const remarksName2Key = `${prefix}remarksName2`;
-    const remarks3Key = `${prefix}remarks3`;
-    const remarksName3Key = `${prefix}remarksName3`;
+    const sections = useMemo(() => getTemplateSections(template), [template]);
+    const dateLabel = getSpecialLabel(specialGroup, "date") ?? "Date";
+    const summaryLabel = getSpecialLabel(specialGroup, "summary") ?? "Interview Summary";
+    const interviewedByLabel = getSpecialLabel(specialGroup, "interviewedBy") ?? "Interviewed by (Name & Appt)";
+
+    const normalizedSavedSpecialInterviews = useMemo(
+        () => normalizeSpecialInterviews(savedSpecialInterviews),
+        [savedSpecialInterviews],
+    );
+    const [specialInterviews, setSpecialInterviews] = React.useState<SpecialInterviewRecord[]>(() =>
+        normalizedSavedSpecialInterviews.map((record) => ({ ...record })),
+    );
 
     // Special tab - dynamic interview records (initialize from Redux)
-    const [specialInterviews, setSpecialInterviews] = React.useState<SpecialInterviewRecord[]>(
-        savedSpecialInterviews || []
-    );
+    // NOTE: state is initialized using the memoized normalized array to keep clones separate.
 
     // Sync special interviews with Redux
     useEffect(() => {
-        setSpecialInterviews(savedSpecialInterviews || []);
-    }, [savedSpecialInterviews]);
+        if (variant !== "special") return;
+        setSpecialInterviews((prev) => {
+            if (areSpecialInterviewsEqual(prev, normalizedSavedSpecialInterviews)) {
+                return prev;
+            }
+            return normalizedSavedSpecialInterviews.map((record) => ({ ...record }));
+        });
+    }, [variant, normalizedSavedSpecialInterviews]);
 
     // Auto-save special interviews to Redux
     useEffect(() => {
-        if (variant === "special" && ocId) {
-            const formFields = getValues();
-            dispatch(saveTermInterviewForm({
-                ocId,
-                termIndex,
-                variant,
-                data: {
-                    formFields,
-                    specialInterviews,
-                },
-            }));
-        }
-    }, [specialInterviews, variant, ocId, termIndex, dispatch]);
+        if (variant !== "special" || !ocId || !isEditing) return;
+        if (areSpecialInterviewsEqual(specialInterviews, normalizedSavedSpecialInterviews)) return;
+
+        const formFields = getValues();
+        dispatch(saveTermInterviewForm({
+            ocId,
+            termIndex,
+            variant,
+            data: {
+                formFields,
+                specialInterviews,
+            },
+        }));
+    }, [
+        specialInterviews,
+        variant,
+        ocId,
+        termIndex,
+        dispatch,
+        getValues,
+        normalizedSavedSpecialInterviews,
+        isEditing,
+    ]);
 
     const variantLabels: Record<string, string> = {
         beginning: "Beginning of Term",
@@ -102,7 +190,6 @@ export default function TermSubForm({
             )
         };
 
-        // Add special interviews to payload if variant is special
         if (variant === "special") {
             payload.specialInterviews = specialInterviews;
         }
@@ -115,9 +202,6 @@ export default function TermSubForm({
         }
 
         toast.success(`Term ${termIndex} ${variantLabels[variant] ?? ""} saved successfully!`);
-
-        // Clear Redux cache after successful save
-        dispatch(clearTermInterviewForm({ ocId, termIndex, variant }));
 
         updateFormState({ isEditing: false, isSaved: true });
     };
@@ -145,153 +229,112 @@ export default function TermSubForm({
         }
     };
 
-    const handleCancelClick = () => {
-        updateFormState({ isEditing: false });
-        toast.info("Changes cancelled");
-    };
-
     const addSpecialInterview = () => {
-        setSpecialInterviews([...specialInterviews, { date: "", summary: "", interviewedBy: "" }]);
+        const nextIndex =
+            specialInterviews.reduce((max, record) => Math.max(max, record.rowIndex ?? -1), -1) + 1;
+        setSpecialInterviews([
+            ...specialInterviews,
+            { date: "", summary: "", interviewedBy: "", rowIndex: nextIndex },
+        ]);
     };
 
     const removeSpecialInterview = (index: number) => {
         setSpecialInterviews(specialInterviews.filter((_, i) => i !== index));
     };
 
-    const renderFields = () => {
-        return fields.map(({ key, label }) => {
-            const scopedKey = `${prefix}${key}`;
-            const value = (getValues(scopedKey) as string) ?? "";
+    const renderField = (field: TemplateField) => {
+        const label = field.label || field.key;
+        const type = field.fieldType?.toLowerCase?.() ?? "text";
+        const scopedKey = field.key.startsWith(prefix) ? field.key : `${prefix}${field.key}`;
 
-            const displayLabel = variant === "special" && key === "details"
-                ? "Interview Summary"
-                : label ?? "Field Label";
-
+        if (type === "textarea") {
             return (
                 <div key={scopedKey} className="mb-4">
-                    <label className="block text-sm font-medium mb-1">{displayLabel}</label>
+                    <label className="block text-sm font-medium mb-1">
+                        {label}
+                        {field.required ? " *" : ""}
+                    </label>
                     <Textarea
                         {...register(scopedKey)}
-                        placeholder={displayLabel}
+                        placeholder={label}
                         disabled={!isEditing}
                         className="w-full min-h-[100px] resize-y"
-                        defaultValue={value}
                     />
+                    {field.helpText ? <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p> : null}
                 </div>
             );
-        });
+        }
+
+        if (type === "select") {
+            const options = [...(field.options ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+            return (
+                <div key={scopedKey} className="mb-4">
+                    <label className="block text-sm font-medium mb-1">
+                        {label}
+                        {field.required ? " *" : ""}
+                    </label>
+                    <select {...register(scopedKey)} disabled={!isEditing} className="w-full border rounded px-3 py-2">
+                        <option value="">Select...</option>
+                        {options.map((option) => (
+                            <option key={option.id} value={option.code}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                    {field.helpText ? <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p> : null}
+                </div>
+            );
+        }
+
+        if (type === "checkbox") {
+            return (
+                <label key={scopedKey} className="flex items-center gap-2 text-sm font-medium mb-2">
+                    <input type="checkbox" {...register(scopedKey)} disabled={!isEditing} className="h-4 w-4" />
+                    {label}
+                </label>
+            );
+        }
+
+        const inputType = type === "date" ? "date" : type === "number" ? "number" : "text";
+        return (
+            <div key={scopedKey} className="mb-4">
+                <label className="block text-sm font-medium mb-1">
+                    {label}
+                    {field.required ? " *" : ""}
+                </label>
+                <Input
+                    type={inputType}
+                    {...register(scopedKey)}
+                    placeholder={label}
+                    disabled={!isEditing}
+                />
+                {field.helpText ? <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p> : null}
+            </div>
+        );
     };
 
     return (
         <div className="border rounded-lg p-4 bg-white">
             <div className="flex items-center justify-between mb-4">
                 <h4 className="font-semibold text-xl">
-                    {`Term ${termIndex} — ${variantLabels[variant] ?? ""}`}
+                    {`Term ${termIndex} - ${variantLabels[variant] ?? ""}`}
                 </h4>
             </div>
 
             {variant !== "special" && (
-                <div className="mb-4">
-                    <label className="block text-sm font-medium mb-1">Date</label>
-                    <Input
-                        type="date"
-                        {...register(dateKey)}
-                        disabled={!isEditing}
-                        defaultValue={(getValues(dateKey) as string) ?? ""}
-                    />
-                </div>
-            )}
-
-            {variant !== "special" && (
-                <div className="space-y-4">
-                    {renderFields()}
-                </div>
-            )}
-
-            {variant === "beginning" && (
-                <div className="mt-6 pt-6 border-t space-y-4">
-                    <h5 className="font-semibold text-lg mb-4">Additional Information</h5>
-
-                    <div className="flex flex-col gap-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Remarks</label>
-                                <Textarea
-                                    {...register(remarks1Key)}
-                                    placeholder="Enter remarks..."
-                                    disabled={!isEditing}
-                                    className="w-full min-h-[100px] resize-y"
-                                    defaultValue={(getValues(remarks1Key) as string) ?? ""}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Interviewed by Pl Cdr</label>
-                                <Input
-                                    {...register(remarksName1Key)}
-                                    placeholder="Name & Appointment"
-                                    disabled={!isEditing}
-                                    defaultValue={(getValues(remarksName1Key) as string) ?? ""}
-                                />
-                            </div>
+                sections.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No interview template configured.</div>
+                ) : (
+                    sections.map((section) => (
+                        <div key={section.id} className="space-y-3 mb-4">
+                            {section.title ? <h5 className="font-semibold text-lg">{section.title}</h5> : null}
+                            {section.description ? (
+                                <p className="text-sm text-muted-foreground">{section.description}</p>
+                            ) : null}
+                            <div className="space-y-4">{section.fields.map(renderField)}</div>
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Remarks</label>
-                                <Textarea
-                                    {...register(remarks2Key)}
-                                    placeholder="Enter remarks..."
-                                    disabled={!isEditing}
-                                    className="w-full min-h-[100px] resize-y"
-                                    defaultValue={(getValues(remarks2Key) as string) ?? ""}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Interviewed by Dy Cdr</label>
-                                <Input
-                                    {...register(remarksName2Key)}
-                                    placeholder="Name & Appointment"
-                                    disabled={!isEditing}
-                                    defaultValue={(getValues(remarksName2Key) as string) ?? ""}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Remarks</label>
-                                <Textarea
-                                    {...register(remarks3Key)}
-                                    placeholder="Enter remarks..."
-                                    disabled={!isEditing}
-                                    className="w-full min-h-[100px] resize-y"
-                                    defaultValue={(getValues(remarks3Key) as string) ?? ""}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Interviewed by Cdr</label>
-                                <Input
-                                    {...register(remarksName3Key)}
-                                    placeholder="Name & Appointment"
-                                    disabled={!isEditing}
-                                    defaultValue={(getValues(remarksName3Key) as string) ?? ""}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {variant === "postmid" && (
-                <div className="mt-6">
-                    <label className="block text-sm font-medium mb-1">Interviewed by (Name & Appt)</label>
-                    <Input
-                        {...register(interviewedByKey)}
-                        placeholder="Name & Appointment"
-                        disabled={!isEditing}
-                        defaultValue={(getValues(interviewedByKey) as string) ?? ""}
-                    />
-                </div>
+                    ))
+                )
             )}
 
             {variant === "special" && (
@@ -312,13 +355,16 @@ export default function TermSubForm({
                     </div>
 
                     {specialInterviews.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                            No interview records yet. Click "Add Record" to create one.
+                        <div className="text-center py-8 text-muted-foreground">
+                            No interview records yet. Click \"Add Record\" to create one.
                         </div>
                     )}
 
                     {specialInterviews.map((interview, index) => (
-                        <div key={index} className="border rounded-lg p-4 bg-gray-50 space-y-4">
+                        <div
+                            key={interview.rowId ?? interview.rowIndex ?? index}
+                            className="border rounded-lg p-4 bg-muted/40 space-y-4"
+                        >
                             <div className="flex justify-between items-start">
                                 <h6 className="font-medium text-md">Record {index + 1}</h6>
                                 {isEditing && (
@@ -327,7 +373,7 @@ export default function TermSubForm({
                                         onClick={() => removeSpecialInterview(index)}
                                         variant="ghost"
                                         size="sm"
-                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                     >
                                         <X className="h-4 w-4" />
                                     </Button>
@@ -335,44 +381,50 @@ export default function TermSubForm({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Date</label>
-                                <Input
-                                    type="date"
-                                    value={interview.date}
-                                    onChange={(e) => {
-                                        const updated = [...specialInterviews];
-                                        updated[index].date = e.target.value;
-                                        setSpecialInterviews(updated);
-                                    }}
-                                    disabled={!isEditing}
-                                />
+                                <label className="block text-sm font-medium mb-1">{dateLabel}</label>
+                        <Input
+                            type="date"
+                            value={interview.date}
+                            onChange={(e) => {
+                                setSpecialInterviews((current) =>
+                                    current.map((record, idx) =>
+                                        idx === index ? { ...record, date: e.target.value } : record
+                                    )
+                                );
+                            }}
+                            disabled={!isEditing}
+                        />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Interview Summary</label>
+                                <label className="block text-sm font-medium mb-1">{summaryLabel}</label>
                                 <Textarea
                                     value={interview.summary}
                                     onChange={(e) => {
-                                        const updated = [...specialInterviews];
-                                        updated[index].summary = e.target.value;
-                                        setSpecialInterviews(updated);
+                                        setSpecialInterviews((current) =>
+                                            current.map((record, idx) =>
+                                                idx === index ? { ...record, summary: e.target.value } : record
+                                            )
+                                        );
                                     }}
-                                    placeholder="Enter interview summary..."
+                                    placeholder={summaryLabel}
                                     disabled={!isEditing}
                                     className="w-full min-h-[100px] resize-y"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Interviewed by (Name & Appt)</label>
+                                <label className="block text-sm font-medium mb-1">{interviewedByLabel}</label>
                                 <Input
                                     value={interview.interviewedBy}
                                     onChange={(e) => {
-                                        const updated = [...specialInterviews];
-                                        updated[index].interviewedBy = e.target.value;
-                                        setSpecialInterviews(updated);
+                                        setSpecialInterviews((current) =>
+                                            current.map((record, idx) =>
+                                                idx === index ? { ...record, interviewedBy: e.target.value } : record
+                                            )
+                                        );
                                     }}
-                                    placeholder="Name & Appointment"
+                                    placeholder={interviewedByLabel}
                                     disabled={!isEditing}
                                 />
                             </div>
@@ -383,33 +435,22 @@ export default function TermSubForm({
 
             <div className="flex items-center justify-center mt-6 gap-2">
                 {isSaved && !isEditing ? (
-                    <>
-                        <Button
-                            type="button"
-                            onClick={handleEditClick}
-                            variant="outline"
-                            className="flex items-center gap-2 bg-blue-950 text-white"
-                        >
-                            <Edit className="h-4 w-4 text-white" />
-                            Edit
-                        </Button>
-                    </>
+                    <Button
+                        type="button"
+                        onClick={handleEditClick}
+                        variant="outline"
+                        className="flex items-center gap-2 bg-primary text-primary-foreground"
+                    >
+                        <Edit className="h-4 w-4 text-primary-foreground" />
+                        Edit
+                    </Button>
                 ) : (
                     <>
-                        <Button
-                            type="button"
-                            onClick={handleSaveClick}
-                            className="flex items-center gap-2"
-                        >
+                        <Button type="button" onClick={handleSaveClick} className="flex items-center gap-2">
                             <Save className="h-4 w-4" />
                             Save
                         </Button>
-                        <Button
-                            type="button"
-                            onClick={handleResetClick}
-                            variant="outline"
-                            className="flex items-center gap-2"
-                        >
+                        <Button type="button" onClick={handleResetClick} variant="outline" className="flex items-center gap-2">
                             <RotateCcw className="h-4 w-4" />
                             Clear Form
                         </Button>

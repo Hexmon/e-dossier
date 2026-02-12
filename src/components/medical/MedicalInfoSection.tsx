@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -10,15 +11,40 @@ import {
     saveMedicalInfo,
     updateMedicalInfo,
     deleteMedicalInfo,
+    type MedicalInfoPayload,
 } from "@/app/lib/api/medinfoApi";
 
 import { MedInfoRow, MedicalInfoForm } from "@/types/med-records";
+import { ApiClientError } from "@/app/lib/apiClient";
 
 import MedicalInfoTable from "./MedicalInfoTable";
 import MedicalInfoFormComponent from "./MedicalInfoForm";
 
 import type { RootState } from "@/store";
 import { clearMedicalInfoForm } from "@/store/slices/medicalInfoSlice";
+
+const numericFieldConfig = [
+    { key: "age", apiKey: "age", label: "Age" },
+    { key: "height", apiKey: "heightCm", label: "Height" },
+    { key: "ibw", apiKey: "ibwKg", label: "IBW" },
+    { key: "abw", apiKey: "abwKg", label: "ABW" },
+    { key: "overw", apiKey: "overwtPct", label: "Overwt" },
+    { key: "bmi", apiKey: "bmi", label: "BMI" },
+    { key: "chest", apiKey: "chestCm", label: "Chest" },
+] as const;
+
+const parseOptionalFloat = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const calculateBmiValue = (abw?: number, heightCm?: number) => {
+    if (abw === undefined || heightCm === undefined || heightCm <= 0) return undefined;
+    const bmi = abw / ((heightCm / 100) * (heightCm / 100));
+    return Number.isFinite(bmi) ? Number(bmi.toFixed(2)) : undefined;
+};
 
 export default function MedicalInfoSection({
     selectedCadet,
@@ -27,13 +53,38 @@ export default function MedicalInfoSection({
     selectedCadet: any;
     semesters: string[];
 }) {
-    const [activeTab, setActiveTab] = useState(0);
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - 1;
+        if (idx < 0 || idx >= semesters.length) return 0;
+        return idx;
+    }, [semParam, semesters.length]);
+    const [activeTab, setActiveTab] = useState(resolvedTab);
     const [savedMedInfo, setSavedMedInfo] = useState<MedInfoRow[]>([]);
     const [loading, setLoading] = useState(false);
-    const [detailsDisabled, setDetailsDisabled] = useState(false);
-
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<MedInfoRow | null>(null);
+    const [detailsEditing, setDetailsEditing] = useState(false);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + 1));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleSemesterChange = (index: number) => {
+        setActiveTab(index);
+        updateSemesterParam(index);
+    };
 
     // Redux
     const dispatch = useDispatch();
@@ -66,16 +117,6 @@ export default function MedicalInfoSection({
 
             setSavedMedInfo(formatted);
 
-            if (formatted.length > 0) {
-                const hasDetails =
-                    Boolean(
-                        formatted[0].medicalHistory ||
-                        formatted[0].medicalIssues ||
-                        formatted[0].allergies
-                    );
-
-                setDetailsDisabled(hasDetails);
-            }
         } catch {
             toast.error("Failed to load medical info.");
         } finally {
@@ -117,20 +158,37 @@ export default function MedicalInfoSection({
         }
 
         try {
-            const payload = filledRows.map((r) => ({
-                semester: activeTab + 1,
-                examDate: r.date,
-                age: Number(r.age),
-                heightCm: Number(r.height),
-                ibwKg: Number(r.ibw),
-                abwKg: Number(r.abw),
-                overwtPct: Number(r.overw),
-                bmi: Number(r.bmi),
-                chestCm: Number(r.chest),
-                medicalHistory: data.medicalHistory || "",
-                hereditaryIssues: data.medicalIssues || "",
-                allergies: data.allergies || "",
-            }));
+            const payload: MedicalInfoPayload[] = [];
+            for (let idx = 0; idx < filledRows.length; idx += 1) {
+                const row = filledRows[idx];
+                const payloadRow: MedicalInfoPayload = {
+                    semester: activeTab + 1,
+                    examDate: row.date,
+                    medicalHistory: data.medicalHistory || "",
+                    hereditaryIssues: data.medicalIssues || "",
+                    allergies: data.allergies || "",
+                };
+
+                for (const field of numericFieldConfig) {
+                    const raw = String(row[field.key] ?? "");
+                    const parsed = parseOptionalFloat(raw);
+                    if (parsed === null) {
+                        toast.error(`Row ${idx + 1}: ${field.label} must be a valid number`);
+                        return;
+                    }
+                    if (parsed !== undefined) {
+                        (payloadRow as unknown as Record<string, unknown>)[field.apiKey] = parsed;
+                    }
+                }
+
+                const computedBmi = calculateBmiValue(
+                    payloadRow.abwKg,
+                    payloadRow.heightCm
+                );
+                if (computedBmi !== undefined) payloadRow.bmi = computedBmi;
+
+                payload.push(payloadRow);
+            }
 
             const response = await saveMedicalInfo(selectedCadet.ocId, payload);
 
@@ -142,8 +200,12 @@ export default function MedicalInfoSection({
             dispatch(clearMedicalInfoForm(selectedCadet.ocId));
 
             fetchMedicalInfo();
-        } catch {
-            toast.error("Failed to save medical info.");
+        } catch (err) {
+            if (err instanceof ApiClientError) {
+                toast.error(err.message || "Failed to save medical info.");
+            } else {
+                toast.error("Failed to save medical info.");
+            }
         }
     };
 
@@ -160,37 +222,121 @@ export default function MedicalInfoSection({
     };
 
     const handleChange = (field: keyof MedInfoRow, value: any) => {
-        setEditForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+        setEditForm((prev) => {
+            if (!prev) return prev;
+            const next = { ...prev, [field]: value };
+
+            if (field === "abw" || field === "height") {
+                const abw = parseOptionalFloat(String(next.abw ?? ""));
+                const height = parseOptionalFloat(String(next.height ?? ""));
+                const computedBmi = calculateBmiValue(
+                    typeof abw === "number" ? abw : undefined,
+                    typeof height === "number" ? height : undefined
+                );
+                next.bmi = computedBmi !== undefined ? computedBmi.toFixed(2) : "";
+            }
+
+            return next;
+        });
     };
 
     const handleSave = async () => {
         if (!editingId || !editForm || !selectedCadet?.ocId)
             return toast.error("Invalid operation");
 
-        const payload = {
-            examDate: editForm.date,
-            age: Number(editForm.age),
-            heightCm: Number(editForm.height),
-            ibwKg: Number(editForm.ibw),
-            abwKg: Number(editForm.abw),
-            overwtPct: Number(editForm.overw),
-            bmi: Number(editForm.bmi),
-            chestCm: Number(editForm.chest),
-        };
+        if (!editForm.date || !editForm.date.trim()) {
+            toast.error("Date is required");
+            return;
+        }
+
+        const payload: Record<string, unknown> = { examDate: editForm.date };
+        for (const field of numericFieldConfig) {
+            const raw = String(editForm[field.key] ?? "");
+            const parsed = parseOptionalFloat(raw);
+            if (parsed === null) {
+                toast.error(`${field.label} must be a valid number`);
+                return;
+            }
+            if (parsed !== undefined) payload[field.apiKey] = parsed;
+        }
+
+        const computedBmi = calculateBmiValue(
+            payload.abwKg as number | undefined,
+            payload.heightCm as number | undefined
+        );
+        const nextEditForm: MedInfoRow =
+            computedBmi !== undefined
+                ? { ...editForm, bmi: computedBmi.toFixed(2) }
+                : editForm;
+        if (computedBmi !== undefined) payload.bmi = computedBmi;
 
         try {
             await updateMedicalInfo(selectedCadet.ocId, editingId, payload);
 
             setSavedMedInfo((prev) =>
-                prev.map((r) => (r.id === editingId ? editForm : r))
+                prev.map((r) => (r.id === editingId ? nextEditForm : r))
             );
 
             toast.success("Record updated");
             setEditingId(null);
             setEditForm(null);
-        } catch {
-            toast.error("Failed to update");
+        } catch (err) {
+            if (err instanceof ApiClientError) {
+                toast.error(err.message || "Failed to update");
+            } else {
+                toast.error("Failed to update");
+            }
         }
+    };
+
+    const getLatestDetailsForActiveTab = () => {
+        const term = semesters[activeTab];
+        const rows = savedMedInfo.filter((r) => r.term === term);
+        if (rows.length === 0) return null;
+        const toTime = (v?: string) => (v ? new Date(v).getTime() : 0);
+        return rows.reduce((latest, cur) =>
+            toTime(cur.date) >= toTime(latest.date) ? cur : latest
+        );
+    };
+
+    const handleDetailsSave = async (details: {
+        medicalHistory: string;
+        medicalIssues: string;
+        allergies: string;
+    }) => {
+        if (!selectedCadet?.ocId) return toast.error("No cadet selected");
+        const activeDetails = getLatestDetailsForActiveTab();
+        if (!activeDetails?.id) return toast.error("No medical record to update");
+
+        try {
+            await updateMedicalInfo(selectedCadet.ocId, activeDetails.id, {
+                medicalHistory: details.medicalHistory,
+                hereditaryIssues: details.medicalIssues,
+                allergies: details.allergies,
+            });
+
+            setSavedMedInfo((prev) =>
+                prev.map((r) =>
+                    r.id === activeDetails.id
+                        ? {
+                            ...r,
+                            medicalHistory: details.medicalHistory,
+                            medicalIssues: details.medicalIssues,
+                            allergies: details.allergies,
+                        }
+                        : r
+                )
+            );
+
+            toast.success("Medical details updated");
+            setDetailsEditing(false);
+        } catch {
+            toast.error("Failed to update medical details");
+        }
+    };
+
+    const handleDetailsCancel = () => {
+        setDetailsEditing(false);
     };
 
     const handleDelete = (row: MedInfoRow) => {
@@ -219,6 +365,7 @@ export default function MedicalInfoSection({
 
     // Get default values - prioritize Redux over saved data
     const getDefaultValues = (): MedicalInfoForm => {
+        const latestDetails = getLatestDetailsForActiveTab();
         if (savedFormData && savedFormData.medInfo.length > 0) {
             return {
                 medInfo: savedFormData.medInfo,
@@ -229,14 +376,14 @@ export default function MedicalInfoSection({
         }
 
         // If no Redux data but we have saved data, use those details
-        if (savedMedInfo.length > 0) {
+        if (latestDetails) {
             return {
                 medInfo: [
                     { date: "", age: "", height: "", ibw: "", abw: "", overw: "", bmi: "", chest: "" }
                 ],
-                medicalHistory: savedMedInfo[0].medicalHistory,
-                medicalIssues: savedMedInfo[0].medicalIssues,
-                allergies: savedMedInfo[0].allergies,
+                medicalHistory: latestDetails.medicalHistory,
+                medicalIssues: latestDetails.medicalIssues,
+                allergies: latestDetails.allergies,
             };
         }
 
@@ -250,6 +397,8 @@ export default function MedicalInfoSection({
             allergies: "",
         };
     };
+
+    const canEditDetails = Boolean(getLatestDetailsForActiveTab()?.id);
 
     return (
         <Card className="p-6 shadow-lg rounded-xl max-w-6xl mx-auto">
@@ -265,8 +414,8 @@ export default function MedicalInfoSection({
                         return (
                             <button
                                 key={s}
-                                onClick={() => setActiveTab(i)}
-                                className={`px-4 py-2 rounded-t-lg ${activeTab === i ? "bg-blue-600 text-white" : "bg-gray-200"
+                                onClick={() => handleSemesterChange(i)}
+                                className={`px-4 py-2 rounded-t-lg ${activeTab === i ? "bg-primary text-primary-foreground" : "bg-muted"
                                     }`}
                             >
                                 {s}
@@ -292,7 +441,12 @@ export default function MedicalInfoSection({
                 <MedicalInfoFormComponent
                     key={`${selectedCadet?.ocId}-${savedFormData ? 'redux' : 'default'}`}
                     onSubmit={onSubmit}
-                    disabled={detailsDisabled}
+                    disabled={!detailsEditing}
+                    detailsEditing={detailsEditing}
+                    canEditDetails={canEditDetails}
+                    onDetailsEdit={() => setDetailsEditing(true)}
+                    onDetailsCancel={handleDetailsCancel}
+                    onDetailsSave={handleDetailsSave}
                     defaultValues={getDefaultValues()}
                     ocId={selectedCadet?.ocId || ""}
                     onClear={handleClearForm}

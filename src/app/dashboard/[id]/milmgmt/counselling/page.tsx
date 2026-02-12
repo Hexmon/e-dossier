@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 
@@ -35,6 +35,9 @@ export default function CounsellingWarningPage() {
     // route param
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const dispatch = useDispatch();
 
     // Get saved form data from Redux
@@ -71,7 +74,30 @@ export default function CounsellingWarningPage() {
         deleteRecord,
     } = useCounsellingRecords(ocId, semesters);
 
-    const [activeTab, setActiveTab] = useState<number>(0);
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - 1;
+        if (idx < 0 || idx >= semesters.length) return 0;
+        return idx;
+    }, [semParam, semesters.length]);
+    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + 1));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleSemesterChange = (index: number) => {
+        setActiveTab(index);
+        updateSemesterParam(index);
+    };
 
     useEffect(() => {
         if (!ocId) return;
@@ -172,10 +198,10 @@ export default function CounsellingWarningPage() {
                                                 <button
                                                     key={term}
                                                     type="button"
-                                                    onClick={() => setActiveTab(idx)}
+                                                    onClick={() => handleSemesterChange(idx)}
                                                     className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx
-                                                            ? "bg-blue-600 text-white"
-                                                            : "bg-gray-200 text-gray-700"
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "bg-muted text-foreground"
                                                         }`}
                                                 >
                                                     {term}

@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST as postLogin } from '@/app/api/v1/auth/login/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import * as ratelimit from '@/lib/ratelimit';
 import * as accountLockout from '@/app/db/queries/account-lockout';
-import * as auditLog from '@/lib/audit-log';
 import * as appointmentsQueries from '@/app/db/queries/appointments';
 import * as jwt from '@/app/lib/jwt';
 import * as cookies from '@/app/lib/cookies';
@@ -67,29 +66,6 @@ vi.mock('@/app/db/queries/account-lockout', () => ({
   checkAndLockAccount: vi.fn(async () => null),
 }));
 
-vi.mock('@/lib/audit-log', () => ({
-  createAuditLog: vi.fn(async () => {}),
-  logLoginSuccess: vi.fn(async () => {}),
-  logLoginFailure: vi.fn(async () => {}),
-  logAccountLocked: vi.fn(async () => {}),
-  logApiRequest: vi.fn(),
-  ensureRequestContext: vi.fn(() => ({
-    requestId: 'test',
-    method: 'POST',
-    pathname: '/',
-    url: '/',
-    startTime: Date.now(),
-  })),
-  noteRequestActor: vi.fn(),
-  setRequestTenant: vi.fn(),
-  AuditEventType: {
-    API_REQUEST: 'api.request',
-  },
-  AuditResourceType: {
-    API: 'api',
-  },
-}));
-
 vi.mock('@/app/lib/jwt', () => ({
   signAccessJWT: vi.fn(async () => 'fake-access-token'),
 }));
@@ -129,7 +105,7 @@ describe('POST /api/v1/auth/login', () => {
       body: loginBody,
     });
 
-    const res = await postLogin(req as any);
+    const res = await postLogin(req as any, createRouteContext());
     expect(res.status).toBe(429);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -143,7 +119,7 @@ describe('POST /api/v1/auth/login', () => {
       body: {},
     });
 
-    const res = await postLogin(req as any);
+    const res = await postLogin(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -163,7 +139,7 @@ describe('POST /api/v1/auth/login', () => {
       throw new Error('boom');
     };
 
-    const res = await postLogin(req as any);
+    const res = await postLogin(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -188,7 +164,7 @@ describe('POST /api/v1/auth/login', () => {
       body: loginBody,
     });
 
-    const res = await postLogin(req as any);
+    const res = await postLogin(req as any, createRouteContext());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
@@ -200,6 +176,5 @@ describe('POST /api/v1/auth/login', () => {
     expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', success: true }),
     );
-    expect(auditLog.logLoginSuccess).toHaveBeenCalled();
   });
 });

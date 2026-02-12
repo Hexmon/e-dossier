@@ -1,16 +1,18 @@
 // src/app/api/v1/oc/route.ts
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/app/db/client';
-import { json, handleApiError, ApiError } from '@/app/lib/http';
+import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq } from 'drizzle-orm';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { listOCsBasic, listOCsFull } from '@/app/db/queries/oc';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 // --- Create OC (token required; no admin) -------------------------------
 const createSchema = z.object({
@@ -22,7 +24,24 @@ const createSchema = z.object({
     arrivalAtUniversity: z.coerce.date(),
 });
 
-async function POSTHandler(req: NextRequest) {
+const ocListSortSchema = z.enum(['name_asc', 'updated_desc', 'created_asc']);
+const ocListQuerySchema = z.object({
+    q: z.string().trim().optional(),
+    query: z.string().trim().optional(),
+    courseId: z.string().uuid().optional(),
+    platoon: z.string().trim().min(1).optional(),
+    platoonId: z.string().trim().min(1).optional(),
+    active: z.enum(['true', 'false']).optional(),
+    limit: z.coerce.number().int().min(1).optional(),
+    offset: z.coerce.number().int().min(0).max(5000).optional(),
+    sort: ocListSortSchema.optional(),
+});
+
+function isUuid(value: string): boolean {
+    return z.string().uuid().safeParse(value).success;
+}
+
+async function POSTHandler(req: AuditNextRequest) {
     try {
         const authCtx = await requireAuth(req);
         const body = createSchema.parse(await req.json());
@@ -78,13 +97,13 @@ async function POSTHandler(req: NextRequest) {
                 createdAt: ocCadets.createdAt,
             });
 
-        await createAuditLog({
-            actorUserId: authCtx.userId,
-            eventType: AuditEventType.OC_CREATED,
-            resourceType: AuditResourceType.OC,
-            resourceId: row.id,
-            description: `Created OC ${row.ocNo}`,
+        await req.audit.log({
+            action: AuditEventType.OC_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: row.id },
             metadata: {
+                description: `Created OC ${row.ocNo}`,
                 ocId: row.id,
                 name: row.name,
                 ocNo: row.ocNo,
@@ -92,24 +111,69 @@ async function POSTHandler(req: NextRequest) {
                 courseId: row.courseId,
                 branch: row.branch,
                 platoonId: row.platoonId,
-                arrivalAtUniversity: row.arrivalAtUniversity,
+                arrivalAtUniversity: row.arrivalAtUniversity?.toISOString?.() ?? row.arrivalAtUniversity,
             },
-            request: req,
         });
+
         return json.created({ message: 'OC created successfully.', oc: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
         const sp = new URL(req.url).searchParams;
+        const parsedQuery = ocListQuerySchema.safeParse({
+            q: sp.get('q') ?? undefined,
+            query: sp.get('query') ?? undefined,
+            courseId: sp.get('courseId') ?? undefined,
+            platoon: sp.get('platoon') ?? undefined,
+            platoonId: sp.get('platoonId') ?? undefined,
+            active: sp.get('active') ?? undefined,
+            limit: sp.get('limit') ?? undefined,
+            offset: sp.get('offset') ?? undefined,
+            sort: sp.get('sort') ?? undefined,
+        });
 
-        const q = (sp.get('q') || '').trim() || undefined;
-        const courseId = (sp.get('courseId') || '').trim() || undefined;
-        const activeOnly = (sp.get('active') || '').toLowerCase() === 'true';
+        const id = (sp.get('id') || '').trim() || undefined;
+        if (!parsedQuery.success) {
+            return json.badRequest('Validation failed.', { issues: parsedQuery.error.flatten() });
+        }
+
+        const q = parsedQuery.data.query || parsedQuery.data.q || undefined;
+        const courseId = parsedQuery.data.courseId;
+        const requestedPlatoon = parsedQuery.data.platoon || parsedQuery.data.platoonId;
+        const activeOnly = parsedQuery.data.active === 'true';
+        const limit = Math.min(parsedQuery.data.limit ?? 200, 1000);
+        const offset = parsedQuery.data.offset ?? 0;
+        const sort = parsedQuery.data.sort ?? 'created_asc';
+
+        const scopeType = String((authCtx.claims as any)?.apt?.scope?.type ?? '').toUpperCase();
+        const scopeId = (authCtx.claims as any)?.apt?.scope?.id;
+        const scopePlatoonId = typeof scopeId === 'string' && scopeId.trim().length > 0 ? scopeId : null;
+        const isPlatoonScoped = scopeType === 'PLATOON';
+
+        if (isPlatoonScoped && !scopePlatoonId) {
+            return json.badRequest('Platoon scoped account is missing platoon scope id.');
+        }
+
+        let platoonId: string | undefined;
+        let platoonKey: string | undefined;
+
+        if (isPlatoonScoped) {
+            if (requestedPlatoon && requestedPlatoon !== scopePlatoonId) {
+                return json.forbidden('Forbidden: cannot query OCs outside assigned platoon scope.');
+            }
+            platoonId = scopePlatoonId ?? undefined;
+        } else if (requestedPlatoon) {
+            if (isUuid(requestedPlatoon)) {
+                platoonId = requestedPlatoon;
+            } else {
+                platoonKey = requestedPlatoon.toUpperCase();
+            }
+        }
 
         // ---------- include / full parsing ----------
         const truthy = new Set(['true', '1', 'yes', 'on', '*', 'all', 'full']);
@@ -211,14 +275,37 @@ async function GETHandler(req: NextRequest) {
 
         const anySectionIncluded = Object.values(includeFlags).some(Boolean);
 
-        const limit = Math.min(parseInt(sp.get('limit') || '200', 10) || 200, 1000);
-        const offset = parseInt(sp.get('offset') || '0', 10) || 0;
+        const opts = { q, courseId, platoonId, platoonKey, active: activeOnly, sort, limit, offset };
 
-        const opts = { q, courseId, active: activeOnly, limit, offset };
+        const writeAccessAudit = async (count: number) => {
+            await req.audit.log({
+                action: AuditEventType.API_REQUEST,
+                outcome: 'SUCCESS',
+                actor: { type: 'user', id: authCtx.userId },
+                target: { type: AuditResourceType.OC, id: 'collection' },
+                metadata: {
+                    description: 'Retrieved OC list via /api/v1/oc',
+                    count,
+                    query: {
+                        q,
+                        courseId,
+                        platoon: requestedPlatoon ?? null,
+                        active: activeOnly,
+                        sort,
+                        limit,
+                        offset,
+                    },
+                    scopeEnforcedPlatoonId: isPlatoonScoped ? scopePlatoonId : null,
+                    includeFlags,
+                    full: wantFullToggle,
+                },
+            });
+        };
 
         // if NO full toggle + NO per-section includes → basic list (old behavior)
         if (!wantFullToggle && !anySectionIncluded) {
             const items = await listOCsBasic(opts);
+            await writeAccessAudit(items.length);
             return json.ok({ message: 'OCs retrieved successfully.', items, count: items.length });
         }
 
@@ -226,6 +313,7 @@ async function GETHandler(req: NextRequest) {
         // (?full=true or ?include=all, but no personal=/delegations=/include=personal, etc.)
         if (wantFullToggle && !anyExplicit) {
             const items = await listOCsFull(opts);
+            await writeAccessAudit(items.length);
             return json.ok({ message: 'OCs retrieved successfully.', items, count: items.length });
         }
 
@@ -270,11 +358,12 @@ async function GETHandler(req: NextRequest) {
             return out;
         });
 
+        await writeAccessAudit(items.length);
         return json.ok({ message: 'OCs retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

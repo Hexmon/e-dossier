@@ -156,7 +156,7 @@ export default function ObstacleTrainingForm({
                         <Button
                             type="submit"
                             disabled={disabled || isSaving}
-                            className="bg-[#40ba4d]"
+                            className="bg-success"
                         >
                             {isSaving ? "Saving..." : "Save"}
                         </Button>

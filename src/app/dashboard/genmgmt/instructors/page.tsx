@@ -38,15 +38,10 @@ export default function InstructorManagementPage() {
     const {
         loading,
         instructors,
-        fetchInstructors,
         addInstructor,
         editInstructor,
         removeInstructor,
-    } = useInstructors();
-
-    useEffect(() => {
-        fetchInstructors();
-    }, []);
+    } = useInstructors({ q: searchQuery });
 
     const handleLogout = () => {
         console.log("Logout clicked");
@@ -55,7 +50,6 @@ export default function InstructorManagementPage() {
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
-        fetchInstructors({ q: query });
     };
 
     const handleAddInstructor = async (newInstructor: InstructorCreate) => {
@@ -64,14 +58,12 @@ export default function InstructorManagementPage() {
         if (editingId) {
             const result = await editInstructor(editingId, newInstructor);
             if (result) {
-                await fetchInstructors({ q: searchQuery });
                 setIsDialogOpen(false);
                 setEditingInstructor(undefined);
             }
         } else {
             const result = await addInstructor(newInstructor);
             if (result) {
-                await fetchInstructors({ q: searchQuery });
                 setIsDialogOpen(false);
             }
         }
@@ -92,10 +84,7 @@ export default function InstructorManagementPage() {
 
     const confirmDelete = async () => {
         if (instructorToDelete) {
-            const result = await removeInstructor(instructorToDelete);
-            if (result) {
-                await fetchInstructors({ q: searchQuery });
-            }
+            await removeInstructor(instructorToDelete);
         }
         setDeleteConfirmOpen(false);
         setInstructorToDelete(null);
@@ -119,13 +108,13 @@ export default function InstructorManagementPage() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                                { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                                 { label: "Instructor Management" },
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="instructor-mgmt">
-                            <TabsContent value="instructor-mgmt" className="space-y-6">
+                        <GlobalTabs tabs={ocTabs} defaultValue="instructors">
+                            <TabsContent value="instructors" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">Instructor List</h2>
 
@@ -200,7 +189,7 @@ export default function InstructorManagementPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-red-600"
+                            className="bg-destructive"
                         >
                             Delete
                         </AlertDialogAction>

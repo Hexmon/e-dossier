@@ -1,6 +1,8 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+import { requireAuth } from '@/app/lib/authz';
 import {
     trainingCampCreateSchema,
     trainingCampQuerySchema,
@@ -9,10 +11,10 @@ import {
     listTrainingCamps,
     createTrainingCamp,
 } from '@/app/db/queries/trainingCamps';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
@@ -34,9 +36,9 @@ async function GETHandler(req: NextRequest) {
     }
 }
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const dto = trainingCampCreateSchema.parse(await req.json());
         const row = await createTrainingCamp({
             name: dto.name.trim(),
@@ -44,24 +46,23 @@ async function POSTHandler(req: NextRequest) {
             maxTotalMarks: dto.maxTotalMarks,
         });
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.TRAINING_CAMP_CREATED,
-            resourceType: AuditResourceType.TRAINING_CAMP,
-            resourceId: row.id,
-            description: `Created training camp ${row.name}`,
+        await req.audit.log({
+            action: AuditEventType.TRAINING_CAMP_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.TRAINING_CAMP, id: row.id },
             metadata: {
+                description: `Created training camp ${row.name}`,
                 trainingCampId: row.id,
                 semester: row.semester,
                 maxTotalMarks: row.maxTotalMarks,
             },
-            request: req,
         });
         return json.created({ message: 'Training camp created successfully.', trainingCamp: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

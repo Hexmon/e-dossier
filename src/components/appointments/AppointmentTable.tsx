@@ -23,8 +23,8 @@ import {
 interface AppointmentTableProps {
   appointments: Appointment[];
   onHandover: (appointment: Appointment) => void;
-  onEdit: (appointmentId: string, updates: any) => Promise<boolean>;
-  onDelete: (appointmentId: string, positionId?: string) => Promise<boolean>;
+  onEdit: (appointmentId: string, updates: any) => Promise<any>;
+  onDelete: (appointmentId: string) => Promise<any>;
   users: any[];
   loading: boolean;
 }
@@ -60,10 +60,9 @@ export function AppointmentTable({
 
   const handleEditSubmit = async () => {
     if (!selectedAppointment || !editFormData.positionName.trim()) return;
-
     setIsSubmitting(true);
     try {
-      const success = await onEdit(selectedAppointment.id, {
+      await onEdit(selectedAppointment.id, {
         startsAt: new Date(editFormData.startsAt).toISOString(),
         positionId: selectedAppointment.positionId,
         positionName: editFormData.positionName,
@@ -71,9 +70,7 @@ export function AppointmentTable({
           userId: editFormData.userId,
         }),
       });
-      if (success) {
-        setIsEditDialogOpen(false);
-      }
+      setIsEditDialogOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -88,7 +85,7 @@ export function AppointmentTable({
     if (!selectedAppointment) return;
     setIsDeleting(true);
     try {
-      await onDelete(selectedAppointment.id, selectedAppointment.positionId);
+      await onDelete(selectedAppointment.id);
       setIsDeleteDialogOpen(false);
     } finally {
       setIsDeleting(false);
@@ -210,7 +207,7 @@ export function AppointmentTable({
                       </SelectItem>
                     ))
                   ) : (
-                    <div className="p-2 text-sm text-gray-500">
+                    <div className="p-2 text-sm text-muted-foreground">
                       No users available
                     </div>
                   )}

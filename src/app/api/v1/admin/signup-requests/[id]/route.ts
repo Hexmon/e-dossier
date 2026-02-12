@@ -1,13 +1,15 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
-import { deleteSignupRequest } from '@/app/db/queries/signupRequests';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+import { requireAuth } from '@/app/lib/authz';
+import { deleteSignupRequest } from '@/app/db/queries/signupRequests';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { userId: adminUserId } = await requireAdmin(req);
+    const { userId: adminUserId } = await requireAuth(req);
     const { id } = await params;
     await deleteSignupRequest({
       requestId: id,
@@ -15,15 +17,15 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
       auditRequestId: req.headers.get('x-request-id') ?? undefined,
     });
 
-    await createAuditLog({
-      actorUserId: adminUserId,
-      eventType: AuditEventType.SIGNUP_REQUEST_DELETED,
-      resourceType: AuditResourceType.SIGNUP_REQUEST,
-      resourceId: id,
-      description: `Signup request ${id} deleted`,
-      metadata: { requestId: id },
-      request: req,
-      required: true,
+    await req.audit.log({
+      action: AuditEventType.SIGNUP_REQUEST_DELETED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminUserId },
+      target: { type: AuditResourceType.SIGNUP_REQUEST, id },
+      metadata: {
+        description: `Signup request ${id} deleted`,
+        requestId: id,
+      },
     });
     return json.ok({ message: 'Signup request deleted successfully.' });
   } catch (err: any) {
@@ -32,4 +34,4 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
     return handleApiError(err);
   }
 }
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

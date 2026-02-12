@@ -5,19 +5,41 @@ import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 import type { DisciplineForm as DisciplineFormType } from "@/types/dicp-records";
 import { saveDisciplineForm } from "@/store/slices/disciplineRecordsSlice";
+import { usePunishments } from "@/hooks/usePunishments";
 
 interface Props {
     onSubmit: (data: DisciplineFormType) => Promise<void> | void;
     defaultValues: DisciplineFormType;
     ocId: string;
+    appointmentOptions: Array<{ value: string; label: string }>;
+    appointmentsLoading: boolean;
     onClear: () => void;
 }
 
-export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear }: Props) {
+export default function DisciplineForm({
+    onSubmit,
+    defaultValues,
+    ocId,
+    appointmentOptions,
+    appointmentsLoading,
+    onClear,
+}: Props) {
     const dispatch = useDispatch();
+    const { punishments, fetchPunishments } = usePunishments();
+
+    // useEffect(() => {
+    //     fetchPunishments();
+    // }, []);
 
     const form = useForm<DisciplineFormType>({
         defaultValues,
@@ -26,20 +48,66 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
     const { control, handleSubmit, register, watch, setValue } = form;
     const { fields, append, remove } = useFieldArray({ control, name: "records" });
 
-    // watch negativePts to compute live cumulative (only show negatives for UI)
+    // watch all records to compute negative pts and cumulative
     const watched = useWatch({ control, name: "records" }) || [];
 
     useEffect(() => {
-        // compute cumulative using the sequence of negativePts and base 0
+        // Auto-calculate negativePts and cumulative for each row
         let total = 0;
+        let hasChanges = false;
+
         for (let i = 0; i < (watched?.length ?? 0); i += 1) {
-            const rec = watched[i] ?? { negativePts: "" };
-            const delta = Number(rec.negativePts ?? 0);
-            total += delta;
-            // always set to form value (string) so backend receives a number if needed later
-            setValue(`records.${i}.cumulative`, String(total), { shouldDirty: true, shouldTouch: false });
+            const rec = watched[i] ?? {};
+
+            // Find the selected punishment to get marksDeduction
+            const selectedPunishment = punishments.find(p => p.title === rec.punishmentAwarded);
+            const hasPunishment = Boolean(rec.punishmentAwarded);
+            const marksDeduction = selectedPunishment?.marksDeduction ?? 0;
+            const rawNum = Number(rec.numberOfPunishments);
+            const numPunishments = hasPunishment
+                ? Math.max(1, Number.isFinite(rawNum) ? rawNum : 1)
+                : 0;
+
+            if (!hasPunishment && rec.numberOfPunishments !== "0") {
+                setValue(`records.${i}.numberOfPunishments`, "0", {
+                    shouldDirty: true,
+                    shouldTouch: false,
+                    shouldValidate: false
+                });
+                hasChanges = true;
+            }
+
+            // Calculate negative points = marksDeduction * numberOfPunishments
+            const calculatedNegativePts = marksDeduction * numPunishments;
+
+            // Only update if the calculated value is different (prevent infinite loop)
+            if (String(calculatedNegativePts) !== rec.negativePts) {
+                setValue(`records.${i}.negativePts`, String(calculatedNegativePts), {
+                    shouldDirty: true,
+                    shouldTouch: false,
+                    shouldValidate: false
+                });
+                hasChanges = true;
+            }
+
+            // Calculate cumulative
+            total += calculatedNegativePts;
+            if (String(total) !== rec.cumulative) {
+                setValue(`records.${i}.cumulative`, String(total), {
+                    shouldDirty: true,
+                    shouldTouch: false,
+                    shouldValidate: false
+                });
+                hasChanges = true;
+            }
         }
-    }, [JSON.stringify(watched), setValue]);
+    }, [
+        watched?.length,
+        watched?.map(r => r?.punishmentAwarded).join(','),
+        watched?.map(r => r?.numberOfPunishments).join(','),
+        punishments.length,
+        setValue
+    ]);
 
     // Auto-save to Redux on form changes
     useEffect(() => {
@@ -50,6 +118,8 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
                     dateOfOffence: record?.dateOfOffence || "",
                     offence: record?.offence || "",
                     punishmentAwarded: record?.punishmentAwarded || "",
+                    punishmentId: record?.punishmentId || "",
+                    numberOfPunishments: record?.punishmentAwarded ? (record?.numberOfPunishments || "1") : "0",
                     dateOfAward: record?.dateOfAward || "",
                     byWhomAwarded: record?.byWhomAwarded || "",
                     negativePts: record?.negativePts || "",
@@ -69,6 +139,8 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
             dateOfOffence: "",
             offence: "",
             punishmentAwarded: "",
+            punishmentId: "",
+            numberOfPunishments: "0",
             dateOfAward: "",
             byWhomAwarded: "",
             negativePts: "",
@@ -77,52 +149,159 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
 
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="overflow-auto border rounded-lg shadow">
-                <table className="w-full table-fixed text-sm">
-                    <thead className="bg-gray-100">
+            <div className="overflow-x-auto border rounded-lg shadow">
+                <table className="w-full min-w-[1200px] table-fixed text-sm">
+                    <thead className="bg-muted/70">
                         <tr>
-                            <th className="p-2 border">S.No</th>
-                            <th className="p-2 border">Date Of Offence</th>
-                            <th className="p-2 border">Offence</th>
-                            <th className="p-2 border">Punishment Awarded</th>
-                            <th className="p-2 border">Date Of Award</th>
-                            <th className="p-2 border">By Whom Awarded</th>
-                            <th className="p-2 border">Negative Pts</th>
-                            <th className="p-2 border">Cumulative</th>
-                            <th className="p-2 border">Action</th>
+                            <th className="p-2 border w-16">S.No</th>
+                            <th className="p-2 border w-32">Date Of Offence</th>
+                            <th className="p-2 border w-44">Offence</th>
+                            <th className="p-2 border w-48">Punishment Awarded</th>
+                            <th className="p-2 border w-32">No. of Punishments</th>
+                            <th className="p-2 border w-32">Date Of Award</th>
+                            <th className="p-2 border w-72">By Whom Awarded</th>
+                            <th className="p-2 border w-24">Negative Pts</th>
+                            <th className="p-2 border w-24">Cumulative</th>
+                            <th className="p-2 border w-28">Action</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {fields.map((field, index) => {
+                            const currentRecord = watched?.[index];
+
                             return (
                                 <tr key={field.id}>
                                     <td className="p-2 border text-center">
-                                        <Input disabled value={String(index + 1)} className="bg-gray-100 text-center" />
+                                        <Input disabled value={String(index + 1)} className="w-full min-w-0 bg-muted/70 text-center" />
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Input type="date" {...register(`records.${index}.dateOfOffence`)} />
+                                        <Input type="date" className="w-full min-w-0" {...register(`records.${index}.dateOfOffence`)} />
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Input {...register(`records.${index}.offence`)} />
+                                        <Input className="w-full min-w-0" {...register(`records.${index}.offence`)} />
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Input {...register(`records.${index}.punishmentAwarded`)} />
+                                        <Select
+                                            value={currentRecord?.punishmentAwarded || ""}
+                                            onValueChange={(value) => {
+                                                // Find the selected punishment to get its ID
+                                                const selectedPunishment = punishments.find(p => p.title === value);
+
+                                                setValue(`records.${index}.punishmentAwarded`, value, {
+                                                    shouldDirty: true,
+                                                    shouldTouch: true
+                                                });
+
+                                                // Store the punishment ID
+                                                if (selectedPunishment?.id) {
+                                                    setValue(`records.${index}.punishmentId`, selectedPunishment.id, {
+                                                        shouldDirty: true,
+                                                        shouldTouch: true
+                                                    });
+                                                }
+                                                if (value) {
+                                                    const currentNum = Number(currentRecord?.numberOfPunishments ?? 0);
+                                                    if (!Number.isFinite(currentNum) || currentNum <= 0) {
+                                                        setValue(`records.${index}.numberOfPunishments`, "1", {
+                                                            shouldDirty: true,
+                                                            shouldTouch: true
+                                                        });
+                                                    }
+                                                } else {
+                                                    setValue(`records.${index}.numberOfPunishments`, "0", {
+                                                        shouldDirty: true,
+                                                        shouldTouch: true
+                                                    });
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-full min-w-0">
+                                                <SelectValue className="truncate" placeholder="Select punishment" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {punishments.map((punishment) => (
+                                                    <SelectItem
+                                                        key={punishment.id}
+                                                        value={punishment.title}
+                                                        className="max-w-[360px] truncate"
+                                                    >
+                                                        {punishment.title} ({punishment.marksDeduction} pts)
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Input type="date" {...register(`records.${index}.dateOfAward`)} />
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            className="w-full min-w-0"
+                                            {...register(`records.${index}.numberOfPunishments`)}
+                                            defaultValue="0"
+                                        />
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Input {...register(`records.${index}.byWhomAwarded`)} />
+                                        <Input type="date" className="w-full min-w-0" {...register(`records.${index}.dateOfAward`)} />
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Input type="number" {...register(`records.${index}.negativePts`)} />
+                                        <Select
+                                            value={currentRecord?.byWhomAwarded || undefined}
+                                            onValueChange={(value) =>
+                                                setValue(`records.${index}.byWhomAwarded`, value, {
+                                                    shouldDirty: true,
+                                                    shouldTouch: true,
+                                                })
+                                            }
+                                            disabled={appointmentsLoading}
+                                        >
+                                            <SelectTrigger className="w-full min-w-0">
+                                                <SelectValue
+                                                    className="truncate"
+                                                    placeholder={
+                                                        appointmentsLoading
+                                                            ? "Loading appointments..."
+                                                            : "Select appointment holder"
+                                                    }
+                                                />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {currentRecord?.byWhomAwarded &&
+                                                    !appointmentOptions.some(
+                                                        (option) => option.value === currentRecord.byWhomAwarded
+                                                    ) && (
+                                                        <SelectItem
+                                                            value={currentRecord.byWhomAwarded}
+                                                            className="max-w-[360px] truncate"
+                                                        >
+                                                            {currentRecord.byWhomAwarded}
+                                                        </SelectItem>
+                                                    )}
+                                                {appointmentOptions.map((option) => (
+                                                    <SelectItem
+                                                        key={option.value}
+                                                        value={option.value}
+                                                        className="max-w-[360px] truncate"
+                                                    >
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </td>
+
+                                    <td className="p-2 border">
+                                        <Input
+                                            disabled
+                                            value={currentRecord?.negativePts || "0"}
+                                            className="w-full min-w-0 bg-muted/70 text-center"
+                                        />
                                     </td>
 
                                     <td className="p-2 border">
@@ -130,11 +309,11 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
                                         <Input
                                             disabled
                                             value={
-                                                Number((watched?.[index]?.cumulative ?? "0")) < 0
-                                                    ? String(watched[index].cumulative)
+                                                Number((currentRecord?.cumulative ?? "0")) < 0
+                                                    ? String(currentRecord.cumulative)
                                                     : ""
                                             }
-                                            className="bg-gray-100 text-center"
+                                            className="w-full min-w-0 bg-muted/70 text-center"
                                         />
                                     </td>
 
@@ -142,7 +321,7 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
                                         <button
                                             type="button"
                                             onClick={() => remove(index)}
-                                            className="inline-block px-2 py-1 bg-red-600 text-white rounded text-xs"
+                                            className="inline-block whitespace-nowrap px-2 py-1 bg-destructive text-primary-foreground rounded text-xs"
                                         >
                                             Remove
                                         </button>
@@ -154,19 +333,19 @@ export default function DisciplineForm({ onSubmit, defaultValues, ocId, onClear 
                 </table>
             </div>
 
-            <div className="mt-4 flex justify-center gap-3">
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
                 <Button type="button" onClick={handleAppend}>
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-[#40ba4d]">
+                <Button type="submit" className="bg-success">
                     Submit
                 </Button>
 
                 <Button
                     type="button"
                     variant="outline"
-                    className="hover:bg-destructive hover:text-white"
+                    className="hover:bg-destructive hover:text-primary-foreground"
                     onClick={onClear}
                 >
                     Clear Form

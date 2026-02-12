@@ -1,6 +1,7 @@
 "use client";
 
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Repeat } from "lucide-react";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -10,10 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@/app/lib/api/authApi";
-import { fetchMe, MeResponse } from "@/app/lib/api/me";
-import { useEffect, useState } from "react";
+import { useMe } from "@/hooks/useMe";
+import SwitchUserModal from "@/components/auth/SwitchUserModal";
+import OCSelectModal from "@/components/modals/OCSelectModal";
+import { buildDossierPathForOc, extractDossierContext, isDossierManagementRoute } from "@/lib/dossier-route";
 
 interface PageHeaderProps {
   title: string;
@@ -36,127 +40,150 @@ const getInitials = (name: string): string => {
 };
 
 export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const [switchUserOpen, setSwitchUserOpen] = useState(false);
+  const [switchOcOpen, setSwitchOcOpen] = useState(false);
 
-  const [data, setData] = useState<MeResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadMeSafely = async (
-    setData: (d: any) => void,
-    setLoading: (v: boolean) => void,
-    isMounted: () => boolean
-  ) => {
-    setLoading(true);
-
-    try {
-      const res = await fetchMe();
-      if (isMounted()) {
-        setData(res);
-      }
-    } catch (err) {
-      console.error("Failed to load /me:", err);
-    } finally {
-      if (isMounted()) {
-        setLoading(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    let mounted = true;
-    const isMounted = () => mounted;
-
-    loadMeSafely(setData, setLoading, isMounted);
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  // Replaces the manual useEffect + fetchMe with a single React Query call
+  // that's shared across the entire app
+  const { data } = useMe();
 
   const {
     user = {},
-    roles = [],
     apt = {},
-  } = (data ?? {}) as Partial<MeResponse>;
+  } = data ?? {};
 
   const {
     email = "",
     name = "",
+    id = "",
     username = "",
-    phone = "",
-    rank = "",
   } = user as any;
 
   const {
-    id = "",
+    id: appointmentId = "",
     position = "",
   } = apt as any;
+  const isDossierRoute = isDossierManagementRoute(pathname);
+  const dossierContext = extractDossierContext(pathname);
 
-  const router = useRouter();
+  const handleLogout = () => {
+    // CRITICAL: Clear all React Query cache on logout
+    // Without this, the next user will see cached data from the previous user
+    queryClient.clear();
 
-  const handleLogout = async () => {
-    const ok = await logout();
     if (onLogout) {
       onLogout();
       return;
     }
-    if (ok) {
-      router.push("/login");
-    }
+
+    // Navigate immediately for instant UX.
+    // logout() clears localStorage and retries the API call (up to 3 times)
+    // to ensure the httpOnly access_token cookie is cleared server-side.
+    router.push("/login");
+    logout().catch(() => {});
   };
 
   const initials = getInitials(name);
 
   return (
-    <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
-      <div className="flex items-center justify-between px-4 h-full">
+    <>
+      <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
+        <div className="flex items-center justify-between px-4 h-full">
 
-        {/* Left side */}
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="h-8 w-8" />
-          <div>
-            <h1 className="text-lg font-semibold text-[#1677ff]">{title}</h1>
-            {description && (
-              <p className="text-sm text-muted-foreground">{description}</p>
+          {/* Left side */}
+          <div className="flex items-center gap-4">
+            <SidebarTrigger className="h-8 w-8" />
+            <div>
+              <h1 className="text-lg font-semibold text-primary">{title}</h1>
+              {description && (
+                <p className="text-sm text-muted-foreground">{description}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setSwitchUserOpen(true)}
+            >
+              <Repeat className="h-4 w-4" />
+              <span>Switch Account</span>
+            </Button>
+            {isDossierRoute && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSwitchOcOpen(true)}
+              >
+                Switch OC
+              </Button>
             )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    <p className="font-medium">{position}</p>
+                    <p className="w-[200px] truncate text-sm text-muted-foreground">
+                      {email}
+                    </p>
+                  </div>
+                </div>
+
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile Settings</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-
-        {/* Right side */}
-        <div className="flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-[#1677ff] text-primary-foreground">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="flex items-center justify-start gap-2 p-2">
-                <div className="flex flex-col space-y-1 leading-none">
-                  <p className="font-medium">{position}</p>
-                  <p className="w-[200px] truncate text-sm text-muted-foreground">
-                    {email}
-                  </p>
-                </div>
-              </div>
-
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile Settings</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-    </header>
+      </header>
+      <SwitchUserModal
+        open={switchUserOpen}
+        onOpenChange={setSwitchUserOpen}
+        currentIdentity={{
+          userId: id || null,
+          appointmentId: appointmentId || null,
+          roleKey: position || null,
+          username: username || null,
+        }}
+      />
+      <OCSelectModal
+        open={switchOcOpen}
+        onOpenChange={setSwitchOcOpen}
+        disabledOcId={dossierContext?.ocId ?? null}
+        userId={id || undefined}
+        onSelect={(oc) => {
+          setSwitchOcOpen(false);
+          const targetPath = buildDossierPathForOc(oc.id, pathname, searchParams.toString());
+          router.push(targetPath);
+        }}
+      />
+    </>
   );
 }

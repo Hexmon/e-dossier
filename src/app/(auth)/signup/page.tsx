@@ -139,7 +139,7 @@ export default function Signup() {
                     placeholder="+91 XXXXX XXXXX"
                     {...register("phone", { required: "Phone number is required" })}
                   />
-                  {errors.phone && <p className="text-red-500 text-sm">{errors.phone.message}</p>}
+                  {errors.phone && <p className="text-destructive text-sm">{errors.phone.message}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -149,7 +149,7 @@ export default function Signup() {
                     placeholder="e.g., Captain, Major"
                     {...register("rank", { required: "Rank is required" })}
                   />
-                  {errors.rank && <p className="text-red-500 text-sm">{errors.rank.message}</p>}
+                  {errors.rank && <p className="text-destructive text-sm">{errors.rank.message}</p>}
                 </div>
               </div>
 
@@ -161,7 +161,7 @@ export default function Signup() {
                   placeholder="Enter your full name"
                   {...register("name", { required: "Name is required" })}
                 />
-                {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
+                {errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
               </div>
 
               {/* Email */}
@@ -175,7 +175,7 @@ export default function Signup() {
                     pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
                   })}
                 />
-                {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
+                {errors.email && <p className="text-destructive text-sm">{errors.email.message}</p>}
               </div>
 
               {/* Username */}
@@ -192,11 +192,11 @@ export default function Signup() {
                   {username && (
                     <div className="absolute right-3 top-3">
                       {isChecking ? (
-                        <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+                        <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
                       ) : usernameAvailable ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <CheckCircle className="h-4 w-4 text-success" />
                       ) : usernameAvailable === false ? (
-                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <AlertCircle className="h-4 w-4 text-destructive" />
                       ) : null}
                     </div>
                   )}
@@ -207,7 +207,7 @@ export default function Signup() {
                   <p className="text-sm text-muted-foreground">
                     Try:{" "}
                     {usernameSuggestions.map((s, i) => (
-                      <span key={s} className="text-blue-500 cursor-pointer">
+                      <span key={s} className="text-primary cursor-pointer">
                         {s}
                         {i < usernameSuggestions.length - 1 ? ", " : ""}
                       </span>
@@ -215,7 +215,7 @@ export default function Signup() {
                   </p>
                 )}
                 {errors.username && (
-                  <p className="text-red-500 text-sm">{errors.username.message}</p>
+                  <p className="text-destructive text-sm">{errors.username.message}</p>
                 )}
               </div>
 
@@ -231,9 +231,9 @@ export default function Signup() {
                   {password && (
                     <div className="absolute right-3 top-3">
                       {passwordStrong ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <CheckCircle className="h-4 w-4 text-success" />
                       ) : (
-                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <AlertCircle className="h-4 w-4 text-destructive" />
                       )}
                     </div>
                   )}
@@ -253,9 +253,9 @@ export default function Signup() {
                   {confirmPassword && (
                     <div className="absolute right-3 top-3">
                       {passwordMatch ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <CheckCircle className="h-4 w-4 text-success" />
                       ) : (
-                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <AlertCircle className="h-4 w-4 text-destructive" />
                       )}
                     </div>
                   )}
@@ -270,7 +270,7 @@ export default function Signup() {
                   placeholder="Add any remarks"
                   {...register("note", { required: "Note is required" })}
                 />
-                {errors.note && <p className="text-red-500 text-sm">{errors.note.message}</p>}
+                {errors.note && <p className="text-destructive text-sm">{errors.note.message}</p>}
               </div>
 
               {/* Submit */}

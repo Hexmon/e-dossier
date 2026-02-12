@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { ocTabs } from "@/config/app.config";
+import { academicsTabs } from "@/config/app.config";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -46,34 +46,27 @@ export default function OfferingManagementPage() {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [offeringToDelete, setOfferingToDelete] = useState<string | null>(null);
 
+    // Use React Query hooks - they handle their own fetching and caching
     const {
         loading: offeringsLoading,
         offerings,
-        fetchOfferings,
         addOffering,
         editOffering,
         removeOffering,
-    } = useOfferings(courseId);
+        isCreating,
+        isUpdating,
+        isDeleting,
+    } = useOfferings(courseId, { semester: selectedSemester });
 
     const {
         loading: subjectsLoading,
         subjects,
-        fetchSubjects,
     } = useSubjects();
 
     const {
         loading: instructorsLoading,
         instructors,
-        fetchInstructors,
     } = useInstructors();
-
-    useEffect(() => {
-        if (courseId) {
-            fetchOfferings({ semester: selectedSemester });
-            fetchSubjects();
-            fetchInstructors();
-        }
-    }, [courseId, selectedSemester]);
 
     const handleLogout = () => {
         console.log("Logout clicked");
@@ -83,25 +76,23 @@ export default function OfferingManagementPage() {
     const handleSemesterChange = (value: string) => {
         const semester = value === "all" ? undefined : parseInt(value);
         setSelectedSemester(semester);
-        fetchOfferings({ semester });
+        // React Query will automatically refetch when the semester param changes
     };
 
     const handleAddOffering = async (newOffering: OfferingCreate) => {
         const editingId = editingOffering?.id;
 
-        if (editingId) {
-            const result = await editOffering(editingId, newOffering);
-            if (result) {
-                await fetchOfferings({ semester: selectedSemester });
-                setIsDialogOpen(false);
-                setEditingOffering(undefined);
+        try {
+            if (editingId) {
+                await editOffering(editingId, newOffering);
+            } else {
+                await addOffering(newOffering);
             }
-        } else {
-            const result = await addOffering(newOffering);
-            if (result) {
-                await fetchOfferings({ semester: selectedSemester });
-                setIsDialogOpen(false);
-            }
+            setIsDialogOpen(false);
+            setEditingOffering(undefined);
+        } catch (error) {
+            // Error handling is done in the hook
+            console.error("Error saving offering:", error);
         }
     };
 
@@ -120,9 +111,10 @@ export default function OfferingManagementPage() {
 
     const confirmDelete = async () => {
         if (offeringToDelete) {
-            const result = await removeOffering(offeringToDelete);
-            if (result) {
-                await fetchOfferings({ semester: selectedSemester });
+            try {
+                await removeOffering(offeringToDelete);
+            } catch (error) {
+                console.error("Error deleting offering:", error);
             }
         }
         setDeleteConfirmOpen(false);
@@ -150,6 +142,7 @@ export default function OfferingManagementPage() {
     });
 
     const loading = offeringsLoading || subjectsLoading || instructorsLoading;
+    const isMutating = isCreating || isUpdating || isDeleting;
 
     return (
         <SidebarProvider>
@@ -169,13 +162,13 @@ export default function OfferingManagementPage() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Courses", href: "/dashboard/genmgmt" },
+                                { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                                 { label: "Offerings" },
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="offering-mgmt">
-                            <TabsContent value="offering-mgmt" className="space-y-6">
+                        <GlobalTabs tabs={academicsTabs} defaultValue="offerings">
+                            <TabsContent value="offerings" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">Offering List</h2>
 
@@ -243,9 +236,10 @@ export default function OfferingManagementPage() {
                 }}
                 onSubmit={handleAddOffering}
                 offering={editingOffering}
-                isLoading={loading}
+                isLoading={isMutating}
                 subjects={subjectsForForm}
                 instructors={instructorsForForm}
+                defaultSemester={selectedSemester !== undefined ? selectedSemester : undefined}
             />
 
             <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -263,9 +257,10 @@ export default function OfferingManagementPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-destructive hover:bg-destructive/90"
+                            disabled={isDeleting}
                         >
-                            Delete
+                            {isDeleting ? "Deleting..." : "Delete"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

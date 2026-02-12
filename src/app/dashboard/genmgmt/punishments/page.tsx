@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import PunishmentDialog from "@/components/punishments/PunishmentDialog";
 import { usePunishments } from "@/hooks/usePunishments";
 import { Punishment, PunishmentCreate } from "@/app/lib/api/punishmentsApi";
 import { Input } from "@/components/ui/input";
-import { ocTabs } from "@/config/app.config";
+import { moduleManagementTabs, ocTabs } from "@/config/app.config";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -38,15 +38,10 @@ export default function PunishmentManagementPage() {
     const {
         loading,
         punishments,
-        fetchPunishments,
         addPunishment,
         editPunishment,
         removePunishment,
-    } = usePunishments();
-
-    useEffect(() => {
-        fetchPunishments();
-    }, []);
+    } = usePunishments({ q: searchQuery });
 
     const handleLogout = () => {
         console.log("Logout clicked");
@@ -55,7 +50,6 @@ export default function PunishmentManagementPage() {
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
-        fetchPunishments({ q: query });
     };
 
     const handleAddPunishment = async (newPunishment: PunishmentCreate) => {
@@ -64,14 +58,12 @@ export default function PunishmentManagementPage() {
         if (editingId) {
             const result = await editPunishment(editingId, newPunishment);
             if (result) {
-                await fetchPunishments({ q: searchQuery });
                 setIsDialogOpen(false);
                 setEditingPunishment(undefined);
             }
         } else {
             const result = await addPunishment(newPunishment);
             if (result) {
-                await fetchPunishments({ q: searchQuery });
                 setIsDialogOpen(false);
             }
         }
@@ -92,10 +84,7 @@ export default function PunishmentManagementPage() {
 
     const confirmDelete = async () => {
         if (punishmentToDelete) {
-            const result = await removePunishment(punishmentToDelete, true);
-            if (result) {
-                await fetchPunishments({ q: searchQuery });
-            }
+            await removePunishment(punishmentToDelete, true);
         }
         setDeleteConfirmOpen(false);
         setPunishmentToDelete(null);
@@ -119,13 +108,13 @@ export default function PunishmentManagementPage() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                                { label: "Module Mgmt", href: "/dashboard/genmgmt?tab=module-mgmt" },
                                 { label: "Punishment Management" },
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="punishment-mgmt">
-                            <TabsContent value="punishment-mgmt" className="space-y-6">
+                        <GlobalTabs tabs={moduleManagementTabs} defaultValue="punishments">
+                            <TabsContent value="punishments" className="space-y-6">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-bold text-foreground">Punishment List</h2>
 
@@ -200,7 +189,7 @@ export default function PunishmentManagementPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-red-600"
+                            className="bg-destructive"
                         >
                             Delete
                         </AlertDialogAction>

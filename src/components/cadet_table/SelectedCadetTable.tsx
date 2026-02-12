@@ -29,39 +29,39 @@ export default function SelectedCadetTable({
 
   return (
     <>
-      <div className="!sticky !top-16 !z-50 bg-white border border-gray-200 shadow-sm min-w-full mb-4 rounded-lg overflow-hidden">
-        <table className="min-w-full text-sm text-gray-700 border-collapse">
-          <thead className="bg-[#1677ff] text-white">
+      <div className="!sticky !top-16 !z-50 bg-white border border-border shadow-sm min-w-full mb-4 rounded-lg overflow-hidden">
+        <table className="min-w-full text-sm text-foreground border-collapse">
+          <thead className="bg-primary text-primary-foreground">
             <tr>
-              <th className="px-6 py-3 text-center font-semibold border border-gray-300">
+              <th className="px-6 py-3 text-center font-semibold border border-border">
                 Selected Cadet
               </th>
-              <th className="px-6 py-3 text-center font-semibold border border-gray-300">
+              <th className="px-6 py-3 text-center font-semibold border border-border">
                 Course
               </th>
-              <th className="px-6 py-3 text-center font-semibold border border-gray-300">
+              <th className="px-6 py-3 text-center font-semibold border border-border">
                 OC Number
               </th>
-              <th className="px-6 py-3 text-center font-semibold border border-gray-300">
+              <th className="px-6 py-3 text-center font-semibold border border-border">
                 Performance Graph
               </th>
             </tr>
           </thead>
           <tbody className="bg-white text-center">
             <tr>
-              <td className="px-6 py-3 border border-gray-300">
+              <td className="px-6 py-3 border border-border">
                 {selectedCadet.name}
               </td>
-              <td className="px-6 py-3 border border-gray-300">
+              <td className="px-6 py-3 border border-border">
                 {selectedCadet.courseName}
               </td>
-              <td className="px-6 py-3 border border-gray-300">
+              <td className="px-6 py-3 border border-border">
                 {selectedCadet.ocNumber}
               </td>
-              <td className="px-6 py-3 border border-gray-300">
+              <td className="px-6 py-3 border border-border">
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="px-4 py-2 bg-[#40ba4d] text-white font-medium rounded-lg transition-colors duration-200"
+                  className="px-4 py-2 bg-success text-primary-foreground font-medium rounded-lg transition-colors duration-200"
                 >
                   View Graphs
                 </button>

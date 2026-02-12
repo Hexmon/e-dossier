@@ -1,15 +1,15 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAdmin } from '../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed } from '../../_checks';
 import { OcIdParam, ocImageDeleteQuerySchema } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { listOcImages, getOcImage, softDeleteOcImage, hardDeleteOcImage } from '@/app/db/queries/oc';
-import { deleteObject, getPublicObjectUrl, createPresignedGetUrl } from '@/app/lib/storage';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { deleteObject, createPresignedGetUrl } from '@/app/lib/storage';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
         await authorizeOcAccess(req, ocId);
@@ -26,18 +26,31 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ ocId
             };
         }
 
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
+            metadata: {
+                description: 'OC images retrieved successfully.',
+                ocId,
+                module: 'images',
+                includeDeleted,
+            },
+        });
+
         return json.ok({ message: 'OC images retrieved successfully.', images, items: rows });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
-
+        await authorizeOcAccess(req, ocId);
         const sp = new URL(req.url).searchParams;
         const qp = ocImageDeleteQuerySchema.parse({
             kind: sp.get('kind') ?? undefined,
@@ -55,22 +68,18 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
             await softDeleteOcImage(ocId, qp.kind);
         }
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.OC_RECORD_DELETED,
-            resourceType: AuditResourceType.OC,
-            resourceId: ocId,
-            description: `${hard ? 'Hard' : 'Soft'} deleted OC image ${qp.kind} for ${ocId}`,
+        await req.audit.log({
+            action: AuditEventType.OC_RECORD_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
+                description: `${hard ? 'Hard' : 'Soft'} deleted OC image ${qp.kind} for ${ocId}`,
                 ocId,
                 module: 'images',
                 kind: qp.kind,
                 hardDeleted: hard,
             },
-            before: existing,
-            after: null,
-            request: req,
-            required: true,
         });
 
         return json.ok({ message: hard ? 'OC image hard-deleted.' : 'OC image soft-deleted.', kind: qp.kind });
@@ -79,6 +88,6 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ o
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', GETHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

@@ -7,9 +7,155 @@
 - Backend APIs live under `/api/v1`
 
 ## Prerequisites
-- Node.js LTS (18+ recommended)
-- pnpm
+- Node.js ≥ 20 (check with `node -v`)
+- pnpm ≥ 9 (check with `pnpm -v`)
 - Docker (for Postgres/MinIO)
+
+## Getting Started (New Developers)
+
+### Step 1: Clone the Repository
+
+**macOS/Linux:**
+```bash
+git clone https://github.com/your-org/e-dossier.git
+cd e-dossier
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/your-org/e-dossier.git
+cd e-dossier
+```
+
+> ⚠️ Git hooks may not be configured automatically on every machine after clone.
+> After cloning, run `pnpm install` (this repository runs a `postinstall` that configures hooks), or run `pnpm run setup:git-hooks` manually to enable the hooks.
+
+### Step 2: Install Dependencies
+
+```bash
+pnpm install
+```
+
+### Step 3: Verify Setup
+
+**macOS/Linux/Windows (All Terminals):**
+```bash
+# Verify hooks are configured (if not, run the setup command below)
+git config core.hooksPath
+# If configured, output should be: .githooks
+
+# List the hooks
+ls -la .githooks/
+# Should show: pre-push, post-checkout, .gitkeep
+```
+
+**Windows (PowerShell alternative):**
+```powershell
+git config core.hooksPath
+# Should output: .githooks
+
+dir .\.githooks\
+# Should show: pre-push, post-checkout, .gitkeep
+```
+
+### Step 4: Start Developing
+
+```bash
+git checkout -b feature/my-feature
+# Make your changes...
+git add .
+git commit -m "feat: add something"
+git push origin feature/my-feature
+
+# ✅ Hooks automatically run: lint → typecheck → build
+# If any checks fail, fix errors and push again
+```
+
+### Existing Developers: Pull Master
+
+If you're already working on this project, pull master to get the updated hooks:
+
+```bash
+git pull origin master
+# → post-checkout hook runs
+# → Hooks are ready for your next push
+
+git checkout -b feature/whatever
+git push origin feature/whatever
+# ✅ Hooks automatically enforce quality
+```
+
+### Troubleshooting: Hooks Not Running
+
+If hooks don't trigger on push, the quickest fixes are:
+
+- Run the setup script installed by `postinstall`:
+
+```bash
+pnpm install
+# or run the setup directly:
+pnpm run setup:git-hooks
+```
+
+- Manual commands (if you prefer not to run the script):
+
+```bash
+# macOS / Linux
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-push .githooks/post-checkout || true
+
+# Windows (PowerShell)
+git config core.hooksPath .githooks
+git update-index --add --chmod=+x .githooks/pre-push .githooks/post-checkout
+```
+
+For more details, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
+For token-based UI color rules, see [THEMING_GUIDE.md](docs/THEMING_GUIDE.md).
+
+
+## Code Quality & Git Hooks (Auto-Setup)
+
+This repository enforces automatic quality checks on **every `git push`** to ensure code quality across all branches.
+
+### What Happens
+
+When you run `git push`, the pre-push hook automatically:
+1. ✓ Verifies dependencies are locked (`pnpm-lock.yaml` exists)
+2. ✓ Checks Node.js and pnpm versions meet requirements
+3. ✓ Runs `pnpm run lint` (ESLint)
+4. ✓ Runs `pnpm run typecheck` (TypeScript type checking)
+5. ✓ Runs `pnpm run build` (production build validation)
+
+**If any check fails**, the push is blocked and errors are shown. Fix issues locally and push again.
+
+### Zero Setup Required
+
+Git hooks **auto-configure automatically**:
+- After `git clone` (via `post-checkout` hook)
+- Before first `git push` (via `pre-push` hook auto-setup)
+
+Just clone and push—no manual setup needed!
+
+```bash
+git clone https://github.com/your-org/e-dossier.git
+cd e-dossier
+pnpm install
+git checkout -b feature/my-feature
+git push origin feature/my-feature  # Hook auto-configures and runs verification
+```
+
+### Troubleshooting
+
+If hooks don't run:
+```bash
+# macOS/Linux
+bash scripts/setup-git-hooks.sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -File scripts/setup-git-hooks.ps1
+```
+
+For detailed setup and troubleshooting, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ## Environment Files
 - App env:
@@ -88,3 +234,19 @@ VM-1 (App)
 ## Operational Checks
 - `pnpm run check` verifies Postgres and MinIO connectivity.
 - If schema changes: `pnpm db:generate` then `pnpm db:migrate`.
+
+## RBAC Permissions Sync & Verification
+Use this flow after RBAC/action-map changes and after `pnpm db:push`.
+
+1. Seed permissions from parsed matrix:
+   - `pnpm seed:permissions`
+2. Optional alternative import command (use if you want explicit parsed-matrix path control):
+   - `pnpm import:permissions`
+   - Example with explicit path:
+     - `pnpm import:permissions docs/rbac/permission-matrix.parsed.json`
+3. Seed admins only if this environment needs admin bootstrap:
+   - `pnpm seed:admins`
+4. Validate action-map coverage:
+   - `pnpm run validate:action-map`
+5. Full verification:
+   - `pnpm lint && pnpm typecheck && pnpm test && pnpm build`

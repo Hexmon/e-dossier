@@ -1,14 +1,17 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { ocDiscipline, ocCadets } from '@/app/db/schema/training/oc';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { eq } from 'drizzle-orm';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
-        await requireAdmin(req);
+        const authCtx = await requireAuth(req);
 
         const rows = await db
             .select({
@@ -22,6 +25,7 @@ async function GETHandler(req: NextRequest) {
                 punishmentAwarded: ocDiscipline.punishmentAwarded,
                 awardedOn: ocDiscipline.awardedOn,
                 awardedBy: ocDiscipline.awardedBy,
+                numberOfPunishments: ocDiscipline.numberOfPunishments,
                 pointsDelta: ocDiscipline.pointsDelta,
                 pointsCumulative: ocDiscipline.pointsCumulative,
             })
@@ -29,10 +33,21 @@ async function GETHandler(req: NextRequest) {
             .innerJoin(ocCadets, eq(ocDiscipline.ocId, ocCadets.id))
             .orderBy(ocDiscipline.dateOfOffence);
 
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.API, id: 'admin.discipline' },
+            metadata: {
+                description: 'Discipline records retrieved successfully.',
+                count: rows.length,
+            },
+        });
+
         return json.ok({ message: 'Discipline records retrieved successfully.', data: rows });
     } catch (err) {
         return handleApiError(err);
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));

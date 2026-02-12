@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import {
@@ -35,75 +36,64 @@ export interface ServedUser {
 }
 
 export function useAppointments() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [servedList, setServedList] = useState<ServedUser[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [platoons, setPlatoons] = useState<Platoon[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  /** ------------------ FETCH USERS FOR HANDOVER ------------------ */
-  const fetchUsers = useCallback(async () => {
-    try {
-      const data = await getAllUsers();
-      setUsers(data);
-    } catch {
-      toast.error("Unable to load users, using fallback.");
-      setUsers(fallbackUsers);
-    }
-  }, []);
-
-
-  /** ------------------ FETCH USERS AND POSITIONS FOR CREATE DIALOG ------------------ */
-  const fetchUsersAndPositions = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [usersData, positionsData, platoonsData] = await Promise.all([
-        getAllUsers(),
-        getPositions(),
-        getPlatoons(),
-      ]);
-      setUsers(usersData);
-      setPositions(positionsData);
-      setPlatoons(platoonsData);
-    } catch {
-      toast.error("Unable to load users and positions, using fallback.");
-      setUsers(fallbackUsers);
-      setPositions([]);
-      setPlatoons([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  /** ------------------ FETCH APPOINTMENTS ------------------ */
-  const fetchAppointments = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await getAppointments();
-
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error("No appointment data available");
+  const { data: appointments = [], isLoading: loadingAppointments } = useQuery({
+    queryKey: ["appointments"],
+    queryFn: async () => {
+      try {
+        const data = await getAppointments();
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error("No appointment data available");
+        }
+        return data;
+      } catch {
+        toast.info("Using fallback appointments.");
+        return fallbackAppointments;
       }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-      setAppointments(data);
-      setError(null);
-    } catch {
-      toast.info("Using fallback appointments.");
-      setAppointments(fallbackAppointments);
-      setError("Using fallback due to API failure.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      try {
+        return await getAllUsers();
+      } catch {
+        toast.error("Unable to load users, using fallback.");
+        return fallbackUsers;
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-  /** ------------------ HANDLE HANDOVER ------------------ */
-  const handleHandover = useCallback(
-    async (
-      appointment: Appointment,
-      form: { toUser: string; handoverDate: string; takeoverDate: string }
-    ) => {
+  const { data: positions = [] } = useQuery({
+    queryKey: ["positions"],
+    queryFn: getPositions,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: platoons = [] } = useQuery({
+    queryKey: ["platoons"],
+    queryFn: getPlatoons,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: servedList = [] } = useQuery<ServedUser[]>({
+    queryKey: ["servedList"],
+    queryFn: () => [],
+    staleTime: Infinity,
+  });
+
+  const handoverMutation = useMutation({
+    mutationFn: async ({
+      appointment,
+      form,
+    }: {
+      appointment: Appointment;
+      form: { toUser: string; handoverDate: string; takeoverDate: string };
+    }) => {
       const { id, username, startsAt, positionName } = appointment;
 
       const handover = new Date(`${form.handoverDate}T00:00:00Z`);
@@ -111,12 +101,10 @@ export function useAppointments() {
       const start = new Date(startsAt);
 
       if (handover <= start) {
-        toast.error("Handover must be after the appointment start date.");
-        return false;
+        throw new Error("Handover must be after the appointment start date.");
       }
       if (handover >= takeover) {
-        toast.error("Handover must be before takeover date.");
-        return false;
+        throw new Error("Handover must be before takeover date.");
       }
 
       const selectedUser = users.find((u) => u.id === form.toUser);
@@ -127,49 +115,41 @@ export function useAppointments() {
         newStartsAt: takeover.toISOString(),
         positionId: appointment.positionId,
         scopeType: appointment.scopeType,
-        scopeId:
-          appointment.scopeType === "GLOBAL" ? null : appointment.scopeId,
+        scopeId: appointment.scopeType === "GLOBAL" ? null : appointment.scopeId,
         reason: "Shift handover",
       };
 
-      try {
-        await transferAppointment(id, payload);
+      await transferAppointment(id, payload);
 
-        const servedEntry: ServedUser = {
+      return {
+        servedEntry: {
           user: username || "Unknown",
           appointment: positionName || "N/A",
           fromDate: startsAt,
           toDate: form.handoverDate,
-        };
-
-        setServedList((prev) => [...prev, servedEntry]);
-
-        // Update current appointment owner
-        setAppointments((prev) =>
-          prev.map((a) =>
-            a.id === id
-              ? {
-                  ...a,
-                  username: selectedUser?.username ?? "N/A",
-                  startsAt: form.takeoverDate,
-                }
-              : a
-          )
-        );
-
-        toast.success("Appointment handed over successfully");
-        return true;
-      } catch (err) {
-        toast.error("Handover failed. Try again.");
-        return false;
-      }
+        },
+        updatedAppointment: {
+          id,
+          username: selectedUser?.username ?? "N/A",
+          startsAt: form.takeoverDate,
+        },
+      };
     },
-    [users]
-  );
+    onSuccess: ({ servedEntry }) => {
+      queryClient.setQueryData<ServedUser[]>(["servedList"], (old = []) => [
+        ...old,
+        servedEntry,
+      ]);
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Appointment handed over successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Handover failed. Try again.");
+    },
+  });
 
-  /** ------------------ CREATE NEW APPOINTMENT ------------------ */
-  const createNewAppointment = useCallback(
-    async (formData: {
+  const createAppointmentMutation = useMutation({
+    mutationFn: async (formData: {
       userId: string;
       appointmentName: string;
       startsAt: string;
@@ -177,147 +157,120 @@ export function useAppointments() {
       platoonId?: string;
       scopeType?: "GLOBAL" | "PLATOON";
     }) => {
-      try {
-        // Step 1: Create new position with appointment name as displayName
-        const positionKey = formData.appointmentName
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-]/g, "");
+      const positionKey = formData.appointmentName
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
 
-        const defaultScope = formData.scopeType === "PLATOON" ? "PLATOON" : "GLOBAL";
+      const defaultScope = formData.scopeType === "PLATOON" ? "PLATOON" : "GLOBAL";
 
-        const positionResponse = await createPosition({
-          key: positionKey,
-          displayName: formData.appointmentName,
-          defaultScope: defaultScope,
-          singleton: true,
+      const positionResponse = await createPosition({
+        key: positionKey,
+        displayName: formData.appointmentName,
+        defaultScope: defaultScope,
+        singleton: true,
+      });
+
+      if (!positionResponse || !positionResponse.data) {
+        throw new Error("Failed to create position: Invalid response");
+      }
+
+      const newPosition = positionResponse.data;
+
+      const payload: CreateAppointmentPayload = {
+        userId: formData.userId,
+        positionId: newPosition.id,
+        startsAt: new Date(formData.startsAt).toISOString(),
+        endsAt: null,
+        reason: formData.appointmentName,
+        assignment: "PRIMARY",
+        scopeType: defaultScope,
+        scopeId: defaultScope === "PLATOON" ? formData.platoonId || null : null,
+      };
+
+      return await createAppointment(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Appointment created successfully!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create appointment");
+    },
+  });
+
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async ({
+      appointmentId,
+      payload,
+    }: {
+      appointmentId: string;
+      payload: UpdateAppointmentPayload & { positionId?: string; positionName?: string };
+    }) => {
+      let newUsername: string | undefined;
+      if (payload.userId) {
+        const selectedUser = users.find((u) => u.id === payload.userId);
+        newUsername = selectedUser?.username;
+      }
+
+      const appointmentPayload: UpdateAppointmentPayload = {
+        startsAt: payload.startsAt,
+        userId: payload.userId,
+        ...(newUsername && { username: newUsername }),
+      };
+
+      const appointmentPromise = updateAppointment(appointmentId, appointmentPayload);
+
+      let positionPromise = Promise.resolve({ data: null } as any);
+      if (payload.positionId && payload.positionName) {
+        positionPromise = updatePosition(payload.positionId, {
+          displayName: payload.positionName,
         });
-
-        if (!positionResponse || !positionResponse.data) {
-          throw new Error("Failed to create position: Invalid response");
-        }
-
-        const newPosition = positionResponse.data;
-
-        // Step 2: Create appointment with the new position
-        const payload: CreateAppointmentPayload = {
-          userId: formData.userId,
-          positionId: newPosition.id,
-          startsAt: new Date(formData.startsAt).toISOString(),
-          endsAt: null,
-          reason: formData.appointmentName,
-          assignment: "PRIMARY",
-          scopeType: defaultScope,
-          scopeId: defaultScope === "PLATOON" ? formData.platoonId || null : null,
-        };
-
-        const response = await createAppointment(payload);
-
-        if (response && response.data) {
-          toast.success("Appointment created successfully!");
-          // Refresh appointments list
-          await fetchAppointments();
-          return true;
-        }
-        return false;
-      } catch (error: any) {
-        toast.error(
-          error.message ||
-            "Failed to create appointment. Please check your inputs and try again."
-        );
-        return false;
       }
+
+      const [appointmentResponse] = await Promise.all([
+        appointmentPromise,
+        positionPromise,
+      ]);
+
+      return appointmentResponse;
     },
-    [fetchAppointments]
-  );
-
-  /** ------------------ UPDATE APPOINTMENT ------------------ */
-  const handleEditAppointment = useCallback(
-    async (appointmentId: string, payload: UpdateAppointmentPayload & { positionId?: string; positionName?: string }) => {
-      try {
-        // Find the selected user's username if userId is being changed
-        let newUsername: string | undefined;
-        if (payload.userId) {
-          const selectedUser = users.find((u) => u.id === payload.userId);
-          newUsername = selectedUser?.username;
-        }
-
-        // Separate appointment and position updates
-        const appointmentPayload: UpdateAppointmentPayload = {
-          startsAt: payload.startsAt,
-          userId: payload.userId,
-          ...(newUsername && { username: newUsername }),
-        };
-
-        // Update appointment (date, user, and username)
-        const appointmentPromise = updateAppointment(appointmentId, appointmentPayload);
-        
-        // Update position displayName if provided
-        let positionPromise = Promise.resolve({ data: null } as any);
-        if (payload.positionId && payload.positionName) {
-          positionPromise = updatePosition(payload.positionId, {
-            displayName: payload.positionName,
-          });
-        }
-
-        // Wait for both updates
-        const [appointmentResponse] = await Promise.all([
-          appointmentPromise,
-          positionPromise,
-        ]);
-
-        if (appointmentResponse && appointmentResponse.data) {
-          toast.success("Appointment updated successfully!");
-          // Refresh appointments list from database
-          await fetchAppointments();
-          return true;
-        }
-        return false;
-      } catch (error: any) {
-        toast.error(error.message || "Failed to update appointment. Please try again.");
-        return false;
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Appointment updated successfully!");
     },
-    [fetchAppointments, users]
-  );
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update appointment");
+    },
+  });
 
-  /** ------------------ DELETE APPOINTMENT ------------------ */
-  const handleDeleteAppointment = useCallback(
-    async (appointmentId: string) => {
-      try {
-        // Delete the appointment first
-        const appointment = appointments.find(a => a.id === appointmentId);
+  const deleteAppointmentMutation = useMutation({
+    mutationFn: async (appointmentId: string) => {
+      const appointment = appointments.find((a) => a.id === appointmentId);
       if (!appointment) {
         throw new Error("Appointment not found");
       }
-      
-        const response = await deleteAppointment(appointmentId);
-        
-        if (response && response.data) {
-          // Delete the associated position if positionId is provided
-          // This is to avoid orphaned positions
-          if (appointment.positionId) {
-            try {
-              await deletePosition(appointment.positionId);
-            } catch (positionError: any) {
-              // Don't fail the entire operation if position deletion fails
-              console.error(positionError); 
-            }
-          }
-          
-          toast.success("Appointment deleted successfully!");
-          // Refresh appointments list
-          await fetchAppointments();
-          return true;
+
+      const response = await deleteAppointment(appointmentId);
+
+      if (response && response.data && appointment.positionId) {
+        try {
+          await deletePosition(appointment.positionId);
+        } catch (positionError: any) {
+          console.error(positionError);
         }
-        return false;
-      } catch (error: any) {
-        toast.error(error.message || "Failed to delete appointment. Please try again.");
-        return false;
       }
+
+      return response;
     },
-    [fetchAppointments, appointments]
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success("Appointment deleted successfully!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete appointment");
+    },
+  });
 
   return {
     appointments,
@@ -325,14 +278,24 @@ export function useAppointments() {
     users,
     positions,
     platoons,
-    loading,
-    error,
-    fetchAppointments,
-    fetchUsers,
-    fetchUsersAndPositions,
-    handleHandover,
-    createNewAppointment,
-    handleEditAppointment,
-    handleDeleteAppointment,
+    loading: loadingAppointments,
+    error: null,
+    fetchAppointments: useCallback(() => queryClient.invalidateQueries({ queryKey: ["appointments"] }), [queryClient]),
+    fetchUsers: useCallback(() => queryClient.invalidateQueries({ queryKey: ["users"] }), [queryClient]),
+    fetchUsersAndPositions: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["positions"] });
+      queryClient.invalidateQueries({ queryKey: ["platoons"] });
+    },
+    handleHandover: (
+      appointment: Appointment,
+      form: { toUser: string; handoverDate: string; takeoverDate: string }
+    ) => handoverMutation.mutateAsync({ appointment, form }),
+    createNewAppointment: createAppointmentMutation.mutateAsync,
+    handleEditAppointment: (
+      appointmentId: string,
+      payload: UpdateAppointmentPayload & { positionId?: string; positionName?: string }
+    ) => updateAppointmentMutation.mutateAsync({ appointmentId, payload }),
+    handleDeleteAppointment: deleteAppointmentMutation.mutateAsync,
   };
 }

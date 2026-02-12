@@ -1,33 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import { POST as postLogout } from '@/app/api/v1/auth/logout/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 
-vi.mock('@/lib/audit-log', () => ({
-  createAuditLog: vi.fn(async () => {}),
-  logApiRequest: vi.fn(),
-  ensureRequestContext: vi.fn(() => ({
-    requestId: 'test',
-    method: 'GET',
-    pathname: '/',
-    url: '/',
-    startTime: Date.now(),
-  })),
-  noteRequestActor: vi.fn(),
-  setRequestTenant: vi.fn(),
+const auditLogMock = vi.fn(async () => {});
+
+vi.mock('@/lib/audit', () => ({
+  withAuditRoute: (_method: string, handler: any) => {
+    return (req: any, context: any) => {
+      req.audit = { log: auditLogMock };
+      return handler(req, context);
+    };
+  },
   AuditEventType: {
-    LOGOUT: 'auth.logout',
-    API_REQUEST: 'api.request',
+    LOGOUT: 'AUTH.LOGOUT',
   },
   AuditResourceType: {
     USER: 'user',
-    API: 'api',
   },
-}));
-
-vi.mock('@/app/lib/authz', () => ({
-  requireAuth: vi.fn(async () => {
-    throw new Error('no-session');
-  }),
 }));
 
 describe('POST /api/v1/auth/logout', () => {
@@ -42,13 +31,13 @@ describe('POST /api/v1/auth/logout', () => {
       cookies: { access_token: 'dummy' },
     });
 
-    const res = await postLogout(req as any);
+    const res = await postLogout(req as any, createRouteContext());
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.ok).toBe(false);
   });
 
-  it('logs out successfully when origin matches', async () => {
+  it('logs out successfully when origin matches and clears cookie', async () => {
     const req = makeJsonRequest({
       method: 'POST',
       path: '/api/v1/auth/logout',
@@ -60,9 +49,49 @@ describe('POST /api/v1/auth/logout', () => {
       cookies: { access_token: 'dummy' },
     });
 
-    const res = await postLogout(req as any);
+    const res = await postLogout(req as any, createRouteContext());
     expect(res.status).toBe(204);
-    // Clear-Site-Data header should be present for security
+    const setCookie = res.headers.get('set-cookie') ?? '';
+    expect(setCookie).toContain('access_token=');
+    expect(setCookie.toLowerCase()).toContain('max-age=0');
+    expect(res.headers.get('Cache-Control')).toContain('no-store');
     expect(res.headers.get('Clear-Site-Data')).toContain('cookies');
+  });
+
+  it('logs out successfully without token cookie on same-origin request', async () => {
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/logout',
+      baseURL: 'http://localhost:3000',
+      headers: {
+        origin: 'http://localhost:3000',
+        'content-type': 'application/json',
+      },
+    });
+
+    const res = await postLogout(req as any, createRouteContext());
+    expect(res.status).toBe(204);
+  });
+
+  it('does not fail logout when audit logging fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    auditLogMock.mockRejectedValueOnce(new Error('audit failed'));
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/logout',
+      baseURL: 'http://localhost:3000',
+      headers: {
+        origin: 'http://localhost:3000',
+        'content-type': 'application/json',
+      },
+      cookies: { access_token: 'dummy' },
+    });
+
+    const res = await postLogout(req as any, createRouteContext());
+    expect(res.status).toBe(204);
+    await Promise.resolve();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });

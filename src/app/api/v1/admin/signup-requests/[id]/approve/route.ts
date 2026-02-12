@@ -1,23 +1,25 @@
 // src/app/api/v1/admin/signup-requests/[id]/approve/route.ts
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { grantSignupRequestSchema } from '@/app/lib/validators';
 import { approveSignupRequest } from '@/app/db/queries/signupRequests';
 import { IdSchema } from '@/app/lib/apiClient';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 /**
  * POST /api/v1/admin/signup-requests/:id/approve
  * Body: grantSignupRequestSchema (positionKey, scopeType, scopeId?, startsAt?, reason?, roleKeys?)
  */
 async function POSTHandler(
-    req: NextRequest,
+    req: AuditNextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { userId: adminId } = await requireAdmin(req);
+        const { userId: adminId } = await requireAuth(req);
 
         const { id: raw } = await params;
         const { id } = IdSchema.parse({ id: decodeURIComponent((raw ?? '')).trim() });
@@ -31,13 +33,13 @@ async function POSTHandler(
             requestId: req.headers.get('x-request-id') ?? undefined,
         });
 
-        await createAuditLog({
-            actorUserId: adminId,
-            eventType: AuditEventType.SIGNUP_REQUEST_APPROVED,
-            resourceType: AuditResourceType.SIGNUP_REQUEST,
-            resourceId: id,
-            description: `Signup request ${id} approved`,
-            metadata: {
+        await req.audit.log({
+      action: AuditEventType.SIGNUP_REQUEST_APPROVED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminId },
+      target: { type: AuditResourceType.SIGNUP_REQUEST, id: id },
+      metadata: {
+        description: `Signup request ${id} approved`,
                 requestId: id,
                 appointmentId: result.appointment.id,
                 userId: result.appointment.userId,
@@ -45,10 +47,8 @@ async function POSTHandler(
                 scopeType: result.appointment.scopeType,
                 scopeId: result.appointment.scopeId ?? null,
                 startsAt: result.appointment.startsAt,
-            },
-            request: req,
-            required: true,
-        });
+      },
+    });
 
         return json.ok({
             message: 'Signup request approved successfully.',
@@ -59,4 +59,4 @@ async function POSTHandler(
         return handleApiError(err);
     }
 }
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

@@ -1,29 +1,58 @@
 // src/app/api/v1/auth/logout/route.ts
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { clearAuthCookies } from '@/app/lib/cookies';
-import { requireAuth } from '@/app/lib/authz';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { clearAuthCookies, readAccessToken } from '@/app/lib/cookies';
+import { decodeJwtPayloadUnsafe } from '@/app/lib/jwt-unsafe';
+import {
+  withAuditRoute,
+  AuditEventType,
+  AuditResourceType,
+} from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
-function originMatches(req: NextRequest) {
-  const expected = req.nextUrl.origin;
-  const origin = req.headers.get('origin');
-  const referer = req.headers.get('referer');
+const LOGOUT_TIMING_DEBUG = process.env.LOGOUT_TIMING_DEBUG === 'true';
 
-  let refererOrigin: string | null = null;
-  if (referer) {
-    try {
-      refererOrigin = new URL(referer).origin;
-    } catch {
-      refererOrigin = null;
-    }
+function getExpectedOrigins(req: AuditNextRequest) {
+  const origins = new Set<string>([req.nextUrl.origin]);
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const host = forwardedHost ?? req.headers.get('host');
+  const forwardedProto = req.headers.get('x-forwarded-proto');
+  const proto = (forwardedProto ?? req.nextUrl.protocol.replace(':', '')).split(',')[0]?.trim();
+
+  if (host && proto) {
+    origins.add(`${proto}://${host}`);
   }
 
-  return (
-    (origin && origin === expected) ||
-    (!origin && refererOrigin && refererOrigin === expected)
-  );
+  return origins;
+}
+
+function originMatches(req: AuditNextRequest) {
+  const expectedOrigins = getExpectedOrigins(req);
+  const origin = req.headers.get('origin');
+  const referer = req.headers.get('referer');
+  const secFetchSite = req.headers.get('sec-fetch-site');
+
+  const matchesExpected = (value: string) => {
+    try {
+      const url = new URL(value);
+      if (expectedOrigins.has(url.origin)) return true;
+      for (const allowed of expectedOrigins) {
+        const allowedUrl = new URL(allowed);
+        if (url.hostname === allowedUrl.hostname && url.protocol === allowedUrl.protocol) {
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  if (origin && origin !== 'null' && matchesExpected(origin)) return true;
+  if (!origin && referer && matchesExpected(referer)) return true;
+
+  if (secFetchSite === 'same-origin' || secFetchSite === 'same-site') return true;
+
+  return false;
 }
 
 /**
@@ -33,16 +62,19 @@ function originMatches(req: NextRequest) {
  * - Sends strict no-cache headers
  * - Uses Clear-Site-Data to wipe cookies & storage for this origin
  * - Returns 204 No Content
- * 
+ *
  * SECURITY NOTE: Kept in PUBLIC_ANY to allow logout even with expired CSRF tokens.
  * Same-origin check provides adequate CSRF protection for logout operations.
  */
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
   try {
+    const startedAt = performance.now();
+
     // SECURITY FIX: Enhanced same-origin validation
     if (!originMatches(req)) {
       return json.forbidden('Cross-site request not allowed for logout.');
     }
+    const originValidatedAt = performance.now();
 
     // Additional security: Check for suspicious headers that might indicate CSRF
     const contentType = req.headers.get('content-type');
@@ -50,13 +82,8 @@ async function POSTHandler(req: NextRequest) {
       return json.badRequest('Invalid content type for logout request.');
     }
 
-    let actorUserId: string | null = null;
-    try {
-      const ctx = await requireAuth(req);
-      actorUserId = ctx.userId;
-    } catch {
-      actorUserId = null;
-    }
+    const payload = decodeJwtPayloadUnsafe(readAccessToken(req));
+    const actorUserId = typeof payload?.sub === 'string' ? payload.sub : null;
 
     // Prepare a 204 response with security headers
     const res = json.noContent({
@@ -74,16 +101,32 @@ async function POSTHandler(req: NextRequest) {
 
     // Server-authoritative cookie clear
     clearAuthCookies(res);
+    const responseBuiltAt = performance.now();
 
-    await createAuditLog({
-      actorUserId,
-      eventType: AuditEventType.LOGOUT,
-      resourceType: AuditResourceType.USER,
-      resourceId: actorUserId,
-      description: 'User logged out via /api/v1/auth/logout',
-      metadata: { actorPresent: Boolean(actorUserId) },
-      request: req,
+    void req.audit.log({
+      action: AuditEventType.LOGOUT,
+      outcome: 'SUCCESS',
+      actor: actorUserId ? { type: 'user', id: actorUserId } : { type: 'anonymous', id: 'unknown' },
+      target: { type: AuditResourceType.USER, id: actorUserId ?? undefined },
+      metadata: { actorPresent: Boolean(actorUserId), description: 'User logged out via /api/v1/auth/logout' },
+    }).catch((error) => {
+      console.warn('[logout] audit logging failed (non-blocking)', error);
     });
+    const auditScheduledAt = performance.now();
+
+    if (LOGOUT_TIMING_DEBUG) {
+      const requestId = req.headers.get('x-request-id') ?? '';
+      console.info(
+        JSON.stringify({
+          type: 'logout.timing',
+          requestId,
+          originValidationMs: Number((originValidatedAt - startedAt).toFixed(2)),
+          responseBuildMs: Number((responseBuiltAt - originValidatedAt).toFixed(2)),
+          auditScheduleMs: Number((auditScheduledAt - responseBuiltAt).toFixed(2)),
+          totalMs: Number((auditScheduledAt - startedAt).toFixed(2)),
+        })
+      );
+    }
 
     return res;
   } catch (err) {
@@ -95,7 +138,7 @@ async function POSTHandler(req: NextRequest) {
  * OPTIONS preflight — no CORS advertised; keeps caches off.
  * SECURITY FIX: Enhanced OPTIONS handling
  */
-async function OPTIONSHandler(req: NextRequest) {
+async function OPTIONSHandler(req: AuditNextRequest) {
   try {
     // Same-origin check for OPTIONS as well
     if (!originMatches(req)) {
@@ -113,6 +156,6 @@ async function OPTIONSHandler(req: NextRequest) {
     return json.serverError('Unexpected error handling OPTIONS');
   }
 }
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', POSTHandler);
 
-export const OPTIONS = withRouteLogging('OPTIONS', OPTIONSHandler);
+export const OPTIONS = withAuditRoute('OPTIONS', OPTIONSHandler);

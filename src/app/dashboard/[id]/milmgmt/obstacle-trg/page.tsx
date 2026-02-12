@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -29,6 +29,9 @@ import { saveObstacleTrainingForm, clearObstacleTrainingForm } from "@/store/sli
 export default function ObstacleTrgPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     const { cadet } = useOcDetails(ocId);
     const {
@@ -40,8 +43,16 @@ export default function ObstacleTrgPage() {
     } = cadet ?? {};
     const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course }), [name, courseName, ocNumber, cadetOcId, course]);
 
-    const [activeTab, setActiveTab] = useState<number>(0);
     const semesterApiBase = 4; // IV -> 4
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - semesterApiBase;
+        if (idx < 0 || idx >= terms.length) return 0;
+        return idx;
+    }, [semParam]);
+    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
     const semesterNumber = activeTab + semesterApiBase;
 
     // Redux
@@ -57,6 +68,16 @@ export default function ObstacleTrgPage() {
 
     const [isEditingAll, setIsEditingAll] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + semesterApiBase));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
 
     useEffect(() => {
         if (!ocId) return;
@@ -152,7 +173,6 @@ export default function ObstacleTrgPage() {
     useEffect(() => {
         const defaultVals = getDefaultValues();
         lastSavedData.current = JSON.stringify(defaultVals);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
     const handleSaveTerm = useCallback(
@@ -202,6 +222,7 @@ export default function ObstacleTrgPage() {
 
     const handleTabChange = (index: number) => {
         setActiveTab(index);
+        updateSemesterParam(index);
         setIsEditingAll(false);
     };
 
@@ -253,7 +274,7 @@ export default function ObstacleTrgPage() {
                                                 key={term}
                                                 type="button"
                                                 onClick={() => handleTabChange(idx)}
-                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                                             >
                                                 {term}
                                             </button>

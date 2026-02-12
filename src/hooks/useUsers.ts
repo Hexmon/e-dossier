@@ -1,64 +1,85 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
     getAllUsers,
     saveUser,
     deleteUser,
     type User,
 } from "@/app/lib/api/userApi";
-import { toast } from "sonner";
 
 export function useUsers() {
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
 
-    /** FETCH USERS */
-    const fetchUsers = useCallback(async () => {
-        try {
-            setLoading(true);
-            const list = await getAllUsers();
-            setUsers(list);
-        } catch {
-            toast.error("Failed to load users.");
-            setUsers([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    /** ADD USER */
-    const addUser = useCallback(async (data: User) => {
-        const savedUser = await saveUser(data);
-        await fetchUsers();
-        return savedUser;
-    }, [fetchUsers]);
-
-    /** EDIT USER */
-    const editUser = useCallback(
-        async (id: string, data: User) => {
-            const savedUser = await saveUser({ ...data, id });
-            await fetchUsers();
-            return savedUser;
+    // Fetch users with React Query
+    const { data: users = [], isLoading: loading } = useQuery({
+        queryKey: ["users"],
+        queryFn: async () => {
+            try {
+                return await getAllUsers();
+            } catch (error) {
+                toast.error("Failed to load users.");
+                return [];
+            }
         },
-        [fetchUsers]
-    );
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    });
 
-    /** DELETE USER */
-    const removeUser = useCallback(
-        async (id: string) => {
+    // Add user mutation
+    const addUserMutation = useMutation({
+        mutationFn: async (data: User) => {
+            return await saveUser(data);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["users"] });
+            toast.success("User added successfully");
+        },
+        onError: (error: any) => {
+            const messages = Array.isArray(error?.extras?.messages) ? error.extras.messages : [];
+            const detail =
+                messages.length > 0
+                    ? messages.join(" ")
+                    : error?.message || error?.extras?.detail || "Failed to add user";
+            toast.error(detail);
+        },
+    });
+
+    // Edit user mutation
+    const editUserMutation = useMutation({
+        mutationFn: async ({ id, data }: { id: string; data: User }) => {
+            return await saveUser({ ...data, id });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["users"] });
+            toast.success("User updated successfully");
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to update user");
+        },
+    });
+
+    // Delete user mutation
+    const removeUserMutation = useMutation({
+        mutationFn: async (id: string) => {
             await deleteUser(id);
-            await fetchUsers();
         },
-        [fetchUsers]
-    );
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["users"] });
+            toast.warning("User deleted");
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to delete user");
+        },
+    });
 
     return {
         users,
         loading,
-        fetchUsers,
-        addUser,
-        editUser,
-        removeUser,
+        fetchUsers: useCallback(() => queryClient.invalidateQueries({ queryKey: ["users"] }), [queryClient]),
+        addUser: addUserMutation.mutateAsync,
+        editUser: (id: string, data: User) => editUserMutation.mutateAsync({ id, data }),
+        removeUser: removeUserMutation.mutateAsync,
     };
 }

@@ -32,7 +32,7 @@ export const OCListItem: React.FC<OCListItemProps> = ({
       case "active":
         return <UserCheck className="h-4 w-4 text-primary" />;
       case "suspended":
-        return <ShieldAlert className="h-4 w-4 text-yellow-500" />;
+        return <ShieldAlert className="h-4 w-4 text-warning-foreground" />;
       default:
         return <Ban className="h-4 w-4 text-muted-foreground" />;
     }
@@ -44,7 +44,7 @@ export const OCListItem: React.FC<OCListItemProps> = ({
         return <Badge variant="default">Active</Badge>;
       case "suspended":
         return (
-          <Badge variant="secondary" className="text-yellow-800 bg-yellow-100">
+          <Badge variant="secondary" className="text-warning-foreground bg-warning/20">
             Suspended
           </Badge>
         );

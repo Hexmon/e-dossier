@@ -1,17 +1,19 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { appointmentUpdateSchema } from '@/app/lib/validators';
 import { and, eq, sql } from 'drizzle-orm';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 
-async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const runtime = 'nodejs';
+
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         await requireAuth(req);
         const { id } = await params;
@@ -54,9 +56,9 @@ async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 }
 
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { id } = await params;
         const body = await req.json();
         const parsed = appointmentUpdateSchema.safeParse(body);
@@ -171,24 +173,20 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
             ...(positionName !== undefined ? ['position.displayName'] : []),
         ];
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.APPOINTMENT_UPDATED,
-            resourceType: AuditResourceType.APPOINTMENT,
-            resourceId: row.id,
-            description: `Updated appointment ${row.id}`,
+        await req.audit.log({
+            action: AuditEventType.APPOINTMENT_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.APPOINTMENT, id: row.id },
             metadata: {
+                description: `Updated appointment ${row.id}`,
                 appointmentId: row.id,
                 userId: row.userId,
                 changes: changedFields,
                 usernameUpdated: username !== undefined,
                 positionNameUpdated: positionName !== undefined,
             },
-            before: txResult.previous,
-            after: txResult.updatedAppointment,
-            changedFields,
-            request: req,
-            required: true,
+            diff: { before: txResult.previous, after: txResult.updatedAppointment },
         });
         return json.ok({ message: 'Appointment updated successfully.', data: row });
     } catch (err: any) {
@@ -202,9 +200,9 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
     }
 }
 
-async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const { id } = await params;
         // Soft delete by setting deleted_at = now()
         const [previous] = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);
@@ -218,30 +216,26 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
 
         if (!row) throw new ApiError(404, 'Appointment not found');
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.APPOINTMENT_DELETED,
-            resourceType: AuditResourceType.APPOINTMENT,
-            resourceId: row.id,
-            description: `Soft deleted appointment ${row.id}`,
+        await req.audit.log({
+            action: AuditEventType.APPOINTMENT_DELETED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.APPOINTMENT, id: row.id },
             metadata: {
+                description: `Soft deleted appointment ${row.id}`,
                 appointmentId: row.id,
                 userId: row.userId,
                 softDeleted: true,
             },
-            before: previous,
-            after: row,
-            changedFields: ['deletedAt'],
-            request: req,
-            required: true,
+            diff: { before: previous, after: row },
         });
         return json.ok({ message: 'Appointment soft-deleted.', data: row });
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', withAuthz(DELETEHandler));

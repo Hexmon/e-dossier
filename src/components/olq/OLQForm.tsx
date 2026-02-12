@@ -34,7 +34,7 @@ export default function OLQForm({ register, structure, onSubmit, onClear, showDe
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 {subtitles.map((s: any) => (
-                                    <div key={s.id} className="p-2 rounded bg-gray-50 border">
+                                    <div key={s.id} className="p-2 rounded bg-muted/40 border">
                                         {s.subtitle}
                                     </div>
                                 ))}

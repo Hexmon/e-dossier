@@ -95,7 +95,9 @@ function serverError(messageText?: string, extras?: object, init?: ResponseInit)
 
 /** Optional helpers */
 export const isPgUniqueViolation = (e: unknown) =>
-  typeof e === 'object' && e !== null && (e as any).code === '23505';
+  typeof e === 'object' &&
+  e !== null &&
+  (((e as any).code === '23505') || ((e as any).cause?.code === '23505'));
 
 const isZod = (e: unknown): e is ZodError => e instanceof ZodError;
 
@@ -109,7 +111,10 @@ export function handleApiError(err: unknown) {
     return badRequest('Validation failed', { issues: (err as ZodError).flatten() });
   }
   if (isPgUniqueViolation(err)) {
-    return conflict('Unique constraint violated', { detail: (err as any).detail });
+    return conflict('Unique constraint violated', {
+      detail: (err as any).detail ?? (err as any).cause?.detail,
+      constraint: (err as any).constraint ?? (err as any).cause?.constraint,
+    });
   }
   // last resort
   console.error('[API ERROR]', err);

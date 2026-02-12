@@ -6,6 +6,7 @@ export interface CfeRecordFormData {
     cat: string;
     mks: string;
     remarks: string;
+    sub_category: string;
 }
 
 interface CfeRecordsState {

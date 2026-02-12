@@ -1,39 +1,42 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { UniversalTable, TableConfig } from "@/components/layout/TableLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { getSpr, upsertSpr } from "@/app/lib/api/performanceRecordsApi";
 import type { RootState } from "@/store";
-import {
-  saveMarksScored,
-  saveRemark,
-  saveReviews,
-  clearSemesterData,
-} from "@/store/slices/semesterRecordSlice";
+import { saveMarksScored, saveRemark, saveReviews } from "@/store/slices/semesterRecordSlice";
 
-interface TableData {
+type TableData = {
   id: string;
   column1: number;
   column2: string;
   column3: number;
   column4: string;
   column5: string;
-}
+};
 
-interface RemarksData {
+type SprRow = {
+  subjectKey: string;
+  subjectLabel: string;
+  maxMarks: number;
+  marksScored: number;
+  remarks?: string;
+};
+
+type RemarksData = {
   pc: string;
   dc: string;
   commander: string;
-}
+};
 
-// Base table config - same columns for all semesters
 const baseTableConfig: TableConfig<TableData> = {
   columns: [
     { key: "column1", label: "S.No", sortable: true, width: "20%" },
@@ -41,7 +44,7 @@ const baseTableConfig: TableConfig<TableData> = {
     { key: "column3", label: "Max Marks", type: "number", sortable: true, width: "20%" },
     { key: "column4", label: "Marks Scored", sortable: false, width: "20%" },
     { key: "column5", label: "Remarks", sortable: false, width: "20%" },
-  ]
+  ],
 };
 
 const tableConfigs: Record<string, TableConfig<TableData>> = {
@@ -53,75 +56,12 @@ const tableConfigs: Record<string, TableConfig<TableData>> = {
   "VI TERM": baseTableConfig,
 };
 
-// Hardcoded base performance data for each semester
-const BASE_SEMESTER_DATA: Record<string, TableData[]> = {
-  "I TERM": [
-    { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: '', column5: "" },
-    { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
-    { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
-    { id: "4", column1: 4, column2: "Games (incl X-Country)", column3: 100, column4: "", column5: "" },
-    { id: "5", column1: 5, column2: "Drill", column3: 0, column4: "", column5: "" },
-    { id: "6", column1: 6, column2: "Camp", column3: 0, column4: "", column5: "" },
-    { id: "7", column1: 7, column2: "CFE", column3: 25, column4: "", column5: "" },
-    { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
-    { id: "9", column1: 9, column2: "TOTAL", column3: 1950, column4: "", column5: "" },
-  ],
-  "II TERM": [
-    { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
-    { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
-    { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
-    { id: "4", column1: 4, column2: "Games (incl X-Country)", column3: 100, column4: "", column5: "" },
-    { id: "5", column1: 5, column2: "Drill", column3: 0, column4: "", column5: "" },
-    { id: "6", column1: 6, column2: "Camp", column3: 0, column4: "", column5: "" },
-    { id: "7", column1: 7, column2: "CFE", column3: 25, column4: "", column5: "" },
-    { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
-    { id: "9", column1: 9, column2: "TOTAL", column3: 1950, column4: "", column5: "" },
-  ],
-  "III TERM": [
-    { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
-    { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
-    { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
-    { id: "4", column1: 4, column2: "Games (incl X-Country)", column3: 100, column4: "", column5: "" },
-    { id: "5", column1: 5, column2: "Drill", column3: 0, column4: "", column5: "" },
-    { id: "6", column1: 6, column2: "Camp", column3: 0, column4: "", column5: "" },
-    { id: "7", column1: 7, column2: "CFE", column3: 25, column4: "", column5: "" },
-    { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
-    { id: "9", column1: 9, column2: "TOTAL", column3: 1950, column4: "", column5: "" },
-  ],
-  "IV TERM": [
-    { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
-    { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
-    { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
-    { id: "4", column1: 4, column2: "Games (incl X-Country)", column3: 100, column4: "", column5: "" },
-    { id: "5", column1: 5, column2: "Drill", column3: 25, column4: "", column5: "" },
-    { id: "6", column1: 6, column2: "Camp", column3: 0, column4: "", column5: "" },
-    { id: "7", column1: 7, column2: "CFE", column3: 25, column4: "", column5: "" },
-    { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
-    { id: "9", column1: 9, column2: "TOTAL", column3: 1975, column4: "", column5: "" },
-  ],
-  "V TERM": [
-    { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
-    { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
-    { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
-    { id: "4", column1: 4, column2: "Games (incl X-Country)", column3: 100, column4: "", column5: "" },
-    { id: "5", column1: 5, column2: "Drill", column3: 25, column4: "", column5: "" },
-    { id: "6", column1: 6, column2: "Camp", column3: 100, column4: "", column5: "" },
-    { id: "7", column1: 7, column2: "CFE", column3: 25, column4: "", column5: "" },
-    { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
-    { id: "9", column1: 9, column2: "TOTAL", column3: 2075, column4: "", column5: "" },
-  ],
-  "VI TERM": [
-    { id: "1", column1: 1, column2: "Academics (incl Service Sub)", column3: 1350, column4: "", column5: "" },
-    { id: "2", column1: 2, column2: "OLQ", column3: 300, column4: "", column5: "" },
-    { id: "3", column1: 3, column2: "PT & Swimming", column3: 150, column4: "", column5: "" },
-    { id: "4", column1: 4, column2: "Games (incl X-Country)", column3: 100, column4: "", column5: "" },
-    { id: "5", column1: 5, column2: "Drill", column3: 40, column4: "", column5: "" },
-    { id: "6", column1: 6, column2: "Camp", column3: 110, column4: "", column5: "" },
-    { id: "7", column1: 7, column2: "CFE", column3: 25, column4: "", column5: "" },
-    { id: "8", column1: 8, column2: "Cdr's Marks", column3: 25, column4: "", column5: "" },
-    { id: "9", column1: 9, column2: "TOTAL", column3: 2100, column4: "", column5: "" },
-  ],
-};
+const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
+
+function semesterLabelToNumber(label: string) {
+  const idx = semesters.indexOf(label);
+  return idx >= 0 ? idx + 1 : 1;
+}
 
 export default function SemesterForm() {
   const params = useParams();
@@ -132,264 +72,306 @@ export default function SemesterForm() {
   const [activeSemester, setActiveSemester] = useState("I TERM");
   const [isEditingRemarks, setIsEditingRemarks] = useState(false);
   const [isEditingReviews, setIsEditingReviews] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
-
-  // Get saved data from Redux
-  const savedData = useSelector((state: RootState) =>
-    state.semesterRecord.forms[ocId]?.[activeSemester]
-  );
-
-  // Local state for reviews (with debounce)
+  const [rows, setRows] = useState<SprRow[]>([]);
+  const [remarksMap, setRemarksMap] = useState<Record<string, string>>({});
+  const [cdrMarks, setCdrMarks] = useState("");
   const [localReviews, setLocalReviews] = useState<RemarksData>({
     pc: "",
     dc: "",
     commander: "",
   });
 
-  // Debounce timer refs
-  const marksDebounceRef = useRef<Record<string, NodeJS.Timeout>>({});
-  const remarksDebounceRef = useRef<Record<string, NodeJS.Timeout>>({});
-  const reviewsDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const savedData = useSelector((state: RootState) =>
+    state.semesterRecord.forms[ocId]?.[activeSemester]
+  );
 
-  // Load saved reviews when semester changes
   useEffect(() => {
-    if (savedData?.reviews) {
+    if (!savedData) return;
+    if (savedData.reviews) {
       setLocalReviews(savedData.reviews);
-    } else {
-      setLocalReviews({ pc: "", dc: "", commander: "" });
     }
-  }, [activeSemester, savedData]);
+    if (savedData.remarks) {
+      setRemarksMap(savedData.remarks);
+    }
+    const cachedCdr = savedData.tableData?.cdr_marks;
+    if (cachedCdr !== undefined) {
+      setCdrMarks(cachedCdr);
+    }
+  }, [savedData]);
 
-  // Handler for marks scored with auto-save
-  const handleMarksScoreChange = (rowId: string, value: string) => {
-    const row = BASE_SEMESTER_DATA[activeSemester].find(r => r.id === rowId);
-    if (!row) return;
+  const semesterNumber = useMemo(
+    () => semesterLabelToNumber(activeSemester),
+    [activeSemester]
+  );
 
-    const marksValue = parseFloat(value);
+  const loadSpr = useCallback(async () => {
+    if (!ocId) return;
+    try {
+      setLoading(true);
+      const data: any = await getSpr(ocId, semesterNumber);
+      const apiRows: SprRow[] = Array.isArray(data?.rows) ? data.rows : [];
+      setRows(apiRows);
 
-    // Allow empty values
-    if (value.trim() !== "") {
-      // Validate marks
-      if (isNaN(marksValue) || marksValue < 0) {
-        toast.error("Marks must be a valid positive number");
-        return;
+      const nextRemarks: Record<string, string> = {};
+      let nextCdr = "";
+      for (const r of apiRows) {
+        nextRemarks[r.subjectKey] = r.remarks ?? "";
+        dispatch(saveRemark({ ocId, semester: activeSemester, rowId: r.subjectKey, value: r.remarks ?? "" }));
+        if (r.subjectKey === "cdr_marks") {
+          nextCdr = r.marksScored !== undefined && r.marksScored !== null ? String(r.marksScored) : "";
+        }
+        dispatch(
+          saveMarksScored({
+            ocId,
+            semester: activeSemester,
+            rowId: r.subjectKey,
+            value: r.marksScored !== undefined && r.marksScored !== null ? String(r.marksScored) : "",
+          })
+        );
       }
+      setRemarksMap(nextRemarks);
+      setCdrMarks(nextCdr);
 
-      if (marksValue > row.column3) {
-        toast.error(`Marks scored cannot exceed maximum marks (${row.column3})`);
-        return;
-      }
+      const pr = data?.performanceReportRemarks ?? {};
+      setLocalReviews({
+        pc: pr.platoonCommanderRemarks ?? "",
+        dc: pr.deputyCommanderRemarks ?? "",
+        commander: pr.commanderRemarks ?? "",
+      });
+      dispatch(
+        saveReviews({
+          ocId,
+          semester: activeSemester,
+          reviews: {
+            pc: pr.platoonCommanderRemarks ?? "",
+            dc: pr.deputyCommanderRemarks ?? "",
+            commander: pr.commanderRemarks ?? "",
+          },
+        })
+      );
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to load SPR data");
+    } finally {
+      setLoading(false);
     }
+  }, [activeSemester, dispatch, ocId, semesterNumber]);
 
-    // Clear existing timeout for this row
-    if (marksDebounceRef.current[rowId]) {
-      clearTimeout(marksDebounceRef.current[rowId]);
-    }
+  useEffect(() => {
+    loadSpr();
+  }, [loadSpr]);
 
-    // Set new timeout for auto-save
-    marksDebounceRef.current[rowId] = setTimeout(() => {
-      dispatch(saveMarksScored({
-        ocId,
-        semester: activeSemester,
-        rowId,
-        value,
-      }));
-    }, 500);
-  };
+  const derivedRows = useMemo(() => {
+    if (rows.length === 0) return rows;
+    const parsed = Number(cdrMarks);
+    const hasCdr = cdrMarks.trim() !== "" && !Number.isNaN(parsed);
+    const cdrOverride = hasCdr ? parsed : undefined;
+    const withCdr = rows.map((r) => {
+      if (r.subjectKey !== "cdr_marks") return r;
+      const clamped = cdrOverride !== undefined ? Math.max(0, Math.min(r.maxMarks, cdrOverride)) : r.marksScored;
+      return { ...r, marksScored: clamped };
+    });
+    const total = withCdr.reduce((acc, r) => {
+      if (r.subjectKey === "total") return acc;
+      return acc + Number(r.marksScored ?? 0);
+    }, 0);
+    return withCdr.map((r) => (r.subjectKey === "total" ? { ...r, marksScored: total } : r));
+  }, [rows, cdrMarks]);
 
-  // Handler for remarks with auto-save
-  const handleRemarkChange = (rowId: string, value: string) => {
-    // Clear existing timeout for this row
-    if (remarksDebounceRef.current[rowId]) {
-      clearTimeout(remarksDebounceRef.current[rowId]);
-    }
-
-    // Set new timeout for auto-save
-    remarksDebounceRef.current[rowId] = setTimeout(() => {
-      dispatch(saveRemark({
-        ocId,
-        semester: activeSemester,
-        rowId,
-        value,
-      }));
-    }, 500);
-  };
-
-  // Handler for reviews with auto-save
-  const handleReviewChange = (field: keyof RemarksData, value: string) => {
-    const newReviews = { ...localReviews, [field]: value };
-    setLocalReviews(newReviews);
-
-    // Clear existing timeout
-    if (reviewsDebounceRef.current) {
-      clearTimeout(reviewsDebounceRef.current);
-    }
-
-    // Set new timeout for auto-save
-    reviewsDebounceRef.current = setTimeout(() => {
-      dispatch(saveReviews({
-        ocId,
-        semester: activeSemester,
-        reviews: newReviews,
-      }));
-    }, 500);
-  };
-
-  // Derived data for display: base semester data merged with Redux data
-  const displaySemesterData: TableData[] = BASE_SEMESTER_DATA[activeSemester].map((row) => ({
-    ...row,
-    column4: savedData?.tableData?.[row.id] ?? row.column4,
-    column5: savedData?.remarks?.[row.id] ?? row.column5,
+  const displaySemesterData: TableData[] = derivedRows.map((row, idx) => ({
+    id: row.subjectKey,
+    column1: idx + 1,
+    column2: row.subjectLabel,
+    column3: row.maxMarks,
+    column4: row.marksScored !== undefined && row.marksScored !== null ? String(row.marksScored) : "",
+    column5: remarksMap[row.subjectKey] ?? row.remarks ?? "",
   }));
 
-  const handleSaveRemarks = () => {
-    // Validate all marks before saving
-    if (!savedData?.tableData) {
-      setIsEditingRemarks(false);
-      toast.success("Performance data saved successfully");
+  const handleRemarkChange = (subjectKey: string, value: string) => {
+    setRemarksMap((prev) => ({ ...prev, [subjectKey]: value }));
+    dispatch(saveRemark({ ocId, semester: activeSemester, rowId: subjectKey, value }));
+  };
+
+  const handleSaveRemarks = async () => {
+    if (!ocId) return;
+    const trimmed = cdrMarks.trim();
+    const cdrValue = trimmed === "" ? undefined : Number(trimmed);
+    if (trimmed !== "" && Number.isNaN(cdrValue)) {
+      toast.error("Cdr's Marks must be a valid number");
+      return;
+    }
+    if (cdrValue !== undefined && cdrValue < 0) {
+      toast.error("Cdr's Marks must be a valid number");
       return;
     }
 
-    const currentTableData = savedData.tableData;
-
-    for (const [rowId, marksValue] of Object.entries(currentTableData)) {
-      if (marksValue.trim() === "") continue;
-
-      const row = BASE_SEMESTER_DATA[activeSemester].find(r => r.id === rowId);
-      if (!row) continue;
-
-      const marksNum = parseFloat(marksValue);
-      if (isNaN(marksNum) || marksNum < 0 || marksNum > row.column3) {
-        toast.error(`Invalid marks for row: ${row.column2}. Marks must be between 0 and ${row.column3}`);
-        return;
-      }
+    try {
+      await upsertSpr(ocId, semesterNumber, {
+        cdrMarks: cdrValue,
+        subjectRemarks: remarksMap,
+      });
+      toast.success("Performance data saved successfully");
+      setIsEditingRemarks(false);
+      await loadSpr();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to save performance data");
     }
+  };
 
+  const handleCancelRemarks = () => {
     setIsEditingRemarks(false);
-    toast.success("Performance data saved successfully");
+    const nextRemarks: Record<string, string> = {};
+    let nextCdr = "";
+    for (const r of rows) {
+      nextRemarks[r.subjectKey] = r.remarks ?? "";
+      dispatch(saveRemark({ ocId, semester: activeSemester, rowId: r.subjectKey, value: r.remarks ?? "" }));
+      if (r.subjectKey === "cdr_marks") {
+        nextCdr = r.marksScored !== undefined && r.marksScored !== null ? String(r.marksScored) : "";
+      }
+      dispatch(
+        saveMarksScored({
+          ocId,
+          semester: activeSemester,
+          rowId: r.subjectKey,
+          value: r.marksScored !== undefined && r.marksScored !== null ? String(r.marksScored) : "",
+        })
+      );
+    }
+    setRemarksMap(nextRemarks);
+    setCdrMarks(nextCdr);
   };
 
-  const handleClearSemester = () => {
-    if (confirm(`Are you sure you want to clear all data for ${activeSemester}?`)) {
-      dispatch(clearSemesterData({ ocId, semester: activeSemester }));
-      toast.info(`${activeSemester} data cleared`);
+  const handleReviewChange = (field: keyof RemarksData, value: string) => {
+    const next = { ...localReviews, [field]: value };
+    setLocalReviews(next);
+    dispatch(saveReviews({ ocId, semester: activeSemester, reviews: next }));
+  };
+
+  const handleSaveReviews = async () => {
+    if (!ocId) return;
+    try {
+      await upsertSpr(ocId, semesterNumber, {
+        performanceReportRemarks: {
+          platoonCommanderRemarks: localReviews.pc,
+          deputyCommanderRemarks: localReviews.dc,
+          commanderRemarks: localReviews.commander,
+        },
+      });
+      toast.success("Reviews saved successfully");
+      setIsEditingReviews(false);
+      await loadSpr();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to save reviews");
     }
   };
-
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(marksDebounceRef.current).forEach(clearTimeout);
-      Object.values(remarksDebounceRef.current).forEach(clearTimeout);
-      if (reviewsDebounceRef.current) {
-        clearTimeout(reviewsDebounceRef.current);
-      }
-    };
-  }, []);
 
   return (
     <div className="space-y-6">
       <Card className="p-6 rounded-2xl shadow-xl bg-white">
         <CardContent className="space-y-6">
-          {/* Semester Tabs */}
           <div className="flex justify-center mb-6 space-x-2">
             {semesters.map((sem) => (
               <button
                 key={sem}
                 onClick={() => setActiveSemester(sem)}
-                className={`px-4 py-2 rounded-t-lg font-medium ${activeSemester === sem
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                  }`}
+                className={`px-4 py-2 rounded-t-lg font-medium ${
+                  activeSemester === sem
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-foreground"
+                }`}
               >
                 {sem}
               </button>
             ))}
           </div>
 
-          {/* Auto-save indicator */}
-          {(isEditingRemarks || isEditingReviews) && (
-            <div className="text-xs text-gray-500 text-center">
-              ✓ Changes are saved automatically
-            </div>
-          )}
-
-          {/* Performance Table */}
           <div>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-center text-primary flex-1">
                 {activeSemester} Performance Data
               </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearSemester}
-                className="text-destructive hover:bg-destructive hover:text-white"
-              >
-                Clear Data
-              </Button>
             </div>
 
-            {isEditingRemarks ? (
+            {loading ? (
+              <p className="text-center text-sm text-muted-foreground">Loading...</p>
+            ) : isEditingRemarks ? (
               <div className="space-y-4">
-                <div className="overflow-x-auto border border-gray-300 rounded-lg">
+                <div className="overflow-x-auto border border-border rounded-lg">
                   <table className="w-full">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-muted/70">
                       <tr>
-                        <th className="border border-gray-300 px-4 py-2 text-left">S.No</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Subject</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Max Marks</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Marks Scored</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
+                        <th className="border border-border px-4 py-2 text-left">S.No</th>
+                        <th className="border border-border px-4 py-2 text-left">Subject</th>
+                        <th className="border border-border px-4 py-2 text-left">Max Marks</th>
+                        <th className="border border-border px-4 py-2 text-left">Marks Scored</th>
+                        <th className="border border-border px-4 py-2 text-left">Remarks</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {BASE_SEMESTER_DATA[activeSemester].map((row) => (
-                        <tr key={row.id} className="hover:bg-gray-50 border-b border-gray-300">
-                          <td className="border border-gray-300 px-4 py-2">{row.column1}</td>
-                          <td className="border border-gray-300 px-4 py-2">{row.column2}</td>
-                          <td className="border border-gray-300 px-4 py-2">{row.column3}</td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <Input
-                              defaultValue={savedData?.tableData?.[row.id] ?? row.column4}
-                              onChange={(e) => handleMarksScoreChange(row.id, e.target.value)}
-                              placeholder="Enter marks scored"
-                              className="w-full"
-                            />
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <Input
-                              defaultValue={savedData?.remarks?.[row.id] ?? row.column5}
-                              onChange={(e) => handleRemarkChange(row.id, e.target.value)}
-                              placeholder="Enter remark"
-                              className="w-full"
-                            />
-                          </td>
-                        </tr>
-                      ))}
+                      {derivedRows.map((row, idx) => {
+                        const isCdr = row.subjectKey === "cdr_marks";
+                        return (
+                          <tr key={row.subjectKey} className="hover:bg-muted/40 border-b border-border">
+                            <td className="border border-border px-4 py-2">{idx + 1}</td>
+                            <td className="border border-border px-4 py-2">{row.subjectLabel}</td>
+                            <td className="border border-border px-4 py-2">{row.maxMarks}</td>
+                            <td className="border border-border px-4 py-2">
+                              {isCdr ? (
+                                <Input
+                                  value={cdrMarks}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setCdrMarks(value);
+                                    dispatch(
+                                      saveMarksScored({
+                                        ocId,
+                                        semester: activeSemester,
+                                        rowId: "cdr_marks",
+                                        value,
+                                      })
+                                    );
+                                  }}
+                                  placeholder="Enter marks"
+                                  className="w-full"
+                                />
+                              ) : (
+                                <Input
+                                  value={
+                                    row.marksScored !== undefined && row.marksScored !== null
+                                      ? String(row.marksScored)
+                                      : ""
+                                  }
+                                  readOnly
+                                  className="w-full bg-muted/40"
+                                />
+                              )}
+                            </td>
+                            <td className="border border-border px-4 py-2">
+                              <Input
+                                value={remarksMap[row.subjectKey] ?? ""}
+                                onChange={(e) => handleRemarkChange(row.subjectKey, e.target.value)}
+                                placeholder="Enter remark"
+                                className="w-full"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
 
                 <div className="flex gap-3 justify-center">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsEditingRemarks(false)}
-                  >
+                  <Button variant="outline" onClick={handleCancelRemarks}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSaveRemarks}>
-                    Save
-                  </Button>
+                  <Button onClick={handleSaveRemarks}>Save</Button>
                 </div>
               </div>
             ) : (
               <>
-                <UniversalTable
-                  data={displaySemesterData}
-                  config={tableConfigs[activeSemester]}
-                />
+                <UniversalTable data={displaySemesterData} config={tableConfigs[activeSemester]} />
                 <div className="flex justify-center mt-4">
                   <Button onClick={() => setIsEditingRemarks(true)}>Edit</Button>
                 </div>
@@ -397,7 +379,6 @@ export default function SemesterForm() {
             )}
           </div>
 
-          {/* Semester Reviews */}
           <div>
             <h2 className="text-lg font-semibold mb-4 text-center text-primary">Performance Report</h2>
             {isEditingReviews ? (
@@ -436,31 +417,26 @@ export default function SemesterForm() {
                   <Button variant="outline" onClick={() => setIsEditingReviews(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={() => {
-                    setIsEditingReviews(false);
-                    toast.success("Reviews saved successfully");
-                  }}>
-                    Save
-                  </Button>
+                  <Button onClick={handleSaveReviews}>Save</Button>
                 </div>
               </div>
             ) : (
               <div className="space-y-2">
                 <div>
                   <Label className="font-medium">Platoon Commander</Label>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
                     {localReviews.pc || "-"}
                   </p>
                 </div>
                 <div>
                   <Label className="font-medium">Deputy Commander</Label>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
                     {localReviews.dc || "-"}
                   </p>
                 </div>
                 <div>
                   <Label className="font-medium">Commander</Label>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
                     {localReviews.commander || "-"}
                   </p>
                 </div>

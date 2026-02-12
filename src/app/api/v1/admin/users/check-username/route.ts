@@ -1,10 +1,12 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
+
+export const runtime = 'nodejs';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { users } from '@/app/db/schema/auth/users';
 import { and, isNull, eq } from 'drizzle-orm';
 import { ApiError, handleApiError, json } from '@/app/lib/http';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 const RESERVED = new Set(['admin', 'root', 'system', 'support', 'help', 'null', 'undefined']);
 const normalize = (u: string) => u.trim().toLowerCase();
@@ -15,7 +17,7 @@ function suggest(u: string): string[] {
     return Array.from(new Set(picks)).filter((s) => s && !RESERVED.has(s) && s !== u).slice(0, 3);
 }
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
         const raw = req.nextUrl.searchParams.get('username') ?? '';
         const username = normalize(raw);
@@ -38,21 +40,20 @@ async function GETHandler(req: NextRequest) {
         const assigned = taken.length > 0;
         const response = { message: 'Username check completed.', username, assigned, available: !assigned, suggestions: assigned ? suggest(username) : [] };
 
-        await createAuditLog({
-            actorUserId: null,
-            eventType: AuditEventType.API_REQUEST,
-            resourceType: AuditResourceType.USER,
-            resourceId: null,
-            description: 'Checked username availability',
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'anonymous', id: 'unknown' },
+            target: { type: AuditResourceType.USER, id: undefined },
             metadata: {
+                description: 'Checked username availability',
                 username,
                 assigned,
             },
-            request: req,
         });
         return json.ok(response);
     } catch (err) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));

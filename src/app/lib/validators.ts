@@ -123,9 +123,10 @@ export const rejectSignupRequestSchema = z.object({
 
 // --- Users (Admin) ---
 export const userQuerySchema = z.object({
-  q: z.string().trim().optional(),                         // matches username/email/name/phone (ILIKE)
+  q: z.string().trim().optional(),                         // matches user fields + active appointment fields (ILIKE)
   isActive: z.union([z.literal('true'), z.literal('false')]).optional(),
   includeDeleted: z.union([z.literal('true'), z.literal('false')]).optional(),
+  scopeType: z.string().trim().optional(),                 // filter by appointment scope type (e.g. 'PLATOON')
   limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).max(5000).optional(),
 });

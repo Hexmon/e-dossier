@@ -7,7 +7,7 @@ import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { ocTabs } from "@/config/app.config";
+import { moduleManagementTabs, ocTabs } from "@/config/app.config";
 import RelegationForm from "@/components/relegation/RelegationForm";
 
 export default function RelegationPage() {
@@ -35,16 +35,16 @@ export default function RelegationPage() {
                         <BreadcrumbNav
                             paths={[
                                 { label: "Dashboard", href: "/dashboard" },
-                                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                                { label: "Module Mgmt", href: "/dashboard/genmgmt?tab=module-mgmt" },
                                 { label: "Relegation" },
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="relegation">
+                        <GlobalTabs tabs={moduleManagementTabs} defaultValue="relegation">
                             <TabsContent value="relegation" className="space-y-6">
                                 <main className="bg-white rounded-2xl p-5">
                                     <div className="flex items-center justify-center">
-                                        <h2 className="text-2xl font-bold text-foreground mb-5 mt-4 bg-blue-200 w-2xl text-center rounded-2xl">
+                                        <h2 className="text-2xl font-bold text-foreground mb-5 mt-4 bg-primary/20 w-2xl text-center rounded-2xl">
                                             Relegation Form
                                         </h2>
                                     </div>
@@ -61,3 +61,4 @@ export default function RelegationPage() {
         </SidebarProvider>
     );
 }
+

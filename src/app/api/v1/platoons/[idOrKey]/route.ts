@@ -1,12 +1,15 @@
-import { NextRequest } from 'next/server';
 import { db } from '@/app/db/client';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { platoonUpdateSchema } from '@/app/lib/validators';
-import { requireAdmin } from '@/app/lib/authz';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { requireAuth } from '@/app/lib/authz';
+import {
+  withAuditRoute,
+  AuditEventType,
+  AuditResourceType,
+} from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
 
 type PgError = { code?: string; detail?: string };
 
@@ -33,9 +36,9 @@ function whereForIdKeyName(idOrKey: string, includeDeleted = false) {
 
 // PATCH /api/v1/platoons/:idOrKey  (ADMIN)
 // body: { key?, name?, about?, restore? }
-async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
   try {
-    const adminCtx = await requireAdmin(req);
+    const adminCtx = await requireAuth(req);
     const { idOrKey } = await params;
     const body = await req.json();
     const parsed = platoonUpdateSchema.safeParse(body);
@@ -60,7 +63,7 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
 
     if (!existing) return json.notFound('Platoon not found.');
 
-    // 🔒 Uniqueness checks when changing key or name (ignore soft-deleted, exclude self)
+    // Uniqueness checks when changing key or name (ignore soft-deleted, exclude self)
     if (key || name) {
       const upKey = key ? key.toUpperCase() : null;
       const lcName = name ? name.trim().toLowerCase() : null;
@@ -114,21 +117,16 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
         deletedAt: platoons.deletedAt,
       });
 
-    await createAuditLog({
-      actorUserId: adminCtx.userId,
-      eventType: AuditEventType.PLATOON_UPDATED,
-      resourceType: AuditResourceType.PLATOON,
-      resourceId: updated.id,
-      description: `Updated platoon ${updated.key}`,
+    await req.audit.log({
+      action: AuditEventType.PLATOON_UPDATED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminCtx.userId },
+      target: { type: AuditResourceType.PLATOON, id: updated.id },
       metadata: {
         platoonId: updated.id,
         changes: Object.keys(parsed.data),
+        description: `Updated platoon ${updated.key}`,
       },
-      before: existing,
-      after: updated,
-      changedFields: Object.keys(parsed.data),
-      request: req,
-      required: true,
     });
     return json.ok({ message: 'Platoon updated successfully.', platoon: updated });
   } catch (err) {
@@ -142,11 +140,11 @@ async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id
  * - Hard delete with ?hard=true
  */
 async function DELETEHandler(
-  req: NextRequest,
+  req: AuditNextRequest,
   { params }: { params: Promise<{ idOrKey: string }> | { idOrKey: string } | string },
 ) {
   try {
-    const adminCtx = await requireAdmin(req);
+    const adminCtx = await requireAuth(req);
     const resolvedParams = typeof params === 'string' ? params : await params;
     const rawIdOrKey =
       typeof resolvedParams === 'string' ? resolvedParams : resolvedParams?.idOrKey;
@@ -176,20 +174,16 @@ async function DELETEHandler(
         .where(eq(platoons.id, existing.id))
         .returning({ id: platoons.id, key: platoons.key, name: platoons.name });
 
-      await createAuditLog({
-        actorUserId: adminCtx.userId,
-        eventType: AuditEventType.PLATOON_DELETED,
-        resourceType: AuditResourceType.PLATOON,
-        resourceId: gone.id,
-        description: `Hard deleted platoon ${gone.key}`,
+      await req.audit.log({
+        action: AuditEventType.PLATOON_DELETED,
+        outcome: 'SUCCESS',
+        actor: { type: 'user', id: adminCtx.userId },
+        target: { type: AuditResourceType.PLATOON, id: gone.id },
         metadata: {
           platoonId: gone.id,
           hardDeleted: true,
+          description: `Hard deleted platoon ${gone.key}`,
         },
-        before: existing,
-        after: null,
-        request: req,
-        required: true,
       });
       return json.ok({
         message: 'Platoon hard-deleted.',
@@ -216,24 +210,19 @@ async function DELETEHandler(
       deletedAt: existing.deletedAt,
     };
 
-    await createAuditLog({
-      actorUserId: adminCtx.userId,
-      eventType: AuditEventType.PLATOON_DELETED,
-      resourceType: AuditResourceType.PLATOON,
-      resourceId: target.id,
-      description: updated
-        ? `Soft deleted platoon ${target.key}`
-        : `Attempted to soft delete already deleted platoon ${target.key}`,
+    await req.audit.log({
+      action: AuditEventType.PLATOON_DELETED,
+      outcome: 'SUCCESS',
+      actor: { type: 'user', id: adminCtx.userId },
+      target: { type: AuditResourceType.PLATOON, id: target.id },
       metadata: {
         platoonId: target.id,
         hardDeleted: false,
         alreadyDeleted: !updated,
+        description: updated
+          ? `Soft deleted platoon ${target.key}`
+          : `Attempted to soft delete already deleted platoon ${target.key}`,
       },
-      before: existing,
-      after: target,
-      changedFields: updated ? ['deletedAt'] : undefined,
-      request: req,
-      required: true,
     });
 
     if (updated) {
@@ -243,7 +232,7 @@ async function DELETEHandler(
       });
     }
 
-    // Already soft-deleted – return current state
+    // Already soft-deleted -- return current state
     return json.ok({
       message: 'Platoon already soft-deleted.',
       platoon: target,
@@ -252,6 +241,6 @@ async function DELETEHandler(
     return handleApiError(err);
   }
 }
-export const PATCH = withRouteLogging('PATCH', PATCHHandler);
+export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
-export const DELETE = withRouteLogging('DELETE', DELETEHandler);
+export const DELETE = withAuditRoute('DELETE', DELETEHandler);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -28,8 +28,6 @@ export default function AppointmentManagement() {
     servedList,
     users,
     loading,
-    fetchAppointments,
-    fetchUsers,
     handleHandover,
     handleEditAppointment,
     handleDeleteAppointment,
@@ -52,22 +50,20 @@ export default function AppointmentManagement() {
     },
   });
 
-  useEffect(() => {
-    fetchAppointments();
-    fetchUsers();
-  }, [fetchAppointments, fetchUsers]);
-
   const openHandover = (appt: Appointment) => {
     setSelectedAppointment(appt);
     setHandoverDialog(true);
-    fetchUsers();
     reset();
   };
 
   const submitHandover = async (data: any) => {
     if (!selectedAppointment) return;
-    const ok = await handleHandover(selectedAppointment, data);
-    if (ok) setHandoverDialog(false);
+    try {
+      await handleHandover(selectedAppointment, data);
+      setHandoverDialog(false);
+    } catch (error) {
+      // Error already handled by mutation
+    }
   };
 
   return (
@@ -85,14 +81,13 @@ export default function AppointmentManagement() {
             <BreadcrumbNav
               paths={[
                 { label: "Dashboard", href: "/dashboard" },
-                { label: "Gen Mgmt", href: "/dashboard/genmgmt" },
+                { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                 { label: "Appointment Management" },
               ]}
             />
 
             <GlobalTabs tabs={ocTabs} defaultValue="appointment-mgmt">
               <TabsContent value="appointment-mgmt" className="space-y-8">
-                {/* Current Appointments */}
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Current Appointments</h2>
                   <CreateAppointment />
@@ -106,7 +101,6 @@ export default function AppointmentManagement() {
                   users={users}
                 />
 
-                {/* Served History */}
                 <ServedHistoryTable servedList={servedList} />
               </TabsContent>
             </GlobalTabs>
@@ -114,7 +108,6 @@ export default function AppointmentManagement() {
         </main>
       </section>
 
-      {/* Handover Dialog */}
       <Dialog open={handoverDialog} onOpenChange={setHandoverDialog}>
         <DialogContent>
           <DialogHeader>

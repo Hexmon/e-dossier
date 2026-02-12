@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState, useEffect, useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/TableLayout";
 import { toast } from "sonner";
-
-import type { RootState } from "@/store";
-import { saveMotivationAwards } from "@/store/slices/physicalTrainingSlice";
+import { usePhysicalTrainingMotivationAwards } from "@/hooks/usePhysicalTrainingMotivationAwards";
+import type { MotivationField } from "@/hooks/usePhysicalTraining";
 
 type AwardRow = {
     id: string;
+    fieldId: string;
     label: string;
     value: string;
 };
@@ -19,48 +18,60 @@ type AwardRow = {
 interface MotivationAwardsProps {
     activeSemester: string;
     ocId: string;
+    fields: MotivationField[];
 }
 
-const DEFAULT_AWARDS = {
-    meritCard: "",
-    halfBlue: "",
-    blue: "",
-    blazer: ""
-};
-
-export default function MotivationAwards({ activeSemester, ocId }: MotivationAwardsProps) {
-    const dispatch = useDispatch();
+export default function MotivationAwards({ activeSemester, ocId, fields }: MotivationAwardsProps) {
     const [isEditing, setIsEditing] = useState(false);
+    const [localValues, setLocalValues] = useState<Record<string, string>>({});
 
-    // Get saved data from Redux
-    const savedData = useSelector((state: RootState) =>
-        state.physicalTraining.forms[ocId]?.[activeSemester]?.motivationAwards
-    );
+    // Use the physical training motivation awards hook
+    const { values, loading, error, fetchValues, saveValues, updateValues } = usePhysicalTrainingMotivationAwards(ocId);
 
-    const [awards, setAwards] = useState(savedData || DEFAULT_AWARDS);
+    // Convert semester string to number (e.g., "I TERM" -> 1)
+    const semesterMap: Record<string, number> = {
+        'I TERM': 1,
+        'II TERM': 2,
+        'III TERM': 3,
+        'IV TERM': 4,
+        'V TERM': 5,
+        'VI TERM': 6,
+    };
+    const semesterNumber = semesterMap[activeSemester] || 1;
 
-    // Load saved data when semester changes
-    useEffect(() => {
-        if (savedData) {
-            setAwards(savedData);
+    const effectiveFields = useMemo(() => {
+        if (fields.length > 0) {
+            return fields;
         }
-    }, [savedData, activeSemester]);
+        return values.map((value, index) => ({
+            id: value.fieldId,
+            label: value.fieldLabel,
+            semester: semesterNumber,
+            sortOrder: index,
+        }));
+    }, [fields, values, semesterNumber]);
 
-    // Auto-save to Redux whenever data changes
+    // Fetch values when component mounts or semester changes
     useEffect(() => {
-        if (awards && ocId) {
-            dispatch(saveMotivationAwards({
-                ocId,
-                semester: activeSemester,
-                data: awards
-            }));
+        if (ocId && activeSemester) {
+            fetchValues(semesterNumber);
         }
-    }, [awards, ocId, activeSemester, dispatch]);
+    }, [ocId, activeSemester, semesterNumber, fetchValues]);
 
-    const handleChange = (field: keyof typeof awards, value: string) => {
-        setAwards(prev => ({
+    // Update local state when API values change
+    useEffect(() => {
+        const valueMap: Record<string, string> = {};
+        effectiveFields.forEach((field) => {
+            const match = values.find((item) => item.fieldId === field.id);
+            valueMap[field.id] = match?.value || "";
+        });
+        setLocalValues(valueMap);
+    }, [effectiveFields, values]);
+
+    const handleChange = (fieldId: string, value: string) => {
+        setLocalValues(prev => ({
             ...prev,
-            [field]: value
+            [fieldId]: value
         }));
     };
 
@@ -68,22 +79,54 @@ export default function MotivationAwards({ activeSemester, ocId }: MotivationAwa
         setIsEditing(true);
     };
 
-    const handleSave = () => {
-        setIsEditing(false);
-        toast.success("Motivation Awards saved successfully");
-        console.log("Motivation Awards saved:", awards);
+    const handleSave = async () => {
+        try {
+            const valuesToSave = Object.entries(localValues)
+                .filter(([_, value]) => value.trim() !== "")
+                .map(([fieldId, value]) => ({
+                    fieldId,
+                    value: value || null
+                }));
+
+            if (valuesToSave.length > 0) {
+                await saveValues(semesterNumber, valuesToSave);
+            } else {
+                // If no values to save, just update with empty values to clear existing ones
+                await updateValues(semesterNumber, [], values.map(v => v.fieldId));
+            }
+
+            setIsEditing(false);
+            toast.success("Motivation Awards saved successfully");
+        } catch (err) {
+            console.error("Error saving motivation awards:", err);
+            toast.error("Failed to save motivation awards");
+        }
     };
 
     const handleCancel = () => {
+        const valueMap: Record<string, string> = {};
+        effectiveFields.forEach((field) => {
+            const match = values.find((item) => item.fieldId === field.id);
+            valueMap[field.id] = match?.value || "";
+        });
+        setLocalValues(valueMap);
         setIsEditing(false);
     };
 
-    const tableData: AwardRow[] = [
-        { id: "meritCard", label: "Merit Card", value: awards.meritCard },
-        { id: "halfBlue", label: "Half Blue", value: awards.halfBlue },
-        { id: "blue", label: "Blue", value: awards.blue },
-        { id: "blazer", label: "Blazer", value: awards.blazer }
-    ];
+    if (error) {
+        return (
+            <div className="p-4 text-destructive">
+                Error loading motivation awards: {error}
+            </div>
+        );
+    }
+
+    const tableData: AwardRow[] = effectiveFields.map((field) => ({
+        id: field.id,
+        fieldId: field.id,
+        label: field.label,
+        value: localValues[field.id] || ""
+    }));
 
     const columns: TableColumn<AwardRow>[] = [
         {
@@ -98,9 +141,9 @@ export default function MotivationAwards({ activeSemester, ocId }: MotivationAwa
             render: (value, row) => (
                 <Textarea
                     value={value}
-                    onChange={(e) => handleChange(row.id as keyof typeof awards, e.target.value)}
+                    onChange={(e) => handleChange(row.fieldId, e.target.value)}
                     placeholder="Enter Motivation Award"
-                    className="border border-gray-300 px-4 py-2"
+                    className="border border-border px-4 py-2"
                     disabled={!isEditing}
                 />
             )
@@ -127,14 +170,18 @@ export default function MotivationAwards({ activeSemester, ocId }: MotivationAwa
     return (
         <div>
             <div>
-                <h2 className="mt-4 text-left text-lg font-bold text-gray-700">Motivation Awards</h2>
+                <h2 className="mt-4 text-left text-lg font-bold text-foreground">Motivation Awards</h2>
             </div>
 
             <div className="mt-4">
-                <UniversalTable<AwardRow>
-                    data={tableData}
-                    config={config}
-                />
+                {loading ? (
+                    <div className="text-center py-4">Loading...</div>
+                ) : (
+                    <UniversalTable<AwardRow>
+                        data={tableData}
+                        config={config}
+                    />
+                )}
             </div>
 
             {/* Edit/Save/Cancel Buttons */}
@@ -144,17 +191,14 @@ export default function MotivationAwards({ activeSemester, ocId }: MotivationAwa
                         <Button variant="outline" onClick={handleCancel}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSave}>Save</Button>
+                        <Button onClick={handleSave} disabled={loading}>
+                            {loading ? "Saving..." : "Save"}
+                        </Button>
                     </>
                 ) : (
                     <Button onClick={handleEdit}>Edit</Button>
                 )}
             </div>
-
-            {/* Auto-save indicator */}
-            <p className="text-sm text-muted-foreground text-center mt-2">
-                * Changes are automatically saved
-            </p>
         </div>
     );
 }

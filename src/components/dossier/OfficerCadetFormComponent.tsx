@@ -131,18 +131,18 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
         <div>
             {!isEditMode  ? (
                 // VIEW MODE
-                <div className="p-4 bg-gray-50 rounded">
+                <div className="p-4 bg-muted/40 rounded">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-semibold">Officer Cadet Details</h3>
-                        <Button onClick={handleEditClick} className="bg-blue-500 hover:bg-blue-600">
+                        <Button onClick={handleEditClick} className="bg-primary hover:bg-primary">
                             Edit
                         </Button>
                     </div>
 
                     {loadingSnapshot ? (
-                        <p className="text-gray-500 italic text-center">Loading...</p>
+                        <p className="text-muted-foreground italic text-center">Loading...</p>
                     ) : !dossierSnapshot ? (
-                        <p className="text-gray-500 italic text-center">No data available. Click Edit to add information.</p>
+                        <p className="text-muted-foreground italic text-center">No data available. Click Edit to add information.</p>
                     ) : (
                         <div>
                             <div className="grid grid-cols-2 gap-6 mb-6">
@@ -153,14 +153,14 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                                             alt="Arrival"
                                             className="h-32 w-32 object-cover rounded border"
                                         />
-                                        <p className="mt-2 text-sm text-gray-600">Arrival (Civil Dress)</p>
+                                        <p className="mt-2 text-sm text-muted-foreground">Arrival (Civil Dress)</p>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center">
-                                        <div className="h-32 w-32 bg-gray-200 rounded border flex items-center justify-center">
-                                            <p className="text-gray-400 text-xs">No photo</p>
+                                        <div className="h-32 w-32 bg-muted rounded border flex items-center justify-center">
+                                            <p className="text-muted-foreground text-xs">No photo</p>
                                         </div>
-                                        <p className="mt-2 text-sm text-gray-500 italic">No arrival photo</p>
+                                        <p className="mt-2 text-sm text-muted-foreground italic">No arrival photo</p>
                                     </div>
                                 )}
 
@@ -171,14 +171,14 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                                             alt="Departure"
                                             className="h-32 w-32 object-cover rounded border"
                                         />
-                                        <p className="mt-2 text-sm text-gray-600">Departure (Uniform)</p>
+                                        <p className="mt-2 text-sm text-muted-foreground">Departure (Uniform)</p>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center">
-                                        <div className="h-32 w-32 bg-gray-200 rounded border flex items-center justify-center">
-                                            <p className="text-gray-400 text-xs">No photo</p>
+                                        <div className="h-32 w-32 bg-muted rounded border flex items-center justify-center">
+                                            <p className="text-muted-foreground text-xs">No photo</p>
                                         </div>
-                                        <p className="mt-2 text-sm text-gray-500 italic">No departure photo</p>
+                                        <p className="mt-2 text-sm text-muted-foreground italic">No departure photo</p>
                                     </div>
                                 )}
                             </div>
@@ -259,7 +259,7 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                                     </div>
                                 </div>
 
-                                <h3 className="text-lg font-semibold bg-blue-100 px-4 py-1 rounded-2xl">
+                                <h3 className="text-lg font-semibold bg-primary/10 px-4 py-1 rounded-2xl">
                                     Commissioning Details
                                 </h3>
                                 <div className="grid grid-cols-2 gap-4">
@@ -286,13 +286,13 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                                 </div>
 
                                 <div className="flex justify-center mt-6 gap-4">
-                                    <Button type="submit" className="w-40 bg-[#40ba4d]">
+                                    <Button type="submit" className="w-40 bg-success">
                                         Save
                                     </Button>
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        className="w-40 hover:bg-destructive hover:text-white"
+                                        className="w-40 hover:bg-destructive hover:text-primary-foreground"
                                         onClick={handleCancel}
                                     >
                                         Cancel
@@ -302,7 +302,7 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                         </TabsContent>
 
                         <TabsContent value="preview">
-                            <div className="p-4 bg-gray-50 rounded">
+                            <div className="p-4 bg-muted/40 rounded">
                                 <h3 className="text-lg font-semibold mb-4">Preview</h3>
                                 <div className="grid grid-cols-2 gap-6 mb-6">
                                     {currentFormValues.arrivalPhoto instanceof FileList && currentFormValues.arrivalPhoto[0] ? (
@@ -312,14 +312,14 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                                                 alt="Arrival"
                                                 className="h-32 w-32 object-cover rounded border"
                                             />
-                                            <p className="mt-2 text-sm text-gray-600">Arrival (Civil Dress)</p>
+                                            <p className="mt-2 text-sm text-muted-foreground">Arrival (Civil Dress)</p>
                                         </div>
                                     ) : (
                                         <div className="flex flex-col items-center">
-                                            <div className="h-32 w-32 bg-gray-200 rounded border flex items-center justify-center">
-                                                <p className="text-gray-400 text-xs">No photo</p>
+                                            <div className="h-32 w-32 bg-muted rounded border flex items-center justify-center">
+                                                <p className="text-muted-foreground text-xs">No photo</p>
                                             </div>
-                                            <p className="mt-2 text-sm text-gray-500 italic">No arrival photo</p>
+                                            <p className="mt-2 text-sm text-muted-foreground italic">No arrival photo</p>
                                         </div>
                                     )}
 
@@ -330,14 +330,14 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                                                 alt="Departure"
                                                 className="h-32 w-32 object-cover rounded border"
                                             />
-                                            <p className="mt-2 text-sm text-gray-600">Departure (Uniform)</p>
+                                            <p className="mt-2 text-sm text-muted-foreground">Departure (Uniform)</p>
                                         </div>
                                     ) : (
                                         <div className="flex flex-col items-center">
-                                            <div className="h-32 w-32 bg-gray-200 rounded border flex items-center justify-center">
-                                                <p className="text-gray-400 text-xs">No photo</p>
+                                            <div className="h-32 w-32 bg-muted rounded border flex items-center justify-center">
+                                                <p className="text-muted-foreground text-xs">No photo</p>
                                             </div>
-                                            <p className="mt-2 text-sm text-gray-500 italic">No departure photo</p>
+                                            <p className="mt-2 text-sm text-muted-foreground italic">No departure photo</p>
                                         </div>
                                     )}
                                 </div>

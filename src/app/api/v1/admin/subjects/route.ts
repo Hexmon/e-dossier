@@ -1,16 +1,18 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth, requireAdmin } from '@/app/lib/authz';
+import { requireAuth } from '@/app/lib/authz';
 import { listQuerySchema, subjectCreateSchema } from '@/app/lib/validators.courses';
 import { listSubjects } from '@/app/db/queries/subjects';
 import { db } from '@/app/db/client';
 import { subjects } from '@/app/db/schema/training/subjects';
-import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
 
-async function GETHandler(req: NextRequest) {
+export const runtime = 'nodejs';
+
+async function GETHandler(req: AuditNextRequest) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
         const sp = new URL(req.url).searchParams;
         const qp = listQuerySchema.parse({
             q: sp.get('q') ?? undefined,
@@ -24,13 +26,32 @@ async function GETHandler(req: NextRequest) {
             includeDeleted: qp.includeDeleted === 'true',
             limit: qp.limit, offset: qp.offset,
         });
+
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.SUBJECT, id: 'collection' },
+            metadata: {
+                description: 'Subjects retrieved successfully.',
+                count: rows.length,
+                query: {
+                    q: qp.q ?? null,
+                    branch: qp.branch ?? null,
+                    includeDeleted: qp.includeDeleted === 'true',
+                    limit: qp.limit ?? null,
+                    offset: qp.offset ?? null,
+                },
+            },
+        });
+
         return json.ok({ message: 'Subjects retrieved successfully.', items: rows, count: rows.length });
     } catch (err) { return handleApiError(err); }
 }
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
+        const adminCtx = await requireAuth(req);
         const body = subjectCreateSchema.parse(await req.json());
         const [row] = await db
             .insert(subjects)
@@ -46,13 +67,13 @@ async function POSTHandler(req: NextRequest) {
             })
             .returning();
 
-        await createAuditLog({
-            actorUserId: adminCtx.userId,
-            eventType: AuditEventType.SUBJECT_CREATED,
-            resourceType: AuditResourceType.SUBJECT,
-            resourceId: row.id,
-            description: `Created subject ${row.code}`,
+        await req.audit.log({
+            action: AuditEventType.SUBJECT_CREATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.SUBJECT, id: row.id },
             metadata: {
+                description: `Created subject ${row.code}`,
                 subjectId: row.id,
                 code: row.code,
                 name: row.name,
@@ -62,9 +83,6 @@ async function POSTHandler(req: NextRequest) {
                 defaultTheoryCredits: row.defaultTheoryCredits,
                 defaultPracticalCredits: row.defaultPracticalCredits,
             },
-            after: row,
-            request: req,
-            required: true,
         });
         return json.created({ message: 'Subject created successfully.', subject: row });
     } catch (err: any) {
@@ -72,6 +90,6 @@ async function POSTHandler(req: NextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

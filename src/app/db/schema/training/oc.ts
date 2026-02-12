@@ -233,7 +233,8 @@ export const ocEducation = pgTable('oc_education', {
     schoolOrCollege: varchar('school_or_college', { length: 160 }).notNull(),
     boardOrUniv: varchar('board_or_univ', { length: 160 }),
     subjects: text('subjects'),                                   // comma list or JSON in future
-    totalPercent: integer('total_percent'),
+    grade: varchar('grade', { length: 32 }),
+    totalPercent: text('total_percent'),
     perSubject: text('per_subject'),                              // JSON string if needed
 });
 
@@ -295,13 +296,13 @@ export const ocMedicals = pgTable('oc_medicals', {
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
     semester: integer('semester').notNull(),                         // 1..6
     date: timestamp('date', { withTimezone: true }).notNull(),
-    age: integer('age'),
-    heightCm: integer('height_cm'),
-    ibwKg: integer('ibw_kg'),
-    abwKg: integer('abw_kg'),
-    overwtPct: integer('overwt_pct'),
-    bmi: integer('bmi'),
-    chestCm: integer('chest_cm'),
+    age: numeric('age', { mode: 'number' }),
+    heightCm: numeric('height_cm', { mode: 'number' }),
+    ibwKg: numeric('ibw_kg', { mode: 'number' }),
+    abwKg: numeric('abw_kg', { mode: 'number' }),
+    overwtPct: numeric('overwt_pct', { mode: 'number' }),
+    bmi: numeric('bmi', { mode: 'number' }),
+    chestCm: numeric('chest_cm', { mode: 'number' }),
     medicalHistory: text('medical_history'),
     hereditaryIssues: text('hereditary_issues'),
     allergies: text('allergies'),
@@ -339,11 +340,32 @@ export const ocDiscipline = pgTable('oc_discipline', {
     punishmentAwarded: varchar('punishment_awarded', { length: 160 }),  // e.g., restrictions / ED / gating / …
     awardedOn: timestamp('awarded_on', { withTimezone: true }),
     awardedBy: varchar('awarded_by', { length: 160 }),
+    numberOfPunishments: integer('number_of_punishments'),
     pointsDelta: integer('points_delta').default(0),                    // e.g., -3, -1, 0
     pointsCumulative: integer('points_cumulative'),                     // optional denorm for quick reads
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
 }));
+
+export const ocSprRecords = pgTable('oc_spr_records', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    cdrMarks: numeric('cdr_marks', { mode: 'number' }).notNull().default(0),
+    subjectRemarks: jsonb('subject_remarks').$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
+    platoonCommanderRemarks: text('platoon_commander_remarks'),
+    deputyCommanderRemarks: text('deputy_commander_remarks'),
+    commanderRemarks: text('commander_remarks'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqOcSemester: uniqueIndex('uq_oc_spr_record').on(t.ocId, t.semester),
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+    cdrNonNegative: { check: sql`CHECK (${t.cdrMarks.name} >= 0)` },
+}));
+
 
 // === Parent communications ===================================================
 export const ocParentComms = pgTable('oc_parent_comms', {
@@ -603,6 +625,7 @@ export const ocCreditForExcellence = pgTable('oc_credit_for_excellence', {
         .$type<CreditForExcellenceEntry[]>()
         .notNull(),
     remark: text('remark'),
+    sub_category: varchar('sub_category', { length: 160 }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },

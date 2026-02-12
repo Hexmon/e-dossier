@@ -12,6 +12,7 @@ import {
   checkApiRateLimit,
   getRateLimitHeaders
 } from '@/lib/ratelimit';
+import { isRateLimitEnabled, shouldExcludeHealthCheck } from '@/config/ratelimit.config';
 // NOTE: Cannot import audit-log in middleware (Edge Runtime doesn't support database operations)
 // Audit logging for middleware events should be done in API routes instead
 
@@ -34,7 +35,8 @@ const PUBLIC_BY_METHOD: Record<string, string[]> = {
     //  '/api/v1/roles',
     '/api/v1/admin/appointments',
     '/api/v1/admin/positions',
-    '/api/v1/platoons'
+    '/api/v1/platoons',
+    '/api/v1/site-settings',
   ],
   // If you ever want some POST public, add here:
   // POST: [ '/api/v1/some/public/post' ],
@@ -58,6 +60,11 @@ function isPublic(pathname: string, method: string) {
   return false;
 }
 
+export function shouldSkipRateLimit(pathname: string, method: string) {
+  if (method !== 'POST' && method !== 'OPTIONS') return false;
+  return matchPrefix(pathname, '/api/v1/auth/logout');
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method.toUpperCase();
@@ -71,8 +78,14 @@ export async function middleware(req: NextRequest) {
   };
 
   // SECURITY FIX: Rate Limiting for API requests
-  // Apply rate limiting to all API endpoints
-  if (pathname.startsWith(PROTECTED_PREFIX)) {
+  // Apply rate limiting to all API endpoints (unless disabled in config)
+  const isHealthCheck = pathname === '/api/v1/health';
+  const shouldApplyRateLimit =
+    isRateLimitEnabled() &&
+    !(isHealthCheck && shouldExcludeHealthCheck()) &&
+    !shouldSkipRateLimit(pathname, method);
+
+  if (pathname.startsWith(PROTECTED_PREFIX) && shouldApplyRateLimit) {
     const clientIp = getClientIp(req);
     const rateLimitResult = await checkApiRateLimit(clientIp);
 

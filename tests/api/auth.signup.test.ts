@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { POST as postSignup } from '@/app/api/v1/auth/signup/route';
-import { makeJsonRequest } from '../utils/next';
+import { makeJsonRequest, createRouteContext } from '../utils/next';
 import * as ratelimit from '@/lib/ratelimit';
 import * as authQueries from '@/app/db/queries/auth';
 import * as signupRequests from '@/app/db/queries/signupRequests';
@@ -70,7 +70,7 @@ describe('POST /api/v1/auth/signup', () => {
     });
 
     const req = makeJsonRequest({ method: 'POST', path: '/api/v1/auth/signup', body: validBody });
-    const res = await postSignup(req as any);
+    const res = await postSignup(req as any, createRouteContext());
 
     expect(res.status).toBe(429);
     const body = await res.json();
@@ -82,7 +82,7 @@ describe('POST /api/v1/auth/signup', () => {
     const badBody = { ...validBody, email: 'not-an-email', confirmPassword: 'mismatch' };
     const req = makeJsonRequest({ method: 'POST', path: '/api/v1/auth/signup', body: badBody });
 
-    const res = await postSignup(req as any);
+    const res = await postSignup(req as any, createRouteContext());
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
@@ -97,7 +97,7 @@ describe('POST /api/v1/auth/signup', () => {
     ]);
 
     const req = makeJsonRequest({ method: 'POST', path: '/api/v1/auth/signup', body: validBody });
-    const res = await postSignup(req as any);
+    const res = await postSignup(req as any, createRouteContext());
 
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -111,7 +111,7 @@ describe('POST /api/v1/auth/signup', () => {
 
   it('creates a disabled user and signup request on happy path', async () => {
     const req = makeJsonRequest({ method: 'POST', path: '/api/v1/auth/signup', body: validBody });
-    const res = await postSignup(req as any);
+    const res = await postSignup(req as any, createRouteContext());
 
     expect(res.status).toBe(201);
     const body = await res.json();

@@ -1,9 +1,12 @@
-import { NextRequest } from 'next/server';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { academicSubjectBulkRequestSchema, Semester } from '@/app/lib/oc-validators';
-import { mustBeAdmin } from '../../_checks';
+import { mustBeAdmin, mustBeAuthed } from '../../_checks';
 import { updateOcAcademicSubject, deleteOcAcademicSubject, getOcAcademicSemester, getOcAcademics } from '@/app/services/oc-academics';
-import { withRouteLogging } from '@/lib/withRouteLogging';
+import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
+import type { AuditNextRequest } from '@/lib/audit';
+import { withAuthz } from '@/app/lib/acx/withAuthz';
+
+export const runtime = 'nodejs';
 
 type BulkResult = {
     index: number;
@@ -46,9 +49,9 @@ function filterSemesterSubjects(semesterData: any, subjectIds: Set<string>) {
     return { ...semesterData, subjects };
 }
 
-async function GETHandler(req: NextRequest) {
+async function GETHandler(req: AuditNextRequest) {
     try {
-        await mustBeAdmin(req);
+        const adminCtx = await mustBeAdmin(req);
         const sp = new URL(req.url).searchParams;
 
         const ocIds = parseCsv(sp.get('ocIds'));
@@ -89,6 +92,22 @@ async function GETHandler(req: NextRequest) {
             }
         }
 
+        await req.audit.log({
+            action: AuditEventType.API_REQUEST,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: adminCtx.userId },
+            target: { type: AuditResourceType.OC_ACADEMICS, id: 'collection' },
+            metadata: {
+                description: 'Bulk academic records retrieved successfully.',
+                module: 'academics_bulk',
+                ocCount: ocIds.length,
+                semester: semester ?? null,
+                subjectFilterCount: subjectIds.size,
+                successCount,
+                errorCount: results.length - successCount,
+            },
+        });
+
         return json.ok({
             message: 'Academic records retrieved successfully.',
             items: results,
@@ -101,9 +120,9 @@ async function GETHandler(req: NextRequest) {
     }
 }
 
-async function POSTHandler(req: NextRequest) {
+async function POSTHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const body = academicSubjectBulkRequestSchema.parse(await req.json());
 
         const results: BulkResult[] = [];
@@ -122,8 +141,8 @@ async function POSTHandler(req: NextRequest) {
                         item.subjectId,
                         { hard: item.hard },
                         {
-                            actorUserId: adminCtx?.userId,
-                            actorRoles: adminCtx?.roles,
+                            actorUserId: authCtx?.userId,
+                            actorRoles: authCtx?.roles,
                             request: req,
                         },
                     );
@@ -134,8 +153,8 @@ async function POSTHandler(req: NextRequest) {
                         item.subjectId,
                         { theory: item.theory, practical: item.practical },
                         {
-                            actorUserId: adminCtx?.userId,
-                            actorRoles: adminCtx?.roles,
+                            actorUserId: authCtx?.userId,
+                            actorRoles: authCtx?.roles,
                             request: req,
                         },
                     );
@@ -165,6 +184,26 @@ async function POSTHandler(req: NextRequest) {
             }
         }
 
+        const upsertCount = body.items.filter((item) => item.op !== 'delete').length;
+        const deleteCount = body.items.filter((item) => item.op === 'delete').length;
+
+        await req.audit.log({
+            action: AuditEventType.OC_ACADEMICS_SUBJECT_UPDATED,
+            outcome: 'SUCCESS',
+            actor: { type: 'user', id: authCtx.userId },
+            target: { type: AuditResourceType.OC_ACADEMICS, id: 'collection' },
+            metadata: {
+                description: 'Bulk academic subject operations processed successfully.',
+                module: 'academics_bulk',
+                itemCount: body.items.length,
+                upsertCount,
+                deleteCount,
+                successCount,
+                errorCount: results.length - successCount,
+                failFast: body.failFast,
+            },
+        });
+
         return json.ok({
             message: 'Academic subjects processed successfully.',
             items: results,
@@ -177,6 +216,6 @@ async function POSTHandler(req: NextRequest) {
     }
 }
 
-export const GET = withRouteLogging('GET', GETHandler);
+export const GET = withAuditRoute('GET', withAuthz(GETHandler));
 
-export const POST = withRouteLogging('POST', POSTHandler);
+export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

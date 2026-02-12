@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 import { useOfferings } from "@/hooks/useOfferings";
 import { Offering } from "@/app/lib/api/offeringsApi";
@@ -9,41 +8,30 @@ interface DynamicSemesterTableProps {
     ocId: string;
     courseId: string;
     semester: number;
+    canEdit?: boolean;
 }
 
 export default function DynamicSemesterTable({
     ocId,
     courseId,
-    semester
+    semester,
+    canEdit = false,
 }: DynamicSemesterTableProps) {
-    const { loading, fetchOfferings } = useOfferings(courseId);
+    const { loading, offerings } = useOfferings(courseId);
     const [rows, setRows] = useState<AcademicRow[]>([]);
     const [totalCredits, setTotalCredits] = useState<string | number>("");
 
     useEffect(() => {
-        const loadOfferings = async () => {
-            // Fetch all offerings for this course
-            const allOfferings = await fetchOfferings() as any[];
-
-            if (!Array.isArray(allOfferings)) {
-                console.error("Expected array from fetchOfferings, got:", allOfferings);
-                return;
-            }
-
-            console.log("All offerings:", allOfferings);
-
+        const loadOfferings = () => {
             // Filter offerings by semester and ensure they have the subject property
-            const semesterOfferings = allOfferings.filter(
+            const semesterOfferings = offerings.filter(
                 (offering: Offering) => {
                     const hasSubject = offering.subject !== undefined || offering.subjectName !== undefined;
                     return offering.semester === semester && hasSubject;
                 }
             );
 
-            console.log(`Semester ${semester} offerings:`, semesterOfferings);
-
             if (semesterOfferings.length === 0) {
-                console.warn(`No offerings found for semester ${semester}`);
                 setRows([]);
                 setTotalCredits(0);
                 return;
@@ -59,29 +47,31 @@ export default function DynamicSemesterTable({
                 practicalCredit: offering.includePractical ? offering.practicalCredits : null,
             }));
 
-            console.log("Transformed rows:", transformedRows);
-
             setRows(transformedRows);
 
-            // Calculate total credits
+            // Calculate total credits with null checks
             const theoryTotal = semesterOfferings.reduce(
                 (sum, offering) =>
-                    sum + (offering.includeTheory ? offering.theoryCredits : 0),
+                    sum + (offering.includeTheory && offering.theoryCredits ? offering.theoryCredits : 0),
                 0
             );
             const practicalTotal = semesterOfferings.reduce(
                 (sum, offering) =>
-                    sum + (offering.includePractical ? offering.practicalCredits : 0),
+                    sum + (offering.includePractical && offering.practicalCredits ? offering.practicalCredits : 0),
                 0
             );
 
             setTotalCredits(theoryTotal + practicalTotal);
         };
 
-        if (courseId) {
+        if (courseId && offerings.length > 0) {
             loadOfferings();
+        } else if (courseId && !loading && offerings.length === 0) {
+            // Handle empty state
+            setRows([]);
+            setTotalCredits(0);
         }
-    }, [courseId, semester, fetchOfferings]);
+    }, [courseId, semester, offerings, loading]);
 
     if (loading) {
         return <div className="p-4 text-center">Loading semester data...</div>;
@@ -89,8 +79,8 @@ export default function DynamicSemesterTable({
 
     if (rows.length === 0) {
         return (
-            <div className="p-4 text-center text-gray-500">
-                No subjects found for Semester {semester}
+            <div className="p-4 text-center text-muted-foreground">
+                No subjects are configured for Semester {semester} in the current course offerings.
             </div>
         );
     }
@@ -102,6 +92,7 @@ export default function DynamicSemesterTable({
             rows={rows}
             totalCredits={totalCredits}
             title={`Semester ${semester}`}
+            canEdit={canEdit}
         />
     );
 }

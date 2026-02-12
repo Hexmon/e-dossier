@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -25,6 +25,7 @@ import { useSpeedMarch } from "@/hooks/useSpeedMarch";
 import SpeedMarchForm from "@/components/speedMarch/SpeedMarchForm";
 import type { RootState } from "@/store";
 import { saveSpeedMarchForm, clearSpeedMarchForm } from "@/store/slices/speedMarchSlice";
+import { resolveTabStateClasses, resolveToneClasses } from "@/lib/theme-color";
 
 type Row = {
     id?: string;
@@ -46,6 +47,9 @@ type TermData = {
 export default function SpeedMarchPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     const { cadet } = useOcDetails(ocId);
     const {
@@ -58,8 +62,16 @@ export default function SpeedMarchPage() {
     const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course }), [name, courseName, ocNumber, cadetOcId, course]);
 
     const terms = useMemo(() => termsConst, []);
-    const [activeTab, setActiveTab] = useState<number>(0);
     const semesterBase = 4; // IV -> 4
+    const semParam = searchParams.get("semester");
+    const resolvedTab = useMemo(() => {
+        const parsed = Number(semParam);
+        if (!Number.isFinite(parsed)) return 0;
+        const idx = parsed - semesterBase;
+        if (idx < 0 || idx >= terms.length) return 0;
+        return idx;
+    }, [semParam, terms.length]);
+    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
     const semesterNumber = activeTab + semesterBase;
 
     // Redux
@@ -75,6 +87,16 @@ export default function SpeedMarchPage() {
 
     const [isEditingAll, setIsEditingAll] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab]);
+
+    const updateSemesterParam = (index: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("semester", String(index + semesterBase));
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
 
     useEffect(() => {
         if (!ocId) return;
@@ -198,7 +220,6 @@ export default function SpeedMarchPage() {
     useEffect(() => {
         const defaultVals = getDefaultValues();
         lastSavedData.current = JSON.stringify(defaultVals);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
     const handleSaveTerm = useCallback(
@@ -277,6 +298,7 @@ export default function SpeedMarchPage() {
 
     const handleTabChange = (index: number) => {
         setActiveTab(index);
+        updateSemesterParam(index);
         setIsEditingAll(false);
     };
 
@@ -304,7 +326,7 @@ export default function SpeedMarchPage() {
                                 return (
                                     <DropdownMenuItem key={card.title} asChild>
                                         <Link href={link} className="flex items-center gap-2">
-                                            <card.icon className={`h-4 w-4 ${card.color}`} />
+                                            <card.icon className={`h-4 w-4 ${resolveToneClasses(card.color, "text")}`} />
                                             {card.title}
                                         </Link>
                                     </DropdownMenuItem>
@@ -329,7 +351,7 @@ export default function SpeedMarchPage() {
                                                 key={term}
                                                 type="button"
                                                 onClick={() => handleTabChange(idx)}
-                                                className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === idx ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                                                className={`px-4 py-2 rounded-t-lg font-medium ${resolveTabStateClasses(activeTab === idx)}`}
                                             >
                                                 {term}
                                             </button>
