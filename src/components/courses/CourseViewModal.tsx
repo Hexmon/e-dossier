@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { listOfferings, Subject as OfferingSubject } from "@/app/lib/api/offeringsApi";
+import { listOfferings, type Offering, Subject as OfferingSubject } from "@/app/lib/api/offeringsApi";
 
 type SubjectView = Pick<OfferingSubject, "id" | "code" | "name" | "branch">;
 
@@ -38,13 +38,14 @@ export default function CourseViewModal({
       .then((res) => {
         if (!active) return;
         const map = new Map<string, SubjectView>();
-        (res.offerings ?? []).forEach((offering) => {
+        const offerings = (res.offerings ?? []) as Offering[];
+        offerings.forEach((offering) => {
           const subject: SubjectView | null =
             offering.subject ?? {
               id: offering.subjectId ?? "",
               code: offering.subjectCode ?? "",
               name: offering.subjectName ?? "",
-              branch: offering.subject?.branch ?? "",
+              branch: "",
             };
 
           if (!subject || (!subject.id && !subject.code && !subject.name)) return;
