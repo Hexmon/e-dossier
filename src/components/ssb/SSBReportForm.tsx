@@ -183,7 +183,7 @@ export function SSBReportForm({
 
     return (
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-            <div className="rounded-2xl shadow-lg bg-white px-5 py-5">
+            <div className="rounded-2xl shadow-lg bg-card px-5 py-5">
 
                 {isEditing && (
                     <div className="text-xs text-muted-foreground text-right mb-4">

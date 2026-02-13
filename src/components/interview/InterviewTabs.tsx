@@ -147,7 +147,7 @@ export default function InterviewTabs() {
     const termLabels: Record<number, string> = { 1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI" };
 
     return (
-        <div className="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow">
+        <div className="max-w-5xl mx-auto bg-card p-6 rounded-lg shadow">
             <div className="flex justify-center items-center gap-2 mb-4">
                 {termTabs.map((term) => {
                     const label = termLabels[term] ?? "";

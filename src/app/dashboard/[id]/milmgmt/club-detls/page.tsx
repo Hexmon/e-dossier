@@ -235,7 +235,7 @@ function InnerClubDrillPage({
             }
         >
             <TabsContent value="club-detls" className="space-y-6">
-                <Card className="max-w-5xl mx-auto p-6 shadow-lg rounded-2xl bg-white">
+                <Card className="max-w-5xl mx-auto p-6 shadow-lg rounded-2xl bg-card">
                     <CardHeader>
                         <CardTitle className="text-center text-primary font-bold">
                             CLUB DETAILS & DRILL ASSESSMENT

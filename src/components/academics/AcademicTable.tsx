@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 
@@ -123,6 +123,37 @@ export default function AcademicTable({
   const [marksFieldErrors, setMarksFieldErrors] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [hardDelete, setHardDelete] = useState(false);
+  const resetMutationStateRef = useRef(resetMutationState);
+  const rowStateKeys = useMemo(
+    () => [
+      "phase1",
+      "phase2",
+      "tutorial",
+      "sessional",
+      "final",
+      "practical",
+      "total",
+      "grade",
+      "practicalPhase1",
+      "practicalPhase2",
+      "practicalTutorial",
+      "practicalSessional",
+      "practicalFinal",
+      "practicalPractical",
+      "practicalTotal",
+      "practicalRemarks",
+      "practicalExam",
+      "practicalCredit",
+      "practicalGrade",
+    ] as const,
+    []
+  );
+
+  const areRowStatesEqual = (a: RowState, b: RowState) =>
+    rowStateKeys.every((key) => a[key] === b[key]);
+
+  const areRowStateArraysEqual = (a: RowState[], b: RowState[]) =>
+    a.length === b.length && a.every((row, idx) => areRowStatesEqual(row, b[idx]));
 
   const hasSubjectsConfigured = rows.length > 0;
   const hasSavedSemesterData = (semesterData?.subjects?.length ?? 0) > 0;
@@ -146,8 +177,8 @@ export default function AcademicTable({
   };
 
   const clearValidationFeedback = () => {
-    setFormErrors([]);
-    setMarksFieldErrors([]);
+    setFormErrors((prev) => (prev.length > 0 ? [] : prev));
+    setMarksFieldErrors((prev) => (prev.length > 0 ? [] : prev));
   };
 
   const handleMutationError = (errorInput: unknown, fallback: string) => {
@@ -174,15 +205,18 @@ export default function AcademicTable({
 
   useEffect(() => {
     if (!semesterData) {
-      setData(initialState);
-      setIsEditing(false);
-      setIsInitialLoad(false);
+      setData((prev) => (areRowStateArraysEqual(prev, initialState) ? prev : initialState));
+      setIsEditing((prev) => (prev ? false : prev));
+      setIsInitialLoad((prev) => (prev ? false : prev));
       return;
     }
 
-    setSgpa(semesterData.sgpa?.toString() || "");
-    setCgpa(semesterData.cgpa?.toString() || "");
-    setMarksScored(semesterData.marksScored?.toString() || "");
+    const nextSgpa = semesterData.sgpa?.toString() || "";
+    const nextCgpa = semesterData.cgpa?.toString() || "";
+    const nextMarksScored = semesterData.marksScored?.toString() || "";
+    setSgpa((prev) => (prev === nextSgpa ? prev : nextSgpa));
+    setCgpa((prev) => (prev === nextCgpa ? prev : nextCgpa));
+    setMarksScored((prev) => (prev === nextMarksScored ? prev : nextMarksScored));
 
     const updatedData = rows.map((row, idx) => {
       const subject = semesterData.subjects?.find((s) => s.subject?.id === row.subjectId);
@@ -206,17 +240,21 @@ export default function AcademicTable({
       return calculateValues(baseData);
     });
 
-    setData(updatedData);
-    setIsEditing(false);
-    setIsInitialLoad(false);
+    setData((prev) => (areRowStateArraysEqual(prev, updatedData) ? prev : updatedData));
+    setIsEditing((prev) => (prev ? false : prev));
+    setIsInitialLoad((prev) => (prev ? false : prev));
   }, [semesterData, rows, initialState]);
 
   useEffect(() => {
-    resetMutationState();
+    resetMutationStateRef.current = resetMutationState;
+  }, [resetMutationState]);
+
+  useEffect(() => {
+    resetMutationStateRef.current();
     clearValidationFeedback();
-    setDeleteTarget(null);
-    setHardDelete(false);
-  }, [semester, resetMutationState]);
+    setDeleteTarget((prev) => (prev ? null : prev));
+    setHardDelete((prev) => (prev ? false : prev));
+  }, [semester]);
 
   const handleChange = (idx: number, key: keyof RowState, value: string) => {
     setData((prev) => {

@@ -302,7 +302,7 @@ export default function CampContent({ ocId }: CampContentProps) {
   // ---------------------------
   if (loadingCamps) {
     return (
-      <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+      <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-card">
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <span className="ml-3 text-muted-foreground">Loading camps...</span>
@@ -313,7 +313,7 @@ export default function CampContent({ ocId }: CampContentProps) {
 
   if (campsError) {
     return (
-      <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+      <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-card">
         <CardContent className="py-12">
           <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
             <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
@@ -329,7 +329,7 @@ export default function CampContent({ ocId }: CampContentProps) {
 
   return (
     <>
-      <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+      <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-center">
             CAMP RECORDS
@@ -563,7 +563,7 @@ export default function CampContent({ ocId }: CampContentProps) {
       {/* TOTAL TABLE SECTION */}
       {selectedCampName && selectedTrainingCamp?.name === "TECHNO TAC CAMP" && (
         <div className="mt-6 max-w-6xl mx-auto">
-          <Card className="p-6 rounded-2xl shadow-xl bg-white">
+          <Card className="p-6 rounded-2xl shadow-xl bg-card">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">TOTAL</CardTitle>
             </CardHeader>

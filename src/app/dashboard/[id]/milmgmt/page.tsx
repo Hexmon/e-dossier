@@ -21,6 +21,9 @@ import { marqueeData2 } from "@/components/Dashboard/MarqueeData";
 import { Input } from "@/components/ui/input";
 import { resolveToneClasses } from "@/lib/theme-color";
 
+const BASIC_CARD_COUNT = 7;
+const ACADEMICS_CARD_TITLE = "Academics";
+
 export default function MilitaryTrainingPage(props: { params: Promise<{ id: string }> }) {
   const { id } = use(props.params);
   const params = useParams();
@@ -67,12 +70,22 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
   };
 
   const basicCards = useMemo(
-    () => filterCards(militaryTrainingCards.slice(0, 7), basicSearch),
+    () => filterCards(militaryTrainingCards.slice(0, BASIC_CARD_COUNT), basicSearch),
     [basicSearch]
   );
 
+  const academicsCards = militaryTrainingCards.filter(
+    (item) => item.title === ACADEMICS_CARD_TITLE
+  );
+
   const miltrgCards = useMemo(
-    () => filterCards(militaryTrainingCards.slice(7, 29), miltrgSearch),
+    () =>
+      filterCards(
+        militaryTrainingCards
+          .slice(BASIC_CARD_COUNT)
+          .filter((card) => card.title !== ACADEMICS_CARD_TITLE),
+        miltrgSearch
+      ),
     [miltrgSearch]
   );
 
@@ -164,7 +177,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                       {card.description}
                     </p>
 
-                    <a href={url}>
+                    <a href={tabbedUrl}>
                       <Button type="button" variant="default" className="w-full cursor-pointer">
                         Access Module {"->"}
                       </Button>
@@ -220,7 +233,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                       {card.description}
                     </p>
 
-                    <a href={url}>
+                    <a href={tabbedUrl}>
                       <Button type="button" variant="default" className="w-full cursor-pointer">
                         Access Module {"->"}
                       </Button>
@@ -237,7 +250,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
 
         <TabsContent value="settings" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
-            {militaryTrainingCards.slice(29, 30).map((card, index) => {
+            {academicsCards.map((card, index) => {
               const Icon = card.icon;
               const url = typeof card.to === "function" ? card.to(ocId) : card.to;
               const tabbedUrl = withTab(url, "settings");
@@ -263,7 +276,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
                       {card.description}
                     </p>
 
-                    <a href={url}>
+                    <a href={tabbedUrl}>
                       <Button type="button" variant="default" className="w-full cursor-pointer">
                         Access Module {"->"}
                       </Button>

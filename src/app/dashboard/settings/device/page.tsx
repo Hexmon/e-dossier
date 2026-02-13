@@ -19,6 +19,7 @@ import {
   DEFAULT_DEVICE_SITE_SETTINGS,
   commitDeviceSiteSettings,
   ensureClientDeviceContext,
+  readStoredDeviceSiteSettings,
   sanitizeDeviceSiteSettings,
   type DeviceSiteSettings,
 } from "@/lib/device-site-settings";
@@ -67,6 +68,10 @@ export default function DeviceSiteSettingsPage() {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM_STATE);
 
   const { query, update } = useDeviceSiteSettings(activeDeviceId);
+  const isEditingCurrentDevice = useMemo(
+    () => Boolean(activeDeviceId) && activeDeviceId === currentDeviceId,
+    [activeDeviceId, currentDeviceId]
+  );
 
   useEffect(() => {
     const resolvedDeviceId = ensureClientDeviceContext();
@@ -79,8 +84,14 @@ export default function DeviceSiteSettingsPage() {
     const settings = query.data?.settings;
     if (!settings) return;
 
+    const stored = readStoredDeviceSiteSettings();
+    const resolvedThemeMode =
+      isEditingCurrentDevice && stored?.themeMode && stored.themeMode !== "system"
+        ? stored.themeMode
+        : settings.themeMode;
+
     setForm({
-      themeMode: settings.themeMode,
+      themeMode: resolvedThemeMode,
       themePreset: settings.themePreset,
       accentPalette: settings.accentPalette,
       density: settings.density,
@@ -88,12 +99,9 @@ export default function DeviceSiteSettingsPage() {
       timezone: settings.timezone,
       refreshIntervalSec: settings.refreshIntervalSec,
     });
-  }, [query.data?.settings]);
+  }, [query.data?.settings, isEditingCurrentDevice]);
 
-  const isEditingCurrentDevice = useMemo(
-    () => Boolean(activeDeviceId) && activeDeviceId === currentDeviceId,
-    [activeDeviceId, currentDeviceId]
-  );
+  
 
   const applyPreviewForCurrentDevice = (next: FormState) => {
     if (!isEditingCurrentDevice || !currentDeviceId) {

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import TechSeminarForm from "./TechSeminarForm";
 import MiniProjectForm from "./MiniProjectForm";
 import { SemesterTableI, SemesterTableII, SemesterTableIII, SemesterTableIV, SemesterTableV_Mech, SemesterTableVI_Mech } from "./SemesterTables";
@@ -14,7 +15,17 @@ interface AcademicsTabsProps {
 }
 
 export default function AcademicsTabs({ ocId, courseId, canEdit = false }: AcademicsTabsProps) {
-    const [selectedTerm, setSelectedTerm] = useState(1);
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const semesterFromQuery = useMemo(() => {
+        const value = Number(searchParams.get("semester") ?? 1);
+        if (!Number.isFinite(value)) return 1;
+        if (value < 1 || value > 6) return 1;
+        return Math.trunc(value);
+    }, [searchParams]);
+
     const [subTab, setSubTab] = useState<Record<number, SubTab>>({
         1: "single",
         2: "single",
@@ -33,8 +44,9 @@ export default function AcademicsTabs({ ocId, courseId, canEdit = false }: Acade
         6: "VI"
     };
 
+    const selectedTerm = semesterFromQuery;
+
     useEffect(() => {
-        setSelectedTerm(1);
         setSubTab({
             1: "single",
             2: "single",
@@ -44,6 +56,20 @@ export default function AcademicsTabs({ ocId, courseId, canEdit = false }: Acade
             6: "mech",
         });
     }, [ocId, courseId]);
+
+    const updateSemesterParam = (term: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        const nextValue = String(term);
+        if (params.get("semester") === nextValue) {
+            return;
+        }
+        params.set("semester", nextValue);
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const handleTermChange = (term: number) => {
+        updateSemesterParam(term);
+    };
 
     return (
         <div>
@@ -57,7 +83,7 @@ export default function AcademicsTabs({ ocId, courseId, canEdit = false }: Acade
                         return (
                             <button
                                 key={term}
-                                onClick={() => setSelectedTerm(term)}
+                                onClick={() => handleTermChange(term)}
                                 className={`px-4 py-2 rounded-t-lg ${isActive
                                     ? "bg-primary text-primary-foreground"
                                     : "bg-muted text-foreground"
