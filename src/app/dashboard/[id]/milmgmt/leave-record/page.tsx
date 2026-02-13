@@ -320,7 +320,7 @@ function InnerLeavePage({
             }
         >
             <TabsContent value="leave-record" className="space-y-6">
-                <Card className="max-w-6xl mx-auto p-6 shadow bg-white">
+                <Card className="max-w-6xl mx-auto p-6 shadow bg-card">
                     <CardHeader>
                         <CardTitle className="text-lg font-semibold text-center">
                             RECORD OF LVE / OVERSTAY LVE : ALL TERMS

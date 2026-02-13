@@ -3,8 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronUp, ChevronDown, Search } from "lucide-react";
+import { ChevronUp, ChevronDown, Search, Edit3, Trash2, Eye } from "lucide-react";
 import { resolveStatusToneClasses } from "@/lib/theme-color";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Core type definitions
 export interface TableColumn<T = any> {
@@ -428,33 +429,56 @@ export function UniversalTable<T extends Record<string, any>>({
                                                         return null;
                                                     }
 
-                                                    const IconComponent = action.icon;
-                                                    const actionKey = action.key?.toLowerCase?.() ?? "";
                                                     const actionLabel = action.label?.toLowerCase?.() ?? "";
-                                                    const iconOnly =
-                                                        (actionKey === "edit" || actionKey === "delete" || actionKey === "view" ||
-                                                            actionLabel === "edit" || actionLabel === "delete" || actionLabel === "view") &&
-                                                        !!IconComponent;
+                                                    const isEdit = actionLabel.includes("edit");
+                                                    const isDelete = actionLabel.includes("delete");
+                                                    const isView = actionLabel.includes("view");
+                                                    const actionType = isEdit ? "edit" : isDelete ? "delete" : isView ? "view" : "";
+                                                    const mappedIcon =
+                                                        actionType === "edit"
+                                                            ? Edit3
+                                                            : actionType === "delete"
+                                                                ? Trash2
+                                                                : actionType === "view"
+                                                                    ? Eye
+                                                                    : undefined;
+                                                    const IconComponent = action.icon ?? mappedIcon;
+                                                    const iconOnly = actionType === "edit" || actionType === "delete" || actionType === "view";
                                                     const showLabel = !iconOnly;
                                                     const iconClass = `h-3 w-3${showLabel ? " mr-1" : ""}`;
-                                                    const buttonTitle = iconOnly ? action.label : undefined;
                                                     const buttonClass =
                                                         `${action.className ?? ""} ${iconOnly ? "px-2" : ""}`.trim();
-                                                    return (
+
+                                                    const actionButton = (
                                                         <Button
-                                                            key={action.key}
                                                             type="button"
                                                             variant={action.variant || 'outline'}
                                                             size={action.size || 'sm'}
                                                             onClick={() => action.handler(row, index)}
                                                             className={buttonClass || undefined}
-                                                            title={buttonTitle}
                                                             aria-label={iconOnly ? action.label : undefined}
                                                         >
                                                             {IconComponent && <IconComponent className={iconClass} />}
                                                             {showLabel && action.label}
                                                             {iconOnly && <span className="sr-only">{action.label}</span>}
                                                         </Button>
+                                                    );
+
+                                                    if (!iconOnly) {
+                                                        return (
+                                                            <React.Fragment key={action.key}>
+                                                                {actionButton}
+                                                            </React.Fragment>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <Tooltip key={action.key}>
+                                                            <TooltipTrigger asChild>{actionButton}</TooltipTrigger>
+                                                            <TooltipContent side="top">
+                                                                {action.label}
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                     );
                                                 })}
                                             </div>

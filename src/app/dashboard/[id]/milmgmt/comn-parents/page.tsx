@@ -192,7 +192,7 @@ export default function ParentCommnPage() {
                 }>
                     <div style={{ width: "100%" }}>
                         <div className="max-w-6xl mx-auto space-y-6">
-                            <Card className="p-6 rounded-2xl shadow-xl bg-white">
+                            <Card className="p-6 rounded-2xl shadow-xl bg-card">
                                 <CardHeader>
                                     <CardTitle className="text-lg font-semibold text-center text-primary">
                                         RECORD OF COMMUNICATION WITH PARENTS / GUARDIAN

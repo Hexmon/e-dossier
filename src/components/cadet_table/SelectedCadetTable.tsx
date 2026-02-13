@@ -29,7 +29,7 @@ export default function SelectedCadetTable({
 
   return (
     <>
-      <div className="!sticky !top-16 !z-50 bg-white border border-border shadow-sm min-w-full mb-4 rounded-lg overflow-hidden">
+      <div className="!sticky !top-16 !z-50 bg-card border border-border shadow-sm min-w-full mb-4 rounded-lg overflow-hidden">
         <table className="min-w-full text-sm text-foreground border-collapse">
           <thead className="bg-primary text-primary-foreground">
             <tr>
@@ -47,7 +47,7 @@ export default function SelectedCadetTable({
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white text-center">
+          <tbody className="bg-card text-center">
             <tr>
               <td className="px-6 py-3 border border-border">
                 {selectedCadet.name}

@@ -91,7 +91,7 @@ export default function FinalPerformanceRecord() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6 rounded-2xl shadow-xl bg-white">
+      <Card className="p-6 rounded-2xl shadow-xl bg-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-center text-primary">
             Final Performance Record

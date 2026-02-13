@@ -90,7 +90,7 @@ export default function PhysicalTrainingPage() {
           }
         >
           <TabsContent value="physical-training">
-            <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+            <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-card">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-center text-primary">
                   Physical Training

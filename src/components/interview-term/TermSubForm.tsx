@@ -314,7 +314,7 @@ export default function TermSubForm({
     };
 
     return (
-        <div className="border rounded-lg p-4 bg-white">
+        <div className="border rounded-lg p-4 bg-card">
             <div className="flex items-center justify-between mb-4">
                 <h4 className="font-semibold text-xl">
                     {`Term ${termIndex} - ${variantLabels[variant] ?? ""}`}

@@ -199,12 +199,17 @@ export function useAcademics(ocId: string, semester: number) {
   const isSaving = updateSemesterMutation.isPending || updateSubjectMutation.isPending;
   const isDeleting = deleteSemesterMutation.isPending || deleteSubjectMutation.isPending;
 
-  const resetMutationState = () => {
+  const resetMutationState = useCallback(() => {
     updateSemesterMutation.reset();
     updateSubjectMutation.reset();
     deleteSemesterMutation.reset();
     deleteSubjectMutation.reset();
-  };
+  }, [
+    updateSemesterMutation,
+    updateSubjectMutation,
+    deleteSemesterMutation,
+    deleteSubjectMutation,
+  ]);
 
   return {
     loading,

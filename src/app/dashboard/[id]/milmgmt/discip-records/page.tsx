@@ -298,7 +298,7 @@ export default function DisciplineRecordsPage() {
                     {/* Tab content */}
                     <div style={{ width: "100%" }}>
                         <div className="max-w-6xl mx-auto space-y-6">
-                            <div className="p-6 rounded-2xl shadow-xl bg-white">
+                            <div className="p-6 rounded-2xl shadow-xl bg-card">
                                 <div className="flex justify-center items-center mb-4">
                                     <h2 className="text-xl font-semibold text-primary">DISCIPLINE RECORDS</h2>
                                 </div>

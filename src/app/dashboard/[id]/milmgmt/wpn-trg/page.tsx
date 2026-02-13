@@ -307,7 +307,7 @@ export default function WpnTrgPage() {
                     </DropdownMenu>
                 }>
                     <TabsContent value="wpn-trg">
-                        <Card className="max-w-5xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+                        <Card className="max-w-5xl mx-auto p-6 rounded-2xl shadow-xl bg-card">
                             <CardHeader><CardTitle className="text-lg font-semibold text-center text-primary">WEAPON TRAINING (WPN TRG)</CardTitle></CardHeader>
 
                             <CardContent>

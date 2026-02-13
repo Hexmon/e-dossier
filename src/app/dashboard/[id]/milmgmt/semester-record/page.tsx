@@ -81,7 +81,7 @@ export default function SemesterRecordPage() {
                 >
 
                     <TabsContent value="semester-record">
-                        <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-white">
+                        <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-card">
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold text-center text-primary">
                                     SEMESTER RECORD

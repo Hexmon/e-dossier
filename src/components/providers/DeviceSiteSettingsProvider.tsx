@@ -34,7 +34,12 @@ export default function DeviceSiteSettingsProvider({ children }: PropsWithChildr
           ...response.settings,
           deviceId: response.settings.deviceId || currentDeviceId,
         });
-        commitDeviceSiteSettings(effective);
+        const stored = readStoredDeviceSiteSettings();
+        const merged =
+          stored?.themeMode && stored.themeMode !== "system"
+            ? { ...effective, themeMode: stored.themeMode }
+            : effective;
+        commitDeviceSiteSettings(merged);
       } catch {
         // Local snapshot already applied; tolerate network/auth transient failures.
       }

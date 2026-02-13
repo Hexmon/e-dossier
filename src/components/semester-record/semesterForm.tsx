@@ -268,7 +268,7 @@ export default function SemesterForm() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6 rounded-2xl shadow-xl bg-white">
+      <Card className="p-6 rounded-2xl shadow-xl bg-card">
         <CardContent className="space-y-6">
           <div className="flex justify-center mb-6 space-x-2">
             {semesters.map((sem) => (
