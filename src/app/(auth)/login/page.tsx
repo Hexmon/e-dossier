@@ -363,9 +363,9 @@ function LoginPageContent() {
                   >
                     <Link href="/signup">Create New Account</Link>
                   </Button>
-                  <Button asChild variant="ghost" className="flex-1">
+                  {/* <Button asChild variant="ghost" className="flex-1">
                     <Link href="/reset-password">Forgot Password?</Link>
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
             </CardContent>
