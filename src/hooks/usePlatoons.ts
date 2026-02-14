@@ -26,7 +26,6 @@ export function usePlatoons() {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Failed to fetch platoons";
             setError(errorMessage);
-            toast.error(errorMessage);
             throw err;
         } finally {
             setIsLoading(false);
@@ -39,12 +38,10 @@ export function usePlatoons() {
 
         try {
             const newPlatoon = await createPlatoon(payload);
-            toast.success("Platoon created successfully");
             return newPlatoon;
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Failed to create platoon";
             setError(errorMessage);
-            toast.error(errorMessage);
             throw err;
         } finally {
             setIsLoading(false);
@@ -57,12 +54,10 @@ export function usePlatoons() {
 
         try {
             const updatedPlatoon = await updatePlatoon(key, payload);
-            toast.success("Platoon updated successfully");
             return updatedPlatoon;
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Failed to update platoon";
             setError(errorMessage);
-            toast.error(errorMessage);
             throw err;
         } finally {
             setIsLoading(false);
@@ -75,11 +70,9 @@ export function usePlatoons() {
 
         try {
             await deletePlatoon(id);
-            toast.success("Platoon deleted successfully");
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Failed to delete platoon";
             setError(errorMessage);
-            toast.error(errorMessage);
             throw err;
         } finally {
             setIsLoading(false);
