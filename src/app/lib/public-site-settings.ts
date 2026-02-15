@@ -1,6 +1,7 @@
 export type PublicCommander = {
   id: string;
   name: string;
+  designation: string;
   imageUrl: string | null;
   tenure: string;
   description: string;
@@ -18,7 +19,7 @@ export type PublicAward = {
 
 export type PublicHistory = {
   id: string;
-  yearOrDate: string;
+  incidentDate: string;
   description: string;
 };
 

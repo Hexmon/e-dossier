@@ -60,6 +60,7 @@ export default async function Home() {
                         )}
                       </div>
                       <CardTitle className="text-lg">{commander.name}</CardTitle>
+                      <p className="text-sm font-medium text-primary mb-1">{commander.designation}</p>
                       <p className="text-xs text-muted-foreground">{commander.tenure}</p>
                     </CardHeader>
                     <CardContent>
@@ -98,7 +99,16 @@ export default async function Home() {
                     <div key={item.id} className="flex gap-4">
                       <div className="flex-shrink-0 w-20 text-right">
                         <span className="inline-flex items-center justify-center min-w-16 h-8 bg-primary text-primary-foreground text-sm font-semibold rounded px-2">
-                          {item.yearOrDate}
+                          {(() => {
+                            // Parse YYYY-MM-DD string as local date components to avoid timezone shifts
+                            const [y, m, d] = item.incidentDate.split("-").map(Number);
+                            const date = new Date(y, m - 1, d);
+                            return date.toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            });
+                          })()}
                         </span>
                       </div>
                       <div className="flex-1 pb-4 border-l-2 border-primary/20 pl-6 relative">

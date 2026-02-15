@@ -36,6 +36,7 @@ const SITE_SETTINGS_SELECT = {
 const COMMANDER_SELECT = {
   id: siteCommanders.id,
   name: siteCommanders.name,
+  designation: siteCommanders.designation,
   imageUrl: siteCommanders.imageUrl,
   imageObjectKey: siteCommanders.imageObjectKey,
   tenure: siteCommanders.tenure,
@@ -63,7 +64,7 @@ const AWARD_SELECT = {
 
 const HISTORY_SELECT = {
   id: siteHistory.id,
-  yearOrDate: siteHistory.yearOrDate,
+  incidentDate: siteHistory.incidentDate,
   description: siteHistory.description,
   isDeleted: siteHistory.isDeleted,
   deletedAt: siteHistory.deletedAt,
@@ -232,6 +233,7 @@ export async function createSiteCommander(input: CommanderCreateInput) {
     .insert(siteCommanders)
     .values({
       name: input.name,
+      designation: input.designation,
       tenure: input.tenure,
       description: input.description,
       imageUrl: input.imageUrl ?? null,
@@ -252,6 +254,7 @@ export async function updateSiteCommander(id: string, input: CommanderUpdateInpu
     .update(siteCommanders)
     .set({
       name: input.name ?? existing.name,
+      designation: input.designation ?? existing.designation,
       tenure: input.tenure ?? existing.tenure,
       description: input.description ?? existing.description,
       imageUrl: input.imageUrl !== undefined ? input.imageUrl : existing.imageUrl,
@@ -447,7 +450,7 @@ export async function listSiteHistory(options?: { includeDeleted?: boolean; sort
   const includeDeleted = options?.includeDeleted ?? false;
   const sort = options?.sort ?? "asc";
   const where = includeDeleted ? undefined : eq(siteHistory.isDeleted, false);
-  const order = sort === "asc" ? asc(siteHistory.createdAt) : desc(siteHistory.createdAt);
+  const order = sort === "asc" ? asc(siteHistory.incidentDate) : desc(siteHistory.incidentDate);
 
   return db.select(HISTORY_SELECT).from(siteHistory).where(where).orderBy(order);
 }
@@ -466,7 +469,7 @@ export async function createSiteHistory(input: HistoryCreateInput) {
   const [created] = await db
     .insert(siteHistory)
     .values({
-      yearOrDate: input.yearOrDate,
+      incidentDate: input.incidentDate,
       description: input.description,
       updatedAt: now(),
     })
@@ -482,7 +485,7 @@ export async function updateSiteHistory(id: string, input: HistoryUpdateInput) {
   const [updated] = await db
     .update(siteHistory)
     .set({
-      yearOrDate: input.yearOrDate ?? existing.yearOrDate,
+      incidentDate: input.incidentDate ?? existing.incidentDate,
       description: input.description ?? existing.description,
       updatedAt: now(),
     })

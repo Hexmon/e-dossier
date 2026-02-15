@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type SafeImageProps = {
   src: string | null | undefined;
@@ -26,6 +26,10 @@ export default function SafeImage({
   }, [fallbackSrc, src]);
 
   const [currentSrc, setCurrentSrc] = useState(safeSrc);
+
+  useEffect(() => {
+    setCurrentSrc(safeSrc);
+  }, [safeSrc]);
 
   return (
     <img

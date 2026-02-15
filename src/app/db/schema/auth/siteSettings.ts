@@ -7,6 +7,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  date,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
@@ -40,6 +41,7 @@ export const siteCommanders = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
+    designation: text("designation").notNull().default(""),
     imageUrl: text("image_url"),
     imageObjectKey: text("image_object_key"),
     tenure: text("tenure").notNull(),
@@ -79,7 +81,7 @@ export const siteHistory = pgTable(
   "site_history",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    yearOrDate: text("year_or_date").notNull(),
+    incidentDate: date("incident_date", { mode: "string" }).notNull(),
     description: text("description").notNull(),
     isDeleted: boolean("is_deleted").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

@@ -21,7 +21,7 @@ async function GETHandler(req: AuditNextRequest) {
         message: "Public history retrieved successfully.",
         items: items.map((row) => ({
           id: row.id,
-          yearOrDate: row.yearOrDate,
+          incidentDate: row.incidentDate,
           description: row.description,
         })),
         sort,
