@@ -1,0 +1,12 @@
+rules: []
+paths:
+  exclude:
+    - node_modules
+    - .next
+    - dist
+    - build
+    - coverage
+    - drizzle
+    - pnpm-lock.yaml
+    - "*.min.js"
+    - "*.min.css"
