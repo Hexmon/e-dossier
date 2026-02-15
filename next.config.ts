@@ -1,14 +1,14 @@
 import type { NextConfig } from "next";
 
-const isDev = process.env.NODE_ENV === "development";
+const isProd = process.env.NODE_ENV === "production";
 
-const cspDirectives = [
+const prodCsp = [
   "default-src 'self'",
-  `script-src 'self'${isDev ? " 'unsafe-eval'" : ""}`,
+  "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  "connect-src 'self'" + (isDev ? " ws: wss:" : ""),
+  "connect-src 'self'",
   "media-src 'self'",
   "object-src 'none'",
   "child-src 'self'",
@@ -21,11 +21,10 @@ const cspDirectives = [
   "upgrade-insecure-requests",
 ].join("; ");
 
-const securityHeaders = [
+const sharedHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Content-Security-Policy", value: cspDirectives },
   {
     key: "Permissions-Policy",
     value:
@@ -35,6 +34,14 @@ const securityHeaders = [
   { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
 ];
+
+const prodOnlyHeaders = [
+  { key: "Content-Security-Policy", value: prodCsp },
+];
+
+const securityHeaders = isProd
+  ? [...sharedHeaders, ...prodOnlyHeaders]
+  : sharedHeaders;
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,

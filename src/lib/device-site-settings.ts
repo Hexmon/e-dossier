@@ -36,7 +36,7 @@ export const DEFAULT_DEVICE_SITE_SETTINGS: DeviceSiteSettings = {
   density: "comfortable",
   language: "en",
   timezone: "Asia/Kolkata",
-  refreshIntervalSec: 60,
+  refreshIntervalSec: 0,
   updatedAt: null,
   updatedBy: null,
 };
@@ -51,6 +51,7 @@ export function clampRefreshIntervalSec(value: unknown): number {
     return DEFAULT_DEVICE_SITE_SETTINGS.refreshIntervalSec;
   }
   const rounded = Math.round(parsed);
+  if (rounded <= 0) return 0;
   if (rounded < 10) return 10;
   if (rounded > 900) return 900;
   return rounded;

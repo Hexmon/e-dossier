@@ -12,9 +12,9 @@ export function useMe() {
         staleTime: 10 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
         retry: 1,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-        refetchInterval: refreshIntervalMs,
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
+        refetchInterval: refreshIntervalMs || false,
         refetchIntervalInBackground: false,
     });
 }
