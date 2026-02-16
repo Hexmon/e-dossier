@@ -8,11 +8,11 @@ const minioOrigin = process.env.MINIO_USE_SSL === 'true'
 
 const prodCsp = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${minioOrigin}`,
+  "img-src 'self' data: blob:",
   "font-src 'self'",
-  `connect-src 'self' ${minioOrigin}`,
+  "connect-src 'self'",
   "media-src 'self'",
   "object-src 'none'",
   "child-src 'self'",
@@ -21,8 +21,9 @@ const prodCsp = [
   "manifest-src 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  "form-action 'self'"
 ].join("; ");
+
 
 const sharedHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
