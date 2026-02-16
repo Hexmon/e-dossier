@@ -2,13 +2,17 @@ import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
 
+const minioOrigin = process.env.MINIO_USE_SSL === 'true'
+  ? `https://${process.env.MINIO_ENDPOINT ?? '127.0.0.1'}:${process.env.MINIO_PORT ?? '443'}`
+  : `http://${process.env.MINIO_ENDPOINT ?? '127.0.0.1'}:${process.env.MINIO_PORT ?? '9000'}`;
+
 const prodCsp = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob: ${minioOrigin}`,
   "font-src 'self'",
-  "connect-src 'self'",
+  `connect-src 'self' ${minioOrigin}`,
   "media-src 'self'",
   "object-src 'none'",
   "child-src 'self'",
@@ -18,7 +22,6 @@ const prodCsp = [
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  "upgrade-insecure-requests",
 ].join("; ");
 
 const sharedHeaders = [
