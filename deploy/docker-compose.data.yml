@@ -51,7 +51,7 @@ services:
       done &&
       mc mb -p local/${MINIO_BUCKET} || true &&
       mc version enable local/${MINIO_BUCKET} &&
-      printf '%s' '{\"CORSRules\":[{\"AllowedOrigins\":[\"http://localhost:3000\",\"http://127.0.0.1:3000\"],\"AllowedMethods\":[\"GET\",\"PUT\",\"HEAD\",\"OPTIONS\"],\"AllowedHeaders\":[\"*\"],\"ExposeHeaders\":[\"ETag\",\"x-amz-request-id\",\"x-amz-id-2\"],\"MaxAgeSeconds\":3000}]}' > /tmp/minio-cors.json &&
+      printf '%s' '{\"CORSRules\":[{\"AllowedOrigins\":[\"http://localhost:3000\",\"http://127.0.0.1:3000\",\"http://172.22.128.57:3000\"],\"AllowedMethods\":[\"GET\",\"PUT\",\"HEAD\",\"OPTIONS\"],\"AllowedHeaders\":[\"*\"],\"ExposeHeaders\":[\"ETag\",\"x-amz-request-id\",\"x-amz-id-2\"],\"MaxAgeSeconds\":3000}]}' > /tmp/minio-cors.json &&
       mc cors set local/${MINIO_BUCKET} /tmp/minio-cors.json &&
       mc anonymous set none local/${MINIO_BUCKET}
       "

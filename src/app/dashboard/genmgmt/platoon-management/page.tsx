@@ -17,6 +17,7 @@ import PlatoonsTable from "@/components/platoon/PlatoonsTable";
 import { Platoon, PlatoonFormData } from "@/types/platoon";
 import { usePlatoons } from "@/hooks/usePlatoons";
 import { toast } from "sonner";
+import { getToastMsg } from "@/lib/error-toast";
 
 export default function PlatoonManagementPage() {
     const router = useRouter();
@@ -48,6 +49,7 @@ export default function PlatoonManagementPage() {
                     name: data.name,
                     about: data.about,
                 });
+                toast.success("Platoon updated successfully");
                 // Refetch data after successful edit
                 await fetchPlatoons();
             } else {
@@ -56,6 +58,7 @@ export default function PlatoonManagementPage() {
                     name: data.name,
                     about: data.about,
                 });
+                toast.success("Platoon created successfully");
                 // Refetch data after successful add
                 await fetchPlatoons();
             }
@@ -63,6 +66,8 @@ export default function PlatoonManagementPage() {
             setIsFormOpen(false);
             setEditingPlatoon(undefined);
         } catch (error) {
+            console.debug("Platoon save error:", error);
+            toast.error(getToastMsg(error));
         }
     };
 
@@ -77,8 +82,8 @@ export default function PlatoonManagementPage() {
                         await fetchPlatoons();
                         toast.success("Platoon deleted successfully");
                     } catch (error) {
-                        console.error("Error deleting platoon:", error);
-                        toast.error("Failed to delete platoon");
+                        console.debug("Error deleting platoon:", error);
+                        toast.error(getToastMsg(error));
                     }
                 },
             },

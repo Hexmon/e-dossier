@@ -107,7 +107,7 @@ export function setCsrfCookie(res: NextResponse, token: string): void {
   // for SPA clients (see apiClient.ts).
   res.cookies.set('csrf-token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false,
     sameSite: 'strict',
     path: '/',
     maxAge: 3600, // 1 hour

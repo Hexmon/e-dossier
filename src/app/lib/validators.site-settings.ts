@@ -50,6 +50,7 @@ export const logoPresignSchema = z.object({
 
 export const commanderCreateSchema = z.object({
   name: trimmedText(2, 160, "name"),
+  designation: trimmedText(2, 160, "designation"),
   tenure: trimmedText(2, 120, "tenure"),
   description: trimmedText(5, 2000, "description"),
   imageUrl: nullableText,
@@ -60,6 +61,7 @@ export const commanderCreateSchema = z.object({
 export const commanderUpdateSchema = z
   .object({
     name: trimmedText(2, 160, "name").optional(),
+    designation: trimmedText(2, 160, "designation").optional(),
     tenure: trimmedText(2, 120, "tenure").optional(),
     description: trimmedText(5, 2000, "description").optional(),
     imageUrl: nullableText,
@@ -102,13 +104,13 @@ export const awardReorderSchema = z.object({
 });
 
 export const historyCreateSchema = z.object({
-  yearOrDate: trimmedText(1, 80, "yearOrDate"),
+  incidentDate: z.string().date("Invalid date format (YYYY-MM-DD)"),
   description: trimmedText(5, 2000, "description"),
 });
 
 export const historyUpdateSchema = z
   .object({
-    yearOrDate: trimmedText(1, 80, "yearOrDate").optional(),
+    incidentDate: z.string().date("Invalid date format (YYYY-MM-DD)").optional(),
     description: trimmedText(5, 2000, "description").optional(),
   })
   .refine(

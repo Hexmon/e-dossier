@@ -46,6 +46,7 @@ const DEFAULT_DRAFT: SettingsDraft = {
 
 type CommanderForm = {
   name: string;
+  designation: string;
   tenure: string;
   description: string;
   imageUrl: string | null;
@@ -54,6 +55,7 @@ type CommanderForm = {
 
 const EMPTY_COMMANDER_FORM: CommanderForm = {
   name: "",
+  designation: "",
   tenure: "",
   description: "",
   imageUrl: null,
@@ -77,12 +79,12 @@ const EMPTY_AWARD_FORM: AwardForm = {
 };
 
 type HistoryForm = {
-  yearOrDate: string;
+  incidentDate: string;
   description: string;
 };
 
 const EMPTY_HISTORY_FORM: HistoryForm = {
-  yearOrDate: "",
+  incidentDate: "",
   description: "",
 };
 
@@ -255,6 +257,7 @@ export default function AdminSiteSettingsPage() {
     setEditingCommander(item);
     setCommanderForm({
       name: item.name,
+      designation: item.designation,
       tenure: item.tenure,
       description: item.description,
       imageUrl: item.imageUrl ?? null,
@@ -397,15 +400,15 @@ export default function AdminSiteSettingsPage() {
   const openEditHistory = (item: SiteHistoryModel) => {
     setEditingHistory(item);
     setHistoryForm({
-      yearOrDate: item.yearOrDate,
+      incidentDate: item.incidentDate.split("T")[0],
       description: item.description,
     });
     setHistoryModalOpen(true);
   };
 
   const submitHistory = async () => {
-    if (!historyForm.yearOrDate || !historyForm.description) {
-      toast.error("Year/Date and description are required.");
+    if (!historyForm.incidentDate || !historyForm.description) {
+      toast.error("Date and description are required.");
       return;
     }
 
@@ -650,6 +653,7 @@ export default function AdminSiteSettingsPage() {
                       />
                       <div className="flex-1">
                         <p className="font-medium">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">{item.designation}</p>
                         <p className="text-xs text-muted-foreground">{item.tenure}</p>
                         <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
                       </div>
@@ -796,7 +800,11 @@ export default function AdminSiteSettingsPage() {
                 <div key={item.id} className="rounded-md border p-3">
                   <div className="flex items-start gap-3">
                     <div className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
-                      {item.yearOrDate}
+                      {new Date(item.incidentDate).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </div>
                     <p className="flex-1 text-sm text-muted-foreground">{item.description}</p>
                     <div className="flex gap-2">
@@ -832,6 +840,16 @@ export default function AdminSiteSettingsPage() {
                 value={commanderForm.name}
                 onChange={(event) =>
                   setCommanderForm((prev) => ({ ...prev, name: event.target.value }))
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Designation</Label>
+              <Input
+                value={commanderForm.designation}
+                onChange={(event) =>
+                  setCommanderForm((prev) => ({ ...prev, designation: event.target.value }))
                 }
               />
             </div>
@@ -975,11 +993,12 @@ export default function AdminSiteSettingsPage() {
 
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label>Year / Date</Label>
+              <Label>Incident Date</Label>
               <Input
-                value={historyForm.yearOrDate}
+                type="date"
+                value={historyForm.incidentDate}
                 onChange={(event) =>
-                  setHistoryForm((prev) => ({ ...prev, yearOrDate: event.target.value }))
+                  setHistoryForm((prev) => ({ ...prev, incidentDate: event.target.value }))
                 }
               />
             </div>

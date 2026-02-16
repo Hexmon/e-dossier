@@ -19,7 +19,7 @@ export function setAccessCookie(res: NextResponse, token: string) {
 export function clearAuthCookies(res: NextResponse) {
   res.cookies.set('access_token', '', {
     httpOnly: true,
-    secure: IS_PROD,
+    secure: false,
     sameSite: 'lax',
     path: '/',
     maxAge: 0,

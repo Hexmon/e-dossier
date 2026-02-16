@@ -8,7 +8,9 @@ import {
 } from "@/lib/device-site-settings";
 
 describe("device site settings helpers", () => {
-  it("clamps refresh interval to 10..900", () => {
+  it("clamps refresh interval to 0 or 10..900", () => {
+    expect(clampRefreshIntervalSec(0)).toBe(0);
+    expect(clampRefreshIntervalSec(-5)).toBe(0);
     expect(clampRefreshIntervalSec(1)).toBe(10);
     expect(clampRefreshIntervalSec(60)).toBe(60);
     expect(clampRefreshIntervalSec(1200)).toBe(900);

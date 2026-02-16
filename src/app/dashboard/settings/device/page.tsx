@@ -330,15 +330,18 @@ export default function DeviceSiteSettingsPage() {
                 <Input
                   id="refresh-interval"
                   type="number"
-                  min={10}
+                  min={0}
                   max={900}
                   value={form.refreshIntervalSec}
                   onChange={(event) =>
                     setFormAndPreview({
-                      refreshIntervalSec: Number(event.target.value || DEFAULT_FORM_STATE.refreshIntervalSec),
+                      refreshIntervalSec: Number(event.target.value ?? DEFAULT_FORM_STATE.refreshIntervalSec),
                     })
                   }
                 />
+                <p className="text-xs text-muted-foreground">
+                  0 = disabled (data refreshes on tab focus only). 10-900 = polling interval.
+                </p>
               </div>
             </div>
 

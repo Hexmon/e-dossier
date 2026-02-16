@@ -1,6 +1,7 @@
 export type PublicCommander = {
   id: string;
   name: string;
+  designation: string;
   imageUrl: string | null;
   tenure: string;
   description: string;
@@ -18,7 +19,7 @@ export type PublicAward = {
 
 export type PublicHistory = {
   id: string;
-  yearOrDate: string;
+  incidentDate: string;
   description: string;
 };
 
@@ -63,8 +64,8 @@ export function normalizePublicSiteSettings(input: Partial<PublicSiteSettings> |
 async function fetchPublicJson<T>(path: string, fallback: T): Promise<T> {
   try {
     const origin =
-      process.env.NEXT_PUBLIC_API_BASE_URL ??
       process.env.APP_BASE_URL ??
+      process.env.NEXT_PUBLIC_API_BASE_URL ??
       "http://localhost:3000";
     const url = new URL(path, origin).toString();
 

@@ -130,7 +130,7 @@ sudo ./edossier_db_setup.sh
 ### 5. Example Output (copy for App VM)
 
 ```
-postgresql://edossier_app:VeryStrongPassword%40123@172.22.128.56:5432/e_dossier_v2?sslmode=disable
+postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:5432/e_dossier_v2?sslmode=disable
 ```
 
 ### 6. Sanity checks

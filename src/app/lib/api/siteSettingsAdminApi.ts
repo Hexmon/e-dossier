@@ -19,6 +19,7 @@ export type SiteSettingsModel = {
 export type SiteCommanderModel = {
   id: string;
   name: string;
+  designation: string;
   imageUrl: string | null;
   imageObjectKey?: string | null;
   tenure: string;
@@ -44,7 +45,7 @@ export type SiteAwardModel = {
 
 export type SiteHistoryModel = {
   id: string;
-  yearOrDate: string;
+  incidentDate: string;
   description: string;
   isDeleted?: boolean;
   createdAt?: string;

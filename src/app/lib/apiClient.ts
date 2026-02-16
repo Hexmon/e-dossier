@@ -17,7 +17,7 @@ import {
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://172.22.128.57";
+const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 type Primitive = string | number | boolean | null | undefined;
 type QueryValue = Primitive | Primitive[];

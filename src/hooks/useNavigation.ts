@@ -38,9 +38,12 @@ export function useNavigation() {
     return useQuery({
         queryKey: ['navigation', 'me'],
         queryFn: fetchNavigation,
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 10 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
         retry: 2,
-        refetchInterval: refreshIntervalMs,
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
+        refetchInterval: refreshIntervalMs || false,
         refetchIntervalInBackground: false,
     });
 }
