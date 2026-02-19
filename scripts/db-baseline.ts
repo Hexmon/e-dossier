@@ -13,6 +13,12 @@ type Journal = {
   entries: JournalEntry[];
 };
 
+type CliArgs = {
+  help: boolean;
+  list: boolean;
+  tag?: string;
+};
+
 function readJournal(): Journal {
   const journalPath = path.join(process.cwd(), "drizzle", "meta", "_journal.json");
   if (!fs.existsSync(journalPath)) {
@@ -44,10 +50,63 @@ function toMigration(entry: JournalEntry) {
   };
 }
 
+function parseArgs(argv: string[]): CliArgs {
+  let help = false;
+  let list = false;
+  let tag: string | undefined;
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+
+    if (arg === "--help" || arg === "-h") {
+      help = true;
+      continue;
+    }
+
+    if (arg === "--list") {
+      list = true;
+      continue;
+    }
+
+    if (arg === "--tag") {
+      const next = argv[i + 1];
+      if (!next || next.startsWith("--")) {
+        throw new Error("Missing value for --tag");
+      }
+      tag = next;
+      i += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--tag=")) {
+      const value = arg.slice("--tag=".length).trim();
+      if (!value) {
+        throw new Error("Missing value for --tag");
+      }
+      tag = value;
+      continue;
+    }
+
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  return { help, list, tag };
+}
+
+function printUsage() {
+  console.log("Usage:");
+  console.log("  pnpm run db:baseline -- --list");
+  console.log("  pnpm run db:baseline -- --tag <migration_tag>");
+  console.log("");
+  console.log("Examples:");
+  console.log("  pnpm run db:baseline -- --tag 0017_course_olq_templates");
+}
+
 async function main() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not set");
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help) {
+    printUsage();
+    return;
   }
 
   const journal = readJournal();
@@ -55,17 +114,42 @@ async function main() {
     throw new Error("No migration entries found in drizzle/meta/_journal.json");
   }
 
-  // Baseline only the latest migration timestamp. This is enough to tell
-  // Drizzle all old migrations are already applied, while preserving all data.
-  const latestEntry = [...journal.entries]
-    .sort((a, b) => Number(a.when) - Number(b.when))
-    .at(-1);
+  const sortedEntries = [...journal.entries].sort((a, b) => Number(a.when) - Number(b.when));
 
-  if (!latestEntry) {
-    throw new Error("Could not resolve latest migration entry from journal");
+  if (args.list) {
+    const latestTag = sortedEntries.at(-1)?.tag;
+    console.log("Available migration tags:");
+    for (const entry of sortedEntries) {
+      const marker = entry.tag === latestTag ? " (latest)" : "";
+      console.log(`- ${entry.tag} (when=${entry.when})${marker}`);
+    }
+    return;
   }
 
-  const latestMigration = toMigration(latestEntry);
+  if (!args.tag) {
+    printUsage();
+    throw new Error("Missing required --tag. Baseline is explicit-only for safety.");
+  }
+
+  const targetEntry = sortedEntries.find((entry) => entry.tag === args.tag);
+  if (!targetEntry) {
+    throw new Error(
+      `Tag '${args.tag}' not found in drizzle/meta/_journal.json. Run with --list to view valid tags.`
+    );
+  }
+
+  const targetWhen = Number(targetEntry.when);
+  const entriesToBaseline = sortedEntries.filter((entry) => Number(entry.when) <= targetWhen);
+  if (!entriesToBaseline.length) {
+    throw new Error(`No entries found to baseline for tag '${args.tag}'`);
+  }
+
+  const migrations = entriesToBaseline.map(toMigration);
+
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is not set");
+  }
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
@@ -82,30 +166,34 @@ async function main() {
       )
     `);
 
-    const insertResult = await client.query(
-      `
-      insert into drizzle.__drizzle_migrations (hash, created_at)
-      select $1, $2
-      where not exists (
-        select 1
-        from drizzle.__drizzle_migrations
-        where created_at = $2
-      )
-      `,
-      [latestMigration.hash, latestMigration.createdAt]
-    );
+    let inserted = 0;
+    for (const migration of migrations) {
+      const insertResult = await client.query(
+        `
+        insert into drizzle.__drizzle_migrations (hash, created_at)
+        select $1, $2
+        where not exists (
+          select 1
+          from drizzle.__drizzle_migrations
+          where created_at = $2
+        )
+        `,
+        [migration.hash, migration.createdAt]
+      );
+      inserted += insertResult.rowCount ?? 0;
+    }
 
     await client.query("commit");
 
-    if (insertResult.rowCount === 0) {
+    if (inserted === 0) {
       console.log(
-        `Baseline already present at created_at=${latestMigration.createdAt} (${latestMigration.tag}). No changes made.`
+        `Baseline already present up to ${targetEntry.tag} (created_at=${targetEntry.when}). No changes made.`
       );
       return;
     }
 
     console.log(
-      `Baseline inserted for ${latestMigration.tag} (created_at=${latestMigration.createdAt}).`
+      `Baseline inserted/updated up to ${targetEntry.tag}. Rows inserted: ${inserted}.`
     );
     console.log("You can now run: pnpm run db:migrate");
   } catch (error) {
