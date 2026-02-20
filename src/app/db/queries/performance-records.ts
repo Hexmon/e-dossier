@@ -11,6 +11,7 @@ import {
 } from '@/app/db/schema/training/oc';
 import { ocPtTaskScores } from '@/app/db/schema/training/physicalTrainingOc';
 import { getOcAcademicSemester } from '@/app/services/oc-academics';
+import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
 
 export type SemesterSourceScores = {
     academics: number;
@@ -23,10 +24,17 @@ export type SemesterSourceScores = {
 };
 
 export async function getSprRecord(ocId: string, semester: number) {
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const [row] = await db
         .select()
         .from(ocSprRecords)
-        .where(and(eq(ocSprRecords.ocId, ocId), eq(ocSprRecords.semester, semester)))
+        .where(
+            and(
+                eq(ocSprRecords.ocId, ocId),
+                eq(ocSprRecords.enrollmentId, activeEnrollment.id),
+                eq(ocSprRecords.semester, semester),
+            ),
+        )
         .limit(1);
     return row ?? null;
 }
@@ -43,6 +51,7 @@ export async function upsertSprRecord(
     },
 ) {
     const existing = await getSprRecord(ocId, semester);
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const patch = {
         cdrMarks: input.cdrMarks ?? existing?.cdrMarks ?? 0,
         subjectRemarks: input.subjectRemarks ?? (existing?.subjectRemarks as Record<string, string> | undefined) ?? {},
@@ -59,12 +68,13 @@ export async function upsertSprRecord(
 
     const [created] = await db
         .insert(ocSprRecords)
-        .values({ ocId, semester, ...patch })
+        .values({ ocId, enrollmentId: activeEnrollment.id, semester, ...patch })
         .returning();
     return created;
 }
 
 export async function getSemesterSourceScores(ocId: string, semester: number): Promise<SemesterSourceScores> {
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const academicSemester = await getOcAcademicSemester(ocId, semester);
     const academicSubjects = Array.isArray(academicSemester?.subjects) ? academicSemester.subjects : [];
     let academicScored = 0;
@@ -85,13 +95,19 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
     const [olq] = await db
         .select({ scored: ocOlq.totalMarks })
         .from(ocOlq)
-        .where(and(eq(ocOlq.ocId, ocId), eq(ocOlq.semester, semester)))
+        .where(and(eq(ocOlq.ocId, ocId), eq(ocOlq.enrollmentId, activeEnrollment.id), eq(ocOlq.semester, semester)))
         .limit(1);
 
     const [pt] = await db
         .select({ scored: sql<number>`COALESCE(SUM(${ocPtTaskScores.marksScored}), 0)` })
         .from(ocPtTaskScores)
-        .where(and(eq(ocPtTaskScores.ocId, ocId), eq(ocPtTaskScores.semester, semester)));
+        .where(
+            and(
+                eq(ocPtTaskScores.ocId, ocId),
+                eq(ocPtTaskScores.enrollmentId, activeEnrollment.id),
+                eq(ocPtTaskScores.semester, semester),
+            ),
+        );
 
     const [games] = await db
         .select({ scored: sql<number>`COALESCE(SUM(${ocSportsAndGames.marksObtained}), 0)` })
@@ -99,6 +115,7 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
         .where(
             and(
                 eq(ocSportsAndGames.ocId, ocId),
+                eq(ocSportsAndGames.enrollmentId, activeEnrollment.id),
                 eq(ocSportsAndGames.semester, semester),
                 isNull(ocSportsAndGames.deletedAt),
             ),
@@ -112,7 +129,14 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
             a2c2: ocDrill.a2c2Marks,
         })
         .from(ocDrill)
-        .where(and(eq(ocDrill.ocId, ocId), eq(ocDrill.semester, semester), isNull(ocDrill.deletedAt)));
+        .where(
+            and(
+                eq(ocDrill.ocId, ocId),
+                eq(ocDrill.enrollmentId, activeEnrollment.id),
+                eq(ocDrill.semester, semester),
+                isNull(ocDrill.deletedAt),
+            ),
+        );
     const drill = drillRows.reduce(
         (acc, r) => acc + Number(r.m1 ?? 0) + Number(r.m2 ?? 0) + Number(r.a1c1 ?? 0) + Number(r.a2c2 ?? 0),
         0,
@@ -122,7 +146,12 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
         .select({ data: ocCreditForExcellence.data })
         .from(ocCreditForExcellence)
         .where(
-            and(eq(ocCreditForExcellence.ocId, ocId), eq(ocCreditForExcellence.semester, semester), isNull(ocCreditForExcellence.deletedAt)),
+            and(
+                eq(ocCreditForExcellence.ocId, ocId),
+                eq(ocCreditForExcellence.enrollmentId, activeEnrollment.id),
+                eq(ocCreditForExcellence.semester, semester),
+                isNull(ocCreditForExcellence.deletedAt),
+            ),
         );
     const cfe = cfeRows.reduce((acc, row) => {
         const items = Array.isArray(row.data) ? row.data : [];
@@ -139,6 +168,7 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
             .where(
                 and(
                     eq(ocCamps.ocId, ocId),
+                    eq(ocCamps.enrollmentId, activeEnrollment.id),
                     inArray(trainingCamps.semester, semKeys as any),
                     isNull(ocCamps.deletedAt),
                     isNull(trainingCamps.deletedAt),

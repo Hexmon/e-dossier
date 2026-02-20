@@ -18,9 +18,23 @@ export const useOlqActions = (selectedCadet: any) => {
     const ocId = selectedCadet?.ocId;
 
     const fetchCategories = async () => {
-        if (!ocId) return [];
-        const res = await listOlqCategories(ocId) as { items?: any[] };
-        return res.items ?? [];
+        if (!ocId) {
+            return {
+                items: [],
+                templateMissing: false,
+                message: "",
+            };
+        }
+        const res = await listOlqCategories(ocId) as {
+            items?: any[];
+            templateMissing?: boolean;
+            message?: string;
+        };
+        return {
+            items: res.items ?? [],
+            templateMissing: Boolean(res.templateMissing),
+            message: res.message ?? "",
+        };
     };
 
     const fetchSemester = async (semester: number) => {

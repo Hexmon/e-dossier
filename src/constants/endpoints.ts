@@ -31,8 +31,16 @@ export const endpoints = {
         relegation: {
             ocOptions: "/api/v1/admin/relegation/ocs",
             nextCourses: "/api/v1/admin/relegation/courses",
+            history: "/api/v1/admin/relegation/history",
             presign: "/api/v1/admin/relegation/presign",
             transfer: "/api/v1/admin/relegation/transfer",
+            exception: "/api/v1/admin/relegation/exception",
+            promoteCourse: "/api/v1/admin/relegation/promote-course",
+            voidPromotion: "/api/v1/admin/relegation/void-promotion",
+            enrollments: (ocId: string) => `/api/v1/admin/relegation/enrollments/${ocId}`,
+            enrollmentModules: (ocId: string) => `/api/v1/admin/relegation/enrollments/${ocId}/modules`,
+            mediaSignedUrl: (historyId: string) =>
+                `/api/v1/admin/relegation/media/${historyId}/signed-url`,
         },
         trainingCamps: {
             list: "/api/v1/admin/training-camps",
@@ -40,6 +48,15 @@ export const endpoints = {
             create: "/api/v1/admin/training-camps",
             update: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
             delete: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
+        },
+        olq: {
+            categories: (courseId: string) => `/api/v1/admin/olq/courses/${courseId}/categories`,
+            categoryById: (courseId: string, categoryId: string) =>
+                `/api/v1/admin/olq/courses/${courseId}/categories/${categoryId}`,
+            subtitles: (courseId: string) => `/api/v1/admin/olq/courses/${courseId}/subtitles`,
+            subtitleById: (courseId: string, subtitleId: string) =>
+                `/api/v1/admin/olq/courses/${courseId}/subtitles/${subtitleId}`,
+            copy: (targetCourseId: string) => `/api/v1/admin/olq/courses/${targetCourseId}/copy`,
         },
     },
     oc: {

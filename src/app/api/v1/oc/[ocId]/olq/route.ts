@@ -15,9 +15,32 @@ import {
     deleteOlqHeader,
     deleteOlqScore,
     recomputeOlqTotal,
+    getCourseTemplateCategories,
 } from '@/app/db/queries/olq';
+import { getOcCourseInfo } from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+
+async function ensureCourseTemplateConfigured(ocId: string) {
+    const courseInfo = await getOcCourseInfo(ocId);
+    if (!courseInfo) throw new ApiError(404, 'OC not found', 'not_found');
+
+    const categories = await getCourseTemplateCategories({
+        courseId: courseInfo.courseId,
+        includeSubtitles: true,
+        isActive: true,
+        fallbackToLegacyGlobal: false,
+    });
+    const hasActiveSubtitle = categories.some((category) => (category.subtitles ?? []).length > 0);
+
+    if (!categories.length || !hasActiveSubtitle) {
+        throw new ApiError(
+            409,
+            'OLQ template is not configured for this course. Contact admin.',
+            'configuration_required',
+        );
+    }
+}
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
@@ -91,6 +114,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
+        await ensureCourseTemplateConfigured(ocId);
 
         const raw = await req.json();
         const dto = olqUpsertSchema.parse({ ...raw, ocId });
@@ -132,6 +156,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
+        await ensureCourseTemplateConfigured(ocId);
 
         const raw = await req.json();
         const dto = olqUpdateSchema.parse(raw);

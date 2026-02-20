@@ -12,6 +12,7 @@ import {
     ocInterviewGroupRows,
     ocInterviewGroupValues,
 } from '@/app/db/schema/training/interviewOc';
+import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
 
 // Template lookups for validation ------------------------------------------
 export async function getInterviewTemplateBase(id: string) {
@@ -65,9 +66,10 @@ export async function listInterviewTemplateGroupsByIds(ids: string[]) {
 // OC interviews -------------------------------------------------------------
 export async function createOcInterview(data: typeof ocInterviews.$inferInsert) {
     const now = new Date();
+    const activeEnrollment = await getOrCreateActiveEnrollment(data.ocId);
     const [row] = await db
         .insert(ocInterviews)
-        .values({ ...data, createdAt: now, updatedAt: now })
+        .values({ ...data, enrollmentId: data.enrollmentId ?? activeEnrollment.id, createdAt: now, updatedAt: now })
         .returning();
     return row;
 }
@@ -92,7 +94,8 @@ export async function getOcInterview(id: string) {
 }
 
 export async function listOcInterviews(ocId: string, opts: { templateId?: string; semester?: number } = {}) {
-    const wh: any[] = [eq(ocInterviews.ocId, ocId)];
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
+    const wh: any[] = [eq(ocInterviews.ocId, ocId), eq(ocInterviews.enrollmentId, activeEnrollment.id)];
     if (opts.templateId) wh.push(eq(ocInterviews.templateId, opts.templateId));
     if (opts.semester !== undefined) wh.push(eq(ocInterviews.semester, opts.semester));
     return db

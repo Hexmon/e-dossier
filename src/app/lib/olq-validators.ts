@@ -23,6 +23,7 @@ export const olqCategoryQuerySchema = z.object({
 });
 
 export const OlqCategoryIdParam = z.object({ categoryId: z.string().uuid() });
+export const OlqCourseIdParam = z.object({ courseId: z.string().uuid() });
 
 // --- Subtitles (traits) -----------------------------------------------------
 export const olqSubtitleCreateSchema = z.object({
@@ -44,6 +45,11 @@ export const olqSubtitleQuerySchema = z.object({
 });
 
 export const OlqSubtitleIdParam = z.object({ subtitleId: z.string().uuid() });
+
+export const olqTemplateCopySchema = z.object({
+    sourceCourseId: z.string().uuid(),
+    mode: z.literal('replace').default('replace'),
+});
 
 // --- OLQ header + scores ----------------------------------------------------
 export const olqScoreSchema = z.object({

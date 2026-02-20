@@ -103,3 +103,8 @@ export const listQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(200).optional(),
     offset: z.coerce.number().int().min(0).max(5000).optional(),
 });
+
+export const subjectListQuerySchema = listQuerySchema.extend({
+    semester: z.coerce.number().int().min(1).max(6).optional(),
+    courseId: z.string().uuid().optional(),
+});

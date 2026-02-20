@@ -1,13 +1,38 @@
 import { db } from '@/app/db/client';
 import { subjects } from '@/app/db/schema/training/subjects';
 import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
-import { and, eq, ilike, isNull } from 'drizzle-orm';
+import { and, eq, exists, ilike, isNull } from 'drizzle-orm';
 
-export async function listSubjects(opts: { q?: string; branch?: 'C' | 'E' | 'M'; includeDeleted?: boolean; limit?: number; offset?: number; }) {
+export async function listSubjects(opts: {
+    q?: string;
+    branch?: 'C' | 'E' | 'M';
+    includeDeleted?: boolean;
+    limit?: number;
+    offset?: number;
+    semester?: number;
+    courseId?: string;
+}) {
     const wh: any[] = [];
     if (opts.q) wh.push(ilike(subjects.name, `%${opts.q}%`));
     if (opts.branch) wh.push(eq(subjects.branch, opts.branch));
     if (!opts.includeDeleted) wh.push(isNull(subjects.deletedAt));
+    if (opts.semester !== undefined || opts.courseId) {
+        const offeringWh: any[] = [
+            eq(courseOfferings.subjectId, subjects.id),
+            isNull(courseOfferings.deletedAt),
+        ];
+        if (opts.semester !== undefined) offeringWh.push(eq(courseOfferings.semester, opts.semester));
+        if (opts.courseId) offeringWh.push(eq(courseOfferings.courseId, opts.courseId));
+
+        wh.push(
+            exists(
+                db
+                    .select({ id: courseOfferings.id })
+                    .from(courseOfferings)
+                    .where(and(...offeringWh))
+            )
+        );
+    }
 
     return db
         .select({

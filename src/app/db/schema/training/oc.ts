@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, text, integer, boolean, numeric, date, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, text, integer, boolean, numeric, date, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { branchKind, ocStatusKind, commModeKind, ssbPointKind, delegationKind, termKind } from './enums';
 import { courses } from './courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -18,6 +18,8 @@ export const counsellingWarningKind = pgEnum('counselling_warning_kind', [
 export const campSemesterKind = pgEnum('camp_semester_kind', ['SEM5', 'SEM6A', 'SEM6B']);
 export const campReviewRoleKind = pgEnum('camp_review_role_kind', ['OIC', 'PLATOON_COMMANDER', 'HOAT']);
 export const ocImageKind = pgEnum('oc_image_kind', ['CIVIL_DRESS', 'UNIFORM']);
+export const ocEnrollmentStatus = pgEnum('oc_enrollment_status', ['ACTIVE', 'ARCHIVED', 'VOIDED']);
+export const ocEnrollmentOrigin = pgEnum('oc_enrollment_origin', ['PROMOTION', 'TRANSFER', 'MANUAL', 'BASELINE']);
 
 export type CreditForExcellenceEntry = {
     cat: string;
@@ -71,6 +73,33 @@ export const ocImages = pgTable('oc_images', {
     uqOcImageKind: uniqueIndex('uq_oc_images_kind').on(t.ocId, t.kind),
 }));
 
+// === OC course enrollments (course-instance lifecycle) =======================
+export const ocCourseEnrollments = pgTable('oc_course_enrollments', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id')
+        .notNull()
+        .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    courseId: uuid('course_id')
+        .notNull()
+        .references(() => courses.id, { onDelete: 'restrict' }),
+    status: ocEnrollmentStatus('status').notNull().default('ACTIVE'),
+    origin: ocEnrollmentOrigin('origin').notNull().default('BASELINE'),
+    startedOn: timestamp('started_on', { withTimezone: true }).notNull().defaultNow(),
+    endedOn: timestamp('ended_on', { withTimezone: true }),
+    reason: text('reason'),
+    note: text('note'),
+    createdByUserId: uuid('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    closedByUserId: uuid('closed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqOcActiveEnrollment: uniqueIndex('uq_oc_course_enrollment_active')
+        .on(t.ocId)
+        .where(sql`${t.status} = 'ACTIVE'`),
+    idxOcStatusStarted: index('idx_oc_course_enrollment_oc_status_started').on(t.ocId, t.status, t.startedOn),
+    idxCourseStatusStarted: index('idx_oc_course_enrollment_course_status_started').on(t.courseId, t.status, t.startedOn),
+}));
+
 export type TheoryMarksRecord = {
     phaseTest1Marks?: number | null;
     phaseTest2Marks?: number | null;
@@ -105,6 +134,7 @@ export const ocSemesterMarks = pgTable('oc_semester_marks', {
     ocId: uuid('oc_id')
         .notNull()
         .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     branchTag: varchar('branch_tag', { length: 1 }).notNull(),
     sgpa: numeric('sgpa', { mode: 'number' }),
@@ -118,8 +148,9 @@ export const ocSemesterMarks = pgTable('oc_semester_marks', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
-    uqOcSemester: uniqueIndex('uq_oc_semester_marks').on(t.ocId, t.semester),
+    uqOcSemester: uniqueIndex('uq_oc_semester_marks').on(t.enrollmentId, t.semester),
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+    idxOcSemesterByEnrollment: index('idx_oc_semester_marks_enrollment_sem').on(t.enrollmentId, t.semester),
 }));
 
 // === Pre-commission track (1 row per OC; current snapshot) ===================
@@ -334,6 +365,7 @@ export const ocMedicalCategory = pgTable('oc_medical_category', {
 export const ocDiscipline = pgTable('oc_discipline', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     dateOfOffence: timestamp('date_of_offence', { withTimezone: true }).notNull(),
     offence: text('offence').notNull(),
@@ -352,6 +384,7 @@ export const ocSprRecords = pgTable('oc_spr_records', {
     ocId: uuid('oc_id')
         .notNull()
         .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     cdrMarks: numeric('cdr_marks', { mode: 'number' }).notNull().default(0),
     subjectRemarks: jsonb('subject_remarks').$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
@@ -361,7 +394,7 @@ export const ocSprRecords = pgTable('oc_spr_records', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
-    uqOcSemester: uniqueIndex('uq_oc_spr_record').on(t.ocId, t.semester),
+    uqOcSemester: uniqueIndex('uq_oc_spr_record').on(t.enrollmentId, t.semester),
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
     cdrNonNegative: { check: sql`CHECK (${t.cdrMarks.name} >= 0)` },
 }));
@@ -398,6 +431,7 @@ export const ocDelegations = pgTable('oc_delegations', {
 export const ocMotivationAwards = pgTable('oc_motivation_awards', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     motivationTitle: varchar('motivation_title', { length: 200 }).notNull(),
     fieldName: varchar('field_name', { length: 160 }).notNull(),
@@ -411,6 +445,7 @@ export const ocMotivationAwards = pgTable('oc_motivation_awards', {
 export const ocSportsAndGames = pgTable('oc_sports_and_games', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     term: termKind('term').notNull(),
     sport: varchar('sport', { length: 160 }).notNull(),
@@ -425,6 +460,7 @@ export const ocSportsAndGames = pgTable('oc_sports_and_games', {
 export const ocWeaponTraining = pgTable('oc_weapon_training', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     subject: varchar('subject', { length: 200 }).notNull(),
     semester: integer('semester').notNull(),
     maxMarks: numeric('max_marks', { mode: 'number' }).notNull(),
@@ -457,6 +493,7 @@ export const trainingCamps = pgTable('training_camps', {
 export const ocCamps = pgTable('oc_camps', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     trainingCampId: uuid('training_camp_id')
         .notNull()
         .references(() => trainingCamps.id, { onDelete: 'restrict' }),
@@ -466,7 +503,7 @@ export const ocCamps = pgTable('oc_camps', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
-    uqOcCamp: uniqueIndex('uq_oc_camp_per_template').on(t.ocId, t.trainingCampId),
+    uqOcCamp: uniqueIndex('uq_oc_camp_per_template').on(t.enrollmentId, t.trainingCampId),
 }));
 
 export const trainingCampActivities = pgTable('training_camp_activities', {
@@ -513,6 +550,7 @@ export const ocCampReviews = pgTable('oc_camp_reviews', {
 export const ocObstacleTraining = pgTable('oc_obstacle_training', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     obstacle: varchar('obstacle', { length: 160 }).notNull(),
     marksObtained: numeric('marks_obtained', { mode: 'number' }).notNull(),
@@ -525,6 +563,7 @@ export const ocObstacleTraining = pgTable('oc_obstacle_training', {
 export const ocSpeedMarch = pgTable('oc_speed_march', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     test: varchar('test', { length: 160 }).notNull(),
     timings: varchar('timings', { length: 64 }).notNull(),
@@ -540,6 +579,7 @@ export const ocDrill = pgTable('oc_drill', {
     ocId: uuid('oc_id')
         .notNull()
         .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     maxMarks: numeric('max_marks', { mode: 'number' }).notNull(),
     m1Marks: numeric('m1_marks', { mode: 'number' }),
@@ -557,6 +597,7 @@ export const ocDrill = pgTable('oc_drill', {
 // ---------------------------------------------------------------------------
 export const ocOlqCategories = pgTable('oc_olq_category', {
     id: uuid('id').primaryKey().defaultRandom(),
+    courseId: uuid('course_id').references(() => courses.id, { onDelete: 'restrict' }),
     code: varchar('code', { length: 50 }).notNull(),
     title: varchar('title', { length: 255 }).notNull(),
     description: text('description'),
@@ -565,7 +606,11 @@ export const ocOlqCategories = pgTable('oc_olq_category', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
-    uqCategoryCode: uniqueIndex('uq_olq_category_code').on(t.code),
+    uqCategoryCodePerCourseActive: uniqueIndex('uq_olq_category_course_code_active')
+        .on(t.courseId, t.code)
+        .where(sql`${t.isActive} = true`),
+    idxCourseActiveOrder: index('idx_olq_category_course_active_order')
+        .on(t.courseId, t.isActive, t.displayOrder),
 }));
 
 export const ocOlqSubtitles = pgTable('oc_olq_subtitle', {
@@ -588,14 +633,16 @@ export const ocOlq = pgTable('oc_olq', {
     ocId: uuid('oc_id')
         .notNull()
         .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     totalMarks: integer('total_marks'),
     remarks: text('remarks'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
-    uqOcSemester: uniqueIndex('uq_oc_olq_semester').on(t.ocId, t.semester),
+    uqOcSemester: uniqueIndex('uq_oc_olq_semester').on(t.enrollmentId, t.semester),
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+    idxOcOlqEnrollmentSemester: index('idx_oc_olq_enrollment_sem').on(t.enrollmentId, t.semester),
 }));
 
 export const ocOlqScores = pgTable('oc_olq_score', {
@@ -620,6 +667,7 @@ export const ocCreditForExcellence = pgTable('oc_credit_for_excellence', {
     ocId: uuid('oc_id')
         .notNull()
         .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     data: jsonb('data')
         .$type<CreditForExcellenceEntry[]>()
@@ -629,7 +677,7 @@ export const ocCreditForExcellence = pgTable('oc_credit_for_excellence', {
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
-    uqPerSemester: uniqueIndex('uq_oc_cfe_per_semester').on(t.ocId, t.semester),
+    uqPerSemester: uniqueIndex('uq_oc_cfe_per_semester').on(t.enrollmentId, t.semester),
 }));
 // -----------------------------------------------------------------------------
 // oc_clubs
@@ -639,6 +687,7 @@ export const ocClubs = pgTable('oc_clubs', {
     ocId: uuid('oc_id')
         .notNull()
         .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     clubName: varchar('club_name', { length: 160 }).notNull(),
     specialAchievement: text('special_achievement'),
@@ -656,6 +705,7 @@ export const ocSpecialAchievementInClubs = pgTable('oc_special_achievement_in_cl
     ocId: uuid('oc_id')
         .notNull()
         .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     achievement: text('achievement').notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
@@ -668,6 +718,7 @@ export const ocRecordingLeaveHikeDetention = pgTable('oc_recording_leave_hike_de
     ocId: uuid('oc_id')
         .notNull()
         .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     reason: text('reason').notNull(),
     type: leaveRecordKind('type').notNull(), // HIKE | LEAVE | DETENTION
@@ -687,6 +738,7 @@ export const ocCounselling = pgTable('oc_counselling', {
     ocId: uuid('oc_id')
         .notNull()
         .references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     reason: text('reason').notNull(),
     natureOfWarning: counsellingWarningKind('nature_of_warning').notNull(), // RELEGATION | WITHDRAWAL | OTHER

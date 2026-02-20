@@ -39,6 +39,7 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
 
 type ListOpts = {
     id?: string;
@@ -104,19 +105,33 @@ export async function getOcCourseInfo(ocId: string) {
     return row ?? null;
 }
 
+async function getActiveEnrollmentId(ocId: string) {
+    const enrollment = await getOrCreateActiveEnrollment(ocId);
+    return enrollment.id;
+}
+
 export async function listSemesterMarksRows(ocId: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocSemesterMarks)
-        .where(and(eq(ocSemesterMarks.ocId, ocId), isNull(ocSemesterMarks.deletedAt)))
+        .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.enrollmentId, enrollmentId), isNull(ocSemesterMarks.deletedAt)))
         .orderBy(ocSemesterMarks.semester);
 }
 
 export async function getSemesterMarksRow(ocId: string, semester: number) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocSemesterMarks)
-        .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester), isNull(ocSemesterMarks.deletedAt)))
+        .where(
+            and(
+                eq(ocSemesterMarks.ocId, ocId),
+                eq(ocSemesterMarks.enrollmentId, enrollmentId),
+                eq(ocSemesterMarks.semester, semester),
+                isNull(ocSemesterMarks.deletedAt),
+            ),
+        )
         .limit(1);
     return row ?? null;
 }
@@ -141,10 +156,17 @@ export type SemesterSummaryPatchInput = {
 export async function upsertSemesterSubjectMarks(ocId: string, semester: number, input: SemesterSubjectUpsertInput) {
     const now = new Date();
     return db.transaction(async (tx) => {
+        const enrollmentId = (await getOrCreateActiveEnrollment(ocId, tx)).id;
         const [existing] = await tx
             .select()
             .from(ocSemesterMarks)
-            .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester)))
+            .where(
+                and(
+                    eq(ocSemesterMarks.ocId, ocId),
+                    eq(ocSemesterMarks.enrollmentId, enrollmentId),
+                    eq(ocSemesterMarks.semester, semester),
+                ),
+            )
             .limit(1);
 
         const subjects = cloneSubjects(existing);
@@ -197,6 +219,7 @@ export async function upsertSemesterSubjectMarks(ocId: string, semester: number,
             .insert(ocSemesterMarks)
             .values({
                 ocId,
+                enrollmentId,
                 semester,
                 branchTag: input.semesterBranchTag,
                 subjects,
@@ -209,10 +232,17 @@ export async function upsertSemesterSubjectMarks(ocId: string, semester: number,
 export async function upsertSemesterSummary(ocId: string, semester: number, input: SemesterSummaryPatchInput) {
     const now = new Date();
     return db.transaction(async (tx) => {
+        const enrollmentId = (await getOrCreateActiveEnrollment(ocId, tx)).id;
         const [existing] = await tx
             .select()
             .from(ocSemesterMarks)
-            .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester)))
+            .where(
+                and(
+                    eq(ocSemesterMarks.ocId, ocId),
+                    eq(ocSemesterMarks.enrollmentId, enrollmentId),
+                    eq(ocSemesterMarks.semester, semester),
+                ),
+            )
             .limit(1);
 
         const patch: Partial<typeof ocSemesterMarks.$inferInsert> = {
@@ -237,6 +267,7 @@ export async function upsertSemesterSummary(ocId: string, semester: number, inpu
             .insert(ocSemesterMarks)
             .values({
                 ocId,
+                enrollmentId,
                 semester,
                 branchTag: input.branchTag,
                 deletedAt: null,
@@ -251,10 +282,17 @@ export async function upsertSemesterSummary(ocId: string, semester: number, inpu
 }
 
 export async function deleteSemester(ocId: string, semester: number, opts: { hard?: boolean } = {}) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocSemesterMarks)
-            .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester)))
+            .where(
+                and(
+                    eq(ocSemesterMarks.ocId, ocId),
+                    eq(ocSemesterMarks.enrollmentId, enrollmentId),
+                    eq(ocSemesterMarks.semester, semester),
+                ),
+            )
             .returning();
         return row ?? null;
     }
@@ -262,7 +300,14 @@ export async function deleteSemester(ocId: string, semester: number, opts: { har
     const [row] = await db
         .update(ocSemesterMarks)
         .set({ deletedAt: new Date(), updatedAt: new Date() })
-        .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester), isNull(ocSemesterMarks.deletedAt)))
+        .where(
+            and(
+                eq(ocSemesterMarks.ocId, ocId),
+                eq(ocSemesterMarks.enrollmentId, enrollmentId),
+                eq(ocSemesterMarks.semester, semester),
+                isNull(ocSemesterMarks.deletedAt),
+            ),
+        )
         .returning();
     return row ?? null;
 }
@@ -270,10 +315,18 @@ export async function deleteSemester(ocId: string, semester: number, opts: { har
 export async function deleteSemesterSubject(ocId: string, semester: number, subjectCode: string, opts: { hard?: boolean } = {}) {
     const now = new Date();
     return db.transaction(async (tx) => {
+        const enrollmentId = (await getOrCreateActiveEnrollment(ocId, tx)).id;
         const [existing] = await tx
             .select()
             .from(ocSemesterMarks)
-            .where(and(eq(ocSemesterMarks.ocId, ocId), eq(ocSemesterMarks.semester, semester), isNull(ocSemesterMarks.deletedAt)))
+            .where(
+                and(
+                    eq(ocSemesterMarks.ocId, ocId),
+                    eq(ocSemesterMarks.enrollmentId, enrollmentId),
+                    eq(ocSemesterMarks.semester, semester),
+                    isNull(ocSemesterMarks.deletedAt),
+                ),
+            )
             .limit(1);
         if (!existing) return null;
 
@@ -640,22 +693,43 @@ export async function deleteMedCat(ocId: string, id: string) {
 
 // ---- Discipline -------------------------------------------------------------
 export async function listDiscipline(ocId: string, limit = 100, offset = 0) {
-    return db.select().from(ocDiscipline).where(eq(ocDiscipline.ocId, ocId)).limit(limit).offset(offset);
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    return db
+        .select()
+        .from(ocDiscipline)
+        .where(and(eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId)))
+        .limit(limit)
+        .offset(offset);
 }
 export async function createDiscipline(ocId: string, data: Omit<typeof ocDiscipline.$inferInsert, 'id' | 'ocId'>) {
-    const [row] = await db.insert(ocDiscipline).values({ ocId, ...data }).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocDiscipline).values({ ocId, enrollmentId, ...data }).returning();
     return row;
 }
 export async function getDiscipline(ocId: string, id: string) {
-    const [row] = await db.select().from(ocDiscipline).where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId))).limit(1);
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db
+        .select()
+        .from(ocDiscipline)
+        .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId)))
+        .limit(1);
     return row ?? null;
 }
 export async function updateDiscipline(ocId: string, id: string, data: Partial<typeof ocDiscipline.$inferInsert>) {
-    const [row] = await db.update(ocDiscipline).set(data).where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId))).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db
+        .update(ocDiscipline)
+        .set(data)
+        .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId)))
+        .returning();
     return row ?? null;
 }
 export async function deleteDiscipline(ocId: string, id: string) {
-    const [row] = await db.delete(ocDiscipline).where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId))).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db
+        .delete(ocDiscipline)
+        .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId)))
+        .returning();
     return row ?? null;
 }
 
@@ -682,10 +756,11 @@ export async function deleteComm(ocId: string, id: string) {
 
 // ---- Motivation awards ----------------------------------------------------
 export async function listMotivationAwards(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocMotivationAwards)
-        .where(and(eq(ocMotivationAwards.ocId, ocId), isNull(ocMotivationAwards.deletedAt)))
+        .where(and(eq(ocMotivationAwards.ocId, ocId), eq(ocMotivationAwards.enrollmentId, enrollmentId), isNull(ocMotivationAwards.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -693,14 +768,16 @@ export async function createMotivationAward(
     ocId: string,
     data: Omit<typeof ocMotivationAwards.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
-    const [row] = await db.insert(ocMotivationAwards).values({ ocId, ...data }).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocMotivationAwards).values({ ocId, enrollmentId, ...data }).returning();
     return row;
 }
 export async function getMotivationAward(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocMotivationAwards)
-        .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId)))
+        .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId), eq(ocMotivationAwards.enrollmentId, enrollmentId)))
         .limit(1);
     return row ?? null;
 }
@@ -709,10 +786,11 @@ export async function updateMotivationAward(
     id: string,
     data: Partial<typeof ocMotivationAwards.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocMotivationAwards)
         .set(data)
-        .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId)))
+        .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId), eq(ocMotivationAwards.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -721,27 +799,29 @@ export async function deleteMotivationAward(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocMotivationAwards)
-            .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId)))
+            .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId), eq(ocMotivationAwards.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocMotivationAwards)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId)))
+        .where(and(eq(ocMotivationAwards.id, id), eq(ocMotivationAwards.ocId, ocId), eq(ocMotivationAwards.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
 
 // ---- Sports & games --------------------------------------------------------
 export async function listSportsAndGames(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocSportsAndGames)
-        .where(and(eq(ocSportsAndGames.ocId, ocId), isNull(ocSportsAndGames.deletedAt)))
+        .where(and(eq(ocSportsAndGames.ocId, ocId), eq(ocSportsAndGames.enrollmentId, enrollmentId), isNull(ocSportsAndGames.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -749,14 +829,16 @@ export async function createSportsAndGames(
     ocId: string,
     data: Omit<typeof ocSportsAndGames.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
-    const [row] = await db.insert(ocSportsAndGames).values({ ocId, ...data }).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocSportsAndGames).values({ ocId, enrollmentId, ...data }).returning();
     return row;
 }
 export async function getSportsAndGames(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocSportsAndGames)
-        .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId)))
+        .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId), eq(ocSportsAndGames.enrollmentId, enrollmentId)))
         .limit(1);
     return row ?? null;
 }
@@ -765,10 +847,11 @@ export async function updateSportsAndGames(
     id: string,
     data: Partial<typeof ocSportsAndGames.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocSportsAndGames)
         .set(data)
-        .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId)))
+        .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId), eq(ocSportsAndGames.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -777,27 +860,29 @@ export async function deleteSportsAndGames(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocSportsAndGames)
-            .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId)))
+            .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId), eq(ocSportsAndGames.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocSportsAndGames)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId)))
+        .where(and(eq(ocSportsAndGames.id, id), eq(ocSportsAndGames.ocId, ocId), eq(ocSportsAndGames.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
 
 // ---- Weapon training -------------------------------------------------------
 export async function listWeaponTraining(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocWeaponTraining)
-        .where(and(eq(ocWeaponTraining.ocId, ocId), isNull(ocWeaponTraining.deletedAt)))
+        .where(and(eq(ocWeaponTraining.ocId, ocId), eq(ocWeaponTraining.enrollmentId, enrollmentId), isNull(ocWeaponTraining.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -805,14 +890,16 @@ export async function createWeaponTraining(
     ocId: string,
     data: Omit<typeof ocWeaponTraining.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
-    const [row] = await db.insert(ocWeaponTraining).values({ ocId, ...data }).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocWeaponTraining).values({ ocId, enrollmentId, ...data }).returning();
     return row;
 }
 export async function getWeaponTraining(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocWeaponTraining)
-        .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId)))
+        .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId), eq(ocWeaponTraining.enrollmentId, enrollmentId)))
         .limit(1);
     return row ?? null;
 }
@@ -821,10 +908,11 @@ export async function updateWeaponTraining(
     id: string,
     data: Partial<typeof ocWeaponTraining.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocWeaponTraining)
         .set(data)
-        .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId)))
+        .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId), eq(ocWeaponTraining.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -833,17 +921,18 @@ export async function deleteWeaponTraining(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocWeaponTraining)
-            .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId)))
+            .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId), eq(ocWeaponTraining.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocWeaponTraining)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId)))
+        .where(and(eq(ocWeaponTraining.id, id), eq(ocWeaponTraining.ocId, ocId), eq(ocWeaponTraining.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -916,10 +1005,11 @@ export async function deleteSpecialAchievementInFiring(
 
 // ---- Obstacle training -----------------------------------------------------
 export async function listObstacleTraining(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocObstacleTraining)
-        .where(and(eq(ocObstacleTraining.ocId, ocId), isNull(ocObstacleTraining.deletedAt)))
+        .where(and(eq(ocObstacleTraining.ocId, ocId), eq(ocObstacleTraining.enrollmentId, enrollmentId), isNull(ocObstacleTraining.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -927,14 +1017,16 @@ export async function createObstacleTraining(
     ocId: string,
     data: Omit<typeof ocObstacleTraining.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
-    const [row] = await db.insert(ocObstacleTraining).values({ ocId, ...data }).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocObstacleTraining).values({ ocId, enrollmentId, ...data }).returning();
     return row;
 }
 export async function getObstacleTraining(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocObstacleTraining)
-        .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId)))
+        .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId), eq(ocObstacleTraining.enrollmentId, enrollmentId)))
         .limit(1);
     return row ?? null;
 }
@@ -943,10 +1035,11 @@ export async function updateObstacleTraining(
     id: string,
     data: Partial<typeof ocObstacleTraining.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocObstacleTraining)
         .set(data)
-        .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId)))
+        .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId), eq(ocObstacleTraining.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -955,27 +1048,29 @@ export async function deleteObstacleTraining(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocObstacleTraining)
-            .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId)))
+            .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId), eq(ocObstacleTraining.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocObstacleTraining)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId)))
+        .where(and(eq(ocObstacleTraining.id, id), eq(ocObstacleTraining.ocId, ocId), eq(ocObstacleTraining.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
 
 // ---- Speed march -----------------------------------------------------------
 export async function listSpeedMarch(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocSpeedMarch)
-        .where(and(eq(ocSpeedMarch.ocId, ocId), isNull(ocSpeedMarch.deletedAt)))
+        .where(and(eq(ocSpeedMarch.ocId, ocId), eq(ocSpeedMarch.enrollmentId, enrollmentId), isNull(ocSpeedMarch.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -983,14 +1078,16 @@ export async function createSpeedMarch(
     ocId: string,
     data: Omit<typeof ocSpeedMarch.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
-    const [row] = await db.insert(ocSpeedMarch).values({ ocId, ...data }).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocSpeedMarch).values({ ocId, enrollmentId, ...data }).returning();
     return row;
 }
 export async function getSpeedMarch(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocSpeedMarch)
-        .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId)))
+        .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId), eq(ocSpeedMarch.enrollmentId, enrollmentId)))
         .limit(1);
     return row ?? null;
 }
@@ -999,10 +1096,11 @@ export async function updateSpeedMarch(
     id: string,
     data: Partial<typeof ocSpeedMarch.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocSpeedMarch)
         .set(data)
-        .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId)))
+        .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId), eq(ocSpeedMarch.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -1011,27 +1109,29 @@ export async function deleteSpeedMarch(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocSpeedMarch)
-            .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId)))
+            .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId), eq(ocSpeedMarch.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocSpeedMarch)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId)))
+        .where(and(eq(ocSpeedMarch.id, id), eq(ocSpeedMarch.ocId, ocId), eq(ocSpeedMarch.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
 
 // ---- Drill ------------------------------------------------------------------
 export async function listDrill(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocDrill)
-        .where(and(eq(ocDrill.ocId, ocId), isNull(ocDrill.deletedAt)))
+        .where(and(eq(ocDrill.ocId, ocId), eq(ocDrill.enrollmentId, enrollmentId), isNull(ocDrill.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -1039,14 +1139,16 @@ export async function createDrill(
     ocId: string,
     data: Omit<typeof ocDrill.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
-    const [row] = await db.insert(ocDrill).values({ ocId, ...data }).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocDrill).values({ ocId, enrollmentId, ...data }).returning();
     return row;
 }
 export async function getDrill(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocDrill)
-        .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId), isNull(ocDrill.deletedAt)))
+        .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId), eq(ocDrill.enrollmentId, enrollmentId), isNull(ocDrill.deletedAt)))
         .limit(1);
     return row ?? null;
 }
@@ -1055,10 +1157,11 @@ export async function updateDrill(
     id: string,
     data: Partial<typeof ocDrill.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocDrill)
         .set(data)
-        .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId)))
+        .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId), eq(ocDrill.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -1067,27 +1170,29 @@ export async function deleteDrill(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocDrill)
-            .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId)))
+            .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId), eq(ocDrill.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocDrill)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId)))
+        .where(and(eq(ocDrill.id, id), eq(ocDrill.ocId, ocId), eq(ocDrill.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
 
 // ---- Credit for excellence (CFE) -----------------------------------------
 export async function listCreditForExcellence(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocCreditForExcellence)
-        .where(and(eq(ocCreditForExcellence.ocId, ocId), isNull(ocCreditForExcellence.deletedAt)))
+        .where(and(eq(ocCreditForExcellence.ocId, ocId), eq(ocCreditForExcellence.enrollmentId, enrollmentId), isNull(ocCreditForExcellence.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -1096,11 +1201,12 @@ export async function createCreditForExcellence(
     ocId: string,
     data: Omit<typeof ocCreditForExcellence.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .insert(ocCreditForExcellence)
-        .values({ ocId, ...data })
+        .values({ ocId, enrollmentId, ...data })
         .onConflictDoUpdate({
-            target: [ocCreditForExcellence.ocId, ocCreditForExcellence.semester],
+            target: [ocCreditForExcellence.enrollmentId, ocCreditForExcellence.semester],
             set: {
                 data: data.data,
                 remark: data.remark ?? null,
@@ -1118,13 +1224,14 @@ export async function createManyCreditForExcellence(
     if (!rows.length) return [];
 
     return db.transaction(async (tx) => {
+        const enrollmentId = (await getOrCreateActiveEnrollment(ocId, tx)).id;
         const created: Array<typeof ocCreditForExcellence.$inferSelect> = [];
         for (const item of rows) {
             const [row] = await tx
                 .insert(ocCreditForExcellence)
-                .values({ ocId, ...item })
+                .values({ ocId, enrollmentId, ...item })
                 .onConflictDoUpdate({
-                    target: [ocCreditForExcellence.ocId, ocCreditForExcellence.semester],
+                    target: [ocCreditForExcellence.enrollmentId, ocCreditForExcellence.semester],
                     set: {
                         data: item.data,
                         remark: item.remark ?? null,
@@ -1139,6 +1246,7 @@ export async function createManyCreditForExcellence(
 }
 
 export async function getCreditForExcellence(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocCreditForExcellence)
@@ -1146,6 +1254,7 @@ export async function getCreditForExcellence(ocId: string, id: string) {
             and(
                 eq(ocCreditForExcellence.id, id),
                 eq(ocCreditForExcellence.ocId, ocId),
+                eq(ocCreditForExcellence.enrollmentId, enrollmentId),
                 isNull(ocCreditForExcellence.deletedAt),
             ),
         )
@@ -1158,10 +1267,11 @@ export async function updateCreditForExcellence(
     id: string,
     data: Partial<typeof ocCreditForExcellence.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocCreditForExcellence)
         .set(data)
-        .where(and(eq(ocCreditForExcellence.id, id), eq(ocCreditForExcellence.ocId, ocId)))
+        .where(and(eq(ocCreditForExcellence.id, id), eq(ocCreditForExcellence.ocId, ocId), eq(ocCreditForExcellence.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -1171,17 +1281,18 @@ export async function deleteCreditForExcellence(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocCreditForExcellence)
-            .where(and(eq(ocCreditForExcellence.id, id), eq(ocCreditForExcellence.ocId, ocId)))
+            .where(and(eq(ocCreditForExcellence.id, id), eq(ocCreditForExcellence.ocId, ocId), eq(ocCreditForExcellence.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocCreditForExcellence)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocCreditForExcellence.id, id), eq(ocCreditForExcellence.ocId, ocId)))
+        .where(and(eq(ocCreditForExcellence.id, id), eq(ocCreditForExcellence.ocId, ocId), eq(ocCreditForExcellence.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -1381,10 +1492,11 @@ export async function listOCsFull(opts: ListOpts = {}) {
 }
 // ---- Clubs --------------------------------------------------------------------
 export async function listClubs(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocClubs)
-        .where(and(eq(ocClubs.ocId, ocId), isNull(ocClubs.deletedAt)))
+        .where(and(eq(ocClubs.ocId, ocId), eq(ocClubs.enrollmentId, enrollmentId), isNull(ocClubs.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -1393,15 +1505,17 @@ export async function createClub(
     ocId: string,
     data: Omit<typeof ocClubs.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
-    const [row] = await db.insert(ocClubs).values({ ocId, ...data }).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocClubs).values({ ocId, enrollmentId, ...data }).returning();
     return row;
 }
 
 export async function getClub(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocClubs)
-        .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId)))
+        .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId), eq(ocClubs.enrollmentId, enrollmentId)))
         .limit(1);
     return row ?? null;
 }
@@ -1411,10 +1525,11 @@ export async function updateClub(
     id: string,
     data: Partial<typeof ocClubs.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocClubs)
         .set(data)
-        .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId)))
+        .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId), eq(ocClubs.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -1424,27 +1539,29 @@ export async function deleteClub(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocClubs)
-            .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId)))
+            .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId), eq(ocClubs.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocClubs)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId)))
+        .where(and(eq(ocClubs.id, id), eq(ocClubs.ocId, ocId), eq(ocClubs.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
 
 // ---- Special achievements in clubs -------------------------------------------
 export async function listClubAchievements(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocSpecialAchievementInClubs)
-        .where(and(eq(ocSpecialAchievementInClubs.ocId, ocId), isNull(ocSpecialAchievementInClubs.deletedAt)))
+        .where(and(eq(ocSpecialAchievementInClubs.ocId, ocId), eq(ocSpecialAchievementInClubs.enrollmentId, enrollmentId), isNull(ocSpecialAchievementInClubs.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -1453,18 +1570,20 @@ export async function createClubAchievement(
     ocId: string,
     data: Omit<typeof ocSpecialAchievementInClubs.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .insert(ocSpecialAchievementInClubs)
-        .values({ ocId, ...data })
+        .values({ ocId, enrollmentId, ...data })
         .returning();
     return row;
 }
 
 export async function getClubAchievement(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocSpecialAchievementInClubs)
-        .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId)))
+        .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId), eq(ocSpecialAchievementInClubs.enrollmentId, enrollmentId)))
         .limit(1);
     return row ?? null;
 }
@@ -1474,10 +1593,11 @@ export async function updateClubAchievement(
     id: string,
     data: Partial<typeof ocSpecialAchievementInClubs.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocSpecialAchievementInClubs)
         .set(data)
-        .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId)))
+        .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId), eq(ocSpecialAchievementInClubs.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -1487,27 +1607,29 @@ export async function deleteClubAchievement(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocSpecialAchievementInClubs)
-            .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId)))
+            .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId), eq(ocSpecialAchievementInClubs.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocSpecialAchievementInClubs)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId)))
+        .where(and(eq(ocSpecialAchievementInClubs.id, id), eq(ocSpecialAchievementInClubs.ocId, ocId), eq(ocSpecialAchievementInClubs.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
 
 // ---- Recording leave/hike/detention ------------------------------------------
 export async function listRecordingLeaveHikeDetention(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocRecordingLeaveHikeDetention)
-        .where(and(eq(ocRecordingLeaveHikeDetention.ocId, ocId), isNull(ocRecordingLeaveHikeDetention.deletedAt)))
+        .where(and(eq(ocRecordingLeaveHikeDetention.ocId, ocId), eq(ocRecordingLeaveHikeDetention.enrollmentId, enrollmentId), isNull(ocRecordingLeaveHikeDetention.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -1516,18 +1638,20 @@ export async function createRecordingLeaveHikeDetention(
     ocId: string,
     data: Omit<typeof ocRecordingLeaveHikeDetention.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .insert(ocRecordingLeaveHikeDetention)
-        .values({ ocId, ...data })
+        .values({ ocId, enrollmentId, ...data })
         .returning();
     return row;
 }
 
 export async function getRecordingLeaveHikeDetention(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocRecordingLeaveHikeDetention)
-        .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId)))
+        .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId), eq(ocRecordingLeaveHikeDetention.enrollmentId, enrollmentId)))
         .limit(1);
     return row ?? null;
 }
@@ -1537,10 +1661,11 @@ export async function updateRecordingLeaveHikeDetention(
     id: string,
     data: Partial<typeof ocRecordingLeaveHikeDetention.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocRecordingLeaveHikeDetention)
         .set(data)
-        .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId)))
+        .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId), eq(ocRecordingLeaveHikeDetention.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -1550,27 +1675,29 @@ export async function deleteRecordingLeaveHikeDetention(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocRecordingLeaveHikeDetention)
-            .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId)))
+            .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId), eq(ocRecordingLeaveHikeDetention.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocRecordingLeaveHikeDetention)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId)))
+        .where(and(eq(ocRecordingLeaveHikeDetention.id, id), eq(ocRecordingLeaveHikeDetention.ocId, ocId), eq(ocRecordingLeaveHikeDetention.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
 
 // ---- Counselling -------------------------------------------------------------
 export async function listCounselling(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocCounselling)
-        .where(and(eq(ocCounselling.ocId, ocId), isNull(ocCounselling.deletedAt)))
+        .where(and(eq(ocCounselling.ocId, ocId), eq(ocCounselling.enrollmentId, enrollmentId), isNull(ocCounselling.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
@@ -1579,15 +1706,17 @@ export async function createCounselling(
     ocId: string,
     data: Omit<typeof ocCounselling.$inferInsert, 'id' | 'ocId' | 'deletedAt'>,
 ) {
-    const [row] = await db.insert(ocCounselling).values({ ocId, ...data }).returning();
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocCounselling).values({ ocId, enrollmentId, ...data }).returning();
     return row;
 }
 
 export async function getCounselling(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocCounselling)
-        .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId)))
+        .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId), eq(ocCounselling.enrollmentId, enrollmentId)))
         .limit(1);
     return row ?? null;
 }
@@ -1597,10 +1726,11 @@ export async function updateCounselling(
     id: string,
     data: Partial<typeof ocCounselling.$inferInsert>,
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocCounselling)
         .set(data)
-        .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId)))
+        .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId), eq(ocCounselling.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -1610,17 +1740,18 @@ export async function deleteCounselling(
     id: string,
     opts: { hard?: boolean } = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     if (opts.hard) {
         const [row] = await db
             .delete(ocCounselling)
-            .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId)))
+            .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId), eq(ocCounselling.enrollmentId, enrollmentId)))
             .returning();
         return row ?? null;
     }
     const [row] = await db
         .update(ocCounselling)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId)))
+        .where(and(eq(ocCounselling.id, id), eq(ocCounselling.ocId, ocId), eq(ocCounselling.enrollmentId, enrollmentId)))
         .returning();
     return row ?? null;
 }
@@ -1686,7 +1817,8 @@ const campActivityTotals = db
 
 export async function getOcCamps(options: GetOcCampsOptions) {
     const { ocId, ocCampId, semester, campName, includeReviews, includeActivities, reviewRole, activityName } = options;
-    const wh: any[] = [eq(ocCamps.ocId, ocId)];
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const wh: any[] = [eq(ocCamps.ocId, ocId), eq(ocCamps.enrollmentId, enrollmentId)];
     if (ocCampId) wh.push(eq(ocCamps.id, ocCampId));
     if (semester) wh.push(eq(trainingCamps.semester, semester));
     if (campName) wh.push(eq(trainingCamps.name, campName));
@@ -1767,7 +1899,8 @@ export async function getOcCamps(options: GetOcCampsOptions) {
 
 export async function getOcCampMarks(options: GetOcCampMarksOptions) {
     const { ocId, semester, campName, activityName } = options;
-    const wh: any[] = [eq(ocCamps.ocId, ocId)];
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const wh: any[] = [eq(ocCamps.ocId, ocId), eq(ocCamps.enrollmentId, enrollmentId)];
     if (semester) wh.push(eq(trainingCamps.semester, semester));
     if (campName) wh.push(eq(trainingCamps.name, campName));
     if (activityName) wh.push(eq(trainingCampActivities.name, activityName));
@@ -1797,7 +1930,8 @@ export async function getOcCampMarks(options: GetOcCampMarksOptions) {
 
 export async function getOcCampTotals(options: GetOcCampTotalsOptions) {
     const { ocId, semester } = options;
-    const wh: any[] = [eq(ocCamps.ocId, ocId)];
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const wh: any[] = [eq(ocCamps.ocId, ocId), eq(ocCamps.enrollmentId, enrollmentId)];
     if (semester) wh.push(eq(trainingCamps.semester, semester));
 
     const rows = await db
@@ -1824,6 +1958,7 @@ export async function upsertOcCamp(
     trainingCampId: string,
     data: Partial<typeof ocCamps.$inferInsert> = {},
 ) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [campTemplate] = await db
         .select({ id: trainingCamps.id })
         .from(trainingCamps)
@@ -1834,7 +1969,7 @@ export async function upsertOcCamp(
     const [existing] = await db
         .select()
         .from(ocCamps)
-        .where(and(eq(ocCamps.ocId, ocId), eq(ocCamps.trainingCampId, trainingCampId)))
+        .where(and(eq(ocCamps.ocId, ocId), eq(ocCamps.enrollmentId, enrollmentId), eq(ocCamps.trainingCampId, trainingCampId)))
         .limit(1);
 
     if (existing) {
@@ -1846,7 +1981,7 @@ export async function upsertOcCamp(
         return row;
     }
 
-    const [row] = await db.insert(ocCamps).values({ ocId, trainingCampId, ...data }).returning();
+    const [row] = await db.insert(ocCamps).values({ ocId, enrollmentId, trainingCampId, ...data }).returning();
     return row;
 }
 

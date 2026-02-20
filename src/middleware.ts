@@ -17,6 +17,7 @@ import { isRateLimitEnabled, shouldExcludeHealthCheck } from '@/config/ratelimit
 // Audit logging for middleware events should be done in API routes instead
 
 const PROTECTED_PREFIX = '/api/v1/';
+const DASHBOARD_PREFIX = '/dashboard';
 
 // Public for any method (rare)
 const PUBLIC_ANY: string[] = [
@@ -60,6 +61,17 @@ function isPublic(pathname: string, method: string) {
   return false;
 }
 
+function isDashboardPath(pathname: string) {
+  return pathname === DASHBOARD_PREFIX || pathname.startsWith(`${DASHBOARD_PREFIX}/`);
+}
+
+function applyNoStoreHeaders(response: NextResponse) {
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  return response;
+}
+
 export function shouldSkipRateLimit(pathname: string, method: string) {
   if (method !== 'POST' && method !== 'OPTIONS') return false;
   return matchPrefix(pathname, '/api/v1/auth/logout');
@@ -76,6 +88,24 @@ export async function middleware(req: NextRequest) {
     response.headers.set('x-request-id', requestId);
     return response;
   };
+
+  if (isDashboardPath(pathname)) {
+    const token = req.cookies.get('access_token')?.value ?? '';
+    if (!token) {
+      const loginUrl = req.nextUrl.clone();
+      loginUrl.pathname = '/login';
+      loginUrl.search = '';
+      const nextPath = `${pathname}${req.nextUrl.search}`;
+      if (nextPath) {
+        loginUrl.searchParams.set('next', nextPath);
+      }
+      return attachRequestId(applyNoStoreHeaders(NextResponse.redirect(loginUrl)));
+    }
+
+    return attachRequestId(
+      applyNoStoreHeaders(NextResponse.next({ request: { headers: requestHeaders } }))
+    );
+  }
 
   // SECURITY FIX: Rate Limiting for API requests
   // Apply rate limiting to all API endpoints (unless disabled in config)
@@ -158,5 +188,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/v1/:path*'],
+  matcher: ['/api/v1/:path*', '/dashboard', '/dashboard/:path*'],
 };

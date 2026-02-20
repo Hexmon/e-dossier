@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { getAppointments, type Appointment } from "@/app/lib/api/appointmentApi";
-import { loginUser, logout } from "@/app/lib/api/authApi";
+import { loginUser, requestServerLogout } from "@/app/lib/api/authApi";
 import { ApiClientError } from "@/app/lib/apiClient";
 import { fetchMe } from "@/app/lib/api/me";
 import {
@@ -228,7 +228,7 @@ export default function SwitchUserModal({
     }
 
     queryClient.clear();
-    await logout().catch(() => {});
+    await requestServerLogout().catch(() => {});
 
     try {
       await loginUser(payload);
