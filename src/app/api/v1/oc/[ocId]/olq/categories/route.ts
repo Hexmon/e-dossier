@@ -29,8 +29,12 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             courseId: courseInfo.courseId,
             includeSubtitles: qp.includeSubtitles ?? false,
             isActive: qp.isActive,
-            fallbackToLegacyGlobal: true,
+            fallbackToLegacyGlobal: false,
         });
+        const templateMissing = (qp.isActive ?? true) && items.length === 0;
+        const message = templateMissing
+            ? 'OLQ template is not configured for this course. Contact admin.'
+            : 'OLQ categories retrieved successfully.';
 
         await req.audit.log({
             action: AuditEventType.API_REQUEST,
@@ -44,10 +48,18 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
                 includeSubtitles: qp.includeSubtitles ?? false,
                 isActive: qp.isActive,
                 count: items.length,
+                templateMissing,
             },
         });
 
-        return json.ok({ message: 'OLQ categories retrieved successfully.', items, count: items.length });
+        return json.ok({
+            message,
+            items,
+            count: items.length,
+            templateMissing,
+            templateScope: 'course',
+            action: templateMissing ? 'contact_admin' : undefined,
+        });
     } catch (err) {
         return handleApiError(err);
     }

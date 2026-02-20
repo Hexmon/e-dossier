@@ -5,6 +5,7 @@ import {
     olqSubtitleQuerySchema,
 } from '@/app/lib/olq-validators';
 import {
+    getCourseTemplateCategories,
     getCourseTemplateSubtitles,
 } from '@/app/db/queries/olq';
 import { getOcCourseInfo } from '@/app/db/queries/oc';
@@ -29,8 +30,20 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             courseId: courseInfo.courseId,
             categoryId: qp.categoryId,
             isActive: qp.isActive,
-            fallbackToLegacyGlobal: true,
+            fallbackToLegacyGlobal: false,
         });
+        const activeCategories = (qp.isActive ?? true)
+            ? await getCourseTemplateCategories({
+                courseId: courseInfo.courseId,
+                includeSubtitles: false,
+                isActive: true,
+                fallbackToLegacyGlobal: false,
+            })
+            : [];
+        const templateMissing = (qp.isActive ?? true) && activeCategories.length === 0;
+        const message = templateMissing
+            ? 'OLQ template is not configured for this course. Contact admin.'
+            : 'OLQ subtitles retrieved successfully.';
 
         await req.audit.log({
             action: AuditEventType.API_REQUEST,
@@ -44,10 +57,18 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
                 categoryId: qp.categoryId,
                 isActive: qp.isActive,
                 count: items.length,
+                templateMissing,
             },
         });
 
-        return json.ok({ message: 'OLQ subtitles retrieved successfully.', items, count: items.length });
+        return json.ok({
+            message,
+            items,
+            count: items.length,
+            templateMissing,
+            templateScope: 'course',
+            action: templateMissing ? 'contact_admin' : undefined,
+        });
     } catch (err) {
         return handleApiError(err);
     }
