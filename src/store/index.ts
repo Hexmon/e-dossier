@@ -31,13 +31,16 @@ import physicalTrainingReducer from './slices/physicalTrainingSlice';
 import semesterRecordReducer from './slices/semesterRecordSlice';
 import overallAssessmentReducer from './slices/overallAssessmentSlice';
 
+export const APP_LOGOUT_RESET = 'app/logoutReset';
+export const appLogoutReset = () => ({ type: APP_LOGOUT_RESET } as const);
+
 const persistConfig = {
   key: 'root',
   storage,
   whitelist: ['officerCadetForm', 'dossierFilling', 'inspSheet', 'personalParticulars', 'ssbReport', 'familyBackground','educationQualification', 'achievements', 'autobiography', 'medicalInfo', 'medicalCategory', 'disciplineRecords', 'parentComm', 'sportsAwards', 'weaponTraining', 'obstacleTraining', 'speedMarch', 'campReviews', 'clubDrill', 'leaveRecords', 'hikeRecords', 'detentionRecords', 'counsellingRecords', 'initialInterview', 'termInterview', 'cfeRecords','physicalTraining', 'semesterRecord', 'overallAssessment'],
 };
 
-const rootReducer = combineReducers({
+const appReducer = combineReducers({
   officerCadetForm: officerCadetFormReducer,
   dossierFilling: dossierFillingReducer,
   inspSheet: inspSheetReducer,
@@ -69,6 +72,16 @@ const rootReducer = combineReducers({
   overallAssessment: overallAssessmentReducer,
   // Add more form slices here as needed
 });
+
+const rootReducer = (
+  state: ReturnType<typeof appReducer> | undefined,
+  action: { type: string }
+) => {
+  if (action.type === APP_LOGOUT_RESET) {
+    return appReducer(undefined, action);
+  }
+  return appReducer(state, action);
+};
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 

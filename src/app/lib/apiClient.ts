@@ -9,11 +9,6 @@
  */
 
 import z from "zod";
-import {
-    buildLoginUrlWithNext,
-    getCurrentDashboardPathWithQuery,
-    storeReturnUrl,
-} from "@/lib/auth-return-url";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -115,7 +110,6 @@ function isFormLike(x: unknown): x is FormData | Blob | File {
 
 let csrfToken: string | null = null;
 let csrfPromise: Promise<void> | null = null;
-let authRedirectInProgress = false;
 const AUTH_ENDPOINT_PATHS = new Set(["/api/v1/auth/login", "/api/v1/auth/logout"]);
 
 function getPathnameFromUrl(input: string): string | null {
@@ -134,7 +128,6 @@ function shouldHandleUnauthorizedInBrowser(params: {
     skipAuth?: boolean;
 }): boolean {
     if (typeof window === "undefined" || params.skipAuth) return false;
-    if (authRedirectInProgress) return false;
     if (window.location.pathname === "/login") return false;
 
     const endpointPath = getPathnameFromUrl(params.endpoint);
@@ -147,27 +140,17 @@ function shouldHandleUnauthorizedInBrowser(params: {
 }
 
 async function handleUnauthorizedInBrowser(): Promise<void> {
-    if (typeof window === "undefined" || authRedirectInProgress) return;
-    authRedirectInProgress = true;
-
-    const returnUrl = getCurrentDashboardPathWithQuery();
-    if (returnUrl) {
-        storeReturnUrl(returnUrl);
-    }
-
+    if (typeof window === "undefined") return;
     try {
-        await fetch("/api/v1/auth/logout", {
-            method: "POST",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-            },
+        const { logoutAndRedirect } = await import("@/lib/auth/logout");
+        await logoutAndRedirect({
+            reason: "unauthorized",
+            preserveNext: true,
+            showServerErrorToast: false,
         });
     } catch {
-        // Best effort only; login redirect still proceeds.
+        // Best effort only; the 401 error is still propagated to caller.
     }
-
-    window.location.assign(buildLoginUrlWithNext(returnUrl));
 }
 
 /**

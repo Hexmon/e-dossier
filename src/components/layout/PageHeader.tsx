@@ -1,6 +1,6 @@
 "use client";
 
-import { User, LogOut, Repeat } from "lucide-react";
+import { User, LogOut, Repeat, Loader2 } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -12,12 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
-import { logout } from "@/app/lib/api/authApi";
 import { useMe } from "@/hooks/useMe";
 import SwitchUserModal from "@/components/auth/SwitchUserModal";
 import OCSelectModal from "@/components/modals/OCSelectModal";
 import { buildDossierPathForOc, extractDossierContext, isDossierManagementRoute } from "@/lib/dossier-route";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 
 interface PageHeaderProps {
   title: string;
@@ -43,7 +42,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [switchUserOpen, setSwitchUserOpen] = useState(false);
   const [switchOcOpen, setSwitchOcOpen] = useState(false);
 
@@ -70,21 +69,24 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   const isDossierRoute = isDossierManagementRoute(pathname);
   const dossierContext = extractDossierContext(pathname);
 
-  const handleLogout = () => {
-    // CRITICAL: Clear all React Query cache on logout
-    // Without this, the next user will see cached data from the previous user
-    queryClient.clear();
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
 
-    if (onLogout) {
-      onLogout();
-      return;
+    try {
+      if (onLogout) {
+        await Promise.resolve(onLogout());
+        return;
+      }
+
+      await logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
+    } finally {
+      setIsLoggingOut(false);
     }
-
-    // Navigate immediately for instant UX.
-    // logout() clears localStorage and retries the API call (up to 3 times)
-    // to ensure the httpOnly access_token cookie is cleared server-side.
-    router.push("/login");
-    logout().catch(() => {});
   };
 
   const initials = getInitials(name);
@@ -155,9 +157,18 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
                   <span>Profile Settings</span>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
+                <DropdownMenuItem
+                  onClick={() => {
+                    void handleLogout();
+                  }}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogOut className="mr-2 h-4 w-4" />
+                  )}
+                  <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

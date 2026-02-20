@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useDeviceRefreshInterval } from '@/hooks/useDeviceRefreshInterval';
+import { api } from '@/app/lib/apiClient';
 
 export type NavItem = {
     key: string;
@@ -25,11 +26,7 @@ export type NavigationResponse = {
 };
 
 async function fetchNavigation(): Promise<NavigationResponse> {
-    const res = await fetch('/api/v1/me/navigation');
-    if (!res.ok) {
-        throw new Error('Failed to fetch navigation');
-    }
-    return res.json();
+    return api.get<NavigationResponse>('/api/v1/me/navigation');
 }
 
 export function useNavigation() {

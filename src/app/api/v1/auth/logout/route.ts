@@ -1,6 +1,6 @@
 // src/app/api/v1/auth/logout/route.ts
 import { json, handleApiError } from '@/app/lib/http';
-import { clearAuthCookies, readAccessToken } from '@/app/lib/cookies';
+import { clearAllRequestCookies, readAccessToken } from '@/app/lib/cookies';
 import { decodeJwtPayloadUnsafe } from '@/app/lib/jwt-unsafe';
 import {
   withAuditRoute,
@@ -99,8 +99,8 @@ async function POSTHandler(req: AuditNextRequest) {
       },
     });
 
-    // Server-authoritative cookie clear
-    clearAuthCookies(res);
+    // Server-authoritative cookie clear (clear all request cookies for this origin)
+    clearAllRequestCookies(res, req);
     const responseBuiltAt = performance.now();
 
     void req.audit.log({
