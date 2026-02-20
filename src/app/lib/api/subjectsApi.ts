@@ -38,6 +38,8 @@ export interface SubjectUpdate {
 export interface ListSubjectsParams {
     q?: string;
     branch?: string;
+    semester?: number;
+    courseId?: string;
     includeDeleted?: boolean;
     limit?: number;
     offset?: number;

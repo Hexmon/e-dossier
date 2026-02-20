@@ -8,7 +8,6 @@ import { db } from '@/app/db/client';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/subjects', () => ({
@@ -73,6 +72,36 @@ describe('GET /api/v1/subjects', () => {
     expect(body.error).toBe('bad_request');
   });
 
+  it('returns 400 for invalid semester filter', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'u1', roles: [] });
+
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `${path}?semester=7`,
+    });
+
+    const res = await getSubjects(req as any, createRouteContext());
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('bad_request');
+  });
+
+  it('returns 400 for invalid courseId filter', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'u1', roles: [] });
+
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `${path}?courseId=invalid-course-id`,
+    });
+
+    const res = await getSubjects(req as any, createRouteContext());
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('bad_request');
+  });
+
   it('returns filtered list of subjects on happy path', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'u1', roles: [] });
     (subjectQueries.listSubjects as any).mockResolvedValueOnce([
@@ -88,7 +117,7 @@ describe('GET /api/v1/subjects', () => {
 
     const req = makeJsonRequest({
       method: 'GET',
-      path: `${path}?q=math&branch=C&includeDeleted=true&limit=10&offset=0`,
+      path: `${path}?q=math&branch=C&includeDeleted=true&limit=10&offset=0&semester=1&courseId=11111111-1111-4111-8111-111111111111`,
     });
 
     const res = await getSubjects(req as any, createRouteContext());
@@ -103,6 +132,8 @@ describe('GET /api/v1/subjects', () => {
       includeDeleted: true,
       limit: 10,
       offset: 0,
+      semester: 1,
+      courseId: '11111111-1111-4111-8111-111111111111',
     });
   });
 });
