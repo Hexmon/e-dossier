@@ -20,7 +20,11 @@ export type RelegationCourseOption = {
   courseName: string;
 };
 
-export type RelegationMovementKind = "TRANSFER" | "PROMOTION_BATCH" | "PROMOTION_EXCEPTION";
+export type RelegationMovementKind =
+  | "TRANSFER"
+  | "PROMOTION_BATCH"
+  | "PROMOTION_EXCEPTION"
+  | "VOID_PROMOTION";
 
 export type RelegationPdfPresignRequest = {
   fileName: string;
@@ -102,6 +106,14 @@ export type RelegationPromoteCourseRequest = {
   note?: string | null;
 };
 
+export type RelegationVoidPromotionRequest = {
+  ocId: string;
+  reason: string;
+  remark?: string | null;
+  pdfObjectKey?: string | null;
+  pdfUrl?: string | null;
+};
+
 export type RelegationPromoteCourseResponse = {
   result: {
     fromCourse: RelegationCourseOption;
@@ -121,6 +133,47 @@ export type RelegationMediaSignedUrlResponse = {
   signedUrl: string;
   expiresInSeconds: number | null;
 };
+
+export type RelegationEnrollmentStatus = "ACTIVE" | "ARCHIVED" | "VOIDED";
+export type RelegationEnrollmentOrigin = "PROMOTION" | "TRANSFER" | "MANUAL" | "BASELINE";
+
+export type RelegationEnrollmentTimelineItem = {
+  id: string;
+  ocId: string;
+  courseId: string;
+  courseCode: string;
+  courseName: string;
+  status: RelegationEnrollmentStatus;
+  origin: RelegationEnrollmentOrigin;
+  startedOn: string;
+  endedOn: string | null;
+  reason: string | null;
+  note: string | null;
+  createdByUserId: string | null;
+  closedByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RelegationEnrollmentModuleKey =
+  | "academics"
+  | "olq"
+  | "interviews"
+  | "pt_scores"
+  | "pt_motivation"
+  | "spr"
+  | "sports_games"
+  | "motivation_awards"
+  | "weapon_training"
+  | "obstacle_training"
+  | "speed_march"
+  | "drill"
+  | "camps"
+  | "discipline"
+  | "clubs"
+  | "leave_hike_detention"
+  | "counselling"
+  | "cfe";
 
 export type RelegationOcOptionsParams = {
   courseId?: string;
@@ -195,8 +248,38 @@ export const relegationApi = {
       { baseURL }
     ),
 
+  voidPromotion: (payload: RelegationVoidPromotionRequest) =>
+    api.post<RelegationTransferResponse, RelegationVoidPromotionRequest>(
+      endpoints.admin.relegation.voidPromotion,
+      payload,
+      { baseURL }
+    ),
+
   getMediaSignedUrl: (historyId: string) =>
     api.get<RelegationMediaSignedUrlResponse>(endpoints.admin.relegation.mediaSignedUrl(historyId), {
       baseURL,
+    }),
+
+  getEnrollments: (ocId: string) =>
+    api.get<{ items: RelegationEnrollmentTimelineItem[]; count: number }>(
+      endpoints.admin.relegation.enrollments(ocId),
+      {
+        baseURL,
+      }
+    ),
+
+  getEnrollmentModuleDataset: (params: {
+    ocId: string;
+    enrollmentId: string;
+    module: RelegationEnrollmentModuleKey;
+    semester?: number;
+  }) =>
+    api.get<{ items: unknown[]; count: number }>(endpoints.admin.relegation.enrollmentModules(params.ocId), {
+      baseURL,
+      query: {
+        enrollmentId: params.enrollmentId,
+        module: params.module,
+        semester: params.semester,
+      },
     }),
 };

@@ -57,7 +57,7 @@ export const relegationHistoryQuerySchema = z.object({
   courseFromId: z.string().uuid("courseFromId must be a valid uuid").optional(),
   courseToId: z.string().uuid("courseToId must be a valid uuid").optional(),
   movementKind: z
-    .enum(["TRANSFER", "PROMOTION_BATCH", "PROMOTION_EXCEPTION"])
+    .enum(["TRANSFER", "PROMOTION_BATCH", "PROMOTION_EXCEPTION", "VOID_PROMOTION"])
     .optional(),
   limit: z.coerce.number().int().positive().max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
@@ -76,9 +76,60 @@ export const relegationMediaPathSchema = z.object({
   historyId: z.string().uuid("historyId must be a valid uuid"),
 });
 
+export const relegationVoidPromotionSchema = z
+  .object({
+    ocId: z.string().uuid("ocId must be a valid uuid"),
+    reason: z.string().trim().min(2, "reason is required").max(2000),
+    remark: optionalTrimmedText,
+    pdfObjectKey: z.string().trim().min(1).max(512).optional().nullable(),
+    pdfUrl: z.string().trim().url().max(4096).optional().nullable(),
+  })
+  .superRefine((value, ctx) => {
+    const hasObjectKey = Boolean(value.pdfObjectKey);
+    const hasUrl = Boolean(value.pdfUrl);
+
+    if (hasObjectKey !== hasUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: hasObjectKey ? ["pdfUrl"] : ["pdfObjectKey"],
+        message: "pdfObjectKey and pdfUrl must be provided together",
+      });
+    }
+  });
+
+export const relegationEnrollmentPathSchema = z.object({
+  ocId: z.string().uuid("ocId must be a valid uuid"),
+});
+
+export const relegationEnrollmentModulesQuerySchema = z.object({
+  enrollmentId: z.string().uuid("enrollmentId must be a valid uuid"),
+  module: z.enum([
+    "academics",
+    "olq",
+    "interviews",
+    "pt_scores",
+    "pt_motivation",
+    "spr",
+    "sports_games",
+    "motivation_awards",
+    "weapon_training",
+    "obstacle_training",
+    "speed_march",
+    "drill",
+    "camps",
+    "discipline",
+    "clubs",
+    "leave_hike_detention",
+    "counselling",
+    "cfe",
+  ]),
+  semester: z.coerce.number().int().min(1).max(6).optional(),
+});
+
 export type RelegationPdfPresignInput = z.infer<typeof relegationPdfPresignSchema>;
 export type RelegationTransferInput = z.infer<typeof relegationTransferSchema>;
 export type RelegationOcOptionsQueryInput = z.infer<typeof relegationOcOptionsQuerySchema>;
 export type RelegationHistoryQueryInput = z.infer<typeof relegationHistoryQuerySchema>;
 export type RelegationExceptionInput = z.infer<typeof relegationExceptionSchema>;
 export type RelegationPromoteCourseInput = z.infer<typeof relegationPromoteCourseSchema>;
+export type RelegationVoidPromotionInput = z.infer<typeof relegationVoidPromotionSchema>;

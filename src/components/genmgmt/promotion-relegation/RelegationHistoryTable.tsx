@@ -14,18 +14,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type RelegationHistoryTableProps = {
   courses: PromotionRelegationCourseOption[];
   onViewPdf: (historyId: string) => void;
+  onViewEnrollments: (ocId: string, ocName: string) => void;
+  onVoidPromotion: (ocId: string, ocNo: string) => Promise<void>;
+  voidingOcId?: string | null;
 };
 
-export default function RelegationHistoryTable({ courses, onViewPdf }: RelegationHistoryTableProps) {
+export default function RelegationHistoryTable({
+  courses,
+  onViewPdf,
+  onViewEnrollments,
+  onVoidPromotion,
+  voidingOcId,
+}: RelegationHistoryTableProps) {
   const [search, setSearch] = useState("");
   const [courseFromId, setCourseFromId] = useState("all");
   const [courseToId, setCourseToId] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<10 | 25 | 50 | 100>(25);
+  const [pendingVoidRow, setPendingVoidRow] = useState<{ ocId: string; ocNo: string } | null>(null);
   const debouncedSearch = useDebouncedValue(search, 350);
 
   const query = useRelegationHistory({
@@ -129,18 +149,19 @@ export default function RelegationHistoryTable({ courses, onViewPdf }: Relegatio
               <th className="p-2">Reason</th>
               <th className="p-2">Date</th>
               <th className="p-2">Media</th>
+              <th className="p-2">Actions</th>
             </tr>
           </thead>
           <tbody>
             {query.isLoading ? (
               <tr>
-                <td colSpan={7} className="p-4 text-center text-muted-foreground">
+                <td colSpan={8} className="p-4 text-center text-muted-foreground">
                   Loading history...
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-4 text-center text-muted-foreground">
+                <td colSpan={8} className="p-4 text-center text-muted-foreground">
                   No relegation history found.
                 </td>
               </tr>
@@ -166,6 +187,27 @@ export default function RelegationHistoryTable({ courses, onViewPdf }: Relegatio
                     ) : (
                       <span className="text-muted-foreground">N/A</span>
                     )}
+                  </td>
+                  <td className="p-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onViewEnrollments(row.ocId, row.ocName)}
+                      >
+                        Enrollments
+                      </Button>
+                      {row.movementKind === "PROMOTION_BATCH" ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setPendingVoidRow({ ocId: row.ocId, ocNo: row.ocNo })}
+                          disabled={voidingOcId === row.ocId}
+                        >
+                          {voidingOcId === row.ocId ? "Voiding..." : "Void Promotion"}
+                        </Button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -221,6 +263,31 @@ export default function RelegationHistoryTable({ courses, onViewPdf }: Relegatio
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={Boolean(pendingVoidRow)} onOpenChange={(open) => !open && setPendingVoidRow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Void Promotion</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will void the active promoted enrollment and reactivate the previous archived enrollment for OC{" "}
+              {pendingVoidRow?.ocNo}. This action is auditable.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(voidingOcId)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={Boolean(voidingOcId)}
+              onClick={async () => {
+                if (!pendingVoidRow) return;
+                await onVoidPromotion(pendingVoidRow.ocId, pendingVoidRow.ocNo);
+                setPendingVoidRow(null);
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

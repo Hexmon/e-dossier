@@ -36,6 +36,9 @@ export const endpoints = {
             transfer: "/api/v1/admin/relegation/transfer",
             exception: "/api/v1/admin/relegation/exception",
             promoteCourse: "/api/v1/admin/relegation/promote-course",
+            voidPromotion: "/api/v1/admin/relegation/void-promotion",
+            enrollments: (ocId: string) => `/api/v1/admin/relegation/enrollments/${ocId}`,
+            enrollmentModules: (ocId: string) => `/api/v1/admin/relegation/enrollments/${ocId}/modules`,
             mediaSignedUrl: (historyId: string) =>
                 `/api/v1/admin/relegation/media/${historyId}/signed-url`,
         },

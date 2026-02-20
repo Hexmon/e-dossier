@@ -262,7 +262,12 @@ export default function RelegationForm({
         <Controller
           name="ocId"
           control={control}
-          rules={{ required: "OC selection is required" }}
+          rules={{
+            validate: (value) => {
+              if (lockOcSelection && prefill?.ocId) return true;
+              return value ? true : "OC selection is required";
+            },
+          }}
           render={({ field }) => (
             <Select
               value={field.value || undefined}

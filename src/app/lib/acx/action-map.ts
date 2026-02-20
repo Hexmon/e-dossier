@@ -1146,6 +1146,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/relegation/enrollments/:ocId",
+    "action": "admin:relegation:enrollments:read",
+    "resourceType": "admin:relegation:enrollments",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/relegation/enrollments/:ocId/modules",
+    "action": "admin:relegation:enrollments:modules:read",
+    "resourceType": "admin:relegation:enrollments:modules",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/relegation/history",
     "action": "admin:relegation:history:read",
     "resourceType": "admin:relegation:history",
@@ -2922,6 +2940,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/relegation/transfer",
     "action": "admin:relegation:transfer:create",
     "resourceType": "admin:relegation:transfer",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/relegation/void-promotion",
+    "action": "admin:relegation:void-promotion:create",
+    "resourceType": "admin:relegation:void-promotion",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true

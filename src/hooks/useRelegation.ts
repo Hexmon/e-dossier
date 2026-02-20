@@ -3,11 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   relegationApi,
+  type RelegationEnrollmentModuleKey,
   type RelegationHistoryParams,
   type RelegationOcOptionsParams,
   type RelegationPdfPresignRequest,
   type RelegationPromoteCourseRequest,
   type RelegationTransferRequest,
+  type RelegationVoidPromotionRequest,
 } from "@/app/lib/api/relegationApi";
 
 export const relegationQueryKeys = {
@@ -32,6 +34,22 @@ export const relegationQueryKeys = {
       params?.movementKind ?? "all",
       params?.limit ?? 25,
       params?.offset ?? 0,
+    ] as const,
+  enrollments: (ocId: string | null) =>
+    [...relegationQueryKeys.all, "enrollments", ocId ?? "none"] as const,
+  enrollmentModules: (
+    ocId: string | null,
+    enrollmentId: string | null,
+    module: RelegationEnrollmentModuleKey | null,
+    semester?: number
+  ) =>
+    [
+      ...relegationQueryKeys.all,
+      "enrollment-modules",
+      ocId ?? "none",
+      enrollmentId ?? "none",
+      module ?? "none",
+      semester ?? "all",
     ] as const,
 };
 
@@ -105,10 +123,32 @@ export function useRelegationActions() {
     },
   });
 
+  const voidPromotionMutation = useMutation({
+    mutationFn: async (payload: RelegationVoidPromotionRequest) => relegationApi.voidPromotion(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: relegationQueryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: ["oc"] });
+    },
+  });
+
   return {
     createException: exceptionMutation.mutateAsync,
     promoteCourse: promoteCourseMutation.mutateAsync,
+    voidPromotion: voidPromotionMutation.mutateAsync,
     exceptionMutation,
     promoteCourseMutation,
+    voidPromotionMutation,
   };
+}
+
+export function useRelegationEnrollments(ocId: string | null) {
+  return useQuery({
+    queryKey: relegationQueryKeys.enrollments(ocId),
+    enabled: Boolean(ocId),
+    queryFn: async () => {
+      if (!ocId) return [];
+      const response = await relegationApi.getEnrollments(ocId);
+      return response.items ?? [];
+    },
+  });
 }

@@ -5,10 +5,12 @@ import {
     ocOlqSubtitles,
     ocOlq,
     ocOlqScores,
+    ocCourseEnrollments,
 } from '@/app/db/schema/training/oc';
 import { ApiError } from '@/app/lib/http';
 import { getCourse } from '@/app/db/queries/courses';
 import { getOcCourseInfo } from '@/app/db/queries/oc';
+import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
 
 type ListOlqCategoriesOpts = {
     courseId: string;
@@ -516,10 +518,11 @@ export async function upsertOlqHeader(
     semester: number,
     data: Partial<typeof ocOlq.$inferInsert> = {}
 ) {
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const [existing] = await db
         .select()
         .from(ocOlq)
-        .where(and(eq(ocOlq.ocId, ocId), eq(ocOlq.semester, semester)))
+        .where(and(eq(ocOlq.ocId, ocId), eq(ocOlq.enrollmentId, activeEnrollment.id), eq(ocOlq.semester, semester)))
         .limit(1);
 
     if (existing) {
@@ -533,7 +536,7 @@ export async function upsertOlqHeader(
 
     const [row] = await db
         .insert(ocOlq)
-        .values({ ocId, semester, ...data })
+        .values({ ocId, enrollmentId: activeEnrollment.id, semester, ...data })
         .returning();
     return row;
 }
@@ -562,9 +565,10 @@ export async function recomputeOlqTotal(ocOlqId: string) {
 }
 
 export async function deleteOlqHeader(ocId: string, semester: number) {
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const [row] = await db
         .delete(ocOlq)
-        .where(and(eq(ocOlq.ocId, ocId), eq(ocOlq.semester, semester)))
+        .where(and(eq(ocOlq.ocId, ocId), eq(ocOlq.enrollmentId, activeEnrollment.id), eq(ocOlq.semester, semester)))
         .returning();
     return row ?? null;
 }
@@ -615,19 +619,22 @@ export async function getOlqSheet(opts: {
     includeCategories?: boolean;
     categoryId?: string;
     subtitleId?: string;
+    enrollmentId?: string;
 }) {
     const { ocId, semester, includeCategories = true, categoryId, subtitleId } = opts;
+    const enrollmentId = opts.enrollmentId ?? (await getOrCreateActiveEnrollment(ocId)).id;
 
     const [header] = await db
         .select({
             id: ocOlq.id,
             ocId: ocOlq.ocId,
+            enrollmentId: ocOlq.enrollmentId,
             semester: ocOlq.semester,
             totalMarks: ocOlq.totalMarks,
             remarks: ocOlq.remarks,
         })
         .from(ocOlq)
-        .where(and(eq(ocOlq.ocId, ocId), eq(ocOlq.semester, semester)))
+        .where(and(eq(ocOlq.ocId, ocId), eq(ocOlq.enrollmentId, enrollmentId), eq(ocOlq.semester, semester)))
         .limit(1);
 
     if (!header) return null;
@@ -661,6 +668,7 @@ export async function getOlqSheet(opts: {
     return {
         id: header.id,
         ocId: header.ocId,
+        enrollmentId: header.enrollmentId,
         semester: header.semester,
         totalMarks: header.totalMarks ?? scoreRows.reduce((acc, r) => acc + (r.marksScored ?? 0), 0),
         remarks: header.remarks,
@@ -678,6 +686,7 @@ export async function getOlqById(id: string, includeCategories = true) {
     if (!header) return null;
     return getOlqSheet({
         ocId: header.ocId,
+        enrollmentId: header.enrollmentId ?? undefined,
         semester: header.semester,
         includeCategories,
     });
@@ -758,7 +767,7 @@ export async function listOlqBySemester(opts: {
     categoryId?: string;
     subtitleId?: string;
 }) {
-    const wh: any[] = [eq(ocOlq.semester, opts.semester)];
+    const wh: any[] = [eq(ocOlq.semester, opts.semester), eq(ocCourseEnrollments.status, "ACTIVE")];
     if (opts.ocId) wh.push(eq(ocOlq.ocId, opts.ocId));
 
     if (!opts.categoryId && !opts.subtitleId) {
@@ -771,6 +780,7 @@ export async function listOlqBySemester(opts: {
                 remarks: ocOlq.remarks,
             })
             .from(ocOlq)
+            .innerJoin(ocCourseEnrollments, eq(ocCourseEnrollments.id, ocOlq.enrollmentId))
             .where(and(...wh));
         return rows;
     }
@@ -791,6 +801,7 @@ export async function listOlqBySemester(opts: {
             remarks: ocOlq.remarks,
         })
         .from(ocOlq)
+        .innerJoin(ocCourseEnrollments, eq(ocCourseEnrollments.id, ocOlq.enrollmentId))
         .innerJoin(ocOlqScores, eq(ocOlqScores.ocOlqId, ocOlq.id))
         .innerJoin(ocOlqSubtitles, eq(ocOlqSubtitles.id, ocOlqScores.subtitleId))
         .where(and(...wh))

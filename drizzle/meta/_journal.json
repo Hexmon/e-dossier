@@ -134,6 +134,13 @@
       "when": 1771554107329,
       "tag": "0018_furry_krista_starr",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1771557975925,
+      "tag": "0019_same_meteorite",
+      "breakpoints": true
     }
   ]
 }
