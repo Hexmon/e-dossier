@@ -278,7 +278,7 @@ export default function DisciplineTable({
             condition: (row) => editingId === row.id,
             handler: () => saveEdit()
         }
-    ], [editingId, onDelete]);
+    ], [editingId, editForm, onDelete]);
 
     const config: TableConfig<HookRow> = useMemo(() => ({
         columns,
