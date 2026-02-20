@@ -1,20 +1,23 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
+import { OcIdParam } from '@/app/lib/oc-validators';
 import {
-    olqSubtitleCreateSchema,
     olqSubtitleQuerySchema,
 } from '@/app/lib/olq-validators';
 import {
-    createOlqSubtitle,
-    listOlqSubtitles,
+    getCourseTemplateSubtitles,
 } from '@/app/db/queries/olq';
+import { getOcCourseInfo } from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await requireAuth(req);
-        const { ocId } = await params;
+        const authCtx = await mustBeAuthed(req);
+        const { ocId } = await parseParam({ params }, OcIdParam);
+        await ensureOcExists(ocId);
+        const courseInfo = await getOcCourseInfo(ocId);
+        if (!courseInfo) return json.notFound('OC not found');
 
         const sp = new URL(req.url).searchParams;
         const qp = olqSubtitleQuerySchema.parse({
@@ -22,9 +25,11 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             isActive: sp.get('isActive') ?? undefined,
         });
 
-        const items = await listOlqSubtitles({
+        const items = await getCourseTemplateSubtitles({
+            courseId: courseInfo.courseId,
             categoryId: qp.categoryId,
             isActive: qp.isActive,
+            fallbackToLegacyGlobal: true,
         });
 
         await req.audit.log({
@@ -50,17 +55,9 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
-        const { ocId } = await params;
-
-        const dto = olqSubtitleCreateSchema.parse(await req.json());
-        const row = await createOlqSubtitle({
-            categoryId: dto.categoryId,
-            subtitle: dto.subtitle.trim(),
-            maxMarks: dto.maxMarks ?? 20,
-            displayOrder: dto.displayOrder ?? 0,
-            isActive: dto.isActive ?? true,
-        });
+        const adminCtx = await mustBeAuthed(req);
+        const { ocId } = await parseParam({ params }, OcIdParam);
+        await ensureOcExists(ocId);
 
         await req.audit.log({
             action: AuditEventType.OC_RECORD_CREATED,
@@ -68,13 +65,12 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
             actor: { type: 'user', id: adminCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
-                description: `Created OLQ subtitle ${row.id}`,
+                description: 'Blocked OC-side OLQ subtitle write attempt.',
                 module: 'olq_subtitles',
-                subtitleId: row.id,
-                categoryId: dto.categoryId,
+                blocked: true,
             },
         });
-        return json.created({ message: 'OLQ subtitle created successfully.', subtitle: row });
+        return json.forbidden('OLQ template updates are admin-only. Use /api/v1/admin/olq/... endpoints.');
     } catch (err) {
         return handleApiError(err);
     }

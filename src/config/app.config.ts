@@ -407,6 +407,13 @@ export const moduleManagementCard: ManagementCardConfig[] = [
     icon: Dumbbell,
     to: "/dashboard/genmgmt/pt-mgmt",
     color: "success"
+  },
+  {
+    title: "OLQ Management",
+    description: "Create, update, and copy OLQ templates across courses",
+    icon: ClipboardList,
+    to: "/dashboard/genmgmt/olq-mgmt",
+    color: "info"
   }
 
 
@@ -1343,6 +1350,12 @@ export const academicsTabs = [
 ];
 
 export const moduleManagementTabs = [
+  {
+    value: "olq-mgmt",
+    title: "OLQ Management",
+    icon: ClipboardList,
+    link: "/dashboard/genmgmt/olq-mgmt",
+  },
   {
     value: "relegation",
     title: "Relegation Management",

@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@/app/db/client';
 import {
     ocOlqCategories,
@@ -7,15 +7,86 @@ import {
     ocOlqScores,
 } from '@/app/db/schema/training/oc';
 import { ApiError } from '@/app/lib/http';
+import { getCourse } from '@/app/db/queries/courses';
+import { getOcCourseInfo } from '@/app/db/queries/oc';
 
-// --- Categories -------------------------------------------------------------
-export async function listOlqCategories(opts: { includeSubtitles?: boolean; isActive?: boolean } = {}) {
-    const wh: any[] = [];
+type ListOlqCategoriesOpts = {
+    courseId: string;
+    includeSubtitles?: boolean;
+    isActive?: boolean;
+    fallbackToLegacyGlobal?: boolean;
+};
+
+type ListOlqSubtitlesOpts = {
+    courseId: string;
+    categoryId?: string;
+    isActive?: boolean;
+    fallbackToLegacyGlobal?: boolean;
+};
+
+async function ensureCourseExists(courseId: string) {
+    const course = await getCourse(courseId);
+    if (!course) throw new ApiError(404, 'Course not found', 'not_found');
+    return course;
+}
+
+function ensureMarksWithinBounds(marksScored: number, maxMarks: number) {
+    if (marksScored > maxMarks) {
+        throw new ApiError(400, 'marksScored cannot exceed maxMarks', 'bad_request', {
+            marksScored,
+            maxMarks,
+        });
+    }
+    if (marksScored < 0) {
+        throw new ApiError(400, 'marksScored cannot be negative', 'bad_request');
+    }
+}
+
+function mapCategoriesWithSubtitles(
+    categories: Array<{
+        id: string;
+        courseId: string | null;
+        code: string;
+        title: string;
+        description: string | null;
+        displayOrder: number;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>,
+    subtitles: Array<{
+        id: string;
+        categoryId: string;
+        subtitle: string;
+        maxMarks: number;
+        displayOrder: number;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>
+) {
+    const grouped = subtitles.reduce<Record<string, typeof subtitles>>((acc, s) => {
+        (acc[s.categoryId] ||= []).push(s);
+        return acc;
+    }, {});
+
+    return categories.map((c) => ({
+        ...c,
+        subtitles: grouped[c.id] ?? [],
+    }));
+}
+
+async function listCategoriesByCourse(
+    courseId: string | null,
+    opts: { includeSubtitles?: boolean; isActive?: boolean } = {}
+) {
+    const wh: any[] = [courseId === null ? isNull(ocOlqCategories.courseId) : eq(ocOlqCategories.courseId, courseId)];
     if (opts.isActive !== undefined) wh.push(eq(ocOlqCategories.isActive, opts.isActive));
 
     const categories = await db
         .select({
             id: ocOlqCategories.id,
+            courseId: ocOlqCategories.courseId,
             code: ocOlqCategories.code,
             title: ocOlqCategories.title,
             description: ocOlqCategories.description,
@@ -25,7 +96,7 @@ export async function listOlqCategories(opts: { includeSubtitles?: boolean; isAc
             updatedAt: ocOlqCategories.updatedAt,
         })
         .from(ocOlqCategories)
-        .where(wh.length ? and(...wh) : undefined)
+        .where(and(...wh))
         .orderBy(ocOlqCategories.displayOrder, ocOlqCategories.title);
 
     if (!opts.includeSubtitles || !categories.length) {
@@ -48,36 +119,83 @@ export async function listOlqCategories(opts: { includeSubtitles?: boolean; isAc
         .where(inArray(ocOlqSubtitles.categoryId, categoryIds))
         .orderBy(ocOlqSubtitles.displayOrder, ocOlqSubtitles.subtitle);
 
-    const grouped = subtitles.reduce<Record<string, typeof subtitles>>((acc, s) => {
-        (acc[s.categoryId] ||= []).push(s);
-        return acc;
-    }, {});
-
-    return categories.map((c) => ({
-        ...c,
-        subtitles: grouped[c.id] ?? [],
-    }));
+    return mapCategoriesWithSubtitles(categories, subtitles);
 }
 
-export async function getOlqCategory(id: string, includeSubtitles = false) {
+export async function ensureCategoryBelongsToCourse(categoryId: string, courseId: string) {
     const [row] = await db
-        .select()
+        .select({
+            id: ocOlqCategories.id,
+            courseId: ocOlqCategories.courseId,
+            code: ocOlqCategories.code,
+            title: ocOlqCategories.title,
+            description: ocOlqCategories.description,
+            displayOrder: ocOlqCategories.displayOrder,
+            isActive: ocOlqCategories.isActive,
+            createdAt: ocOlqCategories.createdAt,
+            updatedAt: ocOlqCategories.updatedAt,
+        })
         .from(ocOlqCategories)
-        .where(eq(ocOlqCategories.id, id))
+        .where(and(eq(ocOlqCategories.id, categoryId), eq(ocOlqCategories.courseId, courseId)))
         .limit(1);
-    if (!row) return null;
-    const base = {
-        id: row.id,
-        code: row.code,
-        title: row.title,
-        description: row.description,
-        displayOrder: row.displayOrder,
-        isActive: row.isActive,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-    };
-    if (!includeSubtitles) return base;
-    const subs = await db
+
+    if (!row) throw new ApiError(404, 'OLQ category not found for this course', 'not_found');
+    return row;
+}
+
+export async function ensureSubtitleBelongsToCourseAndActive(subtitleId: string, courseId: string) {
+    const [row] = await db
+        .select({
+            id: ocOlqSubtitles.id,
+            maxMarks: ocOlqSubtitles.maxMarks,
+            subtitleIsActive: ocOlqSubtitles.isActive,
+            categoryId: ocOlqCategories.id,
+            courseId: ocOlqCategories.courseId,
+            categoryIsActive: ocOlqCategories.isActive,
+        })
+        .from(ocOlqSubtitles)
+        .innerJoin(ocOlqCategories, eq(ocOlqCategories.id, ocOlqSubtitles.categoryId))
+        .where(and(eq(ocOlqSubtitles.id, subtitleId), eq(ocOlqCategories.courseId, courseId)))
+        .limit(1);
+
+    if (!row) {
+        throw new ApiError(400, 'Subtitle does not belong to OC course template', 'bad_request');
+    }
+    if (!row.subtitleIsActive || !row.categoryIsActive) {
+        throw new ApiError(400, 'Subtitle is inactive in current course template', 'bad_request');
+    }
+
+    return row;
+}
+
+// --- Categories -------------------------------------------------------------
+export async function getCourseTemplateCategories(opts: ListOlqCategoriesOpts) {
+    await ensureCourseExists(opts.courseId);
+    const items = await listCategoriesByCourse(opts.courseId, {
+        includeSubtitles: opts.includeSubtitles ?? false,
+        isActive: opts.isActive,
+    });
+
+    if (items.length || !opts.fallbackToLegacyGlobal) {
+        return items;
+    }
+
+    return listCategoriesByCourse(null, {
+        includeSubtitles: opts.includeSubtitles ?? false,
+        isActive: opts.isActive,
+    });
+}
+
+export async function listOlqCategories(opts: ListOlqCategoriesOpts) {
+    return getCourseTemplateCategories(opts);
+}
+
+export async function getOlqCategory(courseId: string, id: string, includeSubtitles = false) {
+    await ensureCourseExists(courseId);
+    const row = await ensureCategoryBelongsToCourse(id, courseId);
+    if (!includeSubtitles) return row;
+
+    const subtitles = await db
         .select({
             id: ocOlqSubtitles.id,
             categoryId: ocOlqSubtitles.categoryId,
@@ -91,54 +209,100 @@ export async function getOlqCategory(id: string, includeSubtitles = false) {
         .from(ocOlqSubtitles)
         .where(eq(ocOlqSubtitles.categoryId, id))
         .orderBy(ocOlqSubtitles.displayOrder, ocOlqSubtitles.subtitle);
-    return { ...base, subtitles: subs };
+
+    return { ...row, subtitles };
 }
 
-export async function createOlqCategory(data: typeof ocOlqCategories.$inferInsert) {
+export async function createOlqCategory(courseId: string, data: Omit<typeof ocOlqCategories.$inferInsert, 'courseId'>) {
+    await ensureCourseExists(courseId);
     const now = new Date();
     const [row] = await db
         .insert(ocOlqCategories)
-        .values({ ...data, createdAt: now, updatedAt: now })
+        .values({ ...data, courseId, createdAt: now, updatedAt: now })
         .returning();
     return row;
 }
 
-export async function updateOlqCategory(id: string, data: Partial<typeof ocOlqCategories.$inferInsert>) {
+export async function updateOlqCategory(courseId: string, id: string, data: Partial<typeof ocOlqCategories.$inferInsert>) {
+    await ensureCourseExists(courseId);
+    await ensureCategoryBelongsToCourse(id, courseId);
+
+    const patch = { ...data };
+    delete (patch as any).courseId;
+
     const [row] = await db
         .update(ocOlqCategories)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(ocOlqCategories.id, id))
+        .set({ ...patch, updatedAt: new Date() })
+        .where(and(eq(ocOlqCategories.id, id), eq(ocOlqCategories.courseId, courseId)))
         .returning();
     return row ?? null;
 }
 
-export async function deleteOlqCategory(id: string, opts: { hard?: boolean } = {}) {
+export async function deleteOlqCategory(courseId: string, id: string, opts: { hard?: boolean } = {}) {
+    await ensureCourseExists(courseId);
+    await ensureCategoryBelongsToCourse(id, courseId);
+
     if (opts.hard) {
-        const [row] = await db.delete(ocOlqCategories).where(eq(ocOlqCategories.id, id)).returning();
+        const [row] = await db
+            .delete(ocOlqCategories)
+            .where(and(eq(ocOlqCategories.id, id), eq(ocOlqCategories.courseId, courseId)))
+            .returning();
         return row ?? null;
     }
+
     const [row] = await db
         .update(ocOlqCategories)
         .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(ocOlqCategories.id, id))
+        .where(and(eq(ocOlqCategories.id, id), eq(ocOlqCategories.courseId, courseId)))
         .returning();
     return row ?? null;
 }
 
 // --- Subtitles --------------------------------------------------------------
-async function ensureCategoryExists(categoryId: string) {
-    const [row] = await db
+export async function getCourseTemplateSubtitles(opts: ListOlqSubtitlesOpts) {
+    await ensureCourseExists(opts.courseId);
+    const categoryWh: any[] = [eq(ocOlqCategories.courseId, opts.courseId)];
+    if (opts.isActive !== undefined) categoryWh.push(eq(ocOlqCategories.isActive, opts.isActive));
+    if (opts.categoryId) categoryWh.push(eq(ocOlqCategories.id, opts.categoryId));
+
+    const categories = await db
         .select({ id: ocOlqCategories.id })
         .from(ocOlqCategories)
-        .where(eq(ocOlqCategories.id, categoryId))
-        .limit(1);
-    if (!row) throw new ApiError(404, 'OLQ category not found', 'not_found');
-}
+        .where(and(...categoryWh));
 
-export async function listOlqSubtitles(opts: { categoryId?: string; isActive?: boolean } = {}) {
-    const wh: any[] = [];
-    if (opts.categoryId) wh.push(eq(ocOlqSubtitles.categoryId, opts.categoryId));
-    if (opts.isActive !== undefined) wh.push(eq(ocOlqSubtitles.isActive, opts.isActive));
+    if (!categories.length && opts.fallbackToLegacyGlobal) {
+        const fallbackCategoryWh: any[] = [isNull(ocOlqCategories.courseId)];
+        if (opts.isActive !== undefined) fallbackCategoryWh.push(eq(ocOlqCategories.isActive, opts.isActive));
+        if (opts.categoryId) fallbackCategoryWh.push(eq(ocOlqCategories.id, opts.categoryId));
+        const fallbackCategories = await db
+            .select({ id: ocOlqCategories.id })
+            .from(ocOlqCategories)
+            .where(and(...fallbackCategoryWh));
+
+        if (!fallbackCategories.length) return [];
+        const fallbackCategoryIds = fallbackCategories.map((c) => c.id);
+        const subtitleWh: any[] = [inArray(ocOlqSubtitles.categoryId, fallbackCategoryIds)];
+        if (opts.isActive !== undefined) subtitleWh.push(eq(ocOlqSubtitles.isActive, opts.isActive));
+        return db
+            .select({
+                id: ocOlqSubtitles.id,
+                categoryId: ocOlqSubtitles.categoryId,
+                subtitle: ocOlqSubtitles.subtitle,
+                maxMarks: ocOlqSubtitles.maxMarks,
+                displayOrder: ocOlqSubtitles.displayOrder,
+                isActive: ocOlqSubtitles.isActive,
+                createdAt: ocOlqSubtitles.createdAt,
+                updatedAt: ocOlqSubtitles.updatedAt,
+            })
+            .from(ocOlqSubtitles)
+            .where(and(...subtitleWh))
+            .orderBy(ocOlqSubtitles.displayOrder, ocOlqSubtitles.subtitle);
+    }
+
+    if (!categories.length) return [];
+    const categoryIds = categories.map((c) => c.id);
+    const subtitleWh: any[] = [inArray(ocOlqSubtitles.categoryId, categoryIds)];
+    if (opts.isActive !== undefined) subtitleWh.push(eq(ocOlqSubtitles.isActive, opts.isActive));
 
     return db
         .select({
@@ -152,21 +316,37 @@ export async function listOlqSubtitles(opts: { categoryId?: string; isActive?: b
             updatedAt: ocOlqSubtitles.updatedAt,
         })
         .from(ocOlqSubtitles)
-        .where(wh.length ? and(...wh) : undefined)
+        .where(and(...subtitleWh))
         .orderBy(ocOlqSubtitles.displayOrder, ocOlqSubtitles.subtitle);
 }
 
-export async function getOlqSubtitle(id: string) {
+export async function listOlqSubtitles(opts: ListOlqSubtitlesOpts) {
+    return getCourseTemplateSubtitles(opts);
+}
+
+export async function getOlqSubtitle(courseId: string, id: string) {
+    await ensureCourseExists(courseId);
     const [row] = await db
-        .select()
+        .select({
+            id: ocOlqSubtitles.id,
+            categoryId: ocOlqSubtitles.categoryId,
+            subtitle: ocOlqSubtitles.subtitle,
+            maxMarks: ocOlqSubtitles.maxMarks,
+            displayOrder: ocOlqSubtitles.displayOrder,
+            isActive: ocOlqSubtitles.isActive,
+            createdAt: ocOlqSubtitles.createdAt,
+            updatedAt: ocOlqSubtitles.updatedAt,
+        })
         .from(ocOlqSubtitles)
-        .where(eq(ocOlqSubtitles.id, id))
+        .innerJoin(ocOlqCategories, eq(ocOlqCategories.id, ocOlqSubtitles.categoryId))
+        .where(and(eq(ocOlqSubtitles.id, id), eq(ocOlqCategories.courseId, courseId)))
         .limit(1);
     return row ?? null;
 }
 
-export async function createOlqSubtitle(data: typeof ocOlqSubtitles.$inferInsert) {
-    await ensureCategoryExists(data.categoryId);
+export async function createOlqSubtitle(courseId: string, data: Omit<typeof ocOlqSubtitles.$inferInsert, 'categoryId'> & { categoryId: string }) {
+    await ensureCourseExists(courseId);
+    await ensureCategoryBelongsToCourse(data.categoryId, courseId);
     const now = new Date();
     const [row] = await db
         .insert(ocOlqSubtitles)
@@ -175,8 +355,12 @@ export async function createOlqSubtitle(data: typeof ocOlqSubtitles.$inferInsert
     return row;
 }
 
-export async function updateOlqSubtitle(id: string, data: Partial<typeof ocOlqSubtitles.$inferInsert>) {
-    if (data.categoryId) await ensureCategoryExists(data.categoryId);
+export async function updateOlqSubtitle(courseId: string, id: string, data: Partial<typeof ocOlqSubtitles.$inferInsert>) {
+    await ensureCourseExists(courseId);
+    const existing = await getOlqSubtitle(courseId, id);
+    if (!existing) return null;
+    if (data.categoryId) await ensureCategoryBelongsToCourse(data.categoryId, courseId);
+
     const [row] = await db
         .update(ocOlqSubtitles)
         .set({ ...data, updatedAt: new Date() })
@@ -185,7 +369,11 @@ export async function updateOlqSubtitle(id: string, data: Partial<typeof ocOlqSu
     return row ?? null;
 }
 
-export async function deleteOlqSubtitle(id: string, opts: { hard?: boolean } = {}) {
+export async function deleteOlqSubtitle(courseId: string, id: string, opts: { hard?: boolean } = {}) {
+    await ensureCourseExists(courseId);
+    const existing = await getOlqSubtitle(courseId, id);
+    if (!existing) return null;
+
     if (opts.hard) {
         const [row] = await db.delete(ocOlqSubtitles).where(eq(ocOlqSubtitles.id, id)).returning();
         return row ?? null;
@@ -198,19 +386,129 @@ export async function deleteOlqSubtitle(id: string, opts: { hard?: boolean } = {
     return row ?? null;
 }
 
+export async function copyOlqTemplateToCourse(input: {
+    sourceCourseId: string;
+    targetCourseId: string;
+    mode: 'replace';
+}) {
+    if (input.mode !== 'replace') {
+        throw new ApiError(400, 'Only replace mode is supported', 'bad_request');
+    }
+    if (input.sourceCourseId === input.targetCourseId) {
+        throw new ApiError(400, 'sourceCourseId and targetCourseId cannot be the same', 'bad_request');
+    }
+
+    await ensureCourseExists(input.sourceCourseId);
+    await ensureCourseExists(input.targetCourseId);
+
+    const sourceCategories = await listOlqCategories({
+        courseId: input.sourceCourseId,
+        includeSubtitles: true,
+        isActive: true,
+    });
+
+    return db.transaction(async (tx) => {
+        const targetActiveCategories = await tx
+            .select({ id: ocOlqCategories.id })
+            .from(ocOlqCategories)
+            .where(and(eq(ocOlqCategories.courseId, input.targetCourseId), eq(ocOlqCategories.isActive, true)));
+
+        const targetCategoryIds = targetActiveCategories.map((c) => c.id);
+        if (targetCategoryIds.length) {
+            await tx
+                .update(ocOlqSubtitles)
+                .set({ isActive: false, updatedAt: new Date() })
+                .where(and(inArray(ocOlqSubtitles.categoryId, targetCategoryIds), eq(ocOlqSubtitles.isActive, true)));
+        }
+
+        await tx
+            .update(ocOlqCategories)
+            .set({ isActive: false, updatedAt: new Date() })
+            .where(and(eq(ocOlqCategories.courseId, input.targetCourseId), eq(ocOlqCategories.isActive, true)));
+
+        let categoriesCopied = 0;
+        let subtitlesCopied = 0;
+
+        for (const category of sourceCategories) {
+            const [createdCategory] = await tx
+                .insert(ocOlqCategories)
+                .values({
+                    courseId: input.targetCourseId,
+                    code: category.code,
+                    title: category.title,
+                    description: category.description ?? null,
+                    displayOrder: category.displayOrder ?? 0,
+                    isActive: true,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                })
+                .returning({ id: ocOlqCategories.id });
+            categoriesCopied += 1;
+
+            for (const subtitle of category.subtitles ?? []) {
+                await tx
+                    .insert(ocOlqSubtitles)
+                    .values({
+                        categoryId: createdCategory.id,
+                        subtitle: subtitle.subtitle,
+                        maxMarks: subtitle.maxMarks ?? 20,
+                        displayOrder: subtitle.displayOrder ?? 0,
+                        isActive: true,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    });
+                subtitlesCopied += 1;
+            }
+        }
+
+        return {
+            targetCourseId: input.targetCourseId,
+            sourceCourseId: input.sourceCourseId,
+            categoriesCopied,
+            subtitlesCopied,
+            mode: input.mode,
+        };
+    });
+}
+
 // --- OLQ headers & scores ---------------------------------------------------
-async function ensureSubtitle(subtitleId: string) {
-    const [sub] = await db
+async function upsertOlqScore(
+    ocOlqId: string,
+    subtitleId: string,
+    marksScored: number
+) {
+    const [subtitle] = await db
         .select({
             id: ocOlqSubtitles.id,
             maxMarks: ocOlqSubtitles.maxMarks,
-            isActive: ocOlqSubtitles.isActive,
         })
         .from(ocOlqSubtitles)
         .where(eq(ocOlqSubtitles.id, subtitleId))
         .limit(1);
-    if (!sub) throw new ApiError(404, 'OLQ subtitle not found', 'not_found');
-    return sub;
+    if (!subtitle) throw new ApiError(404, 'OLQ subtitle not found', 'not_found');
+
+    ensureMarksWithinBounds(marksScored, subtitle.maxMarks);
+
+    const [existing] = await db
+        .select()
+        .from(ocOlqScores)
+        .where(and(eq(ocOlqScores.ocOlqId, ocOlqId), eq(ocOlqScores.subtitleId, subtitleId)))
+        .limit(1);
+
+    if (existing) {
+        const [row] = await db
+            .update(ocOlqScores)
+            .set({ marksScored })
+            .where(eq(ocOlqScores.id, existing.id))
+            .returning();
+        return row;
+    }
+
+    const [row] = await db
+        .insert(ocOlqScores)
+        .values({ ocOlqId, subtitleId, marksScored })
+        .returning();
+    return row;
 }
 
 export async function upsertOlqHeader(
@@ -236,44 +534,6 @@ export async function upsertOlqHeader(
     const [row] = await db
         .insert(ocOlq)
         .values({ ocId, semester, ...data })
-        .returning();
-    return row;
-}
-
-export async function upsertOlqScore(
-    ocOlqId: string,
-    subtitleId: string,
-    marksScored: number
-) {
-    const subtitle = await ensureSubtitle(subtitleId);
-    if (marksScored > subtitle.maxMarks) {
-        throw new ApiError(400, 'marksScored cannot exceed maxMarks', 'bad_request', {
-            marksScored,
-            maxMarks: subtitle.maxMarks,
-        });
-    }
-    if (marksScored < 0) {
-        throw new ApiError(400, 'marksScored cannot be negative', 'bad_request');
-    }
-
-    const [existing] = await db
-        .select()
-        .from(ocOlqScores)
-        .where(and(eq(ocOlqScores.ocOlqId, ocOlqId), eq(ocOlqScores.subtitleId, subtitleId)))
-        .limit(1);
-
-    if (existing) {
-        const [row] = await db
-            .update(ocOlqScores)
-            .set({ marksScored, })
-            .where(eq(ocOlqScores.id, existing.id))
-            .returning();
-        return row;
-    }
-
-    const [row] = await db
-        .insert(ocOlqScores)
-        .values({ ocOlqId, subtitleId, marksScored })
         .returning();
     return row;
 }
@@ -441,12 +701,17 @@ export async function upsertOlqWithScores(input: {
     remarks?: string | null;
     scores?: Array<{ subtitleId: string; marksScored: number }>;
 }) {
+    const courseInfo = await getOcCourseInfo(input.ocId);
+    if (!courseInfo) throw new ApiError(404, 'OC not found', 'not_found');
+
     const header = await upsertOlqHeader(input.ocId, input.semester, {
         remarks: input.remarks ?? null,
     });
 
     if (input.scores?.length) {
         for (const score of input.scores) {
+            const subtitle = await ensureSubtitleBelongsToCourseAndActive(score.subtitleId, courseInfo.courseId);
+            ensureMarksWithinBounds(score.marksScored, subtitle.maxMarks);
             await upsertOlqScore(header.id, score.subtitleId, score.marksScored);
         }
     }
@@ -462,12 +727,17 @@ export async function updateOlqWithScores(input: {
     scores?: Array<{ subtitleId: string; marksScored: number }>;
     deleteSubtitleIds?: string[];
 }) {
+    const courseInfo = await getOcCourseInfo(input.ocId);
+    if (!courseInfo) throw new ApiError(404, 'OC not found', 'not_found');
+
     const header = await upsertOlqHeader(input.ocId, input.semester, {
         remarks: input.remarks ?? null,
     });
 
     if (input.scores?.length) {
         for (const score of input.scores) {
+            const subtitle = await ensureSubtitleBelongsToCourseAndActive(score.subtitleId, courseInfo.courseId);
+            ensureMarksWithinBounds(score.marksScored, subtitle.maxMarks);
             await upsertOlqScore(header.id, score.subtitleId, score.marksScored);
         }
     }

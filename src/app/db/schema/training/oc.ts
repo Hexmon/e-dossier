@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, text, integer, boolean, numeric, date, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, text, integer, boolean, numeric, date, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { branchKind, ocStatusKind, commModeKind, ssbPointKind, delegationKind, termKind } from './enums';
 import { courses } from './courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -557,6 +557,7 @@ export const ocDrill = pgTable('oc_drill', {
 // ---------------------------------------------------------------------------
 export const ocOlqCategories = pgTable('oc_olq_category', {
     id: uuid('id').primaryKey().defaultRandom(),
+    courseId: uuid('course_id').references(() => courses.id, { onDelete: 'restrict' }),
     code: varchar('code', { length: 50 }).notNull(),
     title: varchar('title', { length: 255 }).notNull(),
     description: text('description'),
@@ -565,7 +566,11 @@ export const ocOlqCategories = pgTable('oc_olq_category', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
-    uqCategoryCode: uniqueIndex('uq_olq_category_code').on(t.code),
+    uqCategoryCodePerCourseActive: uniqueIndex('uq_olq_category_course_code_active')
+        .on(t.courseId, t.code)
+        .where(sql`${t.isActive} = true`),
+    idxCourseActiveOrder: index('idx_olq_category_course_active_order')
+        .on(t.courseId, t.isActive, t.displayOrder),
 }));
 
 export const ocOlqSubtitles = pgTable('oc_olq_subtitle', {

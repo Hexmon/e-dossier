@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
-import { olqSubtitleUpdateSchema } from '@/app/lib/olq-validators';
-import { getOlqSubtitle, updateOlqSubtitle, deleteOlqSubtitle } from '@/app/db/queries/olq';
+import { mustBeAuthed, parseParam, ensureOcExists } from '../../../../_checks';
+import { OcIdParam } from '@/app/lib/oc-validators';
+import { getOlqSubtitle } from '@/app/db/queries/olq';
+import { getOcCourseInfo } from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -10,16 +11,20 @@ const SubtitleIdParam = z.object({ subtitleId: z.string().uuid() });
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await requireAuth(req);
+        const authCtx = await mustBeAuthed(req);
+        const { ocId } = await parseParam({ params }, OcIdParam);
+        await ensureOcExists(ocId);
+        const courseInfo = await getOcCourseInfo(ocId);
+        if (!courseInfo) throw new ApiError(404, 'OC not found', 'not_found');
         const parsed = SubtitleIdParam.parse(await params);
-        const row = await getOlqSubtitle(parsed.subtitleId);
+        const row = await getOlqSubtitle(courseInfo.courseId, parsed.subtitleId);
         if (!row) throw new ApiError(404, 'Subtitle not found', 'not_found');
 
         await req.audit.log({
             action: AuditEventType.API_REQUEST,
             outcome: 'SUCCESS',
             actor: { type: 'user', id: authCtx.userId },
-            target: { type: AuditResourceType.OC, id: (await params).ocId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
                 description: `OLQ subtitle ${parsed.subtitleId} retrieved successfully.`,
                 module: 'olq_subtitles',
@@ -35,25 +40,24 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const adminCtx = await mustBeAuthed(req);
+        const { ocId } = await parseParam({ params }, OcIdParam);
+        await ensureOcExists(ocId);
         const parsed = SubtitleIdParam.parse(await params);
-        const dto = olqSubtitleUpdateSchema.parse(await req.json());
-        const row = await updateOlqSubtitle(parsed.subtitleId, { ...dto });
-        if (!row) throw new ApiError(404, 'Subtitle not found', 'not_found');
 
         await req.audit.log({
             action: AuditEventType.OC_RECORD_UPDATED,
             outcome: 'SUCCESS',
             actor: { type: 'user', id: adminCtx.userId },
-            target: { type: AuditResourceType.OC, id: (await params).ocId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
-                description: `Updated OLQ subtitle ${parsed.subtitleId}`,
+                description: `Blocked OC-side OLQ subtitle update ${parsed.subtitleId}`,
                 module: 'olq_subtitles',
                 subtitleId: parsed.subtitleId,
-                changes: Object.keys(dto),
+                blocked: true,
             },
         });
-        return json.ok({ message: 'OLQ subtitle updated successfully.', subtitle: row });
+        return json.forbidden('OLQ template updates are admin-only. Use /api/v1/admin/olq/... endpoints.');
     } catch (err) {
         return handleApiError(err);
     }
@@ -61,25 +65,24 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const adminCtx = await mustBeAuthed(req);
+        const { ocId } = await parseParam({ params }, OcIdParam);
+        await ensureOcExists(ocId);
         const parsed = SubtitleIdParam.parse(await params);
-        const body = (await req.json().catch(() => ({}))) as { hard?: boolean };
-        const row = await deleteOlqSubtitle(parsed.subtitleId, { hard: body?.hard === true });
-        if (!row) throw new ApiError(404, 'Subtitle not found', 'not_found');
 
         await req.audit.log({
             action: AuditEventType.OC_RECORD_DELETED,
             outcome: 'SUCCESS',
             actor: { type: 'user', id: adminCtx.userId },
-            target: { type: AuditResourceType.OC, id: (await params).ocId },
+            target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
-                description: `Deleted OLQ subtitle ${parsed.subtitleId}`,
+                description: `Blocked OC-side OLQ subtitle delete ${parsed.subtitleId}`,
                 module: 'olq_subtitles',
                 subtitleId: parsed.subtitleId,
-                hardDeleted: body?.hard === true,
+                blocked: true,
             },
         });
-        return json.ok({ message: 'OLQ subtitle deleted successfully.', deleted: row.id, hardDeleted: body?.hard === true });
+        return json.forbidden('OLQ template updates are admin-only. Use /api/v1/admin/olq/... endpoints.');
     } catch (err) {
         return handleApiError(err);
     }

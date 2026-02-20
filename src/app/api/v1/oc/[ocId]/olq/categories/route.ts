@@ -1,20 +1,23 @@
-import { json, handleApiError } from '@/app/lib/http';
-import { mustBeAuthed } from '../../../_checks';
+import { json, handleApiError, ApiError } from '@/app/lib/http';
+import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
+import { OcIdParam } from '@/app/lib/oc-validators';
 import {
-    olqCategoryCreateSchema,
     olqCategoryQuerySchema,
 } from '@/app/lib/olq-validators';
 import {
-    createOlqCategory,
-    listOlqCategories,
+    getCourseTemplateCategories,
 } from '@/app/db/queries/olq';
+import { getOcCourseInfo } from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
-        const { ocId } = await params;
+        const { ocId } = await parseParam({ params }, OcIdParam);
+        await ensureOcExists(ocId);
+        const courseInfo = await getOcCourseInfo(ocId);
+        if (!courseInfo) throw new ApiError(404, 'OC not found', 'not_found');
 
         const sp = new URL(req.url).searchParams;
         const qp = olqCategoryQuerySchema.parse({
@@ -22,9 +25,11 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             isActive: sp.get('isActive') ?? undefined,
         });
 
-        const items = await listOlqCategories({
+        const items = await getCourseTemplateCategories({
+            courseId: courseInfo.courseId,
             includeSubtitles: qp.includeSubtitles ?? false,
             isActive: qp.isActive,
+            fallbackToLegacyGlobal: true,
         });
 
         await req.audit.log({
@@ -51,16 +56,8 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
-        const { ocId } = await params;
-
-        const dto = olqCategoryCreateSchema.parse(await req.json());
-        const row = await createOlqCategory({
-            code: dto.code.trim(),
-            title: dto.title.trim(),
-            description: dto.description ?? null,
-            displayOrder: dto.displayOrder ?? 0,
-            isActive: dto.isActive ?? true,
-        });
+        const { ocId } = await parseParam({ params }, OcIdParam);
+        await ensureOcExists(ocId);
 
         await req.audit.log({
             action: AuditEventType.OC_RECORD_CREATED,
@@ -68,14 +65,12 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
             actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
-                description: `Created OLQ category ${row.id}`,
+                description: 'Blocked OC-side OLQ category write attempt.',
                 module: 'olq_categories',
-                categoryId: row.id,
-                code: row.code,
-                title: row.title,
+                blocked: true,
             },
         });
-        return json.created({ message: 'OLQ category created successfully.', category: row });
+        return json.forbidden('OLQ template updates are admin-only. Use /api/v1/admin/olq/... endpoints.');
     } catch (err) {
         return handleApiError(err);
     }

@@ -41,6 +41,15 @@ export const endpoints = {
             update: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
             delete: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
         },
+        olq: {
+            categories: (courseId: string) => `/api/v1/admin/olq/courses/${courseId}/categories`,
+            categoryById: (courseId: string, categoryId: string) =>
+                `/api/v1/admin/olq/courses/${courseId}/categories/${categoryId}`,
+            subtitles: (courseId: string) => `/api/v1/admin/olq/courses/${courseId}/subtitles`,
+            subtitleById: (courseId: string, subtitleId: string) =>
+                `/api/v1/admin/olq/courses/${courseId}/subtitles/${subtitleId}`,
+            copy: (targetCourseId: string) => `/api/v1/admin/olq/courses/${targetCourseId}/copy`,
+        },
     },
     oc: {
         list: "/api/v1/oc",

@@ -23,6 +23,7 @@
     "db:generate": "drizzle-kit generate --config=./src/app/db/drizzle.config.ts",
     "db:baseline": "tsx scripts/db-baseline.ts",
     "db:baseline:list": "tsx scripts/db-baseline.ts --list",
+    "db:repair:olq-course-template": "tsx scripts/db-repair-olq-course-template.ts",
     "db:migrate": "drizzle-kit migrate --config=./src/app/db/drizzle.config.ts",
     "db:push": "drizzle-kit push --config=./src/app/db/drizzle.config.ts",
     "db:studio": "drizzle-kit studio --config=./src/app/db/drizzle.config.ts",
