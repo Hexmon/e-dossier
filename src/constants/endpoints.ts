@@ -31,8 +31,13 @@ export const endpoints = {
         relegation: {
             ocOptions: "/api/v1/admin/relegation/ocs",
             nextCourses: "/api/v1/admin/relegation/courses",
+            history: "/api/v1/admin/relegation/history",
             presign: "/api/v1/admin/relegation/presign",
             transfer: "/api/v1/admin/relegation/transfer",
+            exception: "/api/v1/admin/relegation/exception",
+            promoteCourse: "/api/v1/admin/relegation/promote-course",
+            mediaSignedUrl: (historyId: string) =>
+                `/api/v1/admin/relegation/media/${historyId}/signed-url`,
         },
         trainingCamps: {
             list: "/api/v1/admin/training-camps",

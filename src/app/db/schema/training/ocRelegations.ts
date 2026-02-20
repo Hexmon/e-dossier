@@ -1,7 +1,13 @@
-import { index, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { ocCadets } from "./oc";
 import { courses } from "./courses";
 import { users } from "@/app/db/schema/auth/users";
+
+export const ocMovementKind = pgEnum("oc_movement_kind", [
+  "TRANSFER",
+  "PROMOTION_BATCH",
+  "PROMOTION_EXCEPTION",
+]);
 
 export const ocRelegations = pgTable(
   "oc_relegations",
@@ -22,6 +28,7 @@ export const ocRelegations = pgTable(
     remark: text("remark"),
     pdfObjectKey: varchar("pdf_object_key", { length: 512 }),
     pdfUrl: text("pdf_url"),
+    movementKind: ocMovementKind("movement_kind").notNull().default("TRANSFER"),
     performedByUserId: uuid("performed_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -33,5 +40,9 @@ export const ocRelegations = pgTable(
     ocPerformedAtIdx: index("idx_oc_relegations_oc_performed_at").on(table.ocId, table.performedAt),
     fromCourseIdx: index("idx_oc_relegations_from_course").on(table.fromCourseId),
     toCourseIdx: index("idx_oc_relegations_to_course").on(table.toCourseId),
+    movementKindPerformedAtIdx: index("idx_oc_relegations_movement_kind_performed_at").on(
+      table.movementKind,
+      table.performedAt
+    ),
   })
 );

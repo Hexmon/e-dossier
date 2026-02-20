@@ -3,24 +3,48 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   relegationApi,
-  type RelegationTransferRequest,
+  type RelegationHistoryParams,
+  type RelegationOcOptionsParams,
   type RelegationPdfPresignRequest,
+  type RelegationPromoteCourseRequest,
+  type RelegationTransferRequest,
 } from "@/app/lib/api/relegationApi";
 
 export const relegationQueryKeys = {
   all: ["relegation"] as const,
-  ocs: () => [...relegationQueryKeys.all, "ocs"] as const,
+  ocs: (params?: RelegationOcOptionsParams) =>
+    [
+      ...relegationQueryKeys.all,
+      "ocs",
+      params?.courseId ?? "all",
+      params?.q ?? "",
+      String(Boolean(params?.activeOnly)),
+    ] as const,
   nextCourses: (currentCourseId: string | null) =>
     [...relegationQueryKeys.all, "next-courses", currentCourseId ?? "none"] as const,
+  history: (params?: RelegationHistoryParams) =>
+    [
+      ...relegationQueryKeys.all,
+      "history",
+      params?.q ?? "",
+      params?.courseFromId ?? "all",
+      params?.courseToId ?? "all",
+      params?.movementKind ?? "all",
+      params?.limit ?? 25,
+      params?.offset ?? 0,
+    ] as const,
 };
 
-export function useRelegationModule(currentCourseId: string | null) {
+export function useRelegationModule(
+  currentCourseId: string | null,
+  ocParams?: RelegationOcOptionsParams
+) {
   const queryClient = useQueryClient();
 
   const ocOptionsQuery = useQuery({
-    queryKey: relegationQueryKeys.ocs(),
+    queryKey: relegationQueryKeys.ocs(ocParams),
     queryFn: async () => {
-      const response = await relegationApi.getOcOptions();
+      const response = await relegationApi.getOcOptions(ocParams);
       return response.items ?? [];
     },
   });
@@ -43,7 +67,7 @@ export function useRelegationModule(currentCourseId: string | null) {
     mutationFn: async (payload: RelegationTransferRequest) => relegationApi.applyTransfer(payload),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: relegationQueryKeys.ocs() }),
+        queryClient.invalidateQueries({ queryKey: relegationQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: ["oc"] }),
       ]);
     },
@@ -54,5 +78,37 @@ export function useRelegationModule(currentCourseId: string | null) {
     nextCoursesQuery,
     presignMutation,
     transferMutation,
+  };
+}
+
+export function useRelegationHistory(params?: RelegationHistoryParams) {
+  return useQuery({
+    queryKey: relegationQueryKeys.history(params),
+    queryFn: async () => relegationApi.getHistory(params),
+  });
+}
+
+export function useRelegationActions() {
+  const queryClient = useQueryClient();
+
+  const exceptionMutation = useMutation({
+    mutationFn: async (payload: RelegationTransferRequest) => relegationApi.applyException(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: relegationQueryKeys.all });
+    },
+  });
+
+  const promoteCourseMutation = useMutation({
+    mutationFn: async (payload: RelegationPromoteCourseRequest) => relegationApi.promoteCourse(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: relegationQueryKeys.all });
+    },
+  });
+
+  return {
+    createException: exceptionMutation.mutateAsync,
+    promoteCourse: promoteCourseMutation.mutateAsync,
+    exceptionMutation,
+    promoteCourseMutation,
   };
 }

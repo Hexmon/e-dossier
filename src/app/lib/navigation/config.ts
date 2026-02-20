@@ -31,6 +31,14 @@ export const NAVIGATION_TREE: NavSectionConfig[] = [
                 url: "/dashboard",
                 icon: "Home",
             },
+            {
+                key: "promotion_relegation_mgmt",
+                label: "Promotion / Relegation Management",
+                url: "/dashboard/genmgmt/promotion-relegation",
+                icon: "ArrowDownUp",
+                requiredAction: "page:dashboard:genmgmt:promotion-relegation:view",
+                adminBaseline: false,
+            },
         ],
     },
     {

@@ -374,13 +374,6 @@ export const moduleManagementCard: ManagementCardConfig[] = [
     color: "info"
   },
   {
-    title: "Relegation Management",
-    description: "Monitor, evaluate, and manage student relegation and promotion status",
-    icon: ArrowDownUp,
-    to: "/dashboard/genmgmt/relegation",
-    color: "destructive"
-  },
-  {
     title: "Camps Management",
     description: "Create and Manage Camps efficiently",
     icon: Tent,
@@ -1355,12 +1348,6 @@ export const moduleManagementTabs = [
     title: "OLQ Management",
     icon: ClipboardList,
     link: "/dashboard/genmgmt/olq-mgmt",
-  },
-  {
-    value: "relegation",
-    title: "Relegation Management",
-    icon: ArrowDownCircle,
-    link: "/dashboard/genmgmt/relegation",
   },
   {
     value: "camps",

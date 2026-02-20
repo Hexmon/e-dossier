@@ -40,7 +40,7 @@ function filterSectionsForRoleGroup(
     }));
 }
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   try {
     const principal = await buildPrincipalFromRequest(req);
     const userRoles = principal.roles || [];
@@ -55,3 +55,5 @@ export async function GET(req: NextRequest) {
     return handleApiError(error);
   }
 }
+
+export const GET = GETHandler;

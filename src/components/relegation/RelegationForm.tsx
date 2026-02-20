@@ -15,8 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRelegationModule } from "@/hooks/useRelegation";
+import { useRelegationActions, useRelegationModule } from "@/hooks/useRelegation";
 import { ApiClientError } from "@/app/lib/apiClient";
+import type { RelegationTransferResponse } from "@/app/lib/api/relegationApi";
 
 interface RelegationFormValues {
   ocId: string;
@@ -28,6 +29,26 @@ interface RelegationFormValues {
   remark: string;
   pdfFile: FileList | null;
 }
+
+type RelegationFormMode = "transfer" | "promotion-exception";
+
+type RelegationFormPrefill = {
+  ocId: string;
+  ocName: string;
+  currentCourseId: string;
+  currentCourseCode: string;
+  transferToCourseId?: string;
+};
+
+type RelegationFormProps = {
+  mode?: RelegationFormMode;
+  prefill?: RelegationFormPrefill;
+  lockOcSelection?: boolean;
+  lockTransferTo?: boolean;
+  submitLabel?: string;
+  className?: string;
+  onSuccess?: (transfer: RelegationTransferResponse["transfer"]) => void;
+};
 
 function parseApiError(error: unknown, fallback: string): string {
   if (error instanceof ApiClientError) {
@@ -41,12 +62,21 @@ function parseApiError(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export default function RelegationForm() {
+export default function RelegationForm({
+  mode = "transfer",
+  prefill,
+  lockOcSelection = false,
+  lockTransferTo = false,
+  submitLabel,
+  className,
+  onSuccess,
+}: RelegationFormProps) {
   const {
     register,
     handleSubmit,
     control,
     setValue,
+    reset,
     resetField,
     watch,
     formState: { errors },
@@ -68,6 +98,7 @@ export default function RelegationForm() {
 
   const { ocOptionsQuery, nextCoursesQuery, presignMutation, transferMutation } =
     useRelegationModule(currentCourseId || null);
+  const { exceptionMutation } = useRelegationActions();
 
   const ocOptions = ocOptionsQuery.data ?? [];
   const transferOptions = nextCoursesQuery.data ?? [];
@@ -75,7 +106,8 @@ export default function RelegationForm() {
   const [isOcNameDropdownOpen, setIsOcNameDropdownOpen] = useState(false);
   const ocNameDropdownRef = useRef<HTMLDivElement>(null);
 
-  const isBusy = presignMutation.isPending || transferMutation.isPending;
+  const isBusy =
+    presignMutation.isPending || transferMutation.isPending || exceptionMutation.isPending;
 
   const selectedOc = useMemo(
     () => ocOptions.find((item) => item.ocId === selectedOcId) ?? null,
@@ -85,6 +117,22 @@ export default function RelegationForm() {
   useEffect(() => {
     setOcNameSearch(selectedOc?.ocName ?? "");
   }, [selectedOc?.ocName]);
+
+  useEffect(() => {
+    if (!prefill) return;
+    reset({
+      ocId: prefill.ocId,
+      ocName: prefill.ocName,
+      courseNo: prefill.currentCourseCode,
+      currentCourseId: prefill.currentCourseId,
+      transferTo: prefill.transferToCourseId ?? "",
+      reason: "",
+      remark: "",
+      pdfFile: null,
+    });
+    setValue("ocId", prefill.ocId, { shouldDirty: false, shouldValidate: true });
+    setOcNameSearch(prefill.ocName);
+  }, [prefill, reset, setValue]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -164,35 +212,50 @@ export default function RelegationForm() {
         pdfUrl = presign.publicUrl;
       }
 
-      const response = await transferMutation.mutateAsync({
+      const payload = {
         ocId: formData.ocId,
         toCourseId: formData.transferTo,
         reason: formData.reason.trim(),
         remark: formData.remark?.trim() ? formData.remark.trim() : null,
         pdfObjectKey,
         pdfUrl,
-      });
+      };
+
+      const response =
+        mode === "promotion-exception"
+          ? await exceptionMutation.mutateAsync(payload)
+          : await transferMutation.mutateAsync(payload);
 
       const transfer = response.transfer;
       setValue("courseNo", transfer.toCourse.courseCode, { shouldDirty: false });
       setValue("currentCourseId", transfer.toCourse.courseId, { shouldDirty: false });
-      setValue("transferTo", "", { shouldDirty: false });
+
+      if (mode === "transfer") {
+        setValue("transferTo", "", { shouldDirty: false });
+      }
+
       setValue("reason", "", { shouldDirty: false });
       setValue("remark", "", { shouldDirty: false });
       resetField("pdfFile");
 
-      toast.success(
-        `OC ${transfer.oc.ocNo} transferred from ${transfer.fromCourse.courseCode} to ${transfer.toCourse.courseCode}.`
-      );
+      const successMessage =
+        mode === "promotion-exception"
+          ? `OC ${transfer.oc.ocNo} marked as promotion exception.`
+          : `OC ${transfer.oc.ocNo} transferred from ${transfer.fromCourse.courseCode} to ${transfer.toCourse.courseCode}.`;
+      toast.success(successMessage);
+      onSuccess?.(transfer);
     } catch (error) {
-      toast.error(parseApiError(error, "Failed to submit relegation transfer."));
+      toast.error(parseApiError(error, "Failed to submit relegation request."));
     }
   };
 
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="w-2xl space-y-6 rounded-2xl border border-border bg-card p-4 shadow-sm"
+      className={
+        className ??
+        "w-full space-y-6 rounded-2xl border border-border bg-card p-4 shadow-sm lg:max-w-2xl"
+      }
     >
       <div className="space-y-2">
         <Label htmlFor="ocId">OC No</Label>
@@ -207,7 +270,7 @@ export default function RelegationForm() {
                 field.onChange(value);
                 handleOcSelect(value);
               }}
-              disabled={ocOptionsQuery.isLoading || isBusy}
+              disabled={ocOptionsQuery.isLoading || isBusy || lockOcSelection}
             >
               <SelectTrigger id="ocId">
                 <SelectValue placeholder="Select OC" />
@@ -242,9 +305,9 @@ export default function RelegationForm() {
               setIsOcNameDropdownOpen(true);
             }}
             onFocus={() => setIsOcNameDropdownOpen(true)}
-            disabled={ocOptionsQuery.isLoading || isBusy}
+            disabled={ocOptionsQuery.isLoading || isBusy || lockOcSelection}
           />
-          {isOcNameDropdownOpen && (
+          {isOcNameDropdownOpen && !lockOcSelection && (
             <div className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-border bg-popover shadow-md">
               {filteredOcOptions.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-muted-foreground">No OC found.</div>
@@ -264,12 +327,11 @@ export default function RelegationForm() {
             </div>
           )}
         </div>
-        <input type="hidden" {...register("ocName")} />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="courseNo">Course No</Label>
-        <Input id="courseNo" placeholder="Auto-filled from OC selection" {...register("courseNo")} disabled />
+        <Label htmlFor="courseNo">Current Course</Label>
+        <Input id="courseNo" {...register("courseNo")} disabled />
       </div>
 
       <div className="space-y-2">
@@ -277,15 +339,17 @@ export default function RelegationForm() {
         <Controller
           name="transferTo"
           control={control}
-          rules={{ required: "Transfer course is required" }}
+          rules={{ required: "Transfer target is required" }}
           render={({ field }) => (
             <Select
               value={field.value || undefined}
               onValueChange={field.onChange}
-              disabled={!selectedOc || nextCoursesQuery.isLoading || isBusy}
+              disabled={
+                !selectedOc || nextCoursesQuery.isLoading || isBusy || lockTransferTo || !currentCourseId
+              }
             >
               <SelectTrigger id="transferTo">
-                <SelectValue placeholder="Select immediate next course" />
+                <SelectValue placeholder="Select target course" />
               </SelectTrigger>
               <SelectContent>
                 {transferOptions.map((course) => (
@@ -302,7 +366,7 @@ export default function RelegationForm() {
         ) : null}
         {selectedOc && !nextCoursesQuery.isLoading && transferOptions.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No immediate next course is available from {selectedOc.currentCourseCode}.
+            No immediate next course available for current course.
           </p>
         ) : null}
         {nextCoursesQuery.isError ? (
@@ -316,18 +380,26 @@ export default function RelegationForm() {
         <Label htmlFor="reason">Reason</Label>
         <Textarea
           id="reason"
-          placeholder="Enter reason"
           rows={4}
           {...register("reason", {
             required: "Reason is required",
-            minLength: {
-              value: 2,
-              message: "Reason is required",
-            },
+            minLength: { value: 2, message: "Reason must be at least 2 characters" },
           })}
+          placeholder="Enter reason"
           disabled={isBusy}
         />
         {errors.reason ? <p className="text-sm text-destructive">{errors.reason.message}</p> : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="remark">Remarks (Optional)</Label>
+        <Textarea
+          id="remark"
+          rows={4}
+          {...register("remark")}
+          placeholder="Enter remarks"
+          disabled={isBusy}
+        />
       </div>
 
       <div className="space-y-2">
@@ -341,23 +413,13 @@ export default function RelegationForm() {
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="remark">Remark</Label>
-        <Input
-          id="remark"
-          placeholder="Additional remarks"
-          {...register("remark")}
-          disabled={isBusy}
-        />
-      </div>
-
-      <input type="hidden" {...register("currentCourseId")} />
-
-      <div className="flex justify-center pt-4">
-        <Button type="submit" disabled={isBusy || !selectedOc}>
-          {isBusy ? "Submitting..." : "Submit"}
-        </Button>
-      </div>
+      <Button type="submit" disabled={isBusy} className="w-full cursor-pointer">
+        {isBusy
+          ? mode === "promotion-exception"
+            ? "Saving Exception..."
+            : "Submitting..."
+          : submitLabel ?? (mode === "promotion-exception" ? "Save Exception" : "Submit")}
+      </Button>
     </form>
   );
 }
