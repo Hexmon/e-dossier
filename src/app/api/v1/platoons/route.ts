@@ -4,6 +4,7 @@ import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { json, handleApiError } from '@/app/lib/http';
 import { platoonCreateSchema } from '@/app/lib/validators';
 import { requireAuth } from '@/app/lib/authz';
+import { DEFAULT_PLATOON_THEME_COLOR, normalizePlatoonThemeColor } from '@/lib/platoon-theme';
 import {
   withAuditRoute,
   AuditEventType,
@@ -39,6 +40,9 @@ async function GETHandler(req: AuditNextRequest) {
                 key: platoons.key,
                 name: platoons.name,
                 about: platoons.about,
+                themeColor: platoons.themeColor,
+                imageUrl: platoons.imageUrl,
+                imageObjectKey: platoons.imageObjectKey,
                 createdAt: platoons.createdAt,
                 updatedAt: platoons.updatedAt,
                 deletedAt: platoons.deletedAt,
@@ -67,6 +71,7 @@ async function POSTHandler(req: AuditNextRequest) {
 
         const data = parsed.data;
         const upKey = data.key.toUpperCase();
+        const upThemeColor = normalizePlatoonThemeColor(data.themeColor ?? DEFAULT_PLATOON_THEME_COLOR);
         const lcName = data.name.trim().toLowerCase();
 
         // Uniqueness checks (ignore soft-deleted)
@@ -95,14 +100,21 @@ async function POSTHandler(req: AuditNextRequest) {
                 key: upKey,
                 name: data.name.trim(),
                 about: data.about ?? null,
+                themeColor: upThemeColor,
+                imageUrl: data.imageUrl ?? null,
+                imageObjectKey: data.imageObjectKey ?? null,
             })
             .returning({
                 id: platoons.id,
                 key: platoons.key,
                 name: platoons.name,
                 about: platoons.about,
+                themeColor: platoons.themeColor,
+                imageUrl: platoons.imageUrl,
+                imageObjectKey: platoons.imageObjectKey,
                 createdAt: platoons.createdAt,
                 updatedAt: platoons.updatedAt,
+                deletedAt: platoons.deletedAt,
             });
 
         await req.audit.log({

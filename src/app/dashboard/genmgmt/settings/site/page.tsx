@@ -22,10 +22,16 @@ import {
 } from "@/hooks/useAdminSiteSettings";
 
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const HERO_BG_MIN_WIDTH = 1600;
+const HERO_BG_MIN_HEIGHT = 900;
+const HERO_BG_MIN_ASPECT = 1.6; // 16:10
+const HERO_BG_MAX_ASPECT = 2.4; // 21:9
 
 type SettingsDraft = {
   logoUrl: string | null;
   logoObjectKey: string | null;
+  heroBgUrl: string | null;
+  heroBgObjectKey: string | null;
   heroTitle: string;
   heroDescription: string;
   commandersSectionTitle: string;
@@ -36,6 +42,8 @@ type SettingsDraft = {
 const DEFAULT_DRAFT: SettingsDraft = {
   logoUrl: null,
   logoObjectKey: null,
+  heroBgUrl: null,
+  heroBgObjectKey: null,
   heroTitle: "MCEME",
   heroDescription:
     "Training Excellence for Officer Cadets (OCs) at the Military College of Electronics & Mechanical Engineering",
@@ -107,6 +115,47 @@ function validateImageFile(file: File): string | null {
   return null;
 }
 
+async function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const dims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const img = new Image();
+
+      img.onload = () => {
+        resolve({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+      };
+      img.onerror = () => reject(new Error("Unable to read image dimensions."));
+      img.src = objectUrl;
+    });
+
+    return dims;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function validateHeroBgImageFile(file: File): Promise<string | null> {
+  const baseError = validateImageFile(file);
+  if (baseError) return baseError;
+
+  const { width, height } = await readImageDimensions(file);
+  const aspect = width / height;
+
+  if (width < HERO_BG_MIN_WIDTH || height < HERO_BG_MIN_HEIGHT) {
+    return `Hero background must be at least ${HERO_BG_MIN_WIDTH}x${HERO_BG_MIN_HEIGHT}px.`;
+  }
+
+  if (aspect < HERO_BG_MIN_ASPECT || aspect > HERO_BG_MAX_ASPECT) {
+    return "Hero background must be a landscape image (recommended around 16:9).";
+  }
+
+  return null;
+}
+
 export default function AdminSiteSettingsPage() {
   const [historySort, setHistorySort] = useState<"asc" | "desc">("asc");
   const [settingsDraft, setSettingsDraft] = useState<SettingsDraft>(DEFAULT_DRAFT);
@@ -134,6 +183,7 @@ export default function AdminSiteSettingsPage() {
     historyQuery,
     updateSettingsMutation,
     deleteLogoMutation,
+    deleteHeroBgMutation,
     createCommanderMutation,
     updateCommanderMutation,
     deleteCommanderMutation,
@@ -158,6 +208,8 @@ export default function AdminSiteSettingsPage() {
     setSettingsDraft({
       logoUrl: settings.logoUrl,
       logoObjectKey: settings.logoObjectKey,
+      heroBgUrl: settings.heroBgUrl,
+      heroBgObjectKey: settings.heroBgObjectKey,
       heroTitle: settings.heroTitle,
       heroDescription: settings.heroDescription,
       commandersSectionTitle: settings.commandersSectionTitle,
@@ -172,6 +224,7 @@ export default function AdminSiteSettingsPage() {
 
   const busyMutations =
     updateSettingsMutation.isPending ||
+    deleteHeroBgMutation.isPending ||
     createCommanderMutation.isPending ||
     updateCommanderMutation.isPending ||
     createAwardMutation.isPending ||
@@ -222,6 +275,35 @@ export default function AdminSiteSettingsPage() {
     };
   };
 
+  const uploadHeroBgWithPresign = async (file: File) => {
+    const invalid = await validateHeroBgImageFile(file);
+    if (invalid) {
+      throw new Error(invalid);
+    }
+
+    const presign = await siteSettingsAdminApi.presignHeroBg({
+      contentType: file.type as "image/png" | "image/jpeg" | "image/webp",
+      sizeBytes: file.size,
+    });
+
+    const uploadResponse = await fetch(presign.uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type,
+      },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error("Image upload failed.");
+    }
+
+    return {
+      imageUrl: presign.publicUrl,
+      imageObjectKey: presign.objectKey,
+    };
+  };
+
   const handleSaveSettings = async () => {
     try {
       await updateSettingsMutation.mutateAsync(settingsDraft);
@@ -244,6 +326,22 @@ export default function AdminSiteSettingsPage() {
       toast.success("Logo removed.");
     } catch (error) {
       toast.error(parseApiError(error, "Failed to delete logo."));
+    }
+  };
+
+  const handleDeleteHeroBg = async () => {
+    if (!window.confirm("Delete current hero background image?")) return;
+
+    try {
+      const response = await deleteHeroBgMutation.mutateAsync();
+      setSettingsDraft((prev) => ({
+        ...prev,
+        heroBgUrl: response.settings.heroBgUrl,
+        heroBgObjectKey: response.settings.heroBgObjectKey,
+      }));
+      toast.success("Hero background removed.");
+    } catch (error) {
+      toast.error(parseApiError(error, "Failed to delete hero background."));
     }
   };
 
@@ -466,46 +564,90 @@ export default function AdminSiteSettingsPage() {
               </div>
             )}
 
-            <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-              <div className="space-y-3">
-                <Label>Current Logo</Label>
-                <SafeImage
-                  src={settingsDraft.logoUrl}
-                  alt="Site logo"
-                  fallbackSrc="/images/eme_logo.jpeg"
-                  className="h-24 w-24 rounded border object-contain bg-white"
-                />
-                <div className="space-y-2">
-                  <Input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
-
-                      try {
-                        const uploaded = await uploadImageWithPresign(file);
-                        setSettingsDraft((prev) => ({
-                          ...prev,
-                          logoUrl: uploaded.imageUrl,
-                          logoObjectKey: uploaded.imageObjectKey,
-                        }));
-                        toast.success("Logo uploaded. Save settings to publish.");
-                      } catch (error) {
-                        toast.error(parseApiError(error, "Logo upload failed."));
-                      } finally {
-                        event.currentTarget.value = "";
-                      }
-                    }}
+            <div className="grid gap-4 md:grid-cols-[300px_1fr]">
+              <div className="space-y-5">
+                <div className="space-y-3">
+                  <Label>Current Logo</Label>
+                  <SafeImage
+                    src={settingsDraft.logoUrl}
+                    alt="Site logo"
+                    fallbackSrc="/images/eme_logo.jpeg"
+                    className="h-24 w-24 rounded border object-contain bg-white"
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleDeleteLogo}
-                    disabled={deleteLogoMutation.isPending || !settingsDraft.logoUrl}
-                  >
-                    {deleteLogoMutation.isPending ? "Deleting..." : "Delete Logo"}
-                  </Button>
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+
+                        try {
+                          const uploaded = await uploadImageWithPresign(file);
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            logoUrl: uploaded.imageUrl,
+                            logoObjectKey: uploaded.imageObjectKey,
+                          }));
+                          toast.success("Logo uploaded. Save settings to publish.");
+                        } catch (error) {
+                          toast.error(parseApiError(error, "Logo upload failed."));
+                        } finally {
+                          event.currentTarget.value = "";
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleDeleteLogo}
+                      disabled={deleteLogoMutation.isPending || !settingsDraft.logoUrl}
+                    >
+                      {deleteLogoMutation.isPending ? "Deleting..." : "Delete Logo"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label>Hero Background Image</Label>
+                  <SafeImage
+                    src={settingsDraft.heroBgUrl}
+                    alt="Hero background"
+                    fallbackSrc="/images/hero-training.jpg"
+                    className="h-32 w-full rounded border object-cover"
+                  />
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+
+                        try {
+                          const uploaded = await uploadHeroBgWithPresign(file);
+                          setSettingsDraft((prev) => ({
+                            ...prev,
+                            heroBgUrl: uploaded.imageUrl,
+                            heroBgObjectKey: uploaded.imageObjectKey,
+                          }));
+                          toast.success("Hero background uploaded. Save settings to publish.");
+                        } catch (error) {
+                          toast.error(parseApiError(error, "Hero background upload failed."));
+                        } finally {
+                          event.currentTarget.value = "";
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleDeleteHeroBg}
+                      disabled={deleteHeroBgMutation.isPending || !settingsDraft.heroBgUrl}
+                    >
+                      {deleteHeroBgMutation.isPending ? "Deleting..." : "Delete Hero Background"}
+                    </Button>
+                  </div>
                 </div>
               </div>
 

@@ -34,6 +34,9 @@ export const platoonCreateSchema = z.object({
     .regex(/^[A-Z0-9_-]+$/, 'Use UPPERCASE letters, digits, _ or -'),
   name: z.string().trim().min(2).max(128),
   about: z.string().trim().max(2000).optional().nullable(),
+  themeColor: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/, 'Use hex format #RRGGBB').optional(),
+  imageUrl: z.string().trim().max(4096).optional().nullable(),
+  imageObjectKey: z.string().trim().max(4096).optional().nullable(),
 });
 
 export const platoonUpdateSchema = z.object({
@@ -42,9 +45,18 @@ export const platoonUpdateSchema = z.object({
     .optional(),
   name: z.string().trim().min(2).max(128).optional(),
   about: z.string().trim().max(2000).optional().nullable(),
+  themeColor: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/, 'Use hex format #RRGGBB').optional(),
+  imageUrl: z.string().trim().max(4096).optional().nullable(),
+  imageObjectKey: z.string().trim().max(4096).optional().nullable(),
   restore: z.boolean().optional(), // set true to undelete a soft-deleted platoon
 }).refine((v) => Object.keys(v).some(k => k !== 'restore'), {
-  message: 'Provide at least one field (key/name/about) to update',
+  message: 'Provide at least one field (key/name/about/themeColor/imageUrl/imageObjectKey) to update',
+});
+
+export const platoonImagePresignSchema = z.object({
+  platoonKey: z.string().trim().min(2).max(64).regex(/^[A-Z0-9_-]+$/, 'Invalid platoon key'),
+  contentType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+  sizeBytes: z.number().int().positive().max(2 * 1024 * 1024),
 });
 
 export const positionCreateSchema = z.object({

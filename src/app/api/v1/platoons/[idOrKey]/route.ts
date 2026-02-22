@@ -11,7 +11,9 @@ import {
 } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
-type PgError = { code?: string; detail?: string };
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+};
 
 function isUuid(s: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
@@ -34,6 +36,37 @@ function whereForIdKeyName(idOrKey: string, includeDeleted = false) {
   return and(...parts);
 }
 
+// GET /api/v1/platoons/:idOrKey (PUBLIC)
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
+  try {
+    const { idOrKey: rawIdOrKey } = await params;
+    const idOrKey = decodeURIComponent(rawIdOrKey || '').trim();
+    if (!idOrKey) throw new ApiError(400, 'idOrKey path param is required.', 'bad_request');
+
+    const [platoon] = await db
+      .select({
+        id: platoons.id,
+        key: platoons.key,
+        name: platoons.name,
+        about: platoons.about,
+        themeColor: platoons.themeColor,
+        imageUrl: platoons.imageUrl,
+      })
+      .from(platoons)
+      .where(whereForIdKeyName(idOrKey))
+      .limit(1);
+
+    if (!platoon) return json.notFound('Platoon not found.');
+
+    return json.ok(
+      { message: 'Platoon retrieved successfully.', platoon },
+      { headers: CACHE_HEADERS },
+    );
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
 // PATCH /api/v1/platoons/:idOrKey  (ADMIN)
 // body: { key?, name?, about?, restore? }
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ idOrKey: string }> }) {
@@ -46,7 +79,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
       return json.badRequest('Validation failed', { issues: parsed.error.flatten() });
     }
 
-    const { key, name, about, restore } = parsed.data;
+    const { key, name, about, themeColor, imageUrl, imageObjectKey, restore } = parsed.data;
 
     // Load target (include soft-deleted so we can restore)
     const [existing] = await db
@@ -55,6 +88,9 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         key: platoons.key,
         name: platoons.name,
         about: platoons.about,
+        themeColor: platoons.themeColor,
+        imageUrl: platoons.imageUrl,
+        imageObjectKey: platoons.imageObjectKey,
         deletedAt: platoons.deletedAt,
       })
       .from(platoons)
@@ -100,6 +136,9 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     if (key) updates.key = key.toUpperCase();
     if (name) updates.name = name.trim();
     if ('about' in parsed.data) updates.about = about ?? null;
+    if ('themeColor' in parsed.data) updates.themeColor = themeColor ? themeColor.toUpperCase() : existing.themeColor;
+    if ('imageUrl' in parsed.data) updates.imageUrl = imageUrl ?? null;
+    if ('imageObjectKey' in parsed.data) updates.imageObjectKey = imageObjectKey ?? null;
     if (restore === true) updates.deletedAt = null;
     if (restore === false) updates.deletedAt = new Date();
 
@@ -112,6 +151,9 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         key: platoons.key,
         name: platoons.name,
         about: platoons.about,
+        themeColor: platoons.themeColor,
+        imageUrl: platoons.imageUrl,
+        imageObjectKey: platoons.imageObjectKey,
         createdAt: platoons.createdAt,
         updatedAt: platoons.updatedAt,
         deletedAt: platoons.deletedAt,
@@ -157,6 +199,9 @@ async function DELETEHandler(
         id: platoons.id,
         key: platoons.key,
         name: platoons.name,
+        themeColor: platoons.themeColor,
+        imageUrl: platoons.imageUrl,
+        imageObjectKey: platoons.imageObjectKey,
         deletedAt: platoons.deletedAt,
       })
       .from(platoons)
@@ -200,6 +245,9 @@ async function DELETEHandler(
         id: platoons.id,
         key: platoons.key,
         name: platoons.name,
+        themeColor: platoons.themeColor,
+        imageUrl: platoons.imageUrl,
+        imageObjectKey: platoons.imageObjectKey,
         deletedAt: platoons.deletedAt,
       });
 
@@ -207,6 +255,9 @@ async function DELETEHandler(
       id: existing.id,
       key: existing.key,
       name: existing.name,
+      themeColor: existing.themeColor,
+      imageUrl: existing.imageUrl,
+      imageObjectKey: existing.imageObjectKey,
       deletedAt: existing.deletedAt,
     };
 
@@ -241,6 +292,8 @@ async function DELETEHandler(
     return handleApiError(err);
   }
 }
+export const GET = withAuditRoute('GET', GETHandler);
+
 export const PATCH = withAuditRoute('PATCH', PATCHHandler);
 
 export const DELETE = withAuditRoute('DELETE', DELETEHandler);
