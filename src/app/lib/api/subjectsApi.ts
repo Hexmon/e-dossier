@@ -6,6 +6,7 @@ export interface Subject {
     code: string;
     name: string;
     branch: string;
+    noOfPeriods: number;
     hasTheory: boolean;
     hasPractical: boolean;
     defaultTheoryCredits: number;
@@ -17,6 +18,7 @@ export interface SubjectCreate {
     code: string;
     name: string;
     branch: string;
+    noOfPeriods: number;
     hasTheory: boolean;
     hasPractical: boolean;
     defaultTheoryCredits: number;
@@ -28,6 +30,7 @@ export interface SubjectUpdate {
     code?: string;
     name?: string;
     branch?: string;
+    noOfPeriods?: number;
     hasTheory?: boolean;
     hasPractical?: boolean;
     defaultTheoryCredits?: number;

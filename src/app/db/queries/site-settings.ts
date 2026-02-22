@@ -23,6 +23,8 @@ const SITE_SETTINGS_SELECT = {
   singletonKey: siteSettings.singletonKey,
   logoUrl: siteSettings.logoUrl,
   logoObjectKey: siteSettings.logoObjectKey,
+  heroBgUrl: siteSettings.heroBgUrl,
+  heroBgObjectKey: siteSettings.heroBgObjectKey,
   heroTitle: siteSettings.heroTitle,
   heroDescription: siteSettings.heroDescription,
   commandersSectionTitle: siteSettings.commandersSectionTitle,
@@ -79,6 +81,7 @@ export type SiteHistoryRecord = typeof siteHistory.$inferSelect;
 
 export const DEFAULT_PUBLIC_SITE_SETTINGS = {
   logoUrl: null,
+  heroBgUrl: null,
   heroTitle: "MCEME",
   heroDescription:
     "Training Excellence for Officer Cadets (OCs) at the Military College of Electronics & Mechanical Engineering",
@@ -122,6 +125,8 @@ export async function getSiteSettingsOrDefault() {
     singletonKey: DEFAULT_SINGLETON_KEY,
     logoUrl: DEFAULT_PUBLIC_SITE_SETTINGS.logoUrl,
     logoObjectKey: null,
+    heroBgUrl: DEFAULT_PUBLIC_SITE_SETTINGS.heroBgUrl,
+    heroBgObjectKey: null,
     heroTitle: DEFAULT_PUBLIC_SITE_SETTINGS.heroTitle,
     heroDescription: DEFAULT_PUBLIC_SITE_SETTINGS.heroDescription,
     commandersSectionTitle: DEFAULT_PUBLIC_SITE_SETTINGS.commandersSectionTitle,
@@ -142,6 +147,9 @@ export async function updateSiteSettings(input: SiteSettingsUpdateInput, actorUs
       logoUrl: input.logoUrl !== undefined ? input.logoUrl : current.logoUrl,
       logoObjectKey:
         input.logoObjectKey !== undefined ? input.logoObjectKey : current.logoObjectKey,
+      heroBgUrl: input.heroBgUrl !== undefined ? input.heroBgUrl : current.heroBgUrl,
+      heroBgObjectKey:
+        input.heroBgObjectKey !== undefined ? input.heroBgObjectKey : current.heroBgObjectKey,
       heroTitle: input.heroTitle ?? current.heroTitle,
       heroDescription: input.heroDescription ?? current.heroDescription,
       commandersSectionTitle: input.commandersSectionTitle ?? current.commandersSectionTitle,
@@ -167,6 +175,26 @@ export async function clearSiteLogo(actorUserId: string) {
     .set({
       logoUrl: null,
       logoObjectKey: null,
+      updatedBy: actorUserId,
+      updatedAt: now(),
+    })
+    .where(eq(siteSettings.id, current.id))
+    .returning(SITE_SETTINGS_SELECT);
+
+  return {
+    before: current,
+    after: updated,
+  };
+}
+
+export async function clearSiteHeroBg(actorUserId: string) {
+  const current = await getOrCreateSiteSettings();
+
+  const [updated] = await db
+    .update(siteSettings)
+    .set({
+      heroBgUrl: null,
+      heroBgObjectKey: null,
       updatedBy: actorUserId,
       updatedAt: now(),
     })

@@ -18,6 +18,8 @@ export const siteSettings = pgTable(
     singletonKey: text("singleton_key").notNull().default("default"),
     logoUrl: text("logo_url"),
     logoObjectKey: text("logo_object_key"),
+    heroBgUrl: text("hero_bg_url"),
+    heroBgObjectKey: text("hero_bg_object_key"),
     heroTitle: text("hero_title").notNull().default("MCEME"),
     heroDescription: text("hero_description")
       .notNull()

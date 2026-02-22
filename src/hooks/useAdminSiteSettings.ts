@@ -82,6 +82,13 @@ export function useAdminSiteSettings(sort: "asc" | "desc") {
     },
   });
 
+  const deleteHeroBgMutation = useMutation({
+    mutationFn: siteSettingsAdminApi.deleteHeroBg,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEYS.settings });
+    },
+  });
+
   const createCommanderMutation = useMutation({
     mutationFn: siteSettingsAdminApi.createCommander,
     onSuccess: invalidateAll,
@@ -162,6 +169,7 @@ export function useAdminSiteSettings(sort: "asc" | "desc") {
     historyQuery,
     updateSettingsMutation,
     deleteLogoMutation,
+    deleteHeroBgMutation,
     createCommanderMutation,
     updateCommanderMutation,
     deleteCommanderMutation,

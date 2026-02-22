@@ -9,6 +9,8 @@ export const endpoints = {
         approval: "/api/v1/admin/signup-requests",
         appointments: "/api/v1/admin/appointments?active=true",
         platoons: "/api/v1/platoons",
+        platoonImagePresign: "/api/v1/platoons/image/presign",
+        platoonCommanderHistory: (idOrKey: string) => `/api/v1/admin/platoons/${idOrKey}/commander-history`,
         slots: "/api/v1/admin/positions/slots",
         transferappt: (appointmentId: string) =>
             `/api/v1/admin/appointments/${appointmentId}/transfer`,
