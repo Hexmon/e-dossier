@@ -3,10 +3,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { useSelector, useDispatch } from "react-redux";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { RootState } from "@/store";
 import { InterviewOfficer } from "@/types/interview";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
+import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
 import { saveInterviewForm, clearInterviewForm, type InterviewFormData } from "@/store/slices/initialInterviewSlice";
 
 import DSCoordForm from "./forms/DSCoordForm";
@@ -18,25 +19,76 @@ interface FormWrapperFields {
     [key: string]: string | boolean | undefined;
 }
 
+const EMPTY_FORM_WRAPPER_FIELDS: FormWrapperFields = {};
+
+function buildInitialInterviewResetValues(params: {
+    currentValues: FormWrapperFields;
+    savedValues: FormWrapperFields;
+    templateFields?: Array<{ key: string; fieldType?: string | null; groupId?: string | null }>;
+}): FormWrapperFields {
+    const out: FormWrapperFields = {};
+
+    for (const key of Object.keys(params.currentValues ?? {})) {
+        out[key] = "";
+    }
+
+    for (const field of params.templateFields ?? []) {
+        if (field.groupId) continue;
+        const type = field.fieldType?.toLowerCase?.() ?? "text";
+        out[field.key] = type === "checkbox" ? false : "";
+    }
+
+    for (const [key, value] of Object.entries(params.savedValues ?? {})) {
+        out[key] = value;
+    }
+
+    return out;
+}
+
 export default function InterviewTabs() {
     const { id } = useParams();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
     const dispatch = useDispatch();
 
-    const [selectedTerm, setSelectedTerm] = useState<number>(1);
-    const [active, setActive] = useState<InterviewOfficer>("plcdr");
-    const { fetchInitial, saveInitial, templateMappings } = useInterviewForms(ocId);
-    const hydratedRef = useRef(false);
+    const parseSemesterParam = (value: string | null) => {
+        const n = Number(value);
+        return Number.isInteger(n) && n >= 1 && n <= 6 ? n : 1;
+    };
 
-    const activeTemplate = templateMappings?.byKind[active]?.template ?? null;
+    const [selectedTerm, setSelectedTerm] = useState<number>(() => parseSemesterParam(searchParams.get("sem")));
+    const [active, setActive] = useState<InterviewOfficer>("plcdr");
+    const { loading, templatesLoading, templatesError, fetchInitial, saveInitial, templateMappings } = useInterviewForms(ocId);
+    const hydratedRef = useRef(false);
+    const lastResetTokenRef = useRef<string>("");
+    const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+
+    const activeMatch = getTemplateMatchForSemester(templateMappings, active, selectedTerm);
+    const activeTemplate = activeMatch?.template ?? null;
     const activeSemesters = activeTemplate?.semesters ?? [];
     const usesSemester = activeSemesters.length > 0;
     const semesterAllowed = !usesSemester || activeSemesters.includes(selectedTerm);
-    const activeSemesterKey = usesSemester ? String(selectedTerm) : "none";
+    const activeSemesterKey = String(selectedTerm);
+
+    useEffect(() => {
+        const semFromUrl = parseSemesterParam(searchParams.get("sem"));
+        setSelectedTerm((current) => (current === semFromUrl ? current : semFromUrl));
+    }, [searchParams]);
+
+    useEffect(() => {
+        const currentUrlSem = parseSemesterParam(searchParams.get("sem"));
+        if (currentUrlSem === selectedTerm) return;
+
+        const next = new URLSearchParams(searchParams.toString());
+        next.set("sem", String(selectedTerm));
+        router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    }, [selectedTerm, pathname, router, searchParams]);
 
     // Get saved form data from Redux for current officer
     const savedFormData = useSelector((state: RootState) =>
-        state.initialInterview.forms[ocId]?.[activeSemesterKey]?.[active] || {}
+        state.initialInterview.forms[ocId]?.[activeSemesterKey]?.[active] ?? EMPTY_FORM_WRAPPER_FIELDS
     );
     const allSavedForms = useSelector((state: RootState) => state.initialInterview.forms[ocId] || {});
     const savedFormsRef = useRef(allSavedForms);
@@ -48,6 +100,7 @@ export default function InterviewTabs() {
 
     useEffect(() => {
         hydratedRef.current = false;
+        setInitialDataLoaded(false);
     }, [ocId]);
 
     useEffect(() => {
@@ -60,33 +113,37 @@ export default function InterviewTabs() {
         hydratedRef.current = true;
 
         (async () => {
-            const data = await fetchInitial();
-            if (!data) return;
+            try {
+                const data = await fetchInitial();
+                if (!data) return;
 
-            Object.entries(data).forEach(([semesterKey, officers]) => {
-                (Object.keys(officers) as InterviewOfficer[]).forEach((officer) => {
-                    const incoming = officers[officer];
-                    if (!incoming || Object.keys(incoming).length === 0) return;
+                Object.entries(data).forEach(([semesterKey, officers]) => {
+                    (Object.keys(officers) as InterviewOfficer[]).forEach((officer) => {
+                        const incoming = officers[officer];
+                        if (!incoming || Object.keys(incoming).length === 0) return;
 
-                    const existing = savedFormsRef.current?.[semesterKey]?.[officer];
-                    const isEmpty =
-                        !existing ||
-                        Object.values(existing as InterviewFormData).every(
-                            (value) => value === "" || value === null || value === undefined
+                        const existing = savedFormsRef.current?.[semesterKey]?.[officer];
+                        const isEmpty =
+                            !existing ||
+                            Object.values(existing as InterviewFormData).every(
+                                (value) => value === "" || value === null || value === undefined
+                            );
+
+                        if (!isEmpty) return;
+
+                        dispatch(
+                            saveInterviewForm({
+                                ocId,
+                                semesterKey,
+                                officer,
+                                data: incoming,
+                            })
                         );
-
-                    if (!isEmpty) return;
-
-                    dispatch(
-                        saveInterviewForm({
-                            ocId,
-                            semesterKey,
-                            officer,
-                            data: incoming,
-                        })
-                    );
+                    });
                 });
-            });
+            } finally {
+                setInitialDataLoaded(true);
+            }
         })();
     }, [ocId, fetchInitial, dispatch]);
 
@@ -94,11 +151,36 @@ export default function InterviewTabs() {
     useEffect(() => {
         isHydratingRef.current = true;
         const savedData = savedFormData || {};
-        form.reset(savedData);
+        const templateFieldSeed = Array.from(activeTemplate?.fieldsByKey?.values?.() ?? [])
+            .filter((field) => !field.groupId)
+            .map((field) => `${field.key}:${field.fieldType ?? ""}`)
+            .sort()
+            .join("|");
+        const resetToken = [
+            ocId,
+            active,
+            activeSemesterKey,
+            activeTemplate?.id ?? "",
+            templateFieldSeed,
+            JSON.stringify(savedData),
+        ].join("::");
+
+        if (lastResetTokenRef.current === resetToken) {
+            isHydratingRef.current = false;
+            return;
+        }
+        lastResetTokenRef.current = resetToken;
+
+        const resetValues = buildInitialInterviewResetValues({
+            currentValues: (form.getValues() ?? {}) as FormWrapperFields,
+            savedValues: savedData as FormWrapperFields,
+            templateFields: Array.from(activeTemplate?.fieldsByKey?.values?.() ?? []),
+        });
+        form.reset(resetValues);
         queueMicrotask(() => {
             isHydratingRef.current = false;
         });
-    }, [active, ocId, activeSemesterKey]);
+    }, [active, ocId, activeSemesterKey, activeTemplate, savedFormData]);
 
     // Auto-save unsaved changes to Redux
     useEffect(() => {
@@ -128,7 +210,7 @@ export default function InterviewTabs() {
 
     async function handleSave(officer: InterviewOfficer, data: FormWrapperFields) {
         if (usesSemester && !semesterAllowed) return null;
-        const resp = await saveInitial(officer, data, usesSemester ? selectedTerm : undefined);
+        const resp = await saveInitial(officer, data, selectedTerm);
         if (resp) {
             dispatch(clearInterviewForm({ ocId, semesterKey: activeSemesterKey, officer }));
         }
@@ -145,6 +227,7 @@ export default function InterviewTabs() {
 
     const termTabs = [1, 2, 3, 4, 5, 6];
     const termLabels: Record<number, string> = { 1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI" };
+    const isInitialLoading = templatesLoading || (!initialDataLoaded && loading);
 
     return (
         <div className="max-w-5xl mx-auto bg-card p-6 rounded-lg shadow">
@@ -184,13 +267,23 @@ export default function InterviewTabs() {
                 ))}
             </div>
 
-            {semesterAllowed ? (
+            {isInitialLoading ? (
+                <div className="border rounded-lg p-6 bg-muted/40 text-center text-sm text-muted-foreground">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-3"></div>
+                    Loading interview templates and saved interview data...
+                </div>
+            ) : templatesError ? (
+                <div className="border rounded-lg p-6 bg-muted/40 text-center text-sm text-destructive">
+                    Failed to load interview templates. {templatesError}
+                </div>
+            ) : semesterAllowed ? (
                 <form onSubmit={form.handleSubmit((data) => handleSave(active, data))}>
                     <div className="space-y-6">
                         {active === "plcdr" && (
                             <PLCdrCombinedForm
+                                key={`${ocId}:plcdr:${activeSemesterKey}`}
                                 form={form}
-                                template={templateMappings?.byKind.plcdr?.template ?? null}
+                                template={getTemplateMatchForSemester(templateMappings, "plcdr", selectedTerm)?.template ?? null}
                                 onClearForm={handleClearForm}
                                 onSave={(data) => handleSave("plcdr", data)}
                             />
@@ -198,8 +291,9 @@ export default function InterviewTabs() {
 
                         {active === "dscoord" && (
                             <DSCoordForm
+                                key={`${ocId}:dscoord:${activeSemesterKey}`}
                                 form={form as UseFormReturn<any>}
-                                template={templateMappings?.byKind.dscoord?.template ?? null}
+                                template={getTemplateMatchForSemester(templateMappings, "dscoord", selectedTerm)?.template ?? null}
                                 onClearForm={handleClearForm}
                                 onSave={(data) => handleSave("dscoord", data)}
                             />
@@ -207,8 +301,9 @@ export default function InterviewTabs() {
 
                         {active === "dycdr" && (
                             <DyCdrForm
+                                key={`${ocId}:dycdr:${activeSemesterKey}`}
                                 form={form as UseFormReturn<any>}
-                                template={templateMappings?.byKind.dycdr?.template ?? null}
+                                template={getTemplateMatchForSemester(templateMappings, "dycdr", selectedTerm)?.template ?? null}
                                 onClearForm={handleClearForm}
                                 onSave={(data) => handleSave("dycdr", data)}
                             />
@@ -216,8 +311,9 @@ export default function InterviewTabs() {
 
                         {active === "cdr" && (
                             <CdrForm
+                                key={`${ocId}:cdr:${activeSemesterKey}`}
                                 form={form as UseFormReturn<any>}
-                                template={templateMappings?.byKind.cdr?.template ?? null}
+                                template={getTemplateMatchForSemester(templateMappings, "cdr", selectedTerm)?.template ?? null}
                                 onClearForm={handleClearForm}
                                 onSave={(data) => handleSave("cdr", data)}
                             />

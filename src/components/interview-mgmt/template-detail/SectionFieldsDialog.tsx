@@ -83,7 +83,7 @@ export default function SectionFieldsDialog({
 
     const confirmDelete = async () => {
         if (fieldToDelete) {
-            await removeField(templateId, fieldToDelete, false);
+            await removeField(templateId, fieldToDelete, true);
             await loadFields();
         }
         setDeleteDialogOpen(false);
@@ -222,7 +222,7 @@ export default function SectionFieldsDialog({
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Field</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete this field? This will soft delete the field.
+                            Are you sure you want to delete this field? This will permanently delete the field.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

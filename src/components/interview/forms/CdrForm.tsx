@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { UseFormReturn, FieldValues } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Edit, Save, RotateCcw } from "lucide-react";
+import { Edit, Save, RotateCcw, X } from "lucide-react";
 import type { TemplateField, TemplateInfo, TemplateSection } from "@/types/interview-templates";
 
 interface Props {
@@ -37,6 +37,7 @@ function getTemplateSections(template?: TemplateInfo | null): TemplateSection[] 
 
 export default function CdrForm({ form, tabName = "CDR", template, onClearForm, onSave }: Props) {
     const { register, handleSubmit, reset, watch } = form;
+    const editBaselineRef = useRef<Record<string, unknown> | null>(null);
 
     const formValues = watch();
     const hasSavedData =
@@ -44,14 +45,15 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
         Object.keys(formValues).length > 0 &&
         Object.values(formValues).some((value) => value !== "" && value !== null && value !== undefined);
 
-    const [isEditing, setIsEditing] = useState(!hasSavedData);
+    const [isEditing, setIsEditing] = useState(false);
     const [isSaved, setIsSaved] = useState(hasSavedData);
 
     const sections = useMemo(() => getTemplateSections(template), [template]);
+    const hasTemplateContent = sections.length > 0;
 
     useEffect(() => {
-        if (hasSavedData && !isEditing) {
-            setIsSaved(true);
+        if (!isEditing) {
+            setIsSaved(Boolean(hasSavedData));
         }
     }, [hasSavedData, isEditing]);
 
@@ -73,6 +75,7 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
     };
 
     const handleEdit = () => {
+        editBaselineRef.current = { ...(watch() ?? {}) };
         setIsEditing(true);
     };
 
@@ -86,6 +89,16 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
             onClearForm?.();
             toast.info("Form has been reset");
         }
+    };
+
+    const handleCancel = () => {
+        const baseline = editBaselineRef.current ?? {};
+        reset(baseline);
+        setIsEditing(false);
+        const baselineHasData = Object.values(baseline).some(
+            (value) => value !== "" && value !== null && value !== undefined
+        );
+        setIsSaved(baselineHasData);
     };
 
     const renderField = (field: TemplateField) => {
@@ -162,7 +175,7 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
     return (
         <div className="border p-4 rounded-xl space-y-6">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-xl">{tabName}</h3>
+                <h3 className="font-semibold text-xl">{template?.title || tabName}</h3>
             </div>
 
             {sections.length === 0 ? (
@@ -170,39 +183,41 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
             ) : (
                 sections.map((section) => (
                     <div key={section.id} className="space-y-4">
-                        {section.title ? <h4 className="font-semibold text-lg">{section.title}</h4> : null}
-                        {section.description ? (
-                            <p className="text-sm text-muted-foreground">{section.description}</p>
-                        ) : null}
                         <div className="space-y-4">{section.fields.map(renderField)}</div>
                     </div>
                 ))
             )}
 
-            <div className="flex items-center justify-center gap-2">
-                {isSaved && !isEditing ? (
-                    <Button
-                        type="button"
-                        onClick={handleEdit}
-                        variant="outline"
-                        className="flex items-center gap-2 bg-primary text-primary-foreground"
-                    >
-                        <Edit className="h-4 w-4 text-primary-foreground" />
-                        Edit
-                    </Button>
-                ) : (
-                    <>
-                        <Button type="button" onClick={handleSave} className="flex items-center gap-2">
-                            <Save className="h-4 w-4" />
-                            Save
+            {hasTemplateContent ? (
+                <div className="flex items-center justify-center gap-2">
+                    {!isEditing ? (
+                        <Button
+                            type="button"
+                            onClick={handleEdit}
+                            variant="outline"
+                            className="flex items-center gap-2 bg-primary text-primary-foreground"
+                        >
+                            <Edit className="h-4 w-4 text-primary-foreground" />
+                            Edit
                         </Button>
-                        <Button type="button" onClick={handleReset} variant="outline" className="flex items-center gap-2">
-                            <RotateCcw className="h-4 w-4" />
-                            Clear Form
-                        </Button>
-                    </>
-                )}
-            </div>
+                    ) : (
+                        <>
+                            <Button type="button" onClick={handleSave} className="flex items-center gap-2">
+                                <Save className="h-4 w-4" />
+                                Save
+                            </Button>
+                            <Button type="button" onClick={handleReset} variant="outline" className="flex items-center gap-2">
+                                <RotateCcw className="h-4 w-4" />
+                                Clear Form
+                            </Button>
+                            <Button type="button" onClick={handleCancel} variant="outline" className="flex items-center gap-2">
+                                <X className="h-4 w-4" />
+                                Cancel
+                            </Button>
+                        </>
+                    )}
+                </div>
+            ) : null}
         </div>
     );
 }

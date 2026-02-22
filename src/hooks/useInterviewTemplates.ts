@@ -44,6 +44,7 @@ import {
     deleteFieldOption,
     ListParams,
 } from "@/app/lib/api/Interviewtemplateapi";
+import { clearInterviewTemplateCache } from "@/lib/interviewTemplateLoader";
 
 // ---------------------------------------------------------------------------
 // Query key factories — single source of truth so invalidation is consistent
@@ -74,6 +75,11 @@ export function useInterviewTemplates(options?: {
     const queryClient = useQueryClient();
     const templateId = options?.templateId ?? "";
     const listParams = options?.listParams;
+
+    const invalidateInterviewTemplateCaches = () => {
+        clearInterviewTemplateCache();
+        queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
+    };
 
     // -----------------------------------------------------------------------
     // Queries
@@ -142,7 +148,7 @@ export function useInterviewTemplates(options?: {
             return created;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
+            invalidateInterviewTemplateCaches();
             toast.success("Template created successfully");
         },
         onError: (error) => {
@@ -155,7 +161,7 @@ export function useInterviewTemplates(options?: {
         mutationFn: ({ id, updates }: { id: string; updates: InterviewTemplateUpdate }) =>
             updateTemplate(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
+            invalidateInterviewTemplateCaches();
             toast.success("Template updated successfully");
         },
         onError: (error) => {
@@ -167,7 +173,7 @@ export function useInterviewTemplates(options?: {
     const deleteTemplateMutation = useMutation({
         mutationFn: ({ id, hard }: { id: string; hard: boolean }) => deleteTemplate(id, hard),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
+            invalidateInterviewTemplateCaches();
             toast.success("Template deleted successfully");
         },
         onError: (error) => {
@@ -183,7 +189,9 @@ export function useInterviewTemplates(options?: {
         mutationFn: ({ id, semester }: { id: string; semester: number }) =>
             addTemplateSemester(id, { semester }),
         onSuccess: (_, { semester }) => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.semesters(templateId) });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success(`Semester ${semester} added successfully`);
         },
         onError: (error) => {
@@ -196,7 +204,9 @@ export function useInterviewTemplates(options?: {
         mutationFn: ({ id, semester }: { id: string; semester: number }) =>
             removeTemplateSemester(id, semester),
         onSuccess: (_, { semester }) => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.semesters(templateId) });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success(`Semester ${semester} removed successfully`);
         },
         onError: (error) => {
@@ -212,7 +222,9 @@ export function useInterviewTemplates(options?: {
         mutationFn: ({ tid, section }: { tid: string; section: SectionCreate }) =>
             createSection(tid, section),
         onSuccess: () => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sections(templateId) });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Section created successfully");
         },
         onError: (error) => {
@@ -228,7 +240,9 @@ export function useInterviewTemplates(options?: {
             updates: SectionUpdate;
         }) => updateSection(tid, sectionId, updates),
         onSuccess: () => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sections(templateId) });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Section updated successfully");
         },
         onError: (error) => {
@@ -244,7 +258,9 @@ export function useInterviewTemplates(options?: {
             hard: boolean;
         }) => deleteSection(tid, sectionId, hard),
         onSuccess: () => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sections(templateId) });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Section deleted successfully");
         },
         onError: (error) => {
@@ -260,7 +276,9 @@ export function useInterviewTemplates(options?: {
         mutationFn: ({ tid, group }: { tid: string; group: GroupCreate }) =>
             createGroup(tid, group),
         onSuccess: () => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups(templateId) });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Group created successfully");
         },
         onError: (error) => {
@@ -276,7 +294,9 @@ export function useInterviewTemplates(options?: {
             updates: GroupUpdate;
         }) => updateGroup(tid, groupId, updates),
         onSuccess: () => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups(templateId) });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Group updated successfully");
         },
         onError: (error) => {
@@ -292,7 +312,9 @@ export function useInterviewTemplates(options?: {
             hard: boolean;
         }) => deleteGroup(tid, groupId, hard),
         onSuccess: () => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.groups(templateId) });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Group deleted successfully");
         },
         onError: (error) => {
@@ -311,9 +333,11 @@ export function useInterviewTemplates(options?: {
             field: FieldCreate;
         }) => createSectionField(tid, sectionId, field),
         onSuccess: (_, { tid, sectionId }) => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({
                 queryKey: QUERY_KEYS.sectionFields(tid, sectionId),
             });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Field created successfully");
         },
         onError: (error) => {
@@ -329,9 +353,11 @@ export function useInterviewTemplates(options?: {
             field: FieldCreate;
         }) => createGroupField(tid, groupId, field),
         onSuccess: (_, { tid, groupId }) => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({
                 queryKey: QUERY_KEYS.groupFields(tid, groupId),
             });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Field created successfully");
         },
         onError: (error) => {
@@ -347,12 +373,14 @@ export function useInterviewTemplates(options?: {
             updates: FieldUpdate;
         }) => updateField(tid, fieldId, updates),
         onSuccess: () => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({
                 queryKey: ["interviewTemplates", templateId, "sections"],
             });
             queryClient.invalidateQueries({
                 queryKey: ["interviewTemplates", templateId, "groups"],
             });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Field updated successfully");
         },
         onError: (error) => {
@@ -368,12 +396,14 @@ export function useInterviewTemplates(options?: {
             hard: boolean;
         }) => deleteField(tid, fieldId, hard),
         onSuccess: () => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({
                 queryKey: ["interviewTemplates", templateId, "sections"],
             });
             queryClient.invalidateQueries({
                 queryKey: ["interviewTemplates", templateId, "groups"],
             });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Field deleted successfully");
         },
         onError: (error) => {
@@ -392,9 +422,11 @@ export function useInterviewTemplates(options?: {
             option: FieldOptionCreate;
         }) => createFieldOption(tid, fieldId, option),
         onSuccess: (_, { tid, fieldId }) => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({
                 queryKey: QUERY_KEYS.fieldOptions(tid, fieldId),
             });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Option created successfully");
         },
         onError: (error) => {
@@ -411,9 +443,11 @@ export function useInterviewTemplates(options?: {
             updates: FieldOptionUpdate;
         }) => updateFieldOption(tid, fieldId, optionId, updates),
         onSuccess: (_, { tid, fieldId }) => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({
                 queryKey: QUERY_KEYS.fieldOptions(tid, fieldId),
             });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Option updated successfully");
         },
         onError: (error) => {
@@ -430,9 +464,11 @@ export function useInterviewTemplates(options?: {
             hard: boolean;
         }) => deleteFieldOption(tid, fieldId, optionId, hard),
         onSuccess: (_, { tid, fieldId }) => {
+            clearInterviewTemplateCache();
             queryClient.invalidateQueries({
                 queryKey: QUERY_KEYS.fieldOptions(tid, fieldId),
             });
+            queryClient.invalidateQueries({ queryKey: ["interviewTemplates"] });
             toast.success("Option deleted successfully");
         },
         onError: (error) => {
