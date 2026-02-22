@@ -16,6 +16,7 @@ import PlatoonViewDialog from "@/components/platoon/PlatoonViewDialog";
 import PlatoonsTable from "@/components/platoon/PlatoonsTable";
 import { Platoon, PlatoonFormData } from "@/types/platoon";
 import { usePlatoons } from "@/hooks/usePlatoons";
+import { getPlatoonCommanderHistory, type PlatoonCommanderHistoryItem } from "@/app/lib/api/platoonApi";
 import { toast } from "sonner";
 import { getToastMsg } from "@/lib/error-toast";
 
@@ -34,6 +35,8 @@ export default function PlatoonManagementPage() {
     const [editingPlatoon, setEditingPlatoon] = useState<Platoon | undefined>();
     const [viewPlatoon, setViewPlatoon] = useState<Platoon | undefined>();
     const [isViewOpen, setIsViewOpen] = useState(false);
+    const [commanderHistory, setCommanderHistory] = useState<PlatoonCommanderHistoryItem[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
 
     useEffect(() => {
         fetchPlatoons();
@@ -48,6 +51,9 @@ export default function PlatoonManagementPage() {
                 await editPlatoon(key, {
                     name: data.name,
                     about: data.about,
+                    themeColor: data.themeColor,
+                    imageUrl: data.imageUrl,
+                    imageObjectKey: data.imageObjectKey,
                 });
                 toast.success("Platoon updated successfully");
                 // Refetch data after successful edit
@@ -57,6 +63,9 @@ export default function PlatoonManagementPage() {
                     key: data.key,
                     name: data.name,
                     about: data.about,
+                    themeColor: data.themeColor,
+                    imageUrl: data.imageUrl,
+                    imageObjectKey: data.imageObjectKey,
                 });
                 toast.success("Platoon created successfully");
                 // Refetch data after successful add
@@ -103,6 +112,20 @@ export default function PlatoonManagementPage() {
     const handleOpenViewDialog = (platoon: Platoon) => {
         setViewPlatoon(platoon);
         setIsViewOpen(true);
+        setCommanderHistory([]);
+        setHistoryLoading(true);
+        void (async () => {
+            try {
+                const response = await getPlatoonCommanderHistory(platoon.id);
+                setCommanderHistory(response.items ?? []);
+            } catch (error) {
+                console.debug("Commander history load error:", error);
+                setCommanderHistory([]);
+                toast.error(getToastMsg(error));
+            } finally {
+                setHistoryLoading(false);
+            }
+        })();
     };
 
     return (
@@ -170,6 +193,8 @@ export default function PlatoonManagementPage() {
                 isOpen={isViewOpen}
                 onOpenChange={setIsViewOpen}
                 platoon={viewPlatoon}
+                commanderHistory={commanderHistory}
+                historyLoading={historyLoading}
             />
         </SidebarProvider>
     );

@@ -235,6 +235,20 @@ VM-1 (App)
 - `pnpm run check` verifies Postgres and MinIO connectivity.
 - If schema changes: `pnpm db:generate` then `pnpm db:migrate`.
 
+## Migration Repair Flow (Recommended)
+Use this when `db:migrate` fails due to migration-history mismatch (for example, `already exists` errors).
+
+1. List migration tags:
+   - `pnpm run db:baseline:list`
+2. Run safe auto-repair baseline:
+   - `pnpm run db:baseline`
+3. Apply pending migrations:
+   - `pnpm run db:migrate`
+
+If auto-repair finds nothing, use explicit baseline and rerun migrate:
+- `pnpm run db:baseline -- --tag 0019_same_meteorite`
+- `pnpm run db:migrate`
+
 ## RBAC Permissions Sync & Verification
 Use this flow after RBAC/action-map changes and after `pnpm db:push`.
 

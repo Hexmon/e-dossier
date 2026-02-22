@@ -4,4 +4,5 @@
 * text=auto
 *.sh text eol=lf
 *.bash text eol=lf
+patches/*.patch text eol=lf
 .githooks/* text eol=lf export-ignore

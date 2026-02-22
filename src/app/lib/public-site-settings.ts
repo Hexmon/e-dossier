@@ -1,3 +1,5 @@
+import { DEFAULT_PLATOON_THEME_COLOR, normalizePlatoonThemeColor } from "@/lib/platoon-theme";
+
 export type PublicCommander = {
   id: string;
   name: string;
@@ -28,10 +30,13 @@ export type PublicPlatoon = {
   key: string;
   name: string;
   about: string | null;
+  themeColor: string;
+  imageUrl: string | null;
 };
 
 export type PublicSiteSettings = {
   logoUrl: string | null;
+  heroBgUrl: string | null;
   heroTitle: string;
   heroDescription: string;
   commandersSectionTitle: string;
@@ -41,6 +46,7 @@ export type PublicSiteSettings = {
 
 export const FALLBACK_PUBLIC_SITE_SETTINGS: PublicSiteSettings = {
   logoUrl: null,
+  heroBgUrl: null,
   heroTitle: "MCEME",
   heroDescription:
     "Training Excellence for Officer Cadets (OCs) at the Military College of Electronics & Mechanical Engineering",
@@ -52,6 +58,7 @@ export const FALLBACK_PUBLIC_SITE_SETTINGS: PublicSiteSettings = {
 export function normalizePublicSiteSettings(input: Partial<PublicSiteSettings> | null | undefined) {
   return {
     logoUrl: input?.logoUrl ?? FALLBACK_PUBLIC_SITE_SETTINGS.logoUrl,
+    heroBgUrl: input?.heroBgUrl ?? FALLBACK_PUBLIC_SITE_SETTINGS.heroBgUrl,
     heroTitle: input?.heroTitle || FALLBACK_PUBLIC_SITE_SETTINGS.heroTitle,
     heroDescription: input?.heroDescription || FALLBACK_PUBLIC_SITE_SETTINGS.heroDescription,
     commandersSectionTitle:
@@ -100,6 +107,10 @@ export async function fetchLandingSiteSettings() {
     commanders: commandersRes.items ?? [],
     awards: awardsRes.items ?? [],
     history: historyRes.items ?? [],
-    platoons: platoonsRes.items ?? [],
+    platoons: (platoonsRes.items ?? []).map((item) => ({
+      ...item,
+      themeColor: normalizePlatoonThemeColor(item.themeColor ?? DEFAULT_PLATOON_THEME_COLOR),
+      imageUrl: item.imageUrl ?? null,
+    })),
   };
 }

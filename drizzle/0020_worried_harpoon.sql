@@ -1,0 +1,1 @@
+ALTER TABLE "subjects" ADD COLUMN "no_of_periods" integer DEFAULT 0 NOT NULL;

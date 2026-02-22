@@ -282,6 +282,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/hero-bg",
+    "action": "admin:site-settings:hero-bg:delete",
+    "resourceType": "admin:site-settings:hero-bg",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
     "path": "/api/v1/admin/site-settings/history/:id",
     "action": "admin:site-settings:history:delete",
     "resourceType": "admin:site-settings:history",
@@ -1041,6 +1050,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/physical-training/types/:typeId/tasks/:taskId/scores/:scoreId",
     "action": "admin:physical-training:types:tasks:scores:read",
     "resourceType": "admin:physical-training:types:tasks:scores",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/platoons/:idOrKey/commander-history",
+    "action": "admin:platoons:commander-history:read",
+    "resourceType": "admin:platoons:commander-history",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -2019,6 +2037,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/platoons/:idOrKey",
+    "action": "platoons:read",
+    "resourceType": "platoons",
+    "category": "platoons",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/platoons/:idOrKey/commander-history",
+    "action": "platoons:commander-history:read",
+    "resourceType": "platoons:commander-history",
+    "category": "platoons",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/roles",
     "action": "roles:read",
     "resourceType": "roles",
@@ -2991,6 +3027,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/site-settings/hero-bg/presign",
+    "action": "admin:site-settings:hero-bg:presign:create",
+    "resourceType": "admin:site-settings:hero-bg:presign",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/site-settings/history",
     "action": "admin:site-settings:history:create",
     "resourceType": "admin:site-settings:history",
@@ -3444,6 +3489,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/platoons",
     "action": "platoons:create",
     "resourceType": "platoons",
+    "category": "platoons",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/platoons/image/presign",
+    "action": "platoons:image:presign:create",
+    "resourceType": "platoons:image:presign",
     "category": "platoons",
     "fieldLevelCandidate": false,
     "adminBaseline": false

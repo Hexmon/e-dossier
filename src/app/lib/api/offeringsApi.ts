@@ -13,6 +13,7 @@ export interface Subject {
     code: string;
     name: string;
     branch: string;
+    noOfPeriods: number;
     hasTheory: boolean;
     hasPractical: boolean;
     defaultTheoryCredits: number;

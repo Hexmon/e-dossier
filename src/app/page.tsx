@@ -19,6 +19,7 @@ export default async function Home() {
         <Hero
           title={data.settings.heroTitle}
           description={data.settings.heroDescription}
+          heroBgUrl={data.settings.heroBgUrl}
           commanderName={primaryCommander?.name ?? "Commander"}
           commanderRank={primaryCommander?.tenure ?? "Commander, Cadets Training Wing"}
           commanderImageUrl={primaryCommander?.imageUrl ?? null}

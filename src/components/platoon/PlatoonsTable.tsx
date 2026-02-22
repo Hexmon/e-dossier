@@ -3,6 +3,8 @@
 import { Eye, Edit3, Trash2 } from "lucide-react";
 import { Platoon } from "@/types/platoon";
 import { UniversalTable, TableConfig } from "@/components/layout/TableLayout";
+import SafeImage from "@/components/site-settings/SafeImage";
+import { DEFAULT_PLATOON_THEME_COLOR, normalizePlatoonThemeColor } from "@/lib/platoon-theme";
 
 interface PlatoonsTableProps {
     platoons: Platoon[];
@@ -45,6 +47,43 @@ export default function PlatoonsTable({
                     <span className="text-sm text-muted-foreground line-clamp-2">
                         {value || "No description"}
                     </span>
+                ),
+            },
+            {
+                key: "themeColor",
+                label: "Theme",
+                sortable: false,
+                filterable: false,
+                width: "120px",
+                render: (value) => (
+                    <div className="flex items-center gap-2">
+                        <span
+                            className="h-4 w-4 rounded border"
+                            style={{
+                                backgroundColor: normalizePlatoonThemeColor(
+                                    String(value || DEFAULT_PLATOON_THEME_COLOR)
+                                ),
+                            }}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                            {normalizePlatoonThemeColor(String(value || DEFAULT_PLATOON_THEME_COLOR))}
+                        </span>
+                    </div>
+                ),
+            },
+            {
+                key: "imageUrl",
+                label: "Image",
+                sortable: false,
+                filterable: false,
+                width: "120px",
+                render: (value, row) => (
+                    <SafeImage
+                        src={(value as string) ?? row.imageUrl}
+                        alt={row.name}
+                        fallbackSrc="/images/commander-placeholder.jpg"
+                        className="h-10 w-16 rounded border object-cover"
+                    />
                 ),
             },
             {

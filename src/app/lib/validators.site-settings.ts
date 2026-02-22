@@ -27,6 +27,8 @@ export const siteSettingsUpdateSchema = z
   .object({
     logoUrl: nullableText,
     logoObjectKey: nullableText,
+    heroBgUrl: nullableText,
+    heroBgObjectKey: nullableText,
     heroTitle: trimmedText(2, 160, "heroTitle").optional(),
     heroDescription: trimmedText(8, 1200, "heroDescription").optional(),
     commandersSectionTitle: trimmedText(2, 160, "commandersSectionTitle").optional(),

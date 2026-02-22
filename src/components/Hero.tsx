@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import SafeImage from "@/components/site-settings/SafeImage";
 type HeroProps = {
   title?: string;
   description?: string;
+  heroBgUrl?: string | null;
   commanderName?: string;
   commanderRank?: string;
   commanderImageUrl?: string | null;
@@ -17,6 +17,7 @@ type HeroProps = {
 const Hero = ({
   title = "MCEME",
   description = "Training Excellence for Officer Cadets (OCs) at the Military College of Electronics & Mechanical Engineering",
+  heroBgUrl = null,
   commanderName = "Commander",
   commanderRank = "Commander, Cadets Training Wing",
   commanderImageUrl = null,
@@ -25,12 +26,11 @@ const Hero = ({
     <section className="relative bg-[var(--primary)] text-primary-foreground h-screen w-full overflow-hidden flex items-center">
       {/* Background Image */}
       <div className="absolute inset-0 opacity-20">
-        <Image
-          src="/images/hero-training.jpg"
+        <SafeImage
+          src={heroBgUrl}
+          fallbackSrc="/images/hero-training.jpg"
           alt="MCEME Training Ground"
-          fill
-          priority
-          className="object-cover"
+          className="h-full w-full object-cover"
         />
       </div>
 

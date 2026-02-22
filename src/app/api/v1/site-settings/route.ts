@@ -17,6 +17,7 @@ async function GETHandler(_req: AuditNextRequest) {
         message: "Public site settings retrieved successfully.",
         settings: {
           logoUrl: settings.logoUrl,
+          heroBgUrl: settings.heroBgUrl,
           heroTitle: settings.heroTitle,
           heroDescription: settings.heroDescription,
           commandersSectionTitle: settings.commandersSectionTitle,

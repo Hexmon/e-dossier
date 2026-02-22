@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { logoutAndRedirect } from "@/lib/auth/logout";
 
@@ -11,19 +11,14 @@ export default function DashboardSessionGuard({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [checkingInitialSession, setCheckingInitialSession] = useState(true);
   const checkInFlightRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
 
-    const verifySession = async (initial = false) => {
+    const verifySession = async () => {
       if (checkInFlightRef.current) return;
       checkInFlightRef.current = true;
-
-      if (initial && mounted) {
-        setCheckingInitialSession(true);
-      }
 
       try {
         const response = await fetch("/api/v1/me", {
@@ -48,20 +43,10 @@ export default function DashboardSessionGuard({
         // Keep existing screen for transient failures.
       } finally {
         checkInFlightRef.current = false;
-        if (initial && mounted) {
-          setCheckingInitialSession(false);
-        }
       }
     };
 
-    // Prevent indefinite blank screen if network/auth check stalls.
-    const initialGuardTimeout = window.setTimeout(() => {
-      if (mounted) {
-        setCheckingInitialSession(false);
-      }
-    }, 3000);
-
-    void verifySession(true);
+    void verifySession();
 
     const onFocus = () => {
       void verifySession();
@@ -83,16 +68,11 @@ export default function DashboardSessionGuard({
 
     return () => {
       mounted = false;
-      window.clearTimeout(initialGuardTimeout);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [pathname]);
-
-  if (checkingInitialSession) {
-    return null;
-  }
 
   return <>{children}</>;
 }

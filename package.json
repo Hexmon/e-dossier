@@ -97,11 +97,18 @@
     "zod": "^4.0.17"
   },
   "pnpm": {
+    "overrides": {
+      "fast-xml-parser": "5.3.6",
+      "minimatch": "10.2.1"
+    },
     "auditConfig": {
       "ignoreCves": [
         "CVE-2023-30533",
         "CVE-2024-22363"
       ]
+    },
+    "patchedDependencies": {
+      "minimatch@10.2.1": "patches/minimatch@10.2.1.patch"
     }
   },
   "devDependencies": {

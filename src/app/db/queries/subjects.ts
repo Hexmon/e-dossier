@@ -40,6 +40,7 @@ export async function listSubjects(opts: {
             code: subjects.code,
             name: subjects.name,
             branch: subjects.branch,
+            noOfPeriods: subjects.noOfPeriods,
             hasTheory: subjects.hasTheory,
             hasPractical: subjects.hasPractical,
             defaultTheoryCredits: subjects.defaultTheoryCredits,
