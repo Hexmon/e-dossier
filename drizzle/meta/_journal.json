@@ -141,6 +141,13 @@
       "when": 1771557975925,
       "tag": "0019_same_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1771750835723,
+      "tag": "0020_worried_harpoon",
+      "breakpoints": true
     }
   ]
 }

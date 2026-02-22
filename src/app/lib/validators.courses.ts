@@ -17,6 +17,7 @@ export const subjectCreateSchema = z.object({
     code: z.string().trim().min(2).max(32),
     name: z.string().trim().min(2).max(160),
     branch: z.enum(['C', 'E', 'M']),
+    noOfPeriods: z.coerce.number().int().min(0).max(20),
     hasTheory: z.boolean().optional(),
     hasPractical: z.boolean().optional(),
     defaultTheoryCredits: z.coerce.number().int().min(0).max(20).optional(),
