@@ -106,6 +106,9 @@
         "CVE-2023-30533",
         "CVE-2024-22363"
       ]
+    },
+    "patchedDependencies": {
+      "minimatch@10.2.1": "patches/minimatch@10.2.1.patch"
     }
   },
   "devDependencies": {

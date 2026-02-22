@@ -8,6 +8,11 @@ overrides:
   fast-xml-parser: 5.3.6
   minimatch: 10.2.1
 
+patchedDependencies:
+  minimatch@10.2.1:
+    hash: 1ee2804e0c7aecb452cf620abd166c479299eefbb68b5290af785172d0757e46
+    path: patches/minimatch@10.2.1.patch
+
 importers:
 
   .:
@@ -4960,7 +4965,7 @@ snapshots:
     dependencies:
       '@eslint/object-schema': 2.1.7
       debug: 4.4.3
-      minimatch: 10.2.1
+      minimatch: 10.2.1(patch_hash=1ee2804e0c7aecb452cf620abd166c479299eefbb68b5290af785172d0757e46)
     transitivePeerDependencies:
       - supports-color
 
@@ -4981,7 +4986,7 @@ snapshots:
       ignore: 5.3.2
       import-fresh: 3.3.1
       js-yaml: 4.1.0
-      minimatch: 10.2.1
+      minimatch: 10.2.1(patch_hash=1ee2804e0c7aecb452cf620abd166c479299eefbb68b5290af785172d0757e46)
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
       - supports-color
@@ -6342,7 +6347,7 @@ snapshots:
       debug: 4.4.3
       fast-glob: 3.3.3
       is-glob: 4.0.3
-      minimatch: 10.2.1
+      minimatch: 10.2.1(patch_hash=1ee2804e0c7aecb452cf620abd166c479299eefbb68b5290af785172d0757e46)
       semver: 7.7.3
       ts-api-utils: 2.1.0(typescript@5.9.3)
       typescript: 5.9.3
@@ -7050,7 +7055,7 @@ snapshots:
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
-      minimatch: 10.2.1
+      minimatch: 10.2.1(patch_hash=1ee2804e0c7aecb452cf620abd166c479299eefbb68b5290af785172d0757e46)
       object.fromentries: 2.0.8
       object.groupby: 1.0.3
       object.values: 1.2.1
@@ -7078,7 +7083,7 @@ snapshots:
       hasown: 2.0.2
       jsx-ast-utils: 3.3.5
       language-tags: 1.0.9
-      minimatch: 10.2.1
+      minimatch: 10.2.1(patch_hash=1ee2804e0c7aecb452cf620abd166c479299eefbb68b5290af785172d0757e46)
       object.fromentries: 2.0.8
       safe-regex-test: 1.1.0
       string.prototype.includes: 2.0.1
@@ -7099,7 +7104,7 @@ snapshots:
       estraverse: 5.3.0
       hasown: 2.0.2
       jsx-ast-utils: 3.3.5
-      minimatch: 10.2.1
+      minimatch: 10.2.1(patch_hash=1ee2804e0c7aecb452cf620abd166c479299eefbb68b5290af785172d0757e46)
       object.entries: 1.1.9
       object.fromentries: 2.0.8
       object.values: 1.2.1
@@ -7151,7 +7156,7 @@ snapshots:
       is-glob: 4.0.3
       json-stable-stringify-without-jsonify: 1.0.1
       lodash.merge: 4.6.2
-      minimatch: 10.2.1
+      minimatch: 10.2.1(patch_hash=1ee2804e0c7aecb452cf620abd166c479299eefbb68b5290af785172d0757e46)
       natural-compare: 1.4.0
       optionator: 0.9.4
     optionalDependencies:
@@ -7704,7 +7709,7 @@ snapshots:
       braces: 3.0.3
       picomatch: 2.3.1
 
-  minimatch@10.2.1:
+  minimatch@10.2.1(patch_hash=1ee2804e0c7aecb452cf620abd166c479299eefbb68b5290af785172d0757e46):
     dependencies:
       brace-expansion: 5.0.3
 
