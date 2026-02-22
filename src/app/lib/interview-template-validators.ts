@@ -58,27 +58,29 @@ export const interviewSectionParam = z.object({
 });
 
 // Groups --------------------------------------------------------------------
-export const interviewGroupCreateSchema = z
-    .object({
-        sectionId: z.string().uuid().optional().nullable(),
-        title: z.string().trim().min(1).max(160),
-        minRows: z.coerce.number().int().min(0).optional(),
-        maxRows: z.coerce.number().int().min(0).optional().nullable(),
-        sortOrder: z.coerce.number().int().min(0).optional(),
-        isActive: z.boolean().optional(),
-    })
-    .superRefine((val, ctx) => {
-        if (val.maxRows !== undefined && val.maxRows !== null && val.minRows !== undefined) {
-            if (val.maxRows < val.minRows) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    path: ['maxRows'],
-                    message: 'maxRows cannot be less than minRows',
-                });
-            }
+const interviewGroupBaseSchema = z.object({
+    sectionId: z.string().uuid().optional().nullable(),
+    title: z.string().trim().min(1).max(160),
+    minRows: z.coerce.number().int().min(0).optional(),
+    maxRows: z.coerce.number().int().min(0).optional().nullable(),
+    sortOrder: z.coerce.number().int().min(0).optional(),
+    isActive: z.boolean().optional(),
+});
+
+const validateGroupRows = (val: { minRows?: number; maxRows?: number | null }, ctx: z.RefinementCtx) => {
+    if (val.maxRows !== undefined && val.maxRows !== null && val.minRows !== undefined) {
+        if (val.maxRows < val.minRows) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['maxRows'],
+                message: 'maxRows cannot be less than minRows',
+            });
         }
-    });
-export const interviewGroupUpdateSchema = nonEmptyPartial(interviewGroupCreateSchema);
+    }
+};
+
+export const interviewGroupCreateSchema = interviewGroupBaseSchema.superRefine(validateGroupRows);
+export const interviewGroupUpdateSchema = nonEmptyPartial(interviewGroupBaseSchema).superRefine(validateGroupRows);
 export const interviewGroupQuerySchema = z.object({
     includeDeleted: BoolString.optional(),
 });
