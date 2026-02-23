@@ -36,6 +36,9 @@ const instructorBaseSchema = z.object({
     email: z.string().trim().email().max(255).optional(),
     phone: z.string().trim().max(32).optional(),
     affiliation: z.string().trim().max(160).optional(),
+    experience: z.string().trim().max(2000).optional(),
+    qualification: z.string().trim().max(2000).optional(),
+    subjectIds: z.array(z.string().uuid()).max(200).optional(),
     notes: z.string().trim().max(2000).optional(),
 });
 

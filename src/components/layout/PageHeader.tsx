@@ -1,6 +1,6 @@
 "use client";
 
-import { User, LogOut, Repeat, Loader2 } from "lucide-react";
+import { Settings, LogOut, Repeat, Loader2 } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -152,9 +152,9 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
                   </div>
                 </div>
 
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile Settings</span>
+                <DropdownMenuItem onClick={() => router.push("/dashboard/settings/device")}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Device Site Settings</span>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem

@@ -51,14 +51,6 @@ const Hero = ({
               <Button asChild variant="link" size="lg" className="bg-warning">
                 <Link href="/login?role=staff">Commander / Staff Login</Link>
               </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="bg-white/10 text-primary-foreground border-white/30 hover:bg-white hover:text-primary"
-              >
-                <Link href="/login?role=oc">OC Corner</Link>
-              </Button>
             </div>
           </div>
 

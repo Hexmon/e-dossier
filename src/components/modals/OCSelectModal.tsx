@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/select";
 import { useDebouncedValue } from "@/app/lib/debounce";
 import { fetchOCs, type OCListRow } from "@/app/lib/api/ocApi";
+import { getAllCourses, type CourseResponse } from "@/app/lib/api/courseApi";
 import { getPlatoons, type Platoon } from "@/app/lib/api/platoonApi";
 import { useMe } from "@/hooks/useMe";
 import { isOcSelectable } from "@/lib/oc-selection";
-import { buildOcModalQueryParams, resolveOcModalScope, type OcModalSort } from "@/lib/oc-modal-scope";
+import { buildOcModalQueryParams, resolveOcModalScope } from "@/lib/oc-modal-scope";
 import { ApiClientError } from "@/app/lib/apiClient";
 
 interface OCSelectModalProps {
@@ -31,6 +32,7 @@ interface OCSelectModalProps {
 }
 
 const ALL_PLATOONS_VALUE = "__all__";
+const ALL_COURSES_VALUE = "__all__";
 
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiClientError) return error.message || fallback;
@@ -47,7 +49,7 @@ export default function OCSelectModal({
   const { data: meData, isLoading: meLoading } = useMe();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlatoon, setSelectedPlatoon] = useState("");
-  const [sortBy, setSortBy] = useState<OcModalSort>("name_asc");
+  const [selectedCourse, setSelectedCourse] = useState("");
   const [showOcDropdown, setShowOcDropdown] = useState(false);
   const debouncedSearch = useDebouncedValue(searchQuery, 400);
 
@@ -61,22 +63,30 @@ export default function OCSelectModal({
     staleTime: 5 * 60 * 1000,
   });
 
+  const coursesQuery = useQuery({
+    queryKey: ["oc-select-modal", "courses"],
+    queryFn: getAllCourses,
+    enabled: open,
+    staleTime: 10 * 60 * 1000,
+  });
+
   const ocQuery = useQuery({
     queryKey: [
       "oc-select-modal",
       "ocs",
       open,
       selectedPlatoon || null,
+      selectedCourse || null,
       debouncedSearch.trim(),
-      sortBy,
     ],
     enabled: open && !missingScopedPlatoon,
     queryFn: () =>
       fetchOCs<OCListRow>(
         buildOcModalQueryParams({
           platoonId: selectedPlatoon || undefined,
+          courseId: selectedCourse || undefined,
           query: debouncedSearch,
-          sort: sortBy,
+          sort: "name_asc",
           limit: 20,
         })
       ),
@@ -95,7 +105,7 @@ export default function OCSelectModal({
     if (!open) {
       setSearchQuery("");
       setShowOcDropdown(false);
-      setSortBy("name_asc");
+      setSelectedCourse("");
       if (!isPlatoonScoped) {
         setSelectedPlatoon("");
       }
@@ -103,14 +113,30 @@ export default function OCSelectModal({
   }, [open, isPlatoonScoped]);
 
   const platoonItems = platoonsQuery.data ?? [];
+  const courseItems = useMemo(
+    () =>
+      [...(coursesQuery.data?.items ?? [])].sort((a, b) => {
+        const aKey = `${a.code ?? ""} ${a.title ?? ""}`.toLowerCase();
+        const bKey = `${b.code ?? ""} ${b.title ?? ""}`.toLowerCase();
+        return aKey.localeCompare(bKey);
+      }),
+    [coursesQuery.data?.items]
+  );
   const selectedPlatoonRecord = useMemo(
     () => platoonItems.find((item) => item.id === selectedPlatoon) ?? null,
     [platoonItems, selectedPlatoon]
+  );
+  const selectedCourseRecord = useMemo(
+    () => courseItems.find((item) => item.id === selectedCourse) ?? null,
+    [courseItems, selectedCourse]
   );
   const selectedPlatoonLabel =
     selectedPlatoonRecord?.name ??
     selectedPlatoonRecord?.key ??
     (isPlatoonScoped ? scopePlatoonId ?? "Assigned platoon" : "All platoons");
+  const selectedCourseLabel = selectedCourseRecord
+    ? `${selectedCourseRecord.code} | ${selectedCourseRecord.title}`
+    : "All courses";
 
   const ocOptions = useMemo(() => {
     const rows = ocQuery.data ?? [];
@@ -187,19 +213,36 @@ export default function OCSelectModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="oc-sort-select">Sort By</Label>
+                <Label htmlFor="oc-course-select">Courses</Label>
                 <Select
-                  value={sortBy}
-                  onValueChange={(value: OcModalSort) => setSortBy(value)}
+                  value={selectedCourse || ALL_COURSES_VALUE}
+                  onValueChange={(value) => {
+                    const next = value === ALL_COURSES_VALUE ? "" : value;
+                    setSelectedCourse(next);
+                    setSearchQuery("");
+                    setShowOcDropdown(false);
+                  }}
+                  disabled={coursesQuery.isLoading}
                 >
-                  <SelectTrigger id="oc-sort-select">
-                    <SelectValue placeholder="Select sorting" />
+                  <SelectTrigger id="oc-course-select">
+                    <SelectValue placeholder="Select course">
+                      {selectedCourseLabel}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="name_asc">Name (A-Z)</SelectItem>
-                    <SelectItem value="updated_desc">Recently Updated</SelectItem>
+                    <SelectItem value={ALL_COURSES_VALUE}>All courses</SelectItem>
+                    {courseItems.map((course: CourseResponse) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.code} | {course.title}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {coursesQuery.isError ? (
+                  <p className="text-sm text-destructive">
+                    {toErrorMessage(coursesQuery.error, "Failed to load courses.")}
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
