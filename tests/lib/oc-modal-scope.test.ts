@@ -32,6 +32,7 @@ describe("buildOcModalQueryParams", () => {
   it("builds active query with trimmed search and defaults", () => {
     const result = buildOcModalQueryParams({
       platoonId: "platoon-id",
+      courseId: " course-id ",
       query: "  rahul ",
       sort: "updated_desc",
     });
@@ -40,6 +41,7 @@ describe("buildOcModalQueryParams", () => {
       active: true,
       limit: 20,
       platoon: "platoon-id",
+      courseId: "course-id",
       query: "rahul",
       sort: "updated_desc",
     });

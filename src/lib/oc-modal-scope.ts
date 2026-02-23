@@ -23,6 +23,7 @@ export function resolveOcModalScope(apt: AptScopeClaim): {
 
 export function buildOcModalQueryParams(input: {
   platoonId?: string;
+  courseId?: string;
   query?: string;
   sort?: OcModalSort;
   limit?: number;
@@ -35,6 +36,7 @@ export function buildOcModalQueryParams(input: {
     active: true,
     limit,
     platoon: input.platoonId?.trim() || undefined,
+    courseId: input.courseId?.trim() || undefined,
     query: trimmedQuery ? trimmedQuery : undefined,
     sort: input.sort ?? "name_asc",
   };
