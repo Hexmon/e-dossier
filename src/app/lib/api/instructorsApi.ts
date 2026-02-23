@@ -7,7 +7,10 @@ export interface Instructor {
     email: string;
     phone: string;
     affiliation: string;
-    notes?: string;
+    experience?: string | null;
+    qualification?: string | null;
+    subjectIds?: string[];
+    notes?: string | null;
     createdAt?: string;
     updatedAt?: string;
     deletedAt?: string | null;
@@ -18,6 +21,9 @@ export interface InstructorCreate {
     email: string;
     phone: string;
     affiliation: string;
+    experience?: string;
+    qualification?: string;
+    subjectIds?: string[];
     notes?: string;
 }
 
@@ -26,6 +32,9 @@ export interface InstructorUpdate {
     email?: string;
     phone?: string;
     affiliation?: string;
+    experience?: string;
+    qualification?: string;
+    subjectIds?: string[];
     notes?: string;
 }
 
@@ -79,6 +88,6 @@ export async function updateInstructor(
 
 export async function deleteInstructor(
     instructorId: string
-): Promise<{ id: string; message: string }> {
+): Promise<{ id: string; message: string; instructor?: Instructor }> {
     return await api.delete(endpoints.admin.instructorById(instructorId));
 }

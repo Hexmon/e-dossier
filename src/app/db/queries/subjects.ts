@@ -1,7 +1,7 @@
 import { db } from '@/app/db/client';
 import { subjects } from '@/app/db/schema/training/subjects';
 import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
-import { and, eq, exists, ilike, isNull } from 'drizzle-orm';
+import { and, eq, exists, ilike, inArray, isNull } from 'drizzle-orm';
 
 export async function listSubjects(opts: {
     q?: string;
@@ -92,4 +92,15 @@ export async function hardDeleteSubject(id: string) {
         await tx.delete(subjects).where(eq(subjects.id, id));
         return { before };
     });
+}
+
+export async function findMissingSubjectIds(ids: string[]) {
+    if (!ids.length) return [];
+    const unique = Array.from(new Set(ids));
+    const rows = await db
+        .select({ id: subjects.id })
+        .from(subjects)
+        .where(and(inArray(subjects.id, unique), isNull(subjects.deletedAt)));
+    const found = new Set(rows.map((row) => row.id));
+    return unique.filter((id) => !found.has(id));
 }

@@ -6,6 +6,7 @@ import { db } from '@/app/db/client';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { eq } from 'drizzle-orm';
 import { hardDeleteInstructor, softDeleteInstructor } from '@/app/db/queries/instructors';
+import { findMissingSubjectIds } from '@/app/db/queries/subjects';
 import type { InstructorRow } from '@/app/db/queries/instructors';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -41,6 +42,14 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const adminCtx = await requireAuth(req);
         const { id } = Id.parse(await params);
         const body = instructorUpdateSchema.parse(await req.json());
+        if (body.subjectIds) {
+            const subjectIds = Array.from(new Set(body.subjectIds));
+            const missing = await findMissingSubjectIds(subjectIds);
+            if (missing.length) {
+                return json.badRequest('One or more subjectIds are invalid.', { subjectIds: missing });
+            }
+            body.subjectIds = subjectIds;
+        }
         const [previous] = await db.select().from(instructors).where(eq(instructors.id, id)).limit(1);
         if (!previous) throw new ApiError(404, 'Instructor not found', 'not_found');
         const [row] = await db.update(instructors).set({ ...body }).where(eq(instructors.id, id)).returning();
@@ -95,6 +104,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         return json.ok({
             message: hard ? 'Instructor hard-deleted.' : 'Instructor soft-deleted.',
             id: before.id,
+            instructor: after ?? before,
         });
     } catch (err) { return handleApiError(err); }
 }
