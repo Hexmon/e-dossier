@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import type { InterviewOfficer } from "@/types/interview";
 import type { SpecialInterviewRecord, TermVariant } from "@/store/slices/termInterviewSlice";
 import type { TemplateInfo } from "@/types/interview-templates";
-import { termKeyConfig, type TemplateMappings } from "@/lib/interviewTemplateMatching";
+import { getTemplateMatchForSemester, termKeyConfig, type TemplateMappings } from "@/lib/interviewTemplateMatching";
 import {
     buildFieldPayload,
     mapTemplateKeyToTermFormKey,
@@ -11,6 +11,7 @@ import {
     pickLatestInterview,
     readFieldValue,
     resolveGroupField,
+    resolveSpecialGroupFieldMap,
     resolveSpecialKey,
     resolveTermField,
     type OcInterviewItem,
@@ -68,71 +69,47 @@ export async function fetchInitialInterviews(
     const result: Record<string, Record<InterviewOfficer, Record<string, string | boolean>>> = {};
     initialIndexRef.current = {};
 
-    const officers: InterviewOfficer[] = ["plcdr", "dscoord", "dycdr", "cdr"];
-    for (const officer of officers) {
-        const match = mappings.byKind[officer];
-        if (!match) continue;
+    const buckets = new Map<string, OcInterviewItem[]>();
+    for (const item of items) {
+        const mapping = mappings.byTemplateId.get(item.templateId);
+        if (!mapping) continue;
+        const officer = mapping.kind as InterviewOfficer;
+        if (!["plcdr", "dscoord", "dycdr", "cdr"].includes(officer)) continue;
 
-        const templateItems = items.filter((item) => item.templateId === match.template.id);
-        const usesSemesters = (match.template.semesters?.length ?? 0) > 0;
+        const semesterKey =
+            item.semester != null && item.semester >= 1 && item.semester <= 6 ? String(item.semester) : "none";
+        const key = `${officer}:${semesterKey}`;
+        const list = buckets.get(key) ?? [];
+        list.push(item);
+        buckets.set(key, list);
+    }
 
-        if (usesSemesters) {
-            const bySemester = new Map<number, OcInterviewItem[]>();
-            for (const item of templateItems) {
-                const semester = item.semester ?? null;
-                if (!semester || semester < 1 || semester > 6) continue;
-                if (!match.template.semesters?.includes(semester)) continue;
-                const list = bySemester.get(semester) ?? [];
-                list.push(item);
-                bySemester.set(semester, list);
-            }
+    for (const [key, list] of buckets.entries()) {
+        const [officer, semesterKey] = key.split(":") as [InterviewOfficer, string];
+        const interview = pickLatestInterview(list);
+        if (!interview) continue;
 
-            for (const [semester, list] of bySemester.entries()) {
-                const interview = pickLatestInterview(list);
-                if (!interview) continue;
+        const semesterNum = semesterKey === "none" ? null : Number(semesterKey);
+        const match = getTemplateMatchForSemester(mappings, officer, semesterNum);
+        const template = match?.template;
+        if (!template) continue;
 
-                const formData: Record<string, string | boolean> = {};
-                for (const fieldValue of interview.fields ?? []) {
-                    const field = match.template.fieldsById.get(fieldValue.fieldId);
-                    if (!field) continue;
-                    const value = readFieldValue(field, fieldValue);
-                    if (value !== undefined) formData[field.key] = value;
-                }
-
-                const semesterKey = String(semester);
-                if (!result[semesterKey]) {
-                    result[semesterKey] = { plcdr: {}, dscoord: {}, dycdr: {}, cdr: {} };
-                }
-                result[semesterKey][officer] = formData;
-                initialIndexRef.current[`${officer}:${semesterKey}`] = {
-                    interviewId: interview.id,
-                    templateId: interview.templateId,
-                };
-            }
-        } else {
-            const interview = pickLatestInterview(
-                templateItems.filter((item) => item.semester === null || item.semester === undefined),
-            );
-            if (!interview) continue;
-
-            const formData: Record<string, string | boolean> = {};
-            for (const fieldValue of interview.fields ?? []) {
-                const field = match.template.fieldsById.get(fieldValue.fieldId);
-                if (!field) continue;
-                const value = readFieldValue(field, fieldValue);
-                if (value !== undefined) formData[field.key] = value;
-            }
-
-            const semesterKey = "none";
-            if (!result[semesterKey]) {
-                result[semesterKey] = { plcdr: {}, dscoord: {}, dycdr: {}, cdr: {} };
-            }
-            result[semesterKey][officer] = formData;
-            initialIndexRef.current[`${officer}:${semesterKey}`] = {
-                interviewId: interview.id,
-                templateId: interview.templateId,
-            };
+        const formData: Record<string, string | boolean> = {};
+        for (const fieldValue of interview.fields ?? []) {
+            const field = template.fieldsById.get(fieldValue.fieldId);
+            if (!field) continue;
+            const value = readFieldValue(field, fieldValue);
+            if (value !== undefined) formData[field.key] = value;
         }
+
+        if (!result[semesterKey]) {
+            result[semesterKey] = { plcdr: {}, dscoord: {}, dycdr: {}, cdr: {} };
+        }
+        result[semesterKey][officer] = formData;
+        initialIndexRef.current[`${officer}:${semesterKey}`] = {
+            interviewId: interview.id,
+            templateId: interview.templateId,
+        };
     }
 
     return result;
@@ -179,6 +156,8 @@ export async function fetchTermInterviews(
             const groupId = templateMatch.groupId;
             if (!groupId) continue;
 
+            const templateGroup = templateMatch.template.groups.find((g) => g.id === groupId) ?? null;
+            const specialFieldMap = templateGroup ? resolveSpecialGroupFieldMap(templateGroup) : null;
             const group = item.groups?.find((g) => g.groupId === groupId);
             const rows = group?.rows ?? [];
             const specialInterviews = rows
@@ -195,11 +174,11 @@ export async function fetchTermInterviews(
                         const field = templateMatch.template.fieldsById.get(fieldValue.fieldId);
                         if (!field) continue;
 
-                        if (resolveSpecialKey(field.key, "date")) {
+                        if (specialFieldMap?.date?.id === field.id || resolveSpecialKey(field.key, "date")) {
                             record.date = String(readFieldValue(field, fieldValue) ?? "");
-                        } else if (resolveSpecialKey(field.key, "summary")) {
+                        } else if (specialFieldMap?.summary?.id === field.id || resolveSpecialKey(field.key, "summary")) {
                             record.summary = String(readFieldValue(field, fieldValue) ?? "");
-                        } else if (resolveSpecialKey(field.key, "interviewedBy")) {
+                        } else if (specialFieldMap?.interviewedBy?.id === field.id || resolveSpecialKey(field.key, "interviewedBy")) {
                             record.interviewedBy = String(readFieldValue(field, fieldValue) ?? "");
                         }
                     }
@@ -254,17 +233,18 @@ export async function saveInitialInterview(
     initialIndexRef: { current: InitialIndex },
     semester?: number,
 ) {
-    const match = mappings.byKind[officer];
+    const match = getTemplateMatchForSemester(mappings, officer, semester ?? null);
     if (!match) {
         toast.error("Interview template not configured");
         return null;
     }
 
-    const usesSemesters = (match.template.semesters?.length ?? 0) > 0;
-    if (usesSemesters && (semester === undefined || semester === null)) {
+    if (semester === undefined || semester === null) {
         toast.error("Semester is required for this interview");
         return null;
     }
+
+    const usesSemesters = (match.template.semesters?.length ?? 0) > 0;
     if (usesSemesters && semester && !match.template.semesters?.includes(semester)) {
         toast.error("Semester is not allowed for this interview");
         return null;
@@ -283,7 +263,7 @@ export async function saveInitialInterview(
         valueBool?: boolean | null;
     }>;
 
-    const semesterKey = usesSemesters ? String(semester) : "none";
+    const semesterKey = String(semester);
     const currentIndex = initialIndexRef.current[`${officer}:${semesterKey}`];
     let interview: OcInterviewItem | null = null;
 
@@ -291,21 +271,20 @@ export async function saveInitialInterview(
         const resp: any = await apiRequest<any>({
             method: "PATCH",
             endpoint: `/api/v1/oc/${ocId}/interviews/${currentIndex.interviewId}`,
-            body: { fields, ...(usesSemesters ? { semester } : {}) },
+            body: { fields, semester },
         });
         interview = parseInterviewResponse(resp);
     } else {
         const existing = await fetchLatestInterviewByTemplate(
             ocId,
             match.template.id,
-            usesSemesters ? semester : undefined,
-            usesSemesters ? undefined : { onlyWithoutSemester: true }
+            semester,
         );
         if (existing?.id) {
             const resp: any = await apiRequest<any>({
                 method: "PATCH",
                 endpoint: `/api/v1/oc/${ocId}/interviews/${existing.id}`,
-                body: { fields, ...(usesSemesters ? { semester } : {}) },
+                body: { fields, semester },
             });
             interview = parseInterviewResponse(resp);
         } else {
@@ -314,7 +293,7 @@ export async function saveInitialInterview(
                 endpoint: `/api/v1/oc/${ocId}/interviews`,
                 body: {
                     templateId: match.template.id,
-                    ...(usesSemesters ? { semester } : {}),
+                    semester,
                     fields,
                 },
             });
@@ -344,7 +323,7 @@ export async function saveTermInterview(
     mappings: TemplateMappings,
     termIndexRef: { current: TermIndex },
 ) {
-    const match = mappings.byKind[variant];
+    const match = getTemplateMatchForSemester(mappings, variant, termIndex);
     if (!match) {
         toast.error("Interview template not configured");
         return null;

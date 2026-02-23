@@ -3,10 +3,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { useSelector, useDispatch } from "react-redux";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { RootState } from "@/store";
 import TermSubForm from "./TermSubForm";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
+import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
 import { saveTermInterviewForm, clearTermInterviewForm } from "@/store/slices/termInterviewSlice";
 
 type TermVariant = "beginning" | "postmid" | "special";
@@ -27,12 +28,20 @@ function hasPersistedData(entry: { formFields?: Record<string, string>; specialI
 
 export default function InterviewTermTabs() {
     const { id } = useParams();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
     const dispatch = useDispatch();
     const hydratedRef = useRef(false);
     const isHydratingRef = useRef(false);
 
-    const [selectedTerm, setSelectedTerm] = useState<number>(1);
+    const parseSemesterParam = (value: string | null) => {
+        const n = Number(value);
+        return Number.isInteger(n) && n >= 1 && n <= 6 ? n : 1;
+    };
+
+    const [selectedTerm, setSelectedTerm] = useState<number>(() => parseSemesterParam(searchParams.get("sem")));
 
     const initialSub: Record<number, TermVariant> = {
         1: "postmid",
@@ -64,6 +73,20 @@ export default function InterviewTermTabs() {
     const { fetchTerm, saveTerm, templateMappings } = useInterviewForms(ocId);
     const allSavedForms = useSelector((state: RootState) => state.termInterview.forms[ocId] || {});
     const savedFormsRef = useRef(allSavedForms);
+
+    useEffect(() => {
+        const semFromUrl = parseSemesterParam(searchParams.get("sem"));
+        setSelectedTerm((current) => (current === semFromUrl ? current : semFromUrl));
+    }, [searchParams]);
+
+    useEffect(() => {
+        const currentUrlSem = parseSemesterParam(searchParams.get("sem"));
+        if (currentUrlSem === selectedTerm) return;
+
+        const next = new URLSearchParams(searchParams.toString());
+        next.set("sem", String(selectedTerm));
+        router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    }, [selectedTerm, pathname, router, searchParams]);
 
     useEffect(() => {
         hydratedRef.current = false;
@@ -158,10 +181,10 @@ export default function InterviewTermTabs() {
     const stateKey = `${selectedTerm}_${currentVariant}`;
     const defaultStateFromData = hasPersistedData(savedFormData)
         ? { isEditing: false, isSaved: true }
-        : { isEditing: true, isSaved: false };
+        : { isEditing: false, isSaved: false };
     const currentFormState = formStates[stateKey] ?? defaultStateFromData;
 
-    const termMatch = templateMappings?.byKind[currentVariant] ?? null;
+    const termMatch = getTemplateMatchForSemester(templateMappings, currentVariant, selectedTerm);
     const termTemplate = termMatch?.template ?? null;
     const specialGroup = currentVariant === "special" && termMatch?.groupId
         ? termTemplate?.groups.find((group) => group.id === termMatch.groupId) ?? null

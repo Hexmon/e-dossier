@@ -111,16 +111,88 @@ export function resolveSpecialKey(fieldKey: string, target: "date" | "summary" |
     return aliases.map(normalizeKey).includes(normalizedField);
 }
 
-export function resolveGroupField(group: TemplateGroup, target: "date" | "summary" | "interviewedBy") {
-    const normalizedTarget = normalizeKey(target);
-    const aliases = specialKeyAliases[normalizedTarget] ?? [normalizedTarget];
+export type SpecialGroupFieldMap = {
+    date?: TemplateField;
+    summary?: TemplateField;
+    interviewedBy?: TemplateField;
+};
 
-    for (const alias of aliases) {
-        const field = group.fieldsByKey.get(normalizeKey(alias));
-        if (field) return field;
+function findFieldByAliases(group: TemplateGroup, aliases: string[]) {
+    const normalizedAliases = new Set(aliases.map(normalizeKey));
+    return group.fields.find((field) => normalizedAliases.has(normalizeKey(field.key)));
+}
+
+function firstUnusedField(
+    group: TemplateGroup,
+    usedIds: Set<string>,
+    predicate: (field: TemplateField) => boolean,
+) {
+    return group.fields.find((field) => !usedIds.has(field.id) && predicate(field));
+}
+
+export function resolveSpecialGroupFieldMap(group: TemplateGroup): SpecialGroupFieldMap {
+    const byTarget = {
+        date: specialKeyAliases.date ?? ["date"],
+        summary: specialKeyAliases.summary ?? ["summary"],
+        interviewedBy: specialKeyAliases.interviewedby ?? ["interviewedBy"],
+    } as const;
+
+    const usedIds = new Set<string>();
+    const out: SpecialGroupFieldMap = {};
+
+    const dateAliasMatch = findFieldByAliases(group, byTarget.date);
+    if (dateAliasMatch) {
+        out.date = dateAliasMatch;
+        usedIds.add(dateAliasMatch.id);
     }
 
-    return null;
+    const summaryAliasMatch = findFieldByAliases(group, byTarget.summary);
+    if (summaryAliasMatch && !usedIds.has(summaryAliasMatch.id)) {
+        out.summary = summaryAliasMatch;
+        usedIds.add(summaryAliasMatch.id);
+    }
+
+    const interviewerAliasMatch = findFieldByAliases(group, byTarget.interviewedBy);
+    if (interviewerAliasMatch && !usedIds.has(interviewerAliasMatch.id)) {
+        out.interviewedBy = interviewerAliasMatch;
+        usedIds.add(interviewerAliasMatch.id);
+    }
+
+    if (!out.date) {
+        const dateField = firstUnusedField(group, usedIds, (field) => normalizeKey(field.fieldType) === "date");
+        if (dateField) {
+            out.date = dateField;
+            usedIds.add(dateField.id);
+        }
+    }
+
+    if (!out.summary) {
+        const summaryField =
+            firstUnusedField(group, usedIds, (field) => normalizeKey(field.fieldType) === "textarea") ??
+            firstUnusedField(group, usedIds, (field) => ["text", "textarea"].includes(normalizeKey(field.fieldType)));
+        if (summaryField) {
+            out.summary = summaryField;
+            usedIds.add(summaryField.id);
+        }
+    }
+
+    if (!out.interviewedBy) {
+        const interviewerField =
+            firstUnusedField(group, usedIds, (field) =>
+                ["text", "textarea", "select"].includes(normalizeKey(field.fieldType)),
+            ) ?? firstUnusedField(group, usedIds, () => true);
+        if (interviewerField) {
+            out.interviewedBy = interviewerField;
+            usedIds.add(interviewerField.id);
+        }
+    }
+
+    return out;
+}
+
+export function resolveGroupField(group: TemplateGroup, target: "date" | "summary" | "interviewedBy") {
+    const mapping = resolveSpecialGroupFieldMap(group);
+    return mapping[target] ?? null;
 }
 
 export function pickLatestInterview(items: OcInterviewItem[]) {
