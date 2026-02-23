@@ -11,11 +11,19 @@ import { InterviewFormRecord, InterviewOfficer } from "@/types/interview";
 import { Edit, Save, RotateCcw, X } from "lucide-react";
 import { saveTermInterviewForm, SpecialInterviewRecord } from "@/store/slices/termInterviewSlice";
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from "@/types/interview-templates";
+import { resolveSpecialGroupFieldMap } from "@/lib/interviewFieldUtils";
 
 interface FormState {
     isEditing: boolean;
     isSaved: boolean;
 }
+
+type EditBaseline = {
+    formFields: Record<string, string>;
+    specialInterviews: SpecialInterviewRecord[];
+};
+
+type OfficerTextareaRole = "plcdr" | "dycdr" | "cdr";
 
 interface Props {
     form: UseFormReturn<Record<string, string>>;
@@ -32,16 +40,6 @@ interface Props {
     onClearForm: () => void;
 }
 
-const specialFieldAliases: Record<string, string[]> = {
-    date: ["date", "interviewdate", "interview_date"],
-    summary: ["summary", "details", "remarks", "interviewsummary", "interview_summary"],
-    interviewedby: ["interviewedby", "interviewer", "interviewed_by", "interviewedbyname"],
-};
-
-function normalizeKey(value: string) {
-    return value.trim().toLowerCase();
-}
-
 function normalizeSpecialInterviews(records?: SpecialInterviewRecord[]) {
     return (records ?? []).map((record, index) => ({
         date: record.date ?? "",
@@ -50,6 +48,62 @@ function normalizeSpecialInterviews(records?: SpecialInterviewRecord[]) {
         rowIndex: record.rowIndex ?? index,
         rowId: record.rowId,
     }));
+}
+
+function normalizeText(value: string | null | undefined) {
+    return (value ?? "").trim().toLowerCase();
+}
+
+function isTextareaField(field: TemplateField) {
+    return normalizeText(field.fieldType) === "textarea";
+}
+
+const officerTextareaAliases: Record<OfficerTextareaRole, string[]> = {
+    plcdr: ["pl cdr", "plcdr", "pl cdr remarks", "plcdr remarks", "platoon cdr", "platoon commander"],
+    dycdr: ["dy cdr", "dycdr", "dy cdr remarks", "dycdr remarks", "deputy cdr", "deputy commander"],
+    cdr: ["cdr", "cdr remarks", "commander", "commander remarks", "commanding officer"],
+};
+
+function findOfficerTextareaFieldByRole(fields: TemplateField[], role: OfficerTextareaRole, usedIds: Set<string>) {
+    const aliases = officerTextareaAliases[role].map((value) => normalizeText(value));
+    for (const field of fields) {
+        if (usedIds.has(field.id)) continue;
+        if (!isTextareaField(field)) continue;
+
+        const hay = `${normalizeText(field.key)} ${normalizeText(field.label)}`;
+        if (aliases.some((alias) => hay.includes(alias))) {
+            usedIds.add(field.id);
+            return field;
+        }
+    }
+    return null;
+}
+
+function buildTermOfficerTextareaFields(template: TemplateInfo | null | undefined, variant: Props["variant"]) {
+    if (!template || variant === "special") return [] as TemplateField[];
+
+    const allFields = Array.from(template.fieldsById.values())
+        .filter((field) => !field.groupId)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const textareas = allFields.filter(isTextareaField);
+    if (!textareas.length) return [] as TemplateField[];
+
+    const usedIds = new Set<string>();
+    const ordered: TemplateField[] = [];
+
+    if (variant === "postmid") {
+        const plcdrField = findOfficerTextareaFieldByRole(textareas, "plcdr", usedIds);
+        if (plcdrField) ordered.push(plcdrField);
+    }
+
+    if (variant === "beginning") {
+        for (const role of ["plcdr", "dycdr", "cdr"] as const) {
+            const field = findOfficerTextareaFieldByRole(textareas, role, usedIds);
+            if (field) ordered.push(field);
+        }
+    }
+
+    return ordered;
 }
 
 function areSpecialInterviewsEqual(a: SpecialInterviewRecord[], b: SpecialInterviewRecord[]) {
@@ -89,16 +143,8 @@ function getTemplateSections(template?: TemplateInfo | null): TemplateSection[] 
 
 function getSpecialLabel(group: TemplateGroup | null | undefined, key: "date" | "summary" | "interviewedBy") {
     if (!group) return undefined;
-    const target = normalizeKey(key);
-    const aliases = specialFieldAliases[target] ?? [target];
-    const normalizedAliases = new Set(aliases.map(normalizeKey));
-
-    for (const field of group.fields) {
-        if (normalizedAliases.has(normalizeKey(field.key))) {
-            return field.label || field.key;
-        }
-    }
-    return undefined;
+    const mapping = resolveSpecialGroupFieldMap(group);
+    return mapping[key]?.label || mapping[key]?.key;
 }
 
 export default function TermSubForm({
@@ -119,8 +165,15 @@ export default function TermSubForm({
     const { register, getValues, reset } = form;
 
     const prefix = `term${termIndex}_${variant}_`;
+    const stateKey = `${termIndex}_${variant}`;
+    const editBaselinesRef = React.useRef<Record<string, EditBaseline>>({});
 
     const sections = useMemo(() => getTemplateSections(template), [template]);
+    const trailingOfficerTextareaFields = useMemo(() => buildTermOfficerTextareaFields(template, variant), [template, variant]);
+    const trailingOfficerTextareaFieldIds = useMemo(
+        () => new Set(trailingOfficerTextareaFields.map((field) => field.id)),
+        [trailingOfficerTextareaFields],
+    );
     const dateLabel = getSpecialLabel(specialGroup, "date") ?? "Date";
     const summaryLabel = getSpecialLabel(specialGroup, "summary") ?? "Interview Summary";
     const interviewedByLabel = getSpecialLabel(specialGroup, "interviewedBy") ?? "Interviewed by (Name & Appt)";
@@ -207,7 +260,45 @@ export default function TermSubForm({
     };
 
     const handleEditClick = () => {
+        const currentValues = getValues();
+        editBaselinesRef.current[stateKey] = {
+            formFields: Object.entries(currentValues).reduce<Record<string, string>>((acc, [key, value]) => {
+                acc[key] = String(value ?? "");
+                return acc;
+            }, {}),
+            specialInterviews: normalizeSpecialInterviews(specialInterviews).map((record) => ({ ...record })),
+        };
         updateFormState({ isEditing: true });
+    };
+
+    const handleCancelClick = () => {
+        const baseline = editBaselinesRef.current[stateKey] ?? {
+            formFields: Object.entries(getValues()).reduce<Record<string, string>>((acc, [key, value]) => {
+                acc[key] = String(value ?? "");
+                return acc;
+            }, {}),
+            specialInterviews: normalizeSpecialInterviews(savedSpecialInterviews).map((record) => ({ ...record })),
+        };
+
+        reset(baseline.formFields);
+
+        if (variant === "special") {
+            setSpecialInterviews(baseline.specialInterviews.map((record) => ({ ...record })));
+        }
+
+        dispatch(saveTermInterviewForm({
+            ocId,
+            termIndex,
+            variant,
+            data: {
+                formFields: { ...baseline.formFields },
+                ...(variant === "special"
+                    ? { specialInterviews: baseline.specialInterviews.map((record) => ({ ...record })) }
+                    : {}),
+            },
+        }));
+
+        updateFormState({ isEditing: false });
     };
 
     const handleResetClick = () => {
@@ -327,14 +418,20 @@ export default function TermSubForm({
                 ) : (
                     sections.map((section) => (
                         <div key={section.id} className="space-y-3 mb-4">
-                            {section.title ? <h5 className="font-semibold text-lg">{section.title}</h5> : null}
-                            {section.description ? (
-                                <p className="text-sm text-muted-foreground">{section.description}</p>
-                            ) : null}
-                            <div className="space-y-4">{section.fields.map(renderField)}</div>
+                            <div className="space-y-4">
+                                {section.fields
+                                    .filter((field) => !trailingOfficerTextareaFieldIds.has(field.id))
+                                    .map(renderField)}
+                            </div>
                         </div>
                     ))
                 )
+            )}
+
+            {variant !== "special" && trailingOfficerTextareaFields.length > 0 && (
+                <div className="mt-6 pt-4 border-t space-y-4">
+                    {trailingOfficerTextareaFields.map(renderField)}
+                </div>
             )}
 
             {variant === "special" && (
@@ -356,7 +453,7 @@ export default function TermSubForm({
 
                     {specialInterviews.length === 0 && (
                         <div className="text-center py-8 text-muted-foreground">
-                            No interview records yet. Click \"Add Record\" to create one.
+                            No interview records yet. Click "Edit" to create one.
                         </div>
                     )}
 
@@ -434,7 +531,7 @@ export default function TermSubForm({
             )}
 
             <div className="flex items-center justify-center mt-6 gap-2">
-                {isSaved && !isEditing ? (
+                {!isEditing ? (
                     <Button
                         type="button"
                         onClick={handleEditClick}
@@ -453,6 +550,10 @@ export default function TermSubForm({
                         <Button type="button" onClick={handleResetClick} variant="outline" className="flex items-center gap-2">
                             <RotateCcw className="h-4 w-4" />
                             Clear Form
+                        </Button>
+                        <Button type="button" onClick={handleCancelClick} variant="outline" className="flex items-center gap-2">
+                            <X className="h-4 w-4" />
+                            Cancel
                         </Button>
                     </>
                 )}
