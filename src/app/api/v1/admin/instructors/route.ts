@@ -2,6 +2,7 @@ import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { listQuerySchema, instructorCreateSchema } from '@/app/lib/validators.courses';
 import { listInstructors } from '@/app/db/queries/instructors';
+import { findMissingSubjectIds } from '@/app/db/queries/subjects';
 import { db } from '@/app/db/client';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { users } from '@/app/db/schema/auth/users';
@@ -52,6 +53,14 @@ async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const body = instructorCreateSchema.parse(await req.json());
+        const subjectIds = Array.from(new Set(body.subjectIds ?? []));
+
+        if (subjectIds.length) {
+            const missing = await findMissingSubjectIds(subjectIds);
+            if (missing.length) {
+                return json.badRequest('One or more subjectIds are invalid.', { subjectIds: missing });
+            }
+        }
 
         let userId: string | null = null;
         let name: string;
@@ -84,6 +93,9 @@ async function POSTHandler(req: AuditNextRequest) {
                 email,
                 phone,
                 affiliation: body.affiliation ?? null,
+                experience: body.experience ?? null,
+                qualification: body.qualification ?? null,
+                subjectIds,
                 notes: body.notes ?? null,
             })
             .returning();
@@ -101,6 +113,9 @@ async function POSTHandler(req: AuditNextRequest) {
                 email: row.email,
                 phone: row.phone,
                 affiliation: row.affiliation ?? null,
+                experience: row.experience ?? null,
+                qualification: row.qualification ?? null,
+                subjectIds: row.subjectIds ?? [],
             },
             diff: { after: row },
         });

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { pgTable, uuid, varchar, text, timestamp } from 'drizzle-orm/pg-core';
 import { users } from '@/app/db/schema/auth/users';
 
@@ -9,6 +10,9 @@ export const instructors = pgTable('instructors', {
     email: varchar('email', { length: 255 }),
     phone: varchar('phone', { length: 32 }),
     affiliation: varchar('affiliation', { length: 160 }),
+    experience: text('experience'),
+    qualification: text('qualification'),
+    subjectIds: uuid('subject_ids').array().notNull().default(sql`'{}'::uuid[]`),
     notes: text('notes'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
