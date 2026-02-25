@@ -102,6 +102,9 @@
       "fast-xml-parser": "5.3.6",
       "minimatch": "10.2.1"
     },
+    "patchedDependencies": {
+      "minimatch@10.2.1": "patches/minimatch@10.2.1.patch"
+    },
     "auditConfig": {
       "ignoreCves": [
         "CVE-2023-30533",
