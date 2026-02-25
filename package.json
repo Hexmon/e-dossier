@@ -23,6 +23,7 @@
     "db:generate": "drizzle-kit generate --config=./src/app/db/drizzle.config.ts",
     "db:baseline": "tsx scripts/db-baseline.ts",
     "db:baseline:list": "tsx scripts/db-baseline.ts --list",
+    "db:docs": "tsx scripts/db/export-schema-docs.ts",
     "db:repair:olq-course-template": "tsx scripts/db-repair-olq-course-template.ts",
     "db:migrate": "drizzle-kit migrate --config=./src/app/db/drizzle.config.ts",
     "db:push": "drizzle-kit push --config=./src/app/db/drizzle.config.ts",
@@ -101,14 +102,14 @@
       "fast-xml-parser": "5.3.6",
       "minimatch": "10.2.1"
     },
+    "patchedDependencies": {
+      "minimatch@10.2.1": "patches/minimatch@10.2.1.patch"
+    },
     "auditConfig": {
       "ignoreCves": [
         "CVE-2023-30533",
         "CVE-2024-22363"
       ]
-    },
-    "patchedDependencies": {
-      "minimatch@10.2.1": "patches/minimatch@10.2.1.patch"
     }
   },
   "devDependencies": {
