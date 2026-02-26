@@ -98,25 +98,57 @@ function computeSemesterGpa(view: AcademicSemesterView) {
     return { sgpa, totalCredits, totalWeighted };
 }
 
-async function recomputeAndPersistGpa(ocId: string) {
-    const rows = await listSemesterMarksRows(ocId);
-    if (!rows.length) return;
-    const semestersWithRows = new Set(rows.map((r) => r.semester));
-    const views = (await getOcAcademics(ocId)).filter((v) => semestersWithRows.has(v.semester));
+function computeDerivedGpaBySemester(views: AcademicSemesterView[], semestersWithRows?: Set<number>) {
     const ordered = [...views].sort((a, b) => a.semester - b.semester);
+    const derived = new Map<number, { sgpa: number | null; cgpa: number | null }>();
 
     let cumulativeCredits = 0;
     let cumulativeWeighted = 0;
 
     for (const view of ordered) {
+        if (semestersWithRows && !semestersWithRows.has(view.semester)) {
+            continue;
+        }
+
         const { sgpa, totalCredits, totalWeighted } = computeSemesterGpa(view);
         cumulativeCredits += totalCredits;
         cumulativeWeighted += totalWeighted;
         const cgpa = cumulativeCredits > 0 ? cumulativeWeighted / cumulativeCredits : null;
+        derived.set(view.semester, { sgpa, cgpa });
+    }
+
+    return derived;
+}
+
+function applyComputedGpaToViews(views: AcademicSemesterView[], semestersWithRows: Set<number>) {
+    if (!views.length || semestersWithRows.size === 0) return views;
+    const derived = computeDerivedGpaBySemester(views, semestersWithRows);
+
+    return views.map((view) => {
+        if (!semestersWithRows.has(view.semester)) return view;
+        const next = derived.get(view.semester);
+        if (!next) return view;
+        return {
+            ...view,
+            sgpa: next.sgpa,
+            cgpa: next.cgpa,
+        };
+    });
+}
+
+async function recomputeAndPersistGpa(ocId: string) {
+    const rows = await listSemesterMarksRows(ocId);
+    if (!rows.length) return;
+    const semestersWithRows = new Set(rows.map((r) => r.semester));
+    const views = (await getOcAcademics(ocId)).filter((v) => semestersWithRows.has(v.semester));
+    const derived = computeDerivedGpaBySemester(views, semestersWithRows);
+
+    for (const view of [...views].sort((a, b) => a.semester - b.semester)) {
+        const next = derived.get(view.semester) ?? { sgpa: null, cgpa: null };
         await upsertSemesterSummary(ocId, view.semester, {
             branchTag: view.branchTag,
-            sgpa,
-            cgpa,
+            sgpa: next.sgpa,
+            cgpa: next.cgpa,
         });
     }
 }
@@ -125,14 +157,9 @@ export async function getOcAcademics(ocId: string, opts?: { semester?: number })
     const ocInfo = await getOcCourseInfo(ocId);
     if (!ocInfo) throw new ApiError(404, 'OC not found', 'not_found');
 
-    const offerings = await listCourseOfferings(ocInfo.courseId, opts?.semester);
-    let rows: SemesterMarksRow[] = [];
-    if (opts?.semester) {
-        const single = await getSemesterMarksRow(ocId, opts.semester);
-        rows = single ? [single] : [];
-    } else {
-        rows = await listSemesterMarksRows(ocId);
-    }
+    // Always load all semester rows and offerings so CGPA is accurate even when fetching a single semester.
+    const offerings = await listCourseOfferings(ocInfo.courseId);
+    const rows = await listSemesterMarksRows(ocId);
 
     const rowMap = new Map<number, Awaited<ReturnType<typeof getSemesterMarksRow>>>();
     for (const row of rows) {
@@ -150,7 +177,7 @@ export async function getOcAcademics(ocId: string, opts?: { semester?: number })
 
     const semesters = Array.from(semesterSet).sort((a, b) => a - b);
 
-    return semesters.map((semester) => {
+    const views = semesters.map((semester) => {
         const row = rowMap.get(semester) ?? null;
         const branchTag: BranchTag = row?.branchTag as BranchTag ?? determineBranchForSemester(semester, ocInfo.branch);
         return buildAcademicSemesterView({
@@ -160,6 +187,15 @@ export async function getOcAcademics(ocId: string, opts?: { semester?: number })
             offerings: groupedOfferings.get(semester) ?? [],
         });
     });
+
+    const semestersWithRows = new Set(rows.map((r) => r.semester));
+    const computedViews = applyComputedGpaToViews(views, semestersWithRows);
+
+    if (opts?.semester) {
+        return computedViews.filter((view) => view.semester === opts.semester);
+    }
+
+    return computedViews;
 }
 
 export async function getOcAcademicSemester(ocId: string, semester: number): Promise<AcademicSemesterView> {
