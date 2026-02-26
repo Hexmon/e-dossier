@@ -12,9 +12,8 @@ import CourseFormModal from "@/components/courses/CourseFormModal";
 import CourseViewModal from "@/components/courses/CourseViewModal";
 import AssignOfferingsDialog from "@/components/offerings/AssignOfferingsDialog";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { academicsTabs } from "@/config/app.config";
-import { ocTabs } from "@/config/app.config";
 import { useCourses, type UICourse } from "@/hooks/useCourses";
 import {
   AlertDialog,
@@ -106,16 +105,16 @@ export default function CourseManagement() {
 
   return (
     <SidebarProvider>
-      <section className="flex min-h-screen">
+      <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
 
-        <main className="flex flex-col flex-1">
+        <div className="flex-1 flex flex-col">
           <PageHeader
             title="Course Management"
             description="Manage all courses efficiently."
           />
 
-          <section className="p-6">
+          <main className="flex-1 p-6">
             <BreadcrumbNav
               paths={[
                 { label: "Dashboard", href: "/dashboard" },
@@ -125,10 +124,16 @@ export default function CourseManagement() {
             />
 
             <GlobalTabs tabs={academicsTabs} defaultValue="course-mgmt">
-              <TabsContent value="course-mgmt">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold">Course Sections</h2>
-                  <div className="flex items-center gap-2">
+              <TabsContent value="course-mgmt" className="space-y-6">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                  <h2 className="text-2xl font-bold text-foreground">Course Sections</h2>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Input
+                      placeholder="Search courses..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full sm:w-64"
+                    />
                     <Button variant="outline" onClick={() => setAssignDialogOpen(true)}>
                       Assign Offerings
                     </Button>
@@ -138,10 +143,20 @@ export default function CourseManagement() {
                   </div>
                 </div>
 
+                <div className="flex justify-end items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      {loading ? "Loading courses..." : `${filtered.length} course${filtered.length === 1 ? "" : "s"}`}
+                    </span>
+                  </div>
+                </div>
+
                 {loading ? (
-                  <p>Loading...</p>
+                  <div className="text-center py-12">Loading...</div>
                 ) : filtered.length === 0 ? (
-                  <p>No courses found.</p>
+                  <div className="text-center py-12 text-muted-foreground">
+                    No courses found.
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filtered.map((course) => (
@@ -157,9 +172,9 @@ export default function CourseManagement() {
                 )}
               </TabsContent>
             </GlobalTabs>
-          </section>
-        </main>
-      </section>
+          </main>
+        </div>
+      </div>
 
       <CourseFormModal
         isOpen={isFormOpen}
