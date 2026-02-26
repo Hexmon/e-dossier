@@ -70,8 +70,6 @@ export interface SemesterData {
 
 export interface SemesterGPAUpdate {
     marksScored?: number;
-    sgpa?: number;
-    cgpa?: number;
 }
 
 export interface ListSemestersParams {
