@@ -1,10 +1,10 @@
-import { json, handleApiError } from '@/app/lib/http';
+import { json, handleApiError, ApiError } from '@/app/lib/http';
 
 export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTypeCreateSchema, ptTypeQuerySchema } from '@/app/lib/physical-training-validators';
-import { listPtTypes, createPtType } from '@/app/db/queries/physicalTraining';
+import { listPtTypes, createPtType, findPtTypeBySemesterAndSortOrder, getNextPtTypeSortOrder } from '@/app/db/queries/physicalTraining';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -30,13 +30,29 @@ async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const dto = ptTypeCreateSchema.parse(await req.json());
+        const targetSortOrder = dto.sortOrder ?? (await getNextPtTypeSortOrder(dto.semester));
+        const duplicate = await findPtTypeBySemesterAndSortOrder(dto.semester, targetSortOrder);
+        if (duplicate) {
+            throw new ApiError(
+                409,
+                `Sort order ${targetSortOrder} already exists for semester ${dto.semester}`,
+                'sort_order_conflict',
+                {
+                    field: 'sortOrder',
+                    sortOrder: targetSortOrder,
+                    semester: dto.semester,
+                    conflictingTypeId: duplicate.id,
+                },
+            );
+        }
+
         const row = await createPtType({
             semester: dto.semester,
             code: dto.code.trim(),
             title: dto.title.trim(),
             description: dto.description ?? null,
             maxTotalMarks: dto.maxTotalMarks,
-            sortOrder: dto.sortOrder ?? 0,
+            sortOrder: targetSortOrder,
             isActive: dto.isActive ?? true,
         });
 

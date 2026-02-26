@@ -9,6 +9,7 @@ import { PTAttempt, PTAttemptCreate } from "@/app/lib/api/Physicaltrainingapi";
 
 interface PTAttemptFormProps {
     attempt?: PTAttempt;
+    suggestedSortOrder?: number;
     onSubmit: (attempt: PTAttemptCreate) => void;
     onCancel: () => void;
     isLoading?: boolean;
@@ -16,6 +17,7 @@ interface PTAttemptFormProps {
 
 export default function PTAttemptForm({
     attempt,
+    suggestedSortOrder = 1,
     onSubmit,
     onCancel,
     isLoading = false,
@@ -24,7 +26,7 @@ export default function PTAttemptForm({
         code: "",
         label: "",
         isCompensatory: false,
-        sortOrder: 1,
+        sortOrder: suggestedSortOrder,
         isActive: true,
     });
 
@@ -42,11 +44,11 @@ export default function PTAttemptForm({
                 code: "",
                 label: "",
                 isCompensatory: false,
-                sortOrder: 1,
+                sortOrder: suggestedSortOrder,
                 isActive: true,
             });
         }
-    }, [attempt]);
+    }, [attempt, suggestedSortOrder]);
 
     const handleChange = (field: keyof PTAttemptCreate, value: string | number | boolean) => {
         setFormData((prev) => ({
@@ -58,8 +60,8 @@ export default function PTAttemptForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const { code, label } = formData;
-        if (!code || !label) {
+        const { code, label, sortOrder } = formData;
+        if (!code || !label || (sortOrder ?? 0) < 1) {
             return;
         }
 
@@ -110,7 +112,7 @@ export default function PTAttemptForm({
                     type="number"
                     min="1"
                     value={formData.sortOrder}
-                    onChange={(e) => handleChange("sortOrder", Number(e.target.value))}
+                    onChange={(e) => handleChange("sortOrder", Math.max(1, Number(e.target.value) || 1))}
                     placeholder="1"
                 />
             </div>

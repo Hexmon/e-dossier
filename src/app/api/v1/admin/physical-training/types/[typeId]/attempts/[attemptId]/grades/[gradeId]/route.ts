@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptAttemptGradeParam, ptAttemptGradeUpdateSchema } from '@/app/lib/physical-training-validators';
-import { getPtAttempt, getPtAttemptGrade, updatePtAttemptGrade, deletePtAttemptGrade } from '@/app/db/queries/physicalTraining';
+import { getPtAttempt, getPtAttemptGrade, updatePtAttemptGrade, deletePtAttemptGrade, findPtAttemptGradeByAttemptAndSortOrder } from '@/app/db/queries/physicalTraining';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -38,6 +38,22 @@ async function PATCHHandler(
         if (!existing || existing.ptAttemptId !== attemptId) throw new ApiError(404, 'PT grade not found', 'not_found');
 
         const dto = ptAttemptGradeUpdateSchema.parse(await req.json());
+        const targetSortOrder = dto.sortOrder ?? existing.sortOrder;
+        const duplicate = await findPtAttemptGradeByAttemptAndSortOrder(attemptId, targetSortOrder, { excludeId: gradeId });
+        if (duplicate) {
+            throw new ApiError(
+                409,
+                `Sort order ${targetSortOrder} already exists for this attempt`,
+                'sort_order_conflict',
+                {
+                    field: 'sortOrder',
+                    sortOrder: targetSortOrder,
+                    ptAttemptId: attemptId,
+                    conflictingGradeId: duplicate.id,
+                },
+            );
+        }
+
         const row = await updatePtAttemptGrade(gradeId, {
             ...dto,
             ...(dto.code ? { code: dto.code.trim() } : {}),

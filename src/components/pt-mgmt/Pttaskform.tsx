@@ -9,6 +9,7 @@ import { PTTask, PTTaskCreate } from "@/app/lib/api/Physicaltrainingapi";
 
 interface PTTaskFormProps {
     task?: PTTask;
+    suggestedSortOrder?: number;
     onSubmit: (task: PTTaskCreate) => void;
     onCancel: () => void;
     isLoading?: boolean;
@@ -16,6 +17,7 @@ interface PTTaskFormProps {
 
 export default function PTTaskForm({
     task,
+    suggestedSortOrder = 1,
     onSubmit,
     onCancel,
     isLoading = false,
@@ -23,7 +25,7 @@ export default function PTTaskForm({
     const [formData, setFormData] = useState<PTTaskCreate>({
         title: "",
         maxMarks: 0,
-        sortOrder: 1,
+        sortOrder: suggestedSortOrder,
     });
 
     useEffect(() => {
@@ -37,10 +39,10 @@ export default function PTTaskForm({
             setFormData({
                 title: "",
                 maxMarks: 0,
-                sortOrder: 1,
+                sortOrder: suggestedSortOrder,
             });
         }
-    }, [task]);
+    }, [task, suggestedSortOrder]);
 
     const handleChange = (field: keyof PTTaskCreate, value: string | number) => {
         setFormData((prev) => ({
@@ -52,8 +54,8 @@ export default function PTTaskForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const { title, maxMarks } = formData;
-        if (!title || maxMarks < 0) {
+        const { title, maxMarks, sortOrder } = formData;
+        if (!title || maxMarks < 0 || (sortOrder ?? 0) < 1) {
             return;
         }
 
@@ -94,7 +96,7 @@ export default function PTTaskForm({
                     type="number"
                     min="1"
                     value={formData.sortOrder}
-                    onChange={(e) => handleChange("sortOrder", Number(e.target.value))}
+                    onChange={(e) => handleChange("sortOrder", Math.max(1, Number(e.target.value) || 1))}
                     placeholder="1"
                 />
             </div>

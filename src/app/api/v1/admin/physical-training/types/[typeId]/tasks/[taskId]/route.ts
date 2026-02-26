@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTaskParam, ptTaskUpdateSchema } from '@/app/lib/physical-training-validators';
-import { getPtTask, updatePtTask, deletePtTask } from '@/app/db/queries/physicalTraining';
+import { getPtTask, updatePtTask, deletePtTask, findPtTaskByTypeAndSortOrder } from '@/app/db/queries/physicalTraining';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -28,6 +28,22 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         if (!existing || existing.ptTypeId !== typeId) throw new ApiError(404, 'PT task not found', 'not_found');
 
         const dto = ptTaskUpdateSchema.parse(await req.json());
+        const targetSortOrder = dto.sortOrder ?? existing.sortOrder;
+        const duplicate = await findPtTaskByTypeAndSortOrder(typeId, targetSortOrder, { excludeId: taskId });
+        if (duplicate) {
+            throw new ApiError(
+                409,
+                `Sort order ${targetSortOrder} already exists for this PT type`,
+                'sort_order_conflict',
+                {
+                    field: 'sortOrder',
+                    sortOrder: targetSortOrder,
+                    ptTypeId: typeId,
+                    conflictingTaskId: duplicate.id,
+                },
+            );
+        }
+
         const row = await updatePtTask(taskId, {
             ...dto,
             ...(dto.title ? { title: dto.title.trim() } : {}),

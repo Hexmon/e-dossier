@@ -1,10 +1,10 @@
-import { json, handleApiError } from '@/app/lib/http';
+import { json, handleApiError, ApiError } from '@/app/lib/http';
 
 export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptMotivationFieldCreateSchema, ptMotivationFieldQuerySchema } from '@/app/lib/physical-training-validators';
-import { listPtMotivationFields, createPtMotivationField } from '@/app/db/queries/physicalTraining';
+import { listPtMotivationFields, createPtMotivationField, findPtMotivationFieldBySemesterAndSortOrder, getNextPtMotivationFieldSortOrder } from '@/app/db/queries/physicalTraining';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -30,10 +30,26 @@ async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const dto = ptMotivationFieldCreateSchema.parse(await req.json());
+        const targetSortOrder = dto.sortOrder ?? (await getNextPtMotivationFieldSortOrder(dto.semester));
+        const duplicate = await findPtMotivationFieldBySemesterAndSortOrder(dto.semester, targetSortOrder);
+        if (duplicate) {
+            throw new ApiError(
+                409,
+                `Sort order ${targetSortOrder} already exists for semester ${dto.semester}`,
+                'sort_order_conflict',
+                {
+                    field: 'sortOrder',
+                    sortOrder: targetSortOrder,
+                    semester: dto.semester,
+                    conflictingFieldId: duplicate.id,
+                },
+            );
+        }
+
         const row = await createPtMotivationField({
             semester: dto.semester,
             label: dto.label.trim(),
-            sortOrder: dto.sortOrder ?? 0,
+            sortOrder: targetSortOrder,
             isActive: dto.isActive ?? true,
         });
 
