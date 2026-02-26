@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '@/app/db/client';
 import {
     ptTypes,
@@ -45,6 +45,50 @@ export async function createPtType(data: typeof ptTypes.$inferInsert) {
         .values({ ...data, createdAt: now, updatedAt: now })
         .returning();
     return row;
+}
+
+export async function getNextPtTypeSortOrder(semester: number, opts: { excludeId?: string } = {}) {
+    const wh = [
+        eq(ptTypes.semester, semester),
+        isNull(ptTypes.deletedAt),
+        ...(opts.excludeId ? [ne(ptTypes.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            next: sql<number>`coalesce(max(${ptTypes.sortOrder}), 0) + 1`,
+        })
+        .from(ptTypes)
+        .where(and(...wh));
+
+    return row?.next ?? 1;
+}
+
+export async function findPtTypeBySemesterAndSortOrder(
+    semester: number,
+    sortOrder: number,
+    opts: { excludeId?: string } = {},
+) {
+    const wh = [
+        eq(ptTypes.semester, semester),
+        eq(ptTypes.sortOrder, sortOrder),
+        isNull(ptTypes.deletedAt),
+        ...(opts.excludeId ? [ne(ptTypes.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            id: ptTypes.id,
+            semester: ptTypes.semester,
+            code: ptTypes.code,
+            title: ptTypes.title,
+            sortOrder: ptTypes.sortOrder,
+        })
+        .from(ptTypes)
+        .where(and(...wh))
+        .limit(1);
+
+    return row ?? null;
 }
 
 export async function updatePtType(id: string, data: Partial<typeof ptTypes.$inferInsert>) {
@@ -103,6 +147,50 @@ export async function createPtAttempt(ptTypeId: string, data: Omit<typeof ptType
         .values({ ptTypeId, ...data, createdAt: now, updatedAt: now })
         .returning();
     return row;
+}
+
+export async function getNextPtAttemptSortOrder(ptTypeId: string, opts: { excludeId?: string } = {}) {
+    const wh = [
+        eq(ptTypeAttempts.ptTypeId, ptTypeId),
+        isNull(ptTypeAttempts.deletedAt),
+        ...(opts.excludeId ? [ne(ptTypeAttempts.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            next: sql<number>`coalesce(max(${ptTypeAttempts.sortOrder}), 0) + 1`,
+        })
+        .from(ptTypeAttempts)
+        .where(and(...wh));
+
+    return row?.next ?? 1;
+}
+
+export async function findPtAttemptByTypeAndSortOrder(
+    ptTypeId: string,
+    sortOrder: number,
+    opts: { excludeId?: string } = {},
+) {
+    const wh = [
+        eq(ptTypeAttempts.ptTypeId, ptTypeId),
+        eq(ptTypeAttempts.sortOrder, sortOrder),
+        isNull(ptTypeAttempts.deletedAt),
+        ...(opts.excludeId ? [ne(ptTypeAttempts.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            id: ptTypeAttempts.id,
+            ptTypeId: ptTypeAttempts.ptTypeId,
+            code: ptTypeAttempts.code,
+            label: ptTypeAttempts.label,
+            sortOrder: ptTypeAttempts.sortOrder,
+        })
+        .from(ptTypeAttempts)
+        .where(and(...wh))
+        .limit(1);
+
+    return row ?? null;
 }
 
 export async function updatePtAttempt(id: string, data: Partial<typeof ptTypeAttempts.$inferInsert>) {
@@ -165,6 +253,50 @@ export async function createPtAttemptGrade(
     return row;
 }
 
+export async function getNextPtAttemptGradeSortOrder(ptAttemptId: string, opts: { excludeId?: string } = {}) {
+    const wh = [
+        eq(ptAttemptGrades.ptAttemptId, ptAttemptId),
+        isNull(ptAttemptGrades.deletedAt),
+        ...(opts.excludeId ? [ne(ptAttemptGrades.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            next: sql<number>`coalesce(max(${ptAttemptGrades.sortOrder}), 0) + 1`,
+        })
+        .from(ptAttemptGrades)
+        .where(and(...wh));
+
+    return row?.next ?? 1;
+}
+
+export async function findPtAttemptGradeByAttemptAndSortOrder(
+    ptAttemptId: string,
+    sortOrder: number,
+    opts: { excludeId?: string } = {},
+) {
+    const wh = [
+        eq(ptAttemptGrades.ptAttemptId, ptAttemptId),
+        eq(ptAttemptGrades.sortOrder, sortOrder),
+        isNull(ptAttemptGrades.deletedAt),
+        ...(opts.excludeId ? [ne(ptAttemptGrades.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            id: ptAttemptGrades.id,
+            ptAttemptId: ptAttemptGrades.ptAttemptId,
+            code: ptAttemptGrades.code,
+            label: ptAttemptGrades.label,
+            sortOrder: ptAttemptGrades.sortOrder,
+        })
+        .from(ptAttemptGrades)
+        .where(and(...wh))
+        .limit(1);
+
+    return row ?? null;
+}
+
 export async function updatePtAttemptGrade(id: string, data: Partial<typeof ptAttemptGrades.$inferInsert>) {
     const [row] = await db
         .update(ptAttemptGrades)
@@ -219,6 +351,49 @@ export async function createPtTask(ptTypeId: string, data: Omit<typeof ptTasks.$
         .values({ ptTypeId, ...data, createdAt: now, updatedAt: now })
         .returning();
     return row;
+}
+
+export async function getNextPtTaskSortOrder(ptTypeId: string, opts: { excludeId?: string } = {}) {
+    const wh = [
+        eq(ptTasks.ptTypeId, ptTypeId),
+        isNull(ptTasks.deletedAt),
+        ...(opts.excludeId ? [ne(ptTasks.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            next: sql<number>`coalesce(max(${ptTasks.sortOrder}), 0) + 1`,
+        })
+        .from(ptTasks)
+        .where(and(...wh));
+
+    return row?.next ?? 1;
+}
+
+export async function findPtTaskByTypeAndSortOrder(
+    ptTypeId: string,
+    sortOrder: number,
+    opts: { excludeId?: string } = {},
+) {
+    const wh = [
+        eq(ptTasks.ptTypeId, ptTypeId),
+        eq(ptTasks.sortOrder, sortOrder),
+        isNull(ptTasks.deletedAt),
+        ...(opts.excludeId ? [ne(ptTasks.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            id: ptTasks.id,
+            ptTypeId: ptTasks.ptTypeId,
+            title: ptTasks.title,
+            sortOrder: ptTasks.sortOrder,
+        })
+        .from(ptTasks)
+        .where(and(...wh))
+        .limit(1);
+
+    return row ?? null;
 }
 
 export async function updatePtTask(id: string, data: Partial<typeof ptTasks.$inferInsert>) {
@@ -322,6 +497,49 @@ export async function createPtMotivationField(data: typeof ptMotivationAwardFiel
         .values({ ...data, createdAt: now, updatedAt: now })
         .returning();
     return row;
+}
+
+export async function getNextPtMotivationFieldSortOrder(semester: number, opts: { excludeId?: string } = {}) {
+    const wh = [
+        eq(ptMotivationAwardFields.semester, semester),
+        isNull(ptMotivationAwardFields.deletedAt),
+        ...(opts.excludeId ? [ne(ptMotivationAwardFields.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            next: sql<number>`coalesce(max(${ptMotivationAwardFields.sortOrder}), 0) + 1`,
+        })
+        .from(ptMotivationAwardFields)
+        .where(and(...wh));
+
+    return row?.next ?? 1;
+}
+
+export async function findPtMotivationFieldBySemesterAndSortOrder(
+    semester: number,
+    sortOrder: number,
+    opts: { excludeId?: string } = {},
+) {
+    const wh = [
+        eq(ptMotivationAwardFields.semester, semester),
+        eq(ptMotivationAwardFields.sortOrder, sortOrder),
+        isNull(ptMotivationAwardFields.deletedAt),
+        ...(opts.excludeId ? [ne(ptMotivationAwardFields.id, opts.excludeId)] : []),
+    ];
+
+    const [row] = await db
+        .select({
+            id: ptMotivationAwardFields.id,
+            semester: ptMotivationAwardFields.semester,
+            label: ptMotivationAwardFields.label,
+            sortOrder: ptMotivationAwardFields.sortOrder,
+        })
+        .from(ptMotivationAwardFields)
+        .where(and(...wh))
+        .limit(1);
+
+    return row ?? null;
 }
 
 export async function updatePtMotivationField(id: string, data: Partial<typeof ptMotivationAwardFields.$inferInsert>) {

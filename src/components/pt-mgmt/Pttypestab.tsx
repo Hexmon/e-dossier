@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import {
     Dialog,
     DialogContent,
@@ -44,12 +45,30 @@ export default function PTTypesTab({
     const [editingType, setEditingType] = useState<PTType | undefined>(undefined);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const nextSortOrder = useMemo(
+        () => Math.max(0, ...types.map((item) => item.sortOrder ?? 0)) + 1,
+        [types],
+    );
 
     const handleSubmit = async (data: PTTypeCreate) => {
+        const targetSortOrder = data.sortOrder ?? nextSortOrder;
+        const duplicate = types.find(
+            (item) =>
+                item.semester === data.semester &&
+                item.sortOrder === targetSortOrder &&
+                item.id !== editingType?.id,
+        );
+
+        if (duplicate) {
+            toast.error(`Sort order ${targetSortOrder} is already used in semester ${data.semester}.`);
+            return;
+        }
+
         const result = editingType
             ? await onEdit(editingType.id, data)
             : await onAdd(data);
 
+        if (!result) return;
         setIsDialogOpen(false);
         setEditingType(undefined);
     };
@@ -111,6 +130,8 @@ export default function PTTypesTab({
                     </DialogHeader>
                     <PTTypeForm
                         type={editingType}
+                        defaultSemester={semester}
+                        suggestedSortOrder={nextSortOrder}
                         onSubmit={handleSubmit}
                         onCancel={() => {
                             setIsDialogOpen(false);

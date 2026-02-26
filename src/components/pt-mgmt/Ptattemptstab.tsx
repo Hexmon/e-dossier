@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import {
     Select,
@@ -58,16 +59,29 @@ export default function PTAttemptsTab({
     const [editingAttempt, setEditingAttempt] = useState<PTAttempt | undefined>(undefined);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const nextSortOrder = useMemo(
+        () => Math.max(0, ...attempts.map((item) => item.sortOrder ?? 0)) + 1,
+        [attempts],
+    );
 
     const selectedType = types.find((t) => t.id === selectedTypeId);
 
     const handleSubmit = async (data: PTAttemptCreate) => {
         if (!selectedTypeId) return;
+        const targetSortOrder = data.sortOrder ?? nextSortOrder;
+        const duplicate = attempts.find(
+            (item) => item.sortOrder === targetSortOrder && item.id !== editingAttempt?.id,
+        );
+        if (duplicate) {
+            toast.error(`Sort order ${targetSortOrder} is already used for this PT type.`);
+            return;
+        }
 
         const result = editingAttempt
             ? await onEdit(selectedTypeId, editingAttempt.id, data)
             : await onAdd(selectedTypeId, data);
 
+        if (!result) return;
         setIsDialogOpen(false);
         setEditingAttempt(undefined);
     };
@@ -172,6 +186,7 @@ export default function PTAttemptsTab({
                     </DialogHeader>
                     <PTAttemptForm
                         attempt={editingAttempt}
+                        suggestedSortOrder={nextSortOrder}
                         onSubmit={handleSubmit}
                         onCancel={() => {
                             setIsDialogOpen(false);

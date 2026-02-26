@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import {
     Dialog,
     DialogContent,
@@ -44,12 +45,35 @@ export default function PTMotivationTab({
     const [editingField, setEditingField] = useState<PTMotivationField | undefined>(undefined);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const nextSortOrder = useMemo(
+        () =>
+            Math.max(
+                0,
+                ...fields
+                    .filter((item) => item.semester === semester)
+                    .map((item) => item.sortOrder ?? 0),
+            ) + 1,
+        [fields, semester],
+    );
 
     const handleSubmit = async (data: PTMotivationFieldCreate) => {
+        const targetSortOrder = data.sortOrder ?? nextSortOrder;
+        const duplicate = fields.find(
+            (item) =>
+                item.semester === data.semester &&
+                item.sortOrder === targetSortOrder &&
+                item.id !== editingField?.id,
+        );
+        if (duplicate) {
+            toast.error(`Sort order ${targetSortOrder} is already used in semester ${data.semester}.`);
+            return;
+        }
+
         const result = editingField
             ? await onEdit(editingField.id, data)
             : await onAdd(data);
 
+        if (!result) return;
         setIsDialogOpen(false);
         setEditingField(undefined);
     };
@@ -111,6 +135,8 @@ export default function PTMotivationTab({
                     </DialogHeader>
                     <PTMotivationFieldForm
                         field={editingField}
+                        defaultSemester={semester}
+                        suggestedSortOrder={nextSortOrder}
                         onSubmit={handleSubmit}
                         onCancel={() => {
                             setIsDialogOpen(false);

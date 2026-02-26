@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptTypeParam, ptTypeUpdateSchema } from '@/app/lib/physical-training-validators';
-import { getPtType, updatePtType, deletePtType } from '@/app/db/queries/physicalTraining';
+import { getPtType, updatePtType, deletePtType, findPtTypeBySemesterAndSortOrder } from '@/app/db/queries/physicalTraining';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -25,6 +25,26 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const adminCtx = await requireAuth(req);
         const { typeId } = ptTypeParam.parse(await params);
         const dto = ptTypeUpdateSchema.parse(await req.json());
+        const existing = await getPtType(typeId);
+        if (!existing) throw new ApiError(404, 'PT type not found', 'not_found');
+
+        const targetSemester = dto.semester ?? existing.semester;
+        const targetSortOrder = dto.sortOrder ?? existing.sortOrder;
+        const duplicate = await findPtTypeBySemesterAndSortOrder(targetSemester, targetSortOrder, { excludeId: typeId });
+        if (duplicate) {
+            throw new ApiError(
+                409,
+                `Sort order ${targetSortOrder} already exists for semester ${targetSemester}`,
+                'sort_order_conflict',
+                {
+                    field: 'sortOrder',
+                    sortOrder: targetSortOrder,
+                    semester: targetSemester,
+                    conflictingTypeId: duplicate.id,
+                },
+            );
+        }
+
         const row = await updatePtType(typeId, {
             ...dto,
             ...(dto.code ? { code: dto.code.trim() } : {}),

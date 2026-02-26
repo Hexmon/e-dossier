@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import {
     Select,
@@ -62,17 +63,30 @@ export default function PTGradesTab({
     const [editingGrade, setEditingGrade] = useState<PTGrade | undefined>(undefined);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const nextSortOrder = useMemo(
+        () => Math.max(0, ...grades.map((item) => item.sortOrder ?? 0)) + 1,
+        [grades],
+    );
 
     const selectedType = types.find((t) => t.id === selectedTypeId);
     const selectedAttempt = attempts.find((a) => a.id === selectedAttemptId);
 
     const handleSubmit = async (data: PTGradeCreate) => {
         if (!selectedTypeId || !selectedAttemptId) return;
+        const targetSortOrder = data.sortOrder ?? nextSortOrder;
+        const duplicate = grades.find(
+            (item) => item.sortOrder === targetSortOrder && item.id !== editingGrade?.id,
+        );
+        if (duplicate) {
+            toast.error(`Sort order ${targetSortOrder} is already used for this attempt.`);
+            return;
+        }
 
         const result = editingGrade
             ? await onEdit(selectedTypeId, selectedAttemptId, editingGrade.id, data)
             : await onAdd(selectedTypeId, selectedAttemptId, data);
 
+        if (!result) return;
         setIsDialogOpen(false);
         setEditingGrade(undefined);
     };
@@ -210,6 +224,7 @@ export default function PTGradesTab({
                     </DialogHeader>
                     <PTGradeForm
                         grade={editingGrade}
+                        suggestedSortOrder={nextSortOrder}
                         onSubmit={handleSubmit}
                         onCancel={() => {
                             setIsDialogOpen(false);

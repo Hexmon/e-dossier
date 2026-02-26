@@ -19,6 +19,8 @@ import {
 
 interface PTMotivationFieldFormProps {
     field?: PTMotivationField;
+    defaultSemester?: number;
+    suggestedSortOrder?: number;
     onSubmit: (field: PTMotivationFieldCreate) => void;
     onCancel: () => void;
     isLoading?: boolean;
@@ -26,14 +28,16 @@ interface PTMotivationFieldFormProps {
 
 export default function PTMotivationFieldForm({
     field,
+    defaultSemester = 1,
+    suggestedSortOrder = 1,
     onSubmit,
     onCancel,
     isLoading = false,
 }: PTMotivationFieldFormProps) {
     const [formData, setFormData] = useState<PTMotivationFieldCreate>({
-        semester: 1,
+        semester: defaultSemester,
         label: "",
-        sortOrder: 1,
+        sortOrder: suggestedSortOrder,
         isActive: true,
     });
 
@@ -47,13 +51,13 @@ export default function PTMotivationFieldForm({
             });
         } else {
             setFormData({
-                semester: 1,
+                semester: defaultSemester,
                 label: "",
-                sortOrder: 1,
+                sortOrder: suggestedSortOrder,
                 isActive: true,
             });
         }
-    }, [field]);
+    }, [field, defaultSemester, suggestedSortOrder]);
 
     const handleChange = (
         fieldKey: keyof PTMotivationFieldCreate,
@@ -68,8 +72,8 @@ export default function PTMotivationFieldForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const { semester, label } = formData;
-        if (!semester || !label) {
+        const { semester, label, sortOrder } = formData;
+        if (!semester || !label || (sortOrder ?? 0) < 1) {
             return;
         }
 
@@ -116,7 +120,7 @@ export default function PTMotivationFieldForm({
                     type="number"
                     min="1"
                     value={formData.sortOrder}
-                    onChange={(e) => handleChange("sortOrder", Number(e.target.value))}
+                    onChange={(e) => handleChange("sortOrder", Math.max(1, Number(e.target.value) || 1))}
                     placeholder="1"
                 />
             </div>
