@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { logoutAndRedirect } from "@/lib/auth/logout";
+import { isSwitchSessionInProgress } from "@/lib/auth/switch-session";
 
 export default function DashboardSessionGuard({
   children,
@@ -31,6 +32,7 @@ export default function DashboardSessionGuard({
         });
 
         if (response.status === 401) {
+          if (isSwitchSessionInProgress()) return;
           void logoutAndRedirect({
             reason: "unauthorized",
             preserveNext: true,

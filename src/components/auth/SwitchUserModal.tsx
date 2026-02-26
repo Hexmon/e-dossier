@@ -8,23 +8,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { getAppointments, type Appointment } from "@/app/lib/api/appointmentApi";
-import { loginUser, requestServerLogout } from "@/app/lib/api/authApi";
+import { loginUser } from "@/app/lib/api/authApi";
 import { ApiClientError } from "@/app/lib/apiClient";
 import { fetchMe } from "@/app/lib/api/me";
-import {
-  clearReturnUrl,
-  getCurrentDashboardPathWithQuery,
-  readReturnUrl,
-  resolvePostAuthRedirect,
-  storeReturnUrl,
-} from "@/lib/auth-return-url";
+import { clearReturnUrl } from "@/lib/auth-return-url";
+import { beginSwitchSession, endSwitchSession } from "@/lib/auth/switch-session";
 import {
   type CurrentIdentity,
   filterSwitchableAppointments,
   isSameIdentity,
-  normalizeRoleKey,
 } from "@/lib/switch-user";
 import { type LoginForm } from "@/types/login";
+import { appLogoutReset, persistor, store } from "@/store";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -81,25 +76,11 @@ export default function SwitchUserModal({
   });
 
   const appointment = watch("appointment");
-  const platoon = watch("platoon");
   const isBusy = isSubmitting || loadingAppointments;
 
   const switchableAppointments = useMemo(
     () => filterSwitchableAppointments(appointments, currentIdentity),
     [appointments, currentIdentity]
-  );
-
-  const uniqueAppointmentNames = useMemo(() => {
-    const set = new Set<string>();
-    switchableAppointments.forEach(({ positionName }) => {
-      if (!set.has(positionName)) set.add(positionName);
-    });
-    return Array.from(set);
-  }, [switchableAppointments]);
-
-  const platoonCommanders = useMemo(
-    () => switchableAppointments.filter((a) => a.scopeType === "PLATOON"),
-    [switchableAppointments]
   );
 
   const hasAppointmentsData = useMemo(
@@ -149,25 +130,16 @@ export default function SwitchUserModal({
   }, [open, reset]);
 
   const handleAppointmentChange = (value: string) => {
+    const selectedAppointment = switchableAppointments.find((a) => a.id === value);
+
     setValue("appointment", value);
-    if (value !== "Platoon Commander") {
-      const selectedAppointment = switchableAppointments.find(
-        (a) => a.positionName === value
-      );
-      setValue("username", selectedAppointment?.username ?? "");
-      setValue("platoon", "");
-      return;
-    }
-
-    setValue("username", "");
-  };
-
-  const handlePlatoonChange = (value: string) => {
-    setValue("platoon", value);
-    const selectedPlatoon = platoonCommanders.find(
-      ({ platoonName }) => platoonName === value
+    setValue("username", selectedAppointment?.username ?? "");
+    setValue(
+      "platoon",
+      selectedAppointment?.scopeType === "PLATOON"
+        ? selectedAppointment.scopeId ?? ""
+        : ""
     );
-    setValue("username", selectedPlatoon?.username ?? "");
   };
 
   const onSubmit = async (formData: LoginForm) => {
@@ -176,20 +148,15 @@ export default function SwitchUserModal({
       return;
     }
 
-    const selectedAppointment = switchableAppointments.find(
-      (a) => a.positionName === formData.appointment
-    );
+    const selectedAppointment = switchableAppointments.find((a) => a.id === formData.appointment);
     if (!selectedAppointment?.id) {
       toast.error("Please select a valid appointment.");
       return;
     }
 
-    const selectedPlatoonCommander = platoonCommanders.find(
-      (p) => p.username === formData.platoon
-    );
-
-    if (formData.appointment === "Platoon Commander" && !selectedPlatoonCommander?.id) {
-      toast.error("Please select a valid platoon.");
+    const loginUsername = selectedAppointment.username ?? formData.username;
+    if (!loginUsername) {
+      toast.error("Selected appointment has no username.");
       return;
     }
 
@@ -197,41 +164,51 @@ export default function SwitchUserModal({
       userId: selectedAppointment.userId ?? null,
       appointmentId: selectedAppointment.id,
       roleKey: selectedAppointment.positionKey,
-      username: selectedAppointment.username ?? formData.username,
+      username: loginUsername,
     };
 
-    if (
-      isSameIdentity(currentIdentity, targetIdentity) ||
-      normalizeRoleKey(currentIdentity.roleKey) === normalizeRoleKey(targetIdentity.roleKey)
-    ) {
+    if (isSameIdentity(currentIdentity, targetIdentity)) {
       toast.error("Already logged in as this role/account.");
       return;
     }
 
-    const payload =
-      formData.appointment === "Platoon Commander"
-        ? {
-            appointmentId: selectedAppointment.id,
-            platoonId: selectedPlatoonCommander!.id,
-            username: formData.username,
-            password: formData.password,
-          }
-        : {
-            appointmentId: selectedAppointment.id,
-            username: formData.username,
-            password: formData.password,
-          };
-
-    const returnUrl = getCurrentDashboardPathWithQuery();
-    if (returnUrl) {
-      storeReturnUrl(returnUrl);
+    const isPlatoonCommander = selectedAppointment.positionKey === "PLATOON_COMMANDER";
+    const platoonId = isPlatoonCommander ? selectedAppointment.scopeId ?? null : null;
+    if (isPlatoonCommander && !platoonId) {
+      toast.error("Selected platoon appointment has no platoon scope.");
+      return;
     }
 
-    queryClient.clear();
-    await requestServerLogout().catch(() => {});
+    const payload = platoonId
+      ? {
+          appointmentId: selectedAppointment.id,
+          platoonId,
+          username: loginUsername,
+          password: formData.password,
+        }
+      : {
+          appointmentId: selectedAppointment.id,
+          username: loginUsername,
+          password: formData.password,
+        };
+
+    beginSwitchSession();
+    let loginSucceeded = false;
 
     try {
       await loginUser(payload);
+      loginSucceeded = true;
+
+      // Reset client state only after the new auth cookie is in place.
+      queryClient.removeQueries({ queryKey: ["me"] });
+      queryClient.removeQueries({ queryKey: ["navigation", "me"] });
+      store.dispatch(appLogoutReset());
+      await persistor.flush().catch(() => undefined);
+
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("authToken");
+      }
+      clearReturnUrl();
 
       const nextMe = await fetchMe();
       const nextIdentity: CurrentIdentity = {
@@ -248,19 +225,24 @@ export default function SwitchUserModal({
         return;
       }
 
+      queryClient.setQueryData(["me"], nextMe);
       await queryClient.invalidateQueries({ queryKey: ["me"] });
       await queryClient.invalidateQueries({ queryKey: ["navigation", "me"] });
 
-      const redirectTo = resolvePostAuthRedirect({
-        storedReturnUrl: readReturnUrl(),
-        fallback: "/dashboard",
-      });
-      clearReturnUrl();
       onOpenChange(false);
-      router.push(redirectTo);
+      router.replace("/dashboard");
       router.refresh();
       toast.success("User switched successfully.");
     } catch (err: unknown) {
+      if (loginSucceeded) {
+        clearReturnUrl();
+        onOpenChange(false);
+        router.replace("/dashboard");
+        router.refresh();
+        toast.success("User switched. Refreshing dashboard...");
+        return;
+      }
+
       if (err instanceof ApiClientError) {
         const status = err.status;
         const message = err.message;
@@ -273,6 +255,8 @@ export default function SwitchUserModal({
       }
 
       toast.error(err instanceof Error ? err.message : "Failed to switch user.");
+    } finally {
+      endSwitchSession();
     }
   };
 
@@ -329,36 +313,16 @@ export default function SwitchUserModal({
                 />
               </SelectTrigger>
               <SelectContent>
-                {uniqueAppointmentNames.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
+                {switchableAppointments.map((apt) => (
+                  <SelectItem key={apt.id} value={apt.id}>
+                    {`${apt.positionName ?? apt.positionKey ?? "Appointment"}${
+                      apt.platoonName ? ` - ${apt.platoonName}` : ""
+                    } (${apt.username ?? "unknown"})`}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
-          {(appointment ?? "") === "Platoon Commander" && (
-            <div className="space-y-2">
-              <Label htmlFor="switch-platoon">Platoon</Label>
-              <Select
-                value={platoon}
-                onValueChange={handlePlatoonChange}
-                disabled={isSubmitting || shouldDisableOtherFields}
-              >
-                <SelectTrigger id="switch-platoon">
-                  <SelectValue placeholder="Select your platoon" />
-                </SelectTrigger>
-                <SelectContent>
-                  {platoonCommanders.map(({ id, platoonName }) => (
-                    <SelectItem key={id} value={platoonName ?? ""}>
-                      {platoonName ?? ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="switch-username">Username</Label>

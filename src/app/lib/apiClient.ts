@@ -9,6 +9,7 @@
  */
 
 import z from "zod";
+import { isSwitchSessionInProgress } from "@/lib/auth/switch-session";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -128,6 +129,7 @@ function shouldHandleUnauthorizedInBrowser(params: {
     skipAuth?: boolean;
 }): boolean {
     if (typeof window === "undefined" || params.skipAuth) return false;
+    if (isSwitchSessionInProgress()) return false;
     if (window.location.pathname === "/login") return false;
 
     const endpointPath = getPathnameFromUrl(params.endpoint);
