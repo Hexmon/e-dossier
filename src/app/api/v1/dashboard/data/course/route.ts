@@ -10,7 +10,13 @@ import type { AuditNextRequest } from '@/lib/audit';
 
 async function GETHandler(req: AuditNextRequest) {
     try {
-        await requireAuth(req);
+        const authCtx = await requireAuth(req);
+        const scopeType = String((authCtx.claims as any)?.apt?.scope?.type ?? '').toUpperCase();
+        const scopeId = (authCtx.claims as any)?.apt?.scope?.id;
+        const scopePlatoonId =
+            scopeType === 'PLATOON' && typeof scopeId === 'string' && scopeId.trim().length > 0
+                ? scopeId.trim()
+                : null;
 
         const rows = await db
             .select({
@@ -24,7 +30,8 @@ async function GETHandler(req: AuditNextRequest) {
                 ocCadets,
                 and(
                     eq(ocCadets.courseId, courses.id),
-                    isNull(ocCadets.withdrawnOn)
+                    isNull(ocCadets.withdrawnOn),
+                    ...(scopePlatoonId ? [eq(ocCadets.platoonId, scopePlatoonId)] : []),
                 )
             )
             .leftJoin(
@@ -34,7 +41,12 @@ async function GETHandler(req: AuditNextRequest) {
                     isNull(courseOfferings.deletedAt)
                 )
             )
-            .where(isNull(courses.deletedAt))
+            .where(
+                and(
+                    isNull(courses.deletedAt),
+                    ...(scopePlatoonId ? [eq(ocCadets.platoonId, scopePlatoonId)] : []),
+                )
+            )
             .groupBy(courses.id, courses.code)
             .orderBy(courses.code);
 

@@ -64,6 +64,18 @@ const BASE_POLICY: PolicySet = {
       },
     },
     {
+      id: 'allow-interview-pending-platoon-scope',
+      effect: 'allow',
+      priority: 805,
+      actions: ['admin:interview:pending:read'],
+      resourceTypes: ['admin:interview:pending'],
+      when: {
+        op: 'eq',
+        left: { ref: 'principal.attrs.scopeType' },
+        right: 'PLATOON',
+      },
+    },
+    {
       id: 'allow-sidebar-platoon',
       effect: 'allow',
       priority: 810,
