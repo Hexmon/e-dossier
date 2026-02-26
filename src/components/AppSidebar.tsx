@@ -18,6 +18,7 @@ import {
   CalendarDays,
   Lock,
   ArrowDownUp,
+  Dumbbell,
 } from "lucide-react";
 
 import {
@@ -58,6 +59,7 @@ const ICON_MAP: Record<string, any> = {
   UserCheck,
   CalendarDays,
   ArrowDownUp,
+  Dumbbell,
 };
 
 export function AppSidebar() {
