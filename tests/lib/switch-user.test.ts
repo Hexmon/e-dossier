@@ -69,7 +69,7 @@ describe("switch-user helpers", () => {
       username: "admin_user",
     });
 
-    expect(result.map((item) => item.id)).toEqual(["apt-super"]);
+    expect(result.map((item) => item.id)).toEqual(["apt-other-admin", "apt-super"]);
   });
 
   it("isSameIdentity detects same account after relogin", () => {
