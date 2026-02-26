@@ -108,20 +108,11 @@ export function filterSwitchableAppointments<T extends SwitchableAppointment>(
   appointments: readonly T[],
   current: CurrentIdentity
 ): T[] {
-  const currentRole = normalizeRoleKey(current.roleKey);
   const currentUserId = String(current.userId ?? "");
   const currentAppointmentId = String(current.appointmentId ?? "");
   const currentUsername = normalizeUsername(current.username);
 
   return appointments.filter((appointment) => {
-    const appointmentRole = normalizeRoleKey(
-      appointment.positionKey || appointment.positionName || ""
-    );
-
-    if (currentRole && appointmentRole === currentRole) {
-      return false;
-    }
-
     if (currentUserId && String(appointment.userId ?? "") === currentUserId) {
       return false;
     }
