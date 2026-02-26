@@ -4006,6 +4006,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "route": "/dashboard/bulk-upload",
+    "action": "page:dashboard:bulk-upload:view",
+    "resourceType": "page:dashboard:bulk-upload",
+    "category": "bulk-upload",
+    "adminBaseline": false
+  },
+  {
     "route": "/dashboard/manage-marks",
     "action": "page:dashboard:manage-marks:view",
     "resourceType": "page:dashboard:manage-marks",
