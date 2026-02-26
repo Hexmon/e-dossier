@@ -1,5 +1,5 @@
-import { InterviewOfficer } from "@/types/interview";
-import { TermVariant } from "@/store/slices/termInterviewSlice";
+import type { InterviewOfficer } from "@/types/interview";
+import type { TermVariant } from "@/store/slices/termInterviewSlice";
 import type { TemplateInfo } from "@/types/interview-templates";
 
 export type TemplateMatch = {
