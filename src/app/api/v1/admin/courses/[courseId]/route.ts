@@ -116,8 +116,15 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         const adminCtx = await requireAuth(req);
         const { courseId } = Param.parse(await params);
         const searchParams = new URL(req.url).searchParams;
-        const hard = (searchParams.get('hard') || '').toLowerCase() === 'true'
-            || (searchParams.get('mode') || '').toLowerCase() === 'hard';
+        const hardParam = (searchParams.get('hard') || '').toLowerCase();
+        const modeParam = (searchParams.get('mode') || '').toLowerCase();
+        const hard = modeParam === 'soft'
+            ? false
+            : modeParam === 'hard'
+                ? true
+                : searchParams.has('hard')
+                    ? hardParam === 'true'
+                    : true;
         const assignedOcCount = await countAssignedOCsForCourse(courseId);
 
         if (assignedOcCount > 0) {

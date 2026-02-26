@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import CourseSelectModal from "@/components/modals/CourseSelectModal";
+import { cn } from "@/lib/utils";
 
 type TabItem = {
   value: string;
@@ -37,6 +38,13 @@ export default function GlobalTabs({
   const hasOfferingsAction = tabs.some((tab) => tab.action === "offerings");
   const isOfferingsPage =
     pathname.includes("/dashboard/genmgmt/coursemgmt/") && pathname.includes("/offerings");
+  const sharedTabBaseClasses =
+    "flex items-center gap-2 border border-border " +
+    "rounded-md px-3 py-2 transition-colors w-full shrink min-w-0 truncate";
+  const sharedTabClasses =
+    sharedTabBaseClasses +
+    "data-[state=inactive]:bg-muted data-[state=inactive]:text-muted-foreground " +
+    "data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border-primary ";
 
   return (
     <Tabs
@@ -55,10 +63,13 @@ export default function GlobalTabs({
               key={value}
               type="button"
               onClick={() => setOfferingsOpen(true)}
-              className={`inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-2 border border-border 
-              rounded-md px-3 py-2 transition-colors w-full shrink min-w-0 truncate hover:text-primary ${
-                isOfferingsPage ? "bg-background border-primary text-primary" : "bg-primary/10 text-primary"
-              }`}
+              className={cn(
+                "inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center hover:text-primary",
+                sharedTabBaseClasses,
+                isOfferingsPage
+                  ? "bg-background border-primary text-primary shadow-sm"
+                  : "bg-muted text-muted-foreground"
+              )}
             >
               {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
               <span className="truncate">{title}</span>
@@ -67,10 +78,7 @@ export default function GlobalTabs({
             <Link key={value} href={link} className="text-center hover:text-primary min-w-0">
               <TabsTrigger
                 value={value}
-                className="flex items-center gap-2 border border-border 
-                data-[state=inactive]:bg-muted data-[state=inactive]:text-muted-foreground 
-                data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border-primary 
-                rounded-md px-3 py-2 transition-colors w-full shrink min-w-0 truncate"
+                className={sharedTabClasses}
               >
                 {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
                 <span className="truncate">{title}</span>
@@ -80,10 +88,7 @@ export default function GlobalTabs({
             <TabsTrigger
               key={value}
               value={value}
-              className="flex items-center gap-2 border border-border 
-              data-[state=inactive]:bg-muted data-[state=inactive]:text-muted-foreground 
-              data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border-primary 
-              rounded-md px-3 py-2 transition-colors w-full shrink min-w-0 truncate"
+              className={sharedTabClasses}
             >
               {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
               <span className="truncate">{title}</span>
