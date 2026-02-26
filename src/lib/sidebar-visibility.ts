@@ -5,6 +5,7 @@ export type SidebarSectionKey =
   | "admin"
   | "settings"
   | "academics"
+  | "pt"
   | "reports"
   | "dossier";
 
@@ -13,7 +14,7 @@ export const SIDEBAR_SECTIONS_BY_ROLE_GROUP: Record<
   readonly SidebarSectionKey[]
 > = {
   ADMIN: ["dashboard", "admin", "settings"],
-  OTHER_USERS: ["dashboard", "dossier", "academics", "reports", "settings"],
+  OTHER_USERS: ["dashboard", "dossier", "academics", "pt", "reports", "settings"],
 };
 
 type RoleGroupInput = {

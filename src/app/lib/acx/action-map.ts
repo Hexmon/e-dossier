@@ -2028,6 +2028,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/oc/physical-training/bulk",
+    "action": "oc:physical-training:bulk:read",
+    "resourceType": "oc:physical-training:bulk",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/platoons",
     "action": "platoons:read",
     "resourceType": "platoons",
@@ -3477,6 +3486,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/oc/physical-training/bulk",
+    "action": "oc:physical-training:bulk:create",
+    "resourceType": "oc:physical-training:bulk",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/oc/bulk-upload",
     "action": "oc:bulk-upload:create",
     "resourceType": "oc:bulk-upload",
@@ -3925,6 +3943,20 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "route": "/dashboard/genmgmt/promotion-relegation/promote-course",
+    "action": "page:dashboard:genmgmt:promotion-relegation:promote-course:view",
+    "resourceType": "page:dashboard:genmgmt:promotion-relegation:promote-course",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/genmgmt/promotion-relegation/relegation",
+    "action": "page:dashboard:genmgmt:promotion-relegation:relegation:view",
+    "resourceType": "page:dashboard:genmgmt:promotion-relegation:relegation",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
     "route": "/dashboard/genmgmt/pt-mgmt",
     "action": "page:dashboard:genmgmt:pt-mgmt:view",
     "resourceType": "page:dashboard:genmgmt:pt-mgmt",
@@ -3979,6 +4011,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "resourceType": "page:dashboard:manage-marks",
     "category": "manage-marks",
     "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/manage-pt-marks",
+    "action": "page:dashboard:manage-pt-marks:view",
+    "resourceType": "page:dashboard:manage-pt-marks",
+    "category": "manage-pt-marks",
+    "adminBaseline": false
   },
   {
     "route": "/dashboard/reports",

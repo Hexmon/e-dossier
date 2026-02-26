@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import {
     Dialog,
     DialogContent,
@@ -21,7 +22,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import PTTypesTable from "@/components/pt-mgmt/PTTypesTable";
 import PTTypeForm from "@/components/pt-mgmt/Pttypeform";
-import { PTType, PTTypeCreate } from "@/app/lib/api/Physicaltrainingapi";
+import PTTypeAttemptsDrawer from "@/components/pt-mgmt/PTTypeAttemptsDrawer";
+import PTTypeTasksDrawer from "@/components/pt-mgmt/PTTypeTasksDrawer";
+import { PTAttemptCreate, PTTaskCreate, PTType, PTTypeCreate } from "@/app/lib/api/Physicaltrainingapi";
 
 interface PTTypesTabProps {
     semester: number;
@@ -30,6 +33,15 @@ interface PTTypesTabProps {
     onAdd: (type: PTTypeCreate) => Promise<boolean>;
     onEdit: (id: string, type: PTTypeCreate) => Promise<boolean>;
     onDelete: (id: string) => Promise<boolean>;
+    onAddAttempt: (typeId: string, attempt: PTAttemptCreate) => Promise<boolean>;
+    onEditAttempt: (typeId: string, attemptId: string, attempt: PTAttemptCreate) => Promise<boolean>;
+    onDeleteAttempt: (typeId: string, attemptId: string) => Promise<boolean>;
+    onOpenGradesForAttempt: (typeId: string, attemptId: string) => void;
+    onAddTask: (typeId: string, task: PTTaskCreate) => Promise<boolean>;
+    onEditTask: (typeId: string, taskId: string, task: PTTaskCreate) => Promise<boolean>;
+    onDeleteTask: (typeId: string, taskId: string) => Promise<boolean>;
+    onOpenTasksForType: (typeId: string) => void;
+    onOpenScoresForTask: (typeId: string, taskId: string) => void;
 }
 
 export default function PTTypesTab({
@@ -39,17 +51,48 @@ export default function PTTypesTab({
     onAdd,
     onEdit,
     onDelete,
+    onAddAttempt,
+    onEditAttempt,
+    onDeleteAttempt,
+    onOpenGradesForAttempt,
+    onAddTask,
+    onEditTask,
+    onDeleteTask,
+    onOpenTasksForType,
+    onOpenScoresForTask,
 }: PTTypesTabProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingType, setEditingType] = useState<PTType | undefined>(undefined);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const [isAttemptsDrawerOpen, setIsAttemptsDrawerOpen] = useState(false);
+    const [attemptsDrawerType, setAttemptsDrawerType] = useState<PTType | null>(null);
+    const [isTasksDrawerOpen, setIsTasksDrawerOpen] = useState(false);
+    const [tasksDrawerType, setTasksDrawerType] = useState<PTType | null>(null);
+    const nextSortOrder = useMemo(
+        () => Math.max(0, ...types.map((item) => item.sortOrder ?? 0)) + 1,
+        [types],
+    );
 
     const handleSubmit = async (data: PTTypeCreate) => {
+        const targetSortOrder = data.sortOrder ?? nextSortOrder;
+        const duplicate = types.find(
+            (item) =>
+                item.semester === data.semester &&
+                item.sortOrder === targetSortOrder &&
+                item.id !== editingType?.id,
+        );
+
+        if (duplicate) {
+            toast.error(`Sort order ${targetSortOrder} is already used in semester ${data.semester}.`);
+            return;
+        }
+
         const result = editingType
             ? await onEdit(editingType.id, data)
             : await onAdd(data);
 
+        if (!result) return;
         setIsDialogOpen(false);
         setEditingType(undefined);
     };
@@ -75,6 +118,16 @@ export default function PTTypesTab({
         setItemToDelete(null);
     };
 
+    const handleManageAttempts = (type: PTType) => {
+        setAttemptsDrawerType(type);
+        setIsAttemptsDrawerOpen(true);
+    };
+
+    const handleManageTasks = (type: PTType) => {
+        setTasksDrawerType(type);
+        setIsTasksDrawerOpen(true);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -94,10 +147,16 @@ export default function PTTypesTab({
                 </Button>
             </div>
 
+            <p className="text-sm text-muted-foreground">
+                Use Attempts and Tasks actions here, then jump directly to Grades or Score Matrix.
+            </p>
+
             <PTTypesTable
                 types={types}
                 onEdit={handleEdit}
                 onDelete={handleDeleteClick}
+                onManageAttempts={handleManageAttempts}
+                onManageTasks={handleManageTasks}
                 loading={loading}
             />
 
@@ -111,6 +170,8 @@ export default function PTTypesTab({
                     </DialogHeader>
                     <PTTypeForm
                         type={editingType}
+                        defaultSemester={semester}
+                        suggestedSortOrder={nextSortOrder}
                         onSubmit={handleSubmit}
                         onCancel={() => {
                             setIsDialogOpen(false);
@@ -140,6 +201,27 @@ export default function PTTypesTab({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <PTTypeAttemptsDrawer
+                open={isAttemptsDrawerOpen}
+                onOpenChange={setIsAttemptsDrawerOpen}
+                type={attemptsDrawerType}
+                onAdd={onAddAttempt}
+                onEdit={onEditAttempt}
+                onDelete={onDeleteAttempt}
+                onOpenGradesForAttempt={onOpenGradesForAttempt}
+            />
+
+            <PTTypeTasksDrawer
+                open={isTasksDrawerOpen}
+                onOpenChange={setIsTasksDrawerOpen}
+                type={tasksDrawerType}
+                onAdd={onAddTask}
+                onEdit={onEditTask}
+                onDelete={onDeleteTask}
+                onOpenTasksForType={onOpenTasksForType}
+                onOpenScoresForTask={onOpenScoresForTask}
+            />
         </div>
     );
 }

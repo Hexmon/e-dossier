@@ -39,6 +39,7 @@ describe("sidebar visibility matrix", () => {
     { key: "settings", label: "Settings" },
     { key: "dossier", label: "Dossier" },
     { key: "academics", label: "Academics" },
+    { key: "pt", label: "Physical Training" },
     { key: "reports", label: "Reports" },
     { key: "extra", label: "Extra" },
   ];
@@ -60,6 +61,7 @@ describe("sidebar visibility matrix", () => {
       "dashboard",
       "dossier",
       "academics",
+      "pt",
       "reports",
       "settings",
     ]);
@@ -83,6 +85,7 @@ describe("sidebar visibility matrix", () => {
       "settings",
       "dossier",
       "academics",
+      "pt",
       "reports",
       "extra",
     ]);
@@ -90,6 +93,7 @@ describe("sidebar visibility matrix", () => {
       "dashboard",
       "dossier",
       "academics",
+      "pt",
       "reports",
       "settings",
     ]);

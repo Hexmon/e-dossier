@@ -98,6 +98,20 @@ export const NAVIGATION_TREE: NavSectionConfig[] = [
         ],
     },
     {
+        key: "pt",
+        label: "Physical Training",
+        items: [
+            {
+                key: "manage_pt_marks",
+                label: "PT Marks Management",
+                url: "/dashboard/manage-pt-marks",
+                icon: "Dumbbell",
+                requiredAction: "page:dashboard:manage-pt-marks:view",
+                adminBaseline: false,
+            },
+        ],
+    },
+    {
         key: "reports",
         label: "Report Management",
         items: [

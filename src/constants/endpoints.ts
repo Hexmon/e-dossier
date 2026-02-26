@@ -64,6 +64,9 @@ export const endpoints = {
     oc: {
         list: "/api/v1/oc",
         create: "/api/v1/oc",
+        physicalTraining: {
+            bulk: "/api/v1/oc/physical-training/bulk",
+        },
         getById: (ocId: string) => `/api/v1/oc/${ocId}`,
         update: (ocId: string) => `/api/v1/oc/${ocId}`,
         delete: (ocId: string) => `/api/v1/oc/${ocId}`,

@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptMotivationFieldParam, ptMotivationFieldUpdateSchema } from '@/app/lib/physical-training-validators';
-import { getPtMotivationField, updatePtMotivationField, deletePtMotivationField } from '@/app/db/queries/physicalTraining';
+import { getPtMotivationField, updatePtMotivationField, deletePtMotivationField, findPtMotivationFieldBySemesterAndSortOrder } from '@/app/db/queries/physicalTraining';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -25,6 +25,26 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const adminCtx = await requireAuth(req);
         const { id } = ptMotivationFieldParam.parse(await params);
         const dto = ptMotivationFieldUpdateSchema.parse(await req.json());
+        const existing = await getPtMotivationField(id);
+        if (!existing) throw new ApiError(404, 'PT motivation field not found', 'not_found');
+
+        const targetSemester = dto.semester ?? existing.semester;
+        const targetSortOrder = dto.sortOrder ?? existing.sortOrder;
+        const duplicate = await findPtMotivationFieldBySemesterAndSortOrder(targetSemester, targetSortOrder, { excludeId: id });
+        if (duplicate) {
+            throw new ApiError(
+                409,
+                `Sort order ${targetSortOrder} already exists for semester ${targetSemester}`,
+                'sort_order_conflict',
+                {
+                    field: 'sortOrder',
+                    sortOrder: targetSortOrder,
+                    semester: targetSemester,
+                    conflictingFieldId: duplicate.id,
+                },
+            );
+        }
+
         const row = await updatePtMotivationField(id, {
             ...dto,
             ...(dto.label ? { label: dto.label.trim() } : {}),

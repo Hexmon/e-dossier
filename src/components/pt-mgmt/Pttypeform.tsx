@@ -16,18 +16,27 @@ import {
 
 interface PTTypeFormProps {
     type?: PTType;
+    defaultSemester?: number;
+    suggestedSortOrder?: number;
     onSubmit: (type: PTTypeCreate) => void;
     onCancel: () => void;
     isLoading?: boolean;
 }
 
-export default function PTTypeForm({ type, onSubmit, onCancel, isLoading = false }: PTTypeFormProps) {
+export default function PTTypeForm({
+    type,
+    defaultSemester = 1,
+    suggestedSortOrder = 1,
+    onSubmit,
+    onCancel,
+    isLoading = false,
+}: PTTypeFormProps) {
     const [formData, setFormData] = useState<PTTypeCreate>({
-        semester: 1,
+        semester: defaultSemester,
         code: "",
         title: "",
         maxTotalMarks: 0,
-        sortOrder: 1,
+        sortOrder: suggestedSortOrder,
         isActive: true,
     });
 
@@ -43,15 +52,15 @@ export default function PTTypeForm({ type, onSubmit, onCancel, isLoading = false
             });
         } else {
             setFormData({
-                semester: 1,
+                semester: defaultSemester,
                 code: "",
                 title: "",
                 maxTotalMarks: 0,
-                sortOrder: 1,
+                sortOrder: suggestedSortOrder,
                 isActive: true,
             });
         }
-    }, [type]);
+    }, [type, defaultSemester, suggestedSortOrder]);
 
     const handleChange = (field: keyof PTTypeCreate, value: string | number | boolean) => {
         setFormData((prev) => ({
@@ -63,8 +72,8 @@ export default function PTTypeForm({ type, onSubmit, onCancel, isLoading = false
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const { semester, code, title, maxTotalMarks } = formData;
-        if (!semester || !code || !title || maxTotalMarks < 0) {
+        const { semester, code, title, maxTotalMarks, sortOrder } = formData;
+        if (!semester || !code || !title || maxTotalMarks < 0 || (sortOrder ?? 0) < 1) {
             return;
         }
 
@@ -136,7 +145,7 @@ export default function PTTypeForm({ type, onSubmit, onCancel, isLoading = false
                     type="number"
                     min="1"
                     value={formData.sortOrder}
-                    onChange={(e) => handleChange("sortOrder", Number(e.target.value))}
+                    onChange={(e) => handleChange("sortOrder", Math.max(1, Number(e.target.value) || 1))}
                     placeholder="1"
                 />
             </div>

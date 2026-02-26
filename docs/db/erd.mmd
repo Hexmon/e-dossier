@@ -1,0 +1,1295 @@
+erDiagram
+  %% drizzle.__drizzle_migrations
+  drizzle____drizzle_migrations {
+    integer id PK
+    text hash
+    bigint created_at
+  }
+  %% public.account_lockouts
+  public__account_lockouts {
+    uuid id PK
+    uuid user_id
+    timestamp_with_time_zone locked_at
+    timestamp_with_time_zone locked_until
+    integer failed_attempts
+    character_varying_64 ip_address
+    boolean unlocked
+    timestamp_with_time_zone unlocked_at
+    uuid unlocked_by
+    character_varying_255 reason
+  }
+  %% public.appointment_transfers
+  public__appointment_transfers {
+    uuid id PK
+    uuid from_appointment_id
+    uuid to_appointment_id
+    uuid from_user_id
+    uuid to_user_id
+    uuid position_id
+    text scope_type
+    uuid scope_id
+    timestamp_with_time_zone prev_starts_at
+    timestamp_with_time_zone prev_ends_at
+    timestamp_with_time_zone new_starts_at
+    text reason
+    uuid transferred_by
+    timestamp_with_time_zone created_at
+  }
+  %% public.appointments
+  public__appointments {
+    uuid id PK
+    uuid user_id
+    uuid position_id
+    assignment_kind assignment
+    scope_type scope_type
+    uuid scope_id
+    timestamp_with_time_zone starts_at
+    timestamp_with_time_zone ends_at
+    uuid appointed_by
+    uuid ended_by
+    text reason
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.audit_events
+  public__audit_events {
+    text event_id PK
+    integer schema_version
+    timestamp_with_time_zone occurred_at
+    text action
+    text outcome
+    text actor_id
+    text actor_type
+    text actor_display_name
+    text actor_roles
+    text actor_ip
+    text actor_user_agent
+    text target_id
+    text target_type
+    text target_display_name
+    text tenant_id
+    text org_id
+    jsonb target
+    jsonb context
+    jsonb metadata
+    jsonb diff
+    jsonb integrity
+    text retention_tag
+    boolean metadata_truncated
+    boolean diff_truncated
+  }
+  %% public.audit_logs
+  public__audit_logs {
+    uuid id PK
+    uuid actor_user_id
+    character_varying_96 event_type
+    character_varying_96 resource_type
+    uuid resource_id
+    text description
+    jsonb metadata
+    character_varying_64 ip_addr
+    text user_agent
+    timestamp_with_time_zone created_at
+    uuid tenant_id
+    character_varying_16 method
+    character_varying_512 path
+    integer status_code
+    character_varying_32 outcome
+    uuid request_id
+    text changed_fields
+    jsonb diff
+  }
+  %% public.authz_policy_state
+  public__authz_policy_state {
+    character_varying_64 key PK
+    integer version
+    timestamp_with_time_zone updated_at
+  }
+  %% public.course_offering_instructors
+  public__course_offering_instructors {
+    uuid id PK
+    uuid offering_id
+    uuid instructor_id
+    character_varying_24 role
+    timestamp_with_time_zone created_at
+  }
+  %% public.course_offerings
+  public__course_offerings {
+    uuid id PK
+    uuid course_id
+    smallint semester
+    uuid subject_id
+    boolean include_theory
+    boolean include_practical
+    integer theory_credits
+    integer practical_credits
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.courses
+  public__courses {
+    uuid id PK
+    character_varying_32 code
+    character_varying_160 title
+    text notes
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.credentials_local
+  public__credentials_local {
+    uuid user_id PK
+    text password_hash
+    text password_algo
+    timestamp_with_time_zone password_updated_at
+  }
+  %% public.delegations
+  public__delegations {
+    uuid id PK
+    uuid grantor_user_id
+    uuid grantee_user_id
+    uuid act_as_position_id
+    scope_type scope_type
+    uuid scope_id
+    timestamp_with_time_zone starts_at
+    timestamp_with_time_zone ends_at
+    text reason
+    uuid terminated_by
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.device_site_settings
+  public__device_site_settings {
+    uuid id PK
+    character_varying_128 device_id
+    character_varying_16 theme
+    character_varying_16 language
+    character_varying_64 timezone
+    integer refresh_interval
+    character_varying_16 layout_density
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    uuid updated_by
+    character_varying_32 theme_preset
+    character_varying_16 accent_palette
+  }
+  %% public.dossier_inspections
+  public__dossier_inspections {
+    uuid id PK
+    uuid oc_id
+    uuid inspector_user_id
+    timestamp_with_time_zone date
+    text remarks
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.instructors
+  public__instructors {
+    uuid id PK
+    uuid user_id
+    character_varying_160 name
+    character_varying_255 email
+    character_varying_32 phone
+    character_varying_160 affiliation
+    text notes
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.interview_template_field_options
+  public__interview_template_field_options {
+    uuid id PK
+    uuid field_id
+    character_varying_32 code
+    character_varying_160 label
+    integer sort_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.interview_template_fields
+  public__interview_template_fields {
+    uuid id PK
+    uuid template_id
+    uuid section_id
+    uuid group_id
+    character_varying_64 key
+    character_varying_160 label
+    character_varying_32 field_type
+    boolean required
+    text help_text
+    integer max_length
+    integer sort_order
+    boolean is_active
+    boolean capture_filed_at
+    boolean capture_signature
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.interview_template_groups
+  public__interview_template_groups {
+    uuid id PK
+    uuid template_id
+    uuid section_id
+    character_varying_160 title
+    integer min_rows
+    integer max_rows
+    integer sort_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.interview_template_sections
+  public__interview_template_sections {
+    uuid id PK
+    uuid template_id
+    character_varying_160 title
+    text description
+    integer sort_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.interview_template_semesters
+  public__interview_template_semesters {
+    uuid id PK
+    uuid template_id
+    integer semester
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.interview_templates
+  public__interview_templates {
+    uuid id PK
+    character_varying_32 code
+    character_varying_160 title
+    text description
+    boolean allow_multiple
+    integer sort_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.login_attempts
+  public__login_attempts {
+    uuid id PK
+    uuid user_id
+    character_varying_255 username
+    character_varying_64 ip_address
+    character_varying_512 user_agent
+    boolean success
+    character_varying_255 failure_reason
+    timestamp_with_time_zone attempted_at
+  }
+  %% public.oc_achievements
+  public__oc_achievements {
+    uuid id PK
+    uuid oc_id
+    character_varying_160 event
+    integer year
+    character_varying_64 level
+    character_varying_128 prize
+  }
+  %% public.oc_autobiography
+  public__oc_autobiography {
+    uuid oc_id PK
+    text general_self
+    text proficiency_sports
+    text achievements_note
+    text areas_to_work
+    text additional_info
+    timestamp_with_time_zone filled_on
+    character_varying_160 platoon_commander_name
+  }
+  %% public.oc_cadets
+  public__oc_cadets {
+    uuid id PK
+    character_varying_32 oc_no
+    character_varying_64 uid
+    character_varying_160 name
+    uuid course_id
+    branch_kind branch
+    uuid platoon_id
+    timestamp_with_time_zone arrival_at_university
+    oc_status_kind status
+    uuid manager_user_id
+    uuid relegated_to_course_id
+    timestamp_with_time_zone relegated_on
+    timestamp_with_time_zone withdrawn_on
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_camp_activity_scores
+  public__oc_camp_activity_scores {
+    uuid id PK
+    uuid oc_camp_id
+    uuid training_camp_activity_id
+    integer max_marks
+    integer marks_scored
+    text remark
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_camp_reviews
+  public__oc_camp_reviews {
+    uuid id PK
+    uuid oc_camp_id
+    camp_review_role_kind role
+    character_varying_200 section_title
+    text review_text
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_camps
+  public__oc_camps {
+    uuid id PK
+    uuid oc_id
+    uuid training_camp_id
+    integer year
+    numeric total_marks_scored
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+    uuid enrollment_id
+  }
+  %% public.oc_clubs
+  public__oc_clubs {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    character_varying_160 club_name
+    text special_achievement
+    text remark
+    timestamp_with_time_zone deleted_at
+    uuid enrollment_id
+  }
+  %% public.oc_commissioning
+  public__oc_commissioning {
+    uuid oc_id PK
+    timestamp_with_time_zone pass_out_date
+    character_varying_48 ic_no
+    integer order_of_merit
+    character_varying_128 regiment_or_arm
+    text posted_unit
+  }
+  %% public.oc_counselling
+  public__oc_counselling {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    text reason
+    counselling_warning_kind nature_of_warning
+    date date
+    character_varying_160 warned_by
+    timestamp_with_time_zone deleted_at
+    uuid enrollment_id
+  }
+  %% public.oc_course_enrollments
+  public__oc_course_enrollments {
+    uuid id PK
+    uuid oc_id
+    uuid course_id
+    oc_enrollment_status status
+    oc_enrollment_origin origin
+    timestamp_with_time_zone started_on
+    timestamp_with_time_zone ended_on
+    text reason
+    text note
+    uuid created_by_user_id
+    uuid closed_by_user_id
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_credit_for_excellence
+  public__oc_credit_for_excellence {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    jsonb data
+    text remark
+    timestamp_with_time_zone deleted_at
+    character_varying_160 sub_category
+    uuid enrollment_id
+  }
+  %% public.oc_delegations
+  public__oc_delegations {
+    uuid id PK
+    uuid oc_id
+    uuid from_course_id
+    uuid to_course_id
+    text reason
+    delegation_kind kind
+    timestamp_with_time_zone decided_on
+    uuid decided_by_user_id
+  }
+  %% public.oc_discipline
+  public__oc_discipline {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    timestamp_with_time_zone date_of_offence
+    text offence
+    character_varying_160 punishment_awarded
+    timestamp_with_time_zone awarded_on
+    character_varying_160 awarded_by
+    integer points_delta
+    integer points_cumulative
+    integer number_of_punishments
+    uuid enrollment_id
+  }
+  %% public.oc_dossier_filling
+  public__oc_dossier_filling {
+    uuid oc_id PK
+    character_varying_160 initiated_by
+    timestamp_with_time_zone opened_on
+    text initial_interview
+    character_varying_160 closed_by
+    timestamp_with_time_zone closed_on
+    text final_interview
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_drill
+  public__oc_drill {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    numeric max_marks
+    numeric m1_marks
+    numeric m2_marks
+    numeric a1c1_marks
+    numeric a2c2_marks
+    text remark
+    timestamp_with_time_zone deleted_at
+    uuid enrollment_id
+  }
+  %% public.oc_education
+  public__oc_education {
+    uuid id PK
+    uuid oc_id
+    character_varying_64 level
+    character_varying_160 school_or_college
+    character_varying_160 board_or_univ
+    text subjects
+    text total_percent
+    text per_subject
+    character_varying_32 grade
+  }
+  %% public.oc_family_members
+  public__oc_family_members {
+    uuid id PK
+    uuid oc_id
+    character_varying_160 name
+    character_varying_64 relation
+    integer age
+    character_varying_128 occupation
+    character_varying_128 education
+    character_varying_32 mobile_no
+  }
+  %% public.oc_images
+  public__oc_images {
+    uuid id PK
+    uuid oc_id
+    oc_image_kind kind
+    character_varying_128 bucket
+    character_varying_512 object_key
+    character_varying_128 content_type
+    integer size_bytes
+    character_varying_128 etag
+    timestamp_with_time_zone uploaded_at
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_interview_field_values
+  public__oc_interview_field_values {
+    uuid id PK
+    uuid interview_id
+    uuid field_id
+    text value_text
+    date value_date
+    integer value_number
+    boolean value_bool
+    jsonb value_json
+    date filed_at
+    character_varying_160 filed_by_name
+    character_varying_64 filed_by_rank
+    character_varying_128 filed_by_appointment
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_interview_group_rows
+  public__oc_interview_group_rows {
+    uuid id PK
+    uuid interview_id
+    uuid group_id
+    integer row_index
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_interview_group_values
+  public__oc_interview_group_values {
+    uuid id PK
+    uuid row_id
+    uuid field_id
+    text value_text
+    date value_date
+    integer value_number
+    boolean value_bool
+    jsonb value_json
+    date filed_at
+    character_varying_160 filed_by_name
+    character_varying_64 filed_by_rank
+    character_varying_128 filed_by_appointment
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_interviews
+  public__oc_interviews {
+    uuid id PK
+    uuid oc_id
+    uuid template_id
+    integer semester
+    character_varying_160 course
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    uuid enrollment_id
+  }
+  %% public.oc_medical_category
+  public__oc_medical_category {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    timestamp_with_time_zone date
+    text mos_and_diagnostics
+    timestamp_with_time_zone cat_from
+    timestamp_with_time_zone cat_to
+    timestamp_with_time_zone mh_from
+    timestamp_with_time_zone mh_to
+    text absence
+    character_varying_160 platoon_commander_name
+  }
+  %% public.oc_medicals
+  public__oc_medicals {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    timestamp_with_time_zone date
+    numeric age
+    numeric height_cm
+    numeric ibw_kg
+    numeric abw_kg
+    numeric overwt_pct
+    numeric bmi
+    numeric chest_cm
+    text medical_history
+    text hereditary_issues
+    text allergies
+  }
+  %% public.oc_motivation_awards
+  public__oc_motivation_awards {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    character_varying_160 field_name
+    numeric max_marks
+    numeric marks_obtained
+    timestamp_with_time_zone deleted_at
+    character_varying_200 motivation_title
+    uuid enrollment_id
+  }
+  %% public.oc_obstacle_training
+  public__oc_obstacle_training {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    character_varying_160 obstacle
+    numeric marks_obtained
+    text remark
+    timestamp_with_time_zone deleted_at
+    uuid enrollment_id
+  }
+  %% public.oc_olq
+  public__oc_olq {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    integer total_marks
+    text remarks
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    uuid enrollment_id
+  }
+  %% public.oc_olq_category
+  public__oc_olq_category {
+    uuid id PK
+    character_varying_50 code
+    character_varying_255 title
+    text description
+    integer display_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    uuid course_id
+  }
+  %% public.oc_olq_score
+  public__oc_olq_score {
+    uuid id PK
+    uuid oc_olq_id
+    uuid subtitle_id
+    integer marks_scored
+  }
+  %% public.oc_olq_subtitle
+  public__oc_olq_subtitle {
+    uuid id PK
+    uuid category_id
+    character_varying_255 subtitle
+    integer max_marks
+    integer display_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.oc_parent_comms
+  public__oc_parent_comms {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    comm_mode_kind mode
+    character_varying_64 ref_no
+    timestamp_with_time_zone date
+    text brief
+    character_varying_160 platoon_commander_name
+    text subject
+  }
+  %% public.oc_personal
+  public__oc_personal {
+    uuid oc_id PK
+    text visible_ident_marks
+    character_varying_64 pi
+    timestamp_with_time_zone dob
+    character_varying_128 place_of_birth
+    character_varying_128 domicile
+    character_varying_64 religion
+    character_varying_64 nationality
+    character_varying_8 blood_group
+    text ident_marks
+    character_varying_32 mobile_no
+    character_varying_255 email
+    character_varying_64 passport_no
+    character_varying_20 pan_no
+    character_varying_16 aadhaar_no
+    character_varying_160 father_name
+    character_varying_32 father_mobile
+    text father_addr_permanent
+    text father_addr_present
+    character_varying_128 father_profession
+    character_varying_160 guardian_name
+    text guardian_address
+    integer monthly_income
+    text nok_details
+    text nok_addr_perm
+    text nok_addr_present
+    character_varying_128 nearest_railway_station
+    text family_in_secunderabad
+    text relative_in_armed_forces
+    boolean govt_financial_assistance
+    text bank_details
+    character_varying_64 iden_card_no
+    character_varying_32 upsc_roll_no
+    character_varying_64 ssb_centre
+    text games
+    text hobbies
+    boolean is_swimmer
+    text languages
+    character_varying_64 ds_pi_ss_ic_no
+    character_varying_64 ds_pi_rank
+    character_varying_160 ds_pi_name
+    character_varying_160 ds_pi_unit_arm
+    character_varying_32 ds_pi_mobile
+    character_varying_64 ds_dy_ic_no
+    character_varying_64 ds_dy_rank
+    character_varying_160 ds_dy_name
+    character_varying_160 ds_dy_unit_arm
+    character_varying_32 ds_dy_mobile
+    character_varying_64 ds_cdr_ic_no
+    character_varying_64 ds_cdr_rank
+    character_varying_160 ds_cdr_name
+    character_varying_160 ds_cdr_unit_arm
+    character_varying_32 ds_cdr_mobile
+  }
+  %% public.oc_pre_commission
+  public__oc_pre_commission {
+    uuid oc_id PK
+    uuid course_id
+    branch_kind branch
+    uuid platoon_id
+    uuid relegated_to_course_id
+    timestamp_with_time_zone relegated_on
+    timestamp_with_time_zone withdrawn_on
+  }
+  %% public.oc_pt_motivation_awards
+  public__oc_pt_motivation_awards {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    uuid pt_motivation_field_id
+    text value
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    uuid enrollment_id
+  }
+  %% public.oc_pt_task_scores
+  public__oc_pt_task_scores {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    uuid pt_task_score_id
+    integer marks_scored
+    text remark
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    uuid enrollment_id
+  }
+  %% public.oc_recording_leave_hike_detention
+  public__oc_recording_leave_hike_detention {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    text reason
+    leave_record_kind type
+    date date_from
+    date date_to
+    text remark
+    timestamp_with_time_zone deleted_at
+    uuid enrollment_id
+  }
+  %% public.oc_relegations
+  public__oc_relegations {
+    uuid id PK
+    uuid oc_id
+    uuid from_course_id
+    character_varying_32 from_course_code
+    uuid to_course_id
+    character_varying_32 to_course_code
+    text reason
+    text remark
+    character_varying_512 pdf_object_key
+    text pdf_url
+    uuid performed_by_user_id
+    timestamp_with_time_zone performed_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    oc_movement_kind movement_kind
+    uuid from_enrollment_id
+    uuid to_enrollment_id
+    uuid reversal_of_id
+  }
+  %% public.oc_semester_marks
+  public__oc_semester_marks {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    character_varying_1 branch_tag
+    numeric sgpa
+    numeric cgpa
+    numeric marks_scored
+    jsonb subjects
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    uuid enrollment_id
+  }
+  %% public.oc_special_achievement_in_clubs
+  public__oc_special_achievement_in_clubs {
+    uuid id PK
+    uuid oc_id
+    text achievement
+    timestamp_with_time_zone deleted_at
+    uuid enrollment_id
+  }
+  %% public.oc_special_achievement_in_firing
+  public__oc_special_achievement_in_firing {
+    uuid id PK
+    uuid oc_id
+    text achievement
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.oc_speed_march
+  public__oc_speed_march {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    character_varying_160 test
+    character_varying_64 timings
+    numeric marks
+    text remark
+    timestamp_with_time_zone deleted_at
+    uuid enrollment_id
+  }
+  %% public.oc_sports_and_games
+  public__oc_sports_and_games {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    term_kind term
+    character_varying_160 sport
+    numeric max_marks
+    numeric marks_obtained
+    timestamp_with_time_zone deleted_at
+    text sports_strings
+    uuid enrollment_id
+  }
+  %% public.oc_spr_records
+  public__oc_spr_records {
+    uuid id PK
+    uuid oc_id
+    integer semester
+    numeric cdr_marks
+    jsonb subject_remarks
+    text platoon_commander_remarks
+    text deputy_commander_remarks
+    text commander_remarks
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    uuid enrollment_id
+  }
+  %% public.oc_ssb_points
+  public__oc_ssb_points {
+    uuid id PK
+    uuid report_id
+    ssb_point_kind kind
+    text remark
+    uuid author_user_id
+    character_varying_160 author_name
+  }
+  %% public.oc_ssb_reports
+  public__oc_ssb_reports {
+    uuid id PK
+    uuid oc_id
+    integer overall_predictive_rating
+    text scope_of_improvement
+  }
+  %% public.oc_weapon_training
+  public__oc_weapon_training {
+    uuid id PK
+    uuid oc_id
+    character_varying_200 subject
+    integer semester
+    numeric max_marks
+    numeric marks_obtained
+    timestamp_with_time_zone deleted_at
+    uuid enrollment_id
+  }
+  %% public.permission_field_rules
+  public__permission_field_rules {
+    uuid id PK
+    uuid permission_id
+    uuid position_id
+    uuid role_id
+    field_rule_mode mode
+    text fields
+    text note
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.permissions
+  public__permissions {
+    uuid id PK
+    character_varying_128 key
+    text description
+  }
+  %% public.platoons
+  public__platoons {
+    uuid id PK
+    character_varying_64 key
+    character_varying_128 name
+    text about
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+    character_varying_7 theme_color
+    text image_url
+    text image_object_key
+  }
+  %% public.position_permissions
+  public__position_permissions {
+    uuid position_id PK
+    uuid permission_id PK
+  }
+  %% public.positions
+  public__positions {
+    uuid id PK
+    character_varying_64 key
+    character_varying_128 display_name
+    character_varying_16 default_scope
+    boolean singleton
+    text description
+    timestamp_with_time_zone created_at
+  }
+  %% public.pt_attempt_grades
+  public__pt_attempt_grades {
+    uuid id PK
+    uuid pt_attempt_id
+    character_varying_8 code
+    character_varying_64 label
+    integer sort_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.pt_motivation_award_fields
+  public__pt_motivation_award_fields {
+    uuid id PK
+    integer semester
+    character_varying_160 label
+    integer sort_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.pt_task_scores
+  public__pt_task_scores {
+    uuid id PK
+    uuid pt_task_id
+    uuid pt_attempt_id
+    uuid pt_attempt_grade_id
+    integer max_marks
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.pt_tasks
+  public__pt_tasks {
+    uuid id PK
+    uuid pt_type_id
+    character_varying_160 title
+    integer max_marks
+    integer sort_order
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.pt_type_attempts
+  public__pt_type_attempts {
+    uuid id PK
+    uuid pt_type_id
+    character_varying_16 code
+    character_varying_64 label
+    boolean is_compensatory
+    integer sort_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.pt_types
+  public__pt_types {
+    uuid id PK
+    integer semester
+    character_varying_32 code
+    character_varying_160 title
+    text description
+    integer max_total_marks
+    integer sort_order
+    boolean is_active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.punishments
+  public__punishments {
+    uuid id PK
+    character_varying_160 title
+    integer marks_deduction
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.role_permissions
+  public__role_permissions {
+    uuid role_id PK
+    uuid permission_id PK
+  }
+  %% public.roles
+  public__roles {
+    uuid id PK
+    character_varying_64 key
+    text description
+  }
+  %% public.signup_requests
+  public__signup_requests {
+    uuid id PK
+    uuid user_id
+    text note
+    character_varying_16 status
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone resolved_at
+    uuid resolved_by
+    text admin_reason
+    jsonb payload
+  }
+  %% public.site_awards
+  public__site_awards {
+    uuid id PK
+    text title
+    text description
+    text image_url
+    text image_object_key
+    text category
+    integer sort_order
+    boolean is_deleted
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.site_commanders
+  public__site_commanders {
+    uuid id PK
+    text name
+    text image_url
+    text image_object_key
+    text tenure
+    text description
+    integer sort_order
+    boolean is_deleted
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    text designation
+  }
+  %% public.site_history
+  public__site_history {
+    uuid id PK
+    date incident_date
+    text description
+    boolean is_deleted
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.site_settings
+  public__site_settings {
+    uuid id PK
+    text singleton_key
+    text logo_url
+    text logo_object_key
+    text hero_title
+    text hero_description
+    text commanders_section_title
+    text awards_section_title
+    text history_section_title
+    uuid updated_by
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    text hero_bg_url
+    text hero_bg_object_key
+  }
+  %% public.subjects
+  public__subjects {
+    uuid id PK
+    character_varying_32 code
+    character_varying_160 name
+    character_varying_1 branch
+    boolean has_theory
+    boolean has_practical
+    integer default_theory_credits
+    integer default_practical_credits
+    text description
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+    integer no_of_periods
+  }
+  %% public.training_camp_activities
+  public__training_camp_activities {
+    uuid id PK
+    uuid training_camp_id
+    character_varying_160 name
+    integer default_max_marks
+    integer sort_order
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.training_camps
+  public__training_camps {
+    uuid id PK
+    character_varying_120 name
+    camp_semester_kind semester
+    integer max_total_marks
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.users
+  public__users {
+    uuid id PK
+    character_varying_64 username
+    character_varying_255 email
+    character_varying_32 phone
+    character_varying_120 name
+    character_varying_64 rank
+    uuid appoint_id
+    boolean is_active
+    timestamp_with_time_zone deactivated_at
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+
+  public__account_lockouts }o--|| public__users : "account_lockouts_unlocked_by_users_id_fk"
+  public__account_lockouts }|--|| public__users : "account_lockouts_user_id_users_id_fk"
+  public__appointment_transfers }|--|| public__appointments : "appointment_transfers_from_appointment_id_appointments_id_fk"
+  public__appointment_transfers }|--|| public__users : "appointment_transfers_from_user_id_users_id_fk"
+  public__appointment_transfers }|--|| public__positions : "appointment_transfers_position_id_positions_id_fk"
+  public__appointment_transfers }|--|| public__appointments : "appointment_transfers_to_appointment_id_appointments_id_fk"
+  public__appointment_transfers }|--|| public__users : "appointment_transfers_to_user_id_users_id_fk"
+  public__appointment_transfers }|--|| public__users : "appointment_transfers_transferred_by_users_id_fk"
+  public__appointments }o--|| public__users : "appointments_appointed_by_users_id_fk"
+  public__appointments }o--|| public__users : "appointments_ended_by_users_id_fk"
+  public__appointments }|--|| public__positions : "appointments_position_id_positions_id_fk"
+  public__appointments }|--|| public__users : "appointments_user_id_users_id_fk"
+  public__audit_logs }o--|| public__users : "audit_logs_actor_user_id_users_id_fk"
+  public__course_offering_instructors }|--|| public__instructors : "course_offering_instructors_instructor_id_instructors_id_fk"
+  public__course_offering_instructors }|--|| public__course_offerings : "course_offering_instructors_offering_id_course_offerings_id_fk"
+  public__course_offerings }|--|| public__courses : "course_offerings_course_id_courses_id_fk"
+  public__course_offerings }|--|| public__subjects : "course_offerings_subject_id_subjects_id_fk"
+  public__credentials_local }|--|| public__users : "credentials_local_user_id_users_id_fk"
+  public__delegations }o--|| public__positions : "delegations_act_as_position_id_positions_id_fk"
+  public__delegations }|--|| public__users : "delegations_grantee_user_id_users_id_fk"
+  public__delegations }|--|| public__users : "delegations_grantor_user_id_users_id_fk"
+  public__delegations }o--|| public__platoons : "delegations_scope_id_platoons_id_fk"
+  public__delegations }o--|| public__users : "delegations_terminated_by_users_id_fk"
+  public__device_site_settings }o--|| public__users : "device_site_settings_updated_by_users_id_fk"
+  public__dossier_inspections }|--|| public__users : "dossier_inspections_inspector_user_id_users_id_fk"
+  public__dossier_inspections }|--|| public__oc_cadets : "dossier_inspections_oc_id_oc_cadets_id_fk"
+  public__instructors }o--|| public__users : "instructors_user_id_users_id_fk"
+  public__interview_template_field_options }|--|| public__interview_template_fields : "interview_template_field_options_field_id_interview_template_fi"
+  public__interview_template_fields }o--|| public__interview_template_groups : "interview_template_fields_group_id_interview_template_groups_id"
+  public__interview_template_fields }o--|| public__interview_template_sections : "interview_template_fields_section_id_interview_template_section"
+  public__interview_template_fields }|--|| public__interview_templates : "interview_template_fields_template_id_interview_templates_id_fk"
+  public__interview_template_groups }o--|| public__interview_template_sections : "interview_template_groups_section_id_interview_template_section"
+  public__interview_template_groups }|--|| public__interview_templates : "interview_template_groups_template_id_interview_templates_id_fk"
+  public__interview_template_sections }|--|| public__interview_templates : "interview_template_sections_template_id_interview_templates_id_"
+  public__interview_template_semesters }|--|| public__interview_templates : "interview_template_semesters_template_id_interview_templates_id"
+  public__login_attempts }o--|| public__users : "login_attempts_user_id_users_id_fk"
+  public__oc_achievements }|--|| public__oc_cadets : "oc_achievements_oc_id_oc_cadets_id_fk"
+  public__oc_autobiography }|--|| public__oc_cadets : "oc_autobiography_oc_id_oc_cadets_id_fk"
+  public__oc_cadets }|--|| public__courses : "oc_cadets_course_id_courses_id_fk"
+  public__oc_cadets }o--|| public__users : "oc_cadets_manager_user_id_users_id_fk"
+  public__oc_cadets }o--|| public__platoons : "oc_cadets_platoon_id_platoons_id_fk"
+  public__oc_cadets }o--|| public__courses : "oc_cadets_relegated_to_course_id_courses_id_fk"
+  public__oc_camp_activity_scores }|--|| public__oc_camps : "oc_camp_activity_scores_oc_camp_id_oc_camps_id_fk"
+  public__oc_camp_activity_scores }|--|| public__training_camp_activities : "oc_camp_activity_scores_training_camp_activity_id_training_camp"
+  public__oc_camp_reviews }|--|| public__oc_camps : "oc_camp_reviews_oc_camp_id_oc_camps_id_fk"
+  public__oc_camps }o--|| public__oc_course_enrollments : "oc_camps_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_camps }|--|| public__oc_cadets : "oc_camps_oc_id_oc_cadets_id_fk"
+  public__oc_camps }|--|| public__training_camps : "oc_camps_training_camp_id_training_camps_id_fk"
+  public__oc_clubs }o--|| public__oc_course_enrollments : "oc_clubs_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_clubs }|--|| public__oc_cadets : "oc_clubs_oc_id_oc_cadets_id_fk"
+  public__oc_commissioning }|--|| public__oc_cadets : "oc_commissioning_oc_id_oc_cadets_id_fk"
+  public__oc_counselling }o--|| public__oc_course_enrollments : "oc_counselling_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_counselling }|--|| public__oc_cadets : "oc_counselling_oc_id_oc_cadets_id_fk"
+  public__oc_course_enrollments }o--|| public__users : "oc_course_enrollments_closed_by_user_id_users_id_fk"
+  public__oc_course_enrollments }|--|| public__courses : "oc_course_enrollments_course_id_courses_id_fk"
+  public__oc_course_enrollments }o--|| public__users : "oc_course_enrollments_created_by_user_id_users_id_fk"
+  public__oc_course_enrollments }|--|| public__oc_cadets : "oc_course_enrollments_oc_id_oc_cadets_id_fk"
+  public__oc_credit_for_excellence }o--|| public__oc_course_enrollments : "oc_credit_for_excellence_enrollment_id_oc_course_enrollments_id"
+  public__oc_credit_for_excellence }|--|| public__oc_cadets : "oc_credit_for_excellence_oc_id_oc_cadets_id_fk"
+  public__oc_delegations }o--|| public__users : "oc_delegations_decided_by_user_id_users_id_fk"
+  public__oc_delegations }|--|| public__courses : "oc_delegations_from_course_id_courses_id_fk"
+  public__oc_delegations }|--|| public__oc_cadets : "oc_delegations_oc_id_oc_cadets_id_fk"
+  public__oc_delegations }|--|| public__courses : "oc_delegations_to_course_id_courses_id_fk"
+  public__oc_discipline }o--|| public__oc_course_enrollments : "oc_discipline_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_discipline }|--|| public__oc_cadets : "oc_discipline_oc_id_oc_cadets_id_fk"
+  public__oc_dossier_filling }|--|| public__oc_cadets : "oc_dossier_filling_oc_id_oc_cadets_id_fk"
+  public__oc_drill }o--|| public__oc_course_enrollments : "oc_drill_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_drill }|--|| public__oc_cadets : "oc_drill_oc_id_oc_cadets_id_fk"
+  public__oc_education }|--|| public__oc_cadets : "oc_education_oc_id_oc_cadets_id_fk"
+  public__oc_family_members }|--|| public__oc_cadets : "oc_family_members_oc_id_oc_cadets_id_fk"
+  public__oc_images }|--|| public__oc_cadets : "oc_images_oc_id_oc_cadets_id_fk"
+  public__oc_interview_field_values }|--|| public__interview_template_fields : "oc_interview_field_values_field_id_interview_template_fields_id"
+  public__oc_interview_field_values }|--|| public__oc_interviews : "oc_interview_field_values_interview_id_oc_interviews_id_fk"
+  public__oc_interview_group_rows }|--|| public__interview_template_groups : "oc_interview_group_rows_group_id_interview_template_groups_id_f"
+  public__oc_interview_group_rows }|--|| public__oc_interviews : "oc_interview_group_rows_interview_id_oc_interviews_id_fk"
+  public__oc_interview_group_values }|--|| public__interview_template_fields : "oc_interview_group_values_field_id_interview_template_fields_id"
+  public__oc_interview_group_values }|--|| public__oc_interview_group_rows : "oc_interview_group_values_row_id_oc_interview_group_rows_id_fk"
+  public__oc_interviews }o--|| public__oc_course_enrollments : "oc_interviews_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_interviews }|--|| public__oc_cadets : "oc_interviews_oc_id_oc_cadets_id_fk"
+  public__oc_interviews }|--|| public__interview_templates : "oc_interviews_template_id_interview_templates_id_fk"
+  public__oc_medical_category }|--|| public__oc_cadets : "oc_medical_category_oc_id_oc_cadets_id_fk"
+  public__oc_medicals }|--|| public__oc_cadets : "oc_medicals_oc_id_oc_cadets_id_fk"
+  public__oc_motivation_awards }o--|| public__oc_course_enrollments : "oc_motivation_awards_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_motivation_awards }|--|| public__oc_cadets : "oc_motivation_awards_oc_id_oc_cadets_id_fk"
+  public__oc_obstacle_training }o--|| public__oc_course_enrollments : "oc_obstacle_training_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_obstacle_training }|--|| public__oc_cadets : "oc_obstacle_training_oc_id_oc_cadets_id_fk"
+  public__oc_olq }o--|| public__oc_course_enrollments : "oc_olq_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_olq }|--|| public__oc_cadets : "oc_olq_oc_id_oc_cadets_id_fk"
+  public__oc_olq_category }o--|| public__courses : "oc_olq_category_course_id_courses_id_fk"
+  public__oc_olq_score }|--|| public__oc_olq : "oc_olq_score_oc_olq_id_oc_olq_id_fk"
+  public__oc_olq_score }|--|| public__oc_olq_subtitle : "oc_olq_score_subtitle_id_oc_olq_subtitle_id_fk"
+  public__oc_olq_subtitle }|--|| public__oc_olq_category : "oc_olq_subtitle_category_id_oc_olq_category_id_fk"
+  public__oc_parent_comms }|--|| public__oc_cadets : "oc_parent_comms_oc_id_oc_cadets_id_fk"
+  public__oc_personal }|--|| public__oc_cadets : "oc_personal_oc_id_oc_cadets_id_fk"
+  public__oc_pre_commission }|--|| public__courses : "oc_pre_commission_course_id_courses_id_fk"
+  public__oc_pre_commission }|--|| public__oc_cadets : "oc_pre_commission_oc_id_oc_cadets_id_fk"
+  public__oc_pre_commission }o--|| public__platoons : "oc_pre_commission_platoon_id_platoons_id_fk"
+  public__oc_pre_commission }o--|| public__courses : "oc_pre_commission_relegated_to_course_id_courses_id_fk"
+  public__oc_pt_motivation_awards }o--|| public__oc_course_enrollments : "oc_pt_motivation_awards_enrollment_id_oc_course_enrollments_id_"
+  public__oc_pt_motivation_awards }|--|| public__oc_cadets : "oc_pt_motivation_awards_oc_id_oc_cadets_id_fk"
+  public__oc_pt_motivation_awards }|--|| public__pt_motivation_award_fields : "oc_pt_motivation_awards_pt_motivation_field_id_pt_motivation_aw"
+  public__oc_pt_task_scores }o--|| public__oc_course_enrollments : "oc_pt_task_scores_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_pt_task_scores }|--|| public__oc_cadets : "oc_pt_task_scores_oc_id_oc_cadets_id_fk"
+  public__oc_pt_task_scores }|--|| public__pt_task_scores : "oc_pt_task_scores_pt_task_score_id_pt_task_scores_id_fk"
+  public__oc_recording_leave_hike_detention }o--|| public__oc_course_enrollments : "oc_recording_leave_hike_detention_enrollment_id_oc_course_enrol"
+  public__oc_recording_leave_hike_detention }|--|| public__oc_cadets : "oc_recording_leave_hike_detention_oc_id_oc_cadets_id_fk"
+  public__oc_relegations }|--|| public__courses : "oc_relegations_from_course_id_courses_id_fk"
+  public__oc_relegations }o--|| public__oc_course_enrollments : "oc_relegations_from_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_relegations }|--|| public__oc_cadets : "oc_relegations_oc_id_oc_cadets_id_fk"
+  public__oc_relegations }|--|| public__users : "oc_relegations_performed_by_user_id_users_id_fk"
+  public__oc_relegations }|--|| public__courses : "oc_relegations_to_course_id_courses_id_fk"
+  public__oc_relegations }o--|| public__oc_course_enrollments : "oc_relegations_to_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_semester_marks }o--|| public__oc_course_enrollments : "oc_semester_marks_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_semester_marks }|--|| public__oc_cadets : "oc_semester_marks_oc_id_oc_cadets_id_fk"
+  public__oc_special_achievement_in_clubs }o--|| public__oc_course_enrollments : "oc_special_achievement_in_clubs_enrollment_id_oc_course_enrollm"
+  public__oc_special_achievement_in_clubs }|--|| public__oc_cadets : "oc_special_achievement_in_clubs_oc_id_oc_cadets_id_fk"
+  public__oc_special_achievement_in_firing }|--|| public__oc_cadets : "oc_special_achievement_in_firing_oc_id_oc_cadets_id_fk"
+  public__oc_speed_march }o--|| public__oc_course_enrollments : "oc_speed_march_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_speed_march }|--|| public__oc_cadets : "oc_speed_march_oc_id_oc_cadets_id_fk"
+  public__oc_sports_and_games }o--|| public__oc_course_enrollments : "oc_sports_and_games_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_sports_and_games }|--|| public__oc_cadets : "oc_sports_and_games_oc_id_oc_cadets_id_fk"
+  public__oc_spr_records }o--|| public__oc_course_enrollments : "oc_spr_records_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_spr_records }|--|| public__oc_cadets : "oc_spr_records_oc_id_oc_cadets_id_fk"
+  public__oc_ssb_points }o--|| public__users : "oc_ssb_points_author_user_id_users_id_fk"
+  public__oc_ssb_points }|--|| public__oc_ssb_reports : "oc_ssb_points_report_id_oc_ssb_reports_id_fk"
+  public__oc_ssb_reports }|--|| public__oc_cadets : "oc_ssb_reports_oc_id_oc_cadets_id_fk"
+  public__oc_weapon_training }o--|| public__oc_course_enrollments : "oc_weapon_training_enrollment_id_oc_course_enrollments_id_fk"
+  public__oc_weapon_training }|--|| public__oc_cadets : "oc_weapon_training_oc_id_oc_cadets_id_fk"
+  public__permission_field_rules }|--|| public__permissions : "permission_field_rules_permission_id_permissions_id_fk"
+  public__permission_field_rules }o--|| public__positions : "permission_field_rules_position_id_positions_id_fk"
+  public__permission_field_rules }o--|| public__roles : "permission_field_rules_role_id_roles_id_fk"
+  public__position_permissions }|--|| public__permissions : "position_permissions_permission_id_permissions_id_fk"
+  public__position_permissions }|--|| public__positions : "position_permissions_position_id_positions_id_fk"
+  public__pt_attempt_grades }|--|| public__pt_type_attempts : "pt_attempt_grades_pt_attempt_id_pt_type_attempts_id_fk"
+  public__pt_task_scores }|--|| public__pt_attempt_grades : "pt_task_scores_pt_attempt_grade_id_pt_attempt_grades_id_fk"
+  public__pt_task_scores }|--|| public__pt_type_attempts : "pt_task_scores_pt_attempt_id_pt_type_attempts_id_fk"
+  public__pt_task_scores }|--|| public__pt_tasks : "pt_task_scores_pt_task_id_pt_tasks_id_fk"
+  public__pt_tasks }|--|| public__pt_types : "pt_tasks_pt_type_id_pt_types_id_fk"
+  public__pt_type_attempts }|--|| public__pt_types : "pt_type_attempts_pt_type_id_pt_types_id_fk"
+  public__role_permissions }|--|| public__permissions : "role_permissions_permission_id_permissions_id_fk"
+  public__role_permissions }|--|| public__roles : "role_permissions_role_id_roles_id_fk"
+  public__signup_requests }o--|| public__users : "signup_requests_resolved_by_users_id_fk"
+  public__signup_requests }|--|| public__users : "signup_requests_user_id_users_id_fk"
+  public__site_settings }o--|| public__users : "site_settings_updated_by_users_id_fk"
+  public__training_camp_activities }|--|| public__training_camps : "training_camp_activities_training_camp_id_training_camps_id_fk"
+  public__users }o--|| public__positions : "users_appoint_id_positions_id_fk"

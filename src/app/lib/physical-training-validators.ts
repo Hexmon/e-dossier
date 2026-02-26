@@ -20,7 +20,7 @@ export const ptTypeCreateSchema = z.object({
     title: z.string().trim().min(1).max(160),
     description: z.string().trim().max(2000).optional().nullable(),
     maxTotalMarks: z.coerce.number().int().min(0),
-    sortOrder: z.coerce.number().int().min(0).optional(),
+    sortOrder: z.coerce.number().int().min(1).optional(),
     isActive: z.boolean().optional(),
 });
 export const ptTypeUpdateSchema = nonEmptyPartial(ptTypeCreateSchema);
@@ -36,7 +36,7 @@ export const ptAttemptCreateSchema = z.object({
     code: z.string().trim().min(1).max(16),
     label: z.string().trim().min(1).max(64),
     isCompensatory: z.boolean().optional(),
-    sortOrder: z.coerce.number().int().min(0).optional(),
+    sortOrder: z.coerce.number().int().min(1).optional(),
     isActive: z.boolean().optional(),
 });
 export const ptAttemptUpdateSchema = nonEmptyPartial(ptAttemptCreateSchema);
@@ -51,7 +51,7 @@ export const ptAttemptParam = z.object({
 export const ptAttemptGradeCreateSchema = z.object({
     code: z.string().trim().min(1).max(8),
     label: z.string().trim().min(1).max(64),
-    sortOrder: z.coerce.number().int().min(0).optional(),
+    sortOrder: z.coerce.number().int().min(1).optional(),
     isActive: z.boolean().optional(),
 });
 export const ptAttemptGradeUpdateSchema = nonEmptyPartial(ptAttemptGradeCreateSchema);
@@ -67,7 +67,7 @@ export const ptAttemptGradeParam = z.object({
 export const ptTaskCreateSchema = z.object({
     title: z.string().trim().min(1).max(160),
     maxMarks: z.coerce.number().int().min(0),
-    sortOrder: z.coerce.number().int().min(0).optional(),
+    sortOrder: z.coerce.number().int().min(1).optional(),
 });
 export const ptTaskUpdateSchema = nonEmptyPartial(ptTaskCreateSchema);
 export const ptTaskQuerySchema = z.object({
@@ -93,7 +93,7 @@ export const ptTaskScoreParam = z.object({
 export const ptMotivationFieldCreateSchema = z.object({
     semester: Semester,
     label: z.string().trim().min(1).max(160),
-    sortOrder: z.coerce.number().int().min(0).optional(),
+    sortOrder: z.coerce.number().int().min(1).optional(),
     isActive: z.boolean().optional(),
 });
 export const ptMotivationFieldUpdateSchema = nonEmptyPartial(ptMotivationFieldCreateSchema);

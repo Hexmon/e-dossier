@@ -52,6 +52,7 @@ describe('GET /api/v1/me/navigation', () => {
 
         // Academics Visible
         expect(data.sections.find((s: any) => s.key === 'academics')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'pt')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
 
@@ -78,6 +79,7 @@ describe('GET /api/v1/me/navigation', () => {
 
         // Academics / Reports Hidden
         expect(data.sections.find((s: any) => s.key === 'academics')).toBeUndefined();
+        expect(data.sections.find((s: any) => s.key === 'pt')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'reports')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
     });
