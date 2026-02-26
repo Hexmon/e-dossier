@@ -795,6 +795,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/interview/pending",
+    "action": "admin:interview:pending:read",
+    "resourceType": "admin:interview:pending",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/interview/templates",
     "action": "admin:interview:templates:read",
     "resourceType": "admin:interview:templates",
