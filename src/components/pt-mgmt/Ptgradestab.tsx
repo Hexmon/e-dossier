@@ -159,7 +159,7 @@ export default function PTGradesTab({
                     </Select>
                     {selectedTypeId && attempts.length === 0 && (
                         <p className="text-xs text-muted-foreground">
-                            No attempts available. Please create attempts first in the Attempts tab.
+                            No attempts available. Create attempts from PT Types tab using Manage Attempts.
                         </p>
                     )}
                 </div>

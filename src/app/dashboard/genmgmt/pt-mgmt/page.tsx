@@ -5,14 +5,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TabsContent } from "@/components/ui/tabs";
-import { List, Settings, Trophy, Target, Award, CheckSquare, Grid } from "lucide-react";
+import { List, Settings, Trophy, Award, CheckSquare, Grid } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import {
-    PTAttempt,
-    PTTask,
     PTAttemptCreate,
     PTAttemptUpdate,
     PTGradeCreate,
@@ -34,7 +32,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import PTTemplateView from "@/components/pt-mgmt/Pttemplateview";
-import PTAttemptsTab from "@/components/pt-mgmt/Ptattemptstab";
 import PTGradesTab from "@/components/pt-mgmt/Ptgradestab";
 import PTTasksTab from "@/components/pt-mgmt/Pttaskstab";
 import PTScoresTab from "@/components/pt-mgmt/Ptscorestab";
@@ -45,7 +42,6 @@ import { usePhysicalTrainingMgmt } from "@/hooks/usePhysicalTrainingMgmt";
 const ptTabs = [
     { value: "template", title: "Template View", icon: List },
     { value: "types", title: "PT Types", icon: Settings },
-    { value: "attempts", title: "Attempts", icon: Target },
     { value: "grades", title: "Grades", icon: Award },
     { value: "tasks", title: "Tasks", icon: CheckSquare },
     { value: "scores", title: "Score Matrix", icon: Grid },
@@ -60,6 +56,7 @@ export default function PhysicalTrainingPage() {
     // Changing any of these causes React Query to enable/disable the right queries.
     // ---------------------------------------------------------------------------
     const [selectedSemester, setSelectedSemester] = useState(1);
+    const [activeTab, setActiveTab] = useState("template");
     const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
     const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -169,6 +166,12 @@ export default function PhysicalTrainingPage() {
         }
     };
 
+    const handleOpenGradesFromAttempt = (typeId: string, attemptId: string) => {
+        setSelectedTypeId(typeId);
+        setSelectedAttemptId(attemptId);
+        setActiveTab("grades");
+    };
+
     // ---------------------------------------------------------------------------
     // Grade handlers
     // ---------------------------------------------------------------------------
@@ -227,6 +230,18 @@ export default function PhysicalTrainingPage() {
         } catch {
             return false;
         }
+    };
+
+    const handleOpenTasksForType = (typeId: string) => {
+        setSelectedTypeId(typeId);
+        setSelectedTaskId(null);
+        setActiveTab("tasks");
+    };
+
+    const handleOpenScoresForTask = (typeId: string, taskId: string) => {
+        setSelectedTypeId(typeId);
+        setSelectedTaskId(taskId);
+        setActiveTab("scores");
     };
 
     // ---------------------------------------------------------------------------
@@ -336,7 +351,12 @@ export default function PhysicalTrainingPage() {
                             </div>
                         </div>
 
-                        <GlobalTabs tabs={ptTabs} defaultValue="template">
+                        <GlobalTabs
+                            tabs={ptTabs}
+                            defaultValue="template"
+                            value={activeTab}
+                            onValueChange={setActiveTab}
+                        >
                             <TabsContent value="template" className="space-y-6">
                                 <PTTemplateView
                                     template={template}
@@ -353,20 +373,15 @@ export default function PhysicalTrainingPage() {
                                     onAdd={handleAddType}
                                     onEdit={handleEditType}
                                     onDelete={handleDeleteType}
-                                />
-                            </TabsContent>
-
-                            <TabsContent value="attempts" className="space-y-6">
-                                <PTAttemptsTab
-                                    types={types}
-                                    attempts={attempts}
-                                    selectedTypeId={selectedTypeId}
-                                    loading={loading}
-                                    onTypeSelect={setSelectedTypeId}
-                                    onAdd={handleAddAttempt}
-                                    onEdit={handleEditAttempt}
-                                    onDelete={handleDeleteAttempt}
-                                    onManageGrades={(attempt: PTAttempt) => setSelectedAttemptId(attempt.id)}
+                                    onAddAttempt={handleAddAttempt}
+                                    onEditAttempt={handleEditAttempt}
+                                    onDeleteAttempt={handleDeleteAttempt}
+                                    onOpenGradesForAttempt={handleOpenGradesFromAttempt}
+                                    onAddTask={handleAddTask}
+                                    onEditTask={handleEditTask}
+                                    onDeleteTask={handleDeleteTask}
+                                    onOpenTasksForType={handleOpenTasksForType}
+                                    onOpenScoresForTask={handleOpenScoresForTask}
                                 />
                             </TabsContent>
 
@@ -396,7 +411,7 @@ export default function PhysicalTrainingPage() {
                                     onAdd={handleAddTask}
                                     onEdit={handleEditTask}
                                     onDelete={handleDeleteTask}
-                                    onManageScores={(task: PTTask) => setSelectedTaskId(task.id)}
+                                    onOpenScoresForTask={handleOpenScoresForTask}
                                 />
                             </TabsContent>
 

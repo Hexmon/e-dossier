@@ -3,16 +3,25 @@
 import { PTType } from "@/app/lib/api/Physicaltrainingapi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Edit, Trash2, Loader2 } from "lucide-react";
+import { Edit, Trash2, Loader2, Target, CheckSquare } from "lucide-react";
 
 interface PTTypesTableProps {
     types: PTType[];
     onEdit: (index: number) => void;
     onDelete: (id: string) => void;
+    onManageAttempts: (type: PTType) => void;
+    onManageTasks: (type: PTType) => void;
     loading: boolean;
 }
 
-export default function PTTypesTable({ types, onEdit, onDelete, loading }: PTTypesTableProps) {
+export default function PTTypesTable({
+    types,
+    onEdit,
+    onDelete,
+    onManageAttempts,
+    onManageTasks,
+    loading,
+}: PTTypesTableProps) {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
@@ -70,6 +79,26 @@ export default function PTTypesTable({ types, onEdit, onDelete, loading }: PTTyp
                                     </td>
                                     <td className="text-center p-4">
                                         <div className="flex items-center justify-center gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => onManageAttempts(type)}
+                                                className="h-8 px-2 text-info hover:text-info hover:bg-info/10"
+                                                title="Manage Attempts"
+                                            >
+                                                <Target className="h-4 w-4 mr-1" />
+                                                Attempts
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => onManageTasks(type)}
+                                                className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
+                                                title="Manage Tasks"
+                                            >
+                                                <CheckSquare className="h-4 w-4 mr-1" />
+                                                Tasks
+                                            </Button>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"

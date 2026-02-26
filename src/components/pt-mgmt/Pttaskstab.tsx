@@ -41,7 +41,7 @@ interface PTTasksTabProps {
     onAdd: (typeId: string, task: PTTaskCreate) => Promise<boolean>;
     onEdit: (typeId: string, taskId: string, task: PTTaskCreate) => Promise<boolean>;
     onDelete: (typeId: string, taskId: string) => Promise<boolean>;
-    onManageScores: (task: PTTask) => void;
+    onOpenScoresForTask: (typeId: string, taskId: string) => void;
 }
 
 export default function PTTasksTab({
@@ -53,7 +53,7 @@ export default function PTTasksTab({
     onAdd,
     onEdit,
     onDelete,
-    onManageScores,
+    onOpenScoresForTask,
 }: PTTasksTabProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<PTTask | undefined>(undefined);
@@ -107,11 +107,9 @@ export default function PTTasksTab({
         setItemToDelete(null);
     };
 
-    const handleManageScores = (index: number) => {
-        const task = tasks[index];
-        if (task) {
-            onManageScores(task);
-        }
+    const handleManageScores = (task: PTTask) => {
+        if (!selectedTypeId) return;
+        onOpenScoresForTask(selectedTypeId, task.id);
     };
 
     return (
