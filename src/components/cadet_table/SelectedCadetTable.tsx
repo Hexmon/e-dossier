@@ -4,28 +4,20 @@
 import { Cadet } from "@/types/cadet";
 import { useState } from "react";
 import PerformanceGraphModal from "@/components/performance_graph/PerformanceGraphModal";
-import { data as getPerformanceData } from "@/components/performance_graph/Data";
+import type { PerformanceGraphData } from "@/types/performanceGraph";
 
 type CadetTableProps = {
   selectedCadet: Cadet | null;
-  academicsData?: number[];
-  olqData?: number[];
-  odtData?: number[];
-  disciplineData?: number[];
+  performanceData?: PerformanceGraphData | null;
 };
 
 export default function SelectedCadetTable({
   selectedCadet,
-  academicsData = [],
-  olqData = [],
-  odtData = [],
-  disciplineData = [],
+  performanceData,
 }: CadetTableProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (!selectedCadet) return null;
-
-  const performanceData = getPerformanceData(selectedCadet.ocId);
 
   return (
     <>
@@ -74,11 +66,9 @@ export default function SelectedCadetTable({
       <PerformanceGraphModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        ocId={selectedCadet.ocId}
+        initialData={performanceData}
         cadetName={selectedCadet.name}
-        academicsData={performanceData?.academics ?? []}
-        olqData={performanceData?.olq ?? []}
-        odtData={performanceData?.odt ?? []}
-        disciplineData={performanceData?.discipline ?? []}
       />
     </>
   );

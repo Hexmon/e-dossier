@@ -1,29 +1,40 @@
 // components/performance_graph/PerformanceGraphModal.tsx
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import PerformanceGraphs from "./PerformanceGraphs";
+import type { PerformanceGraphData } from "@/types/performanceGraph";
+import { EMPTY_PERFORMANCE_GRAPH_DATA } from "@/types/performanceGraph";
+import { getPerformanceGraphData } from "@/app/lib/api/performanceGraphApi";
+import { toast } from "sonner";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  academicsData: number[];
-  olqData: number[];
-  odtData: number[];
-  disciplineData: number[];
+  ocId: string;
+  initialData?: PerformanceGraphData | null;
   cadetName: string;
 };
 
 export default function PerformanceGraphModal({
   isOpen,
   onClose,
-  academicsData,
-  olqData,
-  odtData,
-  disciplineData,
+  ocId,
+  initialData,
   cadetName,
 }: Props) {
+  const [graphData, setGraphData] = useState<PerformanceGraphData>(
+    initialData ?? EMPTY_PERFORMANCE_GRAPH_DATA,
+  );
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialData) {
+      setGraphData(initialData);
+    }
+  }, [initialData]);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -49,6 +60,36 @@ export default function PerformanceGraphModal({
       }
     };
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || !ocId || initialData) return;
+
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const response = await getPerformanceGraphData(ocId);
+        if (!cancelled) {
+          setGraphData(response.data ?? EMPTY_PERFORMANCE_GRAPH_DATA);
+        }
+      } catch (error: any) {
+        if (!cancelled) {
+          toast.error(error?.message ?? "Failed to load performance graphs");
+          setGraphData(EMPTY_PERFORMANCE_GRAPH_DATA);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, ocId, initialData]);
 
   if (!isOpen) return null;
 
@@ -77,12 +118,13 @@ export default function PerformanceGraphModal({
           </div>
 
           <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
-            <PerformanceGraphs
-              academicsData={academicsData}
-              olqData={olqData}
-              odtData={odtData}
-              disciplineData={disciplineData}
-            />
+            {loading ? (
+              <div className="px-6 py-10 text-sm text-muted-foreground">
+                Loading performance graphs...
+              </div>
+            ) : (
+              <PerformanceGraphs data={graphData} />
+            )}
           </div>
 
           <div className="border-t border-border px-6 py-4 flex justify-end">
