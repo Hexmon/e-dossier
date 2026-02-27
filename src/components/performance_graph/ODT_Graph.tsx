@@ -32,9 +32,6 @@ ChartJS.register(
   Filler
 );
 
-const cadetLineColor = "#2563eb";
-const averageLineColor = "#ef4444";
-
 export default function OdtChart({
   data: odtData,
   averageData,
@@ -107,6 +104,8 @@ export default function OdtChart({
     const ctx = chartRef.current.getContext("2d");
     if (!ctx) return;
     const theme = getChartThemePalette();
+    const cadetLineColor = theme.primary;
+    const averageLineColor = theme.destructive;
 
     const gradientBg = ctx.createLinearGradient(0, 0, 0, 400);
     gradientBg.addColorStop(0, withAlpha(cadetLineColor, 0.15));
