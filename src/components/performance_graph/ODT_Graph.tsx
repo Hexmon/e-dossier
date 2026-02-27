@@ -121,7 +121,7 @@ export default function OdtChart({
         labels: labels,
         datasets: [
           {
-            label: "Cadet ODT Score",
+            label: "Cadet PT total marks",
             data: odtData,
             borderColor: cadetLineColor,
             backgroundColor: gradientBg,
@@ -137,7 +137,7 @@ export default function OdtChart({
             hoverBorderWidth: 4,
           },
           {
-            label: "Course Average",
+            label: "Course Average PT total marks",
             data: averageData,
             borderColor: averageLineColor,
             backgroundColor: gradientAvgBg,
@@ -181,7 +181,7 @@ export default function OdtChart({
             borderWidth: 1,
             callbacks: {
               label: function (context: any) {
-                return `${context.dataset.label}: ${context.parsed.y}`;
+                return `${context.dataset.label}: ${context.parsed.y}/150`;
               },
             },
           },
@@ -197,9 +197,9 @@ export default function OdtChart({
           },
           y: {
             beginAtZero: true,
-            max: 100,
+            max: 150,
             ticks: {
-              stepSize: 20,
+              stepSize: 25,
               font: { size: 11, weight: "500" as any },
               color: theme.mutedForeground,
               padding: 8,
@@ -226,7 +226,7 @@ export default function OdtChart({
             ODT
           </h2>
           <p className="text-primary-foreground/80 text-sm mt-1">
-            Out Door Training performance tracking
+            Outdoor Training Performance
           </p>
         </div>
 
@@ -241,7 +241,7 @@ export default function OdtChart({
             <p className="text-xs font-semibold text-primary uppercase tracking-wide">
               Highest
             </p>
-            <p className="text-2xl font-bold text-primary mt-1">{stats.highest}/100</p>
+            <p className="text-2xl font-bold text-primary mt-1">{stats.highest}/150</p>
             <p className="text-xs text-primary mt-1">{stats.highestTerm}</p>
           </div>
           <div className="bg-success/10 rounded-lg p-4 border border-success/20">
@@ -258,7 +258,7 @@ export default function OdtChart({
               Lowest
             </p>
             <p className="text-2xl font-bold text-info mt-1">
-              {stats.lowest === null ? "-" : `${stats.lowest}/100`}
+              {stats.lowest === null ? "-" : `${stats.lowest}/150`}
             </p>
             <p className="text-xs text-info mt-1">{stats.lowestTerm}</p>
           </div>

@@ -4,11 +4,10 @@ import {
   ocCourseEnrollments,
   ocDiscipline,
   ocMedicalCategory,
-  ocObstacleTraining,
   ocOlq,
   ocSemesterMarks,
-  ocSpeedMarch,
 } from "@/app/db/schema/training/oc";
+import { ocPtTaskScores } from "@/app/db/schema/training/physicalTrainingOc";
 import { getOrCreateActiveEnrollment } from "@/app/db/queries/oc-enrollments";
 import type {
   PerformanceGraphData,
@@ -88,8 +87,7 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
   const [
     academicsRows,
     olqRows,
-    obstacleRows,
-    speedMarchRows,
+    ptScoreRows,
     disciplineRows,
     medicalCategoryRows,
   ] = await Promise.all([
@@ -116,30 +114,12 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
       .where(inArray(ocOlq.enrollmentId, courseEnrollmentIds)),
     db
       .select({
-        enrollmentId: ocObstacleTraining.enrollmentId,
-        semester: ocObstacleTraining.semester,
-        marksObtained: ocObstacleTraining.marksObtained,
+        enrollmentId: ocPtTaskScores.enrollmentId,
+        semester: ocPtTaskScores.semester,
+        marksScored: ocPtTaskScores.marksScored,
       })
-      .from(ocObstacleTraining)
-      .where(
-        and(
-          inArray(ocObstacleTraining.enrollmentId, courseEnrollmentIds),
-          isNull(ocObstacleTraining.deletedAt),
-        ),
-      ),
-    db
-      .select({
-        enrollmentId: ocSpeedMarch.enrollmentId,
-        semester: ocSpeedMarch.semester,
-        marks: ocSpeedMarch.marks,
-      })
-      .from(ocSpeedMarch)
-      .where(
-        and(
-          inArray(ocSpeedMarch.enrollmentId, courseEnrollmentIds),
-          isNull(ocSpeedMarch.deletedAt),
-        ),
-      ),
+      .from(ocPtTaskScores)
+      .where(inArray(ocPtTaskScores.enrollmentId, courseEnrollmentIds)),
     db
       .select({
         enrollmentId: ocDiscipline.enrollmentId,
@@ -195,16 +175,10 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
 
   const odtByEnrollmentTerm = new Map<string, number>();
 
-  for (const row of obstacleRows) {
+  for (const row of ptScoreRows) {
     if (!isValidSemester(row.semester)) continue;
     const key = `${row.enrollmentId}:${row.semester}`;
-    odtByEnrollmentTerm.set(key, (odtByEnrollmentTerm.get(key) ?? 0) + toFiniteNumber(row.marksObtained));
-  }
-
-  for (const row of speedMarchRows) {
-    if (!isValidSemester(row.semester)) continue;
-    const key = `${row.enrollmentId}:${row.semester}`;
-    odtByEnrollmentTerm.set(key, (odtByEnrollmentTerm.get(key) ?? 0) + toFiniteNumber(row.marks));
+    odtByEnrollmentTerm.set(key, (odtByEnrollmentTerm.get(key) ?? 0) + toFiniteNumber(row.marksScored));
   }
 
   const odtCadet = createTermArray();
