@@ -3539,6 +3539,78 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "method": "GET",
+    "path": "/api/v1/reports/academics/consolidated-sessional/preview",
+    "action": "reports:academics:consolidated-sessional:read",
+    "resourceType": "reports:academics:consolidated-sessional",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/academics/consolidated-sessional/download",
+    "action": "reports:academics:consolidated-sessional:download",
+    "resourceType": "reports:academics:consolidated-sessional:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/academics/semester-grade/candidates",
+    "action": "reports:academics:semester-grade:candidates:read",
+    "resourceType": "reports:academics:semester-grade:candidates",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/academics/semester-grade/preview/:ocId",
+    "action": "reports:academics:semester-grade:read",
+    "resourceType": "reports:academics:semester-grade",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/academics/semester-grade/download",
+    "action": "reports:academics:semester-grade:download",
+    "resourceType": "reports:academics:semester-grade:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/metadata/course-semesters",
+    "action": "reports:metadata:course-semesters:read",
+    "resourceType": "reports:metadata:course-semesters",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/mil-training/physical-assessment/preview",
+    "action": "reports:mil-training:physical-assessment:read",
+    "resourceType": "reports:mil-training:physical-assessment",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/mil-training/physical-assessment/download",
+    "action": "reports:mil-training:physical-assessment:download",
+    "resourceType": "reports:mil-training:physical-assessment:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
     "method": "PUT",
     "path": "/api/v1/admin/device-site-settings",
     "action": "admin:device-site-settings:update",

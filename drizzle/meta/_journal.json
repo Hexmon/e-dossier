@@ -169,6 +169,13 @@
       "when": 1771795200000,
       "tag": "0023_instructor_profile_subjects",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1772200080000,
+      "tag": "0024_reports_download_versions",
+      "breakpoints": true
     }
   ]
 }
