@@ -86,9 +86,10 @@ export default function HigherTests({
     onMarksChange(tableTotal);
   }, [tableTotal, onMarksChange]);
 
+  // Clear contribution when this section unmounts.
   useEffect(() => {
-    onMarksChange(0);
-  }, [activeSemester, onMarksChange]);
+    return () => onMarksChange(0);
+  }, [onMarksChange]);
 
   const handleAttemptChange = useCallback(
     (rowId: string, attemptCode: string) => {
@@ -102,11 +103,8 @@ export default function HigherTests({
           const nextGrade = attemptGroup?.grades[0];
           const nextScoreId = nextGrade?.scoreId ?? row.selectedScoreId;
 
-          const marks = nextScoreId
-            ? scoreById.get(nextScoreId)?.marksScored ?? 0
-            : row.column6;
-
-          const maxMarks = nextGrade?.maxMarks ?? row.column3;
+          const statusMarks = nextGrade?.maxMarks ?? row.column3;
+          const marks = statusMarks;
 
           return {
             ...row,
@@ -115,13 +113,13 @@ export default function HigherTests({
             selectedGrade: nextGrade?.gradeCode ?? row.selectedGrade,
             column5: nextGrade?.gradeCode ?? row.column5,
             selectedScoreId: nextScoreId,
-            column3: maxMarks,
+            column3: statusMarks,
             column6: marks,
           };
         })
       );
     },
-    [scoreById]
+    []
   );
 
   const handleGradeChange = useCallback(
@@ -136,24 +134,21 @@ export default function HigherTests({
           const grade = attemptGroup?.grades.find((g) => g.gradeCode === gradeCode);
           const nextScoreId = grade?.scoreId ?? row.selectedScoreId;
 
-          const marks = nextScoreId
-            ? scoreById.get(nextScoreId)?.marksScored ?? 0
-            : row.column6;
-
-          const maxMarks = grade?.maxMarks ?? row.column3;
+          const statusMarks = grade?.maxMarks ?? row.column3;
+          const marks = statusMarks;
 
           return {
             ...row,
             selectedGrade: gradeCode,
             column5: gradeCode,
             selectedScoreId: nextScoreId,
-            column3: maxMarks,
+            column3: statusMarks,
             column6: marks,
           };
         })
       );
     },
-    [scoreById]
+    []
   );
 
   const handleMarksChange = useCallback((rowId: string, value: string) => {
@@ -163,7 +158,7 @@ export default function HigherTests({
 
         if (isVirtualId(row.selectedScoreId)) {
           toast.error(
-            "This template has no scoreId from server, so marks cannot be saved yet."
+            "Template is not fully configured, Contact Admin."
           );
           return row;
         }
@@ -179,7 +174,7 @@ export default function HigherTests({
         }
 
         if (numValue > row.column3) {
-          toast.error(`Marks scored cannot exceed maximum marks (${row.column3})`);
+          toast.error(`Marks scored cannot exceed status marks (${row.column3})`);
           return row;
         }
 
@@ -199,7 +194,7 @@ export default function HigherTests({
         row.column6 > row.column3
       ) {
         toast.error(
-          `Invalid marks for ${row.column2}. Marks must be between 0 and ${row.column3}`
+          `Invalid marks for ${row.column2}. Marks must be between 0 and status marks (${row.column3})`
         );
         return;
       }
@@ -216,7 +211,7 @@ export default function HigherTests({
 
     if (scoresForApi.length === 0) {
       toast.error(
-        "No valid server scoreIds found to save. Please ensure template provides scoreId."
+        "Template is not fully configured, Contact Admin."
       );
       return;
     }
@@ -242,7 +237,7 @@ export default function HigherTests({
 
   const displayData = [...tableData, totalRow];
 
-  // ✅ Column order: S.No, Test, Category, Status, Max Marks, Marks Scored
+  // Column order: S.No, Test, Category, Status, Marks Scored
   const columns: TableColumn<PTTableRow>[] = useMemo(
     () => [
       {
@@ -313,19 +308,7 @@ export default function HigherTests({
           );
         },
       },
-      // ✅ Max Marks read-only (template-driven)
-      {
-        key: "column3",
-        label: "Max Marks",
-        type: "number",
-        render: (value, row) => {
-          if (row.id === "total") {
-            return <span className="text-center block">{totalMaxMarks}</span>;
-          }
-          return <span className="text-center block">{value || "-"}</span>;
-        },
-      },
-      // ✅ Marks Scored editable
+      // Marks Scored editable
       {
         key: "column6",
         label: "Marks Scored",
@@ -356,7 +339,6 @@ export default function HigherTests({
       handleMarksChange,
       isEditing,
       tableTotal,
-      totalMaxMarks,
     ]
   );
 
@@ -406,3 +388,4 @@ export default function HigherTests({
     </CardContent>
   );
 }
+
