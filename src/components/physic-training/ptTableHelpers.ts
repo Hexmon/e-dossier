@@ -22,7 +22,7 @@ export interface PTTableRow {
   id: string;
   column1: number | string;
   column2: string; // test name (task title)
-  column3: number; // max marks (read-only)
+  column3: number; // status-linked marks used for validation/defaults
   column4: string; // category (attempt)
   column5: string; // status (grade)
   column6: number; // marks scored
@@ -72,7 +72,6 @@ export function buildPTTableRows(
   });
 
   const rows: PTTableRow[] = [];
-
   taskMap.forEach((attemptGroups, taskTitle) => {
     const index = rows.length + 1;
 
@@ -107,6 +106,8 @@ export function buildPTTableRows(
         selectedGrade = firstGrade.gradeCode;
         selectedScoreId = firstGrade.scoreId;
         maxMarks = firstGrade.maxMarks;
+        // Default to status-linked marks when no saved score exists.
+        marks = firstGrade.maxMarks;
       }
     }
 
@@ -208,3 +209,8 @@ function buildResolvedType(
     rows,
   };
 }
+
+
+
+
+

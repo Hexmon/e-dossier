@@ -124,6 +124,7 @@ export const endpoints = {
         leaveRecord: (ocId: string) => `/api/v1/oc/${ocId}/recording-leave-hike-detention`,
         leaveRecordById: (ocId: string, recordId: string) => `/api/v1/oc/${ocId}/recording-leave-hike-detention/${recordId}`,
         olq: (ocId: string) => `/api/v1/oc/${ocId}/olq`,
+        performanceGraph: (ocId: string) => `/api/v1/oc/${ocId}/performance-graph`,
         olqCategories: (ocId: string) => `/api/v1/oc/${ocId}/olq/categories?includeSubtitles=true&isActive=true`,
         dossierInspections: (ocId: string) => `/api/v1/oc/${ocId}/dossier-inspection`,
         camps: {

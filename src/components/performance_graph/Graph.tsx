@@ -1,4 +1,3 @@
-// components/performance_graph/AcademicsChart.tsx
 "use client";
 
 import { useRef, useEffect, useState } from "react";
@@ -15,8 +14,11 @@ import {
   Filler,
 } from "chart.js";
 import { labels } from "@/constants/app.constants";
-import { computeAverageMarks } from "@/components/performance_graph/Data";
-import { addThemeChangedListener, getChartThemePalette, withAlpha } from "@/components/performance_graph/chartTheme";
+import {
+  addThemeChangedListener,
+  getChartThemePalette,
+  withAlpha,
+} from "@/components/performance_graph/chartTheme";
 
 ChartJS.register(
   CategoryScale,
@@ -30,33 +32,59 @@ ChartJS.register(
   Filler
 );
 
-export default function AcademicsChart({ data: academics }: { data: number[] }) {
+export default function AcademicsChart({
+  data: academics,
+  averageData,
+  cadetTermPresence,
+}: {
+  data: number[];
+  averageData: number[];
+  cadetTermPresence: boolean[];
+}) {
   const chartRef = useRef<HTMLCanvasElement | null>(null);
   const chartInstance = useRef<any>(null);
   const [stats, setStats] = useState({
     highest: 0,
     average: 0,
-    lowest: 0,
+    lowest: null as number | null,
     highestTerm: "",
+    lowestTerm: "",
   });
-  const [averageData] = useState(computeAverageMarks("academics"));
   const [themeVersion, setThemeVersion] = useState(0);
 
   useEffect(() => {
     if (!Array.isArray(academics) || academics.length === 0) return;
-    const highest = Math.max(...academics);
-    const average =
-      academics.reduce((a, b) => a + b, 0) / Math.max(1, academics.length);
-    const lowest = Math.min(...academics);
-    const highestIndex = academics.indexOf(highest);
+    const available = academics
+      .map((value, index) => ({ value, index }))
+      .filter((_, index) => Boolean(cadetTermPresence[index]));
+    if (!available.length) {
+      setStats({
+        highest: 0,
+        average: 0,
+        lowest: null,
+        highestTerm: "-",
+        lowestTerm: "-",
+      });
+      return;
+    }
+    const values = available.map((item) => item.value);
+    const highest = Math.max(...values);
+    const average = values.reduce((a, b) => a + b, 0) / values.length;
+    const lowest = values.length < 2 ? null : Math.min(...values);
+    const highestIndex = available.find((item) => item.value === highest)?.index ?? 0;
+    const lowestIndex =
+      lowest === null
+        ? -1
+        : available.find((item) => item.value === lowest)?.index ?? -1;
 
     setStats({
       highest,
       average,
       lowest,
       highestTerm: labels[highestIndex] ?? `Term ${highestIndex + 1}`,
+      lowestTerm: lowestIndex < 0 ? "-" : labels[lowestIndex] ?? `Term ${lowestIndex + 1}`,
     });
-  }, [academics]);
+  }, [academics, cadetTermPresence]);
 
   useEffect(() => {
     const cleanup = addThemeChangedListener(() => {
@@ -76,14 +104,16 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
     const ctx = chartRef.current.getContext("2d");
     if (!ctx) return;
     const theme = getChartThemePalette();
+    const cadetLineColor = theme.primary;
+    const averageLineColor = theme.destructive;
 
     const gradientBg = ctx.createLinearGradient(0, 0, 0, 400);
-    gradientBg.addColorStop(0, withAlpha(theme.primary, 0.15));
-    gradientBg.addColorStop(1, withAlpha(theme.primary, 0));
+    gradientBg.addColorStop(0, withAlpha(cadetLineColor, 0.15));
+    gradientBg.addColorStop(1, withAlpha(cadetLineColor, 0));
 
     const gradientAvgBg = ctx.createLinearGradient(0, 0, 0, 400);
-    gradientAvgBg.addColorStop(0, withAlpha(theme.destructive, 0.15));
-    gradientAvgBg.addColorStop(1, withAlpha(theme.destructive, 0));
+    gradientAvgBg.addColorStop(0, withAlpha(averageLineColor, 0.15));
+    gradientAvgBg.addColorStop(1, withAlpha(averageLineColor, 0));
 
     chartInstance.current = new ChartJS(ctx as any, {
       type: "line",
@@ -93,33 +123,33 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
           {
             label: "Cadet CGPA",
             data: academics,
-            borderColor: theme.primary,
+            borderColor: cadetLineColor,
             backgroundColor: gradientBg,
             borderWidth: 3,
             fill: true,
             tension: 0.4,
             pointRadius: 6,
-            pointBackgroundColor: theme.primary,
+            pointBackgroundColor: cadetLineColor,
             pointBorderColor: theme.pointBorder,
             pointBorderWidth: 2,
             pointHoverRadius: 8,
-            pointHoverBackgroundColor: theme.info,
+            pointHoverBackgroundColor: cadetLineColor,
             hoverBorderWidth: 4,
           },
           {
             label: "Course Average",
             data: averageData,
-            borderColor: theme.destructive,
+            borderColor: averageLineColor,
             backgroundColor: gradientAvgBg,
             borderWidth: 3,
             fill: true,
             tension: 0.4,
             pointRadius: 6,
-            pointBackgroundColor: theme.destructive,
+            pointBackgroundColor: averageLineColor,
             pointBorderColor: theme.pointBorder,
             pointBorderWidth: 2,
             pointHoverRadius: 8,
-            pointHoverBackgroundColor: theme.destructive,
+            pointHoverBackgroundColor: averageLineColor,
             hoverBorderWidth: 4,
             borderDash: [6, 6],
           },
@@ -147,11 +177,11 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
             bodyFont: { size: 12 },
             padding: 12,
             displayColors: true,
-            borderColor: theme.primary,
+            borderColor: cadetLineColor,
             borderWidth: 1,
             callbacks: {
               label: function (context: any) {
-                return `Score: ${context.parsed.y}/10`;
+                return `${context.dataset.label}: ${context.parsed.y}/10`;
               },
             },
           },
@@ -191,35 +221,46 @@ export default function AcademicsChart({ data: academics }: { data: number[] }) 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
       <div className="bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
-        {/* Header */}
         <div className="bg-primary px-6 py-6">
-          <h2 className="text-2xl font-bold text-primary-foreground tracking-tight">📚 ACADEMICS</h2>
-          <p className="text-primary-foreground/80 text-sm mt-1">Academic Performance Tracking (CGPA)</p>
+          <h2 className="text-2xl font-bold text-primary-foreground tracking-tight">
+            ACADEMICS
+          </h2>
+          <p className="text-primary-foreground/80 text-sm mt-1">
+            Academic performance tracking (CGPA)
+          </p>
         </div>
 
-        {/* Chart Container */}
         <div className="p-6">
           <div className="relative w-full h-96 bg-background rounded-xl shadow-sm border border-border">
             <canvas ref={chartRef}></canvas>
           </div>
         </div>
 
-        {/* Stats Footer */}
         <div className="grid grid-cols-3 gap-4 px-6 pb-6">
           <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
-            <p className="text-xs font-semibold text-primary uppercase tracking-wide">Course Highest</p>
+            <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+              Highest
+            </p>
             <p className="text-2xl font-bold text-primary mt-1">{stats.highest}/10</p>
             <p className="text-xs text-primary mt-1">{stats.highestTerm}</p>
           </div>
           <div className="bg-success/10 rounded-lg p-4 border border-success/20">
-            <p className="text-xs font-semibold text-success uppercase tracking-wide">Course Average</p>
-            <p className="text-2xl font-bold text-success mt-1">{stats.average.toFixed(1)}</p>
+            <p className="text-xs font-semibold text-success uppercase tracking-wide">
+              Average
+            </p>
+            <p className="text-2xl font-bold text-success mt-1">
+              {stats.average.toFixed(1)}
+            </p>
             <p className="text-xs text-success mt-1">Overall</p>
           </div>
           <div className="bg-info/10 rounded-lg p-4 border border-info/20">
-            <p className="text-xs font-semibold text-info uppercase tracking-wide">Course Lowest</p>
-            <p className="text-2xl font-bold text-info mt-1">{stats.lowest}/10</p>
-            <p className="text-xs text-info mt-1">Term 1</p>
+            <p className="text-xs font-semibold text-info uppercase tracking-wide">
+              Lowest
+            </p>
+            <p className="text-2xl font-bold text-info mt-1">
+              {stats.lowest === null ? "-" : `${stats.lowest}/10`}
+            </p>
+            <p className="text-xs text-info mt-1">{stats.lowestTerm}</p>
           </div>
         </div>
       </div>
