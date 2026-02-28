@@ -34,7 +34,7 @@ async function POSTHandler(req: AuditNextRequest) {
       {
         password: body.password,
         title: 'Physical Assessment Training Report',
-        layout: 'landscape',
+        layout: 'portrait',
       },
       (doc) => {
         renderPtAssessmentTemplate(doc, preview, {
