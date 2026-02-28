@@ -7,8 +7,10 @@ import {
   ocOlq,
   ocSemesterMarks,
 } from "@/app/db/schema/training/oc";
+import { ptTaskScores } from "@/app/db/schema/training/physicalTraining";
 import { ocPtTaskScores } from "@/app/db/schema/training/physicalTrainingOc";
 import { getOrCreateActiveEnrollment } from "@/app/db/queries/oc-enrollments";
+import { getPtTemplateBySemester } from "@/app/db/queries/physicalTraining";
 import type {
   PerformanceGraphData,
 } from "@/types/performanceGraph";
@@ -116,9 +118,13 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
       .select({
         enrollmentId: ocPtTaskScores.enrollmentId,
         semester: ocPtTaskScores.semester,
+        ptTaskScoreId: ocPtTaskScores.ptTaskScoreId,
+        ptTaskId: ptTaskScores.ptTaskId,
         marksScored: ocPtTaskScores.marksScored,
+        updatedAt: ocPtTaskScores.updatedAt,
       })
       .from(ocPtTaskScores)
+      .innerJoin(ptTaskScores, eq(ptTaskScores.id, ocPtTaskScores.ptTaskScoreId))
       .where(inArray(ocPtTaskScores.enrollmentId, courseEnrollmentIds)),
     db
       .select({
@@ -173,11 +179,29 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
     }
   }
 
-  const odtByEnrollmentTerm = new Map<string, number>();
+  // Keep only the latest score per task for each enrollment+semester.
+  const latestPtByTask = new Map<string, { marksScored: number; updatedAtMs: number }>();
 
   for (const row of ptScoreRows) {
     if (!isValidSemester(row.semester)) continue;
-    const key = `${row.enrollmentId}:${row.semester}`;
+    const enrollmentId = row.enrollmentId ?? "";
+    const taskId = row.ptTaskId ?? "";
+    if (!enrollmentId || !taskId) continue;
+
+    const key = `${enrollmentId}#${row.semester}#${taskId}`;
+    const updatedAtMs = row.updatedAt ? new Date(row.updatedAt).getTime() : 0;
+    const prev = latestPtByTask.get(key);
+    if (!prev || updatedAtMs >= prev.updatedAtMs) {
+      latestPtByTask.set(key, { marksScored: toFiniteNumber(row.marksScored), updatedAtMs });
+    }
+  }
+
+  const odtByEnrollmentTerm = new Map<string, number>();
+  for (const [taskKey, row] of latestPtByTask.entries()) {
+    const [enrollmentId, semesterRaw] = taskKey.split("#");
+    const semester = Number(semesterRaw);
+    if (!enrollmentId || !isValidSemester(semester)) continue;
+    const key = `${enrollmentId}#${semester}`;
     odtByEnrollmentTerm.set(key, (odtByEnrollmentTerm.get(key) ?? 0) + toFiniteNumber(row.marksScored));
   }
 
@@ -186,7 +210,7 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
   const odtCadetPresence = Array.from({ length: TERM_COUNT }, () => false);
 
   for (const [key, rawValue] of odtByEnrollmentTerm.entries()) {
-    const [enrollmentId, semesterRaw] = key.split(":");
+    const [enrollmentId, semesterRaw] = key.split("#");
     const semester = Number(semesterRaw);
     if (!isValidSemester(semester)) continue;
     const termIndex = toTermIndex(semester);
@@ -196,6 +220,57 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
       odtCadet[termIndex] = round1(value);
       odtCadetPresence[termIndex] = true;
     }
+  }
+
+  // Align cadet ODT line with PT grand-total selection logic:
+  // pick score by template option order per task, else fallback to template default marks.
+  const cadetScoresBySemester = new Map<number, Map<string, number>>();
+  for (const row of ptScoreRows) {
+    if (row.enrollmentId !== activeEnrollment.id || !isValidSemester(row.semester)) continue;
+    const semMap = cadetScoresBySemester.get(row.semester) ?? new Map<string, number>();
+    semMap.set(row.ptTaskScoreId, toFiniteNumber(row.marksScored));
+    cadetScoresBySemester.set(row.semester, semMap);
+  }
+
+  const templateBySemester = await Promise.all(
+    Array.from({ length: TERM_COUNT }, (_, idx) => getPtTemplateBySemester(idx + 1)),
+  );
+
+  for (let semester = 1; semester <= TERM_COUNT; semester += 1) {
+    const template = templateBySemester[semester - 1];
+    const scoreById = cadetScoresBySemester.get(semester) ?? new Map<string, number>();
+
+    let semesterTotal = 0;
+    let hasTask = false;
+
+    for (const type of template.types ?? []) {
+      for (const task of type.tasks ?? []) {
+        hasTask = true;
+        let selected: number | null = null;
+
+        outer: for (const attempt of task.attempts ?? []) {
+          const grades = attempt.grades ?? [];
+          if (!grades.length) {
+            if (selected === null) selected = toFiniteNumber(task.maxMarks);
+            continue;
+          }
+          for (const grade of grades) {
+            const fallbackMarks = toFiniteNumber(grade.maxMarks ?? task.maxMarks);
+            if (selected === null) selected = fallbackMarks;
+            if (grade.scoreId && scoreById.has(grade.scoreId)) {
+              selected = scoreById.get(grade.scoreId) ?? fallbackMarks;
+              break outer;
+            }
+          }
+        }
+
+        semesterTotal += selected ?? 0;
+      }
+    }
+
+    const termIndex = toTermIndex(semester);
+    odtCadet[termIndex] = round1(semesterTotal);
+    odtCadetPresence[termIndex] = hasTask;
   }
 
   const disciplineByEnrollmentTerm = new Map<string, number>();
