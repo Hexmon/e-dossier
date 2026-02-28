@@ -103,10 +103,10 @@
   "pnpm": {
     "overrides": {
       "fast-xml-parser": "5.3.6",
-      "minimatch": "10.2.1"
+      "minimatch": "10.2.4"
     },
     "patchedDependencies": {
-      "minimatch@10.2.1": "patches/minimatch@10.2.1.patch"
+      "minimatch@10.2.4": "patches/minimatch@10.2.4.patch"
     },
     "auditConfig": {
       "ignoreCves": [
