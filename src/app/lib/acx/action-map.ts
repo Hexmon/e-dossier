@@ -1884,6 +1884,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/oc/:ocId/performance-graph",
+    "action": "oc:performance-graph:read",
+    "resourceType": "oc:performance-graph",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/oc/:ocId/physical-training",
     "action": "oc:physical-training:read",
     "resourceType": "oc:physical-training",
@@ -4092,6 +4101,20 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "resourceType": "page:dashboard:bulk-upload",
     "category": "bulk-upload",
     "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help",
+    "action": "page:dashboard:help:view",
+    "resourceType": "page:dashboard:help",
+    "category": "help",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/help/setup-guide",
+    "action": "page:dashboard:help:setup-guide:view",
+    "resourceType": "page:dashboard:help:setup-guide",
+    "category": "help",
+    "adminBaseline": true
   },
   {
     "route": "/dashboard/manage-marks",

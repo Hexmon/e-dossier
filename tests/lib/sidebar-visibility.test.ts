@@ -40,6 +40,7 @@ describe("sidebar visibility matrix", () => {
     { key: "dossier", label: "Dossier" },
     { key: "bulk_upload", label: "Bulk Upload" },
     { key: "reports", label: "Reports" },
+    { key: "help", label: "Help" },
     { key: "extra", label: "Extra" },
   ];
 
@@ -48,7 +49,7 @@ describe("sidebar visibility matrix", () => {
   }
 
   it("defines ADMIN sections in required order", () => {
-    expect(sectionKeysFor("ADMIN")).toEqual(["dashboard", "admin", "settings"]);
+    expect(sectionKeysFor("ADMIN")).toEqual(["dashboard", "admin", "settings", "help"]);
   });
 
   it("uses unrestricted mode for SUPER_ADMIN", () => {
@@ -62,6 +63,7 @@ describe("sidebar visibility matrix", () => {
       "bulk_upload",
       "reports",
       "settings",
+      "help",
     ]);
   });
 
@@ -76,7 +78,7 @@ describe("sidebar visibility matrix", () => {
       (section) => section.key
     );
 
-    expect(adminVisible).toEqual(["dashboard", "admin", "settings"]);
+    expect(adminVisible).toEqual(["dashboard", "admin", "settings", "help"]);
     expect(superAdminVisible).toEqual([
       "dashboard",
       "admin",
@@ -84,6 +86,7 @@ describe("sidebar visibility matrix", () => {
       "dossier",
       "bulk_upload",
       "reports",
+      "help",
       "extra",
     ]);
     expect(otherVisible).toEqual([
@@ -92,6 +95,7 @@ describe("sidebar visibility matrix", () => {
       "bulk_upload",
       "reports",
       "settings",
+      "help",
     ]);
   });
 
@@ -104,6 +108,6 @@ describe("sidebar visibility matrix", () => {
       (section) => section.key as SidebarSectionKey
     );
 
-    expect(visible).toEqual(["dashboard", "settings"]);
+    expect(visible).toEqual(["dashboard", "settings", "help"]);
   });
 });
