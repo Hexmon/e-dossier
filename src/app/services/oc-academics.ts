@@ -12,6 +12,7 @@ import {
     SemesterSummaryPatchInput,
 } from '@/app/db/queries/oc';
 import { TheoryMarksRecord, PracticalMarksRecord } from '@/app/db/schema/training/oc';
+import { marksToGradePoints } from '@/app/lib/grading';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 
 type BranchTag = 'C' | 'E' | 'M';
@@ -61,20 +62,6 @@ function determineBranchForSemester(semester: number, branch?: string | null): B
     return 'C';
 }
 
-function gradePointsFromMarks(marks: number) {
-    const m = Math.max(0, Number(marks) || 0);
-    if (m >= 80) return 9;
-    if (m >= 70) return 8;
-    if (m >= 60) return 7;
-    if (m >= 55) return 6;
-    if (m >= 50) return 5;
-    if (m >= 45) return 4;
-    if (m >= 41) return 3;
-    if (m >= 38) return 2;
-    if (m >= 35) return 1;
-    return 0;
-}
-
 function computeSemesterGpa(view: AcademicSemesterView) {
     let totalCredits = 0;
     let totalWeighted = 0;
@@ -82,13 +69,13 @@ function computeSemesterGpa(view: AcademicSemesterView) {
     for (const subject of view.subjects ?? []) {
         if (subject.includeTheory) {
             const credits = Number(subject.theoryCredits ?? subject.subject?.defaultTheoryCredits ?? 0);
-            const points = gradePointsFromMarks(subject.theory?.totalMarks ?? 0);
+            const points = marksToGradePoints(subject.theory?.totalMarks ?? 0);
             totalCredits += credits;
             totalWeighted += credits * points;
         }
         if (subject.includePractical) {
             const credits = Number(subject.practicalCredits ?? subject.subject?.defaultPracticalCredits ?? 0);
-            const points = gradePointsFromMarks(subject.practical?.totalMarks ?? 0);
+            const points = marksToGradePoints(subject.practical?.totalMarks ?? 0);
             totalCredits += credits;
             totalWeighted += credits * points;
         }

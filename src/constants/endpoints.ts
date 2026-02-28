@@ -149,6 +149,28 @@ export const endpoints = {
         spr: (ocId: string) => `/api/v1/oc/${ocId}/spr`,
         fpr: (ocId: string) => `/api/v1/oc/${ocId}/fpr`,
     },
+    reports: {
+        metadata: {
+            courseSemesters: "/api/v1/reports/metadata/course-semesters",
+        },
+        academics: {
+            consolidatedSessional: {
+                preview: "/api/v1/reports/academics/consolidated-sessional/preview",
+                download: "/api/v1/reports/academics/consolidated-sessional/download",
+            },
+            semesterGrade: {
+                candidates: "/api/v1/reports/academics/semester-grade/candidates",
+                preview: (ocId: string) => `/api/v1/reports/academics/semester-grade/preview/${ocId}`,
+                download: "/api/v1/reports/academics/semester-grade/download",
+            },
+        },
+        milTraining: {
+            physicalAssessment: {
+                preview: "/api/v1/reports/mil-training/physical-assessment/preview",
+                download: "/api/v1/reports/mil-training/physical-assessment/download",
+            },
+        },
+    },
     course: {
         all: "/api/v1/admin/courses"
     },

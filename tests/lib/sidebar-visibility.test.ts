@@ -38,8 +38,7 @@ describe("sidebar visibility matrix", () => {
     { key: "admin", label: "Admin" },
     { key: "settings", label: "Settings" },
     { key: "dossier", label: "Dossier" },
-    { key: "academics", label: "Academics" },
-    { key: "pt", label: "Physical Training" },
+    { key: "bulk_upload", label: "Bulk Upload" },
     { key: "reports", label: "Reports" },
     { key: "extra", label: "Extra" },
   ];
@@ -60,8 +59,7 @@ describe("sidebar visibility matrix", () => {
     expect(sectionKeysFor("OTHER_USERS")).toEqual([
       "dashboard",
       "dossier",
-      "academics",
-      "pt",
+      "bulk_upload",
       "reports",
       "settings",
     ]);
@@ -84,16 +82,14 @@ describe("sidebar visibility matrix", () => {
       "admin",
       "settings",
       "dossier",
-      "academics",
-      "pt",
+      "bulk_upload",
       "reports",
       "extra",
     ]);
     expect(otherVisible).toEqual([
       "dashboard",
       "dossier",
-      "academics",
-      "pt",
+      "bulk_upload",
       "reports",
       "settings",
     ]);
