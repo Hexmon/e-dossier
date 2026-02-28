@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useState } from "react";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OCRecord } from "@/app/lib/api/ocApi";
 import { Alert, AlertDescription } from "../ui/alert";
+import SearchableSelect from "@/components/ui/searchable-select";
 
 interface OCFormProps {
     onSubmit: (data: Partial<OCRecord>) => Promise<void>;
     onCancel: () => void;
     defaultValues?: Partial<OCRecord>;
     courses: Array<{ id: string; code?: string; title?: string }>;
-    platoons: Array<{ id: string; name?: string }>;
+    platoons: Array<{ id: string; key?: string; name?: string }>;
     isEditing: boolean;
 }
 
@@ -44,7 +45,7 @@ export function OCForm({
         arrivalAtUniversity: defaultValues.arrivalAtUniversity?.slice(0, 10) || "",
     };
 
-    const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm<OCFormData>({
+    const { register, control, handleSubmit, formState: { isSubmitting, errors } } = useForm<OCFormData>({
         defaultValues: formDefaults,
     });
 
@@ -202,17 +203,24 @@ export function OCForm({
 
                 <div>
                     <Label>Course *</Label>
-                    <select
-                        {...register("courseId", { required: "Course is required" })}
-                        className="w-full border rounded-md p-2 bg-white"
-                    >
-                        <option value="">Select Course</option>
-                        {courses.map(({ id, code, title }) => (
-                            <option key={id} value={id}>
-                                {code ?? title ?? "Untitled Course"}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="courseId"
+                        control={control}
+                        rules={{ required: "Course is required" }}
+                        render={({ field }) => (
+                            <SearchableSelect
+                                value={field.value ?? ""}
+                                onValueChange={field.onChange}
+                                options={courses.map(({ id, code, title }) => ({
+                                    value: id,
+                                    label: code ? `${code}${title ? ` - ${title}` : ""}` : title ?? id,
+                                }))}
+                                placeholder="Select Course"
+                                searchPlaceholder="Search course..."
+                                emptyLabel="No course found"
+                            />
+                        )}
+                    />
                     {getFieldError("courseId") && (
                         <p className="text-sm text-destructive mt-1">{getFieldError("courseId")}</p>
                     )}
@@ -236,17 +244,24 @@ export function OCForm({
 
                 <div>
                     <Label>Platoon</Label>
-                    <select
-                        {...register("platoonId")}
-                        className="w-full border rounded-md p-2 bg-white"
-                    >
-                        <option value="">Select Platoon</option>
-                        {platoons.map(({ id, name }) => (
-                            <option key={id} value={id}>
-                                {name ?? "Unnamed"}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="platoonId"
+                        control={control}
+                        render={({ field }) => (
+                            <SearchableSelect
+                                value={field.value ?? ""}
+                                onValueChange={field.onChange}
+                                options={platoons.map(({ id, key, name }) => ({
+                                    value: id,
+                                    label: key && name ? `${key} - ${name}` : name ?? key ?? id,
+                                }))}
+                                placeholder="Select Platoon"
+                                searchPlaceholder="Search platoon..."
+                                allOptionLabel="No Platoon"
+                                emptyLabel="No platoon found"
+                            />
+                        )}
+                    />
                     {getFieldError("platoonId") && (
                         <p className="text-sm text-destructive mt-1">{getFieldError("platoonId")}</p>
                     )}

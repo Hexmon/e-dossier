@@ -3,9 +3,10 @@
 
 import React from "react";
 import { Input } from "@/components/ui/input";
+import SearchableSelect from "@/components/ui/searchable-select";
 
 type CourseLike = { id: string; code?: string; title?: string };
-type PlatoonLike = { id: string; name?: string };
+type PlatoonLike = { id: string; key?: string; name?: string };
 
 interface FiltersProps {
     search: string;
@@ -44,31 +45,31 @@ export default function OCFilters({
                 onChange={(e) => onSearch(e.target.value)}
             />
 
-            <select
-                className="border rounded px-2 py-2"
+            <SearchableSelect
                 value={courseFilter}
-                onChange={(e) => onCourseChange(e.target.value)}
-            >
-                <option value="">All Courses</option>
-                {courses.map(({ id, code, title }) => (
-                    <option key={id} value={id}>
-                        {code ?? title ?? id}
-                    </option>
-                ))}
-            </select>
+                onValueChange={onCourseChange}
+                options={courses.map(({ id, code, title }) => ({
+                    value: id,
+                    label: code && title ? `${code} - ${title}` : code ?? title ?? id,
+                }))}
+                placeholder="All Courses"
+                searchPlaceholder="Search course..."
+                allOptionLabel="All Courses"
+                emptyLabel="No course found"
+            />
 
-            <select
-                className="border rounded px-2 py-2"
+            <SearchableSelect
                 value={platoonFilter}
-                onChange={(e) => onPlatoonChange(e.target.value)}
-            >
-                <option value="">All Platoons</option>
-                {platoons.map(({ id, name }) => (
-                    <option key={id} value={id}>
-                        {name ?? id}
-                    </option>
-                ))}
-            </select>
+                onValueChange={onPlatoonChange}
+                options={platoons.map(({ id, key, name }) => ({
+                    value: id,
+                    label: key && name ? `${key} - ${name}` : name ?? key ?? id,
+                }))}
+                placeholder="All Platoons"
+                searchPlaceholder="Search platoon..."
+                allOptionLabel="All Platoons"
+                emptyLabel="No platoon found"
+            />
 
             <select
                 className="border rounded px-2 py-2"
