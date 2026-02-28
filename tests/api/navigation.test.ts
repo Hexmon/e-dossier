@@ -50,9 +50,10 @@ describe('GET /api/v1/me/navigation', () => {
         const dossierSection = data.sections.find((s: any) => s.key === 'dossier');
         expect(dossierSection).toBeDefined();
 
-        // Academics Visible
-        expect(data.sections.find((s: any) => s.key === 'academics')).toBeDefined();
-        expect(data.sections.find((s: any) => s.key === 'pt')).toBeDefined();
+        // Bulk upload visible
+        expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'academics')).toBeUndefined();
+        expect(data.sections.find((s: any) => s.key === 'pt')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
 
@@ -77,7 +78,8 @@ describe('GET /api/v1/me/navigation', () => {
         // Dossier Hidden (Goal!)
         expect(data.sections.find((s: any) => s.key === 'dossier')).toBeUndefined();
 
-        // Academics / Reports Hidden
+        // Bulk upload / Reports Hidden
+        expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'academics')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'pt')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'reports')).toBeUndefined();

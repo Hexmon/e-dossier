@@ -84,29 +84,15 @@ export const NAVIGATION_TREE: NavSectionConfig[] = [
         ],
     },
     {
-        key: "academics",
-        label: "Academics",
+        key: "bulk_upload",
+        label: "Bulk Upload",
         items: [
             {
-                key: "manage_marks",
-                label: "Academics Management",
-                url: "/dashboard/manage-marks",
+                key: "bulk_upload_hub",
+                label: "Bulk Upload",
+                url: "/dashboard/bulk-upload",
                 icon: "BookOpen",
-                requiredAction: "sidebar:academics",
-                adminBaseline: true, // Admin sees it
-            },
-        ],
-    },
-    {
-        key: "pt",
-        label: "Physical Training",
-        items: [
-            {
-                key: "manage_pt_marks",
-                label: "PT Marks Management",
-                url: "/dashboard/manage-pt-marks",
-                icon: "Dumbbell",
-                requiredAction: "page:dashboard:manage-pt-marks:view",
+                requiredAction: "page:dashboard:bulk-upload:view",
                 adminBaseline: false,
             },
         ],
