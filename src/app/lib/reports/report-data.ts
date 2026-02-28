@@ -10,6 +10,7 @@ import { courses } from '@/app/db/schema/training/courses';
 import { courseOfferingInstructors } from '@/app/db/schema/training/courseOfferings';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { FIXED_MARKS, REPORT_TYPES } from '@/app/lib/reports/types';
+import { marksToGradePoints, marksToLetterGrade } from '@/app/lib/grading';
 import type {
   ConsolidatedSessionalPreview,
   SemesterGradeCandidate,
@@ -22,18 +23,13 @@ function normalizeValue(value: number | null | undefined): number | null {
   return Number(value);
 }
 
-function gradePointsFromMarks(marks: number | null | undefined): number {
-  const m = Math.max(0, Number(marks ?? 0));
-  if (m >= 80) return 9;
-  if (m >= 70) return 8;
-  if (m >= 60) return 7;
-  if (m >= 55) return 6;
-  if (m >= 50) return 5;
-  if (m >= 45) return 4;
-  if (m >= 41) return 3;
-  if (m >= 38) return 2;
-  if (m >= 35) return 1;
-  return 0;
+function resolveStoredOrDerivedLetterGrade(
+  storedGrade: string | null | undefined,
+  marks: number | null | undefined
+): string {
+  const normalized = String(storedGrade ?? '').trim();
+  if (normalized) return normalized;
+  return marksToLetterGrade(marks);
 }
 
 function summarizeGrades(values: Array<string | null | undefined>) {
@@ -160,7 +156,7 @@ export async function buildConsolidatedSessionalPreview(params: {
         finalMax: FIXED_MARKS.finalMax,
         totalObtained,
         totalMax: FIXED_MARKS.totalMax,
-        letterGrade: subject?.theory?.grade ?? null,
+        letterGrade: resolveStoredOrDerivedLetterGrade(subject?.theory?.grade ?? null, totalObtained),
       });
     }
 
@@ -173,7 +169,10 @@ export async function buildConsolidatedSessionalPreview(params: {
         branch: item.oc.branch,
         practicalObtained: normalizeValue(subject?.practical?.finalMarks ?? null),
         practicalMax: Number(selectedOffering.practicalCredits ?? selectedOffering.subject.defaultPracticalCredits ?? 0),
-        letterGrade: subject?.practical?.grade ?? null,
+        letterGrade: resolveStoredOrDerivedLetterGrade(
+          subject?.practical?.grade ?? null,
+          subject?.practical?.finalMarks ?? null
+        ),
       });
     }
   }
@@ -268,12 +267,12 @@ export async function buildSemesterGradePreview(params: {
     if (subject.includeTheory) {
       const credits = Number(subject.theoryCredits ?? subject.subject.defaultTheoryCredits ?? 0);
       const totalMarks = normalizeValue(subject.theory?.totalMarks ?? null);
-      const points = gradePointsFromMarks(totalMarks);
+      const points = marksToGradePoints(totalMarks);
       subjectRows.push({
         sNo: sNo++,
         subject: subject.includePractical ? `${subject.subject.name} (Theory)` : subject.subject.name,
         credits,
-        letterGrade: subject.theory?.grade ?? null,
+        letterGrade: resolveStoredOrDerivedLetterGrade(subject.theory?.grade ?? null, totalMarks),
         totalMarks,
         gradePoints: points,
         weightedGradePoints: credits * points,
@@ -283,12 +282,12 @@ export async function buildSemesterGradePreview(params: {
     if (subject.includePractical) {
       const credits = Number(subject.practicalCredits ?? subject.subject.defaultPracticalCredits ?? 0);
       const totalMarks = normalizeValue(subject.practical?.totalMarks ?? null);
-      const points = gradePointsFromMarks(totalMarks);
+      const points = marksToGradePoints(totalMarks);
       subjectRows.push({
         sNo: sNo++,
         subject: subject.includeTheory ? `${subject.subject.name} (Practical)` : subject.subject.name,
         credits,
-        letterGrade: subject.practical?.grade ?? null,
+        letterGrade: resolveStoredOrDerivedLetterGrade(subject.practical?.grade ?? null, totalMarks),
         totalMarks,
         gradePoints: points,
         weightedGradePoints: credits * points,
@@ -306,11 +305,11 @@ export async function buildSemesterGradePreview(params: {
       for (const subject of view.subjects) {
         if (subject.includeTheory) {
           const credits = Number(subject.theoryCredits ?? subject.subject.defaultTheoryCredits ?? 0);
-          rows.push({ credits, weighted: credits * gradePointsFromMarks(subject.theory?.totalMarks ?? null) });
+          rows.push({ credits, weighted: credits * marksToGradePoints(subject.theory?.totalMarks ?? null) });
         }
         if (subject.includePractical) {
           const credits = Number(subject.practicalCredits ?? subject.subject.defaultPracticalCredits ?? 0);
-          rows.push({ credits, weighted: credits * gradePointsFromMarks(subject.practical?.totalMarks ?? null) });
+          rows.push({ credits, weighted: credits * marksToGradePoints(subject.practical?.totalMarks ?? null) });
         }
       }
       return rows;

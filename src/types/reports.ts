@@ -177,8 +177,9 @@ export type ConsolidatedDownloadRequest = {
   semester: number;
   subjectId: string;
   password: string;
-  preparedBy: string;
-  checkedBy: string;
+  preparedBy?: string;
+  checkedBy?: string;
+  instructorName?: string;
 };
 
 export type PtAssessmentDownloadRequest = {

@@ -40,6 +40,7 @@ import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
+import { marksToLetterGrade } from '@/app/lib/grading';
 
 type ListOpts = {
     id?: string;
@@ -62,6 +63,11 @@ type SemesterMarksRow = typeof ocSemesterMarks.$inferSelect;
 type TheoryPatch = Partial<TheoryMarksRecord>;
 type PracticalPatch = Partial<PracticalMarksRecord>;
 
+function toFiniteNumber(value: unknown): number {
+    const num = Number(value ?? 0);
+    return Number.isFinite(num) ? num : 0;
+}
+
 function mergeTheory(target: TheoryMarksRecord | null | undefined, patch?: TheoryPatch) {
     if (!patch) return target ?? undefined;
     const next: TheoryMarksRecord = { ...(target ?? {}) };
@@ -69,6 +75,16 @@ function mergeTheory(target: TheoryMarksRecord | null | undefined, patch?: Theor
     for (const [key, value] of Object.entries(patch)) {
         if (value === undefined) continue;
         (next as any)[key] = value;
+        changed = true;
+    }
+    const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
+    const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
+    if (!hasExplicitGrade && !hasExistingGrade) {
+        const phaseTest1 = toFiniteNumber(next.phaseTest1Marks);
+        const phaseTest2 = toFiniteNumber(next.phaseTest2Marks);
+        const tutorial = toFiniteNumber(next.tutorial);
+        const finalMarks = toFiniteNumber(next.finalMarks);
+        next.grade = marksToLetterGrade(phaseTest1 + phaseTest2 + tutorial + finalMarks);
         changed = true;
     }
     return changed ? next : target;
@@ -81,6 +97,12 @@ function mergePractical(target: PracticalMarksRecord | null | undefined, patch?:
     for (const [key, value] of Object.entries(patch)) {
         if (value === undefined) continue;
         (next as any)[key] = value;
+        changed = true;
+    }
+    const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
+    const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
+    if (!hasExplicitGrade && !hasExistingGrade) {
+        next.grade = marksToLetterGrade(next.finalMarks);
         changed = true;
     }
     return changed ? next : target;

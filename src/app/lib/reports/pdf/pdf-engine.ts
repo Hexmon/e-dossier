@@ -35,6 +35,11 @@ function findPdfkitDataDirFromPnpm(baseDir: string): string | null {
   return null;
 }
 
+function findPdfkitDataDirFromNodeModules(baseDir: string): string | null {
+  const candidate = path.join(baseDir, 'node_modules', 'pdfkit', 'js', 'data');
+  return fs.existsSync(candidate) ? candidate : null;
+}
+
 function resolveAfmFallbackPath(filePath: string): string | null {
   const baseName = path.basename(filePath);
   const directCandidates = [
@@ -49,6 +54,9 @@ function resolveAfmFallbackPath(filePath: string): string | null {
   }
 
   const dataDirs = [
+    findPdfkitDataDirFromNodeModules(process.cwd()),
+    findPdfkitDataDirFromNodeModules('/root'),
+    findPdfkitDataDirFromNodeModules('/ROOT'),
     findPdfkitDataDirFromPnpm(process.cwd()),
     findPdfkitDataDirFromPnpm('/root'),
     findPdfkitDataDirFromPnpm('/ROOT'),
@@ -73,8 +81,8 @@ function ensureAfmPathFallbackPatched() {
       return originalReadFileSync(file, options as never);
     }
 
-    const isPdfkitAfmFile = file.includes('/pdfkit/js/data/') && file.endsWith('.afm');
-    if (!isPdfkitAfmFile || fs.existsSync(file)) {
+    const isAfmFile = file.endsWith('.afm');
+    if (!isAfmFile || fs.existsSync(file)) {
       return originalReadFileSync(file, options as never);
     }
 

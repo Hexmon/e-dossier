@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LETTER_GRADE_VALUES } from '@/app/lib/grading';
 
 const nonEmptyPartial = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>) =>
     schema.partial().superRefine((val, ctx) => {
@@ -384,17 +385,24 @@ export const ocCampQuerySchema = z.object({
 export const SemesterParam = z.object({ semester: Semester });
 export const SubjectIdParam = z.object({ subjectId: z.string().uuid() });
 
+const academicLetterGradeSchema = z.preprocess((value) => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim().toUpperCase();
+    return normalized === '' ? undefined : normalized;
+}, z.enum(LETTER_GRADE_VALUES).optional());
+
 export const academicSubjectPatchSchema = z.object({
     theory: z.object({
         phaseTest1Marks: z.coerce.number().optional(),
         phaseTest2Marks: z.coerce.number().optional(),
         tutorial: z.string().optional(),
         finalMarks: z.coerce.number().optional(),
-        grade: z.string().optional(),
+        grade: academicLetterGradeSchema,
     }).partial().optional(),
     practical: z.object({
         finalMarks: z.coerce.number().optional(),
-        grade: z.string().optional(),
+        grade: academicLetterGradeSchema,
         tutorial: z.string().optional(),
     }).partial().optional(),
 }).refine((value) => Boolean(value.theory || value.practical), {

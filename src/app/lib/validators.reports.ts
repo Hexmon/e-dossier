@@ -5,6 +5,12 @@ const branchSchema = z.enum(['E', 'M', 'O']);
 export const reportSemesterSchema = z.coerce.number().int().min(1).max(6);
 
 const nonEmptyString = z.string().trim().min(1);
+const optionalMetaString = z.preprocess((value) => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}, z.string().max(160).optional());
 
 export const reportDownloadMetaSchema = z.object({
   password: z.string().min(1).max(128),
@@ -23,7 +29,12 @@ export const consolidatedSessionalPreviewQuerySchema = z.object({
 });
 
 export const consolidatedSessionalDownloadBodySchema = consolidatedSessionalPreviewQuerySchema.merge(
-  reportDownloadMetaSchema
+  z.object({
+    password: z.string().min(1).max(128),
+    preparedBy: optionalMetaString,
+    checkedBy: optionalMetaString,
+    instructorName: optionalMetaString,
+  })
 );
 
 export const semesterGradeCandidatesQuerySchema = z.object({

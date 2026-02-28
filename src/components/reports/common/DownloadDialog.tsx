@@ -11,6 +11,7 @@ export type DownloadDialogMeta = {
   password: string;
   preparedBy: string;
   checkedBy: string;
+  instructorName?: string;
 };
 
 type DownloadDialogProps = {
@@ -20,6 +21,15 @@ type DownloadDialogProps = {
   description?: string;
   isPending?: boolean;
   includeDateReadonly?: boolean;
+  includeInstructorField?: boolean;
+  preparedByRequired?: boolean;
+  checkedByRequired?: boolean;
+  instructorRequired?: boolean;
+  initialValues?: {
+    preparedBy?: string;
+    checkedBy?: string;
+    instructorName?: string;
+  };
   onSubmit: (meta: DownloadDialogMeta) => Promise<void> | void;
 };
 
@@ -30,19 +40,32 @@ export function DownloadDialog({
   description,
   isPending,
   includeDateReadonly,
+  includeInstructorField = false,
+  preparedByRequired = true,
+  checkedByRequired = true,
+  instructorRequired = false,
+  initialValues,
   onSubmit,
 }: DownloadDialogProps) {
   const [password, setPassword] = useState('');
   const [preparedBy, setPreparedBy] = useState('');
   const [checkedBy, setCheckedBy] = useState('');
+  const [instructorName, setInstructorName] = useState('');
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
       setPassword('');
-      setPreparedBy('');
-      setCheckedBy('');
+      setPreparedBy(initialValues?.preparedBy ?? '');
+      setCheckedBy(initialValues?.checkedBy ?? '');
+      setInstructorName(initialValues?.instructorName ?? '');
+      return;
     }
-  }, [open]);
+
+    setPassword('');
+    setPreparedBy('');
+    setCheckedBy('');
+    setInstructorName('');
+  }, [open, initialValues?.preparedBy, initialValues?.checkedBy, initialValues?.instructorName]);
 
   const currentDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -51,10 +74,16 @@ export function DownloadDialog({
       password,
       preparedBy,
       checkedBy,
+      instructorName: includeInstructorField ? instructorName : undefined,
     });
   };
 
-  const disabled = !password.trim() || !preparedBy.trim() || !checkedBy.trim() || Boolean(isPending);
+  const disabled =
+    !password.trim() ||
+    (preparedByRequired && !preparedBy.trim()) ||
+    (checkedByRequired && !checkedBy.trim()) ||
+    (includeInstructorField && instructorRequired && !instructorName.trim()) ||
+    Boolean(isPending);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,17 +102,24 @@ export function DownloadDialog({
           ) : null}
 
           <div className="space-y-2">
-            <Label>Password (PDF encryption)</Label>
+            <Label>Password (file encryption)</Label>
             <PasswordField value={password} onChange={setPassword} />
           </div>
 
+          {includeInstructorField ? (
+            <div className="space-y-2">
+              <Label>Instructor {instructorRequired ? '' : '(Optional)'}</Label>
+              <Input value={instructorName} onChange={(event) => setInstructorName(event.target.value)} />
+            </div>
+          ) : null}
+
           <div className="space-y-2">
-            <Label>Prepared By</Label>
+            <Label>Prepared By {preparedByRequired ? '' : '(Optional)'}</Label>
             <Input value={preparedBy} onChange={(event) => setPreparedBy(event.target.value)} />
           </div>
 
           <div className="space-y-2">
-            <Label>Checked By</Label>
+            <Label>Checked By {checkedByRequired ? '' : '(Optional)'}</Label>
             <Input value={checkedBy} onChange={(event) => setCheckedBy(event.target.value)} />
           </div>
         </div>

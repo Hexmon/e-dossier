@@ -303,6 +303,36 @@ describe('PATCH /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () =>
     expect(body.data.subjects[0].subject.code).toBe('PHY101');
     expect(academicServices.updateOcAcademicSubject).toHaveBeenCalled();
   });
+
+  it('rejects invalid letter grade values', async () => {
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (ocChecks.parseParam as any)
+      .mockResolvedValueOnce({ ocId })
+      .mockResolvedValueOnce({ semester: 1 })
+      .mockResolvedValueOnce({ subjectId: '22222222-2222-4222-8222-222222222222' });
+
+    const req = makeJsonRequest({
+      method: 'PATCH',
+      path: `${basePath}/${ocId}/academics/1/subjects/22222222-2222-4222-8222-222222222222`,
+      body: {
+        theory: { finalMarks: 55, grade: 'ZZ' },
+      },
+    });
+    const ctx = {
+      params: Promise.resolve({
+        ocId,
+        semester: '1',
+        subjectId: '22222222-2222-4222-8222-222222222222',
+      }),
+    } as any;
+
+    const res = await patchAcademicSubjectRoute(req as any, ctx);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.message).toBe('Validation failed');
+    expect(academicServices.updateOcAcademicSubject).not.toHaveBeenCalled();
+  });
 });
 
 describe('DELETE /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId', () => {

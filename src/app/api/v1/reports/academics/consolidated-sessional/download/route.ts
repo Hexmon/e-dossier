@@ -1,4 +1,5 @@
-import { handleApiError, json } from '@/app/lib/http';
+import { createHash } from 'node:crypto';
+import { handleApiError } from '@/app/lib/http';
 import { consolidatedSessionalDownloadBodySchema } from '@/app/lib/validators.reports';
 import { assertSemesterAllowed, resolveCourseWithSemesters } from '@/app/lib/reports/semester-resolution';
 import { buildConsolidatedSessionalPreview } from '@/app/lib/reports/report-data';
@@ -25,6 +26,10 @@ async function POSTHandler(req: AuditNextRequest) {
     const preview = await buildConsolidatedSessionalPreview(body);
     const versionId = generateReportVersionId();
     const generatedAt = new Date();
+    const preparedBy = body.preparedBy?.trim() || '-';
+    const checkedBy = body.checkedBy?.trim() || '-';
+    const instructorName = body.instructorName?.trim() || preview.subject.instructorName?.trim() || '-';
+
     const fileName = sanitizePdfFileName(
       `consolidated-sessional-${preview.course.code}-sem-${body.semester}-${preview.subject.code}-${versionId}.pdf`
     );
@@ -38,12 +43,15 @@ async function POSTHandler(req: AuditNextRequest) {
       (doc) => {
         renderConsolidatedSessionalTemplate(doc, preview, {
           versionId,
-          preparedBy: body.preparedBy,
-          checkedBy: body.checkedBy,
+          preparedBy,
+          checkedBy,
+          instructorName,
           generatedAt,
         });
       }
     );
+
+    const checksumSha256 = createHash('sha256').update(pdf.buffer).digest('hex');
 
     await createReportDownloadVersion({
       versionId,
@@ -53,12 +61,14 @@ async function POSTHandler(req: AuditNextRequest) {
         courseId: body.courseId,
         semester: body.semester,
         subjectId: body.subjectId,
+        instructorName,
+        format: 'pdf',
       },
-      preparedBy: body.preparedBy,
-      checkedBy: body.checkedBy,
+      preparedBy,
+      checkedBy,
       fileName,
       encrypted: true,
-      checksumSha256: pdf.checksumSha256,
+      checksumSha256,
     });
 
     await req.audit.log({
@@ -73,6 +83,7 @@ async function POSTHandler(req: AuditNextRequest) {
         courseId: body.courseId,
         semester: body.semester,
         subjectId: body.subjectId,
+        format: 'pdf',
         versionId,
       },
     });
