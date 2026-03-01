@@ -2901,6 +2901,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/olq/templates/apply",
+    "action": "admin:olq:templates:apply:create",
+    "resourceType": "admin:olq:templates:apply",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/physical-training/motivation-fields",
     "action": "admin:physical-training:motivation-fields:create",
     "resourceType": "admin:physical-training:motivation-fields",
@@ -4147,6 +4156,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/help/org-templates/physical-training",
     "action": "page:dashboard:help:org-templates:physical-training:view",
     "resourceType": "page:dashboard:help:org-templates:physical-training",
+    "category": "help",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/help/org-templates/olq",
+    "action": "page:dashboard:help:org-templates:olq:view",
+    "resourceType": "page:dashboard:help:org-templates:olq",
     "category": "help",
     "adminBaseline": true
   },

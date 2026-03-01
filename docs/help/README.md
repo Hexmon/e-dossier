@@ -26,6 +26,7 @@ flowchart LR
 - `setup-guide.md`
 - `org-templates.md`
 - `physical-training-template.md`
+- `olq-template.md`
 
 ## future docs
 

@@ -43,7 +43,7 @@ export const HELP_MODULES: HelpModuleMeta[] = [
     summary: 'One-command and one-click bootstrap for baseline organization template setup.',
     route: '/dashboard/help/org-templates',
     status: 'active',
-    tags: ['seed', 'bootstrap', 'org-template', 'pt'],
+    tags: ['seed', 'bootstrap', 'org-template', 'pt', 'camp', 'olq'],
     sections: [
       {
         anchor: 'what-this-does',
@@ -58,7 +58,7 @@ export const HELP_MODULES: HelpModuleMeta[] = [
       {
         anchor: 'one-click-ui-setup',
         label: '3. One-click UI setup',
-        keywords: ['template view', 'pt management'],
+        keywords: ['template view', 'pt management', 'camp management', 'olq management'],
       },
       {
         anchor: 'deployment-order',
@@ -94,6 +94,36 @@ export const HELP_MODULES: HelpModuleMeta[] = [
         anchor: 'validation-checklist',
         label: '4. Validation checklist',
         keywords: ['template view', 'motivation fields'],
+      },
+    ],
+  },
+  {
+    key: 'olq-template-profile',
+    title: 'OLQ Template',
+    summary: 'Default OLQ categories/subtitles, apply scope options, and rollout checklist.',
+    route: '/dashboard/help/org-templates/olq',
+    status: 'active',
+    tags: ['olq', 'template', 'course', 'replace', 'upsert-missing'],
+    sections: [
+      {
+        anchor: 'scope',
+        label: '1. Scope',
+        keywords: ['categories', 'subtitles', 'all courses', 'selected course'],
+      },
+      {
+        anchor: 'default-template',
+        label: '2. Default template model',
+        keywords: ['PLG & ORG', 'Social Adjustment', 'Social Effectiveness', 'Dynamic'],
+      },
+      {
+        anchor: 'apply-options',
+        label: '3. Apply options',
+        keywords: ['dry run', 'replace', 'upsert_missing'],
+      },
+      {
+        anchor: 'validation-checklist',
+        label: '4. Validation checklist',
+        keywords: ['olq management', 'course', 'term'],
       },
     ],
   },

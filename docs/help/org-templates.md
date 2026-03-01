@@ -4,7 +4,7 @@ Use Org Templates to bootstrap default configuration for a new deployment withou
 
 ## 1. What this does {#what-this-does}
 
-- Applies baseline module configuration (current modules: Physical Training and Camps).
+- Applies baseline module configuration (current modules: Physical Training, Camps, and OLQ).
 - Uses non-destructive upsert behavior:
 - creates missing default rows
 - updates canonical default rows
@@ -31,6 +31,7 @@ pnpm seed:org-template -- --module=camp --dry-run
 
 - PT defaults: `Dashboard -> Admin Management -> PT Management -> Template View`.
 - Camp defaults: `Dashboard -> Module Mgmt -> Camps Management`.
+- OLQ defaults: `Dashboard -> Module Mgmt -> OLQ Management -> Copy Template -> Default OLQ Template`.
 - Click `Preview Changes (Dry Run)` first.
 - Review summary counts and warnings.
 - Click apply action for the target module.
@@ -47,6 +48,8 @@ If you need manual setup:
 - Motivation Awards
 - Camps
 - Camp Activities
+- OLQ Categories
+- OLQ Subtitles
 
 Use this only when organization rules differ from the default baseline.
 
@@ -66,6 +69,7 @@ pnpm seed:org-template -- --module=camp
 ## 6. Troubleshooting {#troubleshooting}
 
 - If dry-run shows large updates unexpectedly, review prior manual PT edits.
+- For OLQ, use `upsert_missing` if your organization already has custom categories to keep.
 - If action-map validation fails after route changes:
 - run `pnpm run validate:action-map`
 - If help Mermaid syntax fails:

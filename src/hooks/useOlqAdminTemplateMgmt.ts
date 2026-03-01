@@ -10,6 +10,7 @@ import {
   createOlqAdminSubtitle,
   deleteOlqAdminCategory,
   deleteOlqAdminSubtitle,
+  applyOlqDefaultTemplate,
   listOlqAdminCategories,
   listOlqAdminSubtitles,
   updateOlqAdminCategory,
@@ -21,6 +22,7 @@ import type {
   OlqAdminCopyTemplateInput,
   OlqAdminSubtitleCreateInput,
   OlqAdminSubtitleUpdateInput,
+  OlqTemplateApplyRequest,
 } from "@/types/olq-admin";
 
 type UseOlqAdminTemplateMgmtParams = {
@@ -240,6 +242,22 @@ export function useOlqAdminTemplateMgmt(params: UseOlqAdminTemplateMgmtParams = 
     },
   });
 
+  const applyTemplateMutation = useMutation({
+    mutationFn: async (payload: OlqTemplateApplyRequest) => {
+      return applyOlqDefaultTemplate(payload);
+    },
+    onSuccess: async (result) => {
+      toast.success(result.message || "OLQ default template operation completed.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["olq-admin-categories"] }),
+        queryClient.invalidateQueries({ queryKey: ["olq-admin-subtitles"] }),
+      ]);
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "Failed to apply OLQ default template."));
+    },
+  });
+
   return {
     courses: (coursesQuery.data ?? []) as CourseResponse[],
     coursesLoading: coursesQuery.isLoading,
@@ -262,6 +280,8 @@ export function useOlqAdminTemplateMgmt(params: UseOlqAdminTemplateMgmtParams = 
       sourceCourseId: string,
       mode: OlqAdminCopyTemplateInput["mode"] = "replace"
     ) => copyTemplateMutation.mutateAsync({ targetCourseId, sourceCourseId, mode }),
+    applyDefaultTemplate: (payload: OlqTemplateApplyRequest) =>
+      applyTemplateMutation.mutateAsync(payload),
     isCreatingCategory: createCategoryMutation.isPending,
     isUpdatingCategory: updateCategoryMutation.isPending,
     isDeletingCategory: deleteCategoryMutation.isPending,
@@ -269,5 +289,6 @@ export function useOlqAdminTemplateMgmt(params: UseOlqAdminTemplateMgmtParams = 
     isUpdatingSubtitle: updateSubtitleMutation.isPending,
     isDeletingSubtitle: deleteSubtitleMutation.isPending,
     isCopyingTemplate: copyTemplateMutation.isPending,
+    isApplyingTemplate: applyTemplateMutation.isPending,
   };
 }

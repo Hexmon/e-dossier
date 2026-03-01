@@ -61,6 +61,7 @@ export const endpoints = {
             subtitleById: (courseId: string, subtitleId: string) =>
                 `/api/v1/admin/olq/courses/${courseId}/subtitles/${subtitleId}`,
             copy: (targetCourseId: string) => `/api/v1/admin/olq/courses/${targetCourseId}/copy`,
+            applyTemplate: '/api/v1/admin/olq/templates/apply',
         },
     },
     oc: {
