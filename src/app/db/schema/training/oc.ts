@@ -15,7 +15,6 @@ export const counsellingWarningKind = pgEnum('counselling_warning_kind', [
     'OTHER',
 ]);
 
-export const campSemesterKind = pgEnum('camp_semester_kind', ['SEM5', 'SEM6A', 'SEM6B']);
 export const campReviewRoleKind = pgEnum('camp_review_role_kind', ['OIC', 'PLATOON_COMMANDER', 'HOAT']);
 export const ocImageKind = pgEnum('oc_image_kind', ['CIVIL_DRESS', 'UNIFORM']);
 export const ocEnrollmentStatus = pgEnum('oc_enrollment_status', ['ACTIVE', 'ARCHIVED', 'VOIDED']);
@@ -481,13 +480,34 @@ export const ocSpecialAchievementInFiring = pgTable('oc_special_achievement_in_f
 export const trainingCamps = pgTable('training_camps', {
     id: uuid('id').primaryKey().defaultRandom(),
     name: varchar('name', { length: 120 }).notNull(),
-    semester: campSemesterKind('semester').notNull(),
+    semester: integer('semester').notNull(),
+    sortOrder: integer('sort_order').notNull().default(1),
     maxTotalMarks: integer('max_total_marks').notNull(),
+    performanceTitle: text('performance_title'),
+    performanceGuidance: text('performance_guidance'),
+    signaturePrimaryLabel: varchar('signature_primary_label', { length: 120 }),
+    signatureSecondaryLabel: varchar('signature_secondary_label', { length: 120 }),
+    noteLine1: text('note_line_1'),
+    noteLine2: text('note_line_2'),
+    showAggregateSummary: boolean('show_aggregate_summary').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     uqNameSemester: uniqueIndex('uq_training_camp_name_semester').on(t.name, t.semester),
+    idxSemesterSortName: index('idx_training_camp_semester_sort_name').on(t.semester, t.sortOrder, t.name),
+    semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+}));
+
+export const trainingCampSettings = pgTable('training_camp_settings', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    singletonKey: varchar('singleton_key', { length: 32 }).notNull().default('default'),
+    maxCampsPerSemester: integer('max_camps_per_semester').notNull().default(2),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    uqSingleton: uniqueIndex('uq_training_camp_settings_singleton').on(t.singletonKey),
+    maxCheck: { check: sql`CHECK (${t.maxCampsPerSemester.name} BETWEEN 1 AND 6)` },
 }));
 
 export const ocCamps = pgTable('oc_camps', {

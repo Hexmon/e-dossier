@@ -40,11 +40,62 @@ export const HELP_MODULES: HelpModuleMeta[] = [
   {
     key: 'seeding-and-bootstrap',
     title: 'Seeding & Data Bootstrap',
-    summary: 'Bootstrap order for roles, permissions, admin users, and baseline data.',
-    route: '/dashboard/help',
-    status: 'coming_soon',
-    tags: ['seed', 'bootstrap'],
-    sections: [],
+    summary: 'One-command and one-click bootstrap for baseline organization template setup.',
+    route: '/dashboard/help/org-templates',
+    status: 'active',
+    tags: ['seed', 'bootstrap', 'org-template', 'pt'],
+    sections: [
+      {
+        anchor: 'what-this-does',
+        label: '1. What this does',
+        keywords: ['upsert', 'non-destructive', 'baseline'],
+      },
+      {
+        anchor: 'one-command-setup',
+        label: '2. One-command setup',
+        keywords: ['seed:org-template', 'cli'],
+      },
+      {
+        anchor: 'one-click-ui-setup',
+        label: '3. One-click UI setup',
+        keywords: ['template view', 'pt management'],
+      },
+      {
+        anchor: 'deployment-order',
+        label: '5. Deployment order',
+        keywords: ['db:migrate', 'seed:rbac', 'seed:permissions', 'seed:admins'],
+      },
+    ],
+  },
+  {
+    key: 'pt-template-profile',
+    title: 'Physical Training Template',
+    summary: 'Default PT profile structure, upsert keys, and post-apply validation checklist.',
+    route: '/dashboard/help/org-templates/physical-training',
+    status: 'active',
+    tags: ['pt', 'template', 'score-matrix', 'motivation-awards'],
+    sections: [
+      {
+        anchor: 'scope',
+        label: '1. Scope',
+        keywords: ['semesters', 'pt types', 'attempts', 'grades'],
+      },
+      {
+        anchor: 'default-profile',
+        label: '2. Default profile model',
+        keywords: ['default.v1.json', 'upsert keys'],
+      },
+      {
+        anchor: 'apply-behavior',
+        label: '3. Apply behavior',
+        keywords: ['no delete', 'create missing', 'update canonical'],
+      },
+      {
+        anchor: 'validation-checklist',
+        label: '4. Validation checklist',
+        keywords: ['template view', 'motivation fields'],
+      },
+    ],
   },
   {
     key: 'deployment-and-environment',

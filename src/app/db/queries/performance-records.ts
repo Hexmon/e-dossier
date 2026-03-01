@@ -1,4 +1,4 @@
-﻿import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+﻿import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/app/db/client';
 import {
     ocSprRecords,
@@ -160,7 +160,6 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
 
     let camp = 0;
     if (semester === 5 || semester === 6) {
-        const semKeys = semester === 5 ? ['SEM5'] : ['SEM6A', 'SEM6B'];
         const [campRow] = await db
             .select({ scored: sql<number>`COALESCE(SUM(${ocCamps.totalMarksScored}), 0)` })
             .from(ocCamps)
@@ -169,7 +168,7 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
                 and(
                     eq(ocCamps.ocId, ocId),
                     eq(ocCamps.enrollmentId, activeEnrollment.id),
-                    inArray(trainingCamps.semester, semKeys as any),
+                    eq(trainingCamps.semester, semester),
                     isNull(ocCamps.deletedAt),
                     isNull(trainingCamps.deletedAt),
                 ),

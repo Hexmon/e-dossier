@@ -24,9 +24,10 @@ flowchart LR
 ## v1 active docs
 
 - `setup-guide.md`
+- `org-templates.md`
+- `physical-training-template.md`
 
 ## future docs
 
 - RBAC & Permissions
-- Seeding & Data Bootstrap
 - Deployment & Environment

@@ -38,6 +38,7 @@ import PTScoresTab from "@/components/pt-mgmt/Ptscorestab";
 import PTMotivationTab from "@/components/pt-mgmt/Ptmotivationtab";
 import PTTypesTab from "@/components/pt-mgmt/Pttypestab";
 import { usePhysicalTrainingMgmt } from "@/hooks/usePhysicalTrainingMgmt";
+import type { PtTemplateApplyResult } from "@/app/lib/bootstrap/types";
 
 const ptTabs = [
     { value: "template", title: "Template View", icon: List },
@@ -88,6 +89,7 @@ export default function PhysicalTrainingPage() {
         addMotivationField,
         editMotivationField,
         removeMotivationField,
+        applyDefaultTemplate,
     } = usePhysicalTrainingMgmt({
         semester: selectedSemester,
         typeId: selectedTypeId,
@@ -304,6 +306,16 @@ export default function PhysicalTrainingPage() {
         }
     };
 
+    const handleApplyDefaultTemplate = async (dryRun: boolean): Promise<PtTemplateApplyResult> => {
+        const response = await applyDefaultTemplate({ dryRun, profile: "default" });
+        const { message, ...result } = response;
+        void message;
+        if (result.module !== "pt") {
+            throw new Error("Unexpected org-template module response");
+        }
+        return result;
+    };
+
     // ---------------------------------------------------------------------------
     // Render
     // ---------------------------------------------------------------------------
@@ -362,6 +374,7 @@ export default function PhysicalTrainingPage() {
                                     template={template}
                                     loading={loading}
                                     semester={selectedSemester}
+                                    onApplyDefaultTemplate={handleApplyDefaultTemplate}
                                 />
                             </TabsContent>
 

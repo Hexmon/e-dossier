@@ -3,12 +3,21 @@
  */
 
 import { apiRequest } from "@/app/lib/apiClient";
+import { endpoints } from "@/constants/endpoints";
 
 export interface TrainingCamp {
     id: string;
     name: string;
-    semester: "SEM5" | "SEM6A" | "SEM6B";
+    semester: 1 | 2 | 3 | 4 | 5 | 6;
+    sortOrder: number;
     maxTotalMarks: number;
+    performanceTitle?: string | null;
+    performanceGuidance?: string | null;
+    signaturePrimaryLabel?: string | null;
+    signatureSecondaryLabel?: string | null;
+    noteLine1?: string | null;
+    noteLine2?: string | null;
+    showAggregateSummary: boolean;
     createdAt: string;
     updatedAt: string;
     deletedAt?: string | null;
@@ -28,14 +37,30 @@ export interface TrainingCampActivity {
 
 export interface TrainingCampCreate {
     name: string;
-    semester: "SEM5" | "SEM6A" | "SEM6B";
+    semester: 1 | 2 | 3 | 4 | 5 | 6;
+    sortOrder?: number;
     maxTotalMarks: number;
+    performanceTitle?: string | null;
+    performanceGuidance?: string | null;
+    signaturePrimaryLabel?: string | null;
+    signatureSecondaryLabel?: string | null;
+    noteLine1?: string | null;
+    noteLine2?: string | null;
+    showAggregateSummary?: boolean;
 }
 
 export interface TrainingCampUpdate {
     name?: string;
-    semester?: "SEM5" | "SEM6A" | "SEM6B";
+    semester?: 1 | 2 | 3 | 4 | 5 | 6;
+    sortOrder?: number;
     maxTotalMarks?: number;
+    performanceTitle?: string | null;
+    performanceGuidance?: string | null;
+    signaturePrimaryLabel?: string | null;
+    signatureSecondaryLabel?: string | null;
+    noteLine1?: string | null;
+    noteLine2?: string | null;
+    showAggregateSummary?: boolean;
 }
 
 export interface TrainingCampListResponse {
@@ -53,26 +78,49 @@ export interface TrainingCampResponse {
     trainingCamp: TrainingCamp;
 }
 
+export interface TrainingCampSettings {
+    maxCampsPerSemester: number;
+}
+
 /**
  * Fetch all training camps
  */
 export async function fetchTrainingCamps(params?: {
-    semester?: "SEM5" | "SEM6A" | "SEM6B";
+    semester?: 1 | 2 | 3 | 4 | 5 | 6;
     includeActivities?: boolean;
     includeDeleted?: boolean;
 }): Promise<TrainingCamp[]> {
     const query: Record<string, string> = {};
-    if (params?.semester) query.semester = params.semester;
+    if (params?.semester) query.semester = String(params.semester);
     if (params?.includeActivities) query.includeActivities = "true";
     if (params?.includeDeleted) query.includeDeleted = "true";
 
     const data = await apiRequest<TrainingCampListResponse>({
         method: "GET",
-        endpoint: "/api/v1/admin/training-camps",
+        endpoint: endpoints.admin.trainingCamps.list,
         query,
     });
 
     return data.items;
+}
+
+export async function fetchTrainingCampSettings(): Promise<TrainingCampSettings> {
+    const data = await apiRequest<{ settings: TrainingCampSettings }>({
+        method: "GET",
+        endpoint: endpoints.admin.trainingCamps.settings,
+    });
+    return data.settings;
+}
+
+export async function updateTrainingCampSettings(
+    updates: TrainingCampSettings,
+): Promise<TrainingCampSettings> {
+    const data = await apiRequest<{ settings: TrainingCampSettings }>({
+        method: "PATCH",
+        endpoint: endpoints.admin.trainingCamps.settings,
+        body: updates,
+    });
+    return data.settings;
 }
 
 /**
@@ -81,7 +129,7 @@ export async function fetchTrainingCamps(params?: {
 export async function createTrainingCamp(camp: TrainingCampCreate): Promise<TrainingCamp> {
     const data = await apiRequest<TrainingCampResponse>({
         method: "POST",
-        endpoint: "/api/v1/admin/training-camps",
+        endpoint: endpoints.admin.trainingCamps.create,
         body: camp,
     });
 
@@ -115,4 +163,3 @@ export async function deleteTrainingCamp(campId: string, hard = false): Promise<
 
     return { deleted: data.deleted, hardDeleted: data.hardDeleted };
 }
-

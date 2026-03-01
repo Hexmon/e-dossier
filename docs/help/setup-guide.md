@@ -100,7 +100,7 @@ flowchart TD
   B --> C[(permissions table)]
   B --> D[(role_permissions)]
   B --> E[(position_permissions)]
-  C --> F[/dashboard/genmgmt/rbac]
+  C --> F["/dashboard/genmgmt/rbac"]
   D --> F
   E --> F
 ```

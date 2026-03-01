@@ -1317,6 +1317,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/training-camps/settings",
+    "action": "admin:training-camps:settings:read",
+    "resourceType": "admin:training-camps:settings",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/training-camps/:campId",
     "action": "admin:training-camps:read",
     "resourceType": "admin:training-camps",
@@ -2379,6 +2388,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PATCH",
+    "path": "/api/v1/admin/training-camps/settings",
+    "action": "admin:training-camps:settings:update",
+    "resourceType": "admin:training-camps:settings",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PATCH",
     "path": "/api/v1/admin/training-camps/:campId/activities/:activityId",
     "action": "admin:training-camps:activities:update",
     "resourceType": "admin:training-camps:activities",
@@ -2743,6 +2761,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "action": "admin:appointments:transfer:create",
     "resourceType": "admin:appointments:transfer",
     "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/bootstrap/templates/apply",
+    "action": "admin:bootstrap:templates:apply",
+    "resourceType": "admin:bootstrap:templates",
+    "category": "bootstrap",
     "fieldLevelCandidate": false,
     "adminBaseline": true
   },
@@ -4106,6 +4133,20 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/help",
     "action": "page:dashboard:help:view",
     "resourceType": "page:dashboard:help",
+    "category": "help",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/help/org-templates",
+    "action": "page:dashboard:help:org-templates:view",
+    "resourceType": "page:dashboard:help:org-templates",
+    "category": "help",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/help/org-templates/physical-training",
+    "action": "page:dashboard:help:org-templates:physical-training:view",
+    "resourceType": "page:dashboard:help:org-templates:physical-training",
     "category": "help",
     "adminBaseline": true
   },

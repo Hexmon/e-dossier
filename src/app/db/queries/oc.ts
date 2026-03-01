@@ -21,7 +21,6 @@ import {
     ocRecordingLeaveHikeDetention,
     ocSpecialAchievementInClubs,
     ocCreditForExcellence,
-    campSemesterKind,
     campReviewRoleKind,
     trainingCamps,
     ocCamps,
@@ -1779,15 +1778,24 @@ export async function deleteCounselling(
 }
 
 // ---- Camps ------------------------------------------------------------------
-type CampSemester = (typeof campSemesterKind.enumValues)[number];
+type CampSemester = number;
 type CampReviewRole = (typeof campReviewRoleKind.enumValues)[number];
 
 export type OcCampWithDetails = {
+    id: string;
     ocCampId: string;
     trainingCampId: string;
     campName: string;
     semester: CampSemester;
+    sortOrder: number;
     maxTotalMarks: number;
+    performanceTitle: string | null;
+    performanceGuidance: string | null;
+    signaturePrimaryLabel: string | null;
+    signatureSecondaryLabel: string | null;
+    noteLine1: string | null;
+    noteLine2: string | null;
+    showAggregateSummary: boolean;
     totalMarksScored: number | null;
     reviews?: Array<{
         id: string;
@@ -1847,18 +1855,27 @@ export async function getOcCamps(options: GetOcCampsOptions) {
 
     const baseRows = await db
         .select({
+            id: ocCamps.id,
             ocCampId: ocCamps.id,
             trainingCampId: trainingCamps.id,
             campName: trainingCamps.name,
             semester: trainingCamps.semester,
+            sortOrder: trainingCamps.sortOrder,
             maxTotalMarks: trainingCamps.maxTotalMarks,
+            performanceTitle: trainingCamps.performanceTitle,
+            performanceGuidance: trainingCamps.performanceGuidance,
+            signaturePrimaryLabel: trainingCamps.signaturePrimaryLabel,
+            signatureSecondaryLabel: trainingCamps.signatureSecondaryLabel,
+            noteLine1: trainingCamps.noteLine1,
+            noteLine2: trainingCamps.noteLine2,
+            showAggregateSummary: trainingCamps.showAggregateSummary,
             totalMarksScored: sql<number | null>`COALESCE(${campActivityTotals.totalMarksScored}, ${ocCamps.totalMarksScored})`,
         })
         .from(ocCamps)
         .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
         .leftJoin(campActivityTotals, eq(campActivityTotals.ocCampId, ocCamps.id))
         .where(wh.length ? and(...wh) : undefined)
-        .orderBy(trainingCamps.semester, trainingCamps.name);
+        .orderBy(trainingCamps.semester, trainingCamps.sortOrder, trainingCamps.name);
 
     if (!baseRows.length) return { camps: [] as OcCampWithDetails[], grandTotalMarksScored: 0 };
 
@@ -1929,6 +1946,7 @@ export async function getOcCampMarks(options: GetOcCampMarksOptions) {
 
     const rows = await db
         .select({
+            id: ocCamps.id,
             ocCampId: ocCamps.id,
             trainingCampId: trainingCamps.id,
             campName: trainingCamps.name,
@@ -1962,14 +1980,22 @@ export async function getOcCampTotals(options: GetOcCampTotalsOptions) {
             trainingCampId: trainingCamps.id,
             campName: trainingCamps.name,
             semester: trainingCamps.semester,
+            sortOrder: trainingCamps.sortOrder,
             maxTotalMarks: trainingCamps.maxTotalMarks,
+            performanceTitle: trainingCamps.performanceTitle,
+            performanceGuidance: trainingCamps.performanceGuidance,
+            signaturePrimaryLabel: trainingCamps.signaturePrimaryLabel,
+            signatureSecondaryLabel: trainingCamps.signatureSecondaryLabel,
+            noteLine1: trainingCamps.noteLine1,
+            noteLine2: trainingCamps.noteLine2,
+            showAggregateSummary: trainingCamps.showAggregateSummary,
             totalMarksScored: sql<number | null>`COALESCE(${campActivityTotals.totalMarksScored}, ${ocCamps.totalMarksScored})`,
         })
         .from(ocCamps)
         .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
         .leftJoin(campActivityTotals, eq(campActivityTotals.ocCampId, ocCamps.id))
         .where(wh.length ? and(...wh) : undefined)
-        .orderBy(trainingCamps.semester, trainingCamps.name);
+        .orderBy(trainingCamps.semester, trainingCamps.sortOrder, trainingCamps.name);
 
     const grandTotalMarksScored = rows.reduce((acc, r) => acc + (r.totalMarksScored ?? 0), 0);
     return { items: rows, grandTotalMarksScored };

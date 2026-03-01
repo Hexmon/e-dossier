@@ -14,6 +14,7 @@ export const endpoints = {
         slots: "/api/v1/admin/positions/slots",
         transferappt: (appointmentId: string) =>
             `/api/v1/admin/appointments/${appointmentId}/transfer`,
+        bootstrapTemplateApply: "/api/v1/admin/bootstrap/templates/apply",
 
         users: "/api/v1/admin/users",
         subjects: "/api/v1/admin/subjects",
@@ -46,6 +47,7 @@ export const endpoints = {
         },
         trainingCamps: {
             list: "/api/v1/admin/training-camps",
+            settings: "/api/v1/admin/training-camps/settings",
             getById: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
             create: "/api/v1/admin/training-camps",
             update: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
