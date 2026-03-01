@@ -71,7 +71,12 @@ export default function SearchableSelect({
   };
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
+    <div
+      ref={containerRef}
+      className={cn("relative", className)}
+      data-search-container="dropdown"
+      data-open={open ? "true" : "false"}
+    >
       <Button
         type="button"
         variant="outline"
@@ -93,6 +98,9 @@ export default function SearchableSelect({
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
               autoFocus
+              data-search-target="true"
+              data-search-scope="dropdown"
+              data-search-priority="100"
             />
           </div>
           <div className="max-h-64 overflow-auto py-1">

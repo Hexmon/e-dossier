@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import ReduxProvider from "@/components/providers/ReduxProvider";
 import QueryProvider from "@/components/providers/QueryProvider";
+import SearchHotkeyProvider from "@/components/providers/SearchHotkeyProvider";
 
 const DEVICE_SETTINGS_BOOTSTRAP_SCRIPT = `
 (() => {
@@ -62,9 +63,11 @@ export default function RootLayout({
       >
         <script dangerouslySetInnerHTML={{ __html: DEVICE_SETTINGS_BOOTSTRAP_SCRIPT }} />
         <QueryProvider>
-          <ReduxProvider>
-            {children}
-          </ReduxProvider>
+          <SearchHotkeyProvider>
+            <ReduxProvider>
+              {children}
+            </ReduxProvider>
+          </SearchHotkeyProvider>
         </QueryProvider>
         <Toaster richColors position="top-right" />
       </body>

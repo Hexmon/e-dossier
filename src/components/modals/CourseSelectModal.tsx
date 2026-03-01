@@ -88,6 +88,9 @@ export default function CourseSelectModal({
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10"
+                            data-search-target="true"
+                            data-search-scope="modal"
+                            data-search-priority="80"
                         />
                     </div>
 

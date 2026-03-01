@@ -73,6 +73,9 @@ export function HelpSearch({ entries, className }: HelpSearchProps) {
           }}
           placeholder="Search setup steps, commands, or sections..."
           className="pl-9"
+          data-search-target="true"
+          data-search-scope="page"
+          data-search-priority="40"
         />
       </div>
 
