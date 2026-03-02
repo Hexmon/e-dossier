@@ -3,6 +3,8 @@ import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAdmin } from '@/app/lib/authz';
 import { applyPtTemplateProfile } from '@/app/lib/bootstrap/pt-template';
 import { applyCampTemplateProfile } from '@/app/lib/bootstrap/camp-template';
+import { applyPlatoonTemplateProfile } from '@/app/lib/bootstrap/platoon-template';
+import { applyAppointmentTemplateProfile } from '@/app/lib/bootstrap/appointment-template';
 import { applyOrgTemplateSchema } from '@/app/lib/validators.bootstrap';
 import { withAuditRoute } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -40,6 +42,36 @@ async function POSTHandler(req: AuditNextRequest) {
         message: result.dryRun
           ? 'Camp template dry run completed.'
           : 'Camp template applied successfully.',
+        ...result,
+      });
+    }
+
+    if (body.module === 'platoon') {
+      const result = await applyPlatoonTemplateProfile({
+        profile: body.profile ?? 'default',
+        dryRun: body.dryRun ?? false,
+        actorUserId: authCtx.userId,
+      });
+
+      return json.ok({
+        message: result.dryRun
+          ? 'Platoon template dry run completed.'
+          : 'Platoon template applied successfully.',
+        ...result,
+      });
+    }
+
+    if (body.module === 'appointment') {
+      const result = await applyAppointmentTemplateProfile({
+        profile: body.profile ?? 'default',
+        dryRun: body.dryRun ?? false,
+        actorUserId: authCtx.userId,
+      });
+
+      return json.ok({
+        message: result.dryRun
+          ? 'Appointment template dry run completed.'
+          : 'Appointment template applied successfully.',
         ...result,
       });
     }

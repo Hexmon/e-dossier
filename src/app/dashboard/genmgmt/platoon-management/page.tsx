@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { usePlatoons } from "@/hooks/usePlatoons";
 import { getPlatoonCommanderHistory, type PlatoonCommanderHistoryItem } from "@/app/lib/api/platoonApi";
 import { toast } from "sonner";
 import { getToastMsg } from "@/lib/error-toast";
+import { applyOrgTemplate } from "@/app/lib/api/orgTemplateApi";
 
 export default function PlatoonManagementPage() {
     const router = useRouter();
@@ -37,6 +39,24 @@ export default function PlatoonManagementPage() {
     const [isViewOpen, setIsViewOpen] = useState(false);
     const [commanderHistory, setCommanderHistory] = useState<PlatoonCommanderHistoryItem[]>([]);
     const [historyLoading, setHistoryLoading] = useState(false);
+
+    const applyDefaultTemplateMutation = useMutation({
+        mutationFn: (dryRun: boolean) =>
+            applyOrgTemplate({ module: "platoon", profile: "default", dryRun }),
+        onSuccess: async (result, dryRun) => {
+            await fetchPlatoons();
+            const prefix = dryRun ? "Dry run complete." : "Default platoon template applied.";
+            toast.success(
+                `${prefix} Created: ${result.createdCount}, Updated: ${result.updatedCount}, Skipped: ${result.skippedCount}`
+            );
+            if (result.warnings.length > 0) {
+                toast.warning(`Completed with ${result.warnings.length} warning(s).`);
+            }
+        },
+        onError: (error: any) => {
+            toast.error(error?.message || "Failed to apply default platoon template.");
+        },
+    });
 
     useEffect(() => {
         fetchPlatoons();
@@ -156,15 +176,47 @@ export default function PlatoonManagementPage() {
                                 <div className="flex justify-between items-center">
                                     <h2 className="text-2xl font-bold">Platoon List</h2>
 
-                                    <Button
-                                        variant="outline"
-                                        className="flex gap-2"
-                                        onClick={handleOpenAddDialog}
-                                        disabled={isLoading}
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        Add Platoon
-                                    </Button>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => applyDefaultTemplateMutation.mutate(true)}
+                                            disabled={isLoading || applyDefaultTemplateMutation.isPending}
+                                        >
+                                            {applyDefaultTemplateMutation.isPending ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Running
+                                                </>
+                                            ) : (
+                                                "Preview Changes (Dry Run)"
+                                            )}
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => applyDefaultTemplateMutation.mutate(false)}
+                                            disabled={isLoading || applyDefaultTemplateMutation.isPending}
+                                        >
+                                            {applyDefaultTemplateMutation.isPending ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Applying
+                                                </>
+                                            ) : (
+                                                "Apply Default Platoon Template"
+                                            )}
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            className="flex gap-2"
+                                            onClick={handleOpenAddDialog}
+                                            disabled={isLoading || applyDefaultTemplateMutation.isPending}
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Add Platoon
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <PlatoonsTable

@@ -2,16 +2,20 @@
 import 'dotenv/config';
 import { applyPtTemplateProfile } from '../src/app/lib/bootstrap/pt-template';
 import { applyCampTemplateProfile } from '../src/app/lib/bootstrap/camp-template';
+import { applyPlatoonTemplateProfile } from '../src/app/lib/bootstrap/platoon-template';
+import { applyAppointmentTemplateProfile } from '../src/app/lib/bootstrap/appointment-template';
 import type {
+  AppointmentTemplateProfile,
   CampTemplateProfile,
   OrgTemplateApplyResult,
   OrgTemplateModule,
+  PlatoonTemplateProfile,
   PtTemplateProfile,
 } from '../src/app/lib/bootstrap/types';
 
 type ParsedArgs = {
   module: OrgTemplateModule;
-  profile: PtTemplateProfile | CampTemplateProfile;
+  profile: PtTemplateProfile | CampTemplateProfile | PlatoonTemplateProfile | AppointmentTemplateProfile;
   dryRun: boolean;
 };
 
@@ -34,8 +38,8 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     if (arg.startsWith('--module=')) {
       const value = arg.slice('--module='.length).trim();
-      if (value !== 'pt' && value !== 'camp') {
-        throw new Error(`Unsupported module "${value}". Supported modules: pt, camp`);
+      if (value !== 'pt' && value !== 'camp' && value !== 'platoon' && value !== 'appointment') {
+        throw new Error(`Unsupported module "${value}". Supported modules: pt, camp, platoon, appointment`);
       }
       initial.module = value;
       continue;
@@ -51,7 +55,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
 
     throw new Error(
-      `Unknown argument "${arg}". Supported: --module=pt|camp --profile=default --dry-run`
+      `Unknown argument "${arg}". Supported: --module=pt|camp|platoon|appointment --profile=default --dry-run`
     );
   }
 
@@ -75,9 +79,19 @@ async function main() {
       profile: args.profile as PtTemplateProfile,
       dryRun: args.dryRun,
     });
-  } else {
+  } else if (args.module === 'camp') {
     result = await applyCampTemplateProfile({
       profile: args.profile as CampTemplateProfile,
+      dryRun: args.dryRun,
+    });
+  } else if (args.module === 'platoon') {
+    result = await applyPlatoonTemplateProfile({
+      profile: args.profile as PlatoonTemplateProfile,
+      dryRun: args.dryRun,
+    });
+  } else {
+    result = await applyAppointmentTemplateProfile({
+      profile: args.profile as AppointmentTemplateProfile,
       dryRun: args.dryRun,
     });
   }
@@ -98,8 +112,15 @@ async function main() {
     console.log(`- Task Scores: created=${result.stats.taskScores.created}, updated=${result.stats.taskScores.updated}, skipped=${result.stats.taskScores.skipped}`);
     console.log(`- Motivation Fields: created=${result.stats.motivationFields.created}, updated=${result.stats.motivationFields.updated}, skipped=${result.stats.motivationFields.skipped}`);
   } else {
-    console.log(`- Camps: created=${result.stats.camps.created}, updated=${result.stats.camps.updated}, skipped=${result.stats.camps.skipped}`);
-    console.log(`- Activities: created=${result.stats.activities.created}, updated=${result.stats.activities.updated}, skipped=${result.stats.activities.skipped}`);
+    if (result.module === 'camp') {
+      console.log(`- Camps: created=${result.stats.camps.created}, updated=${result.stats.camps.updated}, skipped=${result.stats.camps.skipped}`);
+      console.log(`- Activities: created=${result.stats.activities.created}, updated=${result.stats.activities.updated}, skipped=${result.stats.activities.skipped}`);
+    } else if (result.module === 'platoon') {
+      console.log(`- Platoons: created=${result.stats.platoons.created}, updated=${result.stats.platoons.updated}, skipped=${result.stats.platoons.skipped}`);
+    } else {
+      console.log(`- Positions: created=${result.stats.positions.created}, updated=${result.stats.positions.updated}, skipped=${result.stats.positions.skipped}`);
+      console.log(`- Assignments: created=${result.stats.assignments.created}, updated=${result.stats.assignments.updated}, skipped=${result.stats.assignments.skipped}`);
+    }
   }
 
   if (result.warnings.length > 0) {

@@ -1,4 +1,4 @@
-export type OrgTemplateModule = "pt" | "camp";
+export type OrgTemplateModule = "pt" | "camp" | "platoon" | "appointment";
 
 export type PtTemplateProfile = "default";
 
@@ -133,4 +133,76 @@ export type CampTemplateApplyResult = {
   };
 };
 
-export type OrgTemplateApplyResult = PtTemplateApplyResult | CampTemplateApplyResult;
+export type PlatoonTemplateProfile = "default";
+
+export type PlatoonTemplate = {
+  key: string;
+  name: string;
+  about?: string | null;
+  themeColor?: string | null;
+};
+
+export type PlatoonTemplatePack = {
+  module: "platoon";
+  version: string;
+  profile: PlatoonTemplateProfile;
+  platoons: PlatoonTemplate[];
+};
+
+export type PlatoonTemplateApplyResult = {
+  module: "platoon";
+  profile: PlatoonTemplateProfile;
+  dryRun: boolean;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  warnings: string[];
+  stats: {
+    platoons: PtTemplateApplyStats;
+  };
+};
+
+export type AppointmentTemplateProfile = "default";
+
+export type AppointmentPositionTemplate = {
+  key: string;
+  displayName: string;
+  defaultScope: "GLOBAL" | "PLATOON";
+  singleton: boolean;
+  description?: string | null;
+};
+
+export type AppointmentAssignmentTemplate = {
+  username: string;
+  positionKey: string;
+  scopeType: "GLOBAL" | "PLATOON";
+  platoonKey?: string | null;
+};
+
+export type AppointmentTemplatePack = {
+  module: "appointment";
+  version: string;
+  profile: AppointmentTemplateProfile;
+  positions: AppointmentPositionTemplate[];
+  assignments: AppointmentAssignmentTemplate[];
+};
+
+export type AppointmentTemplateApplyResult = {
+  module: "appointment";
+  profile: AppointmentTemplateProfile;
+  dryRun: boolean;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  warnings: string[];
+  stats: {
+    positions: PtTemplateApplyStats;
+    assignments: PtTemplateApplyStats;
+  };
+};
+
+export type OrgTemplateApplyResult =
+  | PtTemplateApplyResult
+  | CampTemplateApplyResult
+  | PlatoonTemplateApplyResult
+  | AppointmentTemplateApplyResult;

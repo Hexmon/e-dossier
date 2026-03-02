@@ -1,15 +1,17 @@
 import { api } from '@/app/lib/apiClient';
 import type {
+  AppointmentTemplateProfile,
   CampTemplateProfile,
   OrgTemplateApplyResult,
   OrgTemplateModule,
+  PlatoonTemplateProfile,
   PtTemplateProfile,
 } from '@/app/lib/bootstrap/types';
 import { endpoints } from '@/constants/endpoints';
 
 export type ApplyOrgTemplateRequest = {
   module: OrgTemplateModule;
-  profile?: PtTemplateProfile | CampTemplateProfile;
+  profile?: PtTemplateProfile | CampTemplateProfile | PlatoonTemplateProfile | AppointmentTemplateProfile;
   dryRun?: boolean;
 };
 

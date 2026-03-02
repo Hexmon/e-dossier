@@ -36,6 +36,7 @@ What to check:
 - Active appointments show in current table.
 - Handover/takeover updates move records into history correctly.
 - Position and platoon labels match current assignment.
+- Use `Preview Changes (Dry Run)` and `Apply Default Appointment Template` to bootstrap default appointment slots/users.
 
 ## 4. Platoon Management {#platoon-management}
 
@@ -47,6 +48,7 @@ What to check:
 
 - Platoon details are current.
 - Commander history reflects latest appointment changes.
+- Use `Preview Changes (Dry Run)` and `Apply Default Platoon Template` to bootstrap the six baseline platoons.
 
 ## 5. Verify Downloaded Report PDF {#verify-downloaded-report-pdf}
 

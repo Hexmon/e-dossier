@@ -79,7 +79,7 @@ export const HELP_MODULES: HelpModuleMeta[] = [
     summary: 'One-command and one-click bootstrap for baseline organization template setup.',
     route: '/dashboard/help/org-templates',
     status: 'active',
-    tags: ['seed', 'bootstrap', 'org-template', 'pt', 'camp', 'olq'],
+    tags: ['seed', 'bootstrap', 'org-template', 'pt', 'camp', 'olq', 'appointment', 'platoon'],
     sections: [
       {
         anchor: 'what-this-does',
@@ -94,7 +94,24 @@ export const HELP_MODULES: HelpModuleMeta[] = [
       {
         anchor: 'one-click-ui-setup',
         label: '3. One-click UI setup',
-        keywords: ['template view', 'pt management', 'camp management', 'olq management'],
+        keywords: [
+          'template view',
+          'pt management',
+          'camp management',
+          'olq management',
+          'appointment management',
+          'platoon management',
+        ],
+      },
+      {
+        anchor: 'platoon-default-template',
+        label: '3.1 Platoon default template',
+        keywords: ['platoon', 'arjun', 'chandragupt', 'ranapratap', 'shivaji', 'karna', 'prithviraj'],
+      },
+      {
+        anchor: 'appointment-default-template',
+        label: '3.2 Appointment default template',
+        keywords: ['appointment', 'comdt', 'dcci', 'hoat', 'cdr', 'cco', 'ds_coord', 'ptn_cdr'],
       },
       {
         anchor: 'deployment-order',

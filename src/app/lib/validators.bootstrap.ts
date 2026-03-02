@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const orgTemplateModuleSchema = z.enum(['pt', 'camp']);
+export const orgTemplateModuleSchema = z.enum(['pt', 'camp', 'platoon', 'appointment']);
 export const ptTemplateProfileSchema = z.enum(['default']);
 
 export const applyOrgTemplateSchema = z.object({
