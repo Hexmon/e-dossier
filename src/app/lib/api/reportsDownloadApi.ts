@@ -1,6 +1,7 @@
 import { endpoints } from '@/constants/endpoints';
 import type {
   ConsolidatedDownloadRequest,
+  CourseWiseFinalPerformanceDownloadRequest,
   CourseWisePerformanceDownloadRequest,
   FinalResultDownloadRequest,
   PtAssessmentDownloadRequest,
@@ -132,6 +133,14 @@ export const reportsDownloadApi = {
       endpoint: endpoints.reports.overallTraining.courseWisePerformance.download,
       body: payload,
       fallbackFileName: 'course-wise-performance.pdf',
+    });
+  },
+
+  downloadCourseWiseFinalPerformance(payload: CourseWiseFinalPerformanceDownloadRequest) {
+    return postDownload({
+      endpoint: endpoints.reports.overallTraining.courseWiseFinalPerformance.download,
+      body: payload,
+      fallbackFileName: 'course-wise-final-performance.pdf',
     });
   },
 };

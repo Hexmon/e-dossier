@@ -182,6 +182,10 @@ export const endpoints = {
                 preview: "/api/v1/reports/overall-training/course-wise-performance/preview",
                 download: "/api/v1/reports/overall-training/course-wise-performance/download",
             },
+            courseWiseFinalPerformance: {
+                preview: "/api/v1/reports/overall-training/course-wise-final-performance/preview",
+                download: "/api/v1/reports/overall-training/course-wise-final-performance/download",
+            },
         },
     },
     course: {

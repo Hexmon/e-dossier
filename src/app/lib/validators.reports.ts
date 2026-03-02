@@ -85,6 +85,15 @@ export const courseWisePerformanceDownloadBodySchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const courseWiseFinalPerformancePreviewQuerySchema = z.object({
+  courseId: z.string().uuid(),
+});
+
+export const courseWiseFinalPerformanceDownloadBodySchema = z.object({
+  courseId: z.string().uuid(),
+  password: z.string().min(1).max(128),
+});
+
 const finalResultIdentityRowSchema = z.object({
   ocId: z.string().uuid(),
   enrolmentNumber: z.string().trim().max(120).optional(),

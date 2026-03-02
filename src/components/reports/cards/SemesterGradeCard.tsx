@@ -37,6 +37,7 @@ export function SemesterGradeCard() {
   const [previewOcId, setPreviewOcId] = useState<string | null>(null);
   const [ocListOpen, setOcListOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
+  const [isPreparingAllDownload, setIsPreparingAllDownload] = useState(false);
 
   const courseSemesters = useCourseSemesters(courseId || null);
   const downloads = useReportsDownloads();
@@ -109,22 +110,26 @@ export function SemesterGradeCard() {
       toast.error('Select course and semester first.');
       return;
     }
+    setIsPreparingAllDownload(true);
+    try {
+      let items = candidatesQuery.data?.items;
+      if (!items) {
+        const refreshed = await candidatesQuery.refetch();
+        items = refreshed.data?.items;
+      }
 
-    let items = candidatesQuery.data?.items;
-    if (!items) {
-      const refreshed = await candidatesQuery.refetch();
-      items = refreshed.data?.items;
+      const ocIds = (items ?? []).map((item) => item.ocId);
+      if (!ocIds.length) {
+        toast.error('No OCs found for current filters.');
+        return;
+      }
+
+      setSelectedOcIds(ocIds);
+      setPreviewOcId(null);
+      setDownloadOpen(true);
+    } finally {
+      setIsPreparingAllDownload(false);
     }
-
-    const ocIds = (items ?? []).map((item) => item.ocId);
-    if (!ocIds.length) {
-      toast.error('No OCs found for current filters.');
-      return;
-    }
-
-    setSelectedOcIds(ocIds);
-    setPreviewOcId(null);
-    setDownloadOpen(true);
   };
 
   return (
@@ -227,17 +232,17 @@ export function SemesterGradeCard() {
               await candidatesQuery.refetch();
               setOcListOpen(true);
             }}
-            disabled={!courseId || !semester}
+            disabled={!courseId || !semester || candidatesQuery.isFetching}
           >
-            View
+            {candidatesQuery.isFetching ? 'Loading...' : 'View'}
           </Button>
           <Button
             type="button"
             variant="outline"
             onClick={() => void onDownloadAllFiltered()}
-            disabled={!courseId || !semester || candidatesQuery.isFetching}
+            disabled={!courseId || !semester || candidatesQuery.isFetching || isPreparingAllDownload}
           >
-            Download All (Filtered)
+            {isPreparingAllDownload ? 'Preparing...' : 'Download All (Filtered)'}
           </Button>
         </div>
 
@@ -266,9 +271,9 @@ export function SemesterGradeCard() {
                 type="button"
                 size="sm"
                 onClick={() => void onDownloadAllFiltered()}
-                disabled={!filteredCount || candidatesQuery.isFetching}
+                disabled={!filteredCount || candidatesQuery.isFetching || isPreparingAllDownload}
               >
-                Download All (Filtered)
+                {isPreparingAllDownload ? 'Preparing...' : 'Download All (Filtered)'}
               </Button>
             </div>
 

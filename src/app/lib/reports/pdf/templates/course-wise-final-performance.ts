@@ -1,4 +1,6 @@
-import type { CourseWisePerformancePreview, CourseWisePerformanceRow } from '@/types/reports';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { CourseWiseFinalPerformancePreview, CourseWiseFinalPerformanceRow } from '@/types/reports';
 
 type ReportRenderMeta = {
   versionId: string;
@@ -6,48 +8,61 @@ type ReportRenderMeta = {
 };
 
 const PAGE_MARGIN = 24;
-const FIRST_PAGE_TABLE_Y = 112;
-const CONTINUATION_TABLE_Y = 32;
-const TABLE_HEADER_H1 = 34;
+const FIRST_PAGE_TABLE_Y = 102;
+const CONTINUATION_TABLE_Y = 34;
+const TABLE_HEADER_H1 = 36;
 const TABLE_HEADER_H2 = 18;
 const DATA_ROW_H = 20;
-const PAGE_META_HEIGHT = 18;
+const PAGE_META_HEIGHT = 20;
 
-const COLUMN_BASE_WIDTHS: Record<CourseWisePerformancePreview['columns'][number]['key'], number> = {
-  serNo: 32,
-  tesNo: 44,
-  rank: 42,
-  name: 152,
-  academicsTotal: 80,
-  academicsScaled: 82,
-  ptSwimming: 74,
-  games: 74,
+const COLUMN_BASE_WIDTHS: Record<string, number> = {
+  sNo: 30,
+  tesNo: 46,
+  rank: 36,
+  name: 128,
+  academics: 74,
+  ptSwimming: 66,
+  games: 68,
   olq: 62,
-  cfe: 72,
-  drill: 60,
-  camp: 60,
-  cdrMarks: 64,
-  grandTotal: 70,
-  percentage: 50,
+  cfe: 62,
+  cdrMarks: 62,
+  camp: 58,
+  drill: 58,
+  grandTotal: 74,
+  percentage: 40,
+  orderOfMerit: 42,
+  piAllotment: 76,
 };
 
-function termLabel(semester: number): string {
-  switch (semester) {
-    case 1:
-      return 'FIRST';
-    case 2:
-      return 'SECOND';
-    case 3:
-      return 'THIRD';
-    case 4:
-      return 'FOURTH';
-    case 5:
-      return 'FIFTH';
-    case 6:
-      return 'SIXTH';
-    default:
-      return `${semester}TH`;
+const TABLE_COLUMNS: Array<{
+  key: keyof CourseWiseFinalPerformanceRow | 'sNo';
+  label: string;
+  max: string | null;
+}> = [
+  { key: 'sNo', label: 'S. No', max: null },
+  { key: 'tesNo', label: 'TES No', max: null },
+  { key: 'rank', label: 'Rank', max: null },
+  { key: 'name', label: 'Name', max: null },
+  { key: 'academics', label: 'Academics\n(Incl Service Subject)', max: 'MM 8100' },
+  { key: 'ptSwimming', label: 'PT &\nSwimming', max: 'MM 900' },
+  { key: 'games', label: 'Games +\nX-Country', max: 'MM 600' },
+  { key: 'olq', label: 'OLQ', max: 'MM 1800' },
+  { key: 'cfe', label: 'Credit for\nExcellence', max: 'MM 150' },
+  { key: 'cdrMarks', label: "Cdr's Mks", max: 'MM 150' },
+  { key: 'camp', label: 'Camp Mks', max: 'MM 210' },
+  { key: 'drill', label: 'Drill Mks', max: 'MM 90' },
+  { key: 'grandTotal', label: 'Grand Total', max: 'MM 12000' },
+  { key: 'percentage', label: '%', max: null },
+  { key: 'orderOfMerit', label: 'OM', max: null },
+  { key: 'piAllotment', label: 'PI Allotment', max: null },
+];
+
+function resolveImagePath(candidates: string[]) {
+  for (const relativePath of candidates) {
+    const fullPath = path.join(process.cwd(), relativePath);
+    if (fs.existsSync(fullPath)) return fullPath;
   }
+  return null;
 }
 
 function drawRect(doc: PDFKit.PDFDocument, x: number, y: number, w: number, h: number) {
@@ -65,46 +80,52 @@ function textInBox(
   y: number,
   width: number,
   height: number,
-  opts: { align?: 'left' | 'center' | 'right'; bold?: boolean; size?: number } = {}
+  opts: {
+    align?: 'left' | 'center' | 'right';
+    bold?: boolean;
+    size?: number;
+    lineBreak?: boolean;
+  } = {}
 ) {
   doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(opts.size ?? 8);
   doc.text(text, x + 2, y + 2, {
     width: Math.max(0, width - 4),
     height: Math.max(0, height - 4),
     align: opts.align ?? 'center',
-    lineBreak: false,
+    lineBreak: opts.lineBreak ?? false,
     ellipsis: true,
   });
 }
 
-function drawHeading(doc: PDFKit.PDFDocument, data: CourseWisePerformancePreview) {
+function drawHeading(doc: PDFKit.PDFDocument, data: CourseWiseFinalPerformancePreview) {
   const width = doc.page.width - PAGE_MARGIN * 2;
-  const term = termLabel(data.semester);
 
-  doc.font('Helvetica-Bold').fontSize(12).text('MILITARY COLLEGE OF ELECTRONICS & MECHANICAL ENGINEERING', PAGE_MARGIN, 24, {
-    width,
-    align: 'center',
-    underline: true,
-  });
-  doc.font('Helvetica-Bold').fontSize(12).text('CADETS TRAINING WING', PAGE_MARGIN, 42, {
-    width,
-    align: 'center',
-    underline: true,
-  });
-  doc.font('Helvetica-Bold').fontSize(12).text(
-    `${term} SEMESTER PERFORMANCE CHART OF ${data.course.code} COURSE`,
-    PAGE_MARGIN,
-    60,
-    {
+  const leftLogo = resolveImagePath([
+    'public/images/army_logo.jpeg',
+    'public/images/jnu_logo.png',
+    'public/images/jnu_logo.jpg',
+  ]);
+  const rightLogo = resolveImagePath([
+    'public/images/eme_logo.jpeg',
+    'public/images/brigadier_logo.jpeg',
+    'public/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg',
+  ]);
+
+  if (leftLogo) {
+    doc.image(leftLogo, PAGE_MARGIN, 20, { fit: [42, 42] });
+  }
+  if (rightLogo) {
+    doc.image(rightLogo, doc.page.width - PAGE_MARGIN - 42, 20, { fit: [40, 40] });
+  }
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(12)
+    .text(`I - VI TOTAL PERFORMANCE CHART OF ${data.course.code} COURSE`, PAGE_MARGIN, 28, {
       width,
       align: 'center',
       underline: true,
-    }
-  );
-  doc.font('Helvetica').fontSize(9).text(`Semester: ${data.semester} | Formula: ${data.formulaLabel}`, PAGE_MARGIN, 82, {
-    width,
-    align: 'center',
-  });
+    });
 }
 
 function drawPageMeta(
@@ -113,8 +134,8 @@ function drawPageMeta(
   pageIndex: number,
   totalPages: number
 ) {
-  // Keep page metadata on the same page with fixed footer placement.
-  // Using 3 short labels avoids wrapped long-line text/new page spill.
+  // Keep footer inside current page bounds and avoid wrapped long-line text
+  // that can trigger an implicit page break in PDFKit.
   const y = doc.page.height - PAGE_MARGIN - 10;
   const generatedText = `Generated: ${meta.generatedAt.toISOString().slice(0, 10)}`;
   const pageText = `Page ${pageIndex + 1}/${totalPages}`;
@@ -135,9 +156,9 @@ function drawPageMeta(
   });
 }
 
-function computeWidths(doc: PDFKit.PDFDocument, data: CourseWisePerformancePreview) {
+function computeWidths(doc: PDFKit.PDFDocument) {
   const available = doc.page.width - PAGE_MARGIN * 2;
-  const raw = data.columns.map((column) => COLUMN_BASE_WIDTHS[column.key] ?? 60);
+  const raw = TABLE_COLUMNS.map((column) => COLUMN_BASE_WIDTHS[column.key] ?? 60);
   const sum = raw.reduce((acc, value) => acc + value, 0);
   const ratio = sum > 0 ? available / sum : 1;
   const scaled = raw.map((value) => Math.floor(value * ratio));
@@ -152,31 +173,31 @@ function buildBoundaries(x0: number, widths: number[]) {
   return xs;
 }
 
-function formatValue(row: CourseWisePerformanceRow, key: CourseWisePerformancePreview['columns'][number]['key']) {
-  if (key === 'serNo') return String(row.sNo);
-  if (key === 'tesNo') return row.tesNo;
-  if (key === 'rank') return row.rank;
-  if (key === 'name') return row.name;
-
-  const value = row[key];
-  if (typeof value !== 'number') return '';
-  if (key === 'percentage') return value.toFixed(2);
-  return value.toFixed(2);
-}
-
 function rowsCapacity(doc: PDFKit.PDFDocument, tableStartY: number) {
   const available = doc.page.height - PAGE_MARGIN - PAGE_META_HEIGHT - tableStartY;
   const body = available - TABLE_HEADER_H1 - TABLE_HEADER_H2;
   return Math.max(1, Math.floor(body / DATA_ROW_H));
 }
 
+function readCell(row: CourseWiseFinalPerformanceRow, key: (typeof TABLE_COLUMNS)[number]['key']) {
+  if (key === 'sNo') return String(row.sNo);
+  if (key === 'tesNo') return row.tesNo;
+  if (key === 'rank') return row.rank;
+  if (key === 'name') return row.name;
+  if (key === 'piAllotment') return row.piAllotment ?? '';
+  if (key === 'orderOfMerit') return row.orderOfMerit === null ? '' : String(row.orderOfMerit);
+
+  const value = row[key];
+  if (typeof value !== 'number') return '';
+  return value.toFixed(2);
+}
+
 function drawTablePage(
   doc: PDFKit.PDFDocument,
-  data: CourseWisePerformancePreview,
-  rows: CourseWisePerformanceRow[],
+  rows: CourseWiseFinalPerformanceRow[],
   tableStartY: number
 ) {
-  const widths = computeWidths(doc, data);
+  const widths = computeWidths(doc);
   const x0 = PAGE_MARGIN;
   const tableWidth = doc.page.width - PAGE_MARGIN * 2;
   const tableHeight = TABLE_HEADER_H1 + TABLE_HEADER_H2 + rows.length * DATA_ROW_H;
@@ -194,36 +215,34 @@ function drawTablePage(
     drawLine(doc, x0, y, x0 + tableWidth, y);
   }
 
-  for (let i = 0; i < data.columns.length; i += 1) {
-    const column = data.columns[i]!;
-    const title =
-      column.maxMarks !== null && column.key !== 'percentage'
-        ? `${column.label}\n(MM ${column.maxMarks})`
-        : column.label;
+  for (let i = 0; i < TABLE_COLUMNS.length; i += 1) {
+    const column = TABLE_COLUMNS[i]!;
+    const title = column.max ? `${column.label}\n(${column.max})` : column.label;
     textInBox(doc, title, xs[i]!, tableStartY, widths[i]!, TABLE_HEADER_H1, {
       bold: true,
-      size: 7.5,
+      size: 7.2,
+      lineBreak: true,
     });
     textInBox(doc, `(${String.fromCharCode(97 + i)})`, xs[i]!, tableStartY + TABLE_HEADER_H1, widths[i]!, TABLE_HEADER_H2, {
       bold: true,
-      size: 7.5,
+      size: 7.2,
     });
   }
 
   rows.forEach((row, index) => {
     const y = headerBottom + index * DATA_ROW_H;
-    data.columns.forEach((column, colIndex) => {
-      textInBox(doc, formatValue(row, column.key), xs[colIndex]!, y, widths[colIndex]!, DATA_ROW_H, {
-        align: column.key === 'name' ? 'left' : 'center',
-        size: 8,
+    TABLE_COLUMNS.forEach((column, colIndex) => {
+      textInBox(doc, readCell(row, column.key), xs[colIndex]!, y, widths[colIndex]!, DATA_ROW_H, {
+        align: column.key === 'name' || column.key === 'piAllotment' ? 'left' : 'center',
+        size: 7.8,
       });
     });
   });
 }
 
-export function renderCourseWisePerformanceTemplate(
+export function renderCourseWiseFinalPerformanceTemplate(
   doc: PDFKit.PDFDocument,
-  data: CourseWisePerformancePreview,
+  data: CourseWiseFinalPerformancePreview,
   meta: ReportRenderMeta
 ) {
   const rows = data.rows.length
@@ -235,21 +254,22 @@ export function renderCourseWisePerformanceTemplate(
           tesNo: '-',
           rank: 'OC',
           name: 'No records',
-          academicsTotal: 0,
-          academicsScaled: 0,
+          academics: 0,
           ptSwimming: 0,
           games: 0,
           olq: 0,
           cfe: 0,
-          drill: 0,
-          camp: 0,
           cdrMarks: 0,
+          camp: 0,
+          drill: 0,
           grandTotal: 0,
           percentage: 0,
+          orderOfMerit: null,
+          piAllotment: null,
         },
       ];
 
-  const pages: Array<CourseWisePerformanceRow[]> = [];
+  const pages: Array<CourseWiseFinalPerformanceRow[]> = [];
   let cursor = 0;
   let pageIndex = 0;
   while (cursor < rows.length) {
@@ -267,7 +287,7 @@ export function renderCourseWisePerformanceTemplate(
       drawHeading(doc, data);
     }
     const startY = idx === 0 ? FIRST_PAGE_TABLE_Y : CONTINUATION_TABLE_Y;
+    drawTablePage(doc, pageRows, startY);
     drawPageMeta(doc, meta, idx, totalPages);
-    drawTablePage(doc, data, pageRows, startY);
   });
 }

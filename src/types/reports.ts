@@ -305,3 +305,36 @@ export type CourseWisePerformanceDownloadRequest = {
   semester: number;
   password: string;
 };
+
+export type CourseWiseFinalPerformanceRow = {
+  ocId: string;
+  sNo: number;
+  tesNo: string;
+  rank: string;
+  name: string;
+  academics: number;
+  ptSwimming: number;
+  games: number;
+  olq: number;
+  cfe: number;
+  cdrMarks: number;
+  camp: number;
+  drill: number;
+  grandTotal: number;
+  percentage: number;
+  orderOfMerit: number | null;
+  piAllotment: string | null;
+};
+
+export type CourseWiseFinalPerformancePreview = {
+  reportType: 'OVERALL_TRAINING_COURSE_WISE_FINAL_PERFORMANCE';
+  course: { id: string; code: string; title: string };
+  rows: CourseWiseFinalPerformanceRow[];
+  formulaLabel: string;
+  maxTotal: number;
+};
+
+export type CourseWiseFinalPerformanceDownloadRequest = {
+  courseId: string;
+  password: string;
+};

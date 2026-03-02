@@ -1,4 +1,4 @@
-﻿import { and, eq, isNull, sql } from 'drizzle-orm';
+﻿import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/app/db/client';
 import {
     ocSprRecords,
@@ -28,6 +28,13 @@ export type SemesterSourceScoresDetailed = SemesterSourceScores & {
     academicsRawMax: number;
     academicsScaled: number;
 };
+
+function resolveCampSemesterTokens(semester: number): string[] {
+    // Supports both legacy enum values (SEM5/SEM6A/SEM6B) and numeric semester storage.
+    if (semester === 5) return ['5', 'SEM5'];
+    if (semester === 6) return ['6', 'SEM6', 'SEM6A', 'SEM6B'];
+    return [String(semester), `SEM${semester}`];
+}
 
 export async function getSprRecord(ocId: string, semester: number) {
     const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
@@ -169,6 +176,10 @@ export async function getSemesterSourceScoresDetailed(
 
     let camp = 0;
     if (semester === 5 || semester === 6) {
+        const campSemesterTokens = resolveCampSemesterTokens(semester);
+        const campSemesterPredicate = or(
+            ...campSemesterTokens.map((token) => sql`${trainingCamps.semester}::text = ${token}`),
+        );
         const [campRow] = await db
             .select({ scored: sql<number>`COALESCE(SUM(${ocCamps.totalMarksScored}), 0)` })
             .from(ocCamps)
@@ -177,7 +188,7 @@ export async function getSemesterSourceScoresDetailed(
                 and(
                     eq(ocCamps.ocId, ocId),
                     eq(ocCamps.enrollmentId, activeEnrollment.id),
-                    eq(trainingCamps.semester, semester),
+                    campSemesterPredicate,
                     isNull(ocCamps.deletedAt),
                     isNull(trainingCamps.deletedAt),
                 ),

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { ApiError } from '@/app/lib/http';
 import { db } from '@/app/db/client';
 import { listOCsBasic } from '@/app/db/queries/oc';
@@ -6,15 +6,21 @@ import { listCourseOfferings } from '@/app/db/queries/courses';
 import { getOcAcademicSemester, getOcAcademics } from '@/app/services/oc-academics';
 import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
 import { listOcPtScoresByOcIds } from '@/app/db/queries/physicalTrainingOc';
-import { getSemesterSourceScoresDetailed, getSprRecord } from '@/app/db/queries/performance-records';
+import {
+  getAllSemesterSourceMarks,
+  getSemesterSourceScoresDetailed,
+  getSprRecord,
+} from '@/app/db/queries/performance-records';
 import { courses } from '@/app/db/schema/training/courses';
 import { courseOfferingInstructors } from '@/app/db/schema/training/courseOfferings';
 import { instructors } from '@/app/db/schema/training/instructors';
+import { ocCommissioning } from '@/app/db/schema/training/oc';
 import { FIXED_MARKS, REPORT_TYPES } from '@/app/lib/reports/types';
-import { SPR_MAX_MARKS } from '@/app/services/performance-record.constants';
+import { FPR_MAX_MARKS, SPR_MAX_MARKS } from '@/app/services/performance-record.constants';
 import { marksToGradePoints, marksToLetterGrade } from '@/app/lib/grading';
 import type {
   ConsolidatedSessionalPreview,
+  CourseWiseFinalPerformancePreview,
   CourseWisePerformanceColumn,
   CourseWisePerformancePreview,
   CourseWisePerformanceRow,
@@ -559,6 +565,123 @@ export async function buildCourseWisePerformancePreview(params: {
     rows,
     maxTotalForSemester,
     formulaLabel: `Grand Total = ${formulaParts.join(' + ')}`,
+  };
+}
+
+export async function buildCourseWiseFinalPerformancePreview(params: {
+  courseId: string;
+}): Promise<CourseWiseFinalPerformancePreview> {
+  const [course, ocRows] = await Promise.all([
+    resolveCourse(params.courseId),
+    listOCsBasic({
+      courseId: params.courseId,
+      active: true,
+      limit: 5000,
+      sort: 'name_asc',
+    }),
+  ]);
+
+  const ocIds = ocRows.map((oc) => oc.id);
+  const omRows = ocIds.length
+    ? await db
+        .select({
+          ocId: ocCommissioning.ocId,
+          orderOfMerit: ocCommissioning.orderOfMerit,
+        })
+        .from(ocCommissioning)
+        .where(inArray(ocCommissioning.ocId, ocIds))
+    : [];
+  const orderOfMeritByOc = new Map(omRows.map((row) => [row.ocId, row.orderOfMerit ?? null]));
+
+  const rows = await Promise.all(
+    ocRows.map(async (oc, index) => {
+      const [allSemScores, sprRecords] = await Promise.all([
+        getAllSemesterSourceMarks(oc.id),
+        Promise.all([1, 2, 3, 4, 5, 6].map((semester) => getSprRecord(oc.id, semester))),
+      ]);
+
+      const academics = round2(
+        [1, 2, 3, 4, 5, 6].reduce(
+          (sum, semester) => sum + Number(allSemScores[semester]?.academics ?? 0),
+          0
+        )
+      );
+      const ptSwimming = round2(
+        [1, 2, 3, 4, 5, 6].reduce(
+          (sum, semester) => sum + Number(allSemScores[semester]?.ptSwimming ?? 0),
+          0
+        )
+      );
+      const games = round2(
+        [1, 2, 3, 4, 5, 6].reduce(
+          (sum, semester) => sum + Number(allSemScores[semester]?.games ?? 0),
+          0
+        )
+      );
+      const olq = round2(
+        [1, 2, 3, 4, 5, 6].reduce(
+          (sum, semester) => sum + Number(allSemScores[semester]?.olq ?? 0),
+          0
+        )
+      );
+      const cfe = round2(
+        [1, 2, 3, 4, 5, 6].reduce(
+          (sum, semester) => sum + Number(allSemScores[semester]?.cfe ?? 0),
+          0
+        )
+      );
+      const camp = round2(
+        [1, 2, 3, 4, 5, 6].reduce(
+          (sum, semester) => sum + Number(allSemScores[semester]?.camp ?? 0),
+          0
+        )
+      );
+      const drill = round2(
+        [1, 2, 3, 4, 5, 6].reduce(
+          (sum, semester) => sum + Number(allSemScores[semester]?.drill ?? 0),
+          0
+        )
+      );
+      const cdrMarks = round2(
+        sprRecords.reduce((sum, record) => sum + Number(record?.cdrMarks ?? 0), 0)
+      );
+
+      const grandTotal = round2(
+        academics + ptSwimming + games + olq + cfe + cdrMarks + camp + drill
+      );
+      const percentage = round2(
+        FPR_MAX_MARKS.total > 0 ? (grandTotal / Number(FPR_MAX_MARKS.total)) * 100 : 0
+      );
+
+      return {
+        ocId: oc.id,
+        sNo: index + 1,
+        tesNo: oc.ocNo,
+        rank: 'OC',
+        name: oc.name,
+        academics,
+        ptSwimming,
+        games,
+        olq,
+        cfe,
+        cdrMarks,
+        camp,
+        drill,
+        grandTotal,
+        percentage,
+        orderOfMerit: orderOfMeritByOc.get(oc.id) ?? null,
+        piAllotment: oc.platoonName ?? null,
+      };
+    })
+  );
+
+  return {
+    reportType: REPORT_TYPES.OVERALL_TRAINING_COURSE_WISE_FINAL_PERFORMANCE,
+    course,
+    rows,
+    formulaLabel:
+      "Grand Total = Academics + PT & Swimming + Games + OLQ + CFE + Cdr's Mks + Camp + Drill",
+    maxTotal: Number(FPR_MAX_MARKS.total),
   };
 }
 

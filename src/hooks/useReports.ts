@@ -3,6 +3,7 @@ import { reportsApi } from '@/app/lib/api/reportsApi';
 import { reportsDownloadApi } from '@/app/lib/api/reportsDownloadApi';
 import type {
   ConsolidatedDownloadRequest,
+  CourseWiseFinalPerformanceDownloadRequest,
   CourseWisePerformanceDownloadRequest,
   FinalResultDownloadRequest,
   PtAssessmentDownloadRequest,
@@ -128,6 +129,22 @@ export function useCourseWisePerformancePreview(filters: {
   });
 }
 
+export function useCourseWiseFinalPerformancePreview(filters: {
+  courseId: string;
+  enabled?: boolean;
+}) {
+  const isEnabled = (filters.enabled ?? true) && Boolean(filters.courseId);
+
+  return useQuery({
+    queryKey: ['reports', 'course-wise-final-performance', filters.courseId],
+    queryFn: () =>
+      reportsApi.getCourseWiseFinalPerformancePreview({
+        courseId: filters.courseId,
+      }),
+    enabled: isEnabled,
+  });
+}
+
 export function useReportsDownloads() {
   const consolidatedDownload = useMutation({
     mutationFn: (payload: ConsolidatedDownloadRequest) =>
@@ -154,11 +171,17 @@ export function useReportsDownloads() {
       reportsDownloadApi.downloadCourseWisePerformance(payload),
   });
 
+  const courseWiseFinalPerformanceDownload = useMutation({
+    mutationFn: (payload: CourseWiseFinalPerformanceDownloadRequest) =>
+      reportsDownloadApi.downloadCourseWiseFinalPerformance(payload),
+  });
+
   return {
     consolidatedDownload,
     finalResultCompilationDownload,
     semesterGradeDownload,
     ptAssessmentDownload,
     courseWisePerformanceDownload,
+    courseWiseFinalPerformanceDownload,
   };
 }

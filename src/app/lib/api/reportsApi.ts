@@ -2,6 +2,7 @@ import { api } from '@/app/lib/apiClient';
 import { endpoints } from '@/constants/endpoints';
 import type {
   ConsolidatedSessionalPreview,
+  CourseWiseFinalPerformancePreview,
   CourseWisePerformancePreview,
   CourseSemesterMetadata,
   FinalResultCompilationPreview,
@@ -40,6 +41,11 @@ export type PtAssessmentPreviewResponse = {
 export type CourseWisePerformancePreviewResponse = {
   message: string;
   data: CourseWisePerformancePreview;
+};
+
+export type CourseWiseFinalPerformancePreviewResponse = {
+  message: string;
+  data: CourseWiseFinalPerformancePreview;
 };
 
 export type FinalResultCompilationPreviewResponse = {
@@ -133,6 +139,15 @@ export const reportsApi = {
   }) {
     return api.get<CourseWisePerformancePreviewResponse>(
       endpoints.reports.overallTraining.courseWisePerformance.preview,
+      {
+        query: params,
+      }
+    );
+  },
+
+  getCourseWiseFinalPerformancePreview(params: { courseId: string }) {
+    return api.get<CourseWiseFinalPerformancePreviewResponse>(
+      endpoints.reports.overallTraining.courseWiseFinalPerformance.preview,
       {
         query: params,
       }

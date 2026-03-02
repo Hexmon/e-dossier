@@ -3,7 +3,7 @@ import { SemesterGradeCard } from '@/components/reports/cards/SemesterGradeCard'
 import { PtAssessmentCard } from '@/components/reports/cards/PtAssessmentCard';
 import { FinalResultCompilationCard } from '@/components/reports/cards/FinalResultCompilationCard';
 import { CourseWisePerformanceCard } from '@/components/reports/cards/CourseWisePerformanceCard';
-import { ComingSoonReportCard } from '@/components/reports/common/ComingSoonReportCard';
+import { CourseWiseFinalPerformanceCard } from '@/components/reports/cards/CourseWiseFinalPerformanceCard';
 
 export function ReportsHub() {
   return (
@@ -28,10 +28,7 @@ export function ReportsHub() {
         <h2 className="text-lg font-semibold">Overall Training</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <CourseWisePerformanceCard />
-          <ComingSoonReportCard
-            title="Course Wise Final Performance Record"
-            description="End-of-course final performance document."
-          />
+          <CourseWiseFinalPerformanceCard />
         </div>
       </section>
     </div>

@@ -35,6 +35,7 @@ export function FinalResultCompilationCard() {
   const [preparedBy, setPreparedBy] = useState('');
   const [checkedBy, setCheckedBy] = useState('');
   const [identityRows, setIdentityRows] = useState<Record<string, IdentityRowState>>({});
+  const [isPreparingDownload, setIsPreparingDownload] = useState(false);
 
   const courseSemesters = useCourseSemesters(courseId || null);
   const downloads = useReportsDownloads();
@@ -90,26 +91,30 @@ export function FinalResultCompilationCard() {
   }, [identityRows, previewQuery.data?.data.rows]);
 
   const topDownloadDisabled =
-    !courseId || !semester || downloads.finalResultCompilationDownload.isPending;
+    !courseId || !semester || isPreparingDownload || downloads.finalResultCompilationDownload.isPending;
 
   const handleTopDownloadClick = async () => {
     if (!courseId || !semester) {
       toast.error('Select course and semester first.');
       return;
     }
+    setIsPreparingDownload(true);
+    try {
+      let data = previewQuery.data?.data;
+      if (!data) {
+        const refreshed = await previewQuery.refetch();
+        data = refreshed.data?.data;
+      }
 
-    let data = previewQuery.data?.data;
-    if (!data) {
-      const refreshed = await previewQuery.refetch();
-      data = refreshed.data?.data;
+      if (!data || !data.rows.length) {
+        toast.error('No rows available for selected course and semester.');
+        return;
+      }
+
+      setDownloadOpen(true);
+    } finally {
+      setIsPreparingDownload(false);
     }
-
-    if (!data || !data.rows.length) {
-      toast.error('No rows available for selected course and semester.');
-      return;
-    }
-
-    setDownloadOpen(true);
   };
 
   const handleDownload = async () => {
@@ -207,21 +212,25 @@ export function FinalResultCompilationCard() {
           <Button
             type="button"
             variant="outline"
-            disabled={!courseId || !semester}
+            disabled={!courseId || !semester || previewQuery.isFetching}
             onClick={() => {
               if (!viewRequested) setViewRequested(true);
               setViewModalOpen(true);
               void previewQuery.refetch();
             }}
           >
-            View
+            {previewQuery.isFetching ? 'Loading...' : 'View'}
           </Button>
           <Button
             type="button"
             onClick={() => void handleTopDownloadClick()}
             disabled={topDownloadDisabled}
           >
-            Download PDF
+            {isPreparingDownload
+              ? 'Preparing...'
+              : downloads.finalResultCompilationDownload.isPending
+                ? 'Generating...'
+                : 'Download PDF'}
           </Button>
         </div>
 
