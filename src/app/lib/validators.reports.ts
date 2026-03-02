@@ -74,4 +74,24 @@ export const ptAssessmentDownloadBodySchema = ptAssessmentPreviewQuerySchema.mer
   reportDownloadMetaSchema
 );
 
+const finalResultIdentityRowSchema = z.object({
+  ocId: z.string().uuid(),
+  enrolmentNumber: z.string().trim().max(120).optional(),
+  certSerialNo: z.string().trim().max(120).optional(),
+});
+
+export const finalResultCompilationPreviewQuerySchema = z.object({
+  courseId: z.string().uuid(),
+  semester: reportSemesterSchema,
+});
+
+export const finalResultCompilationDownloadBodySchema = z.object({
+  courseId: z.string().uuid(),
+  semester: reportSemesterSchema,
+  password: z.string().min(1).max(128),
+  identityRows: z.array(finalResultIdentityRowSchema).optional(),
+  preparedBy: optionalMetaString,
+  checkedBy: optionalMetaString,
+});
+
 export const nonEmptySearchSchema = nonEmptyString.max(120);

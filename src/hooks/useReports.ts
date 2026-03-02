@@ -3,6 +3,7 @@ import { reportsApi } from '@/app/lib/api/reportsApi';
 import { reportsDownloadApi } from '@/app/lib/api/reportsDownloadApi';
 import type {
   ConsolidatedDownloadRequest,
+  FinalResultDownloadRequest,
   PtAssessmentDownloadRequest,
   ReportBranch,
   SemesterGradeDownloadRequest,
@@ -32,6 +33,24 @@ export function useConsolidatedSessionalPreview(filters: {
         courseId: filters.courseId,
         semester: filters.semester as number,
         subjectId: filters.subjectId,
+      }),
+    enabled: isEnabled,
+  });
+}
+
+export function useFinalResultCompilationPreview(filters: {
+  courseId: string;
+  semester: number | null;
+  enabled?: boolean;
+}) {
+  const isEnabled = (filters.enabled ?? true) && Boolean(filters.courseId && filters.semester);
+
+  return useQuery({
+    queryKey: ['reports', 'final-result-compilation', filters.courseId, filters.semester],
+    queryFn: () =>
+      reportsApi.getFinalResultCompilationPreview({
+        courseId: filters.courseId,
+        semester: filters.semester as number,
       }),
     enabled: isEnabled,
   });
@@ -96,6 +115,11 @@ export function useReportsDownloads() {
       reportsDownloadApi.downloadConsolidatedSessional(payload),
   });
 
+  const finalResultCompilationDownload = useMutation({
+    mutationFn: (payload: FinalResultDownloadRequest) =>
+      reportsDownloadApi.downloadFinalResultCompilation(payload),
+  });
+
   const semesterGradeDownload = useMutation({
     mutationFn: (payload: SemesterGradeDownloadRequest) =>
       reportsDownloadApi.downloadSemesterGrade(payload),
@@ -108,6 +132,7 @@ export function useReportsDownloads() {
 
   return {
     consolidatedDownload,
+    finalResultCompilationDownload,
     semesterGradeDownload,
     ptAssessmentDownload,
   };

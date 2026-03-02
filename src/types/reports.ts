@@ -190,3 +190,62 @@ export type PtAssessmentDownloadRequest = {
   preparedBy: string;
   checkedBy: string;
 };
+
+export type FinalResultSubjectColumn = {
+  key: string;
+  subjectId: string;
+  subjectCode: string;
+  subjectName: string;
+  kind: 'L' | 'P';
+  credits: number;
+  order: number;
+};
+
+export type FinalResultGradeBand = {
+  label: string;
+  range: string;
+};
+
+export type FinalResultOcRow = {
+  ocId: string;
+  sNo: number;
+  tesNo: string;
+  name: string;
+  previousCumulativePoints: number;
+  previousCumulativeCredits: number;
+  previousCumulativeCgpa: number | null;
+  semesterPoints: number;
+  semesterCredits: number;
+  semesterSgpa: number | null;
+  uptoSemesterPoints: number;
+  uptoSemesterCredits: number;
+  uptoSemesterCgpa: number | null;
+  subjectGrades: Record<string, string | null>;
+};
+
+export type FinalResultCompilationPreview = {
+  reportType: 'ACADEMICS_FINAL_RESULT_COMPILATION';
+  course: { id: string; code: string; title: string };
+  semester: number;
+  subjectColumns: FinalResultSubjectColumn[];
+  rows: FinalResultOcRow[];
+  gradeBands: FinalResultGradeBand[];
+  semesterCreditsTotal: number;
+  previousSemesterCreditsReference: number;
+  uptoSemesterCreditsReference: number;
+};
+
+export type FinalResultIdentityRow = {
+  ocId: string;
+  enrolmentNumber?: string;
+  certSerialNo?: string;
+};
+
+export type FinalResultDownloadRequest = {
+  courseId: string;
+  semester: number;
+  password: string;
+  identityRows?: FinalResultIdentityRow[];
+  preparedBy?: string;
+  checkedBy?: string;
+};

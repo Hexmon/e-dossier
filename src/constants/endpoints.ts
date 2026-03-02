@@ -161,6 +161,10 @@ export const endpoints = {
                 preview: "/api/v1/reports/academics/consolidated-sessional/preview",
                 download: "/api/v1/reports/academics/consolidated-sessional/download",
             },
+            finalResultCompilation: {
+                preview: "/api/v1/reports/academics/final-result-compilation/preview",
+                download: "/api/v1/reports/academics/final-result-compilation/download",
+            },
             semesterGrade: {
                 candidates: "/api/v1/reports/academics/semester-grade/candidates",
                 preview: (ocId: string) => `/api/v1/reports/academics/semester-grade/preview/${ocId}`,

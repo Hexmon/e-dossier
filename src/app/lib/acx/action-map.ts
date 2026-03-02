@@ -3603,6 +3603,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/reports/academics/final-result-compilation/preview",
+    "action": "reports:academics:final-result-compilation:read",
+    "resourceType": "reports:academics:final-result-compilation",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/academics/final-result-compilation/download",
+    "action": "reports:academics:final-result-compilation:download",
+    "resourceType": "reports:academics:final-result-compilation:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/reports/academics/semester-grade/candidates",
     "action": "reports:academics:semester-grade:candidates:read",
     "resourceType": "reports:academics:semester-grade:candidates",

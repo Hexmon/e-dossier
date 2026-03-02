@@ -1,6 +1,7 @@
 import { ConsolidatedSessionalCard } from '@/components/reports/cards/ConsolidatedSessionalCard';
 import { SemesterGradeCard } from '@/components/reports/cards/SemesterGradeCard';
 import { PtAssessmentCard } from '@/components/reports/cards/PtAssessmentCard';
+import { FinalResultCompilationCard } from '@/components/reports/cards/FinalResultCompilationCard';
 import { ComingSoonReportCard } from '@/components/reports/common/ComingSoonReportCard';
 
 export function ReportsHub() {
@@ -11,10 +12,7 @@ export function ReportsHub() {
         <div className="grid grid-cols-1 gap-4">
           <ConsolidatedSessionalCard />
           <SemesterGradeCard />
-          <ComingSoonReportCard
-            title="Final Result Compilation Sheet"
-            description="Final consolidated result output for completed course cohorts."
-          />
+          <FinalResultCompilationCard />
         </div>
       </section>
 

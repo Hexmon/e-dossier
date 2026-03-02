@@ -1,6 +1,7 @@
 import { endpoints } from '@/constants/endpoints';
 import type {
   ConsolidatedDownloadRequest,
+  FinalResultDownloadRequest,
   PtAssessmentDownloadRequest,
   SemesterGradeDownloadRequest,
 } from '@/types/reports';
@@ -98,6 +99,14 @@ export const reportsDownloadApi = {
       endpoint: endpoints.reports.academics.consolidatedSessional.download,
       body: payload,
       fallbackFileName: 'consolidated-sessional.pdf',
+    });
+  },
+
+  downloadFinalResultCompilation(payload: FinalResultDownloadRequest) {
+    return postDownload({
+      endpoint: endpoints.reports.academics.finalResultCompilation.download,
+      body: payload,
+      fallbackFileName: 'final-result-compilation.pdf',
     });
   },
 

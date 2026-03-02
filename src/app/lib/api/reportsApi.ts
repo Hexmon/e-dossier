@@ -3,6 +3,7 @@ import { endpoints } from '@/constants/endpoints';
 import type {
   ConsolidatedSessionalPreview,
   CourseSemesterMetadata,
+  FinalResultCompilationPreview,
   PtAssessmentPreview,
   ReportBranch,
   SemesterGradeCandidate,
@@ -35,6 +36,11 @@ export type PtAssessmentPreviewResponse = {
   data: PtAssessmentPreview;
 };
 
+export type FinalResultCompilationPreviewResponse = {
+  message: string;
+  data: FinalResultCompilationPreview;
+};
+
 export const reportsApi = {
   getCourseSemesters(courseId: string) {
     return api.get<CourseSemesterMetadataResponse>(endpoints.reports.metadata.courseSemesters, {
@@ -49,6 +55,18 @@ export const reportsApi = {
   }) {
     return api.get<ConsolidatedPreviewResponse>(
       endpoints.reports.academics.consolidatedSessional.preview,
+      {
+        query: params,
+      }
+    );
+  },
+
+  getFinalResultCompilationPreview(params: {
+    courseId: string;
+    semester: number;
+  }) {
+    return api.get<FinalResultCompilationPreviewResponse>(
+      endpoints.reports.academics.finalResultCompilation.preview,
       {
         query: params,
       }

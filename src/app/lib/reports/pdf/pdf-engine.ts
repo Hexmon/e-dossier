@@ -9,6 +9,7 @@ export type EncryptedPdfOptions = {
   password: string;
   title: string;
   layout?: PdfLayout;
+  size?: 'A4' | 'A3';
 };
 
 export type PdfRenderResult = {
@@ -104,7 +105,7 @@ export async function renderEncryptedPdf(
   ensureAfmPathFallbackPatched();
   const chunks: Buffer[] = [];
   const doc = new PDFDocument({
-    size: 'A4',
+    size: options.size ?? 'A4',
     margin: 36,
     layout: options.layout ?? 'portrait',
     info: {
