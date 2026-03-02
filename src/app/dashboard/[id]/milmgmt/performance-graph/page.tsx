@@ -1,11 +1,10 @@
 // app/dashboard/[id]/performance/page.tsx
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
-import { data } from "@/components/performance_graph/Data";
 import PerformanceGraphs from "@/components/performance_graph/PerformanceGraphs";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import { useOcDetails } from "@/hooks/useOcDetails";
@@ -15,13 +14,49 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Shield, ChevronDown } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { TabsContent } from "@radix-ui/react-tabs";
-import { Link } from "lucide-react";
+import { getPerformanceGraphData } from "@/app/lib/api/performanceGraphApi";
+import { EMPTY_PERFORMANCE_GRAPH_DATA, type PerformanceGraphData } from "@/types/performanceGraph";
+import { toast } from "sonner";
 
 export default function PerformanceGraphPage() {
   const { id } = useParams();
   const ocId = Array.isArray(id) ? id[0] : id ?? "";
   const { cadet } = useOcDetails(ocId);
-  const performanceData = data(ocId);
+  const [performanceData, setPerformanceData] = useState<PerformanceGraphData>(
+    EMPTY_PERFORMANCE_GRAPH_DATA,
+  );
+  const [isLoadingPerformanceData, setIsLoadingPerformanceData] = useState(false);
+
+  useEffect(() => {
+    if (!ocId) return;
+
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setIsLoadingPerformanceData(true);
+        const response = await getPerformanceGraphData(ocId);
+        if (!cancelled) {
+          setPerformanceData(response.data ?? EMPTY_PERFORMANCE_GRAPH_DATA);
+        }
+      } catch (error: any) {
+        if (!cancelled) {
+          toast.error(error?.message ?? "Failed to load performance graph data");
+          setPerformanceData(EMPTY_PERFORMANCE_GRAPH_DATA);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingPerformanceData(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ocId]);
 
   return (
     <DashboardLayout title="Performance Graph" description="Performance Graph">
@@ -36,13 +71,7 @@ export default function PerformanceGraphPage() {
 
         {cadet && (
           <div className="hidden md:flex sticky top-16 z-40 mb-6">
-            <SelectedCadetTable
-              selectedCadet={cadet}
-              academicsData={performanceData?.academics ?? []}
-              olqData={performanceData?.olq ?? []}
-              odtData={performanceData?.odt ?? []}
-              disciplineData={performanceData?.discipline ?? []}
-            />
+            <SelectedCadetTable selectedCadet={cadet} performanceData={performanceData} />
           </div>
         )}
 
@@ -85,13 +114,13 @@ export default function PerformanceGraphPage() {
                 </CardTitle>
               </CardHeader>
 
-              {/* Reuse same PerformanceGraphs component (page) */}
-              <PerformanceGraphs
-                academicsData={performanceData?.academics ?? []}
-                olqData={performanceData?.olq ?? []}
-                odtData={performanceData?.odt ?? []}
-                disciplineData={performanceData?.discipline ?? []}
-              />
+              {isLoadingPerformanceData ? (
+                <div className="px-4 pb-6 text-sm text-muted-foreground">
+                  Loading performance graph data...
+                </div>
+              ) : (
+                <PerformanceGraphs data={performanceData} />
+              )}
             </Card>
           </TabsContent>
         </DossierTab>

@@ -326,6 +326,9 @@ export function UniversalTable<T extends Record<string, any>>({
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10"
+                                data-search-target="true"
+                                data-search-scope="page"
+                                data-search-priority="30"
                             />
                         </div>
                     )}

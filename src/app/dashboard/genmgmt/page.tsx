@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import {
@@ -20,11 +19,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Monitor, Search, Settings } from "lucide-react";
 import { useMe } from "@/hooks/useMe";
 import { resolvePageAction } from "@/app/lib/acx/action-map";
 import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
-import { deriveSidebarRoleGroup } from "@/lib/sidebar-visibility";
 import { resolveToneClasses, type ColorTone } from "@/lib/theme-color";
 
 export default function GeneralManagementPage() {
@@ -72,13 +70,6 @@ export default function GeneralManagementPage() {
     if (permissions.has("*")) return true;
     return permissions.has(page.action);
   }, [authzV2Enabled, meData?.permissions, meData?.roles, meLoading]);
-
-  const roleGroup = useMemo(() => {
-    return deriveSidebarRoleGroup({
-      roles: meData?.roles ?? [],
-      position: meData?.apt?.position ?? null,
-    });
-  }, [meData?.apt?.position, meData?.roles]);
 
   const filterCards = <T extends { title?: string; description?: string }>(
     cards: T[],
@@ -262,60 +253,21 @@ export default function GeneralManagementPage() {
 
               {/* Settings Tab */}
               <TabsContent value="settings" className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Admin Site Settings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        Manage landing page content including logo, hero text, commanders, awards, and history.
-                      </p>
-                    </CardContent>
-                    <CardFooter>
-                      <Button asChild className="w-full">
-                        <Link href="/dashboard/genmgmt/settings/site">Open Site Settings</Link>
-                      </Button>
-                    </CardFooter>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Device Site Settings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        Configure theme, language, timezone, refresh interval, and layout density per device.
-                      </p>
-                    </CardContent>
-                    <CardFooter>
-                      <Button asChild className="w-full">
-                        <Link href="/dashboard/settings/device">Open Device Settings</Link>
-                      </Button>
-                    </CardFooter>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Permission Management</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        Manage roles, permissions, mappings, and field-level rules for user access control.
-                      </p>
-                    </CardContent>
-                    <CardFooter>
-                      {roleGroup === "ADMIN" || roleGroup === "SUPER_ADMIN" ? (
-                        <Button asChild className="w-full">
-                          <Link href="/dashboard/genmgmt/rbac">Open RBAC Management</Link>
-                        </Button>
-                      ) : (
-                        <Button disabled className="w-full">
-                          Restricted
-                        </Button>
-                      )}
-                    </CardFooter>
-                  </Card>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-11 gap-y-6 mx-auto">
+                  <DashboardCard
+                    title="Admin Site Settings"
+                    description="Manage landing page content including logo, hero text, commanders, awards, and history."
+                    to="/dashboard/genmgmt/settings/site"
+                    icon={Settings}
+                    color="info"
+                  />
+                  <DashboardCard
+                    title="Device Site Settings"
+                    description="Configure theme, language, timezone, refresh interval, and layout density per device."
+                    to="/dashboard/settings/device"
+                    icon={Monitor}
+                    color="muted"
+                  />
                 </div>
               </TabsContent>
             </GlobalTabs>

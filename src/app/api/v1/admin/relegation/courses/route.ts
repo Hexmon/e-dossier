@@ -1,8 +1,7 @@
-import { requireAdmin } from "@/app/lib/authz";
 import { handleApiError, json } from "@/app/lib/http";
 import { listImmediateNextCourses } from "@/app/db/queries/relegation";
 import { relegationCoursesQuerySchema } from "@/app/lib/validators.relegation";
-import { withAuthz } from "@/app/lib/acx/withAuthz";
+import { getRelegationAccessContext } from "@/app/lib/relegation-auth";
 import {
   AuditEventType,
   AuditResourceType,
@@ -14,7 +13,7 @@ export const runtime = "nodejs";
 
 async function GETHandler(req: AuditNextRequest) {
   try {
-    const auth = await requireAdmin(req);
+    const access = await getRelegationAccessContext(req);
 
     const searchParams = new URL(req.url).searchParams;
     const parsed = relegationCoursesQuerySchema.safeParse({
@@ -30,7 +29,7 @@ async function GETHandler(req: AuditNextRequest) {
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
       outcome: "SUCCESS",
-      actor: { type: "user", id: auth.userId },
+      actor: { type: "user", id: access.userId },
       target: { type: AuditResourceType.API, id: "admin:relegation:courses:read" },
       metadata: {
         description: "Immediate next courses for relegation retrieved.",
@@ -48,4 +47,4 @@ async function GETHandler(req: AuditNextRequest) {
   }
 }
 
-export const GET = withAuditRoute("GET", withAuthz(GETHandler));
+export const GET = withAuditRoute("GET", GETHandler);

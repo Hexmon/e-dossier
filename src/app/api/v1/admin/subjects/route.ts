@@ -1,6 +1,6 @@
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
-import { listQuerySchema, subjectCreateSchema } from '@/app/lib/validators.courses';
+import { subjectListQuerySchema, subjectCreateSchema } from '@/app/lib/validators.courses';
 import { listSubjects } from '@/app/db/queries/subjects';
 import { db } from '@/app/db/client';
 import { subjects } from '@/app/db/schema/training/subjects';
@@ -14,17 +14,21 @@ async function GETHandler(req: AuditNextRequest) {
     try {
         const authCtx = await requireAuth(req);
         const sp = new URL(req.url).searchParams;
-        const qp = listQuerySchema.parse({
+        const qp = subjectListQuerySchema.parse({
             q: sp.get('q') ?? undefined,
             branch: sp.get('branch') ?? undefined,
             includeDeleted: sp.get('includeDeleted') ?? undefined,
             limit: sp.get('limit') ?? undefined,
             offset: sp.get('offset') ?? undefined,
+            semester: sp.get('semester') ?? undefined,
+            courseId: sp.get('courseId') ?? undefined,
         });
         const rows = await listSubjects({
             q: qp.q, branch: qp.branch as any,
             includeDeleted: qp.includeDeleted === 'true',
             limit: qp.limit, offset: qp.offset,
+            semester: qp.semester,
+            courseId: qp.courseId,
         });
 
         await req.audit.log({
@@ -41,6 +45,8 @@ async function GETHandler(req: AuditNextRequest) {
                     includeDeleted: qp.includeDeleted === 'true',
                     limit: qp.limit ?? null,
                     offset: qp.offset ?? null,
+                    semester: qp.semester ?? null,
+                    courseId: qp.courseId ?? null,
                 },
             },
         });
@@ -59,6 +65,7 @@ async function POSTHandler(req: AuditNextRequest) {
                 code: body.code,
                 name: body.name,
                 branch: body.branch,
+                noOfPeriods: body.noOfPeriods,
                 hasTheory: body.hasTheory ?? false,
                 hasPractical: body.hasPractical ?? false,
                 defaultTheoryCredits: body.defaultTheoryCredits ?? null,
@@ -78,6 +85,7 @@ async function POSTHandler(req: AuditNextRequest) {
                 code: row.code,
                 name: row.name,
                 branch: row.branch,
+                noOfPeriods: row.noOfPeriods,
                 hasTheory: row.hasTheory,
                 hasPractical: row.hasPractical,
                 defaultTheoryCredits: row.defaultTheoryCredits,

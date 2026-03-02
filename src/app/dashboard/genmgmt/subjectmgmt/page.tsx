@@ -14,11 +14,12 @@ import SubjectCard from "@/components/subjects/SubjectCard";
 import SubjectDialog from "@/components/subjects/SubjectDialog";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useCourses } from "@/hooks/useCourses";
-import { useOfferings } from "@/hooks/useOfferings";
 import { Subject, SubjectCreate } from "@/app/lib/api/subjectsApi";
 import { Input } from "@/components/ui/input";
 import { academicsTabs } from "@/config/app.config";
 import { toast } from "sonner";
+import { useDebouncedValue } from "@/app/lib/debounce";
+import { SEMESTER_SELECT_OPTIONS } from "@/constants/semester";
 import {
     Select,
     SelectContent,
@@ -34,6 +35,17 @@ export default function SubjectManagementPage() {
     const [editingSubject, setEditingSubject] = useState<Subject | undefined>(undefined);
     const [selectedCourseId, setSelectedCourseId] = useState<string>("all");
     const [selectedBranch, setSelectedBranch] = useState<string>("all");
+    const [selectedSemester, setSelectedSemester] = useState<string>("all");
+    const debouncedSearch = useDebouncedValue(searchQuery, 350);
+
+    const subjectQueryParams = useMemo(
+        () => ({
+            q: debouncedSearch || undefined,
+            courseId: selectedCourseId === "all" ? undefined : selectedCourseId,
+            semester: selectedSemester === "all" ? undefined : Number(selectedSemester),
+        }),
+        [debouncedSearch, selectedCourseId, selectedSemester]
+    );
 
     const {
         loading: subjectsLoading,
@@ -41,13 +53,9 @@ export default function SubjectManagementPage() {
         addSubject,
         editSubject,
         removeSubject,
-    } = useSubjects({ q: searchQuery || undefined });
+    } = useSubjects(subjectQueryParams);
 
     const { courses, loading: coursesLoading } = useCourses();
-    const {
-        offerings,
-        loading: offeringsLoading,
-    } = useOfferings(selectedCourseId === "all" ? "" : selectedCourseId);
 
     const branchOptions = useMemo(() => {
         const set = new Set<string>();
@@ -57,36 +65,26 @@ export default function SubjectManagementPage() {
         return Array.from(set).sort();
     }, [subjects]);
 
-    const courseSubjectIds = useMemo(() => {
-        if (selectedCourseId === "all") return null;
-        const set = new Set<string>();
-        offerings.forEach((offering) => {
-            if (offering.subjectId) set.add(offering.subjectId);
-        });
-        return set;
-    }, [offerings, selectedCourseId]);
-
     const filteredSubjects = useMemo(() => {
         let data = subjects;
         if (selectedBranch !== "all") {
             data = data.filter((subject) => subject.branch === selectedBranch);
         }
-        if (selectedCourseId !== "all") {
-            if (!courseSubjectIds) return [];
-            data = data.filter((subject) => subject.id && courseSubjectIds.has(subject.id));
-        }
         return data;
-    }, [subjects, selectedBranch, selectedCourseId, courseSubjectIds]);
+    }, [subjects, selectedBranch]);
 
-    const loading = subjectsLoading || (selectedCourseId !== "all" && offeringsLoading) || coursesLoading;
+    const loading = subjectsLoading || coursesLoading;
 
     const handleLogout = () => {
         console.log("Logout clicked");
         router.push("/login");
     };
 
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
+    const handleResetFilters = () => {
+        setSearchQuery("");
+        setSelectedSemester("all");
+        setSelectedCourseId("all");
+        setSelectedBranch("all");
     };
 
     const handleAddSubject = async (newSubject: SubjectCreate) => {
@@ -173,9 +171,25 @@ export default function SubjectManagementPage() {
                                         <Input
                                             placeholder="Search subjects..."
                                             value={searchQuery}
-                                            onChange={(e) => handleSearch(e.target.value)}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
                                             className="w-64"
                                         />
+                                        <Select
+                                            value={selectedSemester}
+                                            onValueChange={setSelectedSemester}
+                                        >
+                                            <SelectTrigger className="w-40">
+                                                <SelectValue placeholder="All Semesters" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Semesters</SelectItem>
+                                                {SEMESTER_SELECT_OPTIONS.map((semester) => (
+                                                    <SelectItem key={semester.value} value={semester.value}>
+                                                        {semester.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <Select
                                             value={selectedCourseId}
                                             onValueChange={setSelectedCourseId}
@@ -209,6 +223,18 @@ export default function SubjectManagementPage() {
                                             </SelectContent>
                                         </Select>
                                         <Button
+                                            variant="ghost"
+                                            onClick={handleResetFilters}
+                                            disabled={
+                                                searchQuery.length === 0 &&
+                                                selectedSemester === "all" &&
+                                                selectedCourseId === "all" &&
+                                                selectedBranch === "all"
+                                            }
+                                        >
+                                            Reset Filters
+                                        </Button>
+                                        <Button
                                             variant="outline"
                                             onClick={() => {
                                                 setEditingSubject(undefined);
@@ -224,6 +250,10 @@ export default function SubjectManagementPage() {
 
                                 {loading ? (
                                     <div className="text-center py-12">Loading...</div>
+                                ) : filteredSubjects.length === 0 ? (
+                                    <div className="text-center py-12 text-muted-foreground">
+                                        No subjects found matching current filters.
+                                    </div>
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {renderSubjectCards()}

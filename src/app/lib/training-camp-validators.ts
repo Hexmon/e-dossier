@@ -1,12 +1,20 @@
 import { z } from 'zod';
-import { campSemesterKind } from '@/app/db/schema/training/oc';
 
 const BoolString = z.enum(['true', 'false']).transform((v) => v === 'true');
+const CampSemester = z.coerce.number().int().min(1).max(6);
 
 export const trainingCampCreateSchema = z.object({
     name: z.string().trim().min(1).max(120),
-    semester: z.enum(campSemesterKind.enumValues),
+    semester: CampSemester,
+    sortOrder: z.coerce.number().int().min(1).max(10).optional(),
     maxTotalMarks: z.coerce.number().int().min(0),
+    performanceTitle: z.string().trim().max(200).optional().nullable(),
+    performanceGuidance: z.string().trim().max(2000).optional().nullable(),
+    signaturePrimaryLabel: z.string().trim().max(120).optional().nullable(),
+    signatureSecondaryLabel: z.string().trim().max(120).optional().nullable(),
+    noteLine1: z.string().trim().max(500).optional().nullable(),
+    noteLine2: z.string().trim().max(500).optional().nullable(),
+    showAggregateSummary: z.boolean().optional(),
 });
 
 export const trainingCampUpdateSchema = trainingCampCreateSchema.partial().refine(
@@ -15,9 +23,13 @@ export const trainingCampUpdateSchema = trainingCampCreateSchema.partial().refin
 );
 
 export const trainingCampQuerySchema = z.object({
-    semester: z.enum(campSemesterKind.enumValues).optional(),
+    semester: CampSemester.optional(),
     includeActivities: BoolString.optional(),
     includeDeleted: BoolString.optional(),
+});
+
+export const trainingCampSettingsSchema = z.object({
+    maxCampsPerSemester: z.coerce.number().int().min(1).max(6),
 });
 
 export const trainingCampParam = z.object({ campId: z.string().uuid() });

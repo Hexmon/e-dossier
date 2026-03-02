@@ -1,5 +1,6 @@
 import { api, ApiClientError } from "@/app/lib/apiClient";
 import { baseURL, endpoints } from "@/constants/endpoints";
+import { requestServerLogout } from "@/lib/auth/logout-request";
 
 export interface UsernameCheckResponse {
   status: number;
@@ -96,20 +97,7 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
 
 export async function logout() {
   localStorage.removeItem("authToken");
-
-  // The httpOnly access_token cookie can only be cleared by the server.
-  // Retry a few times so the cookie doesn't linger if the first call fails.
-  const MAX_RETRIES = 3;
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      await api.post(endpoints.auth.logout, undefined, { skipCsrf: true });
-      return true;
-    } catch (err) {
-      console.error(`Logout attempt ${attempt}/${MAX_RETRIES} failed:`, err);
-      if (attempt < MAX_RETRIES) {
-        await new Promise((r) => setTimeout(r, 1000 * attempt));
-      }
-    }
-  }
-  return false;
+  return requestServerLogout();
 }
+
+export { requestServerLogout };

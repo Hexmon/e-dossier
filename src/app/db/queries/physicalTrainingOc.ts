@@ -9,6 +9,8 @@ import {
     ptMotivationAwardFields,
 } from '@/app/db/schema/training/physicalTraining';
 import { ocPtTaskScores, ocPtMotivationAwards } from '@/app/db/schema/training/physicalTrainingOc';
+import { ocCourseEnrollments } from '@/app/db/schema/training/oc';
+import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
 
 // Template score details for validation -------------------------------------
 export async function listTemplateScoresByIds(ids: string[]) {
@@ -53,6 +55,7 @@ export async function listMotivationFieldsByIds(ids: string[]) {
 
 // OC PT scores ---------------------------------------------------------------
 export async function listOcPtScores(ocId: string, semester: number) {
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     return db
         .select({
             id: ocPtTaskScores.id,
@@ -80,7 +83,54 @@ export async function listOcPtScores(ocId: string, semester: number) {
         .innerJoin(ptTypes, eq(ptTypes.id, ptTasks.ptTypeId))
         .innerJoin(ptTypeAttempts, eq(ptTypeAttempts.id, ptTaskScores.ptAttemptId))
         .innerJoin(ptAttemptGrades, eq(ptAttemptGrades.id, ptTaskScores.ptAttemptGradeId))
-        .where(and(eq(ocPtTaskScores.ocId, ocId), eq(ocPtTaskScores.semester, semester)))
+        .where(
+            and(
+                eq(ocPtTaskScores.ocId, ocId),
+                eq(ocPtTaskScores.enrollmentId, activeEnrollment.id),
+                eq(ocPtTaskScores.semester, semester),
+            ),
+        )
+        .orderBy(ptTypes.sortOrder, ptTasks.sortOrder, ptTypeAttempts.sortOrder, ptAttemptGrades.sortOrder);
+}
+
+export async function listOcPtScoresByOcIds(ocIds: string[], semester: number) {
+    if (!ocIds.length) return [];
+    return db
+        .select({
+            id: ocPtTaskScores.id,
+            ocId: ocPtTaskScores.ocId,
+            semester: ocPtTaskScores.semester,
+            ptTaskScoreId: ocPtTaskScores.ptTaskScoreId,
+            marksScored: ocPtTaskScores.marksScored,
+            remark: ocPtTaskScores.remark,
+            createdAt: ocPtTaskScores.createdAt,
+            updatedAt: ocPtTaskScores.updatedAt,
+            templateMaxMarks: ptTaskScores.maxMarks,
+            ptTaskId: ptTasks.id,
+            ptTypeId: ptTypes.id,
+            ptAttemptId: ptTypeAttempts.id,
+            ptAttemptGradeId: ptAttemptGrades.id,
+            ptTypeCode: ptTypes.code,
+            ptTypeTitle: ptTypes.title,
+            taskTitle: ptTasks.title,
+            attemptCode: ptTypeAttempts.code,
+            gradeCode: ptAttemptGrades.code,
+        })
+        .from(ocPtTaskScores)
+        .innerJoin(
+            ocCourseEnrollments,
+            and(
+                eq(ocCourseEnrollments.id, ocPtTaskScores.enrollmentId),
+                eq(ocCourseEnrollments.ocId, ocPtTaskScores.ocId),
+                eq(ocCourseEnrollments.status, 'ACTIVE'),
+            ),
+        )
+        .innerJoin(ptTaskScores, eq(ptTaskScores.id, ocPtTaskScores.ptTaskScoreId))
+        .innerJoin(ptTasks, eq(ptTasks.id, ptTaskScores.ptTaskId))
+        .innerJoin(ptTypes, eq(ptTypes.id, ptTasks.ptTypeId))
+        .innerJoin(ptTypeAttempts, eq(ptTypeAttempts.id, ptTaskScores.ptAttemptId))
+        .innerJoin(ptAttemptGrades, eq(ptAttemptGrades.id, ptTaskScores.ptAttemptGradeId))
+        .where(and(inArray(ocPtTaskScores.ocId, ocIds), eq(ocPtTaskScores.semester, semester)))
         .orderBy(ptTypes.sortOrder, ptTasks.sortOrder, ptTypeAttempts.sortOrder, ptAttemptGrades.sortOrder);
 }
 
@@ -92,12 +142,14 @@ export async function upsertOcPtScores(
     if (!scores.length) return [];
     const now = new Date();
     return db.transaction(async (tx) => {
+        const activeEnrollment = await getOrCreateActiveEnrollment(ocId, tx);
         const rows: Array<typeof ocPtTaskScores.$inferSelect> = [];
         for (const item of scores) {
             const [row] = await tx
                 .insert(ocPtTaskScores)
                 .values({
                     ocId,
+                    enrollmentId: activeEnrollment.id,
                     semester,
                     ptTaskScoreId: item.ptTaskScoreId,
                     marksScored: item.marksScored,
@@ -106,7 +158,7 @@ export async function upsertOcPtScores(
                     updatedAt: now,
                 })
                 .onConflictDoUpdate({
-                    target: [ocPtTaskScores.ocId, ocPtTaskScores.ptTaskScoreId],
+                    target: [ocPtTaskScores.enrollmentId, ocPtTaskScores.ptTaskScoreId],
                     set: {
                         semester,
                         marksScored: item.marksScored,
@@ -123,21 +175,51 @@ export async function upsertOcPtScores(
 
 export async function deleteOcPtScoresByIds(ocId: string, ids: string[]) {
     if (!ids.length) return [];
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     return db
         .delete(ocPtTaskScores)
-        .where(and(eq(ocPtTaskScores.ocId, ocId), inArray(ocPtTaskScores.id, ids)))
+        .where(
+            and(
+                eq(ocPtTaskScores.ocId, ocId),
+                eq(ocPtTaskScores.enrollmentId, activeEnrollment.id),
+                inArray(ocPtTaskScores.id, ids),
+            ),
+        )
+        .returning();
+}
+
+export async function deleteOcPtScoresByTaskScoreIds(ocId: string, ptTaskScoreIds: string[]) {
+    if (!ptTaskScoreIds.length) return [];
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
+    return db
+        .delete(ocPtTaskScores)
+        .where(
+            and(
+                eq(ocPtTaskScores.ocId, ocId),
+                eq(ocPtTaskScores.enrollmentId, activeEnrollment.id),
+                inArray(ocPtTaskScores.ptTaskScoreId, ptTaskScoreIds),
+            ),
+        )
         .returning();
 }
 
 export async function deleteOcPtScoresBySemester(ocId: string, semester: number) {
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     return db
         .delete(ocPtTaskScores)
-        .where(and(eq(ocPtTaskScores.ocId, ocId), eq(ocPtTaskScores.semester, semester)))
+        .where(
+            and(
+                eq(ocPtTaskScores.ocId, ocId),
+                eq(ocPtTaskScores.enrollmentId, activeEnrollment.id),
+                eq(ocPtTaskScores.semester, semester),
+            ),
+        )
         .returning();
 }
 
 // OC Motivation values -------------------------------------------------------
 export async function listOcPtMotivationValues(ocId: string, semester: number) {
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     return db
         .select({
             id: ocPtMotivationAwards.id,
@@ -152,7 +234,41 @@ export async function listOcPtMotivationValues(ocId: string, semester: number) {
         })
         .from(ocPtMotivationAwards)
         .innerJoin(ptMotivationAwardFields, eq(ptMotivationAwardFields.id, ocPtMotivationAwards.ptMotivationFieldId))
-        .where(and(eq(ocPtMotivationAwards.ocId, ocId), eq(ocPtMotivationAwards.semester, semester)))
+        .where(
+            and(
+                eq(ocPtMotivationAwards.ocId, ocId),
+                eq(ocPtMotivationAwards.enrollmentId, activeEnrollment.id),
+                eq(ocPtMotivationAwards.semester, semester),
+            ),
+        )
+        .orderBy(ptMotivationAwardFields.sortOrder, ptMotivationAwardFields.label);
+}
+
+export async function listOcPtMotivationValuesByOcIds(ocIds: string[], semester: number) {
+    if (!ocIds.length) return [];
+    return db
+        .select({
+            id: ocPtMotivationAwards.id,
+            ocId: ocPtMotivationAwards.ocId,
+            semester: ocPtMotivationAwards.semester,
+            fieldId: ocPtMotivationAwards.ptMotivationFieldId,
+            value: ocPtMotivationAwards.value,
+            createdAt: ocPtMotivationAwards.createdAt,
+            updatedAt: ocPtMotivationAwards.updatedAt,
+            fieldLabel: ptMotivationAwardFields.label,
+            fieldSortOrder: ptMotivationAwardFields.sortOrder,
+        })
+        .from(ocPtMotivationAwards)
+        .innerJoin(
+            ocCourseEnrollments,
+            and(
+                eq(ocCourseEnrollments.id, ocPtMotivationAwards.enrollmentId),
+                eq(ocCourseEnrollments.ocId, ocPtMotivationAwards.ocId),
+                eq(ocCourseEnrollments.status, 'ACTIVE'),
+            ),
+        )
+        .innerJoin(ptMotivationAwardFields, eq(ptMotivationAwardFields.id, ocPtMotivationAwards.ptMotivationFieldId))
+        .where(and(inArray(ocPtMotivationAwards.ocId, ocIds), eq(ocPtMotivationAwards.semester, semester)))
         .orderBy(ptMotivationAwardFields.sortOrder, ptMotivationAwardFields.label);
 }
 
@@ -164,12 +280,14 @@ export async function upsertOcPtMotivationValues(
     if (!values.length) return [];
     const now = new Date();
     return db.transaction(async (tx) => {
+        const activeEnrollment = await getOrCreateActiveEnrollment(ocId, tx);
         const rows: Array<typeof ocPtMotivationAwards.$inferSelect> = [];
         for (const item of values) {
             const [row] = await tx
                 .insert(ocPtMotivationAwards)
                 .values({
                     ocId,
+                    enrollmentId: activeEnrollment.id,
                     semester,
                     ptMotivationFieldId: item.fieldId,
                     value: item.value ?? null,
@@ -177,7 +295,7 @@ export async function upsertOcPtMotivationValues(
                     updatedAt: now,
                 })
                 .onConflictDoUpdate({
-                    target: [ocPtMotivationAwards.ocId, ocPtMotivationAwards.ptMotivationFieldId],
+                    target: [ocPtMotivationAwards.enrollmentId, ocPtMotivationAwards.ptMotivationFieldId],
                     set: {
                         semester,
                         value: item.value ?? null,
@@ -193,15 +311,44 @@ export async function upsertOcPtMotivationValues(
 
 export async function deleteOcPtMotivationValuesByIds(ocId: string, ids: string[]) {
     if (!ids.length) return [];
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     return db
         .delete(ocPtMotivationAwards)
-        .where(and(eq(ocPtMotivationAwards.ocId, ocId), inArray(ocPtMotivationAwards.id, ids)))
+        .where(
+            and(
+                eq(ocPtMotivationAwards.ocId, ocId),
+                eq(ocPtMotivationAwards.enrollmentId, activeEnrollment.id),
+                inArray(ocPtMotivationAwards.id, ids),
+            ),
+        )
+        .returning();
+}
+
+export async function deleteOcPtMotivationValuesByFieldIds(ocId: string, fieldIds: string[]) {
+    if (!fieldIds.length) return [];
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
+    return db
+        .delete(ocPtMotivationAwards)
+        .where(
+            and(
+                eq(ocPtMotivationAwards.ocId, ocId),
+                eq(ocPtMotivationAwards.enrollmentId, activeEnrollment.id),
+                inArray(ocPtMotivationAwards.ptMotivationFieldId, fieldIds),
+            ),
+        )
         .returning();
 }
 
 export async function deleteOcPtMotivationValuesBySemester(ocId: string, semester: number) {
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     return db
         .delete(ocPtMotivationAwards)
-        .where(and(eq(ocPtMotivationAwards.ocId, ocId), eq(ocPtMotivationAwards.semester, semester)))
+        .where(
+            and(
+                eq(ocPtMotivationAwards.ocId, ocId),
+                eq(ocPtMotivationAwards.enrollmentId, activeEnrollment.id),
+                eq(ocPtMotivationAwards.semester, semester),
+            ),
+        )
         .returning();
 }

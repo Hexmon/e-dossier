@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
@@ -13,11 +11,13 @@ import {
     getTrainingCamp,
     updateTrainingCamp,
     deleteTrainingCamp,
+    countActiveTrainingCampsBySemester,
+    getTrainingCampSettings,
 } from '@/app/db/queries/trainingCamps';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ campId: string }> }) {
     try {
         await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
@@ -35,11 +35,25 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
     }
 }
 
-async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ campId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
         const dto = trainingCampUpdateSchema.parse(await req.json());
+        const existing = await getTrainingCamp(campId, false, true);
+        if (!existing) throw new ApiError(404, 'Training camp not found', 'not_found');
+
+        const targetSemester = dto.semester ?? existing.semester;
+        const settings = await getTrainingCampSettings();
+        const activeCount = await countActiveTrainingCampsBySemester(targetSemester, { excludeCampId: campId });
+        if (activeCount >= settings.maxCampsPerSemester) {
+            throw new ApiError(
+                400,
+                `Maximum ${settings.maxCampsPerSemester} camps allowed for semester ${targetSemester}.`,
+                'MAX_CAMPS_PER_SEMESTER_EXCEEDED',
+            );
+        }
+
         const row = await updateTrainingCamp(campId, { ...dto });
         if (!row) throw new ApiError(404, 'Training camp not found', 'not_found');
 
@@ -60,7 +74,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     }
 }
 
-async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ campId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);

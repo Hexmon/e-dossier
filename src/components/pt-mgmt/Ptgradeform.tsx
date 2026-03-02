@@ -9,6 +9,7 @@ import { PTGrade, PTGradeCreate } from "@/app/lib/api/Physicaltrainingapi";
 
 interface PTGradeFormProps {
     grade?: PTGrade;
+    suggestedSortOrder?: number;
     onSubmit: (grade: PTGradeCreate) => void;
     onCancel: () => void;
     isLoading?: boolean;
@@ -16,6 +17,7 @@ interface PTGradeFormProps {
 
 export default function PTGradeForm({
     grade,
+    suggestedSortOrder = 1,
     onSubmit,
     onCancel,
     isLoading = false,
@@ -23,7 +25,7 @@ export default function PTGradeForm({
     const [formData, setFormData] = useState<PTGradeCreate>({
         code: "",
         label: "",
-        sortOrder: 1,
+        sortOrder: suggestedSortOrder,
         isActive: true,
     });
 
@@ -39,11 +41,11 @@ export default function PTGradeForm({
             setFormData({
                 code: "",
                 label: "",
-                sortOrder: 1,
+                sortOrder: suggestedSortOrder,
                 isActive: true,
             });
         }
-    }, [grade]);
+    }, [grade, suggestedSortOrder]);
 
     const handleChange = (field: keyof PTGradeCreate, value: string | number | boolean) => {
         setFormData((prev) => ({
@@ -55,8 +57,8 @@ export default function PTGradeForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const { code, label } = formData;
-        if (!code || !label) {
+        const { code, label, sortOrder } = formData;
+        if (!code || !label || (sortOrder ?? 0) < 1) {
             return;
         }
 
@@ -96,7 +98,7 @@ export default function PTGradeForm({
                     type="number"
                     min="1"
                     value={formData.sortOrder}
-                    onChange={(e) => handleChange("sortOrder", Number(e.target.value))}
+                    onChange={(e) => handleChange("sortOrder", Math.max(1, Number(e.target.value) || 1))}
                     placeholder="1"
                 />
             </div>

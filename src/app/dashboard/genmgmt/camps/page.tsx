@@ -11,6 +11,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { moduleManagementTabs, ocTabs } from "@/config/app.config";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import CampDialog from "@/components/camps/CampDialog";
 import CampsTable from "@/components/camps/CampsTable";
 import DeleteCampDialog from "@/components/camps/DeleteCampDialog";
@@ -21,9 +22,11 @@ import { ActivityFormData } from "@/components/camps/ActivityForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     fetchTrainingCamps,
+    fetchTrainingCampSettings,
     createTrainingCamp,
     updateTrainingCamp,
     deleteTrainingCamp,
+    updateTrainingCampSettings,
     TrainingCamp,
 } from "@/app/lib/api/trainingCampsApi";
 import {
@@ -33,6 +36,7 @@ import {
     TrainingCampActivity,
 } from "@/app/lib/api/trainingCampActivitiesApi";
 import { toast } from "sonner";
+import { applyOrgTemplate } from "@/app/lib/api/orgTemplateApi";
 
 export default function CampsManagement() {
     const router = useRouter();
@@ -48,6 +52,7 @@ export default function CampsManagement() {
     const [editingActivity, setEditingActivity] = useState<TrainingCampActivity | null>(null);
     const [deletingActivity, setDeletingActivity] = useState<TrainingCampActivity | null>(null);
     const [isDeleteActivityDialogOpen, setIsDeleteActivityDialogOpen] = useState(false);
+    const [maxCampsPerSemester, setMaxCampsPerSemester] = useState<number>(2);
 
     const { data: camps = [], isLoading: isFetchingCamps } = useQuery({
         queryKey: ["trainingCamps"],
@@ -58,6 +63,18 @@ export default function CampsManagement() {
         staleTime: 5 * 60 * 1000,
     });
 
+    const { data: campSettings, isLoading: isFetchingSettings } = useQuery({
+        queryKey: ["trainingCampSettings"],
+        queryFn: fetchTrainingCampSettings,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    React.useEffect(() => {
+        if (campSettings?.maxCampsPerSemester) {
+            setMaxCampsPerSemester(campSettings.maxCampsPerSemester);
+        }
+    }, [campSettings]);
+
     const createCampMutation = useMutation({
         mutationFn: createTrainingCamp,
         onSuccess: () => {
@@ -67,6 +84,32 @@ export default function CampsManagement() {
         },
         onError: (error: any) => {
             toast.error(error.message || "Failed to create camp");
+        },
+    });
+
+    const updateSettingsMutation = useMutation({
+        mutationFn: updateTrainingCampSettings,
+        onSuccess: (settings) => {
+            queryClient.invalidateQueries({ queryKey: ["trainingCampSettings"] });
+            toast.success(`Max camps per semester updated to ${settings.maxCampsPerSemester}.`);
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to update camp settings");
+        },
+    });
+
+    const applyDefaultTemplateMutation = useMutation({
+        mutationFn: (dryRun: boolean) =>
+            applyOrgTemplate({ module: "camp", profile: "default", dryRun }),
+        onSuccess: (result, dryRun) => {
+            queryClient.invalidateQueries({ queryKey: ["trainingCamps"] });
+            const prefix = dryRun ? "Dry run complete." : "Default camp template applied.";
+            toast.success(
+                `${prefix} Created: ${result.createdCount}, Updated: ${result.updatedCount}, Skipped: ${result.skippedCount}`
+            );
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to apply default camp template");
         },
     });
 
@@ -238,7 +281,9 @@ export default function CampsManagement() {
         deleteCampMutation.isPending ||
         createActivityMutation.isPending ||
         updateActivityMutation.isPending ||
-        deleteActivityMutation.isPending;
+        deleteActivityMutation.isPending ||
+        updateSettingsMutation.isPending ||
+        applyDefaultTemplateMutation.isPending;
 
     return (
         <SidebarProvider>
@@ -265,13 +310,56 @@ export default function CampsManagement() {
                             <TabsContent value="camps" className="space-y-6">
                                 <div className="flex justify-between items-center">
                                     <h2 className="text-2xl font-bold">Manage Camps</h2>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => applyDefaultTemplateMutation.mutate(true)}
+                                            disabled={isLoading}
+                                        >
+                                            Preview Changes (Dry Run)
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => applyDefaultTemplateMutation.mutate(false)}
+                                            disabled={isLoading}
+                                        >
+                                            Apply Default Camp Template
+                                        </Button>
+                                        <Button
+                                            onClick={() => setIsDialogOpen(true)}
+                                            className="bg-primary hover:bg-primary"
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Create Camp
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
+                                    <p className="text-sm font-medium">Max Camps / Semester</p>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        max={6}
+                                        className="w-24"
+                                        value={maxCampsPerSemester}
+                                        onChange={(e) => setMaxCampsPerSemester(Math.max(1, Math.min(6, Number(e.target.value) || 1)))}
+                                        disabled={isLoading || isFetchingSettings}
+                                    />
                                     <Button
-                                        onClick={() => setIsDialogOpen(true)}
-                                        className="bg-primary hover:bg-primary"
+                                        size="sm"
+                                        onClick={() =>
+                                            updateSettingsMutation.mutate({
+                                                maxCampsPerSemester,
+                                            })
+                                        }
+                                        disabled={isLoading || isFetchingSettings}
                                     >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Create Camp
+                                        Save
                                     </Button>
+                                    <p className="text-xs text-muted-foreground">
+                                        Global limit applied to all semesters.
+                                    </p>
                                 </div>
 
                                 <div className="space-y-4">
@@ -301,7 +389,15 @@ export default function CampsManagement() {
                         ? {
                             name: editingCamp.name,
                             semester: editingCamp.semester,
+                            sortOrder: editingCamp.sortOrder,
                             maxTotalMarks: editingCamp.maxTotalMarks,
+                            performanceTitle: editingCamp.performanceTitle ?? null,
+                            performanceGuidance: editingCamp.performanceGuidance ?? null,
+                            signaturePrimaryLabel: editingCamp.signaturePrimaryLabel ?? null,
+                            signatureSecondaryLabel: editingCamp.signatureSecondaryLabel ?? null,
+                            noteLine1: editingCamp.noteLine1 ?? null,
+                            noteLine2: editingCamp.noteLine2 ?? null,
+                            showAggregateSummary: editingCamp.showAggregateSummary ?? false,
                         }
                         : undefined
                 }

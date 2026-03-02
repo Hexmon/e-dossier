@@ -30,6 +30,7 @@ describe('GET /api/v1/me/navigation', () => {
         expect(data.sections.find((s: any) => s.key === 'admin')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'dossier')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'help')).toBeDefined();
     });
 
     it('should return correct view for OTHER roles', async () => {
@@ -50,16 +51,19 @@ describe('GET /api/v1/me/navigation', () => {
         const dossierSection = data.sections.find((s: any) => s.key === 'dossier');
         expect(dossierSection).toBeDefined();
 
-        // Academics Visible
-        expect(data.sections.find((s: any) => s.key === 'academics')).toBeDefined();
+        // Bulk upload visible
+        expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'academics')).toBeUndefined();
+        expect(data.sections.find((s: any) => s.key === 'pt')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'help')).toBeDefined();
 
         const settingsSection = data.sections.find((s: any) => s.key === 'settings');
         expect(settingsSection.items.some((i: any) => i.label === 'Device Site Settings')).toBe(true);
     });
 
-    it('should return correct view for ADMIN (No Dossier/Academics/Reports)', async () => {
+    it('should return correct view for ADMIN (No Dossier/Bulk Upload/Reports)', async () => {
         mockBuildPrincipal.mockResolvedValue({
             id: 'admin-1',
             roles: ['ADMIN'],
@@ -76,9 +80,12 @@ describe('GET /api/v1/me/navigation', () => {
         // Dossier Hidden (Goal!)
         expect(data.sections.find((s: any) => s.key === 'dossier')).toBeUndefined();
 
-        // Academics / Reports Hidden
+        // Bulk upload / Reports Hidden
+        expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'academics')).toBeUndefined();
+        expect(data.sections.find((s: any) => s.key === 'pt')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'reports')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'help')).toBeDefined();
     });
 });

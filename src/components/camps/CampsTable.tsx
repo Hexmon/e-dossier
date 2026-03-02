@@ -23,10 +23,13 @@ interface CampsTableProps {
     loading?: boolean;
 }
 
-const semesterLabels: Record<string, string> = {
-    SEM5: "Semester 5",
-    SEM6A: "Semester 6A",
-    SEM6B: "Semester 6B",
+const semesterLabels: Record<number, string> = {
+    1: "Semester 1",
+    2: "Semester 2",
+    3: "Semester 3",
+    4: "Semester 4",
+    5: "Semester 5",
+    6: "Semester 6",
 };
 
 export default function CampsTable({
@@ -48,7 +51,12 @@ export default function CampsTable({
             key: "semester",
             label: "Semester",
             type: "custom",
-            render: (value) => semesterLabels[value as string] || value,
+            render: (value) => semesterLabels[Number(value)] || value,
+        },
+        {
+            key: "sortOrder",
+            label: "Sort",
+            type: "number",
         },
         {
             key: "maxTotalMarks",
@@ -131,4 +139,3 @@ export default function CampsTable({
         </div>
     );
 }
-

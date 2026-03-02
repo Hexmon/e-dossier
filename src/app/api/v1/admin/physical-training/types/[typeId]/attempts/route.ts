@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { ptAttemptCreateSchema, ptAttemptQuerySchema, ptTypeParam } from '@/app/lib/physical-training-validators';
-import { getPtType, listPtAttempts, createPtAttempt } from '@/app/db/queries/physicalTraining';
+import { getPtType, listPtAttempts, createPtAttempt, findPtAttemptByTypeAndSortOrder, getNextPtAttemptSortOrder } from '@/app/db/queries/physicalTraining';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -34,11 +34,27 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         if (!type) throw new ApiError(404, 'PT type not found', 'not_found');
 
         const dto = ptAttemptCreateSchema.parse(await req.json());
+        const targetSortOrder = dto.sortOrder ?? (await getNextPtAttemptSortOrder(typeId));
+        const duplicate = await findPtAttemptByTypeAndSortOrder(typeId, targetSortOrder);
+        if (duplicate) {
+            throw new ApiError(
+                409,
+                `Sort order ${targetSortOrder} already exists for this PT type`,
+                'sort_order_conflict',
+                {
+                    field: 'sortOrder',
+                    sortOrder: targetSortOrder,
+                    ptTypeId: typeId,
+                    conflictingAttemptId: duplicate.id,
+                },
+            );
+        }
+
         const row = await createPtAttempt(typeId, {
             code: dto.code.trim(),
             label: dto.label.trim(),
             isCompensatory: dto.isCompensatory ?? false,
-            sortOrder: dto.sortOrder ?? 0,
+            sortOrder: targetSortOrder,
             isActive: dto.isActive ?? true,
         });
 

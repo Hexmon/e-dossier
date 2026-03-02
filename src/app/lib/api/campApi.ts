@@ -17,8 +17,17 @@ export interface TrainingCampActivity {
 export interface TrainingCamp {
     id: string;
     name: string;
-    semester: string;
+    semester: number;
+    sortOrder?: number;
     year?: number;
+    maxTotalMarks?: number;
+    performanceTitle?: string | null;
+    performanceGuidance?: string | null;
+    signaturePrimaryLabel?: string | null;
+    signatureSecondaryLabel?: string | null;
+    noteLine1?: string | null;
+    noteLine2?: string | null;
+    showAggregateSummary?: boolean;
     activities?: TrainingCampActivity[];
     createdAt: string;
     updatedAt: string;
@@ -44,10 +53,17 @@ export interface OcCamp {
     ocCampId?: string;
     trainingCampId: string;
     campName?: string;
-    semester?: string;
+    semester?: number;
     year: number;
     totalMarksScored: number;
     maxTotalMarks?: number;
+    performanceTitle?: string | null;
+    performanceGuidance?: string | null;
+    signaturePrimaryLabel?: string | null;
+    signatureSecondaryLabel?: string | null;
+    noteLine1?: string | null;
+    noteLine2?: string | null;
+    showAggregateSummary?: boolean;
     reviews: CampReview[];
     activities: Array<{
         id: string;

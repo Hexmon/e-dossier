@@ -26,6 +26,35 @@ export function clearAuthCookies(res: NextResponse) {
   });
 }
 
+function expireCookieByName(res: NextResponse, name: string) {
+  const paths = ['/', '/dashboard', '/api'];
+  for (const path of paths) {
+    res.cookies.set(name, '', {
+      path,
+      maxAge: 0,
+      expires: new Date(0),
+      secure: false,
+      sameSite: 'lax',
+    });
+  }
+}
+
+export function clearAllRequestCookies(res: NextResponse, req: NextRequest) {
+  const cookieNames = new Set<string>([
+    'access_token',
+    'csrf-token',
+    'csrf_token',
+  ]);
+
+  for (const cookie of req.cookies.getAll()) {
+    cookieNames.add(cookie.name);
+  }
+
+  for (const cookieName of cookieNames) {
+    expireCookieByName(res, cookieName);
+  }
+}
+
 export function readAccessToken(req: NextRequest): string | null {
   // Prefer Authorization header if present
   const authz = req.headers.get('authorization');

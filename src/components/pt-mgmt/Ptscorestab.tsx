@@ -188,7 +188,7 @@ export default function PTScoresTab({
                     </Select>
                     {selectedTypeId && tasks.length === 0 && (
                         <p className="text-xs text-muted-foreground">
-                            No tasks available. Please create tasks first in the Tasks tab.
+                            No tasks available. Create tasks from PT Types tab using Manage Tasks, or from the Tasks tab.
                         </p>
                     )}
                 </div>
@@ -214,7 +214,7 @@ export default function PTScoresTab({
                             </p>
                             {tasks.length === 0 && selectedTypeId && (
                                 <p className="text-sm text-muted-foreground mt-2">
-                                    No tasks found. Create tasks in the Tasks tab first.
+                                    No tasks found. Create tasks from PT Types tab using Manage Tasks, or in the Tasks tab.
                                 </p>
                             )}
                         </div>
@@ -228,7 +228,7 @@ export default function PTScoresTab({
                                 No attempts found for {selectedType?.code}
                             </p>
                             <p className="text-sm text-muted-foreground mt-2">
-                                Create attempts in the Attempts tab before setting up score matrix.
+                                Create attempts from PT Types tab using Manage Attempts before setting up score matrix.
                             </p>
                         </div>
                     </CardContent>

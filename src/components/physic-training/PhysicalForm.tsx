@@ -170,10 +170,21 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
 
   const totalMarksObtained = useMemo(() => nonTotalRows.reduce((sum, r) => sum + (r.column6 || 0), 0), [nonTotalRows]);
   const pptTableMaxMarks = useMemo(() => nonTotalRows.reduce((sum, r) => sum + (r.column3 || 0), 0), [nonTotalRows]);
+  const hasAdvancedSections = useMemo(
+    () => ["III TERM", "IV TERM", "V TERM", "VI TERM"].includes(activeSemester),
+    [activeSemester]
+  );
 
   const grandTotalMarks = useMemo(() => {
+    if (!hasAdvancedSections) return totalMarksObtained;
     return totalMarksObtained + (childComponentMarks.ipet || 0) + (childComponentMarks.swimming || 0) + (childComponentMarks.higherTests || 0);
-  }, [totalMarksObtained, childComponentMarks]);
+  }, [totalMarksObtained, childComponentMarks, hasAdvancedSections]);
+
+  useEffect(() => {
+    if (!hasAdvancedSections) {
+      setChildComponentMarks({ ipet: 0, swimming: 0, higherTests: 0 });
+    }
+  }, [hasAdvancedSections]);
 
   const handleAttemptChange = useCallback(
     (rowId: string, attemptCode: string) => {
@@ -186,8 +197,8 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           const nextGrade = attemptGroup?.grades[0];
           const nextScoreId = nextGrade?.scoreId ?? row.selectedScoreId;
 
-          const marks = nextScoreId ? scoreById.get(nextScoreId)?.marksScored ?? 0 : row.column6;
-          const maxMarks = nextGrade?.maxMarks ?? row.column3; // ✅ from template maxMarks
+          const statusMarks = nextGrade?.maxMarks ?? row.column3;
+          const marks = statusMarks;
 
           return {
             ...row,
@@ -196,13 +207,13 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
             selectedGrade: nextGrade?.gradeCode ?? row.selectedGrade,
             column5: nextGrade?.gradeCode ?? row.column5,
             selectedScoreId: nextScoreId,
-            column3: maxMarks,
+            column3: statusMarks,
             column6: marks,
           };
         }),
       }));
     },
-    [activeSemester, scoreById]
+    [activeSemester]
   );
 
   const handleGradeChange = useCallback(
@@ -216,21 +227,21 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           const grade = attemptGroup?.grades.find((g) => g.gradeCode === gradeCode);
           const nextScoreId = grade?.scoreId ?? row.selectedScoreId;
 
-          const marks = nextScoreId ? scoreById.get(nextScoreId)?.marksScored ?? 0 : row.column6;
-          const maxMarks = grade?.maxMarks ?? row.column3;
+          const statusMarks = grade?.maxMarks ?? row.column3;
+          const marks = statusMarks;
 
           return {
             ...row,
             selectedGrade: gradeCode,
             column5: gradeCode,
             selectedScoreId: nextScoreId,
-            column3: maxMarks,
+            column3: statusMarks,
             column6: marks,
           };
         }),
       }));
     },
-    [activeSemester, scoreById]
+    [activeSemester]
   );
 
   const handleMarksChange = useCallback(
@@ -241,7 +252,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           if (row.id !== rowId || row.id.startsWith("total-")) return row;
 
           if (isVirtualId(row.selectedScoreId)) {
-            toast.error("This template has no scoreId from server, so marks cannot be saved yet.");
+            toast.error("Template is not fully configured, Contact Admin.");
             return row;
           }
 
@@ -253,7 +264,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
             return row;
           }
           if (numValue > row.column3) {
-            toast.error(`Marks scored cannot exceed maximum marks (${row.column3})`);
+            toast.error(`Marks scored cannot exceed status marks (${row.column3})`);
             return row;
           }
 
@@ -273,7 +284,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
 
     for (const row of dataRows) {
       if (!isVirtualId(row.selectedScoreId) && row.column6 > row.column3) {
-        toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and ${row.column3}`);
+        toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and status marks (${row.column3})`);
         return;
       }
     }
@@ -288,7 +299,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
       }));
 
     if (scoresForApi.length === 0) {
-      toast.error("No valid server scoreIds found to save. (Template response returned scoreId: null)");
+      toast.error("Template is not fully configured, Contact Admin.");
       return;
     }
 
@@ -301,7 +312,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
   const handleSwimmingMarks = useCallback((marks: number) => setChildComponentMarks((p) => (p.swimming === marks ? p : { ...p, swimming: marks })), []);
   const handleHigherTestsMarks = useCallback((marks: number) => setChildComponentMarks((p) => (p.higherTests === marks ? p : { ...p, higherTests: marks })), []);
 
-  // ✅ PPT columns: S.No, Test, Category, Status, Max Marks, Marks Scored
+  // PPT columns: S.No, Test, Category, Status, Marks Scored
   const columns: TableColumn<PTTableRow>[] = useMemo(() => {
     const rows = semesterTableData[activeSemester] || [];
     const totalRowId = `total-${activeSemester}`;
@@ -370,16 +381,6 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           );
         },
       },
-      // ✅ Max Marks read-only and placed between Status and Marks Scored
-      {
-        key: "column3",
-        label: "Max Marks",
-        type: "number",
-        render: (value, row) => {
-          if (row.id === totalRowId) return <span className="text-center block">{pptTableMaxMarks}</span>;
-          return <span className="text-center block">{value || "-"}</span>;
-        },
-      },
       {
         key: "column6",
         label: "Marks Scored",
@@ -402,7 +403,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
         },
       },
     ];
-  }, [semesterTableData, activeSemester, isEditing, pptTableMaxMarks, totalMarksObtained, handleAttemptChange, handleGradeChange, handleMarksChange]);
+  }, [semesterTableData, activeSemester, isEditing, totalMarksObtained, handleAttemptChange, handleGradeChange, handleMarksChange]);
 
   const config: TableConfig<PTTableRow> = useMemo(
     () => ({
@@ -453,7 +454,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
             )}
           </div>
 
-          {["III TERM", "IV TERM", "V TERM", "VI TERM"].includes(activeSemester) && (
+          {hasAdvancedSections && (
             <>
               <IpetForm
                 key={`ipet-${activeSemester}`}
@@ -492,3 +493,4 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     </div>
   );
 }
+

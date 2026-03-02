@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -19,15 +22,20 @@ import { useForm } from "react-hook-form";
 import { ocTabs } from "@/config/app.config";
 import { Appointment } from "@/app/lib/api/appointmentApi";
 import { CreateAppointment } from "@/components/appointments/createappointment";
+import { applyOrgTemplate } from "@/app/lib/api/orgTemplateApi";
+import { Button } from "@/components/ui/button";
 
 export default function AppointmentManagement() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const {
     appointments,
     servedList,
     users,
     loading,
+    fetchAppointments,
+    fetchUsersAndPositions,
     handleHandover,
     handleEditAppointment,
     handleDeleteAppointment,
@@ -35,6 +43,28 @@ export default function AppointmentManagement() {
 
   const [handoverDialog, setHandoverDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+
+  const applyDefaultTemplateMutation = useMutation({
+    mutationFn: (dryRun: boolean) =>
+      applyOrgTemplate({ module: "appointment", profile: "default", dryRun }),
+    onSuccess: async (result, dryRun) => {
+      await Promise.all([
+        fetchAppointments(),
+        fetchUsersAndPositions(),
+        queryClient.invalidateQueries({ queryKey: ["positions"] }),
+      ]);
+      const prefix = dryRun ? "Dry run complete." : "Default appointment template applied.";
+      toast.success(
+        `${prefix} Created: ${result.createdCount}, Updated: ${result.updatedCount}, Skipped: ${result.skippedCount}`
+      );
+      if (result.warnings.length > 0) {
+        toast.warning(`Completed with ${result.warnings.length} warning(s).`);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Failed to apply default appointment template.");
+    },
+  });
 
   const {
     register,
@@ -90,7 +120,37 @@ export default function AppointmentManagement() {
               <TabsContent value="appointment-mgmt" className="space-y-8">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Current Appointments</h2>
-                  <CreateAppointment />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => applyDefaultTemplateMutation.mutate(true)}
+                      disabled={applyDefaultTemplateMutation.isPending}
+                    >
+                      {applyDefaultTemplateMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Running
+                        </>
+                      ) : (
+                        "Preview Changes (Dry Run)"
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => applyDefaultTemplateMutation.mutate(false)}
+                      disabled={applyDefaultTemplateMutation.isPending}
+                    >
+                      {applyDefaultTemplateMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Applying
+                        </>
+                      ) : (
+                        "Apply Default Appointment Template"
+                      )}
+                    </Button>
+                    <CreateAppointment />
+                  </div>
                 </div>
                 <AppointmentTable
                   appointments={appointments}

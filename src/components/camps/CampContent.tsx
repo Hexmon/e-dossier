@@ -17,7 +17,6 @@ import OcCampActivitiesTable from "@/components/camps/campMarksTable";
 import OcCampReviews from "@/components/camps/campReviews";
 import { useTrainingCamps, useOcCampByName, useCampMutations, useAllOcCamps } from "@/hooks/useCampData";
 import { CreateOcCampPayload, UpdateOcCampPayload } from "@/app/lib/api/campApi";
-import { trainingCampActivities } from "@/app/db/schema/training/oc";
 
 interface CampContentProps {
   ocId: string;
@@ -32,9 +31,16 @@ export default function CampContent({ ocId }: CampContentProps) {
   const [isEditingReviews, setIsEditingReviews] = useState(false);
   const [isEditingActivities, setIsEditingActivities] = useState(false);
 
-  const semesters = ["SEM5", "SEM6"] as const;
-  const semesterLabels = ["V TERM", "VI TERM"];
-  const currentSemester = semesters[activeSemester];
+  const semesters = [1, 2, 3, 4, 5, 6] as const;
+  const semesterLabels = [
+    "FIRST TERM",
+    "SECOND TERM",
+    "THIRD TERM",
+    "FOURTH TERM",
+    "FIFTH TERM",
+    "SIXTH TERM",
+  ] as const;
+  const currentSemester = semesters[activeSemester] ?? 1;
 
   // ---------------------------
   // FORM SETUP
@@ -60,31 +66,12 @@ export default function CampContent({ ocId }: CampContentProps) {
   // Fetch all camps for totals calculation
   const { camps: allCamps, loading: loadingAllCamps } = useAllOcCamps(ocId);
 
-  console.log("final table", allCamps)
-
   // ---------------------------
   // COMPUTED VALUES
   // ---------------------------
   const availableCamps = useMemo(() => {
-    // For SEM6, include both SEM6A and SEM6B camps
-    if (currentSemester === "SEM6") {
-      const filtered = trainingCamps.filter(
-        (camp) => camp.semester === "SEM6A" || camp.semester === "SEM6B"
-      );
-      console.log("SEM6 camps:", filtered);
-      return filtered;
-    }
-    const filtered = trainingCamps.filter((camp) => camp.semester === currentSemester);
-    console.log(`${currentSemester} camps:`, filtered);
-    return filtered;
+    return trainingCamps.filter((camp) => Number(camp.semester) === Number(currentSemester));
   }, [trainingCamps, currentSemester]);
-
-  // Debug logging
-  useEffect(() => {
-    console.log("All training camps:", trainingCamps);
-    console.log("Current semester:", currentSemester);
-    console.log("Available camps:", availableCamps);
-  }, [trainingCamps, currentSemester, availableCamps]);
 
   const selectedTrainingCamp = useMemo(() => {
     return availableCamps.find((camp) => camp.name === selectedCampName);
@@ -95,11 +82,6 @@ export default function CampContent({ ocId }: CampContentProps) {
     return selectedTrainingCamp.activities || [];
   }, [selectedTrainingCamp]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log("Current semester:", currentSemester);
-    console.log("Available Activites:", availableActivities);
-  }, [currentSemester, availableActivities]);
 
   const showWarning = useMemo(() => {
     return selectedCampName && !currentCamp && !loadingCamp;
@@ -154,7 +136,13 @@ export default function CampContent({ ocId }: CampContentProps) {
 
   // Set first camp as selected when available camps change
   useEffect(() => {
-    if (availableCamps.length > 0 && !selectedCampName) {
+    if (availableCamps.length === 0) {
+      setSelectedCampName(null);
+      return;
+    }
+
+    const selectedStillExists = availableCamps.some((camp) => camp.name === selectedCampName);
+    if (!selectedStillExists) {
       setSelectedCampName(availableCamps[0]?.name || null);
     }
   }, [availableCamps, selectedCampName]);
@@ -164,7 +152,6 @@ export default function CampContent({ ocId }: CampContentProps) {
   // ---------------------------
   const handleSubmitReviewsForm = async () => {
     if (!selectedCampName || !selectedTrainingCamp) {
-      console.log("No camp selected");
       return;
     }
 
@@ -173,7 +160,6 @@ export default function CampContent({ ocId }: CampContentProps) {
       const campData = values.campsByName?.[selectedCampName];
 
       if (!campData) {
-        console.log("No data for this camp");
         return;
       }
 
@@ -203,7 +189,7 @@ export default function CampContent({ ocId }: CampContentProps) {
       await refetchCamp();
       setIsEditingReviews(false);
     } catch (error) {
-      console.error("Error handling reviews form:", error);
+      console.error("Failed to save camp reviews", error);
     }
   };
 
@@ -211,22 +197,16 @@ export default function CampContent({ ocId }: CampContentProps) {
 
   const handleSubmitActivitiesForm = async () => {
     if (!selectedCampName || !selectedTrainingCamp) {
-      console.log("No camp selected");
       return;
     }
 
     try {
       const values = getValues();
-      console.log("All form values:", values);
       const campData = values.campsByName?.[selectedCampName];
-      console.log("Camp data:", campData);
 
       if (!campData || !campData.activities || campData.activities.length === 0) {
-        console.log("No activity data to save");
         return;
       }
-
-      console.log("Activities before mapping:", campData.activities);
 
       // Ensure all required fields are present
       const activities = campData.activities
@@ -246,7 +226,6 @@ export default function CampContent({ ocId }: CampContentProps) {
         }));
 
       if (activities.length === 0) {
-        console.log("No valid activities to save");
         return;
       }
 
@@ -279,7 +258,7 @@ export default function CampContent({ ocId }: CampContentProps) {
         refetchCamp();
       }, 100);
     } catch (error) {
-      console.error("Error handling activities form:", error);
+      console.error("Failed to save camp activity marks", error);
     }
   };
 
@@ -294,7 +273,7 @@ export default function CampContent({ ocId }: CampContentProps) {
   };
 
   const handleDeleteReview = (reviewId: string): void => {
-    console.log("Delete review:", reviewId);
+    void reviewId;
   };
 
   // ---------------------------
@@ -382,14 +361,13 @@ export default function CampContent({ ocId }: CampContentProps) {
             )}
           </div>
 
-          <CardDescription>
+            <CardDescription>
             <span className="text-md font-bold underline">
-              Performance during Camp:
+              {selectedTrainingCamp?.performanceTitle || "Performance during Camp."}
             </span>
             <span className="text-sm font-semibold text-muted-foreground block mt-2">
-              (To include application of theoretical knowledge, tactical acumen,
-              logical approach, briefing/orders, appointment held, runback,
-              strengths/weaknesses etc.)
+              {selectedTrainingCamp?.performanceGuidance ||
+                "(To include application of theoretical knowledge, tactical acumen, logical approach, briefing/orders, appointment held, runback, strengths/weaknesses etc.)"}
             </span>
           </CardDescription>
         </CardHeader>
@@ -448,7 +426,7 @@ export default function CampContent({ ocId }: CampContentProps) {
             <div className="text-center py-8 text-muted-foreground">
               <p>No training camps available for this semester.</p>
               <p className="text-sm mt-2">
-                Please check back later or contact administration.
+                No camps configured for {semesterLabels[activeSemester]}. Admin can add camps in Camps Management.
               </p>
             </div>
           </CardContent>
@@ -463,6 +441,8 @@ export default function CampContent({ ocId }: CampContentProps) {
               onDeleteReview={handleDeleteReview}
               disabled={!isEditingReviews}
               campName={selectedCampName}
+              primarySignatureLabel={selectedTrainingCamp?.signaturePrimaryLabel || "OIC Camp"}
+              secondarySignatureLabel={selectedTrainingCamp?.signatureSecondaryLabel || "PI Cdr"}
             />
 
             {!isEditingReviews && (
@@ -561,7 +541,7 @@ export default function CampContent({ ocId }: CampContentProps) {
       )}
 
       {/* TOTAL TABLE SECTION */}
-      {selectedCampName && selectedTrainingCamp?.name === "TECHNO TAC CAMP" && (
+      {selectedCampName && selectedTrainingCamp?.showAggregateSummary && (
         <div className="mt-6 max-w-6xl mx-auto">
           <Card className="p-6 rounded-2xl shadow-xl bg-card">
             <CardHeader>
@@ -624,6 +604,13 @@ export default function CampContent({ ocId }: CampContentProps) {
               )}
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {selectedCampName && (
+        <div className="mt-4 max-w-6xl mx-auto rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
+          {selectedTrainingCamp?.noteLine1 ? <p>{selectedTrainingCamp.noteLine1}</p> : null}
+          {selectedTrainingCamp?.noteLine2 ? <p className="mt-1">{selectedTrainingCamp.noteLine2}</p> : null}
         </div>
       )}
     </>

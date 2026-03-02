@@ -8,7 +8,6 @@ import { db } from '@/app/db/client';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/subjects', () => ({
@@ -24,6 +23,7 @@ vi.mock('@/app/db/client', () => {
           code: 'SUB-1',
           name: 'Subject 1',
           branch: 'C',
+          noOfPeriods: 6,
           hasTheory: true,
           hasPractical: false,
           defaultTheoryCredits: 3,
@@ -73,6 +73,36 @@ describe('GET /api/v1/subjects', () => {
     expect(body.error).toBe('bad_request');
   });
 
+  it('returns 400 for invalid semester filter', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'u1', roles: [] });
+
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `${path}?semester=7`,
+    });
+
+    const res = await getSubjects(req as any, createRouteContext());
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('bad_request');
+  });
+
+  it('returns 400 for invalid courseId filter', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'u1', roles: [] });
+
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `${path}?courseId=invalid-course-id`,
+    });
+
+    const res = await getSubjects(req as any, createRouteContext());
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('bad_request');
+  });
+
   it('returns filtered list of subjects on happy path', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'u1', roles: [] });
     (subjectQueries.listSubjects as any).mockResolvedValueOnce([
@@ -81,6 +111,7 @@ describe('GET /api/v1/subjects', () => {
         code: 'SUB-1',
         name: 'Subject 1',
         branch: 'C',
+        noOfPeriods: 6,
         hasTheory: true,
         hasPractical: false,
       },
@@ -88,7 +119,7 @@ describe('GET /api/v1/subjects', () => {
 
     const req = makeJsonRequest({
       method: 'GET',
-      path: `${path}?q=math&branch=C&includeDeleted=true&limit=10&offset=0`,
+      path: `${path}?q=math&branch=C&includeDeleted=true&limit=10&offset=0&semester=1&courseId=11111111-1111-4111-8111-111111111111`,
     });
 
     const res = await getSubjects(req as any, createRouteContext());
@@ -103,6 +134,8 @@ describe('GET /api/v1/subjects', () => {
       includeDeleted: true,
       limit: 10,
       offset: 0,
+      semester: 1,
+      courseId: '11111111-1111-4111-8111-111111111111',
     });
   });
 });
@@ -152,6 +185,38 @@ describe('POST /api/v1/subjects', () => {
     expect(body.error).toBe('bad_request');
   });
 
+  it('returns 400 when noOfPeriods is missing', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path,
+      body: { code: 'SUB-1', name: 'Subject 1', branch: 'C' },
+    });
+    const res = await postSubject(req as any, createRouteContext());
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('bad_request');
+  });
+
+  it('returns 400 when noOfPeriods is out of range', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path,
+      body: { code: 'SUB-1', name: 'Subject 1', branch: 'C', noOfPeriods: 21 },
+    });
+    const res = await postSubject(req as any, createRouteContext());
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('bad_request');
+  });
+
   it('returns 409 when subject code already exists', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
 
@@ -168,7 +233,7 @@ describe('POST /api/v1/subjects', () => {
     const req = makeJsonRequest({
       method: 'POST',
       path,
-      body: { code: 'SUB-1', name: 'Subject 1', branch: 'C' },
+      body: { code: 'SUB-1', name: 'Subject 1', branch: 'C', noOfPeriods: 6 },
     });
 
     const res = await postSubject(req as any, createRouteContext());
@@ -188,6 +253,7 @@ describe('POST /api/v1/subjects', () => {
         code: 'SUB-1',
         name: 'Subject 1',
         branch: 'C',
+        noOfPeriods: 6,
         hasTheory: true,
         hasPractical: false,
       },
@@ -199,5 +265,6 @@ describe('POST /api/v1/subjects', () => {
     expect(body.ok).toBe(true);
     expect(body.subject.id).toBe('sub-1');
     expect(body.subject.code).toBe('SUB-1');
+    expect(body.subject.noOfPeriods).toBe(6);
   });
 });

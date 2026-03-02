@@ -1,0 +1,11 @@
+diff --git a/dist/esm/index.js b/dist/esm/index.js
+index b53d90a09b99d901d4f0f26d49e6d4f8826af4eb..2a4aa590d2278e36c72f6c35e7a9b6a5656f7f57 100644
+--- a/dist/esm/index.js
++++ b/dist/esm/index.js
+@@ -1104,5 +1104,6 @@ export { unescape } from './unescape.js';
+ minimatch.AST = AST;
+ minimatch.Minimatch = Minimatch;
+ minimatch.escape = escape;
+ minimatch.unescape = unescape;
++export default minimatch;
+ //# sourceMappingURL=index.js.map

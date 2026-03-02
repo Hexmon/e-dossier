@@ -6,6 +6,11 @@ const templateCache = {
     promise: null as Promise<TemplateInfo[]> | null,
 };
 
+export function clearInterviewTemplateCache() {
+    templateCache.data = null;
+    templateCache.promise = null;
+}
+
 function normalizeKey(value: string) {
     return value.trim().toLowerCase();
 }

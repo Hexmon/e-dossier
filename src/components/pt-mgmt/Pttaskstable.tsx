@@ -9,7 +9,7 @@ interface PTTasksTableProps {
     tasks: PTTask[];
     onEdit: (index: number) => void;
     onDelete: (id: string) => void;
-    onManageScores: (index: number) => void;
+    onManageScores: (task: PTTask) => void;
     loading: boolean;
 }
 
@@ -67,7 +67,7 @@ export default function PTTasksTable({
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => onManageScores(index)}
+                                                onClick={() => onManageScores(task)}
                                                 className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
                                                 title="Manage Score Matrix"
                                             >

@@ -33,6 +33,7 @@ export default function SubjectForm({
         code: "",
         name: "",
         branch: "C",
+        noOfPeriods: 0,
         hasTheory: true,
         hasPractical: false,
         defaultTheoryCredits: 0,
@@ -49,6 +50,7 @@ export default function SubjectForm({
                 code: "",
                 name: "",
                 branch: "C",
+                noOfPeriods: 0,
                 hasTheory: true,
                 hasPractical: false,
                 defaultTheoryCredits: 0,
@@ -118,6 +120,21 @@ export default function SubjectForm({
                         <SelectItem value="M">Mechanical</SelectItem>
                     </SelectContent>
                 </Select>
+            </div>
+
+            {/* Number of periods */}
+            <div className="space-y-2">
+                <Label htmlFor="noOfPeriods">No. of Periods *</Label>
+                <Input
+                    id="noOfPeriods"
+                    type="number"
+                    value={formData.noOfPeriods}
+                    onChange={(e) => handleChange("noOfPeriods", parseInt(e.target.value, 10) || 0)}
+                    min="0"
+                    max="20"
+                    step="1"
+                    required
+                />
             </div>
 
             {/* Has Theory */}

@@ -9,9 +9,21 @@ export const endpoints = {
         approval: "/api/v1/admin/signup-requests",
         appointments: "/api/v1/admin/appointments?active=true",
         platoons: "/api/v1/platoons",
+        platoonImagePresign: "/api/v1/platoons/image/presign",
+        platoonCommanderHistory: (idOrKey: string) => `/api/v1/admin/platoons/${idOrKey}/commander-history`,
         slots: "/api/v1/admin/positions/slots",
         transferappt: (appointmentId: string) =>
             `/api/v1/admin/appointments/${appointmentId}/transfer`,
+        bootstrapTemplateApply: "/api/v1/admin/bootstrap/templates/apply",
+        academics: {
+            gradingPolicy: "/api/v1/admin/academics/grading-policy",
+            gradingPolicyRecalculate: "/api/v1/admin/academics/grading-policy/recalculate",
+        },
+        reports: {
+            verification: {
+                verify: "/api/v1/admin/reports/verification/verify",
+            },
+        },
 
         users: "/api/v1/admin/users",
         subjects: "/api/v1/admin/subjects",
@@ -31,20 +43,42 @@ export const endpoints = {
         relegation: {
             ocOptions: "/api/v1/admin/relegation/ocs",
             nextCourses: "/api/v1/admin/relegation/courses",
+            history: "/api/v1/admin/relegation/history",
             presign: "/api/v1/admin/relegation/presign",
             transfer: "/api/v1/admin/relegation/transfer",
+            exception: "/api/v1/admin/relegation/exception",
+            promoteCourse: "/api/v1/admin/relegation/promote-course",
+            voidPromotion: "/api/v1/admin/relegation/void-promotion",
+            enrollments: (ocId: string) => `/api/v1/admin/relegation/enrollments/${ocId}`,
+            enrollmentModules: (ocId: string) => `/api/v1/admin/relegation/enrollments/${ocId}/modules`,
+            mediaSignedUrl: (historyId: string) =>
+                `/api/v1/admin/relegation/media/${historyId}/signed-url`,
         },
         trainingCamps: {
             list: "/api/v1/admin/training-camps",
+            settings: "/api/v1/admin/training-camps/settings",
             getById: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
             create: "/api/v1/admin/training-camps",
             update: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
             delete: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
         },
+        olq: {
+            categories: (courseId: string) => `/api/v1/admin/olq/courses/${courseId}/categories`,
+            categoryById: (courseId: string, categoryId: string) =>
+                `/api/v1/admin/olq/courses/${courseId}/categories/${categoryId}`,
+            subtitles: (courseId: string) => `/api/v1/admin/olq/courses/${courseId}/subtitles`,
+            subtitleById: (courseId: string, subtitleId: string) =>
+                `/api/v1/admin/olq/courses/${courseId}/subtitles/${subtitleId}`,
+            copy: (targetCourseId: string) => `/api/v1/admin/olq/courses/${targetCourseId}/copy`,
+            applyTemplate: '/api/v1/admin/olq/templates/apply',
+        },
     },
     oc: {
         list: "/api/v1/oc",
         create: "/api/v1/oc",
+        physicalTraining: {
+            bulk: "/api/v1/oc/physical-training/bulk",
+        },
         getById: (ocId: string) => `/api/v1/oc/${ocId}`,
         update: (ocId: string) => `/api/v1/oc/${ocId}`,
         delete: (ocId: string) => `/api/v1/oc/${ocId}`,
@@ -102,6 +136,7 @@ export const endpoints = {
         leaveRecord: (ocId: string) => `/api/v1/oc/${ocId}/recording-leave-hike-detention`,
         leaveRecordById: (ocId: string, recordId: string) => `/api/v1/oc/${ocId}/recording-leave-hike-detention/${recordId}`,
         olq: (ocId: string) => `/api/v1/oc/${ocId}/olq`,
+        performanceGraph: (ocId: string) => `/api/v1/oc/${ocId}/performance-graph`,
         olqCategories: (ocId: string) => `/api/v1/oc/${ocId}/olq/categories?includeSubtitles=true&isActive=true`,
         dossierInspections: (ocId: string) => `/api/v1/oc/${ocId}/dossier-inspection`,
         camps: {
@@ -125,6 +160,42 @@ export const endpoints = {
         },
         spr: (ocId: string) => `/api/v1/oc/${ocId}/spr`,
         fpr: (ocId: string) => `/api/v1/oc/${ocId}/fpr`,
+    },
+    reports: {
+        metadata: {
+            courseSemesters: "/api/v1/reports/metadata/course-semesters",
+        },
+        academics: {
+            consolidatedSessional: {
+                preview: "/api/v1/reports/academics/consolidated-sessional/preview",
+                download: "/api/v1/reports/academics/consolidated-sessional/download",
+            },
+            finalResultCompilation: {
+                preview: "/api/v1/reports/academics/final-result-compilation/preview",
+                download: "/api/v1/reports/academics/final-result-compilation/download",
+            },
+            semesterGrade: {
+                candidates: "/api/v1/reports/academics/semester-grade/candidates",
+                preview: (ocId: string) => `/api/v1/reports/academics/semester-grade/preview/${ocId}`,
+                download: "/api/v1/reports/academics/semester-grade/download",
+            },
+        },
+        milTraining: {
+            physicalAssessment: {
+                preview: "/api/v1/reports/mil-training/physical-assessment/preview",
+                download: "/api/v1/reports/mil-training/physical-assessment/download",
+            },
+        },
+        overallTraining: {
+            courseWisePerformance: {
+                preview: "/api/v1/reports/overall-training/course-wise-performance/preview",
+                download: "/api/v1/reports/overall-training/course-wise-performance/download",
+            },
+            courseWiseFinalPerformance: {
+                preview: "/api/v1/reports/overall-training/course-wise-final-performance/preview",
+                download: "/api/v1/reports/overall-training/course-wise-final-performance/download",
+            },
+        },
     },
     course: {
         all: "/api/v1/admin/courses"

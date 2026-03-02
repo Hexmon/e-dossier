@@ -281,12 +281,29 @@ export async function seedPermissionsFromExcel(matrixPath?: string): Promise<{
   rolesProcessed: number;
   permissionsProcessed: number;
 }> {
+  const defaultMatrixPath = path.resolve(process.cwd(), 'docs/rbac/permission-matrix.parsed.json');
   const resolvedMatrixPath = matrixPath
     ? path.resolve(matrixPath)
-    : path.resolve(process.cwd(), 'docs/rbac/permission-matrix.parsed.json');
+    : defaultMatrixPath;
 
   if (!fs.existsSync(resolvedMatrixPath)) {
-    throw new Error(`Parsed permission matrix not found at ${resolvedMatrixPath}`);
+    const errorLines = [
+      `Parsed permission matrix not found at: ${resolvedMatrixPath}`,
+      '',
+      'Generate it first, then rerun permissions seed:',
+      '  pnpm exec tsx scripts/rbac/phase0-generate.ts "/path/to/E Dossier.xlsx"',
+      '  pnpm seed:permissions',
+      '',
+      'Or run with an explicit parsed matrix path:',
+      '  pnpm seed:permissions /absolute/path/to/permission-matrix.parsed.json',
+    ];
+
+    if (resolvedMatrixPath !== defaultMatrixPath) {
+      errorLines.push('');
+      errorLines.push(`Default expected location is: ${defaultMatrixPath}`);
+    }
+
+    throw new Error(errorLines.join('\n'));
   }
 
   const parsed = loadParsedMatrix(resolvedMatrixPath);

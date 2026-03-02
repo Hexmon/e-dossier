@@ -31,6 +31,14 @@ export const NAVIGATION_TREE: NavSectionConfig[] = [
                 url: "/dashboard",
                 icon: "Home",
             },
+            {
+                key: "promotion_relegation_mgmt",
+                label: "Promotion / Relegation Management",
+                url: "/dashboard/genmgmt/promotion-relegation",
+                icon: "ArrowDownUp",
+                requiredAction: "page:dashboard:genmgmt:promotion-relegation:view",
+                adminBaseline: false,
+            },
         ],
     },
     {
@@ -76,16 +84,16 @@ export const NAVIGATION_TREE: NavSectionConfig[] = [
         ],
     },
     {
-        key: "academics",
-        label: "Academics",
+        key: "bulk_upload",
+        label: "Bulk Upload",
         items: [
             {
-                key: "manage_marks",
-                label: "Academics Management",
-                url: "/dashboard/manage-marks",
+                key: "bulk_upload_hub",
+                label: "Bulk Upload",
+                url: "/dashboard/bulk-upload",
                 icon: "BookOpen",
-                requiredAction: "sidebar:academics",
-                adminBaseline: true, // Admin sees it
+                requiredAction: "page:dashboard:bulk-upload:view",
+                adminBaseline: false,
             },
         ],
     },
@@ -100,6 +108,18 @@ export const NAVIGATION_TREE: NavSectionConfig[] = [
                 icon: "FileText",
                 requiredAction: "sidebar:reports",
                 adminBaseline: true, // Admin sees it
+            },
+        ],
+    },
+    {
+        key: "help",
+        label: "Help",
+        items: [
+            {
+                key: "help_center",
+                label: "Help",
+                url: "/dashboard/help",
+                icon: "LifeBuoy",
             },
         ],
     },

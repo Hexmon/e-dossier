@@ -241,7 +241,7 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
   it('returns 404 when course to delete is not found', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(0);
-    (coursesQueries.softDeleteCourse as any).mockResolvedValueOnce(null);
+    (coursesQueries.hardDeleteCourse as any).mockResolvedValueOnce(null);
 
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}` });
     const ctx = { params: Promise.resolve({ courseId }) } as any;
@@ -288,12 +288,11 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
     expect(coursesQueries.hardDeleteCourse).not.toHaveBeenCalled();
   });
 
-  it('soft-deletes course on happy path', async () => {
+  it('hard-deletes course on happy path by default', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(0);
-    (coursesQueries.softDeleteCourse as any).mockResolvedValueOnce({
+    (coursesQueries.hardDeleteCourse as any).mockResolvedValueOnce({
       before: { id: courseId, code: 'TES-50' },
-      after: { id: courseId, code: 'TES-50', deletedAt: new Date().toISOString() },
     });
 
     const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}` });
@@ -304,6 +303,27 @@ describe('DELETE /api/v1/courses/[courseId]', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.id).toBe(courseId);
+    expect(body.message).toMatch(/hard-deleted/i);
+    expect(coursesQueries.softDeleteCourse).not.toHaveBeenCalled();
+  });
+
+  it('soft-deletes course when explicitly requested', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.countAssignedOCsForCourse as any).mockResolvedValueOnce(0);
+    (coursesQueries.softDeleteCourse as any).mockResolvedValueOnce({
+      before: { id: courseId, code: 'TES-50' },
+      after: { id: courseId, code: 'TES-50', deletedAt: new Date().toISOString() },
+    });
+
+    const req = makeJsonRequest({ method: 'DELETE', path: `${basePath}/${courseId}?hard=false` });
+    const ctx = { params: Promise.resolve({ courseId }) } as any;
+
+    const res = await deleteCourse(req as any, ctx);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.id).toBe(courseId);
+    expect(body.message).toMatch(/soft-deleted/i);
   });
 
   it('hard-deletes course when requested', async () => {

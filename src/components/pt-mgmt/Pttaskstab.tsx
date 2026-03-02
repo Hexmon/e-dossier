@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import {
     Select,
@@ -40,7 +41,7 @@ interface PTTasksTabProps {
     onAdd: (typeId: string, task: PTTaskCreate) => Promise<boolean>;
     onEdit: (typeId: string, taskId: string, task: PTTaskCreate) => Promise<boolean>;
     onDelete: (typeId: string, taskId: string) => Promise<boolean>;
-    onManageScores: (task: PTTask) => void;
+    onOpenScoresForTask: (typeId: string, taskId: string) => void;
 }
 
 export default function PTTasksTab({
@@ -52,22 +53,35 @@ export default function PTTasksTab({
     onAdd,
     onEdit,
     onDelete,
-    onManageScores,
+    onOpenScoresForTask,
 }: PTTasksTabProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<PTTask | undefined>(undefined);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const nextSortOrder = useMemo(
+        () => Math.max(0, ...tasks.map((item) => item.sortOrder ?? 0)) + 1,
+        [tasks],
+    );
 
     const selectedType = types.find((t) => t.id === selectedTypeId);
 
     const handleSubmit = async (data: PTTaskCreate) => {
         if (!selectedTypeId) return;
+        const targetSortOrder = data.sortOrder ?? nextSortOrder;
+        const duplicate = tasks.find(
+            (item) => item.sortOrder === targetSortOrder && item.id !== editingTask?.id,
+        );
+        if (duplicate) {
+            toast.error(`Sort order ${targetSortOrder} is already used for this PT type.`);
+            return;
+        }
 
         const result = editingTask
             ? await onEdit(selectedTypeId, editingTask.id, data)
             : await onAdd(selectedTypeId, data);
 
+        if (!result) return;
         setIsDialogOpen(false);
         setEditingTask(undefined);
     };
@@ -93,11 +107,9 @@ export default function PTTasksTab({
         setItemToDelete(null);
     };
 
-    const handleManageScores = (index: number) => {
-        const task = tasks[index];
-        if (task) {
-            onManageScores(task);
-        }
+    const handleManageScores = (task: PTTask) => {
+        if (!selectedTypeId) return;
+        onOpenScoresForTask(selectedTypeId, task.id);
     };
 
     return (
@@ -172,6 +184,7 @@ export default function PTTasksTab({
                     </DialogHeader>
                     <PTTaskForm
                         task={editingTask}
+                        suggestedSortOrder={nextSortOrder}
                         onSubmit={handleSubmit}
                         onCancel={() => {
                             setIsDialogOpen(false);

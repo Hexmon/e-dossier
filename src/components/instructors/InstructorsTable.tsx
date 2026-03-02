@@ -66,6 +66,34 @@ export default function InstructorsTable({
             type: "text",
         },
         {
+            key: "experience",
+            label: "Experience",
+            type: "custom",
+            render: (value) => {
+                const experience = value as string | null | undefined;
+                if (!experience) return <span className="text-muted-foreground">-</span>;
+                return (
+                    <span className="text-sm line-clamp-1" title={experience}>
+                        {experience}
+                    </span>
+                );
+            },
+        },
+        {
+            key: "qualification",
+            label: "Qualification",
+            type: "custom",
+            render: (value) => {
+                const qualification = value as string | null | undefined;
+                if (!qualification) return <span className="text-muted-foreground">-</span>;
+                return (
+                    <span className="text-sm line-clamp-1" title={qualification}>
+                        {qualification}
+                    </span>
+                );
+            },
+        },
+        {
             key: "notes",
             label: "Notes",
             type: "custom",

@@ -1,8 +1,7 @@
-import { requireAdmin } from "@/app/lib/authz";
 import { handleApiError, json } from "@/app/lib/http";
 import { applyOcRelegationTransfer } from "@/app/db/queries/relegation";
 import { relegationTransferSchema } from "@/app/lib/validators.relegation";
-import { withAuthz } from "@/app/lib/acx/withAuthz";
+import { assertCanWriteSingle, getRelegationAccessContext } from "@/app/lib/relegation-auth";
 import {
   AuditEventType,
   AuditResourceType,
@@ -14,19 +13,22 @@ export const runtime = "nodejs";
 
 async function POSTHandler(req: AuditNextRequest) {
   try {
-    const auth = await requireAdmin(req);
+    const access = await getRelegationAccessContext(req);
+    assertCanWriteSingle(access);
     const parsed = relegationTransferSchema.safeParse(await req.json());
 
     if (!parsed.success) {
       return json.badRequest("Validation failed.", { issues: parsed.error.flatten() });
     }
 
-    const transfer = await applyOcRelegationTransfer(parsed.data, auth.userId);
+    const transfer = await applyOcRelegationTransfer(parsed.data, access.userId, {
+      scopePlatoonId: access.scopePlatoonId,
+    });
 
     await req.audit.log({
       action: AuditEventType.OC_RELEGATED,
       outcome: "SUCCESS",
-      actor: { type: "user", id: auth.userId },
+      actor: { type: "user", id: access.userId },
       target: { type: AuditResourceType.OC, id: transfer.oc.ocId },
       metadata: {
         description: `OC ${transfer.oc.ocNo} relegated from ${transfer.fromCourse.courseCode} to ${transfer.toCourse.courseCode}`,
@@ -52,4 +54,4 @@ async function POSTHandler(req: AuditNextRequest) {
   }
 }
 
-export const POST = withAuditRoute("POST", withAuthz(POSTHandler));
+export const POST = withAuditRoute("POST", POSTHandler);

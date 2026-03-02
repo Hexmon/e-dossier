@@ -6,6 +6,8 @@ export type SiteSettingsModel = {
   singletonKey: string;
   logoUrl: string | null;
   logoObjectKey: string | null;
+  heroBgUrl: string | null;
+  heroBgObjectKey: string | null;
   heroTitle: string;
   heroDescription: string;
   commandersSectionTitle: string;
@@ -55,6 +57,8 @@ export type SiteHistoryModel = {
 export type SiteSettingsUpdatePayload = Partial<{
   logoUrl: string | null;
   logoObjectKey: string | null;
+  heroBgUrl: string | null;
+  heroBgObjectKey: string | null;
   heroTitle: string;
   heroDescription: string;
   commandersSectionTitle: string;
@@ -87,8 +91,16 @@ export const siteSettingsAdminApi = {
 
   deleteLogo: () => api.delete<{ settings: SiteSettingsModel }>("/api/v1/admin/site-settings/logo", { baseURL }),
 
+  deleteHeroBg: () =>
+    api.delete<{ settings: SiteSettingsModel }>("/api/v1/admin/site-settings/hero-bg", { baseURL }),
+
   presignLogo: (payload: PresignPayload) =>
     api.post<PresignResponse, PresignPayload>("/api/v1/admin/site-settings/logo/presign", payload, {
+      baseURL,
+    }),
+
+  presignHeroBg: (payload: PresignPayload) =>
+    api.post<PresignResponse, PresignPayload>("/api/v1/admin/site-settings/hero-bg/presign", payload, {
       baseURL,
     }),
 

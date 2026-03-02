@@ -1,4 +1,5 @@
 // src/app/db/seeds/seedRolesAndPermissions.ts
+import 'dotenv/config';
 import { db } from '../client';
 import { roles, permissions, rolePermissions, positionPermissions } from '../schema/auth/rbac';
 import { positions } from '../schema/auth/positions';
@@ -10,6 +11,10 @@ import { eq, and } from 'drizzle-orm';
  * - SUPER_ADMIN position gets all permissions via position_permissions
  */
 export async function seedRolesAndPermissions() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('Missing DATABASE_URL in environment.');
+  }
+
   const roleKeys = ['super_admin', 'admin', 'guest'] as const;
 
   // CRUD perms for core modules
@@ -156,5 +161,17 @@ export async function seedRolesAndPermissions() {
     }
   }
 
-  console.log('バ. Roles & permissions seeded (admin + super_admin have all; SUPER_ADMIN position linked).');
+  console.log('Roles & permissions seeded (admin + super_admin have all; SUPER_ADMIN position linked).');
+}
+
+if (require.main === module) {
+  seedRolesAndPermissions()
+    .then(() => {
+      console.log('Done.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('Failed to seed RBAC:', err);
+      process.exit(1);
+    });
 }

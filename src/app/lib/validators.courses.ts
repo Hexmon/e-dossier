@@ -17,6 +17,7 @@ export const subjectCreateSchema = z.object({
     code: z.string().trim().min(2).max(32),
     name: z.string().trim().min(2).max(160),
     branch: z.enum(['C', 'E', 'M']),
+    noOfPeriods: z.coerce.number().int().min(0).max(20),
     hasTheory: z.boolean().optional(),
     hasPractical: z.boolean().optional(),
     defaultTheoryCredits: z.coerce.number().int().min(0).max(20).optional(),
@@ -28,15 +29,20 @@ export const subjectUpdateSchema = subjectCreateSchema.partial().refine(
     v => Object.keys(v).length > 0, { message: 'No changes provided' }
 );
 
-export const instructorCreateSchema = z.object({
+const instructorBaseSchema = z.object({
     // either link to an existing user OR supply external details
     userId: z.string().uuid().optional(),
     name: z.string().trim().min(2).max(160).optional(),
     email: z.string().trim().email().max(255).optional(),
     phone: z.string().trim().max(32).optional(),
     affiliation: z.string().trim().max(160).optional(),
+    experience: z.string().trim().max(2000).optional(),
+    qualification: z.string().trim().max(2000).optional(),
+    subjectIds: z.array(z.string().uuid()).max(200).optional(),
     notes: z.string().trim().max(2000).optional(),
-}).superRefine((data, ctx) => {
+});
+
+export const instructorCreateSchema = instructorBaseSchema.superRefine((data, ctx) => {
     if (data.userId) return;
     const missing: string[] = [];
     if (!data.name) missing.push('name');
@@ -50,7 +56,7 @@ export const instructorCreateSchema = z.object({
     }
 });
 
-export const instructorUpdateSchema = instructorCreateSchema.partial().refine(
+export const instructorUpdateSchema = instructorBaseSchema.partial().refine(
     v => Object.keys(v).length > 0, { message: 'No changes provided' }
 );
 
@@ -102,4 +108,9 @@ export const listQuerySchema = z.object({
     includeDeleted: z.enum(['true', 'false']).optional(),
     limit: z.coerce.number().int().min(1).max(200).optional(),
     offset: z.coerce.number().int().min(0).max(5000).optional(),
+});
+
+export const subjectListQuerySchema = listQuerySchema.extend({
+    semester: z.coerce.number().int().min(1).max(6).optional(),
+    courseId: z.string().uuid().optional(),
 });

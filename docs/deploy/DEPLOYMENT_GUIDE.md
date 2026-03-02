@@ -272,6 +272,26 @@ sudo -u postgres pg_isready
 sudo systemctl status postgresql
 ```
 
+### Application bootstrap sequence (fresh environment)
+
+After service and DB are reachable, run this in app repo:
+
+```bash
+pnpm db:migrate
+pnpm seed:rbac
+pnpm seed:permissions
+pnpm seed:admins
+pnpm seed:org-template -- --module=pt
+pnpm seed:org-template -- --module=camp
+```
+
+Preview PT bootstrap first (recommended):
+
+```bash
+pnpm seed:org-template -- --module=pt --dry-run
+pnpm seed:org-template -- --module=camp --dry-run
+```
+
 ---
 
 ## 7. Troubleshooting

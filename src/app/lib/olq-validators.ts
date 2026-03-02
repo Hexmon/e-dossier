@@ -23,6 +23,7 @@ export const olqCategoryQuerySchema = z.object({
 });
 
 export const OlqCategoryIdParam = z.object({ categoryId: z.string().uuid() });
+export const OlqCourseIdParam = z.object({ courseId: z.string().uuid() });
 
 // --- Subtitles (traits) -----------------------------------------------------
 export const olqSubtitleCreateSchema = z.object({
@@ -44,6 +45,31 @@ export const olqSubtitleQuerySchema = z.object({
 });
 
 export const OlqSubtitleIdParam = z.object({ subtitleId: z.string().uuid() });
+
+export const olqTemplateCopySchema = z.object({
+    sourceCourseId: z.string().uuid(),
+    mode: z.literal('replace').default('replace'),
+});
+
+export const olqTemplateApplyScopeSchema = z.enum(['course', 'all']);
+export const olqTemplateApplyModeSchema = z.enum(['replace', 'upsert_missing']);
+
+export const olqTemplateApplySchema = z
+    .object({
+        scope: olqTemplateApplyScopeSchema,
+        courseId: z.string().uuid().optional(),
+        dryRun: z.boolean().optional(),
+        mode: olqTemplateApplyModeSchema.default('replace'),
+    })
+    .superRefine((value, ctx) => {
+        if (value.scope === 'course' && !value.courseId) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['courseId'],
+                message: 'courseId is required when scope is "course"',
+            });
+        }
+    });
 
 // --- OLQ header + scores ----------------------------------------------------
 export const olqScoreSchema = z.object({

@@ -1,5 +1,5 @@
 import { pgTable, uuid, varchar, timestamp, integer, text, boolean, date, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
-import { ocCadets } from './oc';
+import { ocCadets, ocCourseEnrollments } from './oc';
 import { interviewTemplates, interviewTemplateFields, interviewTemplateGroups } from './interviewTemplates';
 
 // ---------------------------------------------------------------------------
@@ -8,6 +8,7 @@ import { interviewTemplates, interviewTemplateFields, interviewTemplateGroups } 
 export const ocInterviews = pgTable('oc_interviews', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     templateId: uuid('template_id').notNull().references(() => interviewTemplates.id, { onDelete: 'restrict' }),
     semester: integer('semester'),
     course: varchar('course', { length: 160 }),

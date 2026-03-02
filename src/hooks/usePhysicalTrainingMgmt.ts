@@ -41,6 +41,10 @@ import {
     PTMotivationFieldUpdate,
     DeleteOptions,
 } from "@/app/lib/api/Physicaltrainingapi";
+import {
+    applyOrgTemplate,
+    type ApplyOrgTemplateResponse,
+} from "@/app/lib/api/orgTemplateApi";
 
 // ---------------------------------------------------------------------------
 // Query key factory — single source of truth for all keys + invalidation
@@ -426,6 +430,35 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
         },
     });
 
+    const applyPtTemplateMutation = useMutation({
+        mutationFn: ({
+            dryRun,
+            profile,
+        }: {
+            dryRun: boolean;
+            profile?: "default";
+        }) =>
+            applyOrgTemplate({
+                module: "pt",
+                profile: profile ?? "default",
+                dryRun,
+            }),
+        onSuccess: (result, variables) => {
+            if (!variables.dryRun) {
+                queryClient.invalidateQueries({ queryKey: ["pt"] });
+            }
+            toast.success(
+                variables.dryRun
+                    ? "Template preview generated successfully"
+                    : "Default PT template applied successfully"
+            );
+        },
+        onError: (error) => {
+            console.error("Error applying PT template:", error);
+            toast.error("Failed to apply PT template");
+        },
+    });
+
     // -----------------------------------------------------------------------
     // Derived loading state
     // -----------------------------------------------------------------------
@@ -501,5 +534,15 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
             updateMotivationFieldMutation.mutateAsync({ id, updates }),
         removeMotivationField: (id: string, opts?: DeleteOptions) =>
             deleteMotivationFieldMutation.mutateAsync({ id, opts }),
+
+        // ---- Org template operations --------------------------------------
+        applyDefaultTemplate: ({
+            dryRun = false,
+            profile = "default",
+        }: {
+            dryRun?: boolean;
+            profile?: "default";
+        } = {}): Promise<ApplyOrgTemplateResponse> =>
+            applyPtTemplateMutation.mutateAsync({ dryRun, profile }),
     };
 }

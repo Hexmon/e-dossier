@@ -112,10 +112,11 @@ async function resolvePlatoonId(plText: string): Promise<string | null> {
 
 // ---------- Uniqueness checks in DB ----------
 async function existsOcNo(ocNo: string): Promise<boolean> {
+  const canonical = ocNo.replace(/\s+/g, '').toUpperCase();
   const rows = await db
     .select({ id: ocCadets.id })
     .from(ocCadets)
-    .where(eq(ocCadets.ocNo, ocNo))
+    .where(sql`upper(regexp_replace(${ocCadets.ocNo}, '\\s+', '', 'g')) = ${canonical}`)
     .limit(1);
   return !!rows[0];
 }
@@ -132,6 +133,8 @@ async function existsPersonalField<K extends keyof typeof ocPersonal['_']['colum
 async function POSTHandler(req: AuditNextRequest) {
   try {
     const authCtx = await mustBeAuthed(req);
+    const dryRunParam = req.nextUrl.searchParams.get('dryRun');
+    const dryRun = dryRunParam === '1' || dryRunParam?.toLowerCase() === 'true';
 
     // Rate limit
     const ip = getClientIp(req);
@@ -153,7 +156,7 @@ async function POSTHandler(req: AuditNextRequest) {
     }> = [];
 
     // In-file duplicate guards (so we also catch duplicates within the uploaded file)
-    const seenOcNo = new Set<string>();      // <--- TES No / OC No in-file uniqueness
+    const seenOcNo = new Set<string>();      // canonical TES No / OC No in-file uniqueness
     const seenEmail = new Set<string>();
     const seenPan = new Set<string>();
     const seenAadhaar = new Set<string>();
@@ -190,7 +193,7 @@ async function POSTHandler(req: AuditNextRequest) {
       const fatherProfession = pick(row, ["Father's Profession", 'Father Profession']);
 
       const guardianName = pick(row, ['Guardian Name', "Guardian's Name"]);
-      const guardianAddress = pick(row, ["Guardian's Address", 'Guardian Address']);
+      const guardianAddress = pick(row, ["Guardian's Address", "Guardian'sAddress", 'Guardian Address']);
       const monthlyIncome = pick(row, ['Income(parents)', 'Monthly Income']);
 
       const nokDetails = pick(row, ['Detls of NOK', 'Details of NOK']);
@@ -254,11 +257,12 @@ async function POSTHandler(req: AuditNextRequest) {
 
       // TES No / OC No uniqueness
       const ocNo = String(tesNo).trim();
-      if (seenOcNo.has(ocNo)) {
+      const ocNoCanonical = ocNo.replace(/\s+/g, '').toUpperCase();
+      if (seenOcNo.has(ocNoCanonical)) {
         errors.push({ row: i + 1, error: `Duplicate TES No in upload: ${ocNo}` });
         continue;
       }
-      seenOcNo.add(ocNo);
+      seenOcNo.add(ocNoCanonical);
       if (await existsOcNo(ocNo)) {
         errors.push({ row: i + 1, error: `TES No already exists: ${ocNo}` });
         continue;
@@ -344,6 +348,11 @@ async function POSTHandler(req: AuditNextRequest) {
             return isNaN(n) ? undefined : n;
           })();
 
+      if (dryRun) {
+        success += 1;
+        continue;
+      }
+
       // --- Insert (single transaction per row) ---
       try {
         const inserted = await db.transaction(async (tx) => {
@@ -427,7 +436,10 @@ async function POSTHandler(req: AuditNextRequest) {
       actor: { type: 'user', id: authCtx.userId },
       target: { type: AuditResourceType.OC, id: 'collection' },
       metadata: {
-        description: `Bulk uploaded ${success} OC records (${errors.length} failed)`,
+        description: dryRun
+          ? `Dry-run validated ${success} OC records (${errors.length} failed)`
+          : `Bulk uploaded ${success} OC records (${errors.length} failed)`,
+        dryRun,
         success,
         failed: errors.length,
         created: createdRecords.map((record) => ({
@@ -441,7 +453,13 @@ async function POSTHandler(req: AuditNextRequest) {
       },
     });
 
-    const res = json.ok({ message: 'Bulk upload processed successfully.', success, failed: errors.length, errors });
+    const res = json.ok({
+      message: dryRun ? 'Dry-run validation completed successfully.' : 'Bulk upload processed successfully.',
+      success,
+      failed: errors.length,
+      errors,
+      dryRun,
+    });
     res.headers.set('X-RateLimit-Limit', rate.limit.toString());
     res.headers.set('X-RateLimit-Remaining', rate.remaining.toString());
     res.headers.set('X-RateLimit-Reset', rate.reset.toString());

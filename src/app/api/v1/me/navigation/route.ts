@@ -6,6 +6,7 @@ import {
   getSidebarSectionsForRoleGroup,
   type SidebarSectionKey,
 } from "@/lib/sidebar-visibility";
+import { handleApiError } from "@/app/lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ function filterSectionsForRoleGroup(
     }));
 }
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   try {
     const principal = await buildPrincipalFromRequest(req);
     const userRoles = principal.roles || [];
@@ -51,7 +52,8 @@ export async function GET(req: NextRequest) {
       userRoleSummary: userRoles,
     });
   } catch (error) {
-    console.error("Navigation fetch error:", error);
-    return NextResponse.json({ error: "Failed to load navigation" }, { status: 500 });
+    return handleApiError(error);
   }
 }
+
+export const GET = GETHandler;

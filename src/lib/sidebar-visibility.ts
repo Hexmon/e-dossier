@@ -4,16 +4,17 @@ export type SidebarSectionKey =
   | "dashboard"
   | "admin"
   | "settings"
-  | "academics"
+  | "bulk_upload"
   | "reports"
-  | "dossier";
+  | "dossier"
+  | "help";
 
 export const SIDEBAR_SECTIONS_BY_ROLE_GROUP: Record<
   Exclude<SidebarRoleGroup, "SUPER_ADMIN">,
   readonly SidebarSectionKey[]
 > = {
-  ADMIN: ["dashboard", "admin", "settings"],
-  OTHER_USERS: ["dashboard", "dossier", "academics", "reports", "settings"],
+  ADMIN: ["dashboard", "admin", "settings", "help"],
+  OTHER_USERS: ["dashboard", "dossier", "bulk_upload", "reports", "settings", "help"],
 };
 
 type RoleGroupInput = {

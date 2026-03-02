@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LETTER_GRADE_VALUES } from '@/app/lib/grading';
 
 const nonEmptyPartial = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>) =>
     schema.partial().superRefine((val, ctx) => {
@@ -20,7 +21,7 @@ export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);
 export const SeniorSemester = z.coerce.number().int().min(4).max(6);
 export const TermKind = z.enum(['spring', 'autumn']);
-export const CampSemesterKind = z.enum(['SEM5', 'SEM6A', 'SEM6B']);
+export const CampSemesterKind = z.coerce.number().int().min(1).max(6);
 export const CampReviewRoleKind = z.enum(['OIC', 'PLATOON_COMMANDER', 'HOAT']);
 
 export const personalUpsertSchema = z.object({
@@ -384,17 +385,24 @@ export const ocCampQuerySchema = z.object({
 export const SemesterParam = z.object({ semester: Semester });
 export const SubjectIdParam = z.object({ subjectId: z.string().uuid() });
 
+const academicLetterGradeSchema = z.preprocess((value) => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim().toUpperCase();
+    return normalized === '' ? undefined : normalized;
+}, z.enum(LETTER_GRADE_VALUES).optional());
+
 export const academicSubjectPatchSchema = z.object({
     theory: z.object({
         phaseTest1Marks: z.coerce.number().optional(),
         phaseTest2Marks: z.coerce.number().optional(),
         tutorial: z.string().optional(),
         finalMarks: z.coerce.number().optional(),
-        grade: z.string().optional(),
+        grade: academicLetterGradeSchema,
     }).partial().optional(),
     practical: z.object({
         finalMarks: z.coerce.number().optional(),
-        grade: z.string().optional(),
+        grade: academicLetterGradeSchema,
         tutorial: z.string().optional(),
     }).partial().optional(),
 }).refine((value) => Boolean(value.theory || value.practical), {
@@ -423,9 +431,7 @@ export const academicSubjectBulkRequestSchema = z.object({
 
 export const academicSummaryPatchSchema = z.object({
     marksScored: z.coerce.number().optional(),
-    sgpa: z.coerce.number().optional(),
-    cgpa: z.coerce.number().optional(),
-}).refine((value) => value.marksScored !== undefined || value.sgpa !== undefined || value.cgpa !== undefined, {
+}).refine((value) => value.marksScored !== undefined, {
     message: 'At least one summary field is required.',
 });
 

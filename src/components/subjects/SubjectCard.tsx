@@ -18,6 +18,7 @@ export default function SubjectCard({ subject, onEdit, onDelete }: SubjectCardPr
         code = "",
         name = "",
         branch = "",
+        noOfPeriods = 0,
         hasTheory = false,
         hasPractical = false,
         defaultTheoryCredits = 0,
@@ -63,6 +64,9 @@ export default function SubjectCard({ subject, onEdit, onDelete }: SubjectCardPr
                     <div className="flex items-center gap-2">
                         <BookOpen className="h-4 w-4 text-muted-foreground" />
                         <span>Type: {getType()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">No. of Periods: {noOfPeriods}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">Credits: {totalCredits}</span>

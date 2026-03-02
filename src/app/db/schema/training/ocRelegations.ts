@@ -1,7 +1,14 @@
-import { index, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
-import { ocCadets } from "./oc";
+import { index, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { ocCadets, ocCourseEnrollments } from "./oc";
 import { courses } from "./courses";
 import { users } from "@/app/db/schema/auth/users";
+
+export const ocMovementKind = pgEnum("oc_movement_kind", [
+  "TRANSFER",
+  "PROMOTION_BATCH",
+  "PROMOTION_EXCEPTION",
+  "VOID_PROMOTION",
+]);
 
 export const ocRelegations = pgTable(
   "oc_relegations",
@@ -13,15 +20,23 @@ export const ocRelegations = pgTable(
     fromCourseId: uuid("from_course_id")
       .notNull()
       .references(() => courses.id, { onDelete: "restrict" }),
+    fromEnrollmentId: uuid("from_enrollment_id").references(() => ocCourseEnrollments.id, {
+      onDelete: "set null",
+    }),
     fromCourseCode: varchar("from_course_code", { length: 32 }).notNull(),
     toCourseId: uuid("to_course_id")
       .notNull()
       .references(() => courses.id, { onDelete: "restrict" }),
+    toEnrollmentId: uuid("to_enrollment_id").references(() => ocCourseEnrollments.id, {
+      onDelete: "set null",
+    }),
     toCourseCode: varchar("to_course_code", { length: 32 }).notNull(),
     reason: text("reason").notNull(),
     remark: text("remark"),
     pdfObjectKey: varchar("pdf_object_key", { length: 512 }),
     pdfUrl: text("pdf_url"),
+    movementKind: ocMovementKind("movement_kind").notNull().default("TRANSFER"),
+    reversalOfId: uuid("reversal_of_id"),
     performedByUserId: uuid("performed_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -33,5 +48,11 @@ export const ocRelegations = pgTable(
     ocPerformedAtIdx: index("idx_oc_relegations_oc_performed_at").on(table.ocId, table.performedAt),
     fromCourseIdx: index("idx_oc_relegations_from_course").on(table.fromCourseId),
     toCourseIdx: index("idx_oc_relegations_to_course").on(table.toCourseId),
+    fromEnrollmentIdx: index("idx_oc_relegations_from_enrollment").on(table.fromEnrollmentId),
+    toEnrollmentIdx: index("idx_oc_relegations_to_enrollment").on(table.toEnrollmentId),
+    movementKindPerformedAtIdx: index("idx_oc_relegations_movement_kind_performed_at").on(
+      table.movementKind,
+      table.performedAt
+    ),
   })
 );

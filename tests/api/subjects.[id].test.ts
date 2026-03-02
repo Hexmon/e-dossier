@@ -12,7 +12,6 @@ import * as subjectQueries from '@/app/db/queries/subjects';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/client', () => ({
@@ -95,6 +94,7 @@ describe('GET /api/v1/subjects/[id]', () => {
               code: 'SUB-1',
               name: 'Subject 1',
               branch: 'C',
+              noOfPeriods: 6,
             },
           ],
         }),
@@ -109,6 +109,7 @@ describe('GET /api/v1/subjects/[id]', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.subject.id).toBe(subjectId);
+    expect(body.subject.noOfPeriods).toBe(6);
   });
 });
 
@@ -149,6 +150,23 @@ describe('PATCH /api/v1/subjects/[id]', () => {
     expect(body.error).toBe('bad_request');
   });
 
+  it('returns 400 when noOfPeriods is out of range on patch', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+
+    const req = makeJsonRequest({
+      method: 'PATCH',
+      path: `${basePath}/${subjectId}`,
+      body: { noOfPeriods: 21 },
+    });
+    const ctx = { params: Promise.resolve({ id: subjectId }) } as any;
+
+    const res = await patchSubject(req as any, ctx);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('bad_request');
+  });
+
   it('returns 409 when updating subject violates unique code constraint', async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
     (db.select as any).mockImplementationOnce(() => ({
@@ -159,6 +177,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
               id: subjectId,
               code: 'SUB-1',
               name: 'Subject 1',
+              noOfPeriods: 6,
             },
           ],
         }),
@@ -200,6 +219,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
               id: subjectId,
               code: 'SUB-1',
               name: 'Subject 1',
+              noOfPeriods: 6,
             },
           ],
         }),
@@ -213,6 +233,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
               id: subjectId,
               code: 'SUB-2',
               name: 'Updated Subject',
+              noOfPeriods: 8,
             },
           ],
         }),
@@ -222,7 +243,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
     const req = makeJsonRequest({
       method: 'PATCH',
       path: `${basePath}/${subjectId}`,
-      body: { name: 'Updated Subject' },
+      body: { name: 'Updated Subject', noOfPeriods: 8 },
     });
     const ctx = { params: Promise.resolve({ id: subjectId }) } as any;
 
@@ -232,6 +253,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
     expect(body.ok).toBe(true);
     expect(body.subject.id).toBe(subjectId);
     expect(body.subject.name).toBe('Updated Subject');
+    expect(body.subject.noOfPeriods).toBe(8);
   });
 });
 

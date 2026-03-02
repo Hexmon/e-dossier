@@ -17,6 +17,9 @@ import {
   UserCheck,
   CalendarDays,
   Lock,
+  ArrowDownUp,
+  Dumbbell,
+  LifeBuoy,
 } from "lucide-react";
 
 import {
@@ -56,6 +59,9 @@ const ICON_MAP: Record<string, any> = {
   Activity,
   UserCheck,
   CalendarDays,
+  ArrowDownUp,
+  Dumbbell,
+  LifeBuoy,
 };
 
 export function AppSidebar() {
@@ -78,6 +84,8 @@ export function AppSidebar() {
   const effectiveRoles = meRoles.length > 0 ? meRoles : navData?.userRoleSummary ?? [];
   const roleGroup = deriveSidebarRoleGroup({ roles: effectiveRoles, position });
   const visibleSections = filterSidebarSectionsForRoleGroup(navData?.sections ?? [], roleGroup);
+  const mainSections = visibleSections.filter((section) => section.key !== "help");
+  const pinnedSections = visibleSections.filter((section) => section.key === "help");
 
   const isItemActive = (item: NavItem) => {
     if (item.specialAction === "OPEN_OC_MODAL") return isDossierRouteActive;
@@ -180,8 +188,8 @@ export function AppSidebar() {
           )}
 
           {/* Navigation */}
-          <div className="flex-1 p-2">
-            {visibleSections.map((section) => (
+          <div className="flex h-full flex-1 flex-col p-2">
+            {mainSections.map((section) => (
               <SidebarGroup key={section.key}>
                 {section.collapsible ? (
                   <Collapsible
@@ -274,6 +282,49 @@ export function AppSidebar() {
                 )}
               </SidebarGroup>
             ))}
+
+            {pinnedSections.length > 0 ? (
+              <div className="mt-auto border-t border-border pt-2">
+                {pinnedSections.map((section) => (
+                  <SidebarGroup key={section.key}>
+                    {!collapsed && (
+                      <SidebarGroupLabel className="text-xs font-medium text-muted-foreground">
+                        {section.label}
+                      </SidebarGroupLabel>
+                    )}
+                    <SidebarGroupContent>
+                      <SidebarMenu>
+                        {section.items.map((item) => (
+                          <SidebarMenuItem key={item.key}>
+                            <SidebarMenuButton asChild>
+                              <Link
+                                href={item.url}
+                                onClick={(e) => handleItemClick(e, item)}
+                                className={`flex items-center gap-2 px-[var(--density-sidebar-link-px)] py-[var(--density-sidebar-link-py)] rounded-md ${
+                                  isItemActive(item) ? "bg-primary text-primary-foreground" : "hover:bg-accent/50"
+                                }`}
+                              >
+                                {renderIcon(item.icon)}
+                                {!collapsed && (
+                                  <div className="flex items-center justify-between w-full">
+                                    <span>{item.label}</span>
+                                    {item.badge && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {item.badge}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                ))}
+              </div>
+            ) : null}
           </div>
         </SidebarContent>
       </Sidebar>

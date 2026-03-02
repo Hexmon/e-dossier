@@ -1,9 +1,8 @@
 import { randomUUID } from "crypto";
-import { requireAdmin } from "@/app/lib/authz";
 import { handleApiError, json } from "@/app/lib/http";
-import { withAuthz } from "@/app/lib/acx/withAuthz";
 import { createPresignedUploadUrl, getPublicObjectUrl } from "@/app/lib/storage";
 import { relegationPdfPresignSchema } from "@/app/lib/validators.relegation";
+import { assertCanWriteSingle, getRelegationAccessContext } from "@/app/lib/relegation-auth";
 import {
   AuditEventType,
   AuditResourceType,
@@ -15,7 +14,8 @@ export const runtime = "nodejs";
 
 async function POSTHandler(req: AuditNextRequest) {
   try {
-    const auth = await requireAdmin(req);
+    const access = await getRelegationAccessContext(req);
+    assertCanWriteSingle(access);
     const parsed = relegationPdfPresignSchema.safeParse(await req.json());
 
     if (!parsed.success) {
@@ -33,7 +33,7 @@ async function POSTHandler(req: AuditNextRequest) {
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
       outcome: "SUCCESS",
-      actor: { type: "user", id: auth.userId },
+      actor: { type: "user", id: access.userId },
       target: { type: AuditResourceType.API, id: "admin:relegation:presign:create" },
       metadata: {
         description: "Generated relegation PDF presigned upload URL.",
@@ -56,4 +56,4 @@ async function POSTHandler(req: AuditNextRequest) {
   }
 }
 
-export const POST = withAuditRoute("POST", withAuthz(POSTHandler));
+export const POST = withAuditRoute("POST", POSTHandler);

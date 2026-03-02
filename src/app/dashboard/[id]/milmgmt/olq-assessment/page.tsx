@@ -103,6 +103,7 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
     const [activeInnerTab, setActiveInnerTab] = useState<"input" | "view">("input");
 
     const [structure, setStructure] = useState<Record<string, any[]>>({});
+    const [templateMissingNotice, setTemplateMissingNotice] = useState<string | null>(null);
     const [loadingStructure, setLoadingStructure] = useState<boolean>(true);
 
     const [serverRecordsPerSem, setServerRecordsPerSem] = useState<Record<number, any[]>>({});
@@ -133,8 +134,13 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
         (async () => {
             setLoadingStructure(true);
             try {
-                const categories = await fetchCategories();
+                const categoryResponse = await fetchCategories();
                 if (!mounted) return;
+                const categories = categoryResponse.items ?? [];
+                const missingMessage = categoryResponse.templateMissing
+                    ? (categoryResponse.message || "OLQ template is not configured for this course. Contact admin.")
+                    : null;
+                setTemplateMissingNotice(missingMessage);
 
                 const mapped: Record<string, any[]> = {};
                 categories.forEach((cat: any) => {
@@ -222,6 +228,10 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
 
     const onSubmit = handleSubmit(async (vals) => {
         if (!selectedCadet) { toast.error("No cadet selected"); return; }
+        if (templateMissingNotice) {
+            toast.error(templateMissingNotice);
+            return;
+        }
         const semester = activeSemIndex + 1;
         const itemsForSem = serverRecordsPerSem[semester] ?? [];
 
@@ -264,6 +274,10 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
     });
 
     const handleDeleteSemester = async () => {
+        if (templateMissingNotice) {
+            toast.error(templateMissingNotice);
+            return;
+        }
         const ok = await deleteSemester(activeSemIndex + 1);
         if (ok) {
             const flatInit: any = {};
@@ -333,6 +347,14 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
                                 <CardContent>
                                     {loadingStructure ? (
                                         <p className="text-center py-6">Loading categories...</p>
+                                    ) : templateMissingNotice ? (
+                                        <div className="rounded-lg border border-warning/30 bg-warning/20 p-4 text-warning-foreground">
+                                            {templateMissingNotice}
+                                        </div>
+                                    ) : !Object.keys(structure).length ? (
+                                        <p className="text-center py-6 text-muted-foreground">
+                                            No OLQ categories available for this course.
+                                        </p>
                                     ) : (
                                         <OLQForm
                                             register={register}
@@ -358,15 +380,21 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
                                 <CardContent>
                                     {loadingSemester ? (
                                         <p className="text-center py-6">Loading results...</p>
+                                    ) : templateMissingNotice ? (
+                                        <div className="rounded-lg border border-warning/30 bg-warning/20 p-4 text-warning-foreground">
+                                            {templateMissingNotice}
+                                        </div>
                                     ) : (
                                         <OLQView structure={structure} submission={submissions[activeSemIndex]} />
                                     )}
 
                                     {/* Edit & Delete controls inside view tab */}
-                                    <div className="mt-4 flex justify-center gap-4">
-                                        <Button onClick={() => setActiveInnerTab("input")}>Edit Scores</Button>
-                                        {/* <Button variant="destructive" onClick={handleDeleteSemester}>Delete Semester</Button> */}
-                                    </div>
+                                    {!templateMissingNotice && (
+                                        <div className="mt-4 flex justify-center gap-4">
+                                            <Button onClick={() => setActiveInnerTab("input")}>Edit Scores</Button>
+                                            {/* <Button variant="destructive" onClick={handleDeleteSemester}>Delete Semester</Button> */}
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </InnerTabContent>

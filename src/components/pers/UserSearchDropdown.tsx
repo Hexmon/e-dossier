@@ -89,7 +89,12 @@ export default function UserSearchDropdown({
     };
 
     return (
-        <div ref={containerRef} className="relative">
+        <div
+            ref={containerRef}
+            className="relative"
+            data-search-container="dropdown"
+            data-open={isOpen ? "true" : "false"}
+        >
             <Input
                 value={query}
                 onChange={(e) => {
@@ -100,6 +105,9 @@ export default function UserSearchDropdown({
                 onFocus={() => results.length > 0 && setIsOpen(true)}
                 disabled={disabled}
                 placeholder={placeholder}
+                data-search-target="true"
+                data-search-scope="dropdown"
+                data-search-priority="90"
             />
 
             {isOpen && (
