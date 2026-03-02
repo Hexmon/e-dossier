@@ -2766,6 +2766,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/reports/verification/verify",
+    "action": "admin:reports:verification:verify:create",
+    "resourceType": "admin:reports:verification:verify",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/appointments",
     "action": "admin:appointments:create",
     "resourceType": "admin:appointments",
@@ -4199,6 +4208,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "route": "/dashboard/genmgmt/report-verification",
+    "action": "page:dashboard:genmgmt:report-verification:view",
+    "resourceType": "page:dashboard:genmgmt:report-verification",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
     "route": "/dashboard/genmgmt/settings/site",
     "action": "page:dashboard:genmgmt:settings:site:view",
     "resourceType": "page:dashboard:genmgmt:settings:site",
@@ -4230,6 +4246,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/help",
     "action": "page:dashboard:help:view",
     "resourceType": "page:dashboard:help",
+    "category": "help",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/help/admin-operations",
+    "action": "page:dashboard:help:admin-operations:view",
+    "resourceType": "page:dashboard:help:admin-operations",
     "category": "help",
     "adminBaseline": true
   },

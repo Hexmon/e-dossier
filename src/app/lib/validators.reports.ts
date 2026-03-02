@@ -115,3 +115,10 @@ export const finalResultCompilationDownloadBodySchema = z.object({
 });
 
 export const nonEmptySearchSchema = nonEmptyString.max(120);
+
+export const reportVerificationVersionCodeSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(32)
+  .regex(/^[A-Z0-9-]+$/i, 'Invalid version code format');

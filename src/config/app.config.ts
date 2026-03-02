@@ -10,6 +10,7 @@ import {
   Book,
   CheckCircle,
   CalendarDays,
+  FileCheck2,
   Trophy,
   FileBadge,
   NotebookPen,
@@ -265,6 +266,13 @@ export const managementCard: ManagementCardConfig[] = [
     icon: CalendarDays,
     to: "/dashboard/genmgmt/appointmentmgmt",
     color: "info"
+  },
+  {
+    title: "Report Verification",
+    description: "Verify downloaded report PDFs using version code and optional checksum match",
+    icon: FileCheck2,
+    to: "/dashboard/genmgmt/report-verification",
+    color: "warning"
   },
   {
     title: "RBAC Management",
@@ -1335,6 +1343,12 @@ export const ocTabs = [
     title: "Platoon Management",
     icon: Users,
     link: "/dashboard/genmgmt/platoon-management",
+  },
+  {
+    value: "report-verification",
+    title: "Report Verification",
+    icon: FileCheck2,
+    link: "/dashboard/genmgmt/report-verification",
   }
 ];
 
@@ -1417,6 +1431,12 @@ export const ocTabsWithDropdown = [
         icon: CalendarDays,
         color: "info",
         href: "/dashboard/genmgmt/appointmentmgmt"
+      },
+      {
+        title: "Report Verification",
+        icon: FileCheck2,
+        color: "warning",
+        href: "/dashboard/genmgmt/report-verification"
       },
       {
         title: "Instructor Management",

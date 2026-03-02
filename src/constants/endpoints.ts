@@ -19,6 +19,11 @@ export const endpoints = {
             gradingPolicy: "/api/v1/admin/academics/grading-policy",
             gradingPolicyRecalculate: "/api/v1/admin/academics/grading-policy/recalculate",
         },
+        reports: {
+            verification: {
+                verify: "/api/v1/admin/reports/verification/verify",
+            },
+        },
 
         users: "/api/v1/admin/users",
         subjects: "/api/v1/admin/subjects",

@@ -28,6 +28,7 @@ flowchart LR
 - `physical-training-template.md`
 - `olq-template.md`
 - `grading-policy.md`
+- `admin-operations.md`
 
 ## future docs
 

@@ -29,6 +29,42 @@ export const HELP_MODULES: HelpModuleMeta[] = [
     ],
   },
   {
+    key: 'admin-operations',
+    title: 'Admin Operations',
+    summary:
+      'Operational manual for User, Approval, Appointment, Platoon management, and report PDF verification.',
+    route: '/dashboard/help/admin-operations',
+    status: 'active',
+    tags: ['admin', 'users', 'approval', 'appointments', 'platoon', 'report verification'],
+    sections: [
+      {
+        anchor: 'user-management',
+        label: '1. User Management',
+        keywords: ['usersmgmt', 'username', 'rank'],
+      },
+      {
+        anchor: 'approval-management',
+        label: '2. Approval Management',
+        keywords: ['approval', 'scope', 'position'],
+      },
+      {
+        anchor: 'appointment-management',
+        label: '3. Appointment Management',
+        keywords: ['handover', 'history', 'appointments'],
+      },
+      {
+        anchor: 'platoon-management',
+        label: '4. Platoon Management',
+        keywords: ['platoon', 'commander'],
+      },
+      {
+        anchor: 'verify-downloaded-report-pdf',
+        label: '5. Verify Downloaded Report PDF',
+        keywords: ['version code', 'checksum', 'authentic'],
+      },
+    ],
+  },
+  {
     key: 'rbac-and-permissions',
     title: 'RBAC & Permissions',
     summary: 'How action-map, permission matrix, and role/position mapping work together.',
