@@ -128,6 +128,51 @@ export const HELP_MODULES: HelpModuleMeta[] = [
     ],
   },
   {
+    key: 'academic-grading-policy',
+    title: 'Academic Grading Policy',
+    summary: 'Global letter-grade and grade-point policy, GPA formula settings, and recalculation workflow.',
+    route: '/dashboard/help/org-templates/grading-policy',
+    status: 'active',
+    tags: ['grading', 'grade bands', 'sgpa', 'cgpa', 'academics', 'recalculate'],
+    sections: [
+      {
+        anchor: 'what-this-controls',
+        label: '1. What this controls',
+        keywords: ['global policy', 'letter grades', 'grade points'],
+      },
+      {
+        anchor: 'default-policy',
+        label: '2. Default policy (C# mapping)',
+        keywords: ['ap', 'ao', 'am', 'bp', 'bo', 'bm', 'cp', 'co', 'cm', 'f'],
+      },
+      {
+        anchor: 'update-policy',
+        label: '3. How to update policy',
+        keywords: ['save policy', 'threshold'],
+      },
+      {
+        anchor: 'recalculation-flow',
+        label: '4. Recalculation flow (Preview and Apply)',
+        keywords: ['dry run', 'apply updates', 'all courses', 'selected courses'],
+      },
+      {
+        anchor: 'report-impact',
+        label: '5. Report impact',
+        keywords: ['consolidated', 'semester grade', 'final result compilation'],
+      },
+      {
+        anchor: 'validation-checklist',
+        label: '6. Validation checklist',
+        keywords: ['verify', 'boundaries'],
+      },
+      {
+        anchor: 'common-mistakes',
+        label: '7. Common mistakes',
+        keywords: ['mistakes', 'troubleshooting'],
+      },
+    ],
+  },
+  {
     key: 'deployment-and-environment',
     title: 'Deployment & Environment',
     summary: 'Deployment prerequisites, environment hardening, and operations checks.',

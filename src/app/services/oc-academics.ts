@@ -12,7 +12,8 @@ import {
     SemesterSummaryPatchInput,
 } from '@/app/db/queries/oc';
 import { TheoryMarksRecord, PracticalMarksRecord } from '@/app/db/schema/training/oc';
-import { marksToGradePoints } from '@/app/lib/grading';
+import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
+import { marksToGradePointsWithPolicy, roundPolicyValue, type AcademicGradingPolicy } from '@/app/lib/grading-policy';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 
 type BranchTag = 'C' | 'E' | 'M';
@@ -62,54 +63,94 @@ function determineBranchForSemester(semester: number, branch?: string | null): B
     return 'C';
 }
 
-function computeSemesterGpa(view: AcademicSemesterView) {
+function computeSemesterGpa(view: AcademicSemesterView, policy: AcademicGradingPolicy) {
     let totalCredits = 0;
     let totalWeighted = 0;
+    let totalPoints = 0;
+    let pointComponents = 0;
 
     for (const subject of view.subjects ?? []) {
         if (subject.includeTheory) {
             const credits = Number(subject.theoryCredits ?? subject.subject?.defaultTheoryCredits ?? 0);
-            const points = marksToGradePoints(subject.theory?.totalMarks ?? 0);
+            const points = marksToGradePointsWithPolicy(subject.theory?.totalMarks ?? 0, policy);
             totalCredits += credits;
             totalWeighted += credits * points;
+            totalPoints += points;
+            pointComponents += 1;
         }
         if (subject.includePractical) {
             const credits = Number(subject.practicalCredits ?? subject.subject?.defaultPracticalCredits ?? 0);
-            const points = marksToGradePoints(subject.practical?.totalMarks ?? 0);
+            const points = marksToGradePointsWithPolicy(subject.practical?.totalMarks ?? 0, policy);
             totalCredits += credits;
             totalWeighted += credits * points;
+            totalPoints += points;
+            pointComponents += 1;
         }
     }
 
-    const sgpa = totalCredits > 0 ? totalWeighted / totalCredits : null;
-    return { sgpa, totalCredits, totalWeighted };
+    let sgpa: number | null = null;
+    if (policy.sgpaFormulaTemplate === 'SEMESTER_AVG') {
+        sgpa = pointComponents > 0 ? totalPoints / pointComponents : null;
+    } else {
+        sgpa = totalCredits > 0 ? totalWeighted / totalCredits : null;
+    }
+
+    return {
+        sgpa: roundPolicyValue(sgpa, policy.roundingScale),
+        totalCredits,
+        totalWeighted,
+    };
 }
 
-function computeDerivedGpaBySemester(views: AcademicSemesterView[], semestersWithRows?: Set<number>) {
+function computeDerivedGpaBySemester(
+    views: AcademicSemesterView[],
+    policy: AcademicGradingPolicy,
+    semestersWithRows?: Set<number>
+) {
     const ordered = [...views].sort((a, b) => a.semester - b.semester);
     const derived = new Map<number, { sgpa: number | null; cgpa: number | null }>();
 
     let cumulativeCredits = 0;
     let cumulativeWeighted = 0;
+    let cumulativeSgpa = 0;
+    let cumulativeSgpaCount = 0;
 
     for (const view of ordered) {
         if (semestersWithRows && !semestersWithRows.has(view.semester)) {
             continue;
         }
 
-        const { sgpa, totalCredits, totalWeighted } = computeSemesterGpa(view);
+        const { sgpa, totalCredits, totalWeighted } = computeSemesterGpa(view, policy);
         cumulativeCredits += totalCredits;
         cumulativeWeighted += totalWeighted;
-        const cgpa = cumulativeCredits > 0 ? cumulativeWeighted / cumulativeCredits : null;
-        derived.set(view.semester, { sgpa, cgpa });
+        if (sgpa !== null) {
+            cumulativeSgpa += sgpa;
+            cumulativeSgpaCount += 1;
+        }
+
+        let cgpa: number | null = null;
+        if (policy.cgpaFormulaTemplate === 'SEMESTER_AVG') {
+            cgpa = cumulativeSgpaCount > 0 ? cumulativeSgpa / cumulativeSgpaCount : null;
+        } else {
+            cgpa = cumulativeCredits > 0 ? cumulativeWeighted / cumulativeCredits : null;
+        }
+
+        derived.set(view.semester, {
+            sgpa,
+            cgpa: roundPolicyValue(cgpa, policy.roundingScale),
+        });
     }
 
     return derived;
 }
 
-function applyComputedGpaToViews(views: AcademicSemesterView[], semestersWithRows: Set<number>) {
+function applyComputedGpaToViews(
+    views: AcademicSemesterView[],
+    semestersWithRows: Set<number>,
+    policy: AcademicGradingPolicy
+) {
     if (!views.length || semestersWithRows.size === 0) return views;
-    const derived = computeDerivedGpaBySemester(views, semestersWithRows);
+    const derived = computeDerivedGpaBySemester(views, policy, semestersWithRows);
 
     return views.map((view) => {
         if (!semestersWithRows.has(view.semester)) return view;
@@ -126,9 +167,10 @@ function applyComputedGpaToViews(views: AcademicSemesterView[], semestersWithRow
 async function recomputeAndPersistGpa(ocId: string) {
     const rows = await listSemesterMarksRows(ocId);
     if (!rows.length) return;
+    const policy = await getAcademicGradingPolicy();
     const semestersWithRows = new Set(rows.map((r) => r.semester));
     const views = (await getOcAcademics(ocId)).filter((v) => semestersWithRows.has(v.semester));
-    const derived = computeDerivedGpaBySemester(views, semestersWithRows);
+    const derived = computeDerivedGpaBySemester(views, policy, semestersWithRows);
 
     for (const view of [...views].sort((a, b) => a.semester - b.semester)) {
         const next = derived.get(view.semester) ?? { sgpa: null, cgpa: null };
@@ -143,6 +185,7 @@ async function recomputeAndPersistGpa(ocId: string) {
 export async function getOcAcademics(ocId: string, opts?: { semester?: number }): Promise<AcademicSemesterView[]> {
     const ocInfo = await getOcCourseInfo(ocId);
     if (!ocInfo) throw new ApiError(404, 'OC not found', 'not_found');
+    const policy = await getAcademicGradingPolicy();
 
     // Always load all semester rows and offerings so CGPA is accurate even when fetching a single semester.
     const offerings = await listCourseOfferings(ocInfo.courseId);
@@ -176,7 +219,7 @@ export async function getOcAcademics(ocId: string, opts?: { semester?: number })
     });
 
     const semestersWithRows = new Set(rows.map((r) => r.semester));
-    const computedViews = applyComputedGpaToViews(views, semestersWithRows);
+    const computedViews = applyComputedGpaToViews(views, semestersWithRows, policy);
 
     if (opts?.semester) {
         return computedViews.filter((view) => view.semester === opts.semester);

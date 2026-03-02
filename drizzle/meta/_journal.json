@@ -183,6 +183,13 @@
       "when": 1772307000000,
       "tag": "0025_camp_semester_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1772439000000,
+      "tag": "0026_academic_grading_policy",
+      "breakpoints": true
     }
   ]
 }

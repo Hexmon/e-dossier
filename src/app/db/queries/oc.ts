@@ -39,7 +39,8 @@ import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
-import { marksToLetterGrade } from '@/app/lib/grading';
+import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
+import { marksToLetterGradeWithPolicy, type AcademicGradingPolicy } from '@/app/lib/grading-policy';
 
 type ListOpts = {
     id?: string;
@@ -67,7 +68,15 @@ function toFiniteNumber(value: unknown): number {
     return Number.isFinite(num) ? num : 0;
 }
 
-function mergeTheory(target: TheoryMarksRecord | null | undefined, patch?: TheoryPatch) {
+function toPositiveNumber(value: unknown): number {
+    return Math.max(0, toFiniteNumber(value));
+}
+
+function mergeTheory(
+    target: TheoryMarksRecord | null | undefined,
+    policy: AcademicGradingPolicy,
+    patch?: TheoryPatch
+) {
     if (!patch) return target ?? undefined;
     const next: TheoryMarksRecord = { ...(target ?? {}) };
     let changed = false;
@@ -79,17 +88,22 @@ function mergeTheory(target: TheoryMarksRecord | null | undefined, patch?: Theor
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
     if (!hasExplicitGrade && !hasExistingGrade) {
-        const phaseTest1 = toFiniteNumber(next.phaseTest1Marks);
-        const phaseTest2 = toFiniteNumber(next.phaseTest2Marks);
-        const tutorial = toFiniteNumber(next.tutorial);
-        const finalMarks = toFiniteNumber(next.finalMarks);
-        next.grade = marksToLetterGrade(phaseTest1 + phaseTest2 + tutorial + finalMarks);
+        // C# parity: each component contributes only when positive (Sign(x) == 1).
+        const phaseTest1 = toPositiveNumber(next.phaseTest1Marks);
+        const phaseTest2 = toPositiveNumber(next.phaseTest2Marks);
+        const tutorial = toPositiveNumber(next.tutorial);
+        const finalMarks = toPositiveNumber(next.finalMarks);
+        next.grade = marksToLetterGradeWithPolicy(phaseTest1 + phaseTest2 + tutorial + finalMarks, policy);
         changed = true;
     }
     return changed ? next : target;
 }
 
-function mergePractical(target: PracticalMarksRecord | null | undefined, patch?: PracticalPatch) {
+function mergePractical(
+    target: PracticalMarksRecord | null | undefined,
+    policy: AcademicGradingPolicy,
+    patch?: PracticalPatch
+) {
     if (!patch) return target ?? undefined;
     const next: PracticalMarksRecord = { ...(target ?? {}) };
     let changed = false;
@@ -101,7 +115,8 @@ function mergePractical(target: PracticalMarksRecord | null | undefined, patch?:
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
     if (!hasExplicitGrade && !hasExistingGrade) {
-        next.grade = marksToLetterGrade(next.finalMarks);
+        // C# parity: practical marks use positive-only value for grade mapping.
+        next.grade = marksToLetterGradeWithPolicy(toPositiveNumber(next.finalMarks), policy);
         changed = true;
     }
     return changed ? next : target;
@@ -176,6 +191,7 @@ export type SemesterSummaryPatchInput = {
 
 export async function upsertSemesterSubjectMarks(ocId: string, semester: number, input: SemesterSubjectUpsertInput) {
     const now = new Date();
+    const policy = await getAcademicGradingPolicy();
     return db.transaction(async (tx) => {
         const enrollmentId = (await getOrCreateActiveEnrollment(ocId, tx)).id;
         const [existing] = await tx
@@ -211,9 +227,9 @@ export async function upsertSemesterSubjectMarks(ocId: string, semester: number,
             deletedAt: null,
         };
 
-        const nextTheory = mergeTheory(base.theory, input.theory);
+        const nextTheory = mergeTheory(base.theory, policy, input.theory);
         if (nextTheory) base.theory = nextTheory;
-        const nextPractical = mergePractical(base.practical, input.practical);
+        const nextPractical = mergePractical(base.practical, policy, input.practical);
         if (nextPractical) base.practical = nextPractical;
 
         if (idx >= 0) {

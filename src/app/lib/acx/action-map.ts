@@ -696,6 +696,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/academics/grading-policy",
+    "action": "admin:academics:grading-policy:read",
+    "resourceType": "admin:academics:grading-policy",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/appointments",
     "action": "admin:appointments:read",
     "resourceType": "admin:appointments",
@@ -2748,6 +2757,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/academics/grading-policy/recalculate",
+    "action": "admin:academics:grading-policy:recalculate:create",
+    "resourceType": "admin:academics:grading-policy:recalculate",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/appointments",
     "action": "admin:appointments:create",
     "resourceType": "admin:appointments",
@@ -3720,6 +3738,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PUT",
+    "path": "/api/v1/admin/academics/grading-policy",
+    "action": "admin:academics:grading-policy:update",
+    "resourceType": "admin:academics:grading-policy",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
     "path": "/api/v1/admin/rbac/mappings",
     "action": "admin:rbac:mappings:update",
     "resourceType": "admin:rbac:mappings",
@@ -4074,6 +4101,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "route": "/dashboard/genmgmt/grading-policy",
+    "action": "page:dashboard:genmgmt:grading-policy:view",
+    "resourceType": "page:dashboard:genmgmt:grading-policy",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
     "route": "/dashboard/genmgmt/instructors",
     "action": "page:dashboard:genmgmt:instructors:view",
     "resourceType": "page:dashboard:genmgmt:instructors",
@@ -4217,6 +4251,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/help/org-templates/olq",
     "action": "page:dashboard:help:org-templates:olq:view",
     "resourceType": "page:dashboard:help:org-templates:olq",
+    "category": "help",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/help/org-templates/grading-policy",
+    "action": "page:dashboard:help:org-templates:grading-policy:view",
+    "resourceType": "page:dashboard:help:org-templates:grading-policy",
     "category": "help",
     "adminBaseline": true
   },

@@ -407,6 +407,13 @@ export const moduleManagementCard: ManagementCardConfig[] = [
     icon: ClipboardList,
     to: "/dashboard/genmgmt/olq-mgmt",
     color: "info"
+  },
+  {
+    title: "Grading Policy",
+    description: "Configure grade bands, GPA formulas, and recalculate academic data",
+    icon: ArrowDownUp,
+    to: "/dashboard/genmgmt/grading-policy",
+    color: "warning"
   }
 
 
@@ -1372,6 +1379,12 @@ export const moduleManagementTabs = [
     title: "Physical Training Management",
     icon: Dumbbell,
     link: "/dashboard/genmgmt/pt-mgmt",
+  },
+  {
+    value: "grading-policy",
+    title: "Grading Policy",
+    icon: ArrowDownUp,
+    link: "/dashboard/genmgmt/grading-policy",
   }
 ];
 
