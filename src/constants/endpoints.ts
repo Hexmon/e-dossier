@@ -177,6 +177,12 @@ export const endpoints = {
                 download: "/api/v1/reports/mil-training/physical-assessment/download",
             },
         },
+        overallTraining: {
+            courseWisePerformance: {
+                preview: "/api/v1/reports/overall-training/course-wise-performance/preview",
+                download: "/api/v1/reports/overall-training/course-wise-performance/download",
+            },
+        },
     },
     course: {
         all: "/api/v1/admin/courses"

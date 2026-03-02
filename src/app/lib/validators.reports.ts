@@ -74,6 +74,17 @@ export const ptAssessmentDownloadBodySchema = ptAssessmentPreviewQuerySchema.mer
   reportDownloadMetaSchema
 );
 
+export const courseWisePerformancePreviewQuerySchema = z.object({
+  courseId: z.string().uuid(),
+  semester: reportSemesterSchema,
+});
+
+export const courseWisePerformanceDownloadBodySchema = z.object({
+  courseId: z.string().uuid(),
+  semester: reportSemesterSchema,
+  password: z.string().min(1).max(128),
+});
+
 const finalResultIdentityRowSchema = z.object({
   ocId: z.string().uuid(),
   enrolmentNumber: z.string().trim().max(120).optional(),

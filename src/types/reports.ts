@@ -191,6 +191,56 @@ export type PtAssessmentDownloadRequest = {
   checkedBy: string;
 };
 
+export type CourseWisePerformanceColumn = {
+  key:
+    | 'serNo'
+    | 'tesNo'
+    | 'rank'
+    | 'name'
+    | 'academicsTotal'
+    | 'academicsScaled'
+    | 'ptSwimming'
+    | 'games'
+    | 'olq'
+    | 'cfe'
+    | 'drill'
+    | 'camp'
+    | 'cdrMarks'
+    | 'grandTotal'
+    | 'percentage';
+  label: string;
+  maxMarks: number | null;
+};
+
+export type CourseWisePerformanceRow = {
+  ocId: string;
+  sNo: number;
+  tesNo: string;
+  rank: string;
+  name: string;
+  academicsTotal: number;
+  academicsScaled: number;
+  ptSwimming: number;
+  games: number;
+  olq: number;
+  cfe: number;
+  drill: number;
+  camp: number;
+  cdrMarks: number;
+  grandTotal: number;
+  percentage: number;
+};
+
+export type CourseWisePerformancePreview = {
+  reportType: 'OVERALL_TRAINING_COURSE_WISE_PERFORMANCE';
+  course: { id: string; code: string; title: string };
+  semester: number;
+  columns: CourseWisePerformanceColumn[];
+  rows: CourseWisePerformanceRow[];
+  maxTotalForSemester: number;
+  formulaLabel: string;
+};
+
 export type FinalResultSubjectColumn = {
   key: string;
   subjectId: string;
@@ -248,4 +298,10 @@ export type FinalResultDownloadRequest = {
   identityRows?: FinalResultIdentityRow[];
   preparedBy?: string;
   checkedBy?: string;
+};
+
+export type CourseWisePerformanceDownloadRequest = {
+  courseId: string;
+  semester: number;
+  password: string;
 };

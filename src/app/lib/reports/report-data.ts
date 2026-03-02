@@ -6,13 +6,18 @@ import { listCourseOfferings } from '@/app/db/queries/courses';
 import { getOcAcademicSemester, getOcAcademics } from '@/app/services/oc-academics';
 import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
 import { listOcPtScoresByOcIds } from '@/app/db/queries/physicalTrainingOc';
+import { getSemesterSourceScoresDetailed, getSprRecord } from '@/app/db/queries/performance-records';
 import { courses } from '@/app/db/schema/training/courses';
 import { courseOfferingInstructors } from '@/app/db/schema/training/courseOfferings';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { FIXED_MARKS, REPORT_TYPES } from '@/app/lib/reports/types';
+import { SPR_MAX_MARKS } from '@/app/services/performance-record.constants';
 import { marksToGradePoints, marksToLetterGrade } from '@/app/lib/grading';
 import type {
   ConsolidatedSessionalPreview,
+  CourseWisePerformanceColumn,
+  CourseWisePerformancePreview,
+  CourseWisePerformanceRow,
   FinalResultCompilationPreview,
   FinalResultOcRow,
   FinalResultSubjectColumn,
@@ -65,6 +70,29 @@ const FINAL_RESULT_GRADE_BANDS: FinalResultCompilationPreview['gradeBands'] = [
   { label: 'Well Below Avg', range: '59-30' },
   { label: 'Poor', range: '29-0' },
 ];
+
+const COURSE_WISE_BASE_COLUMNS: CourseWisePerformanceColumn[] = [
+  { key: 'serNo', label: 'S. No', maxMarks: null },
+  { key: 'tesNo', label: 'TES No', maxMarks: null },
+  { key: 'rank', label: 'Rank', maxMarks: null },
+  { key: 'name', label: 'Name', maxMarks: null },
+  { key: 'academicsTotal', label: 'Academics Total Marks', maxMarks: 2500 },
+  { key: 'academicsScaled', label: 'Academics Marks Scale to', maxMarks: 1350 },
+  { key: 'ptSwimming', label: 'PT & Swimming', maxMarks: 150 },
+  { key: 'games', label: 'Games incl X-Country', maxMarks: 100 },
+  { key: 'olq', label: 'OLQ', maxMarks: 300 },
+  { key: 'cfe', label: 'Credit for Excellence', maxMarks: 25 },
+];
+
+const COURSE_WISE_TAIL_COLUMNS: CourseWisePerformanceColumn[] = [
+  { key: 'cdrMarks', label: "Cdr's Mks", maxMarks: 25 },
+  { key: 'grandTotal', label: 'Grand Total', maxMarks: null },
+  { key: 'percentage', label: '%', maxMarks: 100 },
+];
+
+function round2(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
 
 function safeNumber(value: unknown): number {
   const n = Number(value);
@@ -427,6 +455,110 @@ export async function buildFinalResultCompilationPreview(params: {
     semesterCreditsTotal: subjectColumns.reduce((sum, item) => sum + item.credits, 0),
     previousSemesterCreditsReference: Math.max(0, ...rows.map((row) => row.previousCumulativeCredits)),
     uptoSemesterCreditsReference: Math.max(0, ...rows.map((row) => row.uptoSemesterCredits)),
+  };
+}
+
+export async function buildCourseWisePerformancePreview(params: {
+  courseId: string;
+  semester: number;
+}): Promise<CourseWisePerformancePreview> {
+  const [course, ocRows] = await Promise.all([
+    resolveCourse(params.courseId),
+    listOCsBasic({
+      courseId: params.courseId,
+      active: true,
+      limit: 5000,
+      sort: 'name_asc',
+    }),
+  ]);
+
+  const includeDrill = params.semester >= 4 && Number(SPR_MAX_MARKS[params.semester]?.drill ?? 0) > 0;
+  const includeCamp = params.semester >= 5 && Number(SPR_MAX_MARKS[params.semester]?.camp ?? 0) > 0;
+  const maxTotalForSemester = Number(SPR_MAX_MARKS[params.semester]?.total ?? 0);
+
+  const dynamicColumns: CourseWisePerformanceColumn[] = [...COURSE_WISE_BASE_COLUMNS];
+  if (includeDrill) {
+    dynamicColumns.push({
+      key: 'drill',
+      label: 'Drill',
+      maxMarks: Number(SPR_MAX_MARKS[params.semester]?.drill ?? 0),
+    });
+  }
+  if (includeCamp) {
+    dynamicColumns.push({
+      key: 'camp',
+      label: 'Camp',
+      maxMarks: Number(SPR_MAX_MARKS[params.semester]?.camp ?? 0),
+    });
+  }
+  dynamicColumns.push(
+    ...COURSE_WISE_TAIL_COLUMNS.map((column) =>
+      column.key === 'grandTotal'
+        ? { ...column, maxMarks: maxTotalForSemester || null }
+        : column
+    )
+  );
+
+  const formulaParts = [
+    'Academics Scaled',
+    'PT & Swimming',
+    'Games incl X-Country',
+    'OLQ',
+    'Credit for Excellence',
+    ...(includeDrill ? ['Drill'] : []),
+    ...(includeCamp ? ['Camp'] : []),
+    "Cdr's Mks",
+  ];
+
+  const rows = await Promise.all(
+    ocRows.map(async (oc, index): Promise<CourseWisePerformanceRow> => {
+      const [source, sprRecord] = await Promise.all([
+        getSemesterSourceScoresDetailed(oc.id, params.semester),
+        getSprRecord(oc.id, params.semester),
+      ]);
+
+      const cdrMarks = Number(sprRecord?.cdrMarks ?? 0);
+      const grandTotal =
+        Number(source.academicsScaled ?? 0) +
+        Number(source.ptSwimming ?? 0) +
+        Number(source.games ?? 0) +
+        Number(source.olq ?? 0) +
+        Number(source.cfe ?? 0) +
+        (includeDrill ? Number(source.drill ?? 0) : 0) +
+        (includeCamp ? Number(source.camp ?? 0) : 0) +
+        cdrMarks;
+
+      const percentage = maxTotalForSemester > 0 ? (grandTotal / maxTotalForSemester) * 100 : 0;
+
+      return {
+        ocId: oc.id,
+        sNo: index + 1,
+        tesNo: oc.ocNo,
+        rank: 'OC',
+        name: oc.name,
+        academicsTotal: round2(Number(source.academicsRawScored ?? 0)),
+        academicsScaled: round2(Number(source.academicsScaled ?? 0)),
+        ptSwimming: round2(Number(source.ptSwimming ?? 0)),
+        games: round2(Number(source.games ?? 0)),
+        olq: round2(Number(source.olq ?? 0)),
+        cfe: round2(Number(source.cfe ?? 0)),
+        drill: round2(Number(source.drill ?? 0)),
+        camp: round2(Number(source.camp ?? 0)),
+        cdrMarks: round2(cdrMarks),
+        grandTotal: round2(grandTotal),
+        percentage: round2(percentage),
+      };
+    })
+  );
+
+  return {
+    reportType: REPORT_TYPES.OVERALL_TRAINING_COURSE_WISE_PERFORMANCE,
+    course,
+    semester: params.semester,
+    columns: dynamicColumns,
+    rows,
+    maxTotalForSemester,
+    formulaLabel: `Grand Total = ${formulaParts.join(' + ')}`,
   };
 }
 

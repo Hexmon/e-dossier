@@ -23,6 +23,12 @@ export type SemesterSourceScores = {
     cfe: number;
 };
 
+export type SemesterSourceScoresDetailed = SemesterSourceScores & {
+    academicsRawScored: number;
+    academicsRawMax: number;
+    academicsScaled: number;
+};
+
 export async function getSprRecord(ocId: string, semester: number) {
     const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const [row] = await db
@@ -73,7 +79,10 @@ export async function upsertSprRecord(
     return created;
 }
 
-export async function getSemesterSourceScores(ocId: string, semester: number): Promise<SemesterSourceScores> {
+export async function getSemesterSourceScoresDetailed(
+    ocId: string,
+    semester: number,
+): Promise<SemesterSourceScoresDetailed> {
     const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const academicSemester = await getOcAcademicSemester(ocId, semester);
     const academicSubjects = Array.isArray(academicSemester?.subjects) ? academicSemester.subjects : [];
@@ -177,6 +186,9 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
     }
 
     return {
+        academicsRawScored: Number(academicScored ?? 0),
+        academicsRawMax: Number(academicMax ?? 0),
+        academicsScaled: Number(academicScaled ?? 0),
         academics: Number(academicScaled ?? 0),
         olq: Number(olq?.scored ?? 0),
         ptSwimming: Number(pt?.scored ?? 0),
@@ -184,6 +196,19 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
         drill,
         camp,
         cfe,
+    };
+}
+
+export async function getSemesterSourceScores(ocId: string, semester: number): Promise<SemesterSourceScores> {
+    const detailed = await getSemesterSourceScoresDetailed(ocId, semester);
+    return {
+        academics: detailed.academics,
+        olq: detailed.olq,
+        ptSwimming: detailed.ptSwimming,
+        games: detailed.games,
+        drill: detailed.drill,
+        camp: detailed.camp,
+        cfe: detailed.cfe,
     };
 }
 

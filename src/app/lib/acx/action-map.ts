@@ -3648,6 +3648,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/reports/overall-training/course-wise-performance/preview",
+    "action": "reports:overall-training:course-wise-performance:read",
+    "resourceType": "reports:overall-training:course-wise-performance",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/overall-training/course-wise-performance/download",
+    "action": "reports:overall-training:course-wise-performance:download",
+    "resourceType": "reports:overall-training:course-wise-performance:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/reports/metadata/course-semesters",
     "action": "reports:metadata:course-semesters:read",
     "resourceType": "reports:metadata:course-semesters",

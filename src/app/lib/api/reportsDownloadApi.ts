@@ -1,6 +1,7 @@
 import { endpoints } from '@/constants/endpoints';
 import type {
   ConsolidatedDownloadRequest,
+  CourseWisePerformanceDownloadRequest,
   FinalResultDownloadRequest,
   PtAssessmentDownloadRequest,
   SemesterGradeDownloadRequest,
@@ -123,6 +124,14 @@ export const reportsDownloadApi = {
       endpoint: endpoints.reports.milTraining.physicalAssessment.download,
       body: payload,
       fallbackFileName: 'physical-assessment.pdf',
+    });
+  },
+
+  downloadCourseWisePerformance(payload: CourseWisePerformanceDownloadRequest) {
+    return postDownload({
+      endpoint: endpoints.reports.overallTraining.courseWisePerformance.download,
+      body: payload,
+      fallbackFileName: 'course-wise-performance.pdf',
     });
   },
 };

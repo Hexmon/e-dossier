@@ -2,6 +2,7 @@ import { ConsolidatedSessionalCard } from '@/components/reports/cards/Consolidat
 import { SemesterGradeCard } from '@/components/reports/cards/SemesterGradeCard';
 import { PtAssessmentCard } from '@/components/reports/cards/PtAssessmentCard';
 import { FinalResultCompilationCard } from '@/components/reports/cards/FinalResultCompilationCard';
+import { CourseWisePerformanceCard } from '@/components/reports/cards/CourseWisePerformanceCard';
 import { ComingSoonReportCard } from '@/components/reports/common/ComingSoonReportCard';
 
 export function ReportsHub() {
@@ -26,10 +27,7 @@ export function ReportsHub() {
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Overall Training</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <ComingSoonReportCard
-            title="Course Wise Performance Record (Sem I - VI)"
-            description="Comprehensive semester-wise course performance summary."
-          />
+          <CourseWisePerformanceCard />
           <ComingSoonReportCard
             title="Course Wise Final Performance Record"
             description="End-of-course final performance document."
