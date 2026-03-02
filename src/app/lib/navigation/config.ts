@@ -111,4 +111,16 @@ export const NAVIGATION_TREE: NavSectionConfig[] = [
             },
         ],
     },
+    {
+        key: "help",
+        label: "Help",
+        items: [
+            {
+                key: "help_center",
+                label: "Help",
+                url: "/dashboard/help",
+                icon: "LifeBuoy",
+            },
+        ],
+    },
 ];

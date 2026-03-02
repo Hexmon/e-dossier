@@ -1,10 +1,10 @@
 import { and, eq, isNull, inArray } from 'drizzle-orm';
 import { db } from '@/app/db/client';
-import { trainingCamps, trainingCampActivities } from '@/app/db/schema/training/oc';
+import { trainingCamps, trainingCampActivities, trainingCampSettings } from '@/app/db/schema/training/oc';
 
 // Camps ----------------------------------------------------------------------
 export async function listTrainingCamps(opts: {
-    semester?: typeof trainingCamps.semester._.enumValues[number];
+    semester?: number;
     includeActivities?: boolean;
     includeDeleted?: boolean;
 }) {
@@ -17,14 +17,22 @@ export async function listTrainingCamps(opts: {
             id: trainingCamps.id,
             name: trainingCamps.name,
             semester: trainingCamps.semester,
+            sortOrder: trainingCamps.sortOrder,
             maxTotalMarks: trainingCamps.maxTotalMarks,
+            performanceTitle: trainingCamps.performanceTitle,
+            performanceGuidance: trainingCamps.performanceGuidance,
+            signaturePrimaryLabel: trainingCamps.signaturePrimaryLabel,
+            signatureSecondaryLabel: trainingCamps.signatureSecondaryLabel,
+            noteLine1: trainingCamps.noteLine1,
+            noteLine2: trainingCamps.noteLine2,
+            showAggregateSummary: trainingCamps.showAggregateSummary,
             createdAt: trainingCamps.createdAt,
             updatedAt: trainingCamps.updatedAt,
             deletedAt: trainingCamps.deletedAt,
         })
         .from(trainingCamps)
         .where(wh.length ? and(...wh) : undefined)
-        .orderBy(trainingCamps.semester, trainingCamps.name);
+        .orderBy(trainingCamps.semester, trainingCamps.sortOrder, trainingCamps.name);
 
     if (!opts.includeActivities || !camps.length) return camps;
 
@@ -68,7 +76,7 @@ export async function createTrainingCamp(data: typeof trainingCamps.$inferInsert
     const now = new Date();
     const [row] = await db
         .insert(trainingCamps)
-        .values({ ...data, createdAt: now, updatedAt: now })
+        .values({ ...data, sortOrder: data.sortOrder ?? 1, createdAt: now, updatedAt: now })
         .returning();
     return row;
 }
@@ -93,6 +101,68 @@ export async function deleteTrainingCamp(id: string, opts: { hard?: boolean } = 
         .where(eq(trainingCamps.id, id))
         .returning();
     return row ?? null;
+}
+
+// Settings -------------------------------------------------------------------
+type TrainingCampSettingsRow = {
+    id: string;
+    singletonKey: string;
+    maxCampsPerSemester: number;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
+const SETTINGS_SINGLETON_KEY = 'default';
+
+export async function getTrainingCampSettings(): Promise<TrainingCampSettingsRow> {
+    const [existing] = await db
+        .select()
+        .from(trainingCampSettings)
+        .where(eq(trainingCampSettings.singletonKey, SETTINGS_SINGLETON_KEY))
+        .limit(1);
+
+    if (existing) return existing;
+
+    const now = new Date();
+    const [created] = await db
+        .insert(trainingCampSettings)
+        .values({
+            singletonKey: SETTINGS_SINGLETON_KEY,
+            maxCampsPerSemester: 2,
+            createdAt: now,
+            updatedAt: now,
+        })
+        .returning();
+
+    return created;
+}
+
+export async function updateTrainingCampSettings(data: { maxCampsPerSemester: number }): Promise<TrainingCampSettingsRow> {
+    const current = await getTrainingCampSettings();
+    const [updated] = await db
+        .update(trainingCampSettings)
+        .set({
+            maxCampsPerSemester: data.maxCampsPerSemester,
+            updatedAt: new Date(),
+        })
+        .where(eq(trainingCampSettings.id, current.id))
+        .returning();
+
+    return updated;
+}
+
+export async function countActiveTrainingCampsBySemester(
+    semester: number,
+    opts: { excludeCampId?: string } = {},
+): Promise<number> {
+    const activeRows = await db
+        .select({ id: trainingCamps.id })
+        .from(trainingCamps)
+        .where(and(eq(trainingCamps.semester, semester), isNull(trainingCamps.deletedAt)));
+
+    return opts.excludeCampId
+        ? activeRows.filter((row) => row.id !== opts.excludeCampId).length
+        : activeRows.length;
 }
 
 // Activities -----------------------------------------------------------------

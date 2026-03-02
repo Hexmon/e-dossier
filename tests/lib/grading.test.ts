@@ -18,19 +18,22 @@ describe('grading utility', () => {
     expect(marksToGradePoints(80)).toBe(9);
   });
 
-  it('maps marks to temporary letter grades', () => {
+  it('maps marks to letter grades with C# thresholds', () => {
     expect(marksToLetterGrade(undefined)).toBe('F');
     expect(marksToLetterGrade(null)).toBe('F');
     expect(marksToLetterGrade(Number.NaN)).toBe('F');
     expect(marksToLetterGrade(34)).toBe('F');
     expect(marksToLetterGrade(35)).toBe('CM');
+    expect(marksToLetterGrade(37)).toBe('CM');
+    expect(marksToLetterGrade(38)).toBe('CO');
     expect(marksToLetterGrade(40)).toBe('CO');
-    expect(marksToLetterGrade(45)).toBe('CP');
-    expect(marksToLetterGrade(50)).toBe('BM');
-    expect(marksToLetterGrade(55)).toBe('BO');
-    expect(marksToLetterGrade(60)).toBe('BP');
-    expect(marksToLetterGrade(70)).toBe('AM');
-    expect(marksToLetterGrade(80)).toBe('AO');
+    expect(marksToLetterGrade(41)).toBe('CP');
+    expect(marksToLetterGrade(45)).toBe('BM');
+    expect(marksToLetterGrade(50)).toBe('BO');
+    expect(marksToLetterGrade(55)).toBe('BP');
+    expect(marksToLetterGrade(60)).toBe('AM');
+    expect(marksToLetterGrade(70)).toBe('AO');
+    expect(marksToLetterGrade(80)).toBe('AP');
     expect(marksToLetterGrade(90)).toBe('AP');
   });
 });

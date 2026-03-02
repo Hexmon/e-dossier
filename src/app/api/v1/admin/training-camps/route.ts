@@ -1,4 +1,4 @@
-import { json, handleApiError } from '@/app/lib/http';
+import { json, handleApiError, ApiError } from '@/app/lib/http';
 
 export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -10,6 +10,8 @@ import {
 import {
     listTrainingCamps,
     createTrainingCamp,
+    countActiveTrainingCampsBySemester,
+    getTrainingCampSettings,
 } from '@/app/db/queries/trainingCamps';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -40,10 +42,27 @@ async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const dto = trainingCampCreateSchema.parse(await req.json());
+        const settings = await getTrainingCampSettings();
+        const activeCount = await countActiveTrainingCampsBySemester(dto.semester);
+        if (activeCount >= settings.maxCampsPerSemester) {
+            throw new ApiError(
+                400,
+                `Maximum ${settings.maxCampsPerSemester} camps allowed for semester ${dto.semester}.`,
+                'MAX_CAMPS_PER_SEMESTER_EXCEEDED',
+            );
+        }
         const row = await createTrainingCamp({
             name: dto.name.trim(),
             semester: dto.semester,
+            sortOrder: dto.sortOrder ?? activeCount + 1,
             maxTotalMarks: dto.maxTotalMarks,
+            performanceTitle: dto.performanceTitle ?? null,
+            performanceGuidance: dto.performanceGuidance ?? null,
+            signaturePrimaryLabel: dto.signaturePrimaryLabel ?? null,
+            signatureSecondaryLabel: dto.signatureSecondaryLabel ?? null,
+            noteLine1: dto.noteLine1 ?? null,
+            noteLine2: dto.noteLine2 ?? null,
+            showAggregateSummary: dto.showAggregateSummary ?? false,
         });
 
         await req.audit.log({

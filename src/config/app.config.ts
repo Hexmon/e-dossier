@@ -10,6 +10,7 @@ import {
   Book,
   CheckCircle,
   CalendarDays,
+  FileCheck2,
   Trophy,
   FileBadge,
   NotebookPen,
@@ -267,6 +268,13 @@ export const managementCard: ManagementCardConfig[] = [
     color: "info"
   },
   {
+    title: "Report Verification",
+    description: "Verify downloaded report PDFs using version code and optional checksum match",
+    icon: FileCheck2,
+    to: "/dashboard/genmgmt/report-verification",
+    color: "warning"
+  },
+  {
     title: "RBAC Management",
     description: "Manage permissions, mappings, and field-level rules",
     icon: Shield,
@@ -407,6 +415,13 @@ export const moduleManagementCard: ManagementCardConfig[] = [
     icon: ClipboardList,
     to: "/dashboard/genmgmt/olq-mgmt",
     color: "info"
+  },
+  {
+    title: "Grading Policy",
+    description: "Configure grade bands, GPA formulas, and recalculate academic data",
+    icon: ArrowDownUp,
+    to: "/dashboard/genmgmt/grading-policy",
+    color: "warning"
   }
 
 
@@ -1328,6 +1343,12 @@ export const ocTabs = [
     title: "Platoon Management",
     icon: Users,
     link: "/dashboard/genmgmt/platoon-management",
+  },
+  {
+    value: "report-verification",
+    title: "Report Verification",
+    icon: FileCheck2,
+    link: "/dashboard/genmgmt/report-verification",
   }
 ];
 
@@ -1372,6 +1393,12 @@ export const moduleManagementTabs = [
     title: "Physical Training Management",
     icon: Dumbbell,
     link: "/dashboard/genmgmt/pt-mgmt",
+  },
+  {
+    value: "grading-policy",
+    title: "Grading Policy",
+    icon: ArrowDownUp,
+    link: "/dashboard/genmgmt/grading-policy",
   }
 ];
 
@@ -1404,6 +1431,12 @@ export const ocTabsWithDropdown = [
         icon: CalendarDays,
         color: "info",
         href: "/dashboard/genmgmt/appointmentmgmt"
+      },
+      {
+        title: "Report Verification",
+        icon: FileCheck2,
+        color: "warning",
+        href: "/dashboard/genmgmt/report-verification"
       },
       {
         title: "Instructor Management",

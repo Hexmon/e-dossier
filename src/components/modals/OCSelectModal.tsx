@@ -260,6 +260,9 @@ export default function OCSelectModal({
                     onFocus={() => setShowOcDropdown(true)}
                     onBlur={() => setTimeout(() => setShowOcDropdown(false), 150)}
                     className="pl-10"
+                    data-search-target="true"
+                    data-search-scope="modal"
+                    data-search-priority="80"
                   />
                 </div>
 

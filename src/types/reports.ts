@@ -190,3 +190,151 @@ export type PtAssessmentDownloadRequest = {
   preparedBy: string;
   checkedBy: string;
 };
+
+export type CourseWisePerformanceColumn = {
+  key:
+    | 'serNo'
+    | 'tesNo'
+    | 'rank'
+    | 'name'
+    | 'academicsTotal'
+    | 'academicsScaled'
+    | 'ptSwimming'
+    | 'games'
+    | 'olq'
+    | 'cfe'
+    | 'drill'
+    | 'camp'
+    | 'cdrMarks'
+    | 'grandTotal'
+    | 'percentage';
+  label: string;
+  maxMarks: number | null;
+};
+
+export type CourseWisePerformanceRow = {
+  ocId: string;
+  sNo: number;
+  tesNo: string;
+  rank: string;
+  name: string;
+  academicsTotal: number;
+  academicsScaled: number;
+  ptSwimming: number;
+  games: number;
+  olq: number;
+  cfe: number;
+  drill: number;
+  camp: number;
+  cdrMarks: number;
+  grandTotal: number;
+  percentage: number;
+};
+
+export type CourseWisePerformancePreview = {
+  reportType: 'OVERALL_TRAINING_COURSE_WISE_PERFORMANCE';
+  course: { id: string; code: string; title: string };
+  semester: number;
+  columns: CourseWisePerformanceColumn[];
+  rows: CourseWisePerformanceRow[];
+  maxTotalForSemester: number;
+  formulaLabel: string;
+};
+
+export type FinalResultSubjectColumn = {
+  key: string;
+  subjectId: string;
+  subjectCode: string;
+  subjectName: string;
+  kind: 'L' | 'P';
+  credits: number;
+  order: number;
+};
+
+export type FinalResultGradeBand = {
+  label: string;
+  range: string;
+};
+
+export type FinalResultOcRow = {
+  ocId: string;
+  sNo: number;
+  tesNo: string;
+  name: string;
+  previousCumulativePoints: number;
+  previousCumulativeCredits: number;
+  previousCumulativeCgpa: number | null;
+  semesterPoints: number;
+  semesterCredits: number;
+  semesterSgpa: number | null;
+  uptoSemesterPoints: number;
+  uptoSemesterCredits: number;
+  uptoSemesterCgpa: number | null;
+  subjectGrades: Record<string, string | null>;
+};
+
+export type FinalResultCompilationPreview = {
+  reportType: 'ACADEMICS_FINAL_RESULT_COMPILATION';
+  course: { id: string; code: string; title: string };
+  semester: number;
+  subjectColumns: FinalResultSubjectColumn[];
+  rows: FinalResultOcRow[];
+  gradeBands: FinalResultGradeBand[];
+  semesterCreditsTotal: number;
+  previousSemesterCreditsReference: number;
+  uptoSemesterCreditsReference: number;
+};
+
+export type FinalResultIdentityRow = {
+  ocId: string;
+  enrolmentNumber?: string;
+  certSerialNo?: string;
+};
+
+export type FinalResultDownloadRequest = {
+  courseId: string;
+  semester: number;
+  password: string;
+  identityRows?: FinalResultIdentityRow[];
+  preparedBy?: string;
+  checkedBy?: string;
+};
+
+export type CourseWisePerformanceDownloadRequest = {
+  courseId: string;
+  semester: number;
+  password: string;
+};
+
+export type CourseWiseFinalPerformanceRow = {
+  ocId: string;
+  sNo: number;
+  tesNo: string;
+  rank: string;
+  name: string;
+  academics: number;
+  ptSwimming: number;
+  games: number;
+  olq: number;
+  cfe: number;
+  cdrMarks: number;
+  camp: number;
+  drill: number;
+  grandTotal: number;
+  percentage: number;
+  orderOfMerit: number | null;
+  piAllotment: string | null;
+};
+
+export type CourseWiseFinalPerformancePreview = {
+  reportType: 'OVERALL_TRAINING_COURSE_WISE_FINAL_PERFORMANCE';
+  course: { id: string; code: string; title: string };
+  rows: CourseWiseFinalPerformanceRow[];
+  formulaLabel: string;
+  maxTotal: number;
+};
+
+export type CourseWiseFinalPerformanceDownloadRequest = {
+  courseId: string;
+  password: string;
+};

@@ -1,0 +1,65 @@
+{
+  "module": "camp",
+  "version": "default.v1",
+  "profile": "default",
+  "camps": [
+    {
+      "semester": 5,
+      "name": "EX SURAKSHA",
+      "sortOrder": 1,
+      "maxTotalMarks": 100,
+      "performanceTitle": "Performance during Camp.",
+      "performanceGuidance": "To include application of theoretical knowledge on ground, tactical acumen, logical approach, briefing/orders, appointment held, runback, and specific strengths/weaknesses.",
+      "signaturePrimaryLabel": "OIC Camp",
+      "signatureSecondaryLabel": "PI Cdr",
+      "noteLine1": "The above marks will be filled based on analysis of conduct of OC during Camp.",
+      "noteLine2": "Copy of mutual assessment during camp to be kept in dossier.",
+      "showAggregateSummary": false,
+      "activities": [
+        { "name": "Run Back", "defaultMaxMarks": 25, "sortOrder": 1 },
+        { "name": "Ex Disha Khoj", "defaultMaxMarks": 30, "sortOrder": 2 },
+        { "name": "Tent Pitching", "defaultMaxMarks": 15, "sortOrder": 3 },
+        { "name": "Orders/Bfg", "defaultMaxMarks": 20, "sortOrder": 4 },
+        { "name": "Mut Assessment", "defaultMaxMarks": 10, "sortOrder": 5 }
+      ]
+    },
+    {
+      "semester": 6,
+      "name": "EX VAJRA",
+      "sortOrder": 1,
+      "maxTotalMarks": 55,
+      "performanceTitle": "Performance during Camp.",
+      "performanceGuidance": "To include application of theoretical knowledge on ground, tactical acumen, logical approach, briefing/orders, appointment held, runback, and specific strengths/weaknesses.",
+      "signaturePrimaryLabel": "OIC Camp",
+      "signatureSecondaryLabel": "PI Cdr",
+      "noteLine1": "The above marks will be filled based on analysis of conduct of OC during Camp.",
+      "noteLine2": "Copy of mutual assessment during camp to be kept in dossier.",
+      "showAggregateSummary": false,
+      "activities": [
+        { "name": "Run Back", "defaultMaxMarks": 10, "sortOrder": 1 },
+        { "name": "Ex Disha Khoj", "defaultMaxMarks": 20, "sortOrder": 2 },
+        { "name": "Tent Pitching", "defaultMaxMarks": 5, "sortOrder": 3 },
+        { "name": "Orders/Bfg", "defaultMaxMarks": 15, "sortOrder": 4 },
+        { "name": "Mut Assessment", "defaultMaxMarks": 5, "sortOrder": 5 }
+      ]
+    },
+    {
+      "semester": 6,
+      "name": "TECHNO TAC CAMP",
+      "sortOrder": 2,
+      "maxTotalMarks": 55,
+      "performanceTitle": "Proj & Tech Seminar Participation.",
+      "performanceGuidance": "To include involvement and participation during technical seminars and mini project work in military scenarios.",
+      "signaturePrimaryLabel": "HoAT",
+      "signatureSecondaryLabel": "PI Cdr",
+      "noteLine1": "The above marks will be filled based on analysis of conduct of OC during camp visit.",
+      "noteLine2": "Copy of mutual assessment during camp to be kept in dossier.",
+      "showAggregateSummary": true,
+      "activities": [
+        { "name": "Mini Proj", "defaultMaxMarks": 30, "sortOrder": 1 },
+        { "name": "Tech Seminar", "defaultMaxMarks": 20, "sortOrder": 2 },
+        { "name": "Mut Assessment", "defaultMaxMarks": 5, "sortOrder": 3 }
+      ]
+    }
+  ]
+}

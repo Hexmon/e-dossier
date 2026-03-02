@@ -264,3 +264,20 @@ Use this flow after RBAC/action-map changes and after `pnpm db:push`.
    - `pnpm run validate:action-map`
 5. Full verification:
    - `pnpm lint && pnpm typecheck && pnpm test && pnpm build`
+
+## Org Template Bootstrap (PT + Camp)
+Use this to initialize Physical Training and Camp template defaults in a new environment.
+
+Recommended sequence on fresh setup:
+
+1. `pnpm db:migrate`
+2. `pnpm seed:rbac`
+3. `pnpm seed:permissions`
+4. `pnpm seed:admins`
+5. `pnpm seed:org-template -- --module=pt`
+6. `pnpm seed:org-template -- --module=camp`
+
+Preview without writing:
+
+- `pnpm seed:org-template -- --module=pt --dry-run`
+- `pnpm seed:org-template -- --module=camp --dry-run`

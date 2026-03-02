@@ -51,15 +51,22 @@ function toIso(value?: Date | null) {
     return value ? value.toISOString() : null;
 }
 
+function toPositiveNumber(value: unknown): number {
+    const parsed = Number(value ?? 0);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, parsed);
+}
+
 function computeTheory(theory?: TheoryMarksRecord | null): TheoryMarksResponse | undefined {
     if (!theory) return undefined;
     const tutorialRaw = typeof theory.tutorial === 'string' ? Number(theory.tutorial.replace(/[^\d.-]/g, '')) : Number(theory.tutorial ?? 0);
-    const tutorialMarks = Number.isFinite(tutorialRaw) ? tutorialRaw : 0;
+    const tutorialMarks = toPositiveNumber(tutorialRaw);
+    // C# parity: each component contributes only when positive (Sign(x) == 1).
     const sessional =
-        (theory.phaseTest1Marks ?? 0) +
-        (theory.phaseTest2Marks ?? 0) +
+        toPositiveNumber(theory.phaseTest1Marks) +
+        toPositiveNumber(theory.phaseTest2Marks) +
         tutorialMarks;
-    const total = sessional + (theory.finalMarks ?? 0);
+    const total = sessional + toPositiveNumber(theory.finalMarks);
     return {
         ...theory,
         sessionalMarks: sessional,
@@ -71,7 +78,7 @@ function computePractical(practical?: PracticalMarksRecord | null): PracticalMar
     if (!practical) return undefined;
     return {
         ...practical,
-        totalMarks: practical.finalMarks ?? 0,
+        totalMarks: toPositiveNumber(practical.finalMarks),
     };
 }
 

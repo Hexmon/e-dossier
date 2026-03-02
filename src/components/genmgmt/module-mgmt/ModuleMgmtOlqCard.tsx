@@ -38,7 +38,13 @@ import {
 import { toast } from "sonner";
 import { Copy, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useOlqAdminTemplateMgmt } from "@/hooks/useOlqAdminTemplateMgmt";
-import type { OlqAdminCategory, OlqAdminSubtitle } from "@/types/olq-admin";
+import type {
+  OlqAdminCategory,
+  OlqAdminSubtitle,
+  OlqTemplateApplyCourseResult,
+  OlqTemplateApplyMode,
+  OlqTemplateApplyScope,
+} from "@/types/olq-admin";
 
 const categoryFormSchema = z.object({
   code: z.string().trim().min(1, "Code is required").max(50, "Max 50 characters"),
@@ -111,6 +117,19 @@ export default function ModuleMgmtOlqCard() {
   const [copySourceCourseId, setCopySourceCourseId] = useState<string>("");
   const [copyTargetCourseId, setCopyTargetCourseId] = useState<string>("");
   const [copyConfirmOpen, setCopyConfirmOpen] = useState(false);
+  const [templateApplyScope, setTemplateApplyScope] = useState<OlqTemplateApplyScope>("course");
+  const [templateApplyMode, setTemplateApplyMode] = useState<OlqTemplateApplyMode>("replace");
+  const [templateApplyConfirmOpen, setTemplateApplyConfirmOpen] = useState(false);
+  const [templateApplyResult, setTemplateApplyResult] = useState<{
+    dryRun: boolean;
+    totalCourses: number;
+    successCount: number;
+    errorCount: number;
+    createdCount: number;
+    updatedCount: number;
+    skippedCount: number;
+    results: OlqTemplateApplyCourseResult[];
+  } | null>(null);
 
   const {
     courses,
@@ -126,6 +145,7 @@ export default function ModuleMgmtOlqCard() {
     updateSubtitle,
     deleteSubtitle,
     copyTemplate,
+    applyDefaultTemplate,
     isCreatingCategory,
     isUpdatingCategory,
     isDeletingCategory,
@@ -133,6 +153,7 @@ export default function ModuleMgmtOlqCard() {
     isUpdatingSubtitle,
     isDeletingSubtitle,
     isCopyingTemplate,
+    isApplyingTemplate,
   } = useOlqAdminTemplateMgmt({
     courseId: selectedCourseId || null,
     subtitleCategoryId: subtitleCategoryFilter === "all" ? null : subtitleCategoryFilter,
@@ -210,6 +231,7 @@ export default function ModuleMgmtOlqCard() {
     Boolean(copySourceCourseId) &&
     Boolean(copyTargetCourseId) &&
     copySourceCourseId !== copyTargetCourseId;
+  const canRunTemplateApply = templateApplyScope === "all" || Boolean(selectedCourseId);
   const watchedCategoryTitle = categoryForm.watch("title");
 
   useEffect(() => {
@@ -368,6 +390,36 @@ export default function ModuleMgmtOlqCard() {
     try {
       await copyTemplate(copyTargetCourseId, copySourceCourseId, COPY_MODE);
       setCopyConfirmOpen(false);
+    } catch {
+      // Toast handled by hook
+    }
+  };
+
+  const runTemplateApply = async (dryRun: boolean) => {
+    if (!canRunTemplateApply) {
+      toast.error("Select a course or switch scope to all courses.");
+      return;
+    }
+    try {
+      const response = await applyDefaultTemplate({
+        scope: templateApplyScope,
+        courseId: templateApplyScope === "course" ? selectedCourseId : undefined,
+        mode: templateApplyMode,
+        dryRun,
+      });
+      setTemplateApplyResult({
+        dryRun: response.dryRun,
+        totalCourses: response.totalCourses,
+        successCount: response.successCount,
+        errorCount: response.errorCount,
+        createdCount: response.createdCount,
+        updatedCount: response.updatedCount,
+        skippedCount: response.skippedCount,
+        results: response.results,
+      });
+      if (!dryRun) {
+        setTemplateApplyConfirmOpen(false);
+      }
     } catch {
       // Toast handled by hook
     }
@@ -626,6 +678,134 @@ export default function ModuleMgmtOlqCard() {
           </TabsContent>
 
           <TabsContent value="copy" className="space-y-4">
+            <div className="rounded-md border bg-muted/20 p-4 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold">Default OLQ Template</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Apply the standard OLQ category and subtitle structure (PLG & ORG, Social Adjustment,
+                  Social Effectiveness, Dynamic) for one course or all active courses.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="olq-template-scope">Scope</Label>
+                  <Select
+                    value={templateApplyScope}
+                    onValueChange={(value) => setTemplateApplyScope(value as OlqTemplateApplyScope)}
+                  >
+                    <SelectTrigger id="olq-template-scope">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="course">Selected Course</SelectItem>
+                      <SelectItem value="all">All Active Courses</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="olq-template-mode">Mode</Label>
+                  <Select
+                    value={templateApplyMode}
+                    onValueChange={(value) => setTemplateApplyMode(value as OlqTemplateApplyMode)}
+                  >
+                    <SelectTrigger id="olq-template-mode">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="replace">Replace</SelectItem>
+                      <SelectItem value="upsert_missing">Upsert Missing</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Target</Label>
+                  <div className="rounded-md border bg-background px-3 py-2 text-sm">
+                    {templateApplyScope === "all"
+                      ? "All active courses"
+                      : selectedCourse
+                        ? formatCourseLabel(selectedCourse.code, selectedCourse.title)
+                        : "Select a course first"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => void runTemplateApply(true)}
+                  disabled={!canRunTemplateApply || isApplyingTemplate}
+                >
+                  Preview (Dry Run)
+                </Button>
+                <Button
+                  onClick={() => setTemplateApplyConfirmOpen(true)}
+                  disabled={!canRunTemplateApply || isApplyingTemplate}
+                >
+                  Apply Template
+                </Button>
+              </div>
+
+              {templateApplyResult ? (
+                <div className="rounded-md border bg-background p-3 space-y-3">
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="secondary">
+                      {templateApplyResult.dryRun ? "Dry Run" : "Applied"}
+                    </Badge>
+                    <Badge variant="secondary">Courses: {templateApplyResult.totalCourses}</Badge>
+                    <Badge variant="secondary">Success: {templateApplyResult.successCount}</Badge>
+                    <Badge variant={templateApplyResult.errorCount > 0 ? "destructive" : "secondary"}>
+                      Errors: {templateApplyResult.errorCount}
+                    </Badge>
+                    <Badge variant="secondary">Created: {templateApplyResult.createdCount}</Badge>
+                    <Badge variant="secondary">Updated: {templateApplyResult.updatedCount}</Badge>
+                    <Badge variant="secondary">Skipped: {templateApplyResult.skippedCount}</Badge>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="min-w-full text-xs">
+                      <thead className="bg-muted/40">
+                        <tr>
+                          <th className="px-2 py-1 text-left">Course</th>
+                          <th className="px-2 py-1 text-left">Status</th>
+                          <th className="px-2 py-1 text-left">Categories</th>
+                          <th className="px-2 py-1 text-left">Subtitles</th>
+                          <th className="px-2 py-1 text-left">Warnings / Error</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {templateApplyResult.results.map((row) => (
+                          <tr key={row.courseId} className="border-t">
+                            <td className="px-2 py-1 font-mono">{row.courseId}</td>
+                            <td className="px-2 py-1">
+                              <Badge variant={row.status === "ok" ? "secondary" : "destructive"}>
+                                {row.status}
+                              </Badge>
+                            </td>
+                            <td className="px-2 py-1">
+                              C:{row.categoriesCreated} U:{row.categoriesUpdated} S:{row.categoriesSkipped}
+                            </td>
+                            <td className="px-2 py-1">
+                              C:{row.subtitlesCreated} U:{row.subtitlesUpdated} S:{row.subtitlesSkipped}
+                            </td>
+                            <td className="px-2 py-1 text-muted-foreground">
+                              {row.error
+                                ? row.error
+                                : row.warnings.length > 0
+                                  ? row.warnings.join(" | ")
+                                  : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="copy-source-course">Source Course</Label>
@@ -950,6 +1130,30 @@ export default function ModuleMgmtOlqCard() {
             <AlertDialogCancel disabled={isCopyingTemplate}>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={isCopyingTemplate} onClick={onConfirmCopy}>
               {isCopyingTemplate ? "Copying..." : "Yes, Copy Now"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={templateApplyConfirmOpen} onOpenChange={setTemplateApplyConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apply default OLQ template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will run in {templateApplyMode} mode for{" "}
+              {templateApplyScope === "all" ? "all active courses" : "the selected course"}.
+              Existing OLQ template rows remain editable after apply.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isApplyingTemplate}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isApplyingTemplate}
+              onClick={() => {
+                void runTemplateApply(false);
+              }}
+            >
+              {isApplyingTemplate ? "Applying..." : "Yes, Apply"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

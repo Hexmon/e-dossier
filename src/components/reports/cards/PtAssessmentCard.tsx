@@ -155,13 +155,13 @@ export function PtAssessmentCard() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => {
+            onClick={async () => {
               setViewModalOpen(true);
-              void previewQuery.refetch();
+              await previewQuery.refetch();
             }}
-            disabled={!courseId || !semester || !ptTypeId}
+            disabled={!courseId || !semester || !ptTypeId || previewQuery.isFetching}
           >
-            View
+            {previewQuery.isFetching ? 'Loading...' : 'View'}
           </Button>
           <Button type="button" onClick={() => setDownloadOpen(true)} disabled={!courseId || !semester || !ptTypeId}>
             Download PDF
