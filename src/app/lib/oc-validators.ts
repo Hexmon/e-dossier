@@ -21,7 +21,7 @@ export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);
 export const SeniorSemester = z.coerce.number().int().min(4).max(6);
 export const TermKind = z.enum(['spring', 'autumn']);
-export const CampSemesterKind = z.enum(['SEM5', 'SEM6A', 'SEM6B']);
+export const CampSemesterKind = z.coerce.number().int().min(1).max(6);
 export const CampReviewRoleKind = z.enum(['OIC', 'PLATOON_COMMANDER', 'HOAT']);
 
 export const personalUpsertSchema = z.object({

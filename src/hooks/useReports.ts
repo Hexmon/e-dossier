@@ -3,6 +3,9 @@ import { reportsApi } from '@/app/lib/api/reportsApi';
 import { reportsDownloadApi } from '@/app/lib/api/reportsDownloadApi';
 import type {
   ConsolidatedDownloadRequest,
+  CourseWiseFinalPerformanceDownloadRequest,
+  CourseWisePerformanceDownloadRequest,
+  FinalResultDownloadRequest,
   PtAssessmentDownloadRequest,
   ReportBranch,
   SemesterGradeDownloadRequest,
@@ -32,6 +35,24 @@ export function useConsolidatedSessionalPreview(filters: {
         courseId: filters.courseId,
         semester: filters.semester as number,
         subjectId: filters.subjectId,
+      }),
+    enabled: isEnabled,
+  });
+}
+
+export function useFinalResultCompilationPreview(filters: {
+  courseId: string;
+  semester: number | null;
+  enabled?: boolean;
+}) {
+  const isEnabled = (filters.enabled ?? true) && Boolean(filters.courseId && filters.semester);
+
+  return useQuery({
+    queryKey: ['reports', 'final-result-compilation', filters.courseId, filters.semester],
+    queryFn: () =>
+      reportsApi.getFinalResultCompilationPreview({
+        courseId: filters.courseId,
+        semester: filters.semester as number,
       }),
     enabled: isEnabled,
   });
@@ -90,10 +111,49 @@ export function usePtAssessmentPreview(filters: {
   });
 }
 
+export function useCourseWisePerformancePreview(filters: {
+  courseId: string;
+  semester: number | null;
+  enabled?: boolean;
+}) {
+  const isEnabled = (filters.enabled ?? true) && Boolean(filters.courseId && filters.semester);
+
+  return useQuery({
+    queryKey: ['reports', 'course-wise-performance', filters.courseId, filters.semester],
+    queryFn: () =>
+      reportsApi.getCourseWisePerformancePreview({
+        courseId: filters.courseId,
+        semester: filters.semester as number,
+      }),
+    enabled: isEnabled,
+  });
+}
+
+export function useCourseWiseFinalPerformancePreview(filters: {
+  courseId: string;
+  enabled?: boolean;
+}) {
+  const isEnabled = (filters.enabled ?? true) && Boolean(filters.courseId);
+
+  return useQuery({
+    queryKey: ['reports', 'course-wise-final-performance', filters.courseId],
+    queryFn: () =>
+      reportsApi.getCourseWiseFinalPerformancePreview({
+        courseId: filters.courseId,
+      }),
+    enabled: isEnabled,
+  });
+}
+
 export function useReportsDownloads() {
   const consolidatedDownload = useMutation({
     mutationFn: (payload: ConsolidatedDownloadRequest) =>
       reportsDownloadApi.downloadConsolidatedSessional(payload),
+  });
+
+  const finalResultCompilationDownload = useMutation({
+    mutationFn: (payload: FinalResultDownloadRequest) =>
+      reportsDownloadApi.downloadFinalResultCompilation(payload),
   });
 
   const semesterGradeDownload = useMutation({
@@ -106,9 +166,22 @@ export function useReportsDownloads() {
       reportsDownloadApi.downloadPtAssessment(payload),
   });
 
+  const courseWisePerformanceDownload = useMutation({
+    mutationFn: (payload: CourseWisePerformanceDownloadRequest) =>
+      reportsDownloadApi.downloadCourseWisePerformance(payload),
+  });
+
+  const courseWiseFinalPerformanceDownload = useMutation({
+    mutationFn: (payload: CourseWiseFinalPerformanceDownloadRequest) =>
+      reportsDownloadApi.downloadCourseWiseFinalPerformance(payload),
+  });
+
   return {
     consolidatedDownload,
+    finalResultCompilationDownload,
     semesterGradeDownload,
     ptAssessmentDownload,
+    courseWisePerformanceDownload,
+    courseWiseFinalPerformanceDownload,
   };
 }

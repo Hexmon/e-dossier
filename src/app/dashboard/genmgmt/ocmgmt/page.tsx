@@ -38,7 +38,7 @@ import { OCForm } from "@/components/genmgmt/OCForm";
 import { useQuery } from "@tanstack/react-query";
 
 type CourseLike = { id: string; code?: string; title?: string };
-type PlatoonLike = { id: string; name?: string };
+type PlatoonLike = { id: string; key?: string; name?: string };
 
 export default function OCManagementPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -100,15 +100,19 @@ export default function OCManagementPage() {
   const {
     parsing,
     setParsing,
+    uploadedRawRows,
     uploadedPreview,
+    previewSession,
     onParsed,
     bulkUploading,
     bulkResult,
     validateResult,
     rowValidations,
-    doBulkUpload,
+    doBulkUploadSelected,
     doValidateAll,
     doValidateRow,
+    updateUploadedRow,
+    deleteUploadedRow,
     clear: clearUpload,
   } = useOCUpload();
 
@@ -217,8 +221,8 @@ export default function OCManagementPage() {
     setIsDialogOpen(true);
   };
 
-  const handleBulkUpload = async () => {
-    await doBulkUpload(async () => {
+  const handleBulkUpload = async (selectedIndexes: number[]) => {
+    await doBulkUploadSelected(selectedIndexes, async () => {
       toast.success("Bulk upload completed successfully");
     });
   };
@@ -277,6 +281,8 @@ export default function OCManagementPage() {
                       }}
                       onParsingStateChange={setParsing}
                       label={parsing ? "Parsing…" : "Upload CSV / Excel"}
+                      courseOptions={courses}
+                      platoonOptions={platoons}
                     />
                   </div>
                 </div>
@@ -298,12 +304,16 @@ export default function OCManagementPage() {
 
                 <UploadPreviewTable
                   rows={uploadedPreview}
+                  rawRows={uploadedRawRows}
+                  previewSession={previewSession}
                   bulkUploading={bulkUploading}
                   bulkResult={bulkResult}
-                  onBulkUpload={handleBulkUpload}
+                  onBulkUploadSelected={handleBulkUpload}
                   onClear={() => {
                     clearUpload();
                   }}
+                  onUpdateRow={updateUploadedRow}
+                  onDeleteRow={deleteUploadedRow}
                   onValidateAll={doValidateAll}
                   validateResult={validateResult}
                   onValidateRow={doValidateRow}

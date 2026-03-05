@@ -14,6 +14,16 @@ export const endpoints = {
         slots: "/api/v1/admin/positions/slots",
         transferappt: (appointmentId: string) =>
             `/api/v1/admin/appointments/${appointmentId}/transfer`,
+        bootstrapTemplateApply: "/api/v1/admin/bootstrap/templates/apply",
+        academics: {
+            gradingPolicy: "/api/v1/admin/academics/grading-policy",
+            gradingPolicyRecalculate: "/api/v1/admin/academics/grading-policy/recalculate",
+        },
+        reports: {
+            verification: {
+                verify: "/api/v1/admin/reports/verification/verify",
+            },
+        },
 
         users: "/api/v1/admin/users",
         subjects: "/api/v1/admin/subjects",
@@ -46,6 +56,7 @@ export const endpoints = {
         },
         trainingCamps: {
             list: "/api/v1/admin/training-camps",
+            settings: "/api/v1/admin/training-camps/settings",
             getById: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
             create: "/api/v1/admin/training-camps",
             update: (campId: string) => `/api/v1/admin/training-camps/${campId}`,
@@ -59,6 +70,7 @@ export const endpoints = {
             subtitleById: (courseId: string, subtitleId: string) =>
                 `/api/v1/admin/olq/courses/${courseId}/subtitles/${subtitleId}`,
             copy: (targetCourseId: string) => `/api/v1/admin/olq/courses/${targetCourseId}/copy`,
+            applyTemplate: '/api/v1/admin/olq/templates/apply',
         },
     },
     oc: {
@@ -158,6 +170,10 @@ export const endpoints = {
                 preview: "/api/v1/reports/academics/consolidated-sessional/preview",
                 download: "/api/v1/reports/academics/consolidated-sessional/download",
             },
+            finalResultCompilation: {
+                preview: "/api/v1/reports/academics/final-result-compilation/preview",
+                download: "/api/v1/reports/academics/final-result-compilation/download",
+            },
             semesterGrade: {
                 candidates: "/api/v1/reports/academics/semester-grade/candidates",
                 preview: (ocId: string) => `/api/v1/reports/academics/semester-grade/preview/${ocId}`,
@@ -168,6 +184,16 @@ export const endpoints = {
             physicalAssessment: {
                 preview: "/api/v1/reports/mil-training/physical-assessment/preview",
                 download: "/api/v1/reports/mil-training/physical-assessment/download",
+            },
+        },
+        overallTraining: {
+            courseWisePerformance: {
+                preview: "/api/v1/reports/overall-training/course-wise-performance/preview",
+                download: "/api/v1/reports/overall-training/course-wise-performance/download",
+            },
+            courseWiseFinalPerformance: {
+                preview: "/api/v1/reports/overall-training/course-wise-final-performance/preview",
+                download: "/api/v1/reports/overall-training/course-wise-final-performance/download",
             },
         },
     },

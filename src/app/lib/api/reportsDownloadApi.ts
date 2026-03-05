@@ -1,6 +1,9 @@
 import { endpoints } from '@/constants/endpoints';
 import type {
   ConsolidatedDownloadRequest,
+  CourseWiseFinalPerformanceDownloadRequest,
+  CourseWisePerformanceDownloadRequest,
+  FinalResultDownloadRequest,
   PtAssessmentDownloadRequest,
   SemesterGradeDownloadRequest,
 } from '@/types/reports';
@@ -101,6 +104,14 @@ export const reportsDownloadApi = {
     });
   },
 
+  downloadFinalResultCompilation(payload: FinalResultDownloadRequest) {
+    return postDownload({
+      endpoint: endpoints.reports.academics.finalResultCompilation.download,
+      body: payload,
+      fallbackFileName: 'final-result-compilation.pdf',
+    });
+  },
+
   downloadSemesterGrade(payload: SemesterGradeDownloadRequest) {
     return postDownload({
       endpoint: endpoints.reports.academics.semesterGrade.download,
@@ -114,6 +125,22 @@ export const reportsDownloadApi = {
       endpoint: endpoints.reports.milTraining.physicalAssessment.download,
       body: payload,
       fallbackFileName: 'physical-assessment.pdf',
+    });
+  },
+
+  downloadCourseWisePerformance(payload: CourseWisePerformanceDownloadRequest) {
+    return postDownload({
+      endpoint: endpoints.reports.overallTraining.courseWisePerformance.download,
+      body: payload,
+      fallbackFileName: 'course-wise-performance.pdf',
+    });
+  },
+
+  downloadCourseWiseFinalPerformance(payload: CourseWiseFinalPerformanceDownloadRequest) {
+    return postDownload({
+      endpoint: endpoints.reports.overallTraining.courseWiseFinalPerformance.download,
+      body: payload,
+      fallbackFileName: 'course-wise-final-performance.pdf',
     });
   },
 };

@@ -1,0 +1,148 @@
+{
+  "module": "appointment",
+  "version": "default.v1",
+  "profile": "default",
+  "positions": [
+    {
+      "key": "COMDT",
+      "displayName": "Comdt",
+      "defaultScope": "GLOBAL",
+      "singleton": true,
+      "description": "Commandant"
+    },
+    {
+      "key": "DCCI",
+      "displayName": "DCCI",
+      "defaultScope": "GLOBAL",
+      "singleton": true,
+      "description": "Dy Comdt & CI"
+    },
+    {
+      "key": "HOAT",
+      "displayName": "HOAT",
+      "defaultScope": "GLOBAL",
+      "singleton": true,
+      "description": "Head of Academics and Training"
+    },
+    {
+      "key": "CDR",
+      "displayName": "Cdr",
+      "defaultScope": "GLOBAL",
+      "singleton": true,
+      "description": "Cadets Training Wing Commander"
+    },
+    {
+      "key": "DS_COORD",
+      "displayName": "DS_Cord",
+      "defaultScope": "GLOBAL",
+      "singleton": true,
+      "description": "Deputy Secretary Coordinator"
+    },
+    {
+      "key": "ADMIN",
+      "displayName": "Admin",
+      "defaultScope": "GLOBAL",
+      "singleton": true,
+      "description": "System administrator"
+    },
+    {
+      "key": "CCO",
+      "displayName": "CCO",
+      "defaultScope": "GLOBAL",
+      "singleton": true,
+      "description": "Chief Cadet Officer"
+    },
+    {
+      "key": "INSTR",
+      "displayName": "Instr",
+      "defaultScope": "GLOBAL",
+      "singleton": true,
+      "description": "Instructor"
+    },
+    {
+      "key": "PTN_CDR",
+      "displayName": "Ptn_cdr",
+      "defaultScope": "PLATOON",
+      "singleton": true,
+      "description": "Platoon Commander"
+    }
+  ],
+  "assignments": [
+    {
+      "username": "comdt_mceme@army.mil",
+      "positionKey": "COMDT",
+      "scopeType": "GLOBAL"
+    },
+    {
+      "username": "dycomdt_mceme@army.mil",
+      "positionKey": "DCCI",
+      "scopeType": "GLOBAL"
+    },
+    {
+      "username": "hoat_ctw@army.mil",
+      "positionKey": "HOAT",
+      "scopeType": "GLOBAL"
+    },
+    {
+      "username": "cdr_ctw@army.mil",
+      "positionKey": "CDR",
+      "scopeType": "GLOBAL"
+    },
+    {
+      "username": "dscoord@army.mil",
+      "positionKey": "DS_COORD",
+      "scopeType": "GLOBAL"
+    },
+    {
+      "username": "admin@army.mil",
+      "positionKey": "ADMIN",
+      "scopeType": "GLOBAL"
+    },
+    {
+      "username": "cco_ctw@army.mil",
+      "positionKey": "CCO",
+      "scopeType": "GLOBAL"
+    },
+    {
+      "username": "instr1_ctw@army.mil",
+      "positionKey": "INSTR",
+      "scopeType": "GLOBAL"
+    },
+    {
+      "username": "prithvirajpl_cdr@army.mil",
+      "positionKey": "PTN_CDR",
+      "scopeType": "PLATOON",
+      "platoonKey": "PRITHVIRAJ"
+    },
+    {
+      "username": "chandraguptpl_cdr@army.mil",
+      "positionKey": "PTN_CDR",
+      "scopeType": "PLATOON",
+      "platoonKey": "CHANDRAGUPT"
+    },
+    {
+      "username": "arjunpl_cdr@army.mil",
+      "positionKey": "PTN_CDR",
+      "scopeType": "PLATOON",
+      "platoonKey": "ARJUN"
+    },
+    {
+      "username": "ranapratappl_cdr@army.mil",
+      "positionKey": "PTN_CDR",
+      "scopeType": "PLATOON",
+      "platoonKey": "RANAPRATAP"
+    },
+    {
+      "username": "karnapl_cdr@army.mil",
+      "positionKey": "PTN_CDR",
+      "scopeType": "PLATOON",
+      "platoonKey": "KARNA"
+    },
+    {
+      "username": "shivajipl_cdr@army.mil",
+      "positionKey": "PTN_CDR",
+      "scopeType": "PLATOON",
+      "platoonKey": "SHIVAJI"
+    }
+  ]
+}

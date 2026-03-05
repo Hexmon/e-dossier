@@ -1,0 +1,43 @@
+{
+  "module": "platoon",
+  "version": "default.v1",
+  "profile": "default",
+  "platoons": [
+    {
+      "key": "ARJUN",
+      "name": "ARJUN",
+      "about": "Arjun platoon",
+      "themeColor": "#b45309"
+    },
+    {
+      "key": "CHANDRAGUPT",
+      "name": "CHANDRAGUPT",
+      "about": "Chandragupt platoon",
+      "themeColor": "#0369a1"
+    },
+    {
+      "key": "RANAPRATAP",
+      "name": "RANAPRATAP",
+      "about": "Ranapratap platoon",
+      "themeColor": "#166534"
+    },
+    {
+      "key": "SHIVAJI",
+      "name": "SHIVAJI",
+      "about": "Shivaji platoon",
+      "themeColor": "#7c3aed"
+    },
+    {
+      "key": "KARNA",
+      "name": "KARNA",
+      "about": "Karna platoon",
+      "themeColor": "#b91c1c"
+    },
+    {
+      "key": "PRITHVIRAJ",
+      "name": "PRITHVIRAJ",
+      "about": "Prithviraj platoon",
+      "themeColor": "#0f766e"
+    }
+  ]
+}

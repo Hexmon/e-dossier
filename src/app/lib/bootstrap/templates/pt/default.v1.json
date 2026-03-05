@@ -1,0 +1,1639 @@
+{
+  "module": "pt",
+  "version": "v1",
+  "profile": "default",
+  "notes": {
+    "summary": "Default PT template pack for semester-wise baseline setup.",
+    "additionalAttemptsRule": "Mks for addl attempts: 40% mks of particular test to be awarded."
+  },
+  "semesters": [
+    {
+      "semester": 1,
+      "ptTypes": [
+        {
+          "code": "PPT",
+          "title": "PPT",
+          "description": "PPT (150 MKS)",
+          "maxTotalMarks": 150,
+          "sortOrder": 1,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "A1/C1",
+              "label": "Additional/Compensatory 1",
+              "isCompensatory": true,
+              "sortOrder": 3,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A2/C2",
+              "label": "Additional/Compensatory 2",
+              "isCompensatory": true,
+              "sortOrder": 4,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A3/C3",
+              "label": "Additional/Compensatory 3",
+              "isCompensatory": true,
+              "sortOrder": 5,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "1.6 Km Run",
+              "maxMarks": 66,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 66 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 52 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 38 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 57 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 42 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 28 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 26 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 26 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 26 }
+              ]
+            },
+            {
+              "title": "Sprint 100m",
+              "maxMarks": 28,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 28 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 21 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 14 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 21 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 14 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 7 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 11 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 11 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 11 }
+              ]
+            },
+            {
+              "title": "5 M Shuttle",
+              "maxMarks": 32,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 32 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 26 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 19 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 26 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 19 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 13 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 13 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 13 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 13 }
+              ]
+            },
+            {
+              "title": "Sit Ups",
+              "maxMarks": 24,
+              "sortOrder": 4,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 24 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 16 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 8 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 16 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 11 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 6 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 9 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 9 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 9 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "IPET",
+          "title": "IPET",
+          "description": "IPET",
+          "maxTotalMarks": 0,
+          "sortOrder": 2,
+          "isActive": true,
+          "attempts": [],
+          "tasks": []
+        },
+        {
+          "code": "SWIMMING",
+          "title": "SWIMMING",
+          "description": "SWIMMING",
+          "maxTotalMarks": 0,
+          "sortOrder": 3,
+          "isActive": true,
+          "attempts": [],
+          "tasks": []
+        },
+        {
+          "code": "HIGHER_TESTS",
+          "title": "HIGHER TESTS",
+          "description": "HIGHER TESTS",
+          "maxTotalMarks": 0,
+          "sortOrder": 4,
+          "isActive": true,
+          "attempts": [],
+          "tasks": []
+        }
+      ],
+      "motivationFields": [
+        { "label": "Merit Card", "sortOrder": 1, "isActive": true },
+        { "label": "Half Blue", "sortOrder": 2, "isActive": true },
+        { "label": "Blue", "sortOrder": 3, "isActive": true },
+        { "label": "Blazer", "sortOrder": 4, "isActive": true }
+      ]
+    },
+    {
+      "semester": 2,
+      "ptTypes": [
+        {
+          "code": "PPT",
+          "title": "PPT",
+          "description": "PPT (150 MKS)",
+          "maxTotalMarks": 150,
+          "sortOrder": 1,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "A1/C1",
+              "label": "Additional/Compensatory 1",
+              "isCompensatory": true,
+              "sortOrder": 3,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A2/C2",
+              "label": "Additional/Compensatory 2",
+              "isCompensatory": true,
+              "sortOrder": 4,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A3/C3",
+              "label": "Additional/Compensatory 3",
+              "isCompensatory": true,
+              "sortOrder": 5,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "2.4 Km Run",
+              "maxMarks": 53,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 53 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 42 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 30 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 45 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 34 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 23 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 21 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 21 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 21 }
+              ]
+            },
+            {
+              "title": "Chin Up",
+              "maxMarks": 26,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 26 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 22 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 15 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 22 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 18 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 11 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 10 }
+              ]
+            },
+            {
+              "title": "Toe Touch",
+              "maxMarks": 26,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 26 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 22 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 15 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 22 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 18 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 11 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 10 }
+              ]
+            },
+            {
+              "title": "Sprint 100m",
+              "maxMarks": 15,
+              "sortOrder": 4,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 15 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 11 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 7 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 11 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 7 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 6 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 6 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 6 }
+              ]
+            },
+            {
+              "title": "5 M Shuttle",
+              "maxMarks": 19,
+              "sortOrder": 5,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 19 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 15 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 11 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 15 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 11 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 7 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 8 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 8 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 8 }
+              ]
+            },
+            {
+              "title": "Sit Ups",
+              "maxMarks": 11,
+              "sortOrder": 6,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 11 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 8 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 8 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 4 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 4 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 4 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "IPET",
+          "title": "IPET",
+          "description": "IPET",
+          "maxTotalMarks": 0,
+          "sortOrder": 2,
+          "isActive": true,
+          "attempts": [],
+          "tasks": []
+        },
+        {
+          "code": "SWIMMING",
+          "title": "SWIMMING",
+          "description": "SWIMMING",
+          "maxTotalMarks": 0,
+          "sortOrder": 3,
+          "isActive": true,
+          "attempts": [],
+          "tasks": []
+        },
+        {
+          "code": "HIGHER_TESTS",
+          "title": "HIGHER TESTS",
+          "description": "HIGHER TESTS",
+          "maxTotalMarks": 0,
+          "sortOrder": 4,
+          "isActive": true,
+          "attempts": [],
+          "tasks": []
+        }
+      ],
+      "motivationFields": [
+        { "label": "Merit Card", "sortOrder": 1, "isActive": true },
+        { "label": "Half Blue", "sortOrder": 2, "isActive": true },
+        { "label": "Blue", "sortOrder": 3, "isActive": true },
+        { "label": "Blazer", "sortOrder": 4, "isActive": true }
+      ]
+    },
+    {
+      "semester": 3,
+      "ptTypes": [
+        {
+          "code": "PPT",
+          "title": "PPT",
+          "description": "PPT (50 MKS)",
+          "maxTotalMarks": 50,
+          "sortOrder": 1,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "A1/C1",
+              "label": "Additional/Compensatory 1",
+              "isCompensatory": true,
+              "sortOrder": 3,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A2/C2",
+              "label": "Additional/Compensatory 2",
+              "isCompensatory": true,
+              "sortOrder": 4,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A3/C3",
+              "label": "Additional/Compensatory 3",
+              "isCompensatory": true,
+              "sortOrder": 5,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "2.4 Km Run",
+              "maxMarks": 17,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 17 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 13 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 9 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 14 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 7 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 7 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 7 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            },
+            {
+              "title": "Chin Up",
+              "maxMarks": 9,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 9 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 7 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 7 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 4 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 4 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 4 }
+              ]
+            },
+            {
+              "title": "Toe Touch",
+              "maxMarks": 9,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 9 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 7 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 7 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 4 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 4 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 4 }
+              ]
+            },
+            {
+              "title": "Sprint 100m",
+              "maxMarks": 5,
+              "sortOrder": 4,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 5 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 4 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 2 }
+              ]
+            },
+            {
+              "title": "5 M Shuttle",
+              "maxMarks": 6,
+              "sortOrder": 5,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 6 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 2 }
+              ]
+            },
+            {
+              "title": "Sit Ups",
+              "maxMarks": 4,
+              "sortOrder": 6,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 4 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 1 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 2 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "IPET",
+          "title": "IPET",
+          "description": "IPET (35 MKS)",
+          "maxTotalMarks": 35,
+          "sortOrder": 2,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "T / A Vault",
+              "maxMarks": 10,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            },
+            {
+              "title": "Rope",
+              "maxMarks": 13,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 13 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 9 }
+              ]
+            },
+            {
+              "title": "Chest Touch/Heaving",
+              "maxMarks": 12,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 12 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 8 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "SWIMMING",
+          "title": "SWIMMING",
+          "description": "SWIMMING (35 MKS)",
+          "maxTotalMarks": 35,
+          "sortOrder": 3,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "25m",
+              "maxMarks": 20,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 20 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 15 }
+              ]
+            },
+            {
+              "title": "Jump",
+              "maxMarks": 15,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 15 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 10 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "HIGHER_TESTS",
+          "title": "HIGHER TESTS",
+          "description": "HIGHER TESTS (30 MKS)",
+          "maxTotalMarks": 30,
+          "sortOrder": 4,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Swimming",
+              "maxMarks": 7,
+              "sortOrder": 1,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 7 }]
+            },
+            {
+              "title": "Jump",
+              "maxMarks": 8,
+              "sortOrder": 2,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 8 }]
+            },
+            {
+              "title": "Chin Up",
+              "maxMarks": 7,
+              "sortOrder": 3,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 7 }]
+            },
+            {
+              "title": "Rope",
+              "maxMarks": 8,
+              "sortOrder": 4,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 8 }]
+            }
+          ]
+        }
+      ],
+      "motivationFields": [
+        { "label": "Merit Card", "sortOrder": 1, "isActive": true },
+        { "label": "Half Blue", "sortOrder": 2, "isActive": true },
+        { "label": "Blue", "sortOrder": 3, "isActive": true },
+        { "label": "Blazer", "sortOrder": 4, "isActive": true }
+      ]
+    },
+    {
+      "semester": 4,
+      "ptTypes": [
+        {
+          "code": "PPT",
+          "title": "PPT",
+          "description": "PPT (40 MKS)",
+          "maxTotalMarks": 40,
+          "sortOrder": 1,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "A1/C1",
+              "label": "Additional/Compensatory 1",
+              "isCompensatory": true,
+              "sortOrder": 3,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A2/C2",
+              "label": "Additional/Compensatory 2",
+              "isCompensatory": true,
+              "sortOrder": 4,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A3/C3",
+              "label": "Additional/Compensatory 3",
+              "isCompensatory": true,
+              "sortOrder": 5,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "2.4 Km Run",
+              "maxMarks": 14,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 14 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 11 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 8 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 12 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 9 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 6 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 6 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 6 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 6 }
+              ]
+            },
+            {
+              "title": "Chin Up",
+              "maxMarks": 7,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 7 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 6 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 6 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 3 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 3 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 3 }
+              ]
+            },
+            {
+              "title": "Toe Touch",
+              "maxMarks": 7,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 7 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 6 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 6 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 3 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 3 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 3 }
+              ]
+            },
+            {
+              "title": "Sprint 100m",
+              "maxMarks": 4,
+              "sortOrder": 4,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 4 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 2 }
+              ]
+            },
+            {
+              "title": "5 M Shuttle",
+              "maxMarks": 5,
+              "sortOrder": 5,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 5 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 4 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 2 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 2 }
+              ]
+            },
+            {
+              "title": "Sit Ups",
+              "maxMarks": 3,
+              "sortOrder": 6,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 2 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 1 },
+                { "attemptCode": "A1/C1", "gradeCode": "MKS", "maxMarks": 1 },
+                { "attemptCode": "A2/C2", "gradeCode": "MKS", "maxMarks": 1 },
+                { "attemptCode": "A3/C3", "gradeCode": "MKS", "maxMarks": 1 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "IPET",
+          "title": "IPET",
+          "description": "IPET (50 MKS)",
+          "maxTotalMarks": 50,
+          "sortOrder": 2,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Back Roll",
+              "maxMarks": 10,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            },
+            {
+              "title": "Dive Roll",
+              "maxMarks": 5,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 3 }
+              ]
+            },
+            {
+              "title": "T / A Vault",
+              "maxMarks": 10,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            },
+            {
+              "title": "Rope",
+              "maxMarks": 15,
+              "sortOrder": 4,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 15 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 10 }
+              ]
+            },
+            {
+              "title": "Chest Touch/Heaving",
+              "maxMarks": 10,
+              "sortOrder": 5,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "SWIMMING",
+          "title": "SWIMMING",
+          "description": "SWIMMING (30 MKS)",
+          "maxTotalMarks": 30,
+          "sortOrder": 3,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "25 M",
+              "maxMarks": 20,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 20 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 15 }
+              ]
+            },
+            {
+              "title": "Jump",
+              "maxMarks": 10,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 5 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "HIGHER_TESTS",
+          "title": "HIGHER TESTS",
+          "description": "HIGHER TESTS (30 MKS)",
+          "maxTotalMarks": 30,
+          "sortOrder": 4,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Swimming",
+              "maxMarks": 7,
+              "sortOrder": 1,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 7 }]
+            },
+            {
+              "title": "Jump",
+              "maxMarks": 8,
+              "sortOrder": 2,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 8 }]
+            },
+            {
+              "title": "Chin Up",
+              "maxMarks": 7,
+              "sortOrder": 3,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 7 }]
+            },
+            {
+              "title": "Rope",
+              "maxMarks": 8,
+              "sortOrder": 4,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 8 }]
+            }
+          ]
+        }
+      ],
+      "motivationFields": [
+        { "label": "Merit Card", "sortOrder": 1, "isActive": true },
+        { "label": "Half Blue", "sortOrder": 2, "isActive": true },
+        { "label": "Blue", "sortOrder": 3, "isActive": true },
+        { "label": "Blazer", "sortOrder": 4, "isActive": true }
+      ]
+    },
+    {
+      "semester": 5,
+      "ptTypes": [
+        {
+          "code": "PPT",
+          "title": "PPT",
+          "description": "PPT (40 MKS)",
+          "maxTotalMarks": 40,
+          "sortOrder": 1,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "A1/C1",
+              "label": "Additional/Compensatory 1",
+              "isCompensatory": true,
+              "sortOrder": 3,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A2/C2",
+              "label": "Additional/Compensatory 2",
+              "isCompensatory": true,
+              "sortOrder": 4,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A3/C3",
+              "label": "Additional/Compensatory 3",
+              "isCompensatory": true,
+              "sortOrder": 5,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "2.4 Km Run",
+              "maxMarks": 14,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 14 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 11 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 8 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 12 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 9 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 6 }
+              ]
+            },
+            {
+              "title": "Chin Up",
+              "maxMarks": 7,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 7 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 6 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 6 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 }
+              ]
+            },
+            {
+              "title": "Toe Touch",
+              "maxMarks": 7,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 7 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 6 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 6 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 }
+              ]
+            },
+            {
+              "title": "Sprint 100m",
+              "maxMarks": 4,
+              "sortOrder": 4,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 4 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 2 }
+              ]
+            },
+            {
+              "title": "5 M Shuttle",
+              "maxMarks": 5,
+              "sortOrder": 5,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 5 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 4 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 2 }
+              ]
+            },
+            {
+              "title": "Sit Ups",
+              "maxMarks": 3,
+              "sortOrder": 6,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 2 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 1 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "IPET",
+          "title": "IPET",
+          "description": "IPET (50 MKS)",
+          "maxTotalMarks": 50,
+          "sortOrder": 2,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Back Roll",
+              "maxMarks": 10,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            },
+            {
+              "title": "Dive Roll",
+              "maxMarks": 5,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 3 }
+              ]
+            },
+            {
+              "title": "T / A Vault",
+              "maxMarks": 10,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            },
+            {
+              "title": "Rope",
+              "maxMarks": 15,
+              "sortOrder": 4,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 15 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 10 }
+              ]
+            },
+            {
+              "title": "Chest Touch/Heaving",
+              "maxMarks": 10,
+              "sortOrder": 5,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "SWIMMING",
+          "title": "SWIMMING",
+          "description": "SWIMMING (30 MKS)",
+          "maxTotalMarks": 30,
+          "sortOrder": 3,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "25 M",
+              "maxMarks": 20,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 20 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 15 }
+              ]
+            },
+            {
+              "title": "Jump",
+              "maxMarks": 10,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 5 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "HIGHER_TESTS",
+          "title": "HIGHER TESTS",
+          "description": "HIGHER TESTS (30 MKS)",
+          "maxTotalMarks": 30,
+          "sortOrder": 4,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Swimming",
+              "maxMarks": 7,
+              "sortOrder": 1,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 7 }]
+            },
+            {
+              "title": "Jump",
+              "maxMarks": 8,
+              "sortOrder": 2,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 8 }]
+            },
+            {
+              "title": "Chin Up",
+              "maxMarks": 7,
+              "sortOrder": 3,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 7 }]
+            },
+            {
+              "title": "Rope",
+              "maxMarks": 8,
+              "sortOrder": 4,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 8 }]
+            }
+          ]
+        }
+      ],
+      "motivationFields": [
+        { "label": "Merit Card", "sortOrder": 1, "isActive": true },
+        { "label": "Half Blue", "sortOrder": 2, "isActive": true },
+        { "label": "Blue", "sortOrder": 3, "isActive": true },
+        { "label": "Blazer", "sortOrder": 4, "isActive": true }
+      ]
+    },
+    {
+      "semester": 6,
+      "ptTypes": [
+        {
+          "code": "PPT",
+          "title": "PPT",
+          "description": "PPT (40 MKS)",
+          "maxTotalMarks": 40,
+          "sortOrder": 1,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [
+                { "code": "E", "label": "Excellent", "sortOrder": 1, "isActive": true },
+                { "code": "G", "label": "Good", "sortOrder": 2, "isActive": true },
+                { "code": "S", "label": "Satisfactory", "sortOrder": 3, "isActive": true }
+              ]
+            },
+            {
+              "code": "A1/C1",
+              "label": "Additional/Compensatory 1",
+              "isCompensatory": true,
+              "sortOrder": 3,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A2/C2",
+              "label": "Additional/Compensatory 2",
+              "isCompensatory": true,
+              "sortOrder": 4,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "A3/C3",
+              "label": "Additional/Compensatory 3",
+              "isCompensatory": true,
+              "sortOrder": 5,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "2.4 Km Run",
+              "maxMarks": 14,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 14 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 11 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 8 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 12 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 9 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 6 }
+              ]
+            },
+            {
+              "title": "Chin Up",
+              "maxMarks": 7,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 7 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 6 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 6 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 }
+              ]
+            },
+            {
+              "title": "Toe Touch",
+              "maxMarks": 7,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 7 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 6 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 6 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 3 }
+              ]
+            },
+            {
+              "title": "Sprint 100m",
+              "maxMarks": 4,
+              "sortOrder": 4,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 4 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 2 }
+              ]
+            },
+            {
+              "title": "5 M Shuttle",
+              "maxMarks": 5,
+              "sortOrder": 5,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 5 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 4 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 4 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 2 }
+              ]
+            },
+            {
+              "title": "Sit Ups",
+              "maxMarks": 3,
+              "sortOrder": 6,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M1", "gradeCode": "G", "maxMarks": 2 },
+                { "attemptCode": "M1", "gradeCode": "S", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "E", "maxMarks": 3 },
+                { "attemptCode": "M2", "gradeCode": "G", "maxMarks": 2 },
+                { "attemptCode": "M2", "gradeCode": "S", "maxMarks": 1 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "IPET",
+          "title": "IPET",
+          "description": "IPET (50 MKS)",
+          "maxTotalMarks": 50,
+          "sortOrder": 2,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Back Roll",
+              "maxMarks": 10,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            },
+            {
+              "title": "Dive Roll",
+              "maxMarks": 5,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 5 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 3 }
+              ]
+            },
+            {
+              "title": "T / A Vault",
+              "maxMarks": 10,
+              "sortOrder": 3,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            },
+            {
+              "title": "Rope",
+              "maxMarks": 15,
+              "sortOrder": 4,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 15 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 10 }
+              ]
+            },
+            {
+              "title": "Chest Touch/Heaving",
+              "maxMarks": 10,
+              "sortOrder": 5,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 7 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "SWIMMING",
+          "title": "SWIMMING",
+          "description": "SWIMMING (30 MKS)",
+          "maxTotalMarks": 30,
+          "sortOrder": 3,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            },
+            {
+              "code": "M2",
+              "label": "Mandatory 2",
+              "isCompensatory": false,
+              "sortOrder": 2,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "25 M",
+              "maxMarks": 20,
+              "sortOrder": 1,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 20 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 15 }
+              ]
+            },
+            {
+              "title": "Jump",
+              "maxMarks": 10,
+              "sortOrder": 2,
+              "scoreMatrix": [
+                { "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 10 },
+                { "attemptCode": "M2", "gradeCode": "MKS", "maxMarks": 5 }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "HIGHER_TESTS",
+          "title": "HIGHER TESTS",
+          "description": "HIGHER TESTS (30 MKS)",
+          "maxTotalMarks": 30,
+          "sortOrder": 4,
+          "isActive": true,
+          "attempts": [
+            {
+              "code": "M1",
+              "label": "Mandatory 1",
+              "isCompensatory": false,
+              "sortOrder": 1,
+              "isActive": true,
+              "grades": [{ "code": "MKS", "label": "Marks", "sortOrder": 1, "isActive": true }]
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Swimming",
+              "maxMarks": 7,
+              "sortOrder": 1,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 7 }]
+            },
+            {
+              "title": "Jump",
+              "maxMarks": 8,
+              "sortOrder": 2,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 8 }]
+            },
+            {
+              "title": "Chin Up",
+              "maxMarks": 7,
+              "sortOrder": 3,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 7 }]
+            },
+            {
+              "title": "Rope",
+              "maxMarks": 8,
+              "sortOrder": 4,
+              "scoreMatrix": [{ "attemptCode": "M1", "gradeCode": "MKS", "maxMarks": 8 }]
+            }
+          ]
+        }
+      ],
+      "motivationFields": [
+        { "label": "Merit Card", "sortOrder": 1, "isActive": true },
+        { "label": "Half Blue", "sortOrder": 2, "isActive": true },
+        { "label": "Blue", "sortOrder": 3, "isActive": true },
+        { "label": "Blazer", "sortOrder": 4, "isActive": true }
+      ]
+    }
+  ]
+}

@@ -1,43 +1,199 @@
 "use client";
 
+import { useState } from "react";
 import { PTTemplate } from "@/app/lib/api/Physicaltrainingapi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import type { PtTemplateApplyResult } from "@/app/lib/bootstrap/types";
 
 interface PTTemplateViewProps {
     template: PTTemplate | null;
     loading: boolean;
     semester: number;
+    onApplyDefaultTemplate?: (dryRun: boolean) => Promise<PtTemplateApplyResult>;
 }
 
-export default function PTTemplateView({ template, loading, semester }: PTTemplateViewProps) {
+function ApplyResultSummary({ result }: { result: PtTemplateApplyResult }) {
+    return (
+        <div className="rounded-md border bg-muted/30 p-4 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold">
+                    {result.dryRun ? "Dry Run Summary" : "Apply Summary"}
+                </span>
+                <span className="text-muted-foreground">
+                    Created: {result.createdCount} | Updated: {result.updatedCount} | Skipped:{" "}
+                    {result.skippedCount}
+                </span>
+            </div>
+            {result.warnings.length > 0 ? (
+                <div className="mt-2">
+                    <p className="font-medium">Warnings</p>
+                    <ul className="mt-1 list-disc pl-5 text-xs text-muted-foreground">
+                        {result.warnings.map((warning, index) => (
+                            <li key={`${index}-${warning}`}>{warning}</li>
+                        ))}
+                    </ul>
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
+export default function PTTemplateView({
+    template,
+    loading,
+    semester,
+    onApplyDefaultTemplate,
+}: PTTemplateViewProps) {
+    const [busyMode, setBusyMode] = useState<"dry-run" | "apply" | null>(null);
+    const [lastApplyResult, setLastApplyResult] = useState<PtTemplateApplyResult | null>(null);
+
+    const runApply = async (dryRun: boolean) => {
+        if (!onApplyDefaultTemplate) return;
+        setBusyMode(dryRun ? "dry-run" : "apply");
+        try {
+            const result = await onApplyDefaultTemplate(dryRun);
+            setLastApplyResult(result);
+            toast.success(
+                dryRun
+                    ? "Dry run completed. Review the summary below."
+                    : "Default PT template applied."
+            );
+        } catch (error) {
+            toast.error(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to apply default PT template."
+            );
+        } finally {
+            setBusyMode(null);
+        }
+    };
+
+    const renderTemplateApplyActions = () => {
+        if (!onApplyDefaultTemplate) return null;
+
+        const loadingText =
+            busyMode === "dry-run"
+                ? "Running preview..."
+                : busyMode === "apply"
+                    ? "Applying template..."
+                    : null;
+
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Default PT Template Bootstrap</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        Initialize semester-wise PT defaults (Sem 1-6) using upsert-missing
+                        behavior. Existing custom rows are preserved.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => void runApply(true)}
+                            disabled={busyMode !== null}
+                        >
+                            {busyMode === "dry-run" ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Running Dry Run
+                                </>
+                            ) : (
+                                "Preview Changes (Dry Run)"
+                            )}
+                        </Button>
+
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button type="button" disabled={busyMode !== null}>
+                                    Apply Default PT Template
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                        Apply default PT template?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This updates canonical PT template rows and creates missing
+                                        defaults. It does not delete organization-specific entries.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={() => {
+                                            void runApply(false);
+                                        }}
+                                    >
+                                        Confirm Apply
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+
+                    {loadingText ? (
+                        <p className="text-xs text-muted-foreground">{loadingText}</p>
+                    ) : null}
+
+                    {lastApplyResult ? <ApplyResultSummary result={lastApplyResult} /> : null}
+                </CardContent>
+            </Card>
+        );
+    };
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="space-y-6">
+                {renderTemplateApplyActions()}
+                <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
             </div>
         );
     }
 
     if (!template || template.types.length === 0) {
         return (
-            <Card>
-                <CardContent className="py-12">
-                    <div className="text-center">
-                        <p className="text-muted-foreground">
-                            No template data found for Semester {semester}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                            Add PT types in the PT Types tab to get started
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="space-y-6">
+                {renderTemplateApplyActions()}
+                <Card>
+                    <CardContent className="py-12">
+                        <div className="text-center">
+                            <p className="text-muted-foreground">
+                                No template data found for Semester {semester}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-2">
+                                Add PT types in the PT Types tab to get started
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         );
     }
 
     return (
         <div className="space-y-6">
+            {renderTemplateApplyActions()}
             {template.types.map((type) => {
                 const { id, code, title, maxTotalMarks, attempts, tasks } = type;
 

@@ -1,4 +1,4 @@
-﻿import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+﻿import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/app/db/client';
 import {
     ocSprRecords,
@@ -22,6 +22,19 @@ export type SemesterSourceScores = {
     camp: number;
     cfe: number;
 };
+
+export type SemesterSourceScoresDetailed = SemesterSourceScores & {
+    academicsRawScored: number;
+    academicsRawMax: number;
+    academicsScaled: number;
+};
+
+function resolveCampSemesterTokens(semester: number): string[] {
+    // Supports both legacy enum values (SEM5/SEM6A/SEM6B) and numeric semester storage.
+    if (semester === 5) return ['5', 'SEM5'];
+    if (semester === 6) return ['6', 'SEM6', 'SEM6A', 'SEM6B'];
+    return [String(semester), `SEM${semester}`];
+}
 
 export async function getSprRecord(ocId: string, semester: number) {
     const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
@@ -73,7 +86,10 @@ export async function upsertSprRecord(
     return created;
 }
 
-export async function getSemesterSourceScores(ocId: string, semester: number): Promise<SemesterSourceScores> {
+export async function getSemesterSourceScoresDetailed(
+    ocId: string,
+    semester: number,
+): Promise<SemesterSourceScoresDetailed> {
     const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const academicSemester = await getOcAcademicSemester(ocId, semester);
     const academicSubjects = Array.isArray(academicSemester?.subjects) ? academicSemester.subjects : [];
@@ -160,7 +176,10 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
 
     let camp = 0;
     if (semester === 5 || semester === 6) {
-        const semKeys = semester === 5 ? ['SEM5'] : ['SEM6A', 'SEM6B'];
+        const campSemesterTokens = resolveCampSemesterTokens(semester);
+        const campSemesterPredicate = or(
+            ...campSemesterTokens.map((token) => sql`${trainingCamps.semester}::text = ${token}`),
+        );
         const [campRow] = await db
             .select({ scored: sql<number>`COALESCE(SUM(${ocCamps.totalMarksScored}), 0)` })
             .from(ocCamps)
@@ -169,7 +188,7 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
                 and(
                     eq(ocCamps.ocId, ocId),
                     eq(ocCamps.enrollmentId, activeEnrollment.id),
-                    inArray(trainingCamps.semester, semKeys as any),
+                    campSemesterPredicate,
                     isNull(ocCamps.deletedAt),
                     isNull(trainingCamps.deletedAt),
                 ),
@@ -178,6 +197,9 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
     }
 
     return {
+        academicsRawScored: Number(academicScored ?? 0),
+        academicsRawMax: Number(academicMax ?? 0),
+        academicsScaled: Number(academicScaled ?? 0),
         academics: Number(academicScaled ?? 0),
         olq: Number(olq?.scored ?? 0),
         ptSwimming: Number(pt?.scored ?? 0),
@@ -185,6 +207,19 @@ export async function getSemesterSourceScores(ocId: string, semester: number): P
         drill,
         camp,
         cfe,
+    };
+}
+
+export async function getSemesterSourceScores(ocId: string, semester: number): Promise<SemesterSourceScores> {
+    const detailed = await getSemesterSourceScoresDetailed(ocId, semester);
+    return {
+        academics: detailed.academics,
+        olq: detailed.olq,
+        ptSwimming: detailed.ptSwimming,
+        games: detailed.games,
+        drill: detailed.drill,
+        camp: detailed.camp,
+        cfe: detailed.cfe,
     };
 }
 

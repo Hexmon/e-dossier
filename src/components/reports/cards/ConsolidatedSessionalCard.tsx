@@ -178,9 +178,9 @@ export function ConsolidatedSessionalCard() {
               setViewModalOpen(true);
               void previewQuery.refetch();
             }}
-            disabled={!courseId || !semester || !subjectId}
+            disabled={!courseId || !semester || !subjectId || previewQuery.isFetching}
           >
-            View
+            {previewQuery.isFetching ? 'Loading...' : 'View'}
           </Button>
         </div>
 

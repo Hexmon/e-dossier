@@ -12,6 +12,8 @@ import type {
   OlqAdminSubtitleListResponse,
   OlqAdminSubtitleResponse,
   OlqAdminSubtitleUpdateInput,
+  OlqTemplateApplyRequest,
+  OlqTemplateApplyResponse,
 } from "@/types/olq-admin";
 
 type ListCategoriesParams = {
@@ -120,6 +122,15 @@ export async function copyOlqAdminTemplate(
 ): Promise<OlqAdminCopyTemplateResponse> {
   return api.post<OlqAdminCopyTemplateResponse, OlqAdminCopyTemplateInput>(
     endpoints.admin.olq.copy(targetCourseId),
+    payload
+  );
+}
+
+export async function applyOlqDefaultTemplate(
+  payload: OlqTemplateApplyRequest
+): Promise<OlqTemplateApplyResponse> {
+  return api.post<OlqTemplateApplyResponse, OlqTemplateApplyRequest>(
+    endpoints.admin.olq.applyTemplate,
     payload
   );
 }

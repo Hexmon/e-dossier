@@ -28,63 +28,9 @@ interface OcCampReviewsProps {
   camp: OcCampData;
   onDeleteReview: (reviewId: string) => void;
   campName?: string;
+  primarySignatureLabel?: string;
+  secondarySignatureLabel?: string;
 }
-
-// REVIEW PREFILL DATA - Consolidated camp names
-const getReviewPrefillForCampType = (campName: string) => {
-  const campMap: Record<
-    string,
-    Array<{ role: ReviewRole; sectionTitle: string; fieldName: string }>
-  > = {
-    "TECHNO TAC CAMP": [
-      { role: "HOAT", sectionTitle: "Basic DS", fieldName: "basicDS" },
-      { role: "OIC", sectionTitle: "Camp OIC", fieldName: "campOIC" },
-      {
-        role: "PLATOON_COMMANDER",
-        sectionTitle: "Platoon Commander",
-        fieldName: "platoonCommander",
-      },
-    ],
-    "EX-SURAKSHA": [
-      { role: "HOAT", sectionTitle: "Basic DS", fieldName: "basicDS" },
-      { role: "OIC", sectionTitle: "Camp OIC", fieldName: "campOIC" },
-      {
-        role: "PLATOON_COMMANDER",
-        sectionTitle: "Platoon Commander",
-        fieldName: "platoonCommander",
-      },
-    ],
-    "EX SURAKSHA": [
-      { role: "HOAT", sectionTitle: "Basic DS", fieldName: "basicDS" },
-      { role: "OIC", sectionTitle: "Camp OIC", fieldName: "campOIC" },
-      {
-        role: "PLATOON_COMMANDER",
-        sectionTitle: "Platoon Commander",
-        fieldName: "platoonCommander",
-      },
-    ],
-    "EX-VAJRA": [
-      { role: "HOAT", sectionTitle: "Basic DS", fieldName: "basicDS" },
-      { role: "OIC", sectionTitle: "Camp OIC", fieldName: "campOIC" },
-      {
-        role: "PLATOON_COMMANDER",
-        sectionTitle: "Platoon Commander",
-        fieldName: "platoonCommander",
-      },
-    ],
-    "EX VAJRA": [
-      { role: "HOAT", sectionTitle: "Basic DS", fieldName: "basicDS" },
-      { role: "OIC", sectionTitle: "Camp OIC", fieldName: "campOIC" },
-      {
-        role: "PLATOON_COMMANDER",
-        sectionTitle: "Platoon Commander",
-        fieldName: "platoonCommander",
-      },
-    ],
-  };
-
-  return campMap[campName] || [];
-};
 
 export default function OcCampReviews({
   campIndex,
@@ -92,6 +38,8 @@ export default function OcCampReviews({
   camp,
   onDeleteReview,
   campName = "",
+  primarySignatureLabel = "OIC Camp",
+  secondarySignatureLabel = "PI Cdr",
 }: OcCampReviewsProps) {
   const { watch, setValue, register } = useFormContext<FormValues>();
   const initializedRef = useRef<Set<string>>(new Set());
@@ -139,55 +87,50 @@ export default function OcCampReviews({
 
     // Otherwise, only initialize if there are no form reviews yet
     if (formReviews.length === 0) {
-      const prefillData = getReviewPrefillForCampType(campName);
+      const initialReviews: Array<{
+        role: ReviewRole;
+        sectionTitle: string;
+        reviewText: string;
+      }> = [
+        {
+          role: "HOAT",
+          sectionTitle: "Performance Notes",
+          reviewText: "",
+        },
+        {
+          role: "OIC",
+          sectionTitle: primarySignatureLabel,
+          reviewText: "",
+        },
+        {
+          role: "PLATOON_COMMANDER",
+          sectionTitle: secondarySignatureLabel,
+          reviewText: "",
+        },
+      ];
 
-      if (prefillData.length > 0) {
-        // Use fresh hardcoded structure - always 3 reviews
-        const initialReviews: Array<{
-          role: ReviewRole;
-          sectionTitle: string;
-          reviewText: string;
-        }> = [
-            {
-              role: (prefillData[0]?.role || "HOAT") as ReviewRole,
-              sectionTitle: prefillData[0]?.sectionTitle || "Basic DS",
-              reviewText: "",
-            },
-            {
-              role: (prefillData[1]?.role || "OIC") as ReviewRole,
-              sectionTitle: prefillData[1]?.sectionTitle || "Camp OIC",
-              reviewText: "",
-            },
-            {
-              role: (prefillData[2]?.role || "PLATOON_COMMANDER") as ReviewRole,
-              sectionTitle: prefillData[2]?.sectionTitle || "Platoon Commander",
-              reviewText: "",
-            },
-          ];
+      setValue(`campsByName.${campName}.reviews`, initialReviews, {
+        shouldValidate: false,
+        shouldDirty: false,
+      });
 
-        setValue(`campsByName.${campName}.reviews`, initialReviews, {
+      if (camp?.trainingCampId) {
+        setValue(`campsByName.${campName}.trainingCampId`, camp.trainingCampId, {
           shouldValidate: false,
           shouldDirty: false,
         });
-
-        if (camp?.trainingCampId) {
-          setValue(`campsByName.${campName}.trainingCampId`, camp.trainingCampId, {
-            shouldValidate: false,
-            shouldDirty: false,
-          });
-        }
-
-        setValue(
-          `campsByName.${campName}.year`,
-          camp?.year || new Date().getFullYear(),
-          {
-            shouldValidate: false,
-            shouldDirty: false,
-          }
-        );
       }
+
+      setValue(
+        `campsByName.${campName}.year`,
+        camp?.year || new Date().getFullYear(),
+        {
+          shouldValidate: false,
+          shouldDirty: false,
+        }
+      );
     }
-  }, [campName, camp]);
+  }, [campName, camp, formReviews.length, primarySignatureLabel, secondarySignatureLabel, setValue]);
 
   // Reset initialized flag when camp changes
   useEffect(() => {
@@ -221,7 +164,7 @@ export default function OcCampReviews({
           {/* Basic DS Textarea */}
           <div className="space-y-2">
             <Label htmlFor={`textarea-1-${campName}`} className="font-medium">
-              Basic DS
+              Performance Notes
             </Label>
             {disabled ? (
               <p className="text-sm text-foreground whitespace-pre-wrap">
@@ -229,14 +172,14 @@ export default function OcCampReviews({
               </p>
             ) : (
               <>
-                <input
+              <input
                   type="hidden"
                   value="HOAT"
                   {...register(`campsByName.${campName}.reviews.0.role`)}
                 />
                 <input
                   type="hidden"
-                  value="Basic DS"
+                  value="Performance Notes"
                   {...register(`campsByName.${campName}.reviews.0.sectionTitle`)}
                 />
                 <Textarea
@@ -253,7 +196,7 @@ export default function OcCampReviews({
           {/* Camp OIC Textarea */}
           <div className="space-y-2">
             <Label htmlFor={`textarea-2-${campName}`} className="font-medium">
-              Camp OIC
+              {primarySignatureLabel}
             </Label>
             {disabled ? (
               <p className="text-sm text-foreground whitespace-pre-wrap">
@@ -268,7 +211,7 @@ export default function OcCampReviews({
                 />
                 <input
                   type="hidden"
-                  value="Camp OIC"
+                  value={primarySignatureLabel}
                   {...register(`campsByName.${campName}.reviews.1.sectionTitle`)}
                 />
                 <Textarea
@@ -285,7 +228,7 @@ export default function OcCampReviews({
           {/* Platoon Commander Textarea */}
           <div className="space-y-2">
             <Label htmlFor={`textarea-3-${campName}`} className="font-medium">
-              Platoon Commander
+              {secondarySignatureLabel}
             </Label>
             {disabled ? (
               <p className="text-sm text-foreground whitespace-pre-wrap">
@@ -300,7 +243,7 @@ export default function OcCampReviews({
                 />
                 <input
                   type="hidden"
-                  value="Platoon Commander"
+                  value={secondarySignatureLabel}
                   {...register(`campsByName.${campName}.reviews.2.sectionTitle`)}
                 />
                 <Textarea

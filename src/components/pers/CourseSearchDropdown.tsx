@@ -93,13 +93,21 @@ export default function CourseSearchDropdown({
     };
 
     return (
-        <div ref={containerRef} className="relative">
+        <div
+            ref={containerRef}
+            className="relative"
+            data-search-container="dropdown"
+            data-open={isOpen ? "true" : "false"}
+        >
             <Input
                 value={isOpen ? searchQuery : value || ""}
                 onChange={handleInputChange}
                 onFocus={handleFocus}
                 placeholder={value ? value : "Search course..."}
                 disabled={disabled}
+                data-search-target="true"
+                data-search-scope="dropdown"
+                data-search-priority="90"
             />
 
             {isOpen && (
