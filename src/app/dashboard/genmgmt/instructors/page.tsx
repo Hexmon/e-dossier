@@ -26,6 +26,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 
 export default function InstructorManagementPage() {
     const router = useRouter();
@@ -44,8 +45,11 @@ export default function InstructorManagementPage() {
     } = useInstructors({ q: searchQuery });
 
     const handleLogout = () => {
-        console.log("Logout clicked");
-        router.push("/login");
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
     };
 
     const handleSearch = (query: string) => {

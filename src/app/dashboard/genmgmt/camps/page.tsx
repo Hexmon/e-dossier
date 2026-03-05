@@ -19,6 +19,7 @@ import ActivityDialog from "@/components/camps/ActivityDialog";
 import DeleteActivityDialog from "@/components/camps/DeleteActivityDialog";
 import { ActivityFormData } from "@/components/camps/ActivityForm";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 import {
     fetchTrainingCamps,
     createTrainingCamp,
@@ -148,7 +149,13 @@ export default function CampsManagement() {
         },
     });
 
-    const handleLogout = () => router.push("/login");
+    const handleLogout = () => {
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
+    };
 
     const handleCreateCamp = async (formData: CampFormData) => {
         await createCampMutation.mutateAsync(formData);

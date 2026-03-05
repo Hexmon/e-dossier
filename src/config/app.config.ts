@@ -8,7 +8,6 @@ import {
   Ban,
   Camera,
   Book,
-  CheckCircle,
   CalendarDays,
   Trophy,
   FileBadge,
@@ -239,6 +238,13 @@ type ManagementCardConfig = {
 
 export const managementCard: ManagementCardConfig[] = [
   {
+    title: "Course Management",
+    description: "Create, update, and track training courses",
+    icon: BookOpen,
+    to: "/dashboard/genmgmt/coursemgmt",
+    color: "info"
+  },
+  {
     title: "OC Management",
     description: "Manage Officer Cadets and their records",
     icon: UserCheck,
@@ -246,18 +252,18 @@ export const managementCard: ManagementCardConfig[] = [
     color: "warning"
   },
   {
+    title: "Promotion / Relegation Management",
+    description: "Monitor, evaluate, and manage student promotion and relegation",
+    icon: ArrowDownUp,
+    to: "/dashboard/genmgmt/promotion-relegation",
+    color: "destructive"
+  },
+  {
     title: "User Management",
     description: "Manage user roles, permissions, and profiles",
     icon: Users,
     to: "/dashboard/genmgmt/usersmgmt",
     color: "destructive"
-  },
-  {
-    title: "Approval Management",
-    description: "Handle user approvals and verification processes",
-    icon: CheckCircle,
-    to: "/dashboard/genmgmt/approvalmgmt",
-    color: "success"
   },
   {
     title: "Appointment Management",
@@ -342,13 +348,6 @@ export const managementCard: ManagementCardConfig[] = [
 ];
 
 export const academicManagementCards: ManagementCardConfig[] = [
-  {
-    title: "Course Management",
-    description: "Create, update, and track training courses",
-    icon: BookOpen,
-    to: "/dashboard/genmgmt/coursemgmt",
-    color: "info"
-  },
   {
     title: "Subject Management",
     description: "Organize and maintain subjects within courses",
@@ -577,18 +576,11 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "success"
   },
   {
-    title: "Initial Interview",
+    title: "Interviews",
     description: "Schedule and manage candidate interviews",
     icon: UserCheck,
-    to: (id: string) => `/dashboard/${id}/milmgmt/initial-interview`,
+    to: (id: string) => `/dashboard/${id}/milmgmt/interviews`,
     color: "warning"
-  },
-  {
-    title: "Terms Interview",
-    description: "Schedule and manage candidate interviews",
-    icon: UserCheck,
-    to: (id: string) => `/dashboard/${id}/milmgmt/interview-term`,
-    color: "success"
   },
   {
     title: "Credit for Excellence",
@@ -1297,14 +1289,20 @@ export const managementTabs = [
 ];
 
 export const ocTabs = [
-  { value: "oc-mgmt", title: "OC Management", icon: Users, link: "/dashboard/genmgmt/ocmgmt" },
-  { value: "user-mgmt", title: "User Management", icon: Shield, link: "/dashboard/genmgmt/usersmgmt" },
   {
-    value: "approval-mgmt",
-    title: "Approval Management",
-    icon: CheckCircle,
-    link: "/dashboard/genmgmt/approvalmgmt"
+    value: "course-mgmt",
+    title: "Course Management",
+    icon: FileText,
+    link: "/dashboard/genmgmt/coursemgmt",
   },
+  { value: "oc-mgmt", title: "OC Management", icon: Users, link: "/dashboard/genmgmt/ocmgmt" },
+  {
+    value: "promotion-relegation",
+    title: "Promotion / Relegation Management",
+    icon: ArrowDownUp,
+    link: "/dashboard/genmgmt/promotion-relegation",
+  },
+  { value: "user-mgmt", title: "User Management", icon: Shield, link: "/dashboard/genmgmt/usersmgmt" },
   {
     value: "appointment-mgmt",
     title: "Appointment Management",
@@ -1332,7 +1330,6 @@ export const ocTabs = [
 ];
 
 export const academicsTabs = [
-  { value: "course-mgmt", title: "Course Management", icon: FileText, link: "/dashboard/genmgmt/coursemgmt" },
   {
     value: "offerings",
     title: "Offerings Management",
@@ -1394,12 +1391,6 @@ export const ocTabsWithDropdown = [
         href: "/dashboard/genmgmt/usersmgmt"
       },
       {
-        title: "Approval Management",
-        icon: CheckCircle,
-        color: "success",
-        href: "/dashboard/genmgmt/approvalmgmt"
-      },
-      {
         title: "Appointment Management",
         icon: CalendarDays,
         color: "info",
@@ -1443,13 +1434,8 @@ export const miltrgTabs = [
 
 export const dossierTabs = [
   {
-    value: "initial-interview",
-    title: "Initial Interview",
-    icon: UserCheck,
-  },
-  {
-    value: "interview-term",
-    title: "Terms Interview",
+    value: "interviews",
+    title: "Interviews",
     icon: UserCheck,
   },
   {

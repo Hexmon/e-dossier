@@ -34,6 +34,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { moduleManagementTabs, ocTabs } from "@/config/app.config";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 
 export default function InterviewTemplateManagementPage() {
     const router = useRouter();
@@ -61,8 +62,11 @@ export default function InterviewTemplateManagementPage() {
     // No useEffect needed — useQuery fetches on mount and whenever listParams changes.
 
     const handleLogout = () => {
-        console.log("Logout clicked");
-        router.push("/login");
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
     };
 
     const handleAddTemplate = async (newTemplate: InterviewTemplateCreate) => {
