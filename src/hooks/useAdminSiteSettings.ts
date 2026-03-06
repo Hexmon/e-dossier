@@ -7,6 +7,7 @@ export const SITE_SETTINGS_QUERY_KEYS = {
   awards: ["admin-site-settings", "awards"] as const,
   history: (sort: "asc" | "desc") => ["admin-site-settings", "history", sort] as const,
   eventsNews: ["admin-site-settings", "events-news"] as const,
+  footer: ["admin-site-settings", "footer"] as const,
   platoons: ["admin-site-settings", "platoons-preview"] as const,
 };
 
@@ -64,6 +65,11 @@ export function useAdminSiteSettings(sort: "asc" | "desc") {
     queryFn: () => siteSettingsAdminApi.listEventsNews({ sort: "desc" }),
   });
 
+  const footerQuery = useQuery({
+    queryKey: SITE_SETTINGS_QUERY_KEYS.footer,
+    queryFn: () => siteSettingsAdminApi.getFooter(),
+  });
+
   const invalidateAll = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEYS.settings }),
@@ -72,6 +78,7 @@ export function useAdminSiteSettings(sort: "asc" | "desc") {
       queryClient.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEYS.history("asc") }),
       queryClient.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEYS.history("desc") }),
       queryClient.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEYS.eventsNews }),
+      queryClient.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEYS.footer }),
     ]);
   };
 
@@ -191,12 +198,23 @@ export function useAdminSiteSettings(sort: "asc" | "desc") {
     onSuccess: invalidateAll,
   });
 
+  const createFooterMutation = useMutation({
+    mutationFn: siteSettingsAdminApi.createFooter,
+    onSuccess: invalidateAll,
+  });
+
+  const updateFooterMutation = useMutation({
+    mutationFn: siteSettingsAdminApi.updateFooter,
+    onSuccess: invalidateAll,
+  });
+
   return {
     settingsQuery,
     commandersQuery,
     awardsQuery,
     historyQuery,
     eventsNewsQuery,
+    footerQuery,
     updateSettingsMutation,
     deleteLogoMutation,
     deleteHeroBgMutation,
@@ -213,5 +231,7 @@ export function useAdminSiteSettings(sort: "asc" | "desc") {
     createEventNewsMutation,
     updateEventNewsMutation,
     deleteEventNewsMutation,
+    createFooterMutation,
+    updateFooterMutation,
   };
 }

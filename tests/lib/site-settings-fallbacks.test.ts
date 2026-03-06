@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  FALLBACK_PUBLIC_FOOTER,
   FALLBACK_PUBLIC_SITE_SETTINGS,
   normalizePublicSiteSettings,
 } from "@/app/lib/public-site-settings";
@@ -33,5 +34,9 @@ describe("normalizePublicSiteSettings", () => {
 
     expect(result.heroTitle).toBe("Only Hero");
     expect(result.historySectionTitle).toBe(FALLBACK_PUBLIC_SITE_SETTINGS.historySectionTitle);
+  });
+
+  it("defines a non-empty fallback footer", () => {
+    expect(FALLBACK_PUBLIC_FOOTER.length).toBeGreaterThan(10);
   });
 });

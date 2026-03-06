@@ -34,6 +34,10 @@ export type PublicEventNews = {
   type: "event" | "news";
 };
 
+export type PublicFooter = {
+  footer: string;
+};
+
 export type PublicPlatoon = {
   id: string;
   key: string;
@@ -63,6 +67,9 @@ export const FALLBACK_PUBLIC_SITE_SETTINGS: PublicSiteSettings = {
   awardsSectionTitle: "Gallantry Awards",
   historySectionTitle: "Our History",
 };
+
+export const FALLBACK_PUBLIC_FOOTER =
+  "For official MCEME internal use only. (c) 2025 Military College of Electronics & Mechanical Engineering";
 
 export function normalizePublicSiteSettings(input: Partial<PublicSiteSettings> | null | undefined) {
   return {
@@ -103,12 +110,13 @@ async function fetchPublicJson<T>(path: string, fallback: T): Promise<T> {
 }
 
 export async function fetchLandingSiteSettings() {
-  const [settingsRes, commandersRes, awardsRes, historyRes, eventsNewsRes, platoonsRes] = await Promise.all([
+  const [settingsRes, commandersRes, awardsRes, historyRes, eventsNewsRes, footerRes, platoonsRes] = await Promise.all([
     fetchPublicJson<{ settings?: PublicSiteSettings }>("/api/v1/site-settings", {}),
     fetchPublicJson<{ items?: PublicCommander[] }>("/api/v1/site-settings/commanders", {}),
     fetchPublicJson<{ items?: PublicAward[] }>("/api/v1/site-settings/awards", {}),
     fetchPublicJson<{ items?: PublicHistory[] }>("/api/v1/site-settings/history?sort=asc", {}),
     fetchPublicJson<{ items?: PublicEventNews[] }>("/api/v1/site-settings/events-news?sort=desc", {}),
+    fetchPublicJson<{ item?: PublicFooter | null }>("/api/v1/site-settings/footer", {}),
     fetchPublicJson<{ items?: PublicPlatoon[] }>("/api/v1/platoons", {}),
   ]);
 
@@ -118,6 +126,7 @@ export async function fetchLandingSiteSettings() {
     awards: awardsRes.items ?? [],
     history: historyRes.items ?? [],
     eventsNews: eventsNewsRes.items ?? [],
+    footer: footerRes.item?.footer?.trim() || FALLBACK_PUBLIC_FOOTER,
     platoons: (platoonsRes.items ?? []).map((item) => ({
       ...item,
       themeColor: normalizePlatoonThemeColor(item.themeColor ?? DEFAULT_PLATOON_THEME_COLOR),

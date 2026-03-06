@@ -68,6 +68,10 @@ export type SiteEventNewsModel = {
   updatedAt?: string;
 };
 
+export type SiteFooterModel = {
+  footer: string;
+};
+
 export type SiteSettingsUpdatePayload = Partial<{
   logoUrl: string | null;
   logoObjectKey: string | null;
@@ -244,4 +248,21 @@ export const siteSettingsAdminApi = {
 
   hardDeleteEventNews: (id: string) =>
     api.delete<{ id: string }>(`/api/v1/admin/site-settings/events-news/${id}/hard`, { baseURL }),
+
+  getFooter: () =>
+    api.get<{ item: SiteFooterModel | null }>("/api/v1/admin/site-settings/footer", { baseURL }),
+
+  createFooter: (payload: SiteFooterModel) =>
+    api.post<{ item: SiteFooterModel }, SiteFooterModel>(
+      "/api/v1/admin/site-settings/footer",
+      payload,
+      { baseURL }
+    ),
+
+  updateFooter: (payload: SiteFooterModel) =>
+    api.patch<{ item: SiteFooterModel }, SiteFooterModel>(
+      "/api/v1/admin/site-settings/footer",
+      payload,
+      { baseURL }
+    ),
 };

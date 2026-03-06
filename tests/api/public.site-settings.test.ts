@@ -5,6 +5,7 @@ import { GET as getPublicCommanders } from "@/app/api/v1/site-settings/commander
 import { GET as getPublicAwards } from "@/app/api/v1/site-settings/awards/route";
 import { GET as getPublicHistory } from "@/app/api/v1/site-settings/history/route";
 import { GET as getPublicEventsNews } from "@/app/api/v1/site-settings/events-news/route";
+import { GET as getPublicFooter } from "@/app/api/v1/site-settings/footer/route";
 import { makeJsonRequest, createRouteContext } from "../utils/next";
 
 import * as siteQueries from "@/app/db/queries/site-settings";
@@ -55,6 +56,9 @@ vi.mock("@/app/db/queries/site-settings", () => ({
       type: "event",
     },
   ]),
+  getPublicFooter: vi.fn(async () => ({
+    footer: "For official MCEME internal use only.",
+  })),
 }));
 
 beforeEach(() => {
@@ -112,5 +116,18 @@ describe("Public site settings routes", () => {
     expect(res.status).toBe(200);
     expect(body.items).toHaveLength(1);
     expect(siteQueries.listPublicEventsNews).toHaveBeenCalledWith("desc", "event");
+  });
+
+  it("returns public footer", async () => {
+    const req = makeJsonRequest({
+      method: "GET",
+      path: "/api/v1/site-settings/footer",
+    });
+    const res = await getPublicFooter(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.item.footer).toContain("MCEME");
+    expect(siteQueries.getPublicFooter).toHaveBeenCalledTimes(1);
   });
 });

@@ -142,6 +142,14 @@ export const eventNewsUpdateSchema = z
     "At least one field is required"
   );
 
+export const footerCreateSchema = z.object({
+  footer: trimmedText(2, 4000, "footer"),
+});
+
+export const footerUpdateSchema = z.object({
+  footer: trimmedText(2, 4000, "footer"),
+});
+
 export type SiteSettingsUpdateInput = z.infer<typeof siteSettingsUpdateSchema>;
 export type CommanderCreateInput = z.infer<typeof commanderCreateSchema>;
 export type CommanderUpdateInput = z.infer<typeof commanderUpdateSchema>;
@@ -153,3 +161,5 @@ export type HistoryUpdateInput = z.infer<typeof historyUpdateSchema>;
 export type EventNewsTypeInput = z.infer<typeof eventNewsTypeSchema>;
 export type EventNewsCreateInput = z.infer<typeof eventNewsCreateSchema>;
 export type EventNewsUpdateInput = z.infer<typeof eventNewsUpdateSchema>;
+export type FooterCreateInput = z.infer<typeof footerCreateSchema>;
+export type FooterUpdateInput = z.infer<typeof footerUpdateSchema>;

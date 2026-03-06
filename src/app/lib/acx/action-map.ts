@@ -3888,6 +3888,42 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "category": "settings",
     "fieldLevelCandidate": true,
     "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/footer",
+    "action": "admin:site-settings:footer:read",
+    "resourceType": "admin:site-settings:footer",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/site-settings/footer",
+    "action": "admin:site-settings:footer:create",
+    "resourceType": "admin:site-settings:footer",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/site-settings/footer",
+    "action": "admin:site-settings:footer:update",
+    "resourceType": "admin:site-settings:footer",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/site-settings/footer",
+    "action": "site-settings:footer:read",
+    "resourceType": "site-settings:footer",
+    "category": "site-settings",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
   }
 ];
 

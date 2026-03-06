@@ -113,3 +113,7 @@ export const siteEventsNews = pgTable(
     ixActiveDate: index("ix_site_events_news_active_date").on(table.isDeleted, table.date, table.createdAt),
   })
 );
+
+export const siteFooter = pgTable("footer", {
+  footer: text("footer").notNull(),
+});

@@ -30,6 +30,7 @@ import {
   type SiteCommanderModel,
   type SiteEventNewsModel,
   type SiteEventNewsType,
+  type SiteFooterModel,
   type SiteHistoryModel,
 } from "@/app/lib/api/siteSettingsAdminApi";
 import { getPlatoons } from "@/app/lib/api/platoonApi";
@@ -221,6 +222,9 @@ export default function AdminSiteSettingsPage() {
   const [editingEventNews, setEditingEventNews] = useState<SiteEventNewsModel | null>(null);
   const [eventNewsForm, setEventNewsForm] = useState<EventNewsForm>(EMPTY_EVENT_NEWS_FORM);
   const [eventNewsToDelete, setEventNewsToDelete] = useState<SiteEventNewsModel | null>(null);
+  const [footerEditorOpen, setFooterEditorOpen] = useState(false);
+  const [footerForm, setFooterForm] = useState("");
+  const [isEditingFooter, setIsEditingFooter] = useState(false);
 
   const [draggingAwardId, setDraggingAwardId] = useState<string | null>(null);
   const [awardsLocal, setAwardsLocal] = useState<SiteAwardModel[]>([]);
@@ -232,6 +236,7 @@ export default function AdminSiteSettingsPage() {
     awardsQuery,
     historyQuery,
     eventsNewsQuery,
+    footerQuery,
     updateSettingsMutation,
     deleteLogoMutation,
     deleteHeroBgMutation,
@@ -248,6 +253,8 @@ export default function AdminSiteSettingsPage() {
     createEventNewsMutation,
     updateEventNewsMutation,
     deleteEventNewsMutation,
+    createFooterMutation,
+    updateFooterMutation,
   } = useAdminSiteSettings(historySort);
 
   const platoonsQuery = useQuery({
@@ -276,6 +283,15 @@ export default function AdminSiteSettingsPage() {
     setAwardsLocal(awardsQuery.data?.items ?? []);
   }, [awardsQuery.data?.items]);
 
+  useEffect(() => {
+    const footerValue = footerQuery.data?.item?.footer;
+    if (typeof footerValue === "string") {
+      setFooterForm(footerValue);
+      return;
+    }
+    setFooterForm("");
+  }, [footerQuery.data?.item?.footer]);
+
   const busyMutations =
     updateSettingsMutation.isPending ||
     deleteHeroBgMutation.isPending ||
@@ -286,18 +302,22 @@ export default function AdminSiteSettingsPage() {
     createHistoryMutation.isPending ||
     updateHistoryMutation.isPending ||
     createEventNewsMutation.isPending ||
-    updateEventNewsMutation.isPending;
+    updateEventNewsMutation.isPending ||
+    createFooterMutation.isPending ||
+    updateFooterMutation.isPending;
 
   const hasSettingsError = settingsQuery.isError;
   const hasCommandersError = commandersQuery.isError;
   const hasAwardsError = awardsQuery.isError;
   const hasHistoryError = historyQuery.isError;
   const hasEventsNewsError = eventsNewsQuery.isError;
+  const hasFooterError = footerQuery.isError;
   const hasPlatoonsError = platoonsQuery.isError;
 
   const commanderList = commandersQuery.data?.items ?? [];
   const historyList = historyQuery.data?.items ?? [];
   const eventNewsList = eventsNewsQuery.data?.items ?? [];
+  const footerItem = footerQuery.data?.item ?? null;
 
   const canRetryReorder = useMemo(
     () => Boolean(reorderRetryIds && reorderRetryIds.length > 0 && !reorderAwardsMutation.isPending),
@@ -645,10 +665,51 @@ export default function AdminSiteSettingsPage() {
     }
   };
 
+  const openCreateFooter = () => {
+    setIsEditingFooter(false);
+    setFooterForm("");
+    setFooterEditorOpen(true);
+  };
+
+  const openEditFooter = (item: SiteFooterModel) => {
+    setIsEditingFooter(true);
+    setFooterForm(item.footer);
+    setFooterEditorOpen(true);
+  };
+
+  const cancelFooterEditor = () => {
+    setFooterEditorOpen(false);
+    setIsEditingFooter(false);
+    setFooterForm(footerItem?.footer ?? "");
+  };
+
+  const submitFooter = async () => {
+    const footer = footerForm.trim();
+    if (footer.length < 2) {
+      toast.error("Footer must be at least 2 characters.");
+      return;
+    }
+
+    try {
+      if (footerItem) {
+        await updateFooterMutation.mutateAsync({ footer });
+        toast.success("Footer updated.");
+      } else {
+        await createFooterMutation.mutateAsync({ footer });
+        toast.success("Footer created.");
+      }
+
+      setFooterEditorOpen(false);
+      setIsEditingFooter(false);
+    } catch (error) {
+      toast.error(parseApiError(error, "Failed to save footer."));
+    }
+  };
+
   return (
     <DashboardLayout
       title="Admin Site Settings"
-      description="Manage landing page branding, hero, commanders, awards, history, and events/news."
+      description="Manage landing page branding, hero, commanders, awards, history, events/news, and footer."
     >
       <section className="space-y-6 p-6">
         <Card>
@@ -1080,7 +1141,7 @@ export default function AdminSiteSettingsPage() {
               <CardDescription>Manage the public events and news cards displayed on the landing page.</CardDescription>
             </div>
             <Button type="button" onClick={openCreateEventNews}>
-              ADD Event/News
+              Add Event/News
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -1121,12 +1182,87 @@ export default function AdminSiteSettingsPage() {
                         Edit
                       </Button>
                       <Button type="button" variant="destructive" onClick={() => setEventNewsToDelete(item)}>
-                        DELETE
+                        Delete
                       </Button>
                     </div>
                   </div>
                 </div>
               ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Footer</CardTitle>
+              <CardDescription>
+                Create one footer for the landing page. After creation, only edit is allowed.
+              </CardDescription>
+            </div>
+            {footerQuery.isLoading ? null : !footerItem ? (
+              <Button type="button" onClick={openCreateFooter}>
+                Create Footer
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" onClick={() => openEditFooter(footerItem)}>
+                Edit
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {hasFooterError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
+                Unable to load footer.
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-3"
+                  onClick={() => footerQuery.refetch()}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : footerQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading footer...</p>
+            ) : footerItem ? (
+              <div className="rounded-md border p-3">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{footerItem.footer}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No footer created yet.</p>
+            )}
+
+            {footerEditorOpen && (
+              <div className="rounded-md border p-3 space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="footer-input">Footer</Label>
+                  <Textarea
+                    id="footer-input"
+                    value={footerForm}
+                    onChange={(event) => setFooterForm(event.target.value)}
+                    rows={4}
+                    placeholder="Enter footer text"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={cancelFooterEditor}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void submitFooter()}
+                    disabled={createFooterMutation.isPending || updateFooterMutation.isPending}
+                  >
+                    {createFooterMutation.isPending || updateFooterMutation.isPending
+                      ? "Saving..."
+                      : isEditingFooter
+                        ? "Update Footer"
+                        : "Save Footer"}
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

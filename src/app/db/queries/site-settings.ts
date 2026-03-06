@@ -4,6 +4,7 @@ import {
   siteAwards,
   siteCommanders,
   siteEventsNews,
+  siteFooter,
   siteHistory,
   siteSettings,
 } from "@/app/db/schema/auth/siteSettings";
@@ -15,6 +16,8 @@ import type {
   EventNewsCreateInput,
   EventNewsTypeInput,
   EventNewsUpdateInput,
+  FooterCreateInput,
+  FooterUpdateInput,
   HistoryCreateInput,
   HistoryUpdateInput,
   SiteSettingsUpdateInput,
@@ -91,11 +94,16 @@ const EVENTS_NEWS_SELECT = {
   updatedAt: siteEventsNews.updatedAt,
 } as const;
 
+const FOOTER_SELECT = {
+  footer: siteFooter.footer,
+} as const;
+
 export type SiteSettingsRecord = typeof siteSettings.$inferSelect;
 export type SiteCommanderRecord = typeof siteCommanders.$inferSelect;
 export type SiteAwardRecord = typeof siteAwards.$inferSelect;
 export type SiteHistoryRecord = typeof siteHistory.$inferSelect;
 export type SiteEventNewsRecord = typeof siteEventsNews.$inferSelect;
+export type SiteFooterRecord = typeof siteFooter.$inferSelect;
 
 export const DEFAULT_PUBLIC_SITE_SETTINGS = {
   logoUrl: null,
@@ -690,6 +698,50 @@ export async function hardDeleteSiteEventNews(id: string) {
   };
 }
 
+export async function getSiteFooter() {
+  const [row] = await db.select(FOOTER_SELECT).from(siteFooter).limit(1);
+  return row ?? null;
+}
+
+export async function createSiteFooter(input: FooterCreateInput) {
+  const existing = await getSiteFooter();
+  if (existing) {
+    return null;
+  }
+
+  const [created] = await db
+    .insert(siteFooter)
+    .values({
+      footer: input.footer,
+    })
+    .returning(FOOTER_SELECT);
+
+  return created;
+}
+
+export async function updateSiteFooter(input: FooterUpdateInput) {
+  const existing = await getSiteFooter();
+  if (!existing) {
+    return null;
+  }
+
+  const [updated] = await db
+    .update(siteFooter)
+    .set({
+      footer: input.footer,
+    })
+    .returning(FOOTER_SELECT);
+
+  if (!updated) {
+    return null;
+  }
+
+  return {
+    before: existing,
+    after: updated,
+  };
+}
+
 export async function listPublicCommanders() {
   return db
     .select(COMMANDER_SELECT)
@@ -715,4 +767,8 @@ export async function listPublicEventsNews(
   type?: EventNewsTypeInput
 ) {
   return listSiteEventsNews({ includeDeleted: false, sort, type });
+}
+
+export async function getPublicFooter() {
+  return getSiteFooter();
 }
