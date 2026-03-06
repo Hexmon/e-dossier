@@ -86,7 +86,7 @@ function LoginPageContent() {
     const set = new Set<string>();
 
     appointments.forEach(({ positionName }) => {
-      if (!set.has(positionName)) {
+      if (positionName && !set.has(positionName)) {
         set.add(positionName);
       }
     });
@@ -113,24 +113,34 @@ function LoginPageContent() {
     }
 
     try {
-      const selectedAppointment = appointments.find(
-        (a) => a.positionName === data.appointment
-      );
-
+      const isPlatoonCommander = data.appointment === "Platoon Commander";
       const selectedPlatoonCommander = platoonCommanders.find(
-        (p) => p.username === data.platoon
+        (p) => p.platoonName === data.platoon
       );
 
-      const payload =
-        data.appointment === "Platoon Commander"
-          ? {
-            appointmentId: selectedAppointment?.id as string,
-            platoonId: selectedPlatoonCommander?.id as string,
+      const selectedAppointment = isPlatoonCommander
+        ? selectedPlatoonCommander
+        : appointments.find((a) => a.positionName === data.appointment);
+
+      if (!selectedAppointment) {
+        toast.error("Please select a valid appointment.");
+        return;
+      }
+
+      if (isPlatoonCommander && !selectedAppointment.scopeId) {
+        toast.error("Selected platoon mapping is invalid. Please reselect.");
+        return;
+      }
+
+      const payload = isPlatoonCommander
+        ? {
+            appointmentId: selectedAppointment.id,
+            platoonId: selectedAppointment.scopeId as string,
             username: data.username,
             password: data.password,
           }
-          : {
-            appointmentId: selectedAppointment?.id as string,
+        : {
+            appointmentId: selectedAppointment.id,
             username: data.username,
             password: data.password,
           };

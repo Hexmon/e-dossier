@@ -21,15 +21,16 @@ export interface Appointment {
 }
 
 interface AppointmentResponse {
-  status: number;
-  ok: boolean;
   data: Appointment[];
 }
 
 export async function getAppointments(): Promise<Appointment[]> {
   const response = await api.get<AppointmentResponse>(
     endpoints.admin.appointments,
-    { baseURL }
+    {
+      baseURL,
+      query: { active: true },
+    }
   );
 
   return response.data;

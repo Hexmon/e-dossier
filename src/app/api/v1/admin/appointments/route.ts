@@ -180,6 +180,6 @@ async function POSTHandler(req: AuditNextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const GET = withAuditRoute('GET', GETHandler);
 
 export const POST = withAuditRoute('POST', withAuthz(POSTHandler));
