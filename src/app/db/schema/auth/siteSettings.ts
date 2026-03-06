@@ -94,3 +94,22 @@ export const siteHistory = pgTable(
     ixActiveCreatedAt: index("ix_site_history_active_created_at").on(table.isDeleted, table.createdAt),
   })
 );
+
+export const siteEventsNews = pgTable(
+  "site_events_news",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    date: date("date", { mode: "string" }).notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    location: text("location").notNull(),
+    type: text("type").notNull(),
+    isDeleted: boolean("is_deleted").notNull().default(false),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    ixActiveDate: index("ix_site_events_news_active_date").on(table.isDeleted, table.date, table.createdAt),
+  })
+);

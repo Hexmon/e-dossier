@@ -3,6 +3,7 @@ import { db } from "@/app/db/client";
 import {
   siteAwards,
   siteCommanders,
+  siteEventsNews,
   siteHistory,
   siteSettings,
 } from "@/app/db/schema/auth/siteSettings";
@@ -11,6 +12,9 @@ import type {
   AwardUpdateInput,
   CommanderCreateInput,
   CommanderUpdateInput,
+  EventNewsCreateInput,
+  EventNewsTypeInput,
+  EventNewsUpdateInput,
   HistoryCreateInput,
   HistoryUpdateInput,
   SiteSettingsUpdateInput,
@@ -74,10 +78,24 @@ const HISTORY_SELECT = {
   updatedAt: siteHistory.updatedAt,
 } as const;
 
+const EVENTS_NEWS_SELECT = {
+  id: siteEventsNews.id,
+  date: siteEventsNews.date,
+  title: siteEventsNews.title,
+  description: siteEventsNews.description,
+  location: siteEventsNews.location,
+  type: siteEventsNews.type,
+  isDeleted: siteEventsNews.isDeleted,
+  deletedAt: siteEventsNews.deletedAt,
+  createdAt: siteEventsNews.createdAt,
+  updatedAt: siteEventsNews.updatedAt,
+} as const;
+
 export type SiteSettingsRecord = typeof siteSettings.$inferSelect;
 export type SiteCommanderRecord = typeof siteCommanders.$inferSelect;
 export type SiteAwardRecord = typeof siteAwards.$inferSelect;
 export type SiteHistoryRecord = typeof siteHistory.$inferSelect;
+export type SiteEventNewsRecord = typeof siteEventsNews.$inferSelect;
 
 export const DEFAULT_PUBLIC_SITE_SETTINGS = {
   logoUrl: null,
@@ -561,6 +579,117 @@ export async function hardDeleteSiteHistory(id: string) {
   };
 }
 
+export async function listSiteEventsNews(options?: {
+  includeDeleted?: boolean;
+  sort?: "asc" | "desc";
+  type?: EventNewsTypeInput;
+}) {
+  const includeDeleted = options?.includeDeleted ?? false;
+  const sort = options?.sort ?? "desc";
+  const predicates = [];
+
+  if (!includeDeleted) {
+    predicates.push(eq(siteEventsNews.isDeleted, false));
+  }
+  if (options?.type) {
+    predicates.push(eq(siteEventsNews.type, options.type));
+  }
+
+  const where = predicates.length === 0 ? undefined : predicates.length === 1 ? predicates[0] : and(...predicates);
+  const dateOrder = sort === "asc" ? asc(siteEventsNews.date) : desc(siteEventsNews.date);
+  const createdAtOrder = sort === "asc" ? asc(siteEventsNews.createdAt) : desc(siteEventsNews.createdAt);
+
+  return db
+    .select(EVENTS_NEWS_SELECT)
+    .from(siteEventsNews)
+    .where(where)
+    .orderBy(dateOrder, createdAtOrder);
+}
+
+export async function getSiteEventNewsById(id: string, options?: { includeDeleted?: boolean }) {
+  const includeDeleted = options?.includeDeleted ?? false;
+  const where = includeDeleted
+    ? eq(siteEventsNews.id, id)
+    : and(eq(siteEventsNews.id, id), eq(siteEventsNews.isDeleted, false));
+
+  const [row] = await db.select(EVENTS_NEWS_SELECT).from(siteEventsNews).where(where).limit(1);
+  return row ?? null;
+}
+
+export async function createSiteEventNews(input: EventNewsCreateInput) {
+  const [created] = await db
+    .insert(siteEventsNews)
+    .values({
+      date: input.date,
+      title: input.title,
+      description: input.description,
+      location: input.location,
+      type: input.type,
+      updatedAt: now(),
+    })
+    .returning(EVENTS_NEWS_SELECT);
+
+  return created;
+}
+
+export async function updateSiteEventNews(id: string, input: EventNewsUpdateInput) {
+  const existing = await getSiteEventNewsById(id, { includeDeleted: true });
+  if (!existing) return null;
+
+  const [updated] = await db
+    .update(siteEventsNews)
+    .set({
+      date: input.date ?? existing.date,
+      title: input.title ?? existing.title,
+      description: input.description ?? existing.description,
+      location: input.location ?? existing.location,
+      type: input.type ?? existing.type,
+      updatedAt: now(),
+    })
+    .where(eq(siteEventsNews.id, id))
+    .returning(EVENTS_NEWS_SELECT);
+
+  return {
+    before: existing,
+    after: updated,
+  };
+}
+
+export async function softDeleteSiteEventNews(id: string) {
+  const existing = await getSiteEventNewsById(id, { includeDeleted: true });
+  if (!existing) return null;
+
+  const [updated] = await db
+    .update(siteEventsNews)
+    .set({
+      isDeleted: true,
+      deletedAt: now(),
+      updatedAt: now(),
+    })
+    .where(eq(siteEventsNews.id, id))
+    .returning(EVENTS_NEWS_SELECT);
+
+  return {
+    before: existing,
+    after: updated,
+  };
+}
+
+export async function hardDeleteSiteEventNews(id: string) {
+  const existing = await getSiteEventNewsById(id, { includeDeleted: true });
+  if (!existing) return null;
+
+  const [deleted] = await db
+    .delete(siteEventsNews)
+    .where(eq(siteEventsNews.id, id))
+    .returning(EVENTS_NEWS_SELECT);
+
+  return {
+    before: existing,
+    after: deleted,
+  };
+}
+
 export async function listPublicCommanders() {
   return db
     .select(COMMANDER_SELECT)
@@ -579,4 +708,11 @@ export async function listPublicAwards() {
 
 export async function listPublicHistory(sort: "asc" | "desc" = "asc") {
   return listSiteHistory({ includeDeleted: false, sort });
+}
+
+export async function listPublicEventsNews(
+  sort: "asc" | "desc" = "desc",
+  type?: EventNewsTypeInput
+) {
+  return listSiteEventsNews({ includeDeleted: false, sort, type });
 }

@@ -50,6 +50,7 @@ const MODULE_LABELS: Record<string, string> = {
   'rbac:field-rules': 'Field Rules',
   'rbac:roles': 'Roles',
   'site-settings': 'Site Settings',
+  'site-settings:events-news': 'Site Events & News',
   subjects: 'Subjects',
   users: 'Users',
   'training-camps': 'Training Camps',

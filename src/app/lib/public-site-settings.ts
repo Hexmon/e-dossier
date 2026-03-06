@@ -25,6 +25,15 @@ export type PublicHistory = {
   description: string;
 };
 
+export type PublicEventNews = {
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+  location: string;
+  type: "event" | "news";
+};
+
 export type PublicPlatoon = {
   id: string;
   key: string;
@@ -94,11 +103,12 @@ async function fetchPublicJson<T>(path: string, fallback: T): Promise<T> {
 }
 
 export async function fetchLandingSiteSettings() {
-  const [settingsRes, commandersRes, awardsRes, historyRes, platoonsRes] = await Promise.all([
+  const [settingsRes, commandersRes, awardsRes, historyRes, eventsNewsRes, platoonsRes] = await Promise.all([
     fetchPublicJson<{ settings?: PublicSiteSettings }>("/api/v1/site-settings", {}),
     fetchPublicJson<{ items?: PublicCommander[] }>("/api/v1/site-settings/commanders", {}),
     fetchPublicJson<{ items?: PublicAward[] }>("/api/v1/site-settings/awards", {}),
     fetchPublicJson<{ items?: PublicHistory[] }>("/api/v1/site-settings/history?sort=asc", {}),
+    fetchPublicJson<{ items?: PublicEventNews[] }>("/api/v1/site-settings/events-news?sort=desc", {}),
     fetchPublicJson<{ items?: PublicPlatoon[] }>("/api/v1/platoons", {}),
   ]);
 
@@ -107,6 +117,7 @@ export async function fetchLandingSiteSettings() {
     commanders: commandersRes.items ?? [],
     awards: awardsRes.items ?? [],
     history: historyRes.items ?? [],
+    eventsNews: eventsNewsRes.items ?? [],
     platoons: (platoonsRes.items ?? []).map((item) => ({
       ...item,
       themeColor: normalizePlatoonThemeColor(item.themeColor ?? DEFAULT_PLATOON_THEME_COLOR),

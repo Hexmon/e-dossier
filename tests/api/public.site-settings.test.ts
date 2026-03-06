@@ -4,6 +4,7 @@ import { GET as getPublicSettings } from "@/app/api/v1/site-settings/route";
 import { GET as getPublicCommanders } from "@/app/api/v1/site-settings/commanders/route";
 import { GET as getPublicAwards } from "@/app/api/v1/site-settings/awards/route";
 import { GET as getPublicHistory } from "@/app/api/v1/site-settings/history/route";
+import { GET as getPublicEventsNews } from "@/app/api/v1/site-settings/events-news/route";
 import { makeJsonRequest, createRouteContext } from "../utils/next";
 
 import * as siteQueries from "@/app/db/queries/site-settings";
@@ -42,6 +43,16 @@ vi.mock("@/app/db/queries/site-settings", () => ({
       id: "1",
       yearOrDate: "1943",
       description: "desc",
+    },
+  ]),
+  listPublicEventsNews: vi.fn(async () => [
+    {
+      id: "1",
+      date: "2025-01-01",
+      title: "Item",
+      description: "desc",
+      location: "Main Hall",
+      type: "event",
     },
   ]),
 }));
@@ -88,5 +99,18 @@ describe("Public site settings routes", () => {
     expect(res.status).toBe(200);
     expect(body.sort).toBe("desc");
     expect(siteQueries.listPublicHistory).toHaveBeenCalledWith("desc");
+  });
+
+  it("returns public events and news for selected filters", async () => {
+    const req = makeJsonRequest({
+      method: "GET",
+      path: "/api/v1/site-settings/events-news?sort=desc&type=event",
+    });
+    const res = await getPublicEventsNews(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.items).toHaveLength(1);
+    expect(siteQueries.listPublicEventsNews).toHaveBeenCalledWith("desc", "event");
   });
 });

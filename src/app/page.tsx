@@ -124,7 +124,7 @@ export default async function Home() {
           </div>
         </section>
 
-        <EventsNews />
+        <EventsNews items={data.eventsNews} />
       </main>
 
       <footer className="bg-primary text-primary-foreground py-8">

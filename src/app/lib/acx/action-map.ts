@@ -282,6 +282,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/events-news/:id",
+    "action": "admin:site-settings:events-news:delete",
+    "resourceType": "admin:site-settings:events-news",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/events-news/:id/hard",
+    "action": "admin:site-settings:events-news:hard:delete",
+    "resourceType": "admin:site-settings:events-news:hard",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
     "path": "/api/v1/admin/site-settings/hero-bg",
     "action": "admin:site-settings:hero-bg:delete",
     "resourceType": "admin:site-settings:hero-bg",
@@ -1281,6 +1299,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/site-settings/events-news",
+    "action": "admin:site-settings:events-news:read",
+    "resourceType": "admin:site-settings:events-news",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/events-news/:id",
+    "action": "admin:site-settings:events-news:read",
+    "resourceType": "admin:site-settings:events-news",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/site-settings/history",
     "action": "admin:site-settings:history:read",
     "resourceType": "admin:site-settings:history",
@@ -2148,6 +2184,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/site-settings/history",
     "action": "site-settings:history:read",
     "resourceType": "site-settings:history",
+    "category": "site-settings",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/site-settings/events-news",
+    "action": "site-settings:events-news:read",
+    "resourceType": "site-settings:events-news",
     "category": "site-settings",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -3117,6 +3162,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/site-settings/events-news",
+    "action": "admin:site-settings:events-news:create",
+    "resourceType": "admin:site-settings:events-news",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/site-settings/hero-bg/presign",
     "action": "admin:site-settings:hero-bg:presign:create",
     "resourceType": "admin:site-settings:hero-bg:presign",
@@ -3786,6 +3840,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/site-settings/commanders/:id",
     "action": "admin:site-settings:commanders:update",
     "resourceType": "admin:site-settings:commanders",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/site-settings/events-news/:id",
+    "action": "admin:site-settings:events-news:update",
+    "resourceType": "admin:site-settings:events-news",
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true

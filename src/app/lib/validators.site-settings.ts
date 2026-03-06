@@ -8,6 +8,7 @@ export const uuidParamSchema = z.object({
 });
 
 export const sortSchema = z.enum(["asc", "desc"]).default("asc");
+export const eventNewsTypeSchema = z.enum(["event", "news"]);
 
 export const paginationQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -120,6 +121,27 @@ export const historyUpdateSchema = z
     "At least one field is required"
   );
 
+export const eventNewsCreateSchema = z.object({
+  date: z.string().date("Invalid date format (YYYY-MM-DD)"),
+  title: trimmedText(2, 180, "title"),
+  description: trimmedText(5, 2000, "description"),
+  location: trimmedText(2, 200, "location"),
+  type: eventNewsTypeSchema,
+});
+
+export const eventNewsUpdateSchema = z
+  .object({
+    date: z.string().date("Invalid date format (YYYY-MM-DD)").optional(),
+    title: trimmedText(2, 180, "title").optional(),
+    description: trimmedText(5, 2000, "description").optional(),
+    location: trimmedText(2, 200, "location").optional(),
+    type: eventNewsTypeSchema.optional(),
+  })
+  .refine(
+    (value) => Object.values(value).some((entry) => entry !== undefined),
+    "At least one field is required"
+  );
+
 export type SiteSettingsUpdateInput = z.infer<typeof siteSettingsUpdateSchema>;
 export type CommanderCreateInput = z.infer<typeof commanderCreateSchema>;
 export type CommanderUpdateInput = z.infer<typeof commanderUpdateSchema>;
@@ -128,3 +150,6 @@ export type AwardUpdateInput = z.infer<typeof awardUpdateSchema>;
 export type AwardReorderInput = z.infer<typeof awardReorderSchema>;
 export type HistoryCreateInput = z.infer<typeof historyCreateSchema>;
 export type HistoryUpdateInput = z.infer<typeof historyUpdateSchema>;
+export type EventNewsTypeInput = z.infer<typeof eventNewsTypeSchema>;
+export type EventNewsCreateInput = z.infer<typeof eventNewsCreateSchema>;
+export type EventNewsUpdateInput = z.infer<typeof eventNewsUpdateSchema>;
