@@ -40,7 +40,7 @@ function LoginPageContent() {
   const [appointmentsFetchError, setAppointmentsFetchError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Use ref to prevent double calls
+  
   const hasFetchedRef = useRef(false);
 
   const {
