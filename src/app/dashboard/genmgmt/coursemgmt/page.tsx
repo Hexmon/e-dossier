@@ -13,7 +13,7 @@ import CourseViewModal from "@/components/courses/CourseViewModal";
 import AssignOfferingsDialog from "@/components/offerings/AssignOfferingsDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { academicsTabs } from "@/config/app.config";
+import { FileText } from "lucide-react";
 import { useCourses, type UICourse } from "@/hooks/useCourses";
 import {
   AlertDialog,
@@ -25,6 +25,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const courseMgmtTabs = [
+  {
+    value: "course-mgmt",
+    title: "Course Management",
+    icon: FileText,
+    link: "/dashboard/genmgmt/coursemgmt",
+  },
+];
 
 export default function CourseManagement() {
   const {
@@ -123,7 +132,7 @@ export default function CourseManagement() {
               ]}
             />
 
-            <GlobalTabs tabs={academicsTabs} defaultValue="course-mgmt">
+            <GlobalTabs tabs={courseMgmtTabs} defaultValue="course-mgmt">
               <TabsContent value="course-mgmt" className="space-y-6">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                   <h2 className="text-2xl font-bold text-foreground">Course Sections</h2>

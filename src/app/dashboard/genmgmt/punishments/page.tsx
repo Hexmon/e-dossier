@@ -15,6 +15,7 @@ import PunishmentDialog from "@/components/punishments/PunishmentDialog";
 import { usePunishments } from "@/hooks/usePunishments";
 import { Punishment, PunishmentCreate } from "@/app/lib/api/punishmentsApi";
 import { Input } from "@/components/ui/input";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 import { moduleManagementTabs, ocTabs } from "@/config/app.config";
 import {
     AlertDialog,
@@ -44,8 +45,11 @@ export default function PunishmentManagementPage() {
     } = usePunishments({ q: searchQuery });
 
     const handleLogout = () => {
-        console.log("Logout clicked");
-        router.push("/login");
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
     };
 
     const handleSearch = (query: string) => {

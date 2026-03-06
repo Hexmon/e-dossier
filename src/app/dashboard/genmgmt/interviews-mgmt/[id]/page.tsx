@@ -15,6 +15,7 @@ import TemplateOverview from "@/components/interview-mgmt/template-detail/Templa
 import TemplateSemesters from "@/components/interview-mgmt/template-detail/TemplateSemesters";
 import TemplateSections from "@/components/interview-mgmt/template-detail/TemplateSections";
 import TemplateGroups from "@/components/interview-mgmt/template-detail/TemplateGroups";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 
 export default function TemplateDetailPage() {
     const params = useParams();
@@ -28,8 +29,11 @@ export default function TemplateDetailPage() {
     const [activeTab, setActiveTab] = useState("overview");
 
     const handleLogout = () => {
-        console.log("Logout clicked");
-        router.push("/login");
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
     };
 
     const handleBack = () => {

@@ -34,6 +34,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 
 export default function OfferingManagementPage() {
     const router = useRouter();
@@ -69,8 +70,11 @@ export default function OfferingManagementPage() {
     } = useInstructors();
 
     const handleLogout = () => {
-        console.log("Logout clicked");
-        router.push("/login");
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
     };
 
     const handleSemesterChange = (value: string) => {

@@ -27,6 +27,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 
 export default function SubjectManagementPage() {
     const router = useRouter();
@@ -76,8 +77,11 @@ export default function SubjectManagementPage() {
     const loading = subjectsLoading || coursesLoading;
 
     const handleLogout = () => {
-        console.log("Logout clicked");
-        router.push("/login");
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
     };
 
     const handleResetFilters = () => {

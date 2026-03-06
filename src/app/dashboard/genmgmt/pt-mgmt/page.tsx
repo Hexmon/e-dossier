@@ -38,6 +38,7 @@ import PTScoresTab from "@/components/pt-mgmt/Ptscorestab";
 import PTMotivationTab from "@/components/pt-mgmt/Ptmotivationtab";
 import PTTypesTab from "@/components/pt-mgmt/Pttypestab";
 import { usePhysicalTrainingMgmt } from "@/hooks/usePhysicalTrainingMgmt";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 import type { PtTemplateApplyResult } from "@/app/lib/bootstrap/types";
 
 const ptTabs = [
@@ -329,7 +330,13 @@ export default function PhysicalTrainingPage() {
                         <PageHeader
                             title="Physical Training Management"
                             description="Manage PT templates, types, attempts, grades, tasks, and score matrix"
-                            onLogout={() => router.push("/login")}
+                            onLogout={() =>
+                              void logoutAndRedirect({
+                                reason: "manual",
+                                preserveNext: false,
+                                router,
+                              })
+                            }
                         />
                     </header>
 

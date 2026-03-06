@@ -3942,16 +3942,9 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": false
   },
   {
-    "route": "/dashboard/:id/milmgmt/initial-interview",
-    "action": "page:dashboard:milmgmt:initial-interview:view",
-    "resourceType": "page:dashboard:milmgmt:initial-interview",
-    "category": ":id",
-    "adminBaseline": false
-  },
-  {
-    "route": "/dashboard/:id/milmgmt/interview-term",
-    "action": "page:dashboard:milmgmt:interview-term:view",
-    "resourceType": "page:dashboard:milmgmt:interview-term",
+    "route": "/dashboard/:id/milmgmt/interviews",
+    "action": "page:dashboard:milmgmt:interviews:view",
+    "resourceType": "page:dashboard:milmgmt:interviews",
     "category": ":id",
     "adminBaseline": false
   },
