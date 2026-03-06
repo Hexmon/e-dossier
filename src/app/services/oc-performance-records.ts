@@ -78,6 +78,77 @@ function buildSprRows(
     return rows;
 }
 
+function getRawScoreForSubject(
+    key: Exclude<SubjectKey, 'cdr_marks' | 'total'>,
+    source: Awaited<ReturnType<typeof getSemesterSourceScores>>,
+) {
+    return key === 'academics' ? source.academics
+        : key === 'olq' ? source.olq
+        : key === 'pt_swimming' ? source.ptSwimming
+        : key === 'games' ? source.games
+        : key === 'drill' ? source.drill
+        : key === 'camp' ? source.camp
+        : source.cfe;
+}
+
+export function buildFprRows(
+    allSemSources: Record<number, Awaited<ReturnType<typeof getSemesterSourceScores>>>,
+    sprRecords: Array<Awaited<ReturnType<typeof getSprRecord>>>,
+) {
+    const semesters = [1, 2, 3, 4, 5, 6] as const;
+    const fprSubjectKeys = SUBJECT_KEYS.filter(
+        (k): k is Exclude<SubjectKey, 'total'> => k !== 'total',
+    );
+    type FprRow = {
+        subjectKey: SubjectKey;
+        subjectLabel: string;
+        maxMarks: number;
+        marksBySemester: number[];
+        marksScored: number;
+    };
+
+    const rows: FprRow[] = fprSubjectKeys.map((key) => {
+        const marksBySemester = semesters.map((semester, idx) => {
+            if (key === 'cdr_marks') {
+                const max = SPR_MAX_MARKS[semester].cdr_marks;
+                return Math.max(0, Math.min(max, Number(sprRecords[idx]?.cdrMarks ?? 0)));
+            }
+
+            const src = allSemSources[semester];
+            const rawScored = getRawScoreForSubject(key, src);
+            const maxMap = SPR_MAX_MARKS[semester];
+            const maxForSubject = maxMap[key];
+            return convertSubjectMarks({
+                semester,
+                subjectKey: key,
+                rawScored: Number(rawScored ?? 0),
+                rawMax: maxForSubject,
+                targetMax: maxForSubject,
+            });
+        });
+
+        const total = marksBySemester.reduce((acc, v) => acc + Number(v ?? 0), 0);
+        return {
+            subjectKey: key,
+            subjectLabel: key === 'cdr_marks' ? SUBJECT_LABELS.cdr_marks : SUBJECT_LABELS[key],
+            maxMarks: FPR_MAX_MARKS[key],
+            marksBySemester,
+            marksScored: total,
+        };
+    });
+
+    const grandTotal = rows.reduce((acc, r) => acc + r.marksScored, 0);
+    rows.push({
+        subjectKey: 'total',
+        subjectLabel: 'GRAND TOTAL',
+        maxMarks: FPR_MAX_MARKS.total,
+        marksBySemester: [],
+        marksScored: grandTotal,
+    });
+
+    return rows;
+}
+
 export async function getSprView(ocId: string, semester: number) {
     if (semester < 1 || semester > 6) {
         throw new ApiError(400, 'semester must be between 1 and 6', 'bad_request');
@@ -145,37 +216,6 @@ export async function getFprView(ocId: string) {
         Promise.all(semesters.map((sem) => getSprRecord(ocId, sem))),
     ]);
 
-    const rows = (SUBJECT_KEYS.filter((k) => k !== 'total') as SubjectKey[]).map((key) => {
-        const marksBySemester = semesters.map((s, idx) => {
-            if (key === 'cdr_marks') return Number(sprRecords[idx]?.cdrMarks ?? 0);
-            const src = all[s as keyof typeof all];
-            return key === 'academics' ? src.academics
-                : key === 'olq' ? src.olq
-                : key === 'pt_swimming' ? src.ptSwimming
-                : key === 'games' ? src.games
-                : key === 'drill' ? src.drill
-                : key === 'camp' ? src.camp
-                : src.cfe;
-        });
-
-        const total = marksBySemester.reduce((acc, v) => acc + Number(v ?? 0), 0);
-        return {
-            subjectKey: key,
-            subjectLabel: key === 'cdr_marks' ? SUBJECT_LABELS.cdr_marks : SUBJECT_LABELS[key],
-            maxMarks: FPR_MAX_MARKS[key],
-            marksBySemester,
-            marksScored: total,
-        };
-    });
-
-    const grandTotal = rows.reduce((acc, r) => acc + r.marksScored, 0);
-    rows.push({
-        subjectKey: 'total',
-        subjectLabel: 'GRAND TOTAL',
-        maxMarks: FPR_MAX_MARKS.total,
-        marksBySemester: [],
-        marksScored: grandTotal,
-    });
-
+    const rows = buildFprRows(all, sprRecords);
     return { rows };
 }
