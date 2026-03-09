@@ -204,6 +204,13 @@
       "when": 1772793000000,
       "tag": "0028_site_footer",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1772841600000,
+      "tag": "0029_interview_pending_ticker_settings",
+      "breakpoints": true
     }
   ]
 }

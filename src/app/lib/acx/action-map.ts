@@ -831,6 +831,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/interview/pending/ticker-setting",
+    "action": "admin:interview:pending:ticker-setting:read",
+    "resourceType": "admin:interview:pending:ticker-setting",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/interview/templates",
     "action": "admin:interview:templates:read",
     "resourceType": "admin:interview:templates",
@@ -2883,6 +2892,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/interview/pending/ticker-setting",
+    "action": "admin:interview:pending:ticker-setting:create",
+    "resourceType": "admin:interview:pending:ticker-setting",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/interview/templates",
     "action": "admin:interview:templates:create",
     "resourceType": "admin:interview:templates",
@@ -4041,9 +4059,23 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "route": "/dashboard/:id/milmgmt/initial-interview",
+    "action": "page:dashboard:milmgmt:initial-interview:view",
+    "resourceType": "page:dashboard:milmgmt:initial-interview",
+    "category": ":id",
+    "adminBaseline": false
+  },
+  {
     "route": "/dashboard/:id/milmgmt/interviews",
     "action": "page:dashboard:milmgmt:interviews:view",
     "resourceType": "page:dashboard:milmgmt:interviews",
+    "category": ":id",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/:id/milmgmt/interview-term",
+    "action": "page:dashboard:milmgmt:interview-term:view",
+    "resourceType": "page:dashboard:milmgmt:interview-term",
     "category": ":id",
     "adminBaseline": false
   },
@@ -4415,6 +4447,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/settings/device",
     "action": "page:dashboard:settings:device:view",
     "resourceType": "page:dashboard:settings:device",
+    "category": "settings",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/settings/ticker",
+    "action": "page:dashboard:settings:ticker:view",
+    "resourceType": "page:dashboard:settings:ticker",
     "category": "settings",
     "adminBaseline": false
   }

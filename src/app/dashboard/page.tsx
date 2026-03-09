@@ -4,9 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import Marquee from "@/components/Dashboard/Marquee";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import OCSelectModal from "@/components/modals/OCSelectModal";
 import Courses from "@/components/Dashboard/Courses";
 import Platoons from "@/components/Dashboard/Platoons";
@@ -15,6 +12,10 @@ import Appointments from "@/components/Dashboard/Appointments";
 import { api } from "@/app/lib/apiClient";
 import { resolveApiAction } from "@/app/lib/acx/action-map";
 import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
+import {
+  buildInterviewPendingByDaysText,
+  isPlatoonCommanderDashboardUser,
+} from "@/lib/interview-pending-ticker";
 
 type InterviewPendingMarqueeRow = {
   ocNo: string;
@@ -28,6 +29,12 @@ type InterviewPendingMarqueeRow = {
 type InterviewPendingMarqueeResponse = {
   items: InterviewPendingMarqueeRow[];
   count: number;
+};
+
+type InterviewPendingTickerSettingResponse = {
+  setting: {
+    days: number;
+  } | null;
 };
 
 type MeDashboardResponse = {
@@ -44,64 +51,26 @@ type MeDashboardResponse = {
   } | null;
 };
 
-function normalizeRole(value?: string | null) {
-  return String(value ?? "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "_");
-}
+const interviewPendingApiAction = resolveApiAction("GET", "/api/v1/admin/interview/pending");
 
-function isPlatoonCommanderDashboardUser(me: MeDashboardResponse | null) {
-  const scopeType = String(me?.apt?.scope?.type ?? "").trim().toUpperCase();
-  if (scopeType !== "PLATOON") return false;
-
-  const roleCandidates = [
-    me?.apt?.position ?? null,
-    ...(Array.isArray(me?.roles) ? me!.roles : []),
-  ]
-    .map((value) => normalizeRole(value))
-    .filter(Boolean);
-
-  return roleCandidates.some((role) => {
-    const compactRole = role.replace(/[^A-Z0-9]/g, "");
-    const isExplicitPlatoonCommander =
-      (role.includes("PLATOON") && (role.includes("COMMANDER") || role.includes("CDR"))) ||
-      role.includes("PLCDR") ||
-      role.includes("PL_CDR") ||
-      compactRole.includes("PLATOONCOMMANDER") ||
-      compactRole.includes("PLCDR");
-
-    return isExplicitPlatoonCommander;
-  });
-}
-
-function buildPendingMarqueeData(items: InterviewPendingMarqueeRow[]): string[] {
-  const pendingByPlatoon = new Map<string, { label: string; count: number }>();
+function buildPendingCountsMarqueeData(items: InterviewPendingMarqueeRow[]): string[] {
+  const pendingByPlatoon = new Map<string, number>();
 
   for (const item of items) {
     const label = item.platoon?.trim();
     if (!label) continue;
-    const bucket = pendingByPlatoon.get(label) ?? { label, count: 0 };
 
-    if (!item.completeInitial || !item.completeTerms) {
-      bucket.count += 1;
-    }
-
-    pendingByPlatoon.set(label, bucket);
+    const prev = pendingByPlatoon.get(label) ?? 0;
+    const next = !item.completeInitial || !item.completeTerms ? prev + 1 : prev;
+    pendingByPlatoon.set(label, next);
   }
 
-  const platoonLines = Array.from(pendingByPlatoon.values())
-    .sort((a, b) => a.label.localeCompare(b.label))
-    .map((row) => (row.count > 0 ? `${row.label}: ${row.count} •` : `${row.label}: Completed •`));
+  const rows = Array.from(pendingByPlatoon.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([label, count]) => `${label}: ${count} •`);
 
-  if (!platoonLines.length) {
-    return ["*** Interviews Pending:", "No platoon data •", "***"];
-  }
-
-  return ["*** Interviews Pending:", ...platoonLines, "***"];
+  return rows.length > 0 ? rows : ["No platoon data •"];
 }
-
-const interviewPendingApiAction = resolveApiAction("GET", "/api/v1/admin/interview/pending");
 
 function canViewInterviewPending(
   me: MeDashboardResponse | null,
@@ -119,7 +88,15 @@ function canViewInterviewPending(
 
   if (roles.includes("SUPER_ADMIN")) return true;
   if (roles.includes("ADMIN") && mappedAction.adminBaseline) return true;
-  if (isPlatoonCommanderDashboardUser(me)) return true;
+  if (
+    isPlatoonCommanderDashboardUser({
+      roles: me?.roles ?? [],
+      position: me?.apt?.position ?? null,
+      scopeType: me?.apt?.scope?.type ?? null,
+    })
+  ) {
+    return true;
+  }
   if (permissions.has("*")) return true;
   return permissions.has(mappedAction.action);
 }
@@ -128,16 +105,8 @@ const DashboardPage = () => {
   const router = useRouter();
   const authzV2Enabled = isAuthzV2Enabled();
 
-  // Modal controls
   const [open, setOpen] = useState(false);
-
-  // Search controls
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-
-  const [filteredOCs, setFilteredOCs] = useState<any[]>([]);
-  const [marqueeItems, setMarqueeItems] = useState<string[]>(["*** Interviews Pending: Loading... ***"]);
+  const [marqueeItems, setMarqueeItems] = useState<string[]>([buildInterviewPendingByDaysText(0)]);
   const [meInfo, setMeInfo] = useState<MeDashboardResponse | null>(null);
   const [meResolved, setMeResolved] = useState(false);
 
@@ -149,7 +118,6 @@ const DashboardPage = () => {
         const res = await api.get<MeDashboardResponse>("/api/v1/me");
         if (!cancelled) setMeInfo(res);
       } catch (err) {
-        // Non-fatal for dashboard rendering; default layout remains.
         console.error("Failed to load current user context for dashboard", err);
       } finally {
         if (!cancelled) setMeResolved(true);
@@ -175,14 +143,23 @@ const DashboardPage = () => {
 
     let cancelled = false;
 
-    const loadInterviewPendingMarquee = async () => {
+    const loadInterviewPendingTickerSetting = async () => {
       const pageSize = 1000;
+      const maxPages = 20;
       let offset = 0;
       let page = 0;
-      const maxPages = 20;
-      const allItems: InterviewPendingMarqueeRow[] = [];
+      const allRows: InterviewPendingMarqueeRow[] = [];
 
       try {
+        const tickerPromise = api.get<InterviewPendingTickerSettingResponse>(
+          "/api/v1/admin/interview/pending/ticker-setting",
+          {
+            query: {
+              includeLogs: false,
+            },
+          }
+        );
+
         while (page < maxPages) {
           const res = await api.get<InterviewPendingMarqueeResponse>("/api/v1/admin/interview/pending", {
             query: {
@@ -194,47 +171,45 @@ const DashboardPage = () => {
           });
 
           const batch = Array.isArray(res.items) ? res.items : [];
-          allItems.push(...batch);
+          allRows.push(...batch);
 
           if (batch.length < pageSize) break;
-
-          offset += pageSize;
           page += 1;
+          offset += pageSize;
         }
 
+        const tickerRes = await tickerPromise;
         if (!cancelled) {
-          setMarqueeItems(buildPendingMarqueeData(allItems));
+          const days = Number.isFinite(tickerRes?.setting?.days) ? Number(tickerRes.setting?.days) : 0;
+          const pendingCounts = buildPendingCountsMarqueeData(allRows);
+          setMarqueeItems([buildInterviewPendingByDaysText(days), ...pendingCounts]);
         }
       } catch (err) {
-        // Only show "Not Available" on API failure.
-        console.error("Failed to load interview pending marquee data", err);
+        console.error("Failed to load interview pending ticker setting", err);
         if (!cancelled) {
-          setMarqueeItems(["Not Available"]);
+          setMarqueeItems([buildInterviewPendingByDaysText(0), "Pending interviews data not available •"]);
         }
       }
     };
 
-    loadInterviewPendingMarquee();
+    loadInterviewPendingTickerSetting();
 
     return () => {
       cancelled = true;
     };
   }, [authzV2Enabled, meInfo, meResolved]);
 
-  const showPlCdrDashboardView = isPlatoonCommanderDashboardUser(meInfo);
+  const showPlCdrDashboardView = isPlatoonCommanderDashboardUser({
+    roles: meInfo?.roles ?? [],
+    position: meInfo?.apt?.position ?? null,
+    scopeType: meInfo?.apt?.scope?.type ?? null,
+  });
   const canViewInterviewPendingData = canViewInterviewPending(meInfo, { authzV2Enabled, meResolved });
   const showInterviewsPendingTable = showPlCdrDashboardView && canViewInterviewPendingData === true;
 
-  const handleCardClick = () => {
-    setOpen(true);
-  };
-
   return (
     <DashboardLayout title="MCEME CTW Dashboard" description="Training Management System">
-
       <main className="flex-1 p-6 w-full mt-2 overflow-x-hidden">
-
-        {/* Marquee Section - Only visible in content area with proper clipping */}
         <div className="w-full overflow-hidden z-40 shrink-0">
           <Marquee
             data={marqueeItems}
@@ -243,30 +218,25 @@ const DashboardPage = () => {
           />
         </div>
 
-        {/* Cartesian Plane Layout - 2x2 Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-          {/* Top Left Quadrant */}
           <div className="w-full">
             <div className="min-w-[400px]">
               <Courses />
             </div>
           </div>
 
-          {/* Top Right Quadrant */}
           <div className="w-full">
             <div className="min-w-[400px]">
               {showInterviewsPendingTable ? <InterviewsPending /> : <Platoons />}
             </div>
           </div>
 
-          {/* Bottom Spanning Both Columns */}
           <div className="w-full lg:col-span-2 mt-2">
             <Appointments />
           </div>
         </div>
       </main>
 
-      {/* ===================== Modal ===================== */}
       <OCSelectModal
         open={open}
         onOpenChange={setOpen}

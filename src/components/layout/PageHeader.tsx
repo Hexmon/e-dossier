@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, LogOut, Repeat, Loader2 } from "lucide-react";
+import { Settings, LogOut, Repeat, Loader2, Timer } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -17,6 +17,7 @@ import SwitchUserModal from "@/components/auth/SwitchUserModal";
 import OCSelectModal from "@/components/modals/OCSelectModal";
 import { buildDossierPathForOc, extractDossierContext, isDossierManagementRoute } from "@/lib/dossier-route";
 import { logoutAndRedirect } from "@/lib/auth/logout";
+import { canAccessInterviewPendingTickerSetting } from "@/lib/interview-pending-ticker";
 
 interface PageHeaderProps {
   title: string;
@@ -65,7 +66,14 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   const {
     id: appointmentId = "",
     position = "",
+    scope = null,
   } = apt as any;
+
+  const canViewTickerSetting = canAccessInterviewPendingTickerSetting({
+    roles: data?.roles ?? [],
+    position,
+    scopeType: (scope as any)?.type ?? null,
+  });
   const isDossierRoute = isDossierManagementRoute(pathname);
   const dossierContext = extractDossierContext(pathname);
 
@@ -156,6 +164,13 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Device Site Settings</span>
                 </DropdownMenuItem>
+
+                {canViewTickerSetting && (
+                  <DropdownMenuItem onClick={() => router.push("/dashboard/settings/ticker")}>
+                    <Timer className="mr-2 h-4 w-4" />
+                    <span>Ticker Setting</span>
+                  </DropdownMenuItem>
+                )}
 
                 <DropdownMenuItem
                   onClick={() => {

@@ -13,13 +13,14 @@ import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 import { militaryTrainingCards, miltrgTabs } from "@/config/app.config";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Search, Settings } from "lucide-react";
+import { Search } from "lucide-react";
 
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Marquee from "@/components/Dashboard/Marquee";
-import { marqueeData2 } from "@/components/Dashboard/MarqueeData";
 import { Input } from "@/components/ui/input";
 import { resolveToneClasses } from "@/lib/theme-color";
+import { useInterviewPendingTickerSettings } from "@/hooks/useInterviewPendingTickerSettings";
+import { buildInterviewPendingByDaysText } from "@/lib/interview-pending-ticker";
 
 const BASIC_CARD_COUNT = 7;
 const ACADEMICS_CARD_TITLE = "Academics";
@@ -40,6 +41,11 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
     miltrgTabs.find((tab) => tab.value === activeTab)?.title ?? "Basic Details";
   const [basicSearch, setBasicSearch] = useState("");
   const [miltrgSearch, setMiltrgSearch] = useState("");
+  const { query: tickerQuery } = useInterviewPendingTickerSettings({
+    includeLogs: false,
+    limit: 1,
+    offset: 0,
+  });
 
   const updateTab = (value: string) => {
     if (value === activeTab) return;
@@ -88,6 +94,16 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
       ),
     [miltrgSearch]
   );
+  const marqueeItems = useMemo(() => {
+    if (tickerQuery.isError) {
+      return [buildInterviewPendingByDaysText(0)];
+    }
+
+    const days = Number.isFinite(tickerQuery.data?.setting?.days)
+      ? Number(tickerQuery.data?.setting?.days)
+      : 0;
+    return [buildInterviewPendingByDaysText(days)];
+  }, [tickerQuery.data?.setting?.days, tickerQuery.isError]);
 
   return (
     <DashboardLayout
@@ -106,7 +122,7 @@ export default function MilitaryTrainingPage(props: { params: Promise<{ id: stri
 
       <div className="w-full overflow-hidden z-40 shrink-0">
           <Marquee
-            data={marqueeData2}
+            data={marqueeItems}
             speed={25}
             className="w-full"
           />

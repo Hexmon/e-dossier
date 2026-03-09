@@ -4,7 +4,7 @@ import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, Shield } from "lucide-react";
+import { Settings, Shield, Timer } from "lucide-react";
 
 export default function SettingsLandingPage() {
   return (
@@ -51,6 +51,28 @@ export default function SettingsLandingPage() {
             <CardFooter>
               <Button asChild className="w-full">
                 <Link href="/dashboard/genmgmt/rbac">Open Permission Management</Link>
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Timer className="h-5 w-5" />
+                Ticker Setting
+              </CardTitle>
+              <CardDescription>
+                Configure start and end dates used to calculate interview pending days in dashboard marquee text.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Marquee text format: INTERVIEW PENDING BY {"<days>"} DAYS.
+              </p>
+            </CardContent>
+            <CardFooter>
+              <Button asChild className="w-full">
+                <Link href="/dashboard/settings/ticker">Open Ticker Setting</Link>
               </Button>
             </CardFooter>
           </Card>
