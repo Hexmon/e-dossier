@@ -42,6 +42,15 @@ export default function PlatoonForm({ platoon, onSubmit, onCancel }: PlatoonForm
   });
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrl) {
+        URL.revokeObjectURL(localPreviewUrl);
+      }
+    };
+  }, [localPreviewUrl]);
 
   useEffect(() => {
     if (platoon) {
@@ -55,6 +64,7 @@ export default function PlatoonForm({ platoon, onSubmit, onCancel }: PlatoonForm
         imageUrl: imageUrl ?? null,
         imageObjectKey: imageObjectKey ?? null,
       });
+      setLocalPreviewUrl(null);
       return;
     }
 
@@ -66,6 +76,7 @@ export default function PlatoonForm({ platoon, onSubmit, onCancel }: PlatoonForm
       imageUrl: null,
       imageObjectKey: null,
     });
+    setLocalPreviewUrl(null);
   }, [platoon]);
 
   const isEditMode = Boolean(platoon);
@@ -116,6 +127,10 @@ export default function PlatoonForm({ platoon, onSubmit, onCancel }: PlatoonForm
         imageUrl: presign.publicUrl,
         imageObjectKey: presign.objectKey,
       }));
+      setLocalPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(file);
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Image upload failed.";
       setUploadError(message);
@@ -198,21 +213,26 @@ export default function PlatoonForm({ platoon, onSubmit, onCancel }: PlatoonForm
 
       <div className="space-y-2">
         <Label>Platoon Image</Label>
-        <SafeImage
-          src={formData.imageUrl}
-          alt="Platoon"
-          fallbackSrc="/images/commander-placeholder.jpg"
-          className="h-28 w-full rounded border object-cover"
-        />
+        <div className="overflow-hidden rounded-md border bg-muted/20">
+          <div className="flex aspect-[16/9] max-h-56 w-full items-center justify-center">
+            <SafeImage
+              src={localPreviewUrl ?? formData.imageUrl}
+              alt="Platoon"
+              fallbackSrc="/images/commander-placeholder.jpg"
+              className="h-full w-full object-contain"
+            />
+          </div>
+        </div>
         <Input
           type="file"
           accept="image/png,image/jpeg,image/webp"
           disabled={!canUploadImage || uploading}
           onChange={async (event) => {
-            const file = event.target.files?.[0];
+            const input = event.currentTarget;
+            const file = input.files?.[0];
             if (!file) return;
             await handleImageUpload(file);
-            event.currentTarget.value = "";
+            input.value = "";
           }}
         />
         {!canUploadImage && (
@@ -224,6 +244,10 @@ export default function PlatoonForm({ platoon, onSubmit, onCancel }: PlatoonForm
           variant="outline"
           onClick={() => {
             setFormData((prev) => ({ ...prev, imageUrl: null, imageObjectKey: null }));
+            setLocalPreviewUrl((prev) => {
+              if (prev) URL.revokeObjectURL(prev);
+              return null;
+            });
             setUploadError(null);
           }}
           disabled={uploading || !formData.imageUrl}

@@ -44,7 +44,7 @@ export default function PlatoonsTable({
                 sortable: false,
                 filterable: true,
                 render: (value) => (
-                    <span className="text-sm text-muted-foreground line-clamp-2">
+                    <span className="text-sm text-muted-foreground line-clamp-2 [overflow-wrap:anywhere]">
                         {value || "No description"}
                     </span>
                 ),

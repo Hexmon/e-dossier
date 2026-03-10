@@ -4,6 +4,7 @@ import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { json, handleApiError } from '@/app/lib/http';
 import { platoonCreateSchema } from '@/app/lib/validators';
 import { requireAuth } from '@/app/lib/authz';
+import { createPresignedGetUrl } from '@/app/lib/storage';
 import { DEFAULT_PLATOON_THEME_COLOR, normalizePlatoonThemeColor } from '@/lib/platoon-theme';
 import {
   withAuditRoute,
@@ -13,6 +14,32 @@ import {
 import type { AuditNextRequest } from '@/lib/audit';
 
 type PgError = { code?: string; detail?: string };
+type PlatoonRow = {
+    id: string;
+    key: string;
+    name: string;
+    about: string | null;
+    themeColor: string;
+    imageUrl: string | null;
+    imageObjectKey: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+};
+
+async function withReadableImageUrl(row: PlatoonRow): Promise<PlatoonRow> {
+    if (!row.imageObjectKey) return row;
+
+    try {
+        const signedUrl = await createPresignedGetUrl({
+            key: row.imageObjectKey,
+            expiresInSeconds: 3600,
+        });
+        return { ...row, imageUrl: signedUrl };
+    } catch {
+        return row;
+    }
+}
 
 // GET /api/v1/platoons  (PUBLIC)
 // Optional query: ?q=...  (matches key or name, case-insensitive)
@@ -51,7 +78,9 @@ async function GETHandler(req: AuditNextRequest) {
             .where(where.length ? and(...where) : undefined)
             .orderBy(platoons.key);
 
-        return json.ok({ message: 'Platoons retrieved successfully.', items: rows });
+        const items = await Promise.all(rows.map(withReadableImageUrl));
+
+        return json.ok({ message: 'Platoons retrieved successfully.', items });
     } catch (err) {
         return handleApiError(err);
     }
