@@ -23,6 +23,11 @@ export default function DynamicSemesterTable({
             return { rows: [] as AcademicRow[], totalCredits: "" as string | number };
         }
 
+        const resolveTheoryCredits = (offering: Offering) =>
+            offering.theoryCredits ?? offering.subject?.defaultTheoryCredits ?? 0;
+        const resolvePracticalCredits = (offering: Offering) =>
+            offering.practicalCredits ?? offering.subject?.defaultPracticalCredits ?? 0;
+
         const semesterOfferings = offerings.filter((offering: Offering) => {
             const hasSubject = offering.subject !== undefined || offering.subjectName !== undefined;
             return offering.semester === semester && hasSubject;
@@ -32,23 +37,33 @@ export default function DynamicSemesterTable({
             return { rows: [] as AcademicRow[], totalCredits: 0 };
         }
 
-        const transformedRows: AcademicRow[] = semesterOfferings.map((offering: Offering) => ({
-            subjectId: offering.subject?.id || "",
-            subject: offering.subject?.name || offering.subjectName || "Unknown Subject",
-            exam: offering.includeTheory ? "Theory" : undefined,
-            credit: offering.includeTheory ? offering.theoryCredits : "-",
-            practicalExam: offering.includePractical ? "Practical" : null,
-            practicalCredit: offering.includePractical ? offering.practicalCredits : null,
-        }));
+        const transformedRows: AcademicRow[] = semesterOfferings.map((offering: Offering) => {
+            const theoryCredits = resolveTheoryCredits(offering);
+            const practicalCredits = resolvePracticalCredits(offering);
+            return {
+                subjectId: offering.subject?.id || "",
+                subject: offering.subject?.name || offering.subjectName || "Unknown Subject",
+                exam: offering.includeTheory
+                    ? "Theory"
+                    : offering.includePractical
+                        ? "Practical"
+                        : undefined,
+                credit: offering.includeTheory ? theoryCredits : null,
+                practicalExam: offering.includePractical ? "Practical" : null,
+                practicalCredit: offering.includePractical ? practicalCredits : null,
+                includeTheory: offering.includeTheory,
+                includePractical: offering.includePractical,
+            };
+        });
 
         const theoryTotal = semesterOfferings.reduce(
             (sum, offering) =>
-                sum + (offering.includeTheory && offering.theoryCredits ? offering.theoryCredits : 0),
+                sum + (offering.includeTheory ? resolveTheoryCredits(offering) : 0),
             0
         );
         const practicalTotal = semesterOfferings.reduce(
             (sum, offering) =>
-                sum + (offering.includePractical && offering.practicalCredits ? offering.practicalCredits : 0),
+                sum + (offering.includePractical ? resolvePracticalCredits(offering) : 0),
             0
         );
 

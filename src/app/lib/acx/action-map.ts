@@ -282,6 +282,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/events-news/:id",
+    "action": "admin:site-settings:events-news:delete",
+    "resourceType": "admin:site-settings:events-news",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/site-settings/events-news/:id/hard",
+    "action": "admin:site-settings:events-news:hard:delete",
+    "resourceType": "admin:site-settings:events-news:hard",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
     "path": "/api/v1/admin/site-settings/hero-bg",
     "action": "admin:site-settings:hero-bg:delete",
     "resourceType": "admin:site-settings:hero-bg",
@@ -813,6 +831,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/interview/pending/ticker-setting",
+    "action": "admin:interview:pending:ticker-setting:read",
+    "resourceType": "admin:interview:pending:ticker-setting",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/interview/templates",
     "action": "admin:interview:templates:read",
     "resourceType": "admin:interview:templates",
@@ -1275,6 +1302,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/site-settings/commanders/:id",
     "action": "admin:site-settings:commanders:read",
     "resourceType": "admin:site-settings:commanders",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/events-news",
+    "action": "admin:site-settings:events-news:read",
+    "resourceType": "admin:site-settings:events-news",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/events-news/:id",
+    "action": "admin:site-settings:events-news:read",
+    "resourceType": "admin:site-settings:events-news",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -2153,6 +2198,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "method": "GET",
+    "path": "/api/v1/site-settings/events-news",
+    "action": "site-settings:events-news:read",
+    "resourceType": "site-settings:events-news",
+    "category": "site-settings",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
     "method": "OPTIONS",
     "path": "/api/v1/auth/logout",
     "action": "auth:logout:read",
@@ -2838,6 +2892,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/interview/pending/ticker-setting",
+    "action": "admin:interview:pending:ticker-setting:create",
+    "resourceType": "admin:interview:pending:ticker-setting",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/interview/templates",
     "action": "admin:interview:templates:create",
     "resourceType": "admin:interview:templates",
@@ -3111,6 +3174,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/site-settings/commanders",
     "action": "admin:site-settings:commanders:create",
     "resourceType": "admin:site-settings:commanders",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/site-settings/events-news",
+    "action": "admin:site-settings:events-news:create",
+    "resourceType": "admin:site-settings:events-news",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -3792,6 +3864,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PUT",
+    "path": "/api/v1/admin/site-settings/events-news/:id",
+    "action": "admin:site-settings:events-news:update",
+    "resourceType": "admin:site-settings:events-news",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
     "path": "/api/v1/admin/site-settings/history/:id",
     "action": "admin:site-settings:history:update",
     "resourceType": "admin:site-settings:history",
@@ -3824,6 +3905,42 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "resourceType": "settings:device-site",
     "category": "settings",
     "fieldLevelCandidate": true,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/site-settings/footer",
+    "action": "admin:site-settings:footer:read",
+    "resourceType": "admin:site-settings:footer",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/site-settings/footer",
+    "action": "admin:site-settings:footer:create",
+    "resourceType": "admin:site-settings:footer",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/site-settings/footer",
+    "action": "admin:site-settings:footer:update",
+    "resourceType": "admin:site-settings:footer",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/site-settings/footer",
+    "action": "site-settings:footer:read",
+    "resourceType": "site-settings:footer",
+    "category": "site-settings",
+    "fieldLevelCandidate": false,
     "adminBaseline": false
   }
 ];
@@ -3942,9 +4059,23 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "route": "/dashboard/:id/milmgmt/initial-interview",
+    "action": "page:dashboard:milmgmt:initial-interview:view",
+    "resourceType": "page:dashboard:milmgmt:initial-interview",
+    "category": ":id",
+    "adminBaseline": false
+  },
+  {
     "route": "/dashboard/:id/milmgmt/interviews",
     "action": "page:dashboard:milmgmt:interviews:view",
     "resourceType": "page:dashboard:milmgmt:interviews",
+    "category": ":id",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/:id/milmgmt/interview-term",
+    "action": "page:dashboard:milmgmt:interview-term:view",
+    "resourceType": "page:dashboard:milmgmt:interview-term",
     "category": ":id",
     "adminBaseline": false
   },
@@ -4316,6 +4447,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/settings/device",
     "action": "page:dashboard:settings:device:view",
     "resourceType": "page:dashboard:settings:device",
+    "category": "settings",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/settings/ticker",
+    "action": "page:dashboard:settings:ticker:view",
+    "resourceType": "page:dashboard:settings:ticker",
     "category": "settings",
     "adminBaseline": false
   }

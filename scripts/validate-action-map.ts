@@ -64,10 +64,10 @@ function printList(title: string, rows: string[]): void {
 
 function main(): void {
   const apiRouteFiles = walkFiles(path.join(process.cwd(), 'src/app/api/v1'), (filePath) =>
-    filePath.endsWith('/route.ts')
+    toPosix(filePath).endsWith('/route.ts')
   );
   const dashboardPageFiles = walkFiles(path.join(process.cwd(), 'src/app/dashboard'), (filePath) =>
-    filePath.endsWith('/page.tsx')
+    toPosix(filePath).endsWith('/page.tsx')
   );
 
   const discoveredApiKeys: string[] = [];

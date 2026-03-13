@@ -124,14 +124,12 @@ export default async function Home() {
           </div>
         </section>
 
-        <EventsNews />
+        <EventsNews items={data.eventsNews} />
       </main>
 
       <footer className="bg-primary text-primary-foreground py-8">
         <section className="container mx-auto px-4 text-center">
-          <p className="text-sm">
-            For official MCEME internal use only. © 2025 Military College of Electronics & Mechanical Engineering
-          </p>
+          <p className="text-sm">{data.footer}</p>
         </section>
       </footer>
     </div>

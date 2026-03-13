@@ -136,28 +136,54 @@ function entryFromOffering(
     const subjectInfo = baseSubjectInfo(offering);
     const theory = record?.theory ?? null;
     const practical = record?.practical ?? null;
+    const theoryCredits =
+        offering.theoryCredits ?? record?.meta?.theoryCredits ?? subjectInfo.defaultTheoryCredits ?? null;
+    const practicalCredits =
+        offering.practicalCredits ?? record?.meta?.practicalCredits ?? subjectInfo.defaultPracticalCredits ?? null;
+    const theoryView = computeTheory(theory ?? undefined);
+    const practicalView = computePractical(practical ?? undefined);
+
+    if ((Number(theoryCredits ?? 0) <= 0) && theoryView) {
+        theoryView.grade = undefined;
+    }
+    if ((Number(practicalCredits ?? 0) <= 0) && practicalView) {
+        practicalView.grade = undefined;
+    }
+
     return {
         offeringId: offering.id,
         includeTheory: offering.includeTheory,
         includePractical: offering.includePractical,
-        theoryCredits: offering.theoryCredits ?? record?.meta?.theoryCredits ?? subjectInfo.defaultTheoryCredits ?? null,
-        practicalCredits: offering.practicalCredits ?? record?.meta?.practicalCredits ?? subjectInfo.defaultPracticalCredits ?? null,
+        theoryCredits,
+        practicalCredits,
         subject: subjectInfo,
-        theory: computeTheory(theory ?? undefined),
-        practical: computePractical(practical ?? undefined),
+        theory: theoryView,
+        practical: practicalView,
     };
 }
 
 function entryFromRecord(record: SemesterSubjectRecord): AcademicSubjectView {
+    const theoryCredits = record.meta?.theoryCredits ?? null;
+    const practicalCredits = record.meta?.practicalCredits ?? null;
+    const theoryView = computeTheory(record.theory);
+    const practicalView = computePractical(record.practical);
+
+    if ((Number(theoryCredits ?? 0) <= 0) && theoryView) {
+        theoryView.grade = undefined;
+    }
+    if ((Number(practicalCredits ?? 0) <= 0) && practicalView) {
+        practicalView.grade = undefined;
+    }
+
     return {
         offeringId: record.meta?.offeringId ?? null,
         includeTheory: Boolean(record.theory),
         includePractical: Boolean(record.practical),
-        theoryCredits: record.meta?.theoryCredits ?? null,
-        practicalCredits: record.meta?.practicalCredits ?? null,
+        theoryCredits,
+        practicalCredits,
         subject: fallbackSubjectInfo(record),
-        theory: computeTheory(record.theory),
-        practical: computePractical(record.practical),
+        theory: theoryView,
+        practical: practicalView,
     };
 }
 

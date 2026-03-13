@@ -29,6 +29,7 @@ export default function PlatoonViewDialog({
   if (!platoon) return null;
 
   const { key, name, about, createdAt, updatedAt, themeColor, imageUrl } = platoon;
+  const activeCommander = commanderHistory.find((item) => item.status === "CURRENT") ?? null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -38,13 +39,13 @@ export default function PlatoonViewDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="overflow-hidden rounded border">
-            <SafeImage
-              src={imageUrl}
-              alt={`${name} platoon`}
-              fallbackSrc="/images/commander-placeholder.jpg"
-              className="h-48 w-full object-cover"
-            />
+          <div className="mx-auto flex h-[34vh] min-h-[180px] max-h-[360px] w-fit max-w-full items-center justify-center">
+              <SafeImage
+                src={imageUrl}
+                alt={`${name} platoon`}
+                fallbackSrc="/images/commander-placeholder.jpg"
+                className="h-full w-auto max-w-full object-contain"
+              />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -57,6 +58,20 @@ export default function PlatoonViewDialog({
               <p className="font-semibold text-sm text-muted-foreground">Platoon Name</p>
               <p className="text-lg">{name || "-"}</p>
             </div>
+          </div>
+
+          <div>
+            <p className="font-semibold text-sm text-muted-foreground">Platoon Commander</p>
+            {historyLoading ? (
+              <p className="text-sm text-muted-foreground">Loading platoon commander...</p>
+            ) : activeCommander ? (
+              <>
+                <p className="text-xs text-muted-foreground mt-1">Current Active</p>
+                <p className="text-lg">{activeCommander.rank} {activeCommander.name}</p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground mt-1">No active platoon commander assigned.</p>
+            )}
           </div>
 
           <div>
