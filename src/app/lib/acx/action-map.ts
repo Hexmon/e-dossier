@@ -1326,6 +1326,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/site-settings/footer",
+    "action": "admin:site-settings:footer:read",
+    "resourceType": "admin:site-settings:footer",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/site-settings/history",
     "action": "admin:site-settings:history:read",
     "resourceType": "admin:site-settings:history",
@@ -1371,15 +1380,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
-    "path": "/api/v1/admin/training-camps/settings",
-    "action": "admin:training-camps:settings:read",
-    "resourceType": "admin:training-camps:settings",
-    "category": "admin",
-    "fieldLevelCandidate": false,
-    "adminBaseline": true
-  },
-  {
-    "method": "GET",
     "path": "/api/v1/admin/training-camps/:campId",
     "action": "admin:training-camps:read",
     "resourceType": "admin:training-camps",
@@ -1401,6 +1401,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/training-camps/:campId/activities/:activityId",
     "action": "admin:training-camps:activities:read",
     "resourceType": "admin:training-camps:activities",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/training-camps/settings",
+    "action": "admin:training-camps:settings:read",
+    "resourceType": "admin:training-camps:settings",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -1938,18 +1947,18 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
-    "path": "/api/v1/oc/:ocId/personal",
-    "action": "oc:personal:read",
-    "resourceType": "oc:personal",
+    "path": "/api/v1/oc/:ocId/performance-graph",
+    "action": "oc:performance-graph:read",
+    "resourceType": "oc:performance-graph",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false
   },
   {
     "method": "GET",
-    "path": "/api/v1/oc/:ocId/performance-graph",
-    "action": "oc:performance-graph:read",
-    "resourceType": "oc:performance-graph",
+    "path": "/api/v1/oc/:ocId/personal",
+    "action": "oc:personal:read",
+    "resourceType": "oc:personal",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -2145,6 +2154,78 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/reports/academics/consolidated-sessional/preview",
+    "action": "reports:academics:consolidated-sessional:preview:read",
+    "resourceType": "reports:academics:consolidated-sessional:preview",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/academics/final-result-compilation/preview",
+    "action": "reports:academics:final-result-compilation:preview:read",
+    "resourceType": "reports:academics:final-result-compilation:preview",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/academics/semester-grade/candidates",
+    "action": "reports:academics:semester-grade:candidates:read",
+    "resourceType": "reports:academics:semester-grade:candidates",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/academics/semester-grade/preview/:ocId",
+    "action": "reports:academics:semester-grade:preview:read",
+    "resourceType": "reports:academics:semester-grade:preview",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/metadata/course-semesters",
+    "action": "reports:metadata:course-semesters:read",
+    "resourceType": "reports:metadata:course-semesters",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/mil-training/physical-assessment/preview",
+    "action": "reports:mil-training:physical-assessment:preview:read",
+    "resourceType": "reports:mil-training:physical-assessment:preview",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/overall-training/course-wise-final-performance/preview",
+    "action": "reports:overall-training:course-wise-final-performance:preview:read",
+    "resourceType": "reports:overall-training:course-wise-final-performance:preview",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/reports/overall-training/course-wise-performance/preview",
+    "action": "reports:overall-training:course-wise-performance:preview:read",
+    "resourceType": "reports:overall-training:course-wise-performance:preview",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/roles",
     "action": "roles:read",
     "resourceType": "roles",
@@ -2190,18 +2271,27 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
-    "path": "/api/v1/site-settings/history",
-    "action": "site-settings:history:read",
-    "resourceType": "site-settings:history",
+    "path": "/api/v1/site-settings/events-news",
+    "action": "site-settings:events-news:read",
+    "resourceType": "site-settings:events-news",
     "category": "site-settings",
     "fieldLevelCandidate": false,
     "adminBaseline": false
   },
   {
     "method": "GET",
-    "path": "/api/v1/site-settings/events-news",
-    "action": "site-settings:events-news:read",
-    "resourceType": "site-settings:events-news",
+    "path": "/api/v1/site-settings/footer",
+    "action": "site-settings:footer:read",
+    "resourceType": "site-settings:footer",
+    "category": "site-settings",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/site-settings/history",
+    "action": "site-settings:history:read",
+    "resourceType": "site-settings:history",
     "category": "site-settings",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -2433,6 +2523,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PATCH",
+    "path": "/api/v1/admin/site-settings/footer",
+    "action": "admin:site-settings:footer:update",
+    "resourceType": "admin:site-settings:footer",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PATCH",
     "path": "/api/v1/admin/subjects/:id",
     "action": "admin:subjects:update",
     "resourceType": "admin:subjects",
@@ -2451,18 +2550,18 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PATCH",
-    "path": "/api/v1/admin/training-camps/settings",
-    "action": "admin:training-camps:settings:update",
-    "resourceType": "admin:training-camps:settings",
+    "path": "/api/v1/admin/training-camps/:campId/activities/:activityId",
+    "action": "admin:training-camps:activities:update",
+    "resourceType": "admin:training-camps:activities",
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true
   },
   {
     "method": "PATCH",
-    "path": "/api/v1/admin/training-camps/:campId/activities/:activityId",
-    "action": "admin:training-camps:activities:update",
-    "resourceType": "admin:training-camps:activities",
+    "path": "/api/v1/admin/training-camps/settings",
+    "action": "admin:training-camps:settings:update",
+    "resourceType": "admin:training-camps:settings",
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true
@@ -2815,15 +2914,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "action": "admin:academics:grading-policy:recalculate:create",
     "resourceType": "admin:academics:grading-policy:recalculate",
     "category": "admin",
-    "fieldLevelCandidate": true,
-    "adminBaseline": true
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/admin/reports/verification/verify",
-    "action": "admin:reports:verification:verify:create",
-    "resourceType": "admin:reports:verification:verify",
-    "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
   },
@@ -2848,9 +2938,9 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   {
     "method": "POST",
     "path": "/api/v1/admin/bootstrap/templates/apply",
-    "action": "admin:bootstrap:templates:apply",
-    "resourceType": "admin:bootstrap:templates",
-    "category": "bootstrap",
+    "action": "admin:bootstrap:templates:apply:create",
+    "resourceType": "admin:bootstrap:templates:apply",
+    "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
   },
@@ -3144,6 +3234,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/reports/verification/verify",
+    "action": "admin:reports:verification:verify:create",
+    "resourceType": "admin:reports:verification:verify",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/signup-requests/:id/approve",
     "action": "admin:signup-requests:approve:create",
     "resourceType": "admin:signup-requests:approve",
@@ -3183,6 +3282,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/site-settings/events-news",
     "action": "admin:site-settings:events-news:create",
     "resourceType": "admin:site-settings:events-news",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/site-settings/footer",
+    "action": "admin:site-settings:footer:create",
+    "resourceType": "admin:site-settings:footer",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -3639,18 +3747,18 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
-    "path": "/api/v1/oc/physical-training/bulk",
-    "action": "oc:physical-training:bulk:create",
-    "resourceType": "oc:physical-training:bulk",
+    "path": "/api/v1/oc/bulk-upload",
+    "action": "oc:bulk-upload:create",
+    "resourceType": "oc:bulk-upload",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false
   },
   {
     "method": "POST",
-    "path": "/api/v1/oc/bulk-upload",
-    "action": "oc:bulk-upload:create",
-    "resourceType": "oc:bulk-upload",
+    "path": "/api/v1/oc/physical-training/bulk",
+    "action": "oc:physical-training:bulk:create",
+    "resourceType": "oc:physical-training:bulk",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -3675,6 +3783,60 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/reports/academics/consolidated-sessional/download",
+    "action": "reports:academics:consolidated-sessional:download:create",
+    "resourceType": "reports:academics:consolidated-sessional:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/academics/final-result-compilation/download",
+    "action": "reports:academics:final-result-compilation:download:create",
+    "resourceType": "reports:academics:final-result-compilation:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/academics/semester-grade/download",
+    "action": "reports:academics:semester-grade:download:create",
+    "resourceType": "reports:academics:semester-grade:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/mil-training/physical-assessment/download",
+    "action": "reports:mil-training:physical-assessment:download:create",
+    "resourceType": "reports:mil-training:physical-assessment:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/overall-training/course-wise-final-performance/download",
+    "action": "reports:overall-training:course-wise-final-performance:download:create",
+    "resourceType": "reports:overall-training:course-wise-final-performance:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/reports/overall-training/course-wise-performance/download",
+    "action": "reports:overall-training:course-wise-performance:download:create",
+    "resourceType": "reports:overall-training:course-wise-performance:download",
+    "category": "reports",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/roles",
     "action": "roles:create",
     "resourceType": "roles",
@@ -3683,145 +3845,19 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
-    "method": "GET",
-    "path": "/api/v1/reports/academics/consolidated-sessional/preview",
-    "action": "reports:academics:consolidated-sessional:read",
-    "resourceType": "reports:academics:consolidated-sessional",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/reports/academics/consolidated-sessional/download",
-    "action": "reports:academics:consolidated-sessional:download",
-    "resourceType": "reports:academics:consolidated-sessional:download",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/reports/academics/final-result-compilation/preview",
-    "action": "reports:academics:final-result-compilation:read",
-    "resourceType": "reports:academics:final-result-compilation",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/reports/academics/final-result-compilation/download",
-    "action": "reports:academics:final-result-compilation:download",
-    "resourceType": "reports:academics:final-result-compilation:download",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/reports/academics/semester-grade/candidates",
-    "action": "reports:academics:semester-grade:candidates:read",
-    "resourceType": "reports:academics:semester-grade:candidates",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/reports/academics/semester-grade/preview/:ocId",
-    "action": "reports:academics:semester-grade:read",
-    "resourceType": "reports:academics:semester-grade",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/reports/academics/semester-grade/download",
-    "action": "reports:academics:semester-grade:download",
-    "resourceType": "reports:academics:semester-grade:download",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/reports/overall-training/course-wise-performance/preview",
-    "action": "reports:overall-training:course-wise-performance:read",
-    "resourceType": "reports:overall-training:course-wise-performance",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/reports/overall-training/course-wise-performance/download",
-    "action": "reports:overall-training:course-wise-performance:download",
-    "resourceType": "reports:overall-training:course-wise-performance:download",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/reports/overall-training/course-wise-final-performance/preview",
-    "action": "reports:overall-training:course-wise-final-performance:read",
-    "resourceType": "reports:overall-training:course-wise-final-performance",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/reports/overall-training/course-wise-final-performance/download",
-    "action": "reports:overall-training:course-wise-final-performance:download",
-    "resourceType": "reports:overall-training:course-wise-final-performance:download",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/reports/metadata/course-semesters",
-    "action": "reports:metadata:course-semesters:read",
-    "resourceType": "reports:metadata:course-semesters",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/reports/mil-training/physical-assessment/preview",
-    "action": "reports:mil-training:physical-assessment:read",
-    "resourceType": "reports:mil-training:physical-assessment",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/reports/mil-training/physical-assessment/download",
-    "action": "reports:mil-training:physical-assessment:download",
-    "resourceType": "reports:mil-training:physical-assessment:download",
-    "category": "reports",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
     "method": "PUT",
-    "path": "/api/v1/admin/device-site-settings",
-    "action": "admin:device-site-settings:update",
-    "resourceType": "admin:device-site-settings",
+    "path": "/api/v1/admin/academics/grading-policy",
+    "action": "admin:academics:grading-policy:update",
+    "resourceType": "admin:academics:grading-policy",
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true
   },
   {
     "method": "PUT",
-    "path": "/api/v1/admin/academics/grading-policy",
-    "action": "admin:academics:grading-policy:update",
-    "resourceType": "admin:academics:grading-policy",
+    "path": "/api/v1/admin/device-site-settings",
+    "action": "admin:device-site-settings:update",
+    "resourceType": "admin:device-site-settings",
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true
@@ -3905,42 +3941,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "resourceType": "settings:device-site",
     "category": "settings",
     "fieldLevelCandidate": true,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/admin/site-settings/footer",
-    "action": "admin:site-settings:footer:read",
-    "resourceType": "admin:site-settings:footer",
-    "category": "admin",
-    "fieldLevelCandidate": false,
-    "adminBaseline": true
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/admin/site-settings/footer",
-    "action": "admin:site-settings:footer:create",
-    "resourceType": "admin:site-settings:footer",
-    "category": "admin",
-    "fieldLevelCandidate": false,
-    "adminBaseline": true
-  },
-  {
-    "method": "PATCH",
-    "path": "/api/v1/admin/site-settings/footer",
-    "action": "admin:site-settings:footer:update",
-    "resourceType": "admin:site-settings:footer",
-    "category": "admin",
-    "fieldLevelCandidate": true,
-    "adminBaseline": true
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/site-settings/footer",
-    "action": "site-settings:footer:read",
-    "resourceType": "site-settings:footer",
-    "category": "site-settings",
-    "fieldLevelCandidate": false,
     "adminBaseline": false
   }
 ];
@@ -4066,16 +4066,16 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": false
   },
   {
-    "route": "/dashboard/:id/milmgmt/interviews",
-    "action": "page:dashboard:milmgmt:interviews:view",
-    "resourceType": "page:dashboard:milmgmt:interviews",
+    "route": "/dashboard/:id/milmgmt/interview-term",
+    "action": "page:dashboard:milmgmt:interview-term:view",
+    "resourceType": "page:dashboard:milmgmt:interview-term",
     "category": ":id",
     "adminBaseline": false
   },
   {
-    "route": "/dashboard/:id/milmgmt/interview-term",
-    "action": "page:dashboard:milmgmt:interview-term:view",
-    "resourceType": "page:dashboard:milmgmt:interview-term",
+    "route": "/dashboard/:id/milmgmt/interviews",
+    "action": "page:dashboard:milmgmt:interviews:view",
+    "resourceType": "page:dashboard:milmgmt:interviews",
     "category": ":id",
     "adminBaseline": false
   },
@@ -4175,6 +4175,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "action": "page:dashboard:audit-logs:view",
     "resourceType": "page:dashboard:audit-logs",
     "category": "audit-logs",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/bulk-upload",
+    "action": "page:dashboard:bulk-upload:view",
+    "resourceType": "page:dashboard:bulk-upload",
+    "category": "bulk-upload",
     "adminBaseline": false
   },
   {
@@ -4360,67 +4367,60 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
-    "route": "/dashboard/bulk-upload",
-    "action": "page:dashboard:bulk-upload:view",
-    "resourceType": "page:dashboard:bulk-upload",
-    "category": "bulk-upload",
-    "adminBaseline": false
-  },
-  {
     "route": "/dashboard/help",
     "action": "page:dashboard:help:view",
     "resourceType": "page:dashboard:help",
     "category": "help",
-    "adminBaseline": true
+    "adminBaseline": false
   },
   {
     "route": "/dashboard/help/admin-operations",
     "action": "page:dashboard:help:admin-operations:view",
     "resourceType": "page:dashboard:help:admin-operations",
     "category": "help",
-    "adminBaseline": true
+    "adminBaseline": false
   },
   {
     "route": "/dashboard/help/org-templates",
     "action": "page:dashboard:help:org-templates:view",
     "resourceType": "page:dashboard:help:org-templates",
     "category": "help",
-    "adminBaseline": true
-  },
-  {
-    "route": "/dashboard/help/org-templates/physical-training",
-    "action": "page:dashboard:help:org-templates:physical-training:view",
-    "resourceType": "page:dashboard:help:org-templates:physical-training",
-    "category": "help",
-    "adminBaseline": true
-  },
-  {
-    "route": "/dashboard/help/org-templates/olq",
-    "action": "page:dashboard:help:org-templates:olq:view",
-    "resourceType": "page:dashboard:help:org-templates:olq",
-    "category": "help",
-    "adminBaseline": true
+    "adminBaseline": false
   },
   {
     "route": "/dashboard/help/org-templates/grading-policy",
     "action": "page:dashboard:help:org-templates:grading-policy:view",
     "resourceType": "page:dashboard:help:org-templates:grading-policy",
     "category": "help",
-    "adminBaseline": true
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/org-templates/olq",
+    "action": "page:dashboard:help:org-templates:olq:view",
+    "resourceType": "page:dashboard:help:org-templates:olq",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/org-templates/physical-training",
+    "action": "page:dashboard:help:org-templates:physical-training:view",
+    "resourceType": "page:dashboard:help:org-templates:physical-training",
+    "category": "help",
+    "adminBaseline": false
   },
   {
     "route": "/dashboard/help/setup-guide",
     "action": "page:dashboard:help:setup-guide:view",
     "resourceType": "page:dashboard:help:setup-guide",
     "category": "help",
-    "adminBaseline": true
+    "adminBaseline": false
   },
   {
     "route": "/dashboard/manage-marks",
     "action": "page:dashboard:manage-marks:view",
     "resourceType": "page:dashboard:manage-marks",
     "category": "manage-marks",
-    "adminBaseline": true
+    "adminBaseline": false
   },
   {
     "route": "/dashboard/manage-pt-marks",

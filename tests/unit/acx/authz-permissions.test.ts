@@ -21,12 +21,9 @@ describe('authz-permissions helpers', () => {
     expect(result.isSuperAdmin).toBe(false);
     expect(permissionSet.size).toBeGreaterThan(0);
     expect(Array.from(permissionSet)).toEqual(expect.arrayContaining(baseline.slice(0, 3)));
-    expect(Array.from(permissionSet)).toEqual(
-      expect.arrayContaining([
-        'page:dashboard:genmgmt:view',
-        'page:dashboard:manage-marks:view',
-      ])
-    );
+    expect(Array.from(permissionSet)).toContain('page:dashboard:genmgmt:view');
+    expect(Array.from(permissionSet)).not.toContain('page:dashboard:manage-marks:view');
+    expect(Array.from(permissionSet)).not.toContain('oc:academics:bulk:read');
   });
 
   it('grants wildcard permission for super admin', () => {
@@ -38,4 +35,3 @@ describe('authz-permissions helpers', () => {
     expect(permissionSet.has('*')).toBe(true);
   });
 });
-

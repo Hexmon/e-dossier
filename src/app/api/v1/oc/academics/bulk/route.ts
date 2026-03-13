@@ -1,6 +1,6 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { academicSubjectBulkRequestSchema, Semester } from '@/app/lib/oc-validators';
-import { mustBeAdmin, mustBeAuthed } from '../../_checks';
+import { mustBeAuthed } from '../../_checks';
 import { updateOcAcademicSubject, deleteOcAcademicSubject, getOcAcademicSemester, getOcAcademics } from '@/app/services/oc-academics';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -51,7 +51,7 @@ function filterSemesterSubjects(semesterData: any, subjectIds: Set<string>) {
 
 async function GETHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await mustBeAdmin(req);
+        const authCtx = await mustBeAuthed(req);
         const sp = new URL(req.url).searchParams;
 
         const ocIds = parseCsv(sp.get('ocIds'));
@@ -95,7 +95,7 @@ async function GETHandler(req: AuditNextRequest) {
         await req.audit.log({
             action: AuditEventType.API_REQUEST,
             outcome: 'SUCCESS',
-            actor: { type: 'user', id: adminCtx.userId },
+            actor: { type: 'user', id: authCtx.userId },
             target: { type: AuditResourceType.OC_ACADEMICS, id: 'collection' },
             metadata: {
                 description: 'Bulk academic records retrieved successfully.',

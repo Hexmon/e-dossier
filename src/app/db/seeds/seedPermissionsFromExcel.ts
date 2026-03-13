@@ -51,7 +51,6 @@ const EXTRA_RBAC_ACTIONS = [
 const MANAGE_MARKS_ACTION_ALLOWLIST = new Set(
   API_ACTION_MAP.filter(
     (entry) =>
-      entry.path === '/api/v1/oc/academics/bulk' ||
       entry.path === '/api/v1/admin/courses' ||
       entry.path === '/api/v1/admin/courses/:courseId/offerings' ||
       entry.path === '/api/v1/admin/courses/:courseId/offerings/assign' ||
