@@ -5,6 +5,7 @@ import { ApiError } from '@/app/lib/http';
 import { makeJsonRequest, createRouteContext } from '../utils/next';
 
 import * as ocChecks from '@/app/api/v1/oc/_checks';
+import * as ocQueries from '@/app/db/queries/oc';
 import * as olqQueries from '@/app/db/queries/olq';
 
 vi.mock('@/app/api/v1/oc/_checks', () => ({
@@ -21,6 +22,11 @@ vi.mock('@/app/db/queries/olq', () => ({
     deleteOlqHeader: vi.fn(),
     deleteOlqScore: vi.fn(),
     recomputeOlqTotal: vi.fn(),
+    getCourseTemplateCategories: vi.fn(),
+}));
+
+vi.mock('@/app/db/queries/oc', () => ({
+    getOcCourseInfo: vi.fn(),
 }));
 
 const ocId = '11111111-1111-4111-8111-111111111111';
@@ -31,6 +37,13 @@ beforeEach(() => {
     (ocChecks.mustBeAuthed as any).mockResolvedValue({ userId: 'u-1', roles: ['ADMIN'] });
     (ocChecks.ensureOcExists as any).mockResolvedValue(undefined);
     (ocChecks.parseParam as any).mockImplementation(async ({ params }: any, schema: any) => schema.parse(await params));
+    (ocQueries.getOcCourseInfo as any).mockResolvedValue({ id: ocId, courseId: 'course-1' });
+    (olqQueries.getCourseTemplateCategories as any).mockResolvedValue([
+        {
+            id: 'category-1',
+            subtitles: [{ id: subtitleId }],
+        },
+    ]);
 });
 
 describe('OC OLQ score writes validate current course template', () => {

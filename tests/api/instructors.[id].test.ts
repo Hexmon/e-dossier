@@ -12,7 +12,6 @@ import * as instructorQueries from '@/app/db/queries/instructors';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/client', () => ({

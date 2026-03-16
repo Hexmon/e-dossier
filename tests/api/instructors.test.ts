@@ -8,7 +8,6 @@ import { db } from '@/app/db/client';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/instructors', () => ({

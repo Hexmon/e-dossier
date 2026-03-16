@@ -19,7 +19,7 @@ vi.mock("@/app/db/queries/site-settings", () => ({
   listSiteHistory: vi.fn(async () => [
     {
       id: "efff9dd0-f8f8-4cf7-962e-2ede2583a5b4",
-      yearOrDate: "1943",
+      incidentDate: "1943-01-01",
       description: "Created",
       isDeleted: false,
       deletedAt: null,
@@ -29,7 +29,7 @@ vi.mock("@/app/db/queries/site-settings", () => ({
   ]),
   createSiteHistory: vi.fn(async () => ({
     id: "efff9dd0-f8f8-4cf7-962e-2ede2583a5b4",
-    yearOrDate: "1943",
+    incidentDate: "1943-01-01",
     description: "Created",
     isDeleted: false,
     deletedAt: null,
@@ -38,7 +38,7 @@ vi.mock("@/app/db/queries/site-settings", () => ({
   })),
   getSiteHistoryById: vi.fn(async () => ({
     id: "efff9dd0-f8f8-4cf7-962e-2ede2583a5b4",
-    yearOrDate: "1943",
+    incidentDate: "1943-01-01",
     description: "Created",
     isDeleted: false,
     deletedAt: null,
@@ -48,7 +48,7 @@ vi.mock("@/app/db/queries/site-settings", () => ({
   updateSiteHistory: vi.fn(async () => ({
     before: {
       id: "efff9dd0-f8f8-4cf7-962e-2ede2583a5b4",
-      yearOrDate: "1943",
+      incidentDate: "1943-01-01",
       description: "Created",
       isDeleted: false,
       deletedAt: null,
@@ -57,7 +57,7 @@ vi.mock("@/app/db/queries/site-settings", () => ({
     },
     after: {
       id: "efff9dd0-f8f8-4cf7-962e-2ede2583a5b4",
-      yearOrDate: "1944",
+      incidentDate: "1944-01-01",
       description: "Created",
       isDeleted: false,
       deletedAt: null,
@@ -91,7 +91,7 @@ describe("Admin site settings history routes", () => {
     const req = makeJsonRequest({
       method: "POST",
       path: "/api/v1/admin/site-settings/history",
-      body: { yearOrDate: "1943", description: "Created" },
+      body: { incidentDate: "1943-01-01", description: "Created" },
     });
     const res = await createHistory(req as any, createRouteContext());
     expect(res.status).toBe(201);
@@ -105,7 +105,7 @@ describe("Admin site settings history routes", () => {
     const putReq = makeJsonRequest({
       method: "PUT",
       path: `/api/v1/admin/site-settings/history/${uuid}`,
-      body: { yearOrDate: "1944" },
+      body: { incidentDate: "1944-01-01" },
     });
     const putRes = await updateHistory(putReq as any, createRouteContext({ id: uuid }));
     expect(putRes.status).toBe(200);
