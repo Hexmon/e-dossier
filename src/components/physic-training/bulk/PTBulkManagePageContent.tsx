@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -12,6 +12,7 @@ import {
     buildBulkPTSaveRequest,
     usePhysicalTrainingBulk,
     type PTBulkFilters as PTBulkFiltersType,
+    type PTScoreDraftValues,
 } from '@/hooks/usePhysicalTrainingBulk';
 import type { PTBulkSaveResponse } from '@/app/lib/api/physicalTrainingBulkApi';
 
@@ -32,7 +33,7 @@ export function PTBulkManagePageContent() {
     const [activeTab, setActiveTab] = useState<'scores' | 'motivation'>('scores');
     const [selectedTypeCode, setSelectedTypeCode] = useState('');
 
-    const [scoreDraftValues, setScoreDraftValues] = useState<Record<string, Record<string, string>>>({});
+    const [scoreDraftValues, setScoreDraftValues] = useState<PTScoreDraftValues>({});
     const [motivationDraftValues, setMotivationDraftValues] = useState<Record<string, Record<string, string>>>({});
     const [clearScoreIds, setClearScoreIds] = useState<Record<string, string[]>>({});
     const [clearMotivationFieldIds, setClearMotivationFieldIds] = useState<Record<string, string[]>>({});
@@ -60,23 +61,6 @@ export function PTBulkManagePageContent() {
         setSaveSummary(null);
     }, [filters.courseId, filters.semester, filters.active, filters.q, filters.platoon]);
 
-    const scoreMaxById = useMemo(() => {
-        const map = new Map<string, number>();
-        const types = bulkQuery.data?.template?.types ?? [];
-        for (const type of types) {
-            for (const task of type.tasks ?? []) {
-                for (const attempt of task.attempts ?? []) {
-                    for (const grade of attempt.grades ?? []) {
-                        if (!grade.scoreId) continue;
-                        const max = typeof grade.maxMarks === 'number' ? grade.maxMarks : task.maxMarks;
-                        map.set(grade.scoreId, max);
-                    }
-                }
-            }
-        }
-        return map;
-    }, [bulkQuery.data]);
-
     const handleSave = async () => {
         const data = bulkQuery.data;
         if (!data) {
@@ -85,17 +69,16 @@ export function PTBulkManagePageContent() {
         }
 
         for (const [ocId, scoreMap] of Object.entries(scoreDraftValues)) {
-            for (const [scoreId, raw] of Object.entries(scoreMap)) {
-                const trimmed = raw.trim();
+            for (const [, draft] of Object.entries(scoreMap)) {
+                const trimmed = draft.marks.trim();
                 if (!trimmed) continue;
                 const numeric = Number(trimmed);
                 if (!Number.isFinite(numeric) || numeric < 0) {
                     toast.error(`Invalid score for ${ocId}. Use non-negative numbers only.`);
                     return;
                 }
-                const max = scoreMaxById.get(scoreId);
-                if (max !== undefined && numeric > max) {
-                    toast.error(`Marks cannot exceed ${max}.`);
+                if (numeric > draft.maxMarks) {
+                    toast.error(`Marks cannot exceed ${draft.maxMarks}.`);
                     return;
                 }
             }
@@ -167,28 +150,28 @@ export function PTBulkManagePageContent() {
                                         onSelectedTypeCodeChange={setSelectedTypeCode}
                                         scoreDraftValues={scoreDraftValues}
                                         clearScoreIds={clearScoreIds}
-                                        onScoreChange={(ocId, scoreId, value) => {
+                                        onTaskSelectionChange={(ocId, taskId, selection) => {
                                             setScoreDraftValues((prev) => ({
                                                 ...prev,
                                                 [ocId]: {
                                                     ...(prev[ocId] ?? {}),
-                                                    [scoreId]: value,
+                                                    [taskId]: selection,
                                                 },
                                             }));
-                                            setClearScoreIds((prev) => removeFromClearRecord(prev, ocId, scoreId));
+                                            setClearScoreIds((prev) => removeFromClearRecord(prev, ocId, taskId));
                                         }}
-                                        onToggleClearScore={(ocId, scoreId) => {
+                                        onToggleClearScore={(ocId, taskId) => {
                                             setClearScoreIds((prev) => {
                                                 const current = new Set(prev[ocId] ?? []);
-                                                if (current.has(scoreId)) current.delete(scoreId);
-                                                else current.add(scoreId);
+                                                if (current.has(taskId)) current.delete(taskId);
+                                                else current.add(taskId);
                                                 return { ...prev, [ocId]: Array.from(current) };
                                             });
                                             setScoreDraftValues((prev) => {
-                                                if (!prev[ocId]?.[scoreId]) return prev;
+                                                if (!prev[ocId]?.[taskId]) return prev;
                                                 const next = { ...prev };
                                                 next[ocId] = { ...(next[ocId] ?? {}) };
-                                                delete next[ocId][scoreId];
+                                                delete next[ocId][taskId];
                                                 return next;
                                             });
                                         }}

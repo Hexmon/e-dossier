@@ -64,7 +64,6 @@ const MANAGE_MARKS_API_PATHS = new Set<string>([
   '/api/v1/admin/courses/:courseId/offerings',
   '/api/v1/admin/courses/:courseId/offerings/assign',
   '/api/v1/oc',
-  '/api/v1/oc/academics/bulk',
 ]);
 
 const ADMIN_BASELINE_ACTIONS = new Set<string>([

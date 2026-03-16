@@ -17,6 +17,7 @@ export type PTBulkScoreRecord = {
     ocId: string;
     semester: number;
     ptTaskScoreId: string;
+    ptTaskId: string;
     marksScored: number;
     remark: string | null;
     templateMaxMarks: number;

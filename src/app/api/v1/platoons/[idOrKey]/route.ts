@@ -4,6 +4,7 @@ import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { platoonUpdateSchema } from '@/app/lib/validators';
 import { requireAuth } from '@/app/lib/authz';
+import { createPresignedGetUrl } from '@/app/lib/storage';
 import {
   withAuditRoute,
   AuditEventType,
@@ -51,12 +52,24 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
         about: platoons.about,
         themeColor: platoons.themeColor,
         imageUrl: platoons.imageUrl,
+        imageObjectKey: platoons.imageObjectKey,
       })
       .from(platoons)
       .where(whereForIdKeyName(idOrKey))
       .limit(1);
 
     if (!platoon) return json.notFound('Platoon not found.');
+
+    if (platoon.imageObjectKey) {
+      try {
+        platoon.imageUrl = await createPresignedGetUrl({
+          key: platoon.imageObjectKey,
+          expiresInSeconds: 3600,
+        });
+      } catch {
+        // Keep stored imageUrl fallback when signed URL generation fails.
+      }
+    }
 
     return json.ok(
       { message: 'Platoon retrieved successfully.', platoon },

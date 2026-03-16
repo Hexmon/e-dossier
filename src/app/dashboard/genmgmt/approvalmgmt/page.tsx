@@ -6,13 +6,22 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
+import { CheckCircle } from "lucide-react";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
-import { ocTabs } from "@/config/app.config";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 
 import { useApproval } from "@/hooks/useApproval";
 import { PendingUserItem } from "@/components/approval/PendingUserItem";
 import type { PendingUser } from "@/app/lib/api/ApprovalApi";
+
+const approvalMgmtTabs = [
+  {
+    value: "approval-mgmt",
+    title: "Approval Management",
+    icon: CheckCircle,
+  },
+];
 
 export default function ApprovalManagement() {
     const router = useRouter();
@@ -27,7 +36,13 @@ export default function ApprovalManagement() {
 
     const [selectedSlots, setSelectedSlots] = useState<Record<string, string>>({});
 
-    const handleLogout = () => router.push("/login");
+    const handleLogout = () => {
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
+    };
 
     return (
         <SidebarProvider>
@@ -52,7 +67,7 @@ export default function ApprovalManagement() {
                             ]}
                         />
 
-                        <GlobalTabs tabs={ocTabs} defaultValue="approval-mgmt">
+                        <GlobalTabs tabs={approvalMgmtTabs} defaultValue="approval-mgmt">
                             <TabsContent value="approval-mgmt" className="space-y-6">
                                 <h2 className="text-2xl font-bold">Pending Approvals</h2>
 

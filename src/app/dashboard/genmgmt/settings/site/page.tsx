@@ -6,13 +6,33 @@ import { toast } from "sonner";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import SafeImage from "@/components/site-settings/SafeImage";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { siteSettingsAdminApi, type SiteAwardModel, type SiteCommanderModel, type SiteHistoryModel } from "@/app/lib/api/siteSettingsAdminApi";
+import {
+  siteSettingsAdminApi,
+  type SiteAwardModel,
+  type SiteCommanderModel,
+  type SiteEventNewsModel,
+  type SiteEventNewsType,
+  type SiteFooterModel,
+  type SiteHistoryModel,
+} from "@/app/lib/api/siteSettingsAdminApi";
 import { getPlatoons } from "@/app/lib/api/platoonApi";
 import { SITE_SETTINGS_IMAGE_MAX_SIZE_BYTES } from "@/app/lib/validators.site-settings";
 import {
@@ -96,6 +116,22 @@ const EMPTY_HISTORY_FORM: HistoryForm = {
   description: "",
 };
 
+type EventNewsForm = {
+  date: string;
+  title: string;
+  description: string;
+  location: string;
+  type: SiteEventNewsType;
+};
+
+const EMPTY_EVENT_NEWS_FORM: EventNewsForm = {
+  date: "",
+  title: "",
+  description: "",
+  location: "",
+  type: "event",
+};
+
 function parseApiError(error: unknown, fallback: string) {
   if (error instanceof Error) {
     return error.message || fallback;
@@ -156,6 +192,16 @@ async function validateHeroBgImageFile(file: File): Promise<string | null> {
   return null;
 }
 
+function formatDisplayDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function AdminSiteSettingsPage() {
   const [historySort, setHistorySort] = useState<"asc" | "desc">("asc");
   const [settingsDraft, setSettingsDraft] = useState<SettingsDraft>(DEFAULT_DRAFT);
@@ -172,6 +218,14 @@ export default function AdminSiteSettingsPage() {
   const [editingHistory, setEditingHistory] = useState<SiteHistoryModel | null>(null);
   const [historyForm, setHistoryForm] = useState<HistoryForm>(EMPTY_HISTORY_FORM);
 
+  const [eventNewsModalOpen, setEventNewsModalOpen] = useState(false);
+  const [editingEventNews, setEditingEventNews] = useState<SiteEventNewsModel | null>(null);
+  const [eventNewsForm, setEventNewsForm] = useState<EventNewsForm>(EMPTY_EVENT_NEWS_FORM);
+  const [eventNewsToDelete, setEventNewsToDelete] = useState<SiteEventNewsModel | null>(null);
+  const [footerEditorOpen, setFooterEditorOpen] = useState(false);
+  const [footerForm, setFooterForm] = useState("");
+  const [isEditingFooter, setIsEditingFooter] = useState(false);
+
   const [draggingAwardId, setDraggingAwardId] = useState<string | null>(null);
   const [awardsLocal, setAwardsLocal] = useState<SiteAwardModel[]>([]);
   const [reorderRetryIds, setReorderRetryIds] = useState<string[] | null>(null);
@@ -181,6 +235,8 @@ export default function AdminSiteSettingsPage() {
     commandersQuery,
     awardsQuery,
     historyQuery,
+    eventsNewsQuery,
+    footerQuery,
     updateSettingsMutation,
     deleteLogoMutation,
     deleteHeroBgMutation,
@@ -194,6 +250,11 @@ export default function AdminSiteSettingsPage() {
     createHistoryMutation,
     updateHistoryMutation,
     deleteHistoryMutation,
+    createEventNewsMutation,
+    updateEventNewsMutation,
+    deleteEventNewsMutation,
+    createFooterMutation,
+    updateFooterMutation,
   } = useAdminSiteSettings(historySort);
 
   const platoonsQuery = useQuery({
@@ -222,6 +283,15 @@ export default function AdminSiteSettingsPage() {
     setAwardsLocal(awardsQuery.data?.items ?? []);
   }, [awardsQuery.data?.items]);
 
+  useEffect(() => {
+    const footerValue = footerQuery.data?.item?.footer;
+    if (typeof footerValue === "string") {
+      setFooterForm(footerValue);
+      return;
+    }
+    setFooterForm("");
+  }, [footerQuery.data?.item?.footer]);
+
   const busyMutations =
     updateSettingsMutation.isPending ||
     deleteHeroBgMutation.isPending ||
@@ -230,16 +300,24 @@ export default function AdminSiteSettingsPage() {
     createAwardMutation.isPending ||
     updateAwardMutation.isPending ||
     createHistoryMutation.isPending ||
-    updateHistoryMutation.isPending;
+    updateHistoryMutation.isPending ||
+    createEventNewsMutation.isPending ||
+    updateEventNewsMutation.isPending ||
+    createFooterMutation.isPending ||
+    updateFooterMutation.isPending;
 
   const hasSettingsError = settingsQuery.isError;
   const hasCommandersError = commandersQuery.isError;
   const hasAwardsError = awardsQuery.isError;
   const hasHistoryError = historyQuery.isError;
+  const hasEventsNewsError = eventsNewsQuery.isError;
+  const hasFooterError = footerQuery.isError;
   const hasPlatoonsError = platoonsQuery.isError;
 
   const commanderList = commandersQuery.data?.items ?? [];
   const historyList = historyQuery.data?.items ?? [];
+  const eventNewsList = eventsNewsQuery.data?.items ?? [];
+  const footerItem = footerQuery.data?.item ?? null;
 
   const canRetryReorder = useMemo(
     () => Boolean(reorderRetryIds && reorderRetryIds.length > 0 && !reorderAwardsMutation.isPending),
@@ -535,10 +613,103 @@ export default function AdminSiteSettingsPage() {
     }
   };
 
+  const openCreateEventNews = () => {
+    setEditingEventNews(null);
+    setEventNewsForm(EMPTY_EVENT_NEWS_FORM);
+    setEventNewsModalOpen(true);
+  };
+
+  const openEditEventNews = (item: SiteEventNewsModel) => {
+    setEditingEventNews(item);
+    setEventNewsForm({
+      date: item.date.split("T")[0],
+      title: item.title,
+      description: item.description,
+      location: item.location,
+      type: item.type,
+    });
+    setEventNewsModalOpen(true);
+  };
+
+  const submitEventNews = async () => {
+    if (!eventNewsForm.date || !eventNewsForm.title || !eventNewsForm.description || !eventNewsForm.location) {
+      toast.error("Date, title, description, and location are required.");
+      return;
+    }
+
+    try {
+      if (editingEventNews) {
+        await updateEventNewsMutation.mutateAsync({
+          id: editingEventNews.id,
+          payload: eventNewsForm,
+        });
+      } else {
+        await createEventNewsMutation.mutateAsync(eventNewsForm);
+      }
+
+      toast.success(editingEventNews ? "Event/news item updated." : "Event/news item created.");
+      setEventNewsModalOpen(false);
+    } catch (error) {
+      toast.error(parseApiError(error, "Failed to save event/news item."));
+    }
+  };
+
+  const confirmDeleteEventNews = async () => {
+    if (!eventNewsToDelete) return;
+    try {
+      await deleteEventNewsMutation.mutateAsync({ id: eventNewsToDelete.id, hard: true });
+      toast.success("Event/news item deleted.");
+      setEventNewsToDelete(null);
+    } catch (error) {
+      toast.error(parseApiError(error, "Failed to delete event/news item."));
+    }
+  };
+
+  const openCreateFooter = () => {
+    setIsEditingFooter(false);
+    setFooterForm("");
+    setFooterEditorOpen(true);
+  };
+
+  const openEditFooter = (item: SiteFooterModel) => {
+    setIsEditingFooter(true);
+    setFooterForm(item.footer);
+    setFooterEditorOpen(true);
+  };
+
+  const cancelFooterEditor = () => {
+    setFooterEditorOpen(false);
+    setIsEditingFooter(false);
+    setFooterForm(footerItem?.footer ?? "");
+  };
+
+  const submitFooter = async () => {
+    const footer = footerForm.trim();
+    if (footer.length < 2) {
+      toast.error("Footer must be at least 2 characters.");
+      return;
+    }
+
+    try {
+      if (footerItem) {
+        await updateFooterMutation.mutateAsync({ footer });
+        toast.success("Footer updated.");
+      } else {
+        await createFooterMutation.mutateAsync({ footer });
+        toast.success("Footer created.");
+      }
+
+      setFooterEditorOpen(false);
+      setIsEditingFooter(false);
+    } catch (error) {
+      toast.error(parseApiError(error, "Failed to save footer."));
+    }
+  };
+
   return (
     <DashboardLayout
       title="Admin Site Settings"
-      description="Manage landing page branding, hero, commanders, awards, and history."
+      description="Manage landing page branding, hero, commanders, awards, history, events/news, and footer."
     >
       <section className="space-y-6 p-6">
         <Card>
@@ -942,11 +1113,7 @@ export default function AdminSiteSettingsPage() {
                 <div key={item.id} className="rounded-md border p-3">
                   <div className="flex items-start gap-3">
                     <div className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
-                      {new Date(item.incidentDate).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {formatDisplayDate(item.incidentDate)}
                     </div>
                     <p className="flex-1 text-sm text-muted-foreground">{item.description}</p>
                     <div className="flex gap-2">
@@ -963,6 +1130,139 @@ export default function AdminSiteSettingsPage() {
                   </div>
                 </div>
               ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Events & News</CardTitle>
+              <CardDescription>Manage the public events and news cards displayed on the landing page.</CardDescription>
+            </div>
+            <Button type="button" onClick={openCreateEventNews}>
+              Add Event/News
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {hasEventsNewsError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
+                Unable to load events and news.
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-3"
+                  onClick={() => eventsNewsQuery.refetch()}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : eventsNewsQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading events and news...</p>
+            ) : eventNewsList.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No event/news items added yet.</p>
+            ) : (
+              eventNewsList.map((item) => (
+                <div key={item.id} className="rounded-md border p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
+                      {formatDisplayDate(item.date)}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{item.title}</p>
+                        <Badge variant="outline">{item.type === "event" ? "Event" : "News"}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                      <p className="text-xs text-muted-foreground">{item.location}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" onClick={() => openEditEventNews(item)}>
+                        Edit
+                      </Button>
+                      <Button type="button" variant="destructive" onClick={() => setEventNewsToDelete(item)}>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Footer</CardTitle>
+              <CardDescription>
+                Create one footer for the landing page. After creation, only edit is allowed.
+              </CardDescription>
+            </div>
+            {footerQuery.isLoading ? null : !footerItem ? (
+              <Button type="button" onClick={openCreateFooter}>
+                Create Footer
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" onClick={() => openEditFooter(footerItem)}>
+                Edit
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {hasFooterError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
+                Unable to load footer.
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-3"
+                  onClick={() => footerQuery.refetch()}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : footerQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading footer...</p>
+            ) : footerItem ? (
+              <div className="rounded-md border p-3">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{footerItem.footer}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No footer created yet.</p>
+            )}
+
+            {footerEditorOpen && (
+              <div className="rounded-md border p-3 space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="footer-input">Footer</Label>
+                  <Textarea
+                    id="footer-input"
+                    value={footerForm}
+                    onChange={(event) => setFooterForm(event.target.value)}
+                    rows={4}
+                    placeholder="Enter footer text"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={cancelFooterEditor}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void submitFooter()}
+                    disabled={createFooterMutation.isPending || updateFooterMutation.isPending}
+                  >
+                    {createFooterMutation.isPending || updateFooterMutation.isPending
+                      ? "Saving..."
+                      : isEditingFooter
+                        ? "Update Footer"
+                        : "Save Footer"}
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -1166,6 +1466,113 @@ export default function AdminSiteSettingsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={eventNewsModalOpen} onOpenChange={(next) => !busyMutations && setEventNewsModalOpen(next)}>
+        <DialogContent onInteractOutside={(event) => busyMutations && event.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>
+              {editingEventNews ? "Edit Event/News" : eventNewsForm.type === "event" ? "Add Event" : "Add News"}
+            </DialogTitle>
+            <DialogDescription>Maintain public events and news cards for the landing page.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Type</Label>
+              <Select
+                value={eventNewsForm.type}
+                onValueChange={(value) => {
+                  if (value === "event" || value === "news") {
+                    setEventNewsForm((prev) => ({ ...prev, type: value }));
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="event">Event</SelectItem>
+                  <SelectItem value="news">News</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={eventNewsForm.date}
+                onChange={(event) =>
+                  setEventNewsForm((prev) => ({ ...prev, date: event.target.value }))
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Title</Label>
+              <Input
+                value={eventNewsForm.title}
+                onChange={(event) =>
+                  setEventNewsForm((prev) => ({ ...prev, title: event.target.value }))
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Location</Label>
+              <Input
+                value={eventNewsForm.location}
+                onChange={(event) =>
+                  setEventNewsForm((prev) => ({ ...prev, location: event.target.value }))
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Description</Label>
+              <Textarea
+                value={eventNewsForm.description}
+                onChange={(event) =>
+                  setEventNewsForm((prev) => ({ ...prev, description: event.target.value }))
+                }
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEventNewsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={() => void submitEventNews()}>
+                {editingEventNews ? "Update" : "Create"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={Boolean(eventNewsToDelete)} onOpenChange={(open) => !open && setEventNewsToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete event/news item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete
+              {" "}
+              {eventNewsToDelete?.title ? `"${eventNewsToDelete.title}"` : "this item"}.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteEventNewsMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteEventNewsMutation.isPending}
+              onClick={confirmDeleteEventNews}
+            >
+              {deleteEventNewsMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

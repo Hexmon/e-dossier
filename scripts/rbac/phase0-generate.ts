@@ -468,7 +468,7 @@ function buildPageInventory(): {
 
     const segments = route.split('/').filter(Boolean);
     const category = segments[1] ?? 'dashboard';
-    const isAdminBaseline = route.startsWith('/dashboard/genmgmt') || route === '/dashboard/manage-marks';
+    const isAdminBaseline = route.startsWith('/dashboard/genmgmt');
 
     return {
       route,

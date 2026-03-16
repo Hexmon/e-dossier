@@ -57,12 +57,12 @@ const PlatoonsSection = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="mb-4 overflow-hidden rounded border">
+                  <div className="mb-4 overflow-hidden rounded border bg-muted/20">
                     <SafeImage
                       src={platoon.imageUrl}
                       fallbackSrc="/images/commander-placeholder.jpg"
                       alt={`${platoon.name} platoon`}
-                      className="h-36 w-full object-cover"
+                      className="h-[200px] w-full object-contain sm:h-[220px] lg:h-[240px] xl:h-[260px]"
                     />
                   </div>
                   <p className="text-muted-foreground mb-4 leading-relaxed">

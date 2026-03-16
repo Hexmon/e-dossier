@@ -59,13 +59,16 @@ describe('OC OLQ template routes (read-only)', () => {
             courseId,
             includeSubtitles: true,
             isActive: true,
-            fallbackToLegacyGlobal: true,
+            fallbackToLegacyGlobal: false,
         });
     });
 
     it('GET subtitles resolves by OC course template', async () => {
         (olqQueries.getCourseTemplateSubtitles as any).mockResolvedValueOnce([
             { id: subtitleId, categoryId, subtitle: 'Initiative', maxMarks: 20 },
+        ]);
+        (olqQueries.getCourseTemplateCategories as any).mockResolvedValueOnce([
+            { id: categoryId, code: 'LDR', title: 'Leadership' },
         ]);
 
         const req = makeJsonRequest({
@@ -81,7 +84,13 @@ describe('OC OLQ template routes (read-only)', () => {
             courseId,
             categoryId,
             isActive: true,
-            fallbackToLegacyGlobal: true,
+            fallbackToLegacyGlobal: false,
+        });
+        expect(olqQueries.getCourseTemplateCategories).toHaveBeenCalledWith({
+            courseId,
+            includeSubtitles: false,
+            isActive: true,
+            fallbackToLegacyGlobal: false,
         });
     });
 

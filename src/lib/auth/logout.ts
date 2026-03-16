@@ -181,6 +181,12 @@ function redirectToLogin(url: string, router?: RouterLike) {
   }
 
   if (router) {
+    try {
+      window.history.replaceState({}, "", url);
+    } catch {
+      // Browser API failures should not block logout.
+    }
+
     router.replace(url);
     return;
   }
@@ -225,6 +231,12 @@ export async function logoutAndRedirect(params: LogoutAndRedirectParams = {}): P
         window.localStorage?.removeItem("authToken");
       } catch {
         // Non-blocking local storage cleanup.
+      }
+
+      try {
+        clearGlobalQueryClient();
+      } catch {
+        // Non-blocking client state cleanup.
       }
     }
     store.dispatch(appLogoutReset());

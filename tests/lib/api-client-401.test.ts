@@ -33,12 +33,18 @@ describe("apiClient 401 handling", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
   let sessionStorageMock: SessionStorageMock;
   let assignMock: ReturnType<typeof vi.fn>;
+  let logoutAndRedirectMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.resetModules();
     fetchMock = vi.fn();
     sessionStorageMock = createSessionStorageMock();
     assignMock = vi.fn();
+    logoutAndRedirectMock = vi.fn().mockResolvedValue(undefined);
+
+    vi.doMock("@/lib/auth/logout", () => ({
+      logoutAndRedirect: logoutAndRedirectMock,
+    }));
 
     (globalThis as any).fetch = fetchMock;
     (globalThis as any).window = {
@@ -59,9 +65,7 @@ describe("apiClient 401 handling", () => {
   });
 
   it("stores returnUrl and redirects to /login?next after eligible 401", async () => {
-    fetchMock
-      .mockResolvedValueOnce(unauthorizedResponse())
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fetchMock.mockResolvedValueOnce(unauthorizedResponse());
 
     const { apiRequest } = await import("@/app/lib/apiClient");
 
@@ -72,15 +76,16 @@ describe("apiClient 401 handling", () => {
       })
     ).rejects.toMatchObject({ status: 401 });
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.dynamicImportSettled();
 
-    expect(sessionStorageMock.setItem).toHaveBeenCalledWith(
-      "ed_return_url",
-      "/dashboard/reports?tab=1"
-    );
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/v1/auth/logout");
-    expect(assignMock).toHaveBeenCalledWith("/login?next=%2Fdashboard%2Freports%3Ftab%3D1");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(logoutAndRedirectMock).toHaveBeenCalledWith({
+      reason: "unauthorized",
+      preserveNext: true,
+      showServerErrorToast: false,
+    });
+    expect(sessionStorageMock.setItem).not.toHaveBeenCalled();
+    expect(assignMock).not.toHaveBeenCalled();
   });
 
   it("does not trigger redirect flow for login endpoint 401", async () => {
@@ -96,7 +101,7 @@ describe("apiClient 401 handling", () => {
       })
     ).rejects.toMatchObject({ status: 401 });
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.dynamicImportSettled();
 
     expect(sessionStorageMock.setItem).not.toHaveBeenCalled();
     expect(assignMock).not.toHaveBeenCalled();
@@ -115,17 +120,16 @@ describe("apiClient 401 handling", () => {
       })
     ).rejects.toMatchObject({ status: 401 });
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.dynamicImportSettled();
 
     expect(sessionStorageMock.setItem).not.toHaveBeenCalled();
     expect(assignMock).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("prevents duplicate redirect/logout flow after the first 401", async () => {
+  it("continues to reject repeated eligible 401 responses while triggering logout handling", async () => {
     fetchMock
       .mockResolvedValueOnce(unauthorizedResponse())
-      .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(unauthorizedResponse());
 
     const { apiRequest } = await import("@/app/lib/apiClient");
@@ -137,7 +141,7 @@ describe("apiClient 401 handling", () => {
       })
     ).rejects.toMatchObject({ status: 401 });
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.dynamicImportSettled();
 
     await expect(
       apiRequest({
@@ -146,9 +150,9 @@ describe("apiClient 401 handling", () => {
       })
     ).rejects.toMatchObject({ status: 401 });
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.dynamicImportSettled();
 
-    expect(assignMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(logoutAndRedirectMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

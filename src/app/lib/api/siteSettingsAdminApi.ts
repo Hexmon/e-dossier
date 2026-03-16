@@ -54,6 +54,24 @@ export type SiteHistoryModel = {
   updatedAt?: string;
 };
 
+export type SiteEventNewsType = "event" | "news";
+
+export type SiteEventNewsModel = {
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+  location: string;
+  type: SiteEventNewsType;
+  isDeleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type SiteFooterModel = {
+  footer: string;
+};
+
 export type SiteSettingsUpdatePayload = Partial<{
   logoUrl: string | null;
   logoObjectKey: string | null;
@@ -197,4 +215,54 @@ export const siteSettingsAdminApi = {
 
   hardDeleteHistory: (id: string) =>
     api.delete<{ id: string }>(`/api/v1/admin/site-settings/history/${id}/hard`, { baseURL }),
+
+  listEventsNews: (params?: { sort?: "asc" | "desc"; type?: SiteEventNewsType }) =>
+    api.get<{ items: SiteEventNewsModel[] }>("/api/v1/admin/site-settings/events-news", {
+      baseURL,
+      query: params,
+    }),
+
+  getEventNews: (id: string) =>
+    api.get<{ item: SiteEventNewsModel }>(`/api/v1/admin/site-settings/events-news/${id}`, {
+      baseURL,
+    }),
+
+  createEventNews: (payload: Omit<SiteEventNewsModel, "id">) =>
+    api.post<{ item: SiteEventNewsModel }, typeof payload>(
+      "/api/v1/admin/site-settings/events-news",
+      payload,
+      { baseURL }
+    ),
+
+  updateEventNews: (id: string, payload: Partial<Omit<SiteEventNewsModel, "id">>) =>
+    api.put<{ item: SiteEventNewsModel }, typeof payload>(
+      `/api/v1/admin/site-settings/events-news/${id}`,
+      payload,
+      { baseURL }
+    ),
+
+  deleteEventNews: (id: string) =>
+    api.delete<{ item: SiteEventNewsModel }>(`/api/v1/admin/site-settings/events-news/${id}`, {
+      baseURL,
+    }),
+
+  hardDeleteEventNews: (id: string) =>
+    api.delete<{ id: string }>(`/api/v1/admin/site-settings/events-news/${id}/hard`, { baseURL }),
+
+  getFooter: () =>
+    api.get<{ item: SiteFooterModel | null }>("/api/v1/admin/site-settings/footer", { baseURL }),
+
+  createFooter: (payload: SiteFooterModel) =>
+    api.post<{ item: SiteFooterModel }, SiteFooterModel>(
+      "/api/v1/admin/site-settings/footer",
+      payload,
+      { baseURL }
+    ),
+
+  updateFooter: (payload: SiteFooterModel) =>
+    api.patch<{ item: SiteFooterModel }, SiteFooterModel>(
+      "/api/v1/admin/site-settings/footer",
+      payload,
+      { baseURL }
+    ),
 };

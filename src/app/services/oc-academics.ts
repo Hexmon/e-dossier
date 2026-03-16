@@ -63,7 +63,7 @@ function determineBranchForSemester(semester: number, branch?: string | null): B
     return 'C';
 }
 
-function computeSemesterGpa(view: AcademicSemesterView, policy: AcademicGradingPolicy) {
+export function computeSemesterGpa(view: AcademicSemesterView, policy: AcademicGradingPolicy) {
     let totalCredits = 0;
     let totalWeighted = 0;
     let totalPoints = 0;
@@ -72,19 +72,23 @@ function computeSemesterGpa(view: AcademicSemesterView, policy: AcademicGradingP
     for (const subject of view.subjects ?? []) {
         if (subject.includeTheory) {
             const credits = Number(subject.theoryCredits ?? subject.subject?.defaultTheoryCredits ?? 0);
-            const points = marksToGradePointsWithPolicy(subject.theory?.totalMarks ?? 0, policy);
-            totalCredits += credits;
-            totalWeighted += credits * points;
-            totalPoints += points;
-            pointComponents += 1;
+            if (credits > 0) {
+                const points = marksToGradePointsWithPolicy(subject.theory?.totalMarks ?? 0, policy);
+                totalCredits += credits;
+                totalWeighted += credits * points;
+                totalPoints += points;
+                pointComponents += 1;
+            }
         }
         if (subject.includePractical) {
             const credits = Number(subject.practicalCredits ?? subject.subject?.defaultPracticalCredits ?? 0);
-            const points = marksToGradePointsWithPolicy(subject.practical?.totalMarks ?? 0, policy);
-            totalCredits += credits;
-            totalWeighted += credits * points;
-            totalPoints += points;
-            pointComponents += 1;
+            if (credits > 0) {
+                const points = marksToGradePointsWithPolicy(subject.practical?.totalMarks ?? 0, policy);
+                totalCredits += credits;
+                totalWeighted += credits * points;
+                totalPoints += points;
+                pointComponents += 1;
+            }
         }
     }
 

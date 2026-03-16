@@ -7,13 +7,9 @@ import { GET as getNextCourses } from "@/app/api/v1/admin/relegation/courses/rou
 import { POST as postPresign } from "@/app/api/v1/admin/relegation/presign/route";
 import { POST as postTransfer } from "@/app/api/v1/admin/relegation/transfer/route";
 
-import * as authz from "@/app/lib/authz";
 import * as relegationQueries from "@/app/db/queries/relegation";
+import * as relegationAuth from "@/app/lib/relegation-auth";
 import * as storage from "@/app/lib/storage";
-
-vi.mock("@/app/lib/authz", () => ({
-  requireAdmin: vi.fn(),
-}));
 
 vi.mock("@/app/db/queries/relegation", () => ({
   listRelegationOcOptions: vi.fn(async () => []),
@@ -43,6 +39,12 @@ vi.mock("@/app/db/queries/relegation", () => ({
   isImmediateNextCourseCode: vi.fn(),
 }));
 
+vi.mock("@/app/lib/relegation-auth", () => ({
+  getRelegationAccessContext: vi.fn(),
+  assertCanWriteSingle: vi.fn(),
+  assertCanPromoteBatch: vi.fn(),
+}));
+
 vi.mock("@/app/lib/storage", () => ({
   createPresignedUploadUrl: vi.fn(async () => "https://upload-url"),
   getPublicObjectUrl: vi.fn(() => "https://public-url"),
@@ -55,16 +57,22 @@ const transferPath = "/api/v1/admin/relegation/transfer";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(authz.requireAdmin).mockResolvedValue({
+  vi.mocked(relegationAuth.getRelegationAccessContext).mockResolvedValue({
     userId: "admin-1",
     roles: ["ADMIN"],
-    claims: {},
-  } as Awaited<ReturnType<typeof authz.requireAdmin>>);
+    isAdmin: true,
+    isPlatoonCommander: false,
+    canWriteSingle: true,
+    canPromoteBatch: true,
+    scopeType: null,
+    scopeId: null,
+    scopePlatoonId: null,
+  });
 });
 
 describe("Admin relegation APIs", () => {
   it("returns 401 when admin auth fails", async () => {
-    vi.mocked(authz.requireAdmin).mockRejectedValueOnce(
+    vi.mocked(relegationAuth.getRelegationAccessContext).mockRejectedValueOnce(
       new ApiError(401, "Unauthorized", "unauthorized")
     );
 
@@ -75,7 +83,7 @@ describe("Admin relegation APIs", () => {
   });
 
   it("returns 403 when admin auth is forbidden", async () => {
-    vi.mocked(authz.requireAdmin).mockRejectedValueOnce(
+    vi.mocked(relegationAuth.getRelegationAccessContext).mockRejectedValueOnce(
       new ApiError(403, "Forbidden", "forbidden")
     );
 
@@ -229,7 +237,8 @@ describe("Admin relegation APIs", () => {
         pdfObjectKey: "relegation/abc.pdf",
         pdfUrl: "https://public-url/relegation/abc.pdf",
       },
-      "admin-1"
+      "admin-1",
+      { scopePlatoonId: null }
     );
   });
 });

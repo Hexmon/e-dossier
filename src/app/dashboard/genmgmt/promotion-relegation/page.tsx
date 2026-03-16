@@ -22,6 +22,7 @@ export default function PromotionRelegationPage() {
             <BreadcrumbNav
               paths={[
                 { label: "Dashboard", href: "/dashboard" },
+                { label: "Admin Management", href: "/dashboard/genmgmt?tab=Gen%20Mgmt" },
                 { label: "Promotion / Relegation Management" },
               ]}
             />

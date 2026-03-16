@@ -62,6 +62,9 @@ function likeEscape(q: string) {
 type SemesterMarksRow = typeof ocSemesterMarks.$inferSelect;
 type TheoryPatch = Partial<TheoryMarksRecord>;
 type PracticalPatch = Partial<PracticalMarksRecord>;
+type MergeGradeOptions = {
+    autoComputeGrade?: boolean;
+};
 
 function toFiniteNumber(value: unknown): number {
     const num = Number(value ?? 0);
@@ -75,10 +78,12 @@ function toPositiveNumber(value: unknown): number {
 function mergeTheory(
     target: TheoryMarksRecord | null | undefined,
     policy: AcademicGradingPolicy,
-    patch?: TheoryPatch
+    patch?: TheoryPatch,
+    options: MergeGradeOptions = {}
 ) {
     if (!patch) return target ?? undefined;
     const next: TheoryMarksRecord = { ...(target ?? {}) };
+    const autoComputeGrade = options.autoComputeGrade !== false;
     let changed = false;
     for (const [key, value] of Object.entries(patch)) {
         if (value === undefined) continue;
@@ -87,7 +92,10 @@ function mergeTheory(
     }
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
-    if (!hasExplicitGrade && !hasExistingGrade) {
+    if (!hasExplicitGrade && !autoComputeGrade && hasExistingGrade) {
+        next.grade = undefined;
+        changed = true;
+    } else if (!hasExplicitGrade && autoComputeGrade && !hasExistingGrade) {
         // C# parity: each component contributes only when positive (Sign(x) == 1).
         const phaseTest1 = toPositiveNumber(next.phaseTest1Marks);
         const phaseTest2 = toPositiveNumber(next.phaseTest2Marks);
@@ -102,10 +110,12 @@ function mergeTheory(
 function mergePractical(
     target: PracticalMarksRecord | null | undefined,
     policy: AcademicGradingPolicy,
-    patch?: PracticalPatch
+    patch?: PracticalPatch,
+    options: MergeGradeOptions = {}
 ) {
     if (!patch) return target ?? undefined;
     const next: PracticalMarksRecord = { ...(target ?? {}) };
+    const autoComputeGrade = options.autoComputeGrade !== false;
     let changed = false;
     for (const [key, value] of Object.entries(patch)) {
         if (value === undefined) continue;
@@ -114,7 +124,10 @@ function mergePractical(
     }
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
-    if (!hasExplicitGrade && !hasExistingGrade) {
+    if (!hasExplicitGrade && !autoComputeGrade && hasExistingGrade) {
+        next.grade = undefined;
+        changed = true;
+    } else if (!hasExplicitGrade && autoComputeGrade && !hasExistingGrade) {
         // C# parity: practical marks use positive-only value for grade mapping.
         next.grade = marksToLetterGradeWithPolicy(toPositiveNumber(next.finalMarks), policy);
         changed = true;
@@ -227,9 +240,16 @@ export async function upsertSemesterSubjectMarks(ocId: string, semester: number,
             deletedAt: null,
         };
 
-        const nextTheory = mergeTheory(base.theory, policy, input.theory);
+        const hasTheoryCredits = toPositiveNumber(input.meta?.theoryCredits) > 0;
+        const hasPracticalCredits = toPositiveNumber(input.meta?.practicalCredits) > 0;
+
+        const nextTheory = mergeTheory(base.theory, policy, input.theory, {
+            autoComputeGrade: hasTheoryCredits,
+        });
         if (nextTheory) base.theory = nextTheory;
-        const nextPractical = mergePractical(base.practical, policy, input.practical);
+        const nextPractical = mergePractical(base.practical, policy, input.practical, {
+            autoComputeGrade: hasPracticalCredits,
+        });
         if (nextPractical) base.practical = nextPractical;
 
         if (idx >= 0) {

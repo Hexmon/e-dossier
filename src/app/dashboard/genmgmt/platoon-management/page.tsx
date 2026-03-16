@@ -20,6 +20,7 @@ import { usePlatoons } from "@/hooks/usePlatoons";
 import { getPlatoonCommanderHistory, type PlatoonCommanderHistoryItem } from "@/app/lib/api/platoonApi";
 import { toast } from "sonner";
 import { getToastMsg } from "@/lib/error-toast";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 import { applyOrgTemplate } from "@/app/lib/api/orgTemplateApi";
 
 export default function PlatoonManagementPage() {
@@ -62,7 +63,13 @@ export default function PlatoonManagementPage() {
         fetchPlatoons();
     }, [fetchPlatoons]);
 
-    const handleLogout = () => router.push("/login");
+    const handleLogout = () => {
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
+    };
 
     const handleAddOrEdit = async (data: PlatoonFormData) => {
         try {

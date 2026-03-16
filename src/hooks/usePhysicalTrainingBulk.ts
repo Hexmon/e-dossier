@@ -6,6 +6,11 @@ import {
     PTBulkGetResponse,
     PTBulkSaveRequest,
 } from '@/app/lib/api/physicalTrainingBulkApi';
+import {
+    buildAllPTBulkTaskDefinitions,
+    buildPTBulkInitialSelections,
+    type PTBulkTaskSelection,
+} from '@/components/physic-training/bulk/ptBulkScoreHelpers';
 
 export type PTBulkFilters = {
     courseId: string;
@@ -15,7 +20,7 @@ export type PTBulkFilters = {
     platoon: string;
 };
 
-export type PTScoreDraftValues = Record<string, Record<string, string>>;
+export type PTScoreDraftValues = Record<string, Record<string, PTBulkTaskSelection>>;
 export type PTMotivationDraftValues = Record<string, Record<string, string>>;
 export type PTClearSelections = Record<string, string[]>;
 
@@ -42,13 +47,11 @@ export function buildBulkPTSaveRequest({
 }: BuildRequestArgs): PTBulkSaveRequest | null {
     if (!filters.courseId || !filters.semester || !data) return null;
 
-    const initialScoreValue = new Map<string, number>();
+    const taskDefinitions = buildAllPTBulkTaskDefinitions(data.template.types);
+    const initialSelections = buildPTBulkInitialSelections(data.items, taskDefinitions);
     const initialMotivationValue = new Map<string, string>();
 
     for (const item of data.items) {
-        for (const score of item.scores) {
-            initialScoreValue.set(`${item.oc.id}:${score.ptTaskScoreId}`, score.marksScored);
-        }
         for (const value of item.motivationValues) {
             initialMotivationValue.set(`${item.oc.id}:${value.fieldId}`, normalizeText(value.value));
         }
@@ -60,17 +63,31 @@ export function buildBulkPTSaveRequest({
         const ocId = item.oc.id;
         const scoreUpsert: Array<{ ptTaskScoreId: string; marksScored: number }> = [];
         const motivationUpsert: Array<{ fieldId: string; value?: string | null }> = [];
+        const clearScores = new Set<string>();
 
         const scoreDraftForOc = scoreDraftValues[ocId] ?? {};
-        for (const [ptTaskScoreId, raw] of Object.entries(scoreDraftForOc)) {
-            const trimmed = raw.trim();
+        const clearTasksForOc = new Set(clearScoreIds[ocId] ?? []);
+
+        for (const [taskId, draft] of Object.entries(scoreDraftForOc)) {
+            if (clearTasksForOc.has(taskId)) continue;
+
+            const trimmed = draft.marks.trim();
             if (!trimmed) continue;
             const numeric = Number(trimmed);
             if (!Number.isFinite(numeric)) continue;
             const rounded = Math.trunc(numeric);
-            const initial = initialScoreValue.get(`${ocId}:${ptTaskScoreId}`);
-            if (initial !== undefined && initial === rounded) continue;
-            scoreUpsert.push({ ptTaskScoreId, marksScored: rounded });
+            const initial = initialSelections[ocId]?.[taskId];
+            if (initial?.selectedScoreId && initial.selectedScoreId !== draft.selectedScoreId) {
+                clearScores.add(initial.selectedScoreId);
+            }
+            if (
+                initial &&
+                initial.selectedScoreId === draft.selectedScoreId &&
+                Number(initial.marks) === rounded
+            ) {
+                continue;
+            }
+            scoreUpsert.push({ ptTaskScoreId: draft.selectedScoreId, marksScored: rounded });
         }
 
         const motivationDraftForOc = motivationDraftValues[ocId] ?? {};
@@ -82,10 +99,17 @@ export function buildBulkPTSaveRequest({
             motivationUpsert.push({ fieldId, value: trimmed });
         }
 
-        const clearScores = Array.from(new Set(clearScoreIds[ocId] ?? []));
-        const clearMotivation = Array.from(new Set(clearMotivationFieldIds[ocId] ?? []));
+        for (const taskId of clearTasksForOc) {
+            const initial = initialSelections[ocId]?.[taskId];
+            if (initial?.selectedScoreId) {
+                clearScores.add(initial.selectedScoreId);
+            }
+        }
 
-        if (!scoreUpsert.length && !motivationUpsert.length && !clearScores.length && !clearMotivation.length) {
+        const clearMotivation = Array.from(new Set(clearMotivationFieldIds[ocId] ?? []));
+        const clearScoreList = Array.from(clearScores);
+
+        if (!scoreUpsert.length && !motivationUpsert.length && !clearScoreList.length && !clearMotivation.length) {
             continue;
         }
 
@@ -93,7 +117,7 @@ export function buildBulkPTSaveRequest({
             ocId,
             scoresUpsert: scoreUpsert.length ? scoreUpsert : undefined,
             motivationUpsert: motivationUpsert.length ? motivationUpsert : undefined,
-            clearScoreIds: clearScores.length ? clearScores : undefined,
+            clearScoreIds: clearScoreList.length ? clearScoreList : undefined,
             clearMotivationFieldIds: clearMotivation.length ? clearMotivation : undefined,
         });
     }

@@ -47,5 +47,11 @@ jobs:
       - name: Validate action-map coverage
         run: pnpm run validate:action-map
 
+      - name: Validate API test coverage
+        run: pnpm run validate:api-tests
+
+      - name: Run test suite
+        run: pnpm test
+
       - name: Run verification pipeline
         run: pnpm run verify

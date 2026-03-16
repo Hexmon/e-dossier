@@ -152,12 +152,12 @@ describe('logoutAndRedirect orchestrator', () => {
     await logoutAndRedirect({ router, reason: 'manual' });
 
     expect(router.replace).toHaveBeenCalledWith('/login');
-    expect(clearQueryClientMock).not.toHaveBeenCalled();
+    expect(clearQueryClientMock).toHaveBeenCalledTimes(1);
     expect(storeMocks.persistorMock.flush).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(3100);
 
-    expect(clearQueryClientMock).toHaveBeenCalledTimes(1);
+    expect(clearQueryClientMock).toHaveBeenCalledTimes(2);
     expect(storeMocks.persistorMock.flush).toHaveBeenCalledTimes(1);
     expect(storeMocks.persistorMock.purge).toHaveBeenCalledTimes(1);
   });

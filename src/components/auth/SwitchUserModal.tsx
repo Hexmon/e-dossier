@@ -96,6 +96,32 @@ export default function SwitchUserModal({
     [appointment, hasAppointmentsData]
   );
 
+  const resetClientSessionState = async () => {
+    await queryClient.cancelQueries().catch(() => undefined);
+    queryClient.clear();
+
+    store.dispatch(appLogoutReset());
+    persistor.pause();
+    await persistor.flush().catch(() => undefined);
+    await persistor.purge().catch(() => undefined);
+    persistor.persist();
+
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("authToken");
+    }
+    clearReturnUrl();
+  };
+
+  const redirectToDashboard = () => {
+    onOpenChange(false);
+    if (typeof window !== "undefined") {
+      window.location.replace("/dashboard");
+      return;
+    }
+    router.replace("/dashboard");
+    router.refresh();
+  };
+
   useEffect(() => {
     if (!open) return;
     if (hasFetchedRef.current && !appointmentsFetchError) return;
@@ -199,17 +225,6 @@ export default function SwitchUserModal({
       await loginUser(payload);
       loginSucceeded = true;
 
-      // Reset client state only after the new auth cookie is in place.
-      queryClient.removeQueries({ queryKey: ["me"] });
-      queryClient.removeQueries({ queryKey: ["navigation", "me"] });
-      store.dispatch(appLogoutReset());
-      await persistor.flush().catch(() => undefined);
-
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem("authToken");
-      }
-      clearReturnUrl();
-
       const nextMe = await fetchMe();
       const nextIdentity: CurrentIdentity = {
         userId: nextMe.user?.id ?? null,
@@ -225,21 +240,12 @@ export default function SwitchUserModal({
         return;
       }
 
-      queryClient.setQueryData(["me"], nextMe);
-      await queryClient.invalidateQueries({ queryKey: ["me"] });
-      await queryClient.invalidateQueries({ queryKey: ["navigation", "me"] });
-
-      onOpenChange(false);
-      router.replace("/dashboard");
-      router.refresh();
-      toast.success("User switched successfully.");
+      await resetClientSessionState();
+      redirectToDashboard();
     } catch (err: unknown) {
       if (loginSucceeded) {
-        clearReturnUrl();
-        onOpenChange(false);
-        router.replace("/dashboard");
-        router.refresh();
-        toast.success("User switched. Refreshing dashboard...");
+        await resetClientSessionState();
+        redirectToDashboard();
         return;
       }
 

@@ -51,7 +51,6 @@ const EXTRA_RBAC_ACTIONS = [
 const MANAGE_MARKS_ACTION_ALLOWLIST = new Set(
   API_ACTION_MAP.filter(
     (entry) =>
-      entry.path === '/api/v1/oc/academics/bulk' ||
       entry.path === '/api/v1/admin/courses' ||
       entry.path === '/api/v1/admin/courses/:courseId/offerings' ||
       entry.path === '/api/v1/admin/courses/:courseId/offerings/assign' ||
@@ -94,7 +93,7 @@ const MODULE_PREFIX_HINTS: Array<{ pattern: RegExp; prefixes: string[] }> = [
   { pattern: /FINAL PERFORMANCE/, prefixes: ['page:dashboard:milmgmt:final-performance', 'oc:fpr'] },
   { pattern: /OVERALL ASSESSMENT|OVERALL PERFORMANCE/, prefixes: ['page:dashboard:milmgmt:overall-assessment'] },
   { pattern: /LVE\/HIKE\/DETENTION|LEAVE\/HIKE\/DETENTION/, prefixes: ['oc:recording-leave-hike-detention', 'page:dashboard:milmgmt:leave-record'] },
-  { pattern: /INITIAL INTERVIEW|INTERVIEW SHEET/, prefixes: ['oc:interviews', 'page:dashboard:milmgmt:interview-term'] },
+  { pattern: /INITIAL INTERVIEW|INTERVIEW SHEET/, prefixes: ['oc:interviews', 'page:dashboard:milmgmt:interview-term', 'page:dashboard:milmgmt:interviews'] },
   { pattern: /COUNSELLING/, prefixes: ['oc:counselling', 'page:dashboard:milmgmt:counselling'] },
   { pattern: /PERFORMANCE GRAPH/, prefixes: ['page:dashboard:milmgmt:performance-graph'] },
 ];

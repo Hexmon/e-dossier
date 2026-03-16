@@ -15,14 +15,14 @@ import { useMe } from "@/hooks/useMe";
 import { useUserAppointments } from "@/hooks/useUserAppointments";
 import { ocTabs } from "@/config/app.config";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
     Dialog,
@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { logoutAndRedirect } from "@/lib/auth/logout";
 
 export default function DisciplineRecordsManagementPage() {
     const router = useRouter();
@@ -63,8 +64,11 @@ export default function DisciplineRecordsManagementPage() {
     });
 
     const handleLogout = () => {
-        console.log("Logout clicked");
-        router.push("/login");
+      void logoutAndRedirect({
+        reason: "manual",
+        preserveNext: false,
+        router,
+      });
     };
 
     const handleEdit = (record: AdminDisciplineRow) => {
