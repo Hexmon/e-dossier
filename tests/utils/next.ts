@@ -44,6 +44,13 @@ export function makeJsonRequest(opts: MockJsonRequestOptions): any {
       const value = cookies[name];
       return value ? { name, value } : undefined;
     },
+    getAll(name?: string) {
+      const entries = Object.entries(cookies).map(([cookieName, value]) => ({
+        name: cookieName,
+        value,
+      }));
+      return name ? entries.filter((cookie) => cookie.name === name) : entries;
+    },
   };
 
   return {
@@ -57,4 +64,3 @@ export function makeJsonRequest(opts: MockJsonRequestOptions): any {
     },
   } as any;
 }
-

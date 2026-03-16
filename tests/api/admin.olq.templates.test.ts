@@ -4,7 +4,7 @@ import { GET as getCategories, POST as postCategories } from '@/app/api/v1/admin
 import { PATCH as patchCategoryById } from '@/app/api/v1/admin/olq/courses/[courseId]/categories/[categoryId]/route';
 import { GET as getSubtitles } from '@/app/api/v1/admin/olq/courses/[courseId]/subtitles/route';
 import { DELETE as deleteSubtitleById } from '@/app/api/v1/admin/olq/courses/[courseId]/subtitles/[subtitleId]/route';
-import { POST as postCopyTemplate } from '@/app/api/v1/admin/olq/courses/[targetCourseId]/copy/route';
+import { POST as postCopyTemplate } from '@/app/api/v1/admin/olq/courses/[courseId]/copy/route';
 import { ApiError } from '@/app/lib/http';
 import { makeJsonRequest, createRouteContext } from '../utils/next';
 
@@ -181,7 +181,7 @@ describe('Admin OLQ template APIs', () => {
         });
         const res = await postCopyTemplate(
             req as any,
-            createRouteContext({ targetCourseId }) as any
+            createRouteContext({ courseId: targetCourseId }) as any
         );
         const body = await res.json();
 
