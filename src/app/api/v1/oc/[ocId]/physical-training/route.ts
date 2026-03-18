@@ -16,6 +16,7 @@ import {
 } from '@/app/db/queries/physicalTrainingOc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { isFreeEntryPtAttemptCode } from '@/app/lib/physical-training-attempts';
 
 async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: string; marksScored: number }>) {
     const uniqueIds = Array.from(new Set(scores.map((s) => s.ptTaskScoreId)));
@@ -50,9 +51,10 @@ async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: s
     for (const item of scores) {
         const row = rowById.get(item.ptTaskScoreId);
         if (!row) continue;
-        if (item.marksScored > row.maxMarks) {
+        if (!isFreeEntryPtAttemptCode(row.attemptCode) && item.marksScored > row.maxMarks) {
             throw new ApiError(400, 'Marks exceed template max marks', 'marks_exceed_max', {
                 ptTaskScoreId: item.ptTaskScoreId,
+                attemptCode: row.attemptCode,
                 maxMarks: row.maxMarks,
                 marksScored: item.marksScored,
             });

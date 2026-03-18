@@ -51,7 +51,7 @@ export class ApiClientError extends Error {
 }
 
 export type ApiRequestOptions<B = unknown> = {
-    /** "GET" | "POST" | ... */
+    /** "GET" | "POST" |  */
     method: HttpMethod;
     /**
      * Endpoint can be absolute or relative; recommended: relative to same origin,

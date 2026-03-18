@@ -4,7 +4,7 @@ import { assertSemesterAllowed, resolveCourseWithSemesters } from '@/app/lib/rep
 import { buildPtAssessmentPreview } from '@/app/lib/reports/report-data';
 import { REPORT_TYPES } from '@/app/lib/reports/types';
 import { renderEncryptedPdf } from '@/app/lib/reports/pdf/pdf-engine';
-import { renderPtAssessmentTemplate } from '@/app/lib/reports/pdf/templates/pt-assessment';
+import { getPtAssessmentPdfPageSize, renderPtAssessmentTemplate } from '@/app/lib/reports/pdf/templates/pt-assessment';
 import { generateReportVersionId, sanitizePdfFileName } from '@/app/lib/reports/pdf/versioning';
 import { createReportDownloadVersion } from '@/app/db/queries/reportDownloadVersions';
 import { requireAuth } from '@/app/lib/authz';
@@ -25,16 +25,20 @@ async function POSTHandler(req: AuditNextRequest) {
     const preview = await buildPtAssessmentPreview(body);
     const versionId = generateReportVersionId();
     const generatedAt = new Date();
+    const ptTypeCodeForFileName = preview.selection.isAll
+      ? 'ALL'
+      : preview.sections[0]?.ptType.code ?? body.ptTypeId;
 
     const fileName = sanitizePdfFileName(
-      `pt-assessment-${preview.course.code}-sem-${body.semester}-${preview.ptType.code}-${versionId}.pdf`
+      `pt-assessment-${preview.course.code}-sem-${body.semester}-${ptTypeCodeForFileName}-${versionId}.pdf`
     );
+    const pdfPageSize = getPtAssessmentPdfPageSize(preview);
 
     const pdf = await renderEncryptedPdf(
       {
         password: body.password,
         title: 'Physical Assessment Training Report',
-        layout: 'portrait',
+        size: pdfPageSize,
       },
       (doc) => {
         renderPtAssessmentTemplate(doc, preview, {

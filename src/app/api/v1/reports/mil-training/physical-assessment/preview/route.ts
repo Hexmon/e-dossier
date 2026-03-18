@@ -23,6 +23,7 @@ async function GETHandler(req: AuditNextRequest) {
     assertSemesterAllowed(query.semester, courseMeta.allowedSemesters);
 
     const data = await buildPtAssessmentPreview(query);
+    const rowCount = data.sections.reduce((sum, section) => sum + section.rows.length, 0);
 
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
@@ -36,7 +37,7 @@ async function GETHandler(req: AuditNextRequest) {
         courseId: query.courseId,
         semester: query.semester,
         ptTypeId: query.ptTypeId,
-        count: data.rows.length,
+        count: rowCount,
       },
     });
 
