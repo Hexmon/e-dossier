@@ -121,23 +121,16 @@ export type SemesterGradePreview = {
   totalValidCreditsEarned: number;
 };
 
-export type PtAssessmentGradeCell = {
-  gradeCode: string;
-  scoreId: string | null;
-  maxMarks: number | null;
-};
-
-export type PtAssessmentAttempt = {
-  attemptId: string;
-  attemptCode: string;
-  grades: PtAssessmentGradeCell[];
-};
-
 export type PtAssessmentTask = {
   taskId: string;
   title: string;
   maxMarks: number;
-  attempts: PtAssessmentAttempt[];
+};
+
+export type PtAssessmentTaskCell = {
+  attemptCode: string | null;
+  gradeCode: string | null;
+  marks: number | null;
 };
 
 export type PtAssessmentRow = {
@@ -146,14 +139,11 @@ export type PtAssessmentRow = {
   tesNo: string;
   rank: string;
   name: string;
-  cells: Record<string, number | null>;
+  cells: Record<string, PtAssessmentTaskCell>;
   totalMarksScored: number;
 };
 
-export type PtAssessmentPreview = {
-  reportType: 'MIL_TRAINING_PHYSICAL_ASSESSMENT';
-  course: { id: string; code: string; title: string };
-  semester: number;
+export type PtAssessmentTypeSection = {
   ptType: {
     id: string;
     code: string;
@@ -161,6 +151,18 @@ export type PtAssessmentPreview = {
   };
   tasks: PtAssessmentTask[];
   rows: PtAssessmentRow[];
+};
+
+export type PtAssessmentPreview = {
+  reportType: 'MIL_TRAINING_PHYSICAL_ASSESSMENT';
+  course: { id: string; code: string; title: string };
+  semester: number;
+  selection: {
+    ptTypeId: string;
+    label: string;
+    isAll: boolean;
+  };
+  sections: PtAssessmentTypeSection[];
 };
 
 export type SemesterGradeDownloadRequest = {
