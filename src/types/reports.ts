@@ -244,13 +244,16 @@ export type CourseWisePerformancePreview = {
 };
 
 export type FinalResultSubjectColumn = {
-  key: string;
   subjectId: string;
   subjectCode: string;
   subjectName: string;
-  kind: 'L' | 'P';
-  credits: number;
+  branch: 'C' | 'E' | 'M';
   order: number;
+  components: Array<{
+    key: string;
+    kind: 'L' | 'P';
+    credits: number;
+  }>;
 };
 
 export type FinalResultGradeBand = {
@@ -263,6 +266,9 @@ export type FinalResultOcRow = {
   sNo: number;
   tesNo: string;
   name: string;
+  branchTag: 'C' | 'E' | 'M';
+  enrolmentNumber: string;
+  certSerialNo: string;
   previousCumulativePoints: number;
   previousCumulativeCredits: number;
   previousCumulativeCgpa: number | null;
@@ -297,7 +303,6 @@ export type FinalResultDownloadRequest = {
   courseId: string;
   semester: number;
   password: string;
-  identityRows?: FinalResultIdentityRow[];
   preparedBy?: string;
   checkedBy?: string;
 };

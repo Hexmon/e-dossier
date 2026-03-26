@@ -7,6 +7,7 @@ import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy
 import { getOcAcademicSemester, getOcAcademics } from '@/app/services/oc-academics';
 import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
 import { listOcPtScoresByOcIds } from '@/app/db/queries/physicalTrainingOc';
+import { getSiteSettingsOrDefault } from '@/app/db/queries/site-settings';
 import {
   getAllSemesterSourceMarks,
   getSemesterSourceScoresDetailed,
@@ -158,6 +159,18 @@ function resolvePracticalTotalMarks(
   return total > 0 ? total : null;
 }
 
+function semesterToRoman(semester: number): string {
+  const map: Record<number, string> = {
+    1: 'I',
+    2: 'II',
+    3: 'III',
+    4: 'IV',
+    5: 'V',
+    6: 'VI',
+  };
+  return map[semester] ?? String(semester);
+}
+
 function normalizeSubjectColumns(
   offerings: Awaited<ReturnType<typeof listCourseOfferings>>
 ): FinalResultSubjectColumn[] {
@@ -169,36 +182,63 @@ function normalizeSubjectColumns(
 
   let order = 0;
   const columns: FinalResultSubjectColumn[] = [];
+  const grouped = new Map<string, FinalResultSubjectColumn>();
   for (const offering of sorted) {
+    const groupingKey = offering.subject.id ?? offering.subject.code;
+    let column = grouped.get(groupingKey);
+
+    if (!column) {
+      column = {
+        subjectId: offering.subject.id,
+        subjectCode: offering.subject.code,
+        subjectName: offering.subject.name,
+        branch: (offering.subject.branch ?? 'C') as 'C' | 'E' | 'M',
+        order: order++,
+        components: [],
+      };
+      grouped.set(groupingKey, column);
+      columns.push(column);
+    }
+
     const theoryCredits = Number(offering.theoryCredits ?? offering.subject.defaultTheoryCredits ?? 0);
     const practicalCredits = Number(offering.practicalCredits ?? offering.subject.defaultPracticalCredits ?? 0);
 
     if (offering.includeTheory) {
-      columns.push({
+      column.components.push({
         key: `${offering.subject.id}:L`,
-        subjectId: offering.subject.id,
-        subjectCode: offering.subject.code,
-        subjectName: offering.subject.name,
         kind: 'L',
         credits: Number.isFinite(theoryCredits) ? theoryCredits : 0,
-        order: order++,
       });
     }
 
     if (offering.includePractical) {
-      columns.push({
+      column.components.push({
         key: `${offering.subject.id}:P`,
-        subjectId: offering.subject.id,
-        subjectCode: offering.subject.code,
-        subjectName: offering.subject.name,
         kind: 'P',
         credits: Number.isFinite(practicalCredits) ? practicalCredits : 0,
-        order: order++,
       });
     }
   }
 
   return columns;
+}
+
+function totalSubjectCredits(columns: FinalResultSubjectColumn[]) {
+  return columns.reduce(
+    (sum, column) => sum + column.components.reduce((componentSum, component) => componentSum + component.credits, 0),
+    0
+  );
+}
+
+function buildFinalResultEnrollmentNumber(heroTitle: string | null | undefined, courseCode: string, jnuEnrollmentNo: string | null | undefined) {
+  const prefix = String(heroTitle ?? '').trim() || 'MCEME';
+  const enrollment = String(jnuEnrollmentNo ?? '').trim();
+  if (!enrollment) return '';
+  return `${prefix}/${courseCode}/${enrollment}`;
+}
+
+function buildFinalResultCertSerialNo(courseCode: string, semester: number, branchTag: 'C' | 'E' | 'M', serial: number) {
+  return `${courseCode}/Sem-${semesterToRoman(semester)}(${branchTag})/${String(serial).padStart(2, '0')}`;
 }
 
 function computeSemesterSummary(
@@ -388,7 +428,7 @@ export async function buildFinalResultCompilationPreview(params: {
   courseId: string;
   semester: number;
 }): Promise<FinalResultCompilationPreview> {
-  const [course, offerings, ocRows, policy] = await Promise.all([
+  const [course, offerings, ocRows, policy, siteSettings] = await Promise.all([
     resolveCourse(params.courseId),
     listCourseOfferings(params.courseId, params.semester),
     listOCsBasic({
@@ -398,6 +438,7 @@ export async function buildFinalResultCompilationPreview(params: {
       sort: 'name_asc',
     }),
     getAcademicGradingPolicy(),
+    getSiteSettingsOrDefault(),
   ]);
 
   const subjectColumns = normalizeSubjectColumns(offerings);
@@ -410,10 +451,17 @@ export async function buildFinalResultCompilationPreview(params: {
   );
 
   const rows: FinalResultOcRow[] = [];
+  const branchSerials = new Map<'C' | 'E' | 'M', number>();
   for (const [index, item] of ocViews.entries()) {
     const { oc, views } = item;
     const viewBySemester = new Map(views.map((view) => [view.semester, view]));
     const selectedView = viewBySemester.get(params.semester);
+    const previousView = [...views]
+      .filter((view) => view.semester < params.semester)
+      .sort((left, right) => right.semester - left.semester)[0] ?? null;
+    const branchTag = selectedView?.branchTag ?? (params.semester <= 2 ? 'C' : oc.branch === 'M' ? 'M' : oc.branch === 'E' ? 'E' : 'C');
+    const nextBranchSerial = (branchSerials.get(branchTag) ?? 0) + 1;
+    branchSerials.set(branchTag, nextBranchSerial);
 
     const subjectGrades: Record<string, string | null> = {};
     const selectedSubjects = selectedView?.subjects ?? [];
@@ -422,17 +470,19 @@ export async function buildFinalResultCompilationPreview(params: {
 
     for (const column of subjectColumns) {
       const subject = selectedById.get(column.subjectId) ?? selectedByCode.get(column.subjectCode);
-      if (!subject) {
-        subjectGrades[column.key] = null;
-        continue;
-      }
+      for (const component of column.components) {
+        if (!subject) {
+          subjectGrades[component.key] = null;
+          continue;
+        }
 
-      if (column.kind === 'L') {
-        const marks = resolveTheoryTotalMarks(subject.theory);
-        subjectGrades[column.key] = resolveStoredOrDerivedLetterGrade(subject.theory?.grade ?? null, marks, policy);
-      } else {
-        const marks = resolvePracticalTotalMarks(subject.practical);
-        subjectGrades[column.key] = resolveStoredOrDerivedLetterGrade(subject.practical?.grade ?? null, marks, policy);
+        if (component.kind === 'L') {
+          const marks = resolveTheoryTotalMarks(subject.theory);
+          subjectGrades[component.key] = resolveStoredOrDerivedLetterGrade(subject.theory?.grade ?? null, marks, policy);
+        } else {
+          const marks = resolvePracticalTotalMarks(subject.practical);
+          subjectGrades[component.key] = resolveStoredOrDerivedLetterGrade(subject.practical?.grade ?? null, marks, policy);
+        }
       }
     }
 
@@ -455,7 +505,7 @@ export async function buildFinalResultCompilationPreview(params: {
     const selectedSummary = selectedView
       ? computeSemesterSummary(selectedView, policy)
       : {
-          credits: subjectColumns.reduce((sum, item) => sum + item.credits, 0),
+          credits: totalSubjectCredits(subjectColumns),
           points: 0,
           sgpa: null as number | null,
         };
@@ -465,15 +515,18 @@ export async function buildFinalResultCompilationPreview(params: {
       sNo: index + 1,
       tesNo: oc.ocNo,
       name: oc.name,
+      branchTag,
+      enrolmentNumber: buildFinalResultEnrollmentNumber(siteSettings.heroTitle, course.code, oc.jnuEnrollmentNo),
+      certSerialNo: buildFinalResultCertSerialNo(course.code, params.semester, branchTag, nextBranchSerial),
       previousCumulativePoints: Math.round(previousPoints),
       previousCumulativeCredits: previousCredits,
-      previousCumulativeCgpa: previousCredits > 0 ? previousPoints / previousCredits : null,
+      previousCumulativeCgpa: previousView?.cgpa ?? (previousCredits > 0 ? previousPoints / previousCredits : null),
       semesterPoints: Math.round(selectedSummary.points),
       semesterCredits: selectedSummary.credits,
-      semesterSgpa: selectedSummary.sgpa,
+      semesterSgpa: selectedView?.sgpa ?? selectedSummary.sgpa,
       uptoSemesterPoints: Math.round(uptoPoints),
       uptoSemesterCredits: uptoCredits,
-      uptoSemesterCgpa: uptoCredits > 0 ? uptoPoints / uptoCredits : null,
+      uptoSemesterCgpa: selectedView?.cgpa ?? (uptoCredits > 0 ? uptoPoints / uptoCredits : null),
       subjectGrades,
     });
   }
@@ -485,7 +538,7 @@ export async function buildFinalResultCompilationPreview(params: {
     subjectColumns,
     rows,
     gradeBands: FINAL_RESULT_GRADE_BANDS,
-    semesterCreditsTotal: subjectColumns.reduce((sum, item) => sum + item.credits, 0),
+    semesterCreditsTotal: totalSubjectCredits(subjectColumns),
     previousSemesterCreditsReference: Math.max(0, ...rows.map((row) => row.previousCumulativeCredits)),
     uptoSemesterCreditsReference: Math.max(0, ...rows.map((row) => row.uptoSemesterCredits)),
   };

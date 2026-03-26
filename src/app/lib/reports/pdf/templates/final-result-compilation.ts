@@ -2,28 +2,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FinalResultCompilationPreview } from '@/types/reports';
 
-type IdentityRow = {
-  enrolmentNumber: string;
-  certSerialNo: string;
-};
-
 type ReportRenderMeta = {
   versionId: string;
   generatedAt: Date;
   preparedBy: string;
   checkedBy: string;
-  identityByOcId: Record<string, IdentityRow>;
 };
 
-const PAGE_MARGIN = 28;
-const FIRST_PAGE_TABLE_START_Y = 116;
-const CONTINUATION_TABLE_START_Y = 34;
-const TABLE_HEADER_HEIGHT = 78;
-const CREDITS_ROW_HEIGHT = 16;
-const DATA_ROW_HEIGHT = 22;
-const PAGE_META_HEIGHT = 24;
-const SIGNATURE_BLOCK_HEIGHT = 72;
-const SIGNATURE_GAP_FROM_TABLE = 24;
+const PAGE_MARGIN = 20;
+const FIRST_PAGE_TABLE_START_Y = 104;
+const CONTINUATION_TABLE_START_Y = 22;
+const HEADER_TITLE_HEIGHT = 54;
+const HEADER_LABEL_HEIGHT = 14;
+const HEADER_CREDITS_HEIGHT = 14;
+const DATA_ROW_HEIGHT = 18;
+const FOOTER_HEIGHT = 82;
 
 function semesterToRoman(semester: number): string {
   const map: Record<number, string> = {
@@ -47,6 +40,14 @@ function semesterWord(semester: number): string {
     6: 'SIX',
   };
   return map[semester] ?? String(semester);
+}
+
+function resolveReportBranchTag(data: FinalResultCompilationPreview): 'C' | 'E' | 'M' {
+  const unique = Array.from(new Set(data.rows.map((row) => row.branchTag).filter(Boolean)));
+  if (unique.length === 1 && (unique[0] === 'C' || unique[0] === 'E' || unique[0] === 'M')) {
+    return unique[0];
+  }
+  return data.rows[0]?.branchTag ?? 'C';
 }
 
 function resolveImagePath(candidates: string[]) {
@@ -80,7 +81,6 @@ function textInBox(
     height: Math.max(0, height - 4),
     align: opts.align ?? 'center',
     lineBreak: true,
-    ellipsis: true,
   });
 }
 
@@ -104,7 +104,6 @@ function textVerticalCenter(
     width: Math.max(0, height - 4),
     align: 'center',
     lineBreak: false,
-    ellipsis: true,
   });
   doc.restore();
 }
@@ -113,6 +112,7 @@ function drawInstitutionHeader(doc: PDFKit.PDFDocument, data: FinalResultCompila
   const contentWidth = doc.page.width - PAGE_MARGIN * 2;
   const semRoman = semesterToRoman(data.semester);
   const semWord = semesterWord(data.semester);
+  const branchTag = resolveReportBranchTag(data);
 
   const leftLogo = resolveImagePath([
     'public/images/army_logo.jpeg',
@@ -143,7 +143,7 @@ function drawInstitutionHeader(doc: PDFKit.PDFDocument, data: FinalResultCompila
     underline: true,
   });
   doc.font('Helvetica-Bold').fontSize(12).text(
-    `SEMESTER-${semRoman} (${semWord}) RESULT OF COURSE SER NO ${data.course.code}`,
+    `SEMESTER-${semRoman} (${semWord}) RESULT OF COURSE SER NO ${data.course.code}(${branchTag})`,
     PAGE_MARGIN,
     58,
     {
@@ -154,29 +154,7 @@ function drawInstitutionHeader(doc: PDFKit.PDFDocument, data: FinalResultCompila
   );
 }
 
-function drawPageMeta(
-  doc: PDFKit.PDFDocument,
-  meta: ReportRenderMeta,
-  pageIndex: number,
-  totalPages: number
-) {
-  const y = doc.page.height - PAGE_MARGIN - PAGE_META_HEIGHT + 4;
-  const contentWidth = doc.page.width - PAGE_MARGIN * 2;
-  doc.font('Helvetica').fontSize(7.4).text(
-    `Prepared by: ${meta.preparedBy}    Checked by: ${meta.checkedBy}`,
-    PAGE_MARGIN,
-    y,
-    { width: contentWidth, align: 'left', lineBreak: false }
-  );
-  doc.text(
-    `Version: ${meta.versionId}    Generated: ${meta.generatedAt.toISOString().slice(0, 10)}    Page ${pageIndex + 1}/${totalPages}`,
-    PAGE_MARGIN,
-    y,
-    { width: contentWidth, align: 'right', lineBreak: false }
-  );
-}
-
-function drawSignatureBlock(doc: PDFKit.PDFDocument, startY: number) {
+function drawFooter(doc: PDFKit.PDFDocument, startY: number, meta: ReportRenderMeta) {
   const contentWidth = doc.page.width - PAGE_MARGIN * 2;
   const sectionWidth = contentWidth / 6;
   const labels = [
@@ -188,10 +166,15 @@ function drawSignatureBlock(doc: PDFKit.PDFDocument, startY: number) {
     '(Comdt, MCEME)',
   ];
 
+  doc.font('Helvetica').fontSize(8);
+  doc.text(`Prepared by : ${meta.preparedBy}`, PAGE_MARGIN, startY);
+  doc.text(`Checked by : ${meta.checkedBy}`, PAGE_MARGIN, startY + 13);
+
+  const signatureY = startY + 42;
   for (let i = 0; i < labels.length; i += 1) {
     const x = PAGE_MARGIN + i * sectionWidth;
-    drawLine(doc, x + 8, startY, x + sectionWidth - 8, startY);
-    doc.font('Helvetica').fontSize(8).text(labels[i] ?? '', x, startY + 5, {
+    drawLine(doc, x + 8, signatureY, x + sectionWidth - 8, signatureY);
+    doc.text(labels[i] ?? '', x, signatureY + 5, {
       width: sectionWidth,
       align: 'center',
       lineBreak: false,
@@ -199,21 +182,33 @@ function drawSignatureBlock(doc: PDFKit.PDFDocument, startY: number) {
   }
 }
 
-function buildColumnWidths(doc: PDFKit.PDFDocument, subjectColumnsCount: number) {
+function flattenSubjectComponents(data: FinalResultCompilationPreview) {
+  return data.subjectColumns.flatMap((column) =>
+    column.components.map((component) => ({
+      ...component,
+      subjectCode: column.subjectCode,
+      subjectName: column.subjectName,
+      groupSize: column.components.length,
+    }))
+  );
+}
+
+function buildColumnWidths(doc: PDFKit.PDFDocument, data: FinalResultCompilationPreview) {
   const contentWidth = doc.page.width - PAGE_MARGIN * 2;
+  const componentCount = flattenSubjectComponents(data).length;
 
   const base = {
     serNo: 28,
-    tesNo: 40,
+    tesNo: 42,
     name: 98,
-    enrolmentNo: 92,
-    certNo: 82,
-    prevPoints: 40,
-    prevCgpa: 40,
-    semPoints: 40,
-    semSgpa: 40,
-    uptoPoints: 40,
-    uptoCgpa: 40,
+    enrolmentNo: 112,
+    certNo: 92,
+    prevPoints: 38,
+    prevCgpa: 38,
+    semPoints: 38,
+    semSgpa: 38,
+    uptoPoints: 38,
+    uptoCgpa: 38,
   };
 
   const fixedSum =
@@ -230,13 +225,13 @@ function buildColumnWidths(doc: PDFKit.PDFDocument, subjectColumnsCount: number)
     base.uptoCgpa;
 
   const remaining = Math.max(0, contentWidth - fixedSum);
-  const perSubject = subjectColumnsCount > 0 ? Math.max(20, Math.floor(remaining / subjectColumnsCount)) : 0;
-  const consumed = fixedSum + perSubject * subjectColumnsCount;
+  const perSubjectComponent = componentCount > 0 ? Math.max(20, Math.floor(remaining / componentCount)) : 0;
+  const consumed = fixedSum + perSubjectComponent * componentCount;
   const correction = contentWidth - consumed;
 
   return {
     ...base,
-    subject: perSubject,
+    subjectComponent: perSubjectComponent,
     correction,
   };
 }
@@ -249,18 +244,13 @@ function formatCgpa(value: number | null | undefined): string {
 function drawTablePage(
   doc: PDFKit.PDFDocument,
   data: FinalResultCompilationPreview,
-  meta: ReportRenderMeta,
   rows: FinalResultCompilationPreview['rows'],
   y0: number
 ) {
-  const widths = buildColumnWidths(doc, data.subjectColumns.length);
+  const widths = buildColumnWidths(doc, data);
   const previousSemesterLabel = data.semester > 1 ? String(data.semester - 1) : '0';
   const x0 = PAGE_MARGIN;
-  const tableWidth = doc.page.width - PAGE_MARGIN * 2;
-  const tableHeight = TABLE_HEADER_HEIGHT + CREDITS_ROW_HEIGHT + rows.length * DATA_ROW_HEIGHT;
-  const tableHeaderBottomY = y0 + TABLE_HEADER_HEIGHT;
-  const creditsBottomY = tableHeaderBottomY + CREDITS_ROW_HEIGHT;
-
+  const componentColumns = flattenSubjectComponents(data);
   const columnWidths: number[] = [
     widths.serNo,
     widths.tesNo,
@@ -269,141 +259,215 @@ function drawTablePage(
     widths.certNo,
     widths.prevPoints,
     widths.prevCgpa,
-    ...data.subjectColumns.map(() => widths.subject),
+    ...componentColumns.map(() => widths.subjectComponent),
     widths.semPoints,
     widths.semSgpa,
     widths.uptoPoints,
     widths.uptoCgpa + widths.correction,
   ];
-
   const xBoundaries = [x0];
-  for (const width of columnWidths) xBoundaries.push(xBoundaries[xBoundaries.length - 1] + width);
+  for (const width of columnWidths) {
+    xBoundaries.push(xBoundaries[xBoundaries.length - 1] + width);
+  }
+
+  const totalHeaderHeight = HEADER_TITLE_HEIGHT + HEADER_LABEL_HEIGHT + HEADER_CREDITS_HEIGHT;
+  const tableWidth = doc.page.width - PAGE_MARGIN * 2;
+  const tableHeight = totalHeaderHeight + rows.length * DATA_ROW_HEIGHT;
+  const labelStartY = y0 + HEADER_TITLE_HEIGHT;
+  const creditsStartY = labelStartY + HEADER_LABEL_HEIGHT;
+  const bodyStartY = y0 + totalHeaderHeight;
+  const previousStartIndex = 5;
+  const subjectStartIndex = 7;
+  const tailStartIndex = subjectStartIndex + componentColumns.length;
+  const innerDividerIndices = new Set<number>([
+    previousStartIndex + 1,
+    tailStartIndex + 1,
+    tailStartIndex + 3,
+  ]);
+
+  let subjectOffset = 0;
+  for (const subjectColumn of data.subjectColumns) {
+    for (let componentIndex = 1; componentIndex < subjectColumn.components.length; componentIndex += 1) {
+      innerDividerIndices.add(subjectStartIndex + subjectOffset + componentIndex);
+    }
+    subjectOffset += subjectColumn.components.length;
+  }
 
   drawRect(doc, x0, y0, tableWidth, tableHeight);
   for (let i = 1; i < xBoundaries.length - 1; i += 1) {
     const x = xBoundaries[i] ?? x0;
-    drawLine(doc, x, y0, x, y0 + tableHeight);
+    drawLine(doc, x, innerDividerIndices.has(i) ? labelStartY : y0, x, y0 + tableHeight);
   }
 
-  drawLine(doc, x0, tableHeaderBottomY, x0 + tableWidth, tableHeaderBottomY);
-  drawLine(doc, x0, creditsBottomY, x0 + tableWidth, creditsBottomY);
+  drawLine(doc, x0, labelStartY, x0 + tableWidth, labelStartY);
+  drawLine(doc, x0, creditsStartY, x0 + tableWidth, creditsStartY);
+  drawLine(doc, x0, bodyStartY, x0 + tableWidth, bodyStartY);
+
   for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
-    const y = creditsBottomY + rowIndex * DATA_ROW_HEIGHT;
+    const y = bodyStartY + rowIndex * DATA_ROW_HEIGHT;
     drawLine(doc, x0, y, x0 + tableWidth, y);
   }
 
-  const fixedHeaders = [
-    'Ser No',
-    'TES No',
-    'Name',
-    'Enrolment Number',
-    'Cert Ser No',
-    `Upto Semester ${previousSemesterLabel}\nCumulative Grade Point\nAverage (CGPA)\nPoints`,
-    `Upto Semester ${previousSemesterLabel}\nCumulative Grade Point\nAverage (CGPA)`,
-  ];
-
+  const fixedHeaders = ['Ser No', 'TES No', 'Name', 'Enrollment Number', 'Cert Ser No'];
   for (let i = 0; i < fixedHeaders.length; i += 1) {
-    textInBox(doc, fixedHeaders[i] ?? '', xBoundaries[i]!, y0, columnWidths[i]!, TABLE_HEADER_HEIGHT, {
+    textInBox(doc, fixedHeaders[i] ?? '', xBoundaries[i]!, y0, columnWidths[i]!, totalHeaderHeight, {
       bold: true,
-      size: 7.6,
+      size: 7.1,
     });
   }
 
-  const subjectStartIndex = fixedHeaders.length;
-  for (let i = 0; i < data.subjectColumns.length; i += 1) {
-    const subject = data.subjectColumns[i]!;
-    const label = `${subject.subjectCode}\n${subject.subjectName}`;
-    textVerticalCenter(
-      doc,
-      label,
-      xBoundaries[subjectStartIndex + i]!,
-      y0,
-      columnWidths[subjectStartIndex + i]!,
-      TABLE_HEADER_HEIGHT,
-      { bold: true, size: 7.1 }
-    );
-  }
-
-  const tailHeaders = [
-    `Semester ${data.semester}\nSemester Grade Point\nAverage (SGPA)\nPoints`,
-    `Semester ${data.semester}\nSemester Grade Point\nAverage (SGPA)`,
-    `Upto Semester ${data.semester}\nCumulative Grade Point\nAverage (CGPA)\nPoints`,
-    `Upto Semester ${data.semester}\nCumulative Grade Point\nAverage (CGPA)`,
-  ];
-  for (let i = 0; i < tailHeaders.length; i += 1) {
-    const idx = subjectStartIndex + data.subjectColumns.length + i;
-    textInBox(doc, tailHeaders[i] ?? '', xBoundaries[idx]!, y0, columnWidths[idx]!, TABLE_HEADER_HEIGHT, {
-      bold: true,
-      size: 7.3,
-    });
-  }
-
-  textInBox(doc, 'Credits =====>', xBoundaries[2]!, tableHeaderBottomY, columnWidths[2]!, CREDITS_ROW_HEIGHT, {
-    align: 'left',
+  textInBox(
+    doc,
+    `Upto Semester ${previousSemesterLabel}\nCumulative Grade Point\nAverage (CGPA)`,
+    xBoundaries[previousStartIndex]!,
+    y0,
+    columnWidths[previousStartIndex]! + columnWidths[previousStartIndex + 1]!,
+    HEADER_TITLE_HEIGHT,
+    { bold: true, size: 6.7 }
+  );
+  textInBox(doc, 'Points', xBoundaries[previousStartIndex]!, labelStartY, columnWidths[previousStartIndex]!, HEADER_LABEL_HEIGHT, {
     bold: true,
-    size: 7.2,
+    size: 6.5,
   });
-  for (let i = 0; i < data.subjectColumns.length; i += 1) {
-    const idx = subjectStartIndex + i;
-    const col = data.subjectColumns[i]!;
-    textInBox(
-      doc,
-      `${col.kind}\n(${col.credits})`,
-      xBoundaries[idx]!,
-      tableHeaderBottomY,
-      columnWidths[idx]!,
-      CREDITS_ROW_HEIGHT,
-      { bold: true, size: 6.8 }
-    );
+  textInBox(
+    doc,
+    '{CGPA}',
+    xBoundaries[previousStartIndex + 1]!,
+    labelStartY,
+    columnWidths[previousStartIndex + 1]!,
+    HEADER_LABEL_HEIGHT,
+    { bold: true, size: 6.5 }
+  );
+  textInBox(
+    doc,
+    `(${data.previousSemesterCreditsReference || '-'})`,
+    xBoundaries[previousStartIndex + 1]!,
+    creditsStartY,
+    columnWidths[previousStartIndex + 1]!,
+    HEADER_CREDITS_HEIGHT,
+    { bold: true, size: 6.2 }
+  );
+
+  let subjectCursor = xBoundaries[subjectStartIndex]!;
+  for (const subjectColumn of data.subjectColumns) {
+    const groupWidth = subjectColumn.components.length * widths.subjectComponent;
+    textVerticalCenter(doc, subjectColumn.subjectName.toUpperCase(), subjectCursor, y0, groupWidth, HEADER_TITLE_HEIGHT, {
+      bold: true,
+      size: 6.5,
+    });
+    for (const component of subjectColumn.components) {
+      textInBox(doc, `${component.kind}`, subjectCursor, labelStartY, widths.subjectComponent, HEADER_LABEL_HEIGHT, {
+        bold: true,
+        size: 6.5,
+      });
+      textInBox(doc, `(${component.credits})`, subjectCursor, creditsStartY, widths.subjectComponent, HEADER_CREDITS_HEIGHT, {
+        bold: true,
+        size: 6.2,
+      });
+      subjectCursor += widths.subjectComponent;
+    }
   }
-  const semPointsIdx = subjectStartIndex + data.subjectColumns.length;
+
   textInBox(
     doc,
-    `[SGPA]\n(${data.semesterCreditsTotal})`,
-    xBoundaries[semPointsIdx]!,
-    tableHeaderBottomY,
-    columnWidths[semPointsIdx]!,
-    CREDITS_ROW_HEIGHT,
-    { bold: true, size: 6.8 }
+    'Credits =====>',
+    xBoundaries[3]!,
+    creditsStartY,
+    xBoundaries[5]! - xBoundaries[3]!,
+    HEADER_CREDITS_HEIGHT,
+    { align: 'left', bold: true, size: 6.5 }
+  );
+
+  textInBox(
+    doc,
+    `Semester ${data.semester}\nSemester Grade Point\nAverage (SGPA)`,
+    xBoundaries[tailStartIndex]!,
+    y0,
+    columnWidths[tailStartIndex]! + columnWidths[tailStartIndex + 1]!,
+    HEADER_TITLE_HEIGHT,
+    { bold: true, size: 6.7 }
+  );
+  textInBox(doc, 'Points', xBoundaries[tailStartIndex]!, labelStartY, columnWidths[tailStartIndex]!, HEADER_LABEL_HEIGHT, {
+    bold: true,
+    size: 6.5,
+  });
+  textInBox(
+    doc,
+    '{SGPA}',
+    xBoundaries[tailStartIndex + 1]!,
+    labelStartY,
+    columnWidths[tailStartIndex + 1]!,
+    HEADER_LABEL_HEIGHT,
+    { bold: true, size: 6.5 }
   );
   textInBox(
     doc,
-    `[CGPA]\n(${data.uptoSemesterCreditsReference || '-'})`,
-    xBoundaries[semPointsIdx + 2]!,
-    tableHeaderBottomY,
-    columnWidths[semPointsIdx + 2]!,
-    CREDITS_ROW_HEIGHT,
-    { bold: true, size: 6.8 }
+    `(${data.semesterCreditsTotal || '-'})`,
+    xBoundaries[tailStartIndex + 1]!,
+    creditsStartY,
+    columnWidths[tailStartIndex + 1]!,
+    HEADER_CREDITS_HEIGHT,
+    { bold: true, size: 6.2 }
   );
 
-  rows.forEach((row, pageRowIndex) => {
-    const y = creditsBottomY + pageRowIndex * DATA_ROW_HEIGHT;
-    const identity = meta.identityByOcId[row.ocId];
+  textInBox(
+    doc,
+    `Upto Semester ${data.semester}\nCumulative Grade Point\nAverage (CGPA)`,
+    xBoundaries[tailStartIndex + 2]!,
+    y0,
+    columnWidths[tailStartIndex + 2]! + columnWidths[tailStartIndex + 3]!,
+    HEADER_TITLE_HEIGHT,
+    { bold: true, size: 6.7 }
+  );
+  textInBox(doc, 'Points', xBoundaries[tailStartIndex + 2]!, labelStartY, columnWidths[tailStartIndex + 2]!, HEADER_LABEL_HEIGHT, {
+    bold: true,
+    size: 6.5,
+  });
+  textInBox(
+    doc,
+    '{CGPA}',
+    xBoundaries[tailStartIndex + 3]!,
+    labelStartY,
+    columnWidths[tailStartIndex + 3]!,
+    HEADER_LABEL_HEIGHT,
+    { bold: true, size: 6.5 }
+  );
+  textInBox(
+    doc,
+    `(${data.uptoSemesterCreditsReference || '-'})`,
+    xBoundaries[tailStartIndex + 3]!,
+    creditsStartY,
+    columnWidths[tailStartIndex + 3]!,
+    HEADER_CREDITS_HEIGHT,
+    { bold: true, size: 6.2 }
+  );
 
+  rows.forEach((row, rowIndex) => {
+    const y = bodyStartY + rowIndex * DATA_ROW_HEIGHT;
     const fixedValues = [
       String(row.sNo),
       row.tesNo,
       row.name,
-      identity?.enrolmentNumber ?? '',
-      identity?.certSerialNo ?? '',
+      row.enrolmentNumber,
+      row.certSerialNo,
       String(row.previousCumulativePoints),
       formatCgpa(row.previousCumulativeCgpa),
     ];
+
     for (let i = 0; i < fixedValues.length; i += 1) {
       textInBox(doc, fixedValues[i] ?? '', xBoundaries[i]!, y, columnWidths[i]!, DATA_ROW_HEIGHT, {
-        align: i === 2 ? 'left' : 'center',
-        size: 8,
+        align: i === 2 || i === 3 || i === 4 ? 'left' : 'center',
+        size: 7.1,
       });
     }
 
-    for (let i = 0; i < data.subjectColumns.length; i += 1) {
-      const idx = subjectStartIndex + i;
-      const col = data.subjectColumns[i]!;
-      textInBox(doc, row.subjectGrades[col.key] ?? '', xBoundaries[idx]!, y, columnWidths[idx]!, DATA_ROW_HEIGHT, {
+    componentColumns.forEach((component, componentIndex) => {
+      const idx = subjectStartIndex + componentIndex;
+      textInBox(doc, row.subjectGrades[component.key] ?? '', xBoundaries[idx]!, y, columnWidths[idx]!, DATA_ROW_HEIGHT, {
         align: 'center',
-        size: 8,
+        size: 7.1,
       });
-    }
+    });
 
     const tailValues = [
       String(row.semesterPoints),
@@ -411,11 +475,12 @@ function drawTablePage(
       String(row.uptoSemesterPoints),
       formatCgpa(row.uptoSemesterCgpa),
     ];
+
     for (let i = 0; i < tailValues.length; i += 1) {
-      const idx = semPointsIdx + i;
+      const idx = tailStartIndex + i;
       textInBox(doc, tailValues[i] ?? '', xBoundaries[idx]!, y, columnWidths[idx]!, DATA_ROW_HEIGHT, {
         align: 'center',
-        size: 8,
+        size: 7.1,
       });
     }
   });
@@ -425,13 +490,9 @@ function drawTablePage(
   };
 }
 
-function rowsCapacity(
-  doc: PDFKit.PDFDocument,
-  tableStartY: number,
-  reserveAfterTable: number
-) {
-  const available = doc.page.height - PAGE_MARGIN - PAGE_META_HEIGHT - reserveAfterTable - tableStartY;
-  const body = available - TABLE_HEADER_HEIGHT - CREDITS_ROW_HEIGHT;
+function rowsCapacity(doc: PDFKit.PDFDocument, tableStartY: number, reserveAfterTable: number) {
+  const available = doc.page.height - PAGE_MARGIN - reserveAfterTable - tableStartY;
+  const body = available - HEADER_TITLE_HEIGHT - HEADER_LABEL_HEIGHT - HEADER_CREDITS_HEIGHT;
   return Math.max(1, Math.floor(body / DATA_ROW_HEIGHT));
 }
 
@@ -448,6 +509,9 @@ export function renderFinalResultCompilationTemplate(
           sNo: 1,
           tesNo: '-',
           name: 'No records',
+          branchTag: 'C' as const,
+          enrolmentNumber: '',
+          certSerialNo: '',
           previousCumulativePoints: 0,
           previousCumulativeCredits: 0,
           previousCumulativeCgpa: null,
@@ -468,7 +532,7 @@ export function renderFinalResultCompilationTemplate(
   while (cursor < allRows.length) {
     const startY = pageIndex === 0 ? FIRST_PAGE_TABLE_START_Y : CONTINUATION_TABLE_START_Y;
     const capNormal = rowsCapacity(doc, startY, 0);
-    const capLast = rowsCapacity(doc, startY, SIGNATURE_BLOCK_HEIGHT);
+    const capLast = rowsCapacity(doc, startY, FOOTER_HEIGHT);
     const remaining = allRows.length - cursor;
     let isLast = false;
     let take = 0;
@@ -477,7 +541,6 @@ export function renderFinalResultCompilationTemplate(
       isLast = true;
       take = remaining;
     } else if (remaining <= capNormal) {
-      // Leave a dedicated final page with signature reserve.
       take = Math.max(1, remaining - capLast);
     } else {
       take = capNormal;
@@ -491,7 +554,6 @@ export function renderFinalResultCompilationTemplate(
     pageIndex += 1;
   }
 
-  const totalPages = pages.length || 1;
   pages.forEach((page, idx) => {
     if (idx > 0) doc.addPage();
     if (idx === 0) {
@@ -499,16 +561,11 @@ export function renderFinalResultCompilationTemplate(
     }
 
     const startY = idx === 0 ? FIRST_PAGE_TABLE_START_Y : CONTINUATION_TABLE_START_Y;
-    const { tableBottomY } = drawTablePage(doc, data, meta, page.rows, startY);
+    const { tableBottomY } = drawTablePage(doc, data, page.rows, startY);
 
     if (page.isLast) {
-      // Keep signatures at end of table while guaranteeing visibility on page.
-      const signatureYMin = tableBottomY + SIGNATURE_GAP_FROM_TABLE;
-      const signatureYMax = doc.page.height - PAGE_MARGIN - PAGE_META_HEIGHT - 18;
-      const signatureY = Math.min(signatureYMin, signatureYMax);
-      drawSignatureBlock(doc, signatureY);
+      const footerY = Math.min(tableBottomY + 12, doc.page.height - PAGE_MARGIN - FOOTER_HEIGHT + 12);
+      drawFooter(doc, footerY, meta);
     }
-
-    drawPageMeta(doc, meta, idx, totalPages);
   });
 }
