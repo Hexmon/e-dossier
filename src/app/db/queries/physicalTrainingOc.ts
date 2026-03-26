@@ -23,6 +23,7 @@ export async function listTemplateScoresByIds(ids: string[]) {
             ptTypeId: ptTypes.id,
             ptAttemptId: ptTypeAttempts.id,
             ptAttemptGradeId: ptAttemptGrades.id,
+            attemptCode: ptTypeAttempts.code,
             semester: ptTypes.semester,
             typeIsActive: ptTypes.isActive,
             attemptIsActive: ptTypeAttempts.isActive,

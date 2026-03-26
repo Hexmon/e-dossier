@@ -6,9 +6,11 @@ import { toast } from "sonner";
 import { useAcademics } from "@/hooks/useAcademics";
 import { Button } from "@/components/ui/button";
 import { extractRequestId, extractValidationIssues, resolveApiMessage } from "@/lib/api-feedback";
+import type { SubjectWithMarks } from "@/app/lib/api/academics";
 
 export type AcademicRow = {
   subjectId: string;
+  subjectCode?: string;
   subject: string;
   exam?: string;
   credit?: string | number | null;
@@ -16,6 +18,7 @@ export type AcademicRow = {
   practicalCredit?: string | number | null;
   includeTheory?: boolean;
   includePractical?: boolean;
+  isLegacyRecord?: boolean;
 };
 
 type RowState = {
@@ -73,6 +76,86 @@ function createInitialRowState(row: AcademicRow): RowState {
   };
 }
 
+function normalizeSubjectId(value: string | null | undefined) {
+  return (value ?? "").trim();
+}
+
+function normalizeSubjectCode(value: string | null | undefined) {
+  return (value ?? "").trim().toUpperCase();
+}
+
+export function rowMatchesSemesterSubject(
+  row: Pick<AcademicRow, "subjectId" | "subjectCode">,
+  subject: Pick<SubjectWithMarks, "subject">
+) {
+  const rowSubjectId = normalizeSubjectId(row.subjectId);
+  const subjectId = normalizeSubjectId(subject.subject?.id);
+  if (rowSubjectId && subjectId && rowSubjectId === subjectId) {
+    return true;
+  }
+
+  const rowSubjectCode = normalizeSubjectCode(row.subjectCode);
+  const subjectCode = normalizeSubjectCode(subject.subject?.code);
+  return Boolean(rowSubjectCode && subjectCode && rowSubjectCode === subjectCode);
+}
+
+export function buildDisplayAcademicRows(
+  rows: AcademicRow[],
+  subjects: SubjectWithMarks[] | undefined
+): AcademicRow[] {
+  if (!subjects?.length) return rows;
+
+  const matched = new Set<number>();
+  const nextRows = [...rows];
+
+  for (const subject of subjects) {
+    const matchIndex = rows.findIndex((row, index) => {
+      if (matched.has(index)) return false;
+      return rowMatchesSemesterSubject(row, subject);
+    });
+
+    if (matchIndex >= 0) {
+      matched.add(matchIndex);
+      continue;
+    }
+
+    nextRows.push({
+      subjectId: subject.subject?.id ?? "",
+      subjectCode: subject.subject?.code ?? "",
+      subject: subject.subject?.name ?? "Unknown Subject",
+      exam: subject.includeTheory ? "Theory" : subject.includePractical ? "Practical" : undefined,
+      credit: subject.includeTheory
+        ? subject.theoryCredits ?? subject.subject?.defaultTheoryCredits ?? null
+        : null,
+      practicalExam: subject.includePractical ? "Practical" : null,
+      practicalCredit: subject.includePractical
+        ? subject.practicalCredits ?? subject.subject?.defaultPracticalCredits ?? null
+        : null,
+      includeTheory: subject.includeTheory,
+      includePractical: subject.includePractical,
+      isLegacyRecord: true,
+    });
+  }
+
+  return nextRows;
+}
+
+export function resolveDisplayTotalCredits(rows: AcademicRow[], fallbackTotal: string | number | undefined) {
+  const fallbackNumber = Number(fallbackTotal ?? 0);
+  if (rows.length === 0) {
+    return Number.isFinite(fallbackNumber) ? fallbackNumber : "";
+  }
+
+  const derivedTotal = rows.reduce((sum, row) => {
+    const theory = Number(row.credit ?? 0);
+    const practical = Number(row.practicalCredit ?? 0);
+    return sum + (Number.isFinite(theory) ? theory : 0) + (Number.isFinite(practical) ? practical : 0);
+  }, 0);
+
+  if (derivedTotal > 0) return derivedTotal;
+  return Number.isFinite(fallbackNumber) ? fallbackNumber : "";
+}
+
 export default function AcademicTable({
   ocId,
   semester,
@@ -93,7 +176,11 @@ export default function AcademicTable({
     resetMutationState,
   } = useAcademics(ocId, semester);
 
-  const initialState = useMemo<RowState[]>(() => rows.map(createInitialRowState), [rows]);
+  const displayRows = useMemo(
+    () => buildDisplayAcademicRows(rows, semesterData?.subjects),
+    [rows, semesterData?.subjects]
+  );
+  const initialState = useMemo<RowState[]>(() => displayRows.map(createInitialRowState), [displayRows]);
 
   const [data, setData] = useState<RowState[]>(initialState);
   const [isEditing, setIsEditing] = useState(false);
@@ -134,7 +221,9 @@ export default function AcademicTable({
     a.length === b.length && a.every((row, idx) => areRowStatesEqual(row, b[idx]));
 
   const hasSubjectsConfigured = rows.length > 0;
+  const hasDisplayRows = displayRows.length > 0;
   const hasSavedSemesterData = (semesterData?.subjects?.length ?? 0) > 0;
+  const hasLegacyDisplayRows = displayRows.some((row) => row.isLegacyRecord);
 
   const toNum = (v: string | number | undefined): number => {
     const n = parseFloat(String(v ?? "").replace(/[^\d.-]/g, ""));
@@ -193,8 +282,8 @@ export default function AcademicTable({
     setSgpa((prev) => (prev === nextSgpa ? prev : nextSgpa));
     setCgpa((prev) => (prev === nextCgpa ? prev : nextCgpa));
 
-    const updatedData = rows.map((row, idx) => {
-      const subject = semesterData.subjects?.find((s) => s.subject?.id === row.subjectId);
+    const updatedData = displayRows.map((row, idx) => {
+      const subject = semesterData.subjects?.find((s) => rowMatchesSemesterSubject(row, s));
       const theory = subject?.theory;
       const practical = subject?.practical;
       const hasTheoryComponent = row.includeTheory !== false;
@@ -224,7 +313,7 @@ export default function AcademicTable({
     setData((prev) => (areRowStateArraysEqual(prev, updatedData) ? prev : updatedData));
     setIsEditing((prev) => (prev ? false : prev));
     setIsInitialLoad((prev) => (prev ? false : prev));
-  }, [semesterData, rows, initialState]);
+  }, [displayRows, semesterData, initialState]);
 
   useEffect(() => {
     resetMutationStateRef.current = resetMutationState;
@@ -246,12 +335,16 @@ export default function AcademicTable({
 
   const grandTotal = useMemo(() => {
     return data.reduce((sum, row, idx) => {
-      const includesPractical = rows[idx]?.includePractical === true;
+      const includesPractical = displayRows[idx]?.includePractical === true;
       return sum + toNum(row.total) + (includesPractical ? toNum(row.practicalTotal) : 0);
     }, 0);
-  }, [data, rows]);
+  }, [data, displayRows]);
 
   const autoMarksScored = useMemo(() => Math.round(grandTotal), [grandTotal]);
+  const resolvedTotalCredits = useMemo(
+    () => resolveDisplayTotalCredits(displayRows, totalCredits),
+    [displayRows, totalCredits]
+  );
 
   const handleSave = async () => {
     if (!canEdit) return;
@@ -266,13 +359,15 @@ export default function AcademicTable({
       });
       successMessage = semesterResponse.message;
 
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
+      for (let i = 0; i < displayRows.length; i++) {
+        const row = displayRows[i];
         const state = data[i];
+        if (!row || !state) continue;
         const hasTheoryComponent = row.includeTheory !== false;
         const hasPracticalComponent = row.includePractical === true;
         const shouldAllowTheoryGrade = toNum(row.credit ?? undefined) > 0;
         const shouldAllowPracticalGrade = toNum(row.practicalCredit ?? undefined) > 0;
+        const canPersistRow = !row.isLegacyRecord && Boolean(row.subjectId);
 
         const trimmedPhase1 = (state.phase1 ?? "").trim();
         const trimmedPhase2 = (state.phase2 ?? "").trim();
@@ -298,6 +393,10 @@ export default function AcademicTable({
             trimmedPracticalTutorial === "");
 
         if (isTheoryEmpty && isPracticalEmpty) {
+          continue;
+        }
+
+        if (!canPersistRow) {
           continue;
         }
 
@@ -341,8 +440,8 @@ export default function AcademicTable({
     }
 
     setData(
-      rows.map((row, idx) => {
-        const subject = semesterData.subjects?.find((s) => s.subject?.id === row.subjectId);
+      displayRows.map((row, idx) => {
+        const subject = semesterData.subjects?.find((s) => rowMatchesSemesterSubject(row, s));
         const theory = subject?.theory;
         const practical = subject?.practical;
         const hasTheoryComponent = row.includeTheory !== false;
@@ -392,6 +491,14 @@ export default function AcademicTable({
     );
   }
 
+  if (!hasDisplayRows && !hasSavedSemesterData) {
+    return (
+      <div className="rounded-md border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
+        No academic records or course offerings are available for this semester yet.
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -407,6 +514,12 @@ export default function AcademicTable({
       {hasSubjectsConfigured && !hasSavedSemesterData ? (
         <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
           Subjects are configured for this semester, but no marks have been saved yet.
+        </div>
+      ) : null}
+
+      {hasLegacyDisplayRows ? (
+        <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          Showing legacy saved academics rows that do not match the current course offerings. These rows remain read-only until offerings are aligned.
         </div>
       ) : null}
 
@@ -440,16 +553,17 @@ export default function AcademicTable({
         </thead>
 
         <tbody>
-          {rows.map((r, idx) => {
+          {displayRows.map((r, idx) => {
             const state = data[idx];
             if (!state) return null;
             const hasTheoryComponent = r.includeTheory !== false;
             const hasPracticalComponent = r.includePractical === true;
             const hasTheoryCredits = toNum(r.credit ?? undefined) > 0;
             const hasPracticalCredits = toNum(r.practicalCredit ?? undefined) > 0;
+            const canEditRow = canEdit && !r.isLegacyRecord && Boolean(r.subjectId);
 
             return (
-              <React.Fragment key={r.subjectId}>
+              <React.Fragment key={`${r.subjectId || r.subjectCode || r.subject}-${idx}`}>
                 <tr>
                   <td className="border px-2 py-1" rowSpan={hasPracticalComponent ? 2 : 1}>
                     {idx + 1}
@@ -464,7 +578,7 @@ export default function AcademicTable({
                     <td key={key} className="border px-2 py-1">
                       <input
                         value={hasTheoryComponent ? state[key] : ""}
-                        disabled={!canEdit || !isEditing || isSaving || !hasTheoryComponent}
+                        disabled={!canEditRow || !isEditing || isSaving || !hasTheoryComponent}
                         onChange={(e) => handleChange(idx, key, e.target.value)}
                         className="w-full border px-1 rounded bg-background"
                       />
@@ -478,7 +592,7 @@ export default function AcademicTable({
                   <td className="border px-2 py-1">
                     <input
                       value={hasTheoryComponent ? state.final : ""}
-                      disabled={!canEdit || !isEditing || isSaving || !hasTheoryComponent}
+                      disabled={!canEditRow || !isEditing || isSaving || !hasTheoryComponent}
                       onChange={(e) => handleChange(idx, "final", e.target.value)}
                       className="w-full border px-1 rounded bg-background"
                     />
@@ -495,7 +609,7 @@ export default function AcademicTable({
                   <td className="border px-2 py-1">
                     <input
                       value={hasTheoryCredits ? state.grade : ""}
-                      disabled={!canEdit || !isEditing || isSaving || !hasTheoryComponent || !hasTheoryCredits}
+                      disabled={!canEditRow || !isEditing || isSaving || !hasTheoryComponent || !hasTheoryCredits}
                       onChange={(e) => handleChange(idx, "grade", e.target.value)}
                       className="w-full border px-1 rounded bg-background"
                     />
@@ -525,7 +639,7 @@ export default function AcademicTable({
                     <td className="border px-2 py-1">
                       <input
                         value={state.practicalTutorial}
-                        disabled={!canEdit || !isEditing || isSaving}
+                        disabled={!canEditRow || !isEditing || isSaving}
                         onChange={(e) => handleChange(idx, "practicalTutorial", e.target.value)}
                         className="w-full border px-1 rounded bg-background"
                       />
@@ -540,7 +654,7 @@ export default function AcademicTable({
                     <td className="border px-2 py-1">
                       <input
                         value={state.practicalFinal}
-                        disabled={!canEdit || !isEditing || isSaving}
+                        disabled={!canEditRow || !isEditing || isSaving}
                         onChange={(e) => handleChange(idx, "practicalFinal", e.target.value)}
                         className="w-full border px-1 rounded bg-background"
                       />
@@ -560,7 +674,7 @@ export default function AcademicTable({
                     <td className="border px-2 py-1">
                       <input
                         value={hasPracticalCredits ? state.practicalGrade : ""}
-                        disabled={!canEdit || !isEditing || isSaving || !hasPracticalCredits}
+                        disabled={!canEditRow || !isEditing || isSaving || !hasPracticalCredits}
                         onChange={(e) => handleChange(idx, "practicalGrade", e.target.value)}
                         className="w-full border px-1 rounded bg-background"
                       />
@@ -575,7 +689,7 @@ export default function AcademicTable({
             <td className="border px-2 py-1" colSpan={3}>
               Total
             </td>
-            <td className="border px-2 py-1">{totalCredits}</td>
+            <td className="border px-2 py-1">{resolvedTotalCredits}</td>
             <td className="border px-2 py-1" colSpan={6}></td>
             <td className="border px-2 py-1 font-bold">{Math.round(grandTotal)}</td>
             <td className="border px-2 py-1"></td>

@@ -232,6 +232,13 @@ export default function OCManagementPage() {
     setViewOpen(true);
   };
 
+  const handleViewOpenChange = (nextOpen: boolean) => {
+    setViewOpen(nextOpen);
+    if (!nextOpen) {
+      setViewId(null);
+    }
+  };
+
   const handleFilterChange = (filterSetter: (val: string) => void, value: string) => {
     filterSetter(value);
     setCurrentPage(1); // Reset to page 1 when filter changes
@@ -462,7 +469,7 @@ export default function OCManagementPage() {
         </DialogContent>
       </Dialog>
 
-      <OCDetailsModal open={viewOpen} ocId={viewId} onOpenChange={setViewOpen} />
+      <OCDetailsModal open={viewOpen} ocId={viewId} onOpenChange={handleViewOpenChange} />
     </SidebarProvider>
   );
 }

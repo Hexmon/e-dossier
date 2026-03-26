@@ -42,6 +42,7 @@ export default function DynamicSemesterTable({
             const practicalCredits = resolvePracticalCredits(offering);
             return {
                 subjectId: offering.subject?.id || "",
+                subjectCode: offering.subject?.code || offering.subjectCode || "",
                 subject: offering.subject?.name || offering.subjectName || "Unknown Subject",
                 exam: offering.includeTheory
                     ? "Theory"

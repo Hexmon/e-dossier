@@ -1,7 +1,7 @@
 import { db } from '@/app/db/client';
 import { subjects } from '@/app/db/schema/training/subjects';
 import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
-import { and, eq, exists, ilike, inArray, isNull } from 'drizzle-orm';
+import { and, eq, exists, ilike, inArray, isNull, or } from 'drizzle-orm';
 
 export async function listSubjects(opts: {
     q?: string;
@@ -103,4 +103,40 @@ export async function findMissingSubjectIds(ids: string[]) {
         .where(and(inArray(subjects.id, unique), isNull(subjects.deletedAt)));
     const found = new Set(rows.map((row) => row.id));
     return unique.filter((id) => !found.has(id));
+}
+
+export async function listSubjectsByIdsOrCodes(opts: {
+    ids?: string[];
+    codes?: string[];
+    includeDeleted?: boolean;
+}) {
+    const ids = Array.from(new Set((opts.ids ?? []).filter(Boolean)));
+    const codes = Array.from(new Set((opts.codes ?? []).filter(Boolean)));
+    const lookupClauses = [];
+
+    if (ids.length) lookupClauses.push(inArray(subjects.id, ids));
+    if (codes.length) lookupClauses.push(inArray(subjects.code, codes));
+    if (!lookupClauses.length) return [];
+
+    const wh = [or(...lookupClauses)];
+    if (!opts.includeDeleted) wh.push(isNull(subjects.deletedAt));
+
+    return db
+        .select({
+            id: subjects.id,
+            code: subjects.code,
+            name: subjects.name,
+            branch: subjects.branch,
+            noOfPeriods: subjects.noOfPeriods,
+            hasTheory: subjects.hasTheory,
+            hasPractical: subjects.hasPractical,
+            defaultTheoryCredits: subjects.defaultTheoryCredits,
+            defaultPracticalCredits: subjects.defaultPracticalCredits,
+            description: subjects.description,
+            createdAt: subjects.createdAt,
+            updatedAt: subjects.updatedAt,
+            deletedAt: subjects.deletedAt,
+        })
+        .from(subjects)
+        .where(and(...wh));
 }

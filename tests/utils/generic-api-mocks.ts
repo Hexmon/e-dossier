@@ -230,12 +230,34 @@ function defaultAsyncValue(name: string): unknown {
         code: 'TES-50',
         name: 'TES 50',
       },
-      ptType: {
-        id: UUIDS[1],
-        code: 'PT-A',
-        name: 'Assessment A',
+      selection: {
+        ptTypeId: UUIDS[1],
+        label: 'PT-A - Assessment A',
+        isAll: false,
       },
-      rows: [{ ocId: UUIDS[0], marks: 82 }],
+      sections: [
+        {
+          ptType: {
+            id: UUIDS[1],
+            code: 'PT-A',
+            title: 'Assessment A',
+          },
+          tasks: [{ taskId: 'task-1', title: 'Run', maxMarks: 20 }],
+          rows: [
+            {
+              ocId: UUIDS[0],
+              sNo: 1,
+              tesNo: 'TES-1',
+              rank: 'OC',
+              name: 'Cadet One',
+              cells: {
+                'task-1': { attemptCode: 'A1/C1', gradeCode: 'E/G/S', marks: 82 },
+              },
+              totalMarksScored: 82,
+            },
+          ],
+        },
+      ],
     };
   }
   if (name === 'buildCourseWisePerformancePreview') {
