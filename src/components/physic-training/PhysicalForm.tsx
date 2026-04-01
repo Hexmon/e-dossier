@@ -20,6 +20,7 @@ import HigherTests from "./HigherTests";
 import Swimming from "./Swimming";
 import { resolveTemplatesByType, ResolvedTemplateType, buildPTTableRows, PTTableRow } from "./ptTableHelpers";
 import { usePhysicalTraining, PhysicalTrainingScore } from "@/hooks/usePhysicalTraining";
+import { isFreeEntryPtAttemptCode, resolvePtDraftMarks } from "@/app/lib/physical-training-attempts";
 
 interface PhysicalFormProps {
   ocId: string;
@@ -172,7 +173,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
   const pptTableMaxMarks = useMemo(() => nonTotalRows.reduce((sum, r) => sum + (r.column3 || 0), 0), [nonTotalRows]);
   const hasAdvancedSections = useMemo(
     () => ["III TERM", "IV TERM", "V TERM", "VI TERM"].includes(activeSemester),
-    [activeSemester]
+    [activeSemester, scoreById]
   );
 
   const grandTotalMarks = useMemo(() => {
@@ -198,7 +199,11 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           const nextScoreId = nextGrade?.scoreId ?? row.selectedScoreId;
 
           const statusMarks = nextGrade?.maxMarks ?? row.column3;
-          const marks = statusMarks;
+          const marks = resolvePtDraftMarks(
+            attemptCode,
+            statusMarks,
+            scoreById.get(nextScoreId)?.marksScored ?? null,
+          );
 
           return {
             ...row,
@@ -228,7 +233,11 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           const nextScoreId = grade?.scoreId ?? row.selectedScoreId;
 
           const statusMarks = grade?.maxMarks ?? row.column3;
-          const marks = statusMarks;
+          const marks = resolvePtDraftMarks(
+            row.selectedAttempt,
+            statusMarks,
+            scoreById.get(nextScoreId)?.marksScored ?? null,
+          );
 
           return {
             ...row,
@@ -241,7 +250,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
         }),
       }));
     },
-    [activeSemester]
+    [activeSemester, scoreById]
   );
 
   const handleMarksChange = useCallback(
@@ -256,14 +265,14 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
             return row;
           }
 
-          if (value.trim() === "") return { ...row, column6: 0 };
+          if (value.trim() === "") return { ...row, column6: null };
 
           const numValue = parseFloat(value);
           if (isNaN(numValue) || numValue < 0) {
             toast.error("Marks must be a valid positive number");
             return row;
           }
-          if (numValue > row.column3) {
+          if (!isFreeEntryPtAttemptCode(row.selectedAttempt) && numValue > row.column3) {
             toast.error(`Marks scored cannot exceed status marks (${row.column3})`);
             return row;
           }
@@ -283,7 +292,12 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     const dataRows = rows.filter((r) => !r.id.startsWith("total-"));
 
     for (const row of dataRows) {
-      if (!isVirtualId(row.selectedScoreId) && row.column6 > row.column3) {
+      if (
+        !isVirtualId(row.selectedScoreId) &&
+        row.column6 !== null &&
+        !isFreeEntryPtAttemptCode(row.selectedAttempt) &&
+        row.column6 > row.column3
+      ) {
         toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and status marks (${row.column3})`);
         return;
       }
@@ -293,7 +307,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
       .filter((row) => row.selectedScoreId && !isVirtualId(row.selectedScoreId))
       .map((row) => ({
         ptTaskScoreId: row.selectedScoreId,
-        marksScored: row.column6 || 0,
+        marksScored: row.column6 ?? 0,
         attemptCode: row.selectedAttempt,
         gradeCode: row.selectedGrade,
       }));
@@ -391,14 +405,14 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           return isEditing ? (
             <Input
               type="number"
-              value={value}
+              value={value ?? ""}
               onChange={(e) => handleMarksChange(row.id, e.target.value)}
               placeholder={disabled ? "No scoreId" : "Enter marks"}
               className="w-full"
               disabled={disabled}
             />
           ) : (
-            <span>{value || "-"}</span>
+            <span>{value ?? "-"}</span>
           );
         },
       },

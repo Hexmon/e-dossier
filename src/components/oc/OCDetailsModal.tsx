@@ -169,7 +169,8 @@ export default function OCDetailsModal({ open, ocId, onOpenChange }: Props) {
           <div className="space-y-6 text-sm">
             <section className="grid grid-cols-2 gap-4">
               <div><div className="font-medium">Name</div><div>{oc.name}</div></div>
-              <div><div className="font-medium">TES No</div><div>{oc.ocNo}</div></div>
+              <div><div className="font-medium">OC No</div><div>{oc.ocNo}</div></div>
+              <div><div className="font-medium">JNU Enrollment No</div><div>{oc.jnuEnrollmentNo ?? "-"}</div></div>
               <div><div className="font-medium">Course</div><div>{oc.courseCode ?? oc.courseTitle ?? oc.course?.id ?? "-"}</div></div>
               <div><div className="font-medium">Platoon</div><div>{oc.platoonName ?? oc.platoonKey ?? oc.platoonId ?? "-"}</div></div>
               <div><div className="font-medium">Branch</div><div>{oc.branch ?? "-"}</div></div>
@@ -223,6 +224,7 @@ export default function OCDetailsModal({ open, ocId, onOpenChange }: Props) {
                 <p className="text-sm text-muted-foreground">No records available.</p>
               )}
             </section>
+
           </div>
         )}
       </DialogContent>

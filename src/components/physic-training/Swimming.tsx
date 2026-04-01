@@ -24,6 +24,7 @@ import {
   PhysicalTrainingTemplateRow,
 } from "@/hooks/usePhysicalTraining";
 import { buildPTTableRows, PTTableRow } from "./ptTableHelpers";
+import { isFreeEntryPtAttemptCode, resolvePtDraftMarks } from "@/app/lib/physical-training-attempts";
 
 interface SwimmingProps {
   onMarksChange: (marks: number) => void;
@@ -104,7 +105,11 @@ export default function Swimming({
           const nextScoreId = nextGrade?.scoreId ?? row.selectedScoreId;
 
           const statusMarks = nextGrade?.maxMarks ?? row.column3;
-          const marks = statusMarks;
+          const marks = resolvePtDraftMarks(
+            attemptCode,
+            statusMarks,
+            scoreById.get(nextScoreId)?.marksScored ?? null
+          );
 
           return {
             ...row,
@@ -119,7 +124,7 @@ export default function Swimming({
         })
       );
     },
-    []
+    [scoreById]
   );
 
   const handleGradeChange = useCallback(
@@ -135,7 +140,11 @@ export default function Swimming({
           const nextScoreId = grade?.scoreId ?? row.selectedScoreId;
 
           const statusMarks = grade?.maxMarks ?? row.column3;
-          const marks = statusMarks;
+          const marks = resolvePtDraftMarks(
+            row.selectedAttempt,
+            statusMarks,
+            scoreById.get(nextScoreId)?.marksScored ?? null
+          );
 
           return {
             ...row,
@@ -148,7 +157,7 @@ export default function Swimming({
         })
       );
     },
-    []
+    [scoreById]
   );
 
   const handleMarksChange = useCallback((rowId: string, value: string) => {
@@ -164,7 +173,7 @@ export default function Swimming({
         }
 
         if (value.trim() === "") {
-          return { ...row, column6: 0 };
+          return { ...row, column6: null };
         }
 
         const numValue = parseFloat(value);
@@ -173,7 +182,7 @@ export default function Swimming({
           return row;
         }
 
-        if (numValue > row.column3) {
+        if (!isFreeEntryPtAttemptCode(row.selectedAttempt) && numValue > row.column3) {
           toast.error(`Marks scored cannot exceed status marks (${row.column3})`);
           return row;
         }
@@ -190,7 +199,8 @@ export default function Swimming({
     for (const row of tableData) {
       if (
         !isVirtualId(row.selectedScoreId) &&
-        row.column6 > 0 &&
+        row.column6 !== null &&
+        !isFreeEntryPtAttemptCode(row.selectedAttempt) &&
         row.column6 > row.column3
       ) {
         toast.error(
@@ -204,7 +214,7 @@ export default function Swimming({
       .filter((row) => row.selectedScoreId && !isVirtualId(row.selectedScoreId))
       .map((row) => ({
         ptTaskScoreId: row.selectedScoreId,
-        marksScored: row.column6 || 0,
+        marksScored: row.column6 ?? 0,
         attemptCode: row.selectedAttempt,
         gradeCode: row.selectedGrade,
       }));
@@ -321,14 +331,14 @@ export default function Swimming({
           return isEditing ? (
             <Input
               type="number"
-              value={value}
+              value={value ?? ""}
               onChange={(e) => handleMarksChange(row.id, e.target.value)}
               placeholder={disabled ? "No scoreId" : "Enter marks"}
               className="w-full"
               disabled={disabled}
             />
           ) : (
-            <span>{value || "-"}</span>
+            <span>{value ?? "-"}</span>
           );
         },
       },

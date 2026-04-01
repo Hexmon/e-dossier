@@ -140,7 +140,7 @@ export function PTBulkScoresTable({
                                                             nextGrade.gradeCode,
                                                             initialSelection?.selectedScoreId === nextGrade.scoreId
                                                                 ? initialSelection.marks
-                                                                : nextGrade.maxMarks,
+                                                                : undefined,
                                                         );
                                                         if (!nextSelection) return;
                                                         onTaskSelectionChange(item.oc.id, task.taskId, nextSelection);
@@ -168,16 +168,7 @@ export function PTBulkScoresTable({
                                                                 : undefined,
                                                         );
                                                         if (!nextSelection) return;
-
-                                                        const marks =
-                                                            initialSelection?.selectedScoreId === nextSelection.selectedScoreId
-                                                                ? initialSelection.marks
-                                                                : nextSelection.maxMarks;
-
-                                                        onTaskSelectionChange(item.oc.id, task.taskId, {
-                                                            ...nextSelection,
-                                                            marks: String(marks),
-                                                        });
+                                                        onTaskSelectionChange(item.oc.id, task.taskId, nextSelection);
                                                     }}
                                                 >
                                                     {(task.attempts.find(

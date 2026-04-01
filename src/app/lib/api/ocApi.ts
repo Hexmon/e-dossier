@@ -31,6 +31,7 @@ export interface OCRecord {
   photo: File;
   name: string;
   ocNo: string;
+  jnuEnrollmentNo?: string | null;
   uid?: string;
   branch?: "E" | "M" | "O" | null; // FIXED: Changed "C" to "O"
   platoonId?: string | null;

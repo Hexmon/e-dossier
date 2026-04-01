@@ -22,6 +22,7 @@ interface OCFormProps {
 interface OCFormData {
     name: string;
     ocNo: string;
+    jnuEnrollmentNo?: string;
     courseId: string;
     branch?: string;
     platoonId?: string;
@@ -39,6 +40,7 @@ export function OCForm({
     const formDefaults: Partial<OCFormData> = {
         name: defaultValues.name || "",
         ocNo: defaultValues.ocNo || "",
+        jnuEnrollmentNo: defaultValues.jnuEnrollmentNo ?? undefined,
         courseId: defaultValues.courseId ?? defaultValues.course?.id ?? "",
         branch: defaultValues.branch || "",
         platoonId: defaultValues.platoonId || "",
@@ -80,7 +82,7 @@ export function OCForm({
         }
 
         if (!data.ocNo?.trim()) {
-            setApiErrors({ ocNo: ["TES No is required"] });
+            setApiErrors({ ocNo: ["OC No is required"] });
             return;
         }
 
@@ -88,6 +90,7 @@ export function OCForm({
         const submitData: any = {
             name: data.name.trim(),
             ocNo: data.ocNo.trim(),
+            jnuEnrollmentNo: data.jnuEnrollmentNo?.trim() ? data.jnuEnrollmentNo.trim() : undefined,
             courseId: data.courseId,
             branch: data.branch || undefined,
             platoonId: data.platoonId || undefined,
@@ -185,19 +188,37 @@ export function OCForm({
                 </div>
 
                 <div>
-                    <Label>TES No *</Label>
+                    <Label>OC No *</Label>
                     <Input
                         {...register("ocNo", {
-                            required: "TES No is required",
+                            required: "OC No is required",
                             pattern: {
                                 value: /^[A-Z0-9-]+$/i,
-                                message: "TES No should contain only letters, numbers and hyphens"
+                                message: "OC No should contain only letters, numbers and hyphens"
                             }
                         })}
-                        placeholder="Enter TES number"
+                        placeholder="Enter OC number"
                     />
                     {getFieldError("ocNo") && (
                         <p className="text-sm text-destructive mt-1">{getFieldError("ocNo")}</p>
+                    )}
+                </div>
+
+                <div>
+                    <Label>JNU Enrollment No</Label>
+                    <Input
+                        type="text"
+                        inputMode="numeric"
+                        {...register("jnuEnrollmentNo", {
+                            validate: (value) =>
+                                !value ||
+                                /^\d+$/.test(value) ||
+                                "JNU Enrollment No must contain digits only",
+                        })}
+                        placeholder="Enter JNU enrollment number"
+                    />
+                    {getFieldError("jnuEnrollmentNo") && (
+                        <p className="text-sm text-destructive mt-1">{getFieldError("jnuEnrollmentNo")}</p>
                     )}
                 </div>
 

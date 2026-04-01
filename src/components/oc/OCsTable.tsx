@@ -56,7 +56,7 @@ export default function OCsTable({
         },
         {
             key: "ocNo",
-            label: "TES No",
+            label: "OC No",
             type: "text",
         },
         {
