@@ -138,36 +138,50 @@ function recomputeRowSubjects(
 
     if (nextSubject.theory) {
       const marks = theoryTotal(nextSubject.theory);
-      const derivedGrade = marksToLetterGradeWithPolicy(marks, policy);
-      if (normalizeGrade(nextSubject.theory.grade) !== derivedGrade) {
-        nextSubject.theory.grade = derivedGrade;
-        gradeFieldChanges += 1;
-      }
-
       const credits = Math.max(0, toFiniteNumber(nextSubject.meta?.theoryCredits));
-      const points = marksToGradePointsWithPolicy(marks, policy);
-      components.push({
-        credits,
-        points,
-        weighted: credits * points,
-      });
+      if (credits <= 0) {
+        if (normalizeGrade(nextSubject.theory.grade) !== '') {
+          nextSubject.theory.grade = undefined;
+          gradeFieldChanges += 1;
+        }
+      } else {
+        const derivedGrade = marksToLetterGradeWithPolicy(marks, policy);
+        if (normalizeGrade(nextSubject.theory.grade) !== derivedGrade) {
+          nextSubject.theory.grade = derivedGrade;
+          gradeFieldChanges += 1;
+        }
+
+        const points = marksToGradePointsWithPolicy(marks, policy);
+        components.push({
+          credits,
+          points,
+          weighted: credits * points,
+        });
+      }
     }
 
     if (nextSubject.practical) {
       const marks = practicalTotal(nextSubject.practical);
-      const derivedGrade = marksToLetterGradeWithPolicy(marks, policy);
-      if (normalizeGrade(nextSubject.practical.grade) !== derivedGrade) {
-        nextSubject.practical.grade = derivedGrade;
-        gradeFieldChanges += 1;
-      }
-
       const credits = Math.max(0, toFiniteNumber(nextSubject.meta?.practicalCredits));
-      const points = marksToGradePointsWithPolicy(marks, policy);
-      components.push({
-        credits,
-        points,
-        weighted: credits * points,
-      });
+      if (credits <= 0) {
+        if (normalizeGrade(nextSubject.practical.grade) !== '') {
+          nextSubject.practical.grade = undefined;
+          gradeFieldChanges += 1;
+        }
+      } else {
+        const derivedGrade = marksToLetterGradeWithPolicy(marks, policy);
+        if (normalizeGrade(nextSubject.practical.grade) !== derivedGrade) {
+          nextSubject.practical.grade = derivedGrade;
+          gradeFieldChanges += 1;
+        }
+
+        const points = marksToGradePointsWithPolicy(marks, policy);
+        components.push({
+          credits,
+          points,
+          weighted: credits * points,
+        });
+      }
     }
 
     return nextSubject;

@@ -90,12 +90,17 @@ function mergeTheory(
         (next as any)[key] = value;
         changed = true;
     }
+    if (!autoComputeGrade) {
+        if (next.grade !== undefined) {
+            next.grade = undefined;
+            changed = true;
+        }
+        return changed ? next : target;
+    }
+
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
-    if (!hasExplicitGrade && !autoComputeGrade && hasExistingGrade) {
-        next.grade = undefined;
-        changed = true;
-    } else if (!hasExplicitGrade && autoComputeGrade && !hasExistingGrade) {
+    if (!hasExplicitGrade && !hasExistingGrade) {
         // C# parity: each component contributes only when positive (Sign(x) == 1).
         const phaseTest1 = toPositiveNumber(next.phaseTest1Marks);
         const phaseTest2 = toPositiveNumber(next.phaseTest2Marks);
@@ -122,12 +127,17 @@ function mergePractical(
         (next as any)[key] = value;
         changed = true;
     }
+    if (!autoComputeGrade) {
+        if (next.grade !== undefined) {
+            next.grade = undefined;
+            changed = true;
+        }
+        return changed ? next : target;
+    }
+
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
-    if (!hasExplicitGrade && !autoComputeGrade && hasExistingGrade) {
-        next.grade = undefined;
-        changed = true;
-    } else if (!hasExplicitGrade && autoComputeGrade && !hasExistingGrade) {
+    if (!hasExplicitGrade && !hasExistingGrade) {
         // C# parity: practical marks use positive-only value for grade mapping.
         next.grade = marksToLetterGradeWithPolicy(toPositiveNumber(next.finalMarks), policy);
         changed = true;

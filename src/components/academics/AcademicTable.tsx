@@ -546,7 +546,6 @@ export default function AcademicTable({
             <th className="border px-2 py-2 bg-muted/40">Tutorial</th>
             <th className="border px-2 py-2 bg-muted/40">Sessional</th>
             <th className="border px-2 py-2 bg-muted/40">Final</th>
-            <th className="border px-2 py-2 bg-muted/40">Practical</th>
             <th className="border px-2 py-2 bg-muted/40">Total</th>
             <th className="border px-2 py-2 bg-muted/40">Grade</th>
           </tr>
@@ -596,10 +595,6 @@ export default function AcademicTable({
                       onChange={(e) => handleChange(idx, "final", e.target.value)}
                       className="w-full border px-1 rounded bg-background"
                     />
-                  </td>
-
-                  <td className="border px-2 py-1">
-                    <input value={state.practical} disabled className="w-full border px-1 rounded bg-muted/70" />
                   </td>
 
                   <td className="border px-2 py-1">
@@ -660,14 +655,6 @@ export default function AcademicTable({
                       />
                     </td>
                     <td className="border px-2 py-1">
-                      <input
-                        value={state.practicalPractical}
-                        disabled
-                        className="w-full border px-1 rounded bg-muted/70"
-                      />
-                    </td>
-
-                    <td className="border px-2 py-1">
                       <input value={state.practicalTotal} disabled className="w-full border px-1 bg-muted/70" />
                     </td>
 
@@ -690,20 +677,20 @@ export default function AcademicTable({
               Total
             </td>
             <td className="border px-2 py-1">{resolvedTotalCredits}</td>
-            <td className="border px-2 py-1" colSpan={6}></td>
+            <td className="border px-2 py-1" colSpan={5}></td>
             <td className="border px-2 py-1 font-bold">{Math.round(grandTotal)}</td>
             <td className="border px-2 py-1"></td>
           </tr>
 
           <tr>
             <td className="border px-2 py-1">SGPA</td>
-            <td className="border px-2 py-1" colSpan={11}>
+            <td className="border px-2 py-1" colSpan={10}>
               {sgpa !== "" ? sgpa : "-"}
             </td>
           </tr>
           <tr>
             <td className="border px-2 py-1">Marks(1350)</td>
-            <td className="border px-2 py-1" colSpan={11}>
+            <td className="border px-2 py-1" colSpan={10}>
               <input
                 value={autoMarksScored}
                 disabled
@@ -714,7 +701,7 @@ export default function AcademicTable({
           </tr>
           <tr>
             <td className="border px-2 py-1">CGPA</td>
-            <td className="border px-2 py-1" colSpan={11}>
+            <td className="border px-2 py-1" colSpan={10}>
               {cgpa !== "" ? cgpa : "-"}
             </td>
           </tr>
