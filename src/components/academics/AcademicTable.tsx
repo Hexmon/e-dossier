@@ -5,6 +5,14 @@ import { toast } from "sonner";
 
 import { useAcademics } from "@/hooks/useAcademics";
 import { Button } from "@/components/ui/button";
+import {
+  computePracticalTotalMarks,
+  computeTheorySessionalMarks,
+  computeTheoryTotalMarks,
+  hasAcademicCredits,
+  normalizeAcademicCredits,
+  toFiniteAcademicNumber,
+} from "@/app/lib/academic-marks-core";
 import { extractRequestId, extractValidationIssues, resolveApiMessage } from "@/lib/api-feedback";
 import type { SubjectWithMarks } from "@/app/lib/api/academics";
 
@@ -119,20 +127,23 @@ export function buildDisplayAcademicRows(
       continue;
     }
 
+    const includeTheory = Boolean(subject.subject?.hasTheory && (subject.includeTheory || subject.theory));
+    const includePractical = Boolean(subject.subject?.hasPractical && (subject.includePractical || subject.practical));
+
     nextRows.push({
       subjectId: subject.subject?.id ?? "",
       subjectCode: subject.subject?.code ?? "",
       subject: subject.subject?.name ?? "Unknown Subject",
-      exam: subject.includeTheory ? "Theory" : subject.includePractical ? "Practical" : undefined,
-      credit: subject.includeTheory
+      exam: includeTheory ? "Theory" : includePractical ? "Practical" : undefined,
+      credit: includeTheory
         ? subject.theoryCredits ?? subject.subject?.defaultTheoryCredits ?? null
         : null,
-      practicalExam: subject.includePractical ? "Practical" : null,
-      practicalCredit: subject.includePractical
+      practicalExam: includePractical ? "Practical" : null,
+      practicalCredit: includePractical
         ? subject.practicalCredits ?? subject.subject?.defaultPracticalCredits ?? null
         : null,
-      includeTheory: subject.includeTheory,
-      includePractical: subject.includePractical,
+      includeTheory,
+      includePractical,
       isLegacyRecord: true,
     });
   }
@@ -146,14 +157,61 @@ export function resolveDisplayTotalCredits(rows: AcademicRow[], fallbackTotal: s
     return Number.isFinite(fallbackNumber) ? fallbackNumber : "";
   }
 
-  const derivedTotal = rows.reduce((sum, row) => {
-    const theory = Number(row.credit ?? 0);
-    const practical = Number(row.practicalCredit ?? 0);
-    return sum + (Number.isFinite(theory) ? theory : 0) + (Number.isFinite(practical) ? practical : 0);
-  }, 0);
+  const derivedTotal = rows.reduce(
+    (sum, row) => sum + normalizeAcademicCredits(row.credit) + normalizeAcademicCredits(row.practicalCredit),
+    0
+  );
 
   if (derivedTotal > 0) return derivedTotal;
   return Number.isFinite(fallbackNumber) ? fallbackNumber : "";
+}
+
+export function toAcademicInputNumber(value: string | number | null | undefined): number {
+  return toFiniteAcademicNumber(value);
+}
+
+export function calculateAcademicRowState(rowData: RowState): RowState {
+  const sessional = computeTheorySessionalMarks({
+    phaseTest1Marks: rowData.phase1,
+    phaseTest2Marks: rowData.phase2,
+    tutorial: rowData.tutorial,
+  });
+  const total = computeTheoryTotalMarks({
+    phaseTest1Marks: rowData.phase1,
+    phaseTest2Marks: rowData.phase2,
+    tutorial: rowData.tutorial,
+    finalMarks: rowData.final,
+  });
+  const practicalMarks = computePracticalTotalMarks({
+    finalMarks: rowData.practicalFinal,
+  });
+
+  return {
+    ...rowData,
+    sessional: sessional > 0 ? String(Math.round(sessional)) : "",
+    total: total > 0 ? String(Math.round(total)) : "",
+    practicalPractical: practicalMarks > 0 ? String(Math.round(practicalMarks)) : "",
+    practicalTotal: practicalMarks > 0 ? String(Math.round(practicalMarks)) : "",
+  };
+}
+
+export function resolveDisplayGrandTotal(data: RowState[], rows: AcademicRow[]): number {
+  return data.reduce((sum, row, idx) => {
+    const theoryTotal = computeTheoryTotalMarks({
+      phaseTest1Marks: row.phase1,
+      phaseTest2Marks: row.phase2,
+      tutorial: row.tutorial,
+      finalMarks: row.final,
+    });
+    const practicalTotal =
+      rows[idx]?.includePractical === true
+        ? computePracticalTotalMarks({
+            finalMarks: row.practicalFinal,
+          })
+        : 0;
+
+    return sum + theoryTotal + practicalTotal;
+  }, 0);
 }
 
 export default function AcademicTable({
@@ -225,26 +283,6 @@ export default function AcademicTable({
   const hasSavedSemesterData = (semesterData?.subjects?.length ?? 0) > 0;
   const hasLegacyDisplayRows = displayRows.some((row) => row.isLegacyRecord);
 
-  const toNum = (v: string | number | undefined): number => {
-    const n = parseFloat(String(v ?? "").replace(/[^\d.-]/g, ""));
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  const calculateValues = (rowData: RowState): RowState => {
-    const sessional = toNum(rowData.phase1) + toNum(rowData.phase2) + toNum(rowData.tutorial);
-    const total = sessional + toNum(rowData.final);
-    const practicalTotal = toNum(rowData.practicalFinal) + toNum(rowData.practicalTutorial);
-    const practicalMarks = toNum(rowData.practicalFinal);
-
-    return {
-      ...rowData,
-      sessional: sessional > 0 ? String(Math.round(sessional)) : "",
-      total: total > 0 ? String(Math.round(total)) : "",
-      practicalPractical: practicalMarks > 0 ? String(Math.round(practicalMarks)) : "",
-      practicalTotal: practicalTotal > 0 ? String(Math.round(practicalTotal)) : "",
-    };
-  };
-
   const clearValidationFeedback = () => {
     setFormErrors((prev) => (prev.length > 0 ? [] : prev));
   };
@@ -288,8 +326,8 @@ export default function AcademicTable({
       const practical = subject?.practical;
       const hasTheoryComponent = row.includeTheory !== false;
       const hasPracticalComponent = row.includePractical === true;
-      const hasTheoryCredits = toNum(row.credit ?? undefined) > 0;
-      const hasPracticalCredits = toNum(row.practicalCredit ?? undefined) > 0;
+      const hasTheoryCredits = hasAcademicCredits(row.credit);
+      const hasPracticalCredits = hasAcademicCredits(row.practicalCredit);
 
       const baseData = {
         ...initialState[idx],
@@ -307,7 +345,7 @@ export default function AcademicTable({
         practicalCredit: row.practicalCredit ?? "",
       };
 
-      return calculateValues(baseData);
+      return calculateAcademicRowState(baseData);
     });
 
     setData((prev) => (areRowStateArraysEqual(prev, updatedData) ? prev : updatedData));
@@ -328,17 +366,12 @@ export default function AcademicTable({
     setData((prev) => {
       const next = [...prev];
       const updatedRow = { ...next[idx], [key]: value };
-      next[idx] = calculateValues(updatedRow);
+      next[idx] = calculateAcademicRowState(updatedRow);
       return next;
     });
   };
 
-  const grandTotal = useMemo(() => {
-    return data.reduce((sum, row, idx) => {
-      const includesPractical = displayRows[idx]?.includePractical === true;
-      return sum + toNum(row.total) + (includesPractical ? toNum(row.practicalTotal) : 0);
-    }, 0);
-  }, [data, displayRows]);
+  const grandTotal = useMemo(() => resolveDisplayGrandTotal(data, displayRows), [data, displayRows]);
 
   const autoMarksScored = useMemo(() => Math.round(grandTotal), [grandTotal]);
   const resolvedTotalCredits = useMemo(
@@ -365,8 +398,8 @@ export default function AcademicTable({
         if (!row || !state) continue;
         const hasTheoryComponent = row.includeTheory !== false;
         const hasPracticalComponent = row.includePractical === true;
-        const shouldAllowTheoryGrade = toNum(row.credit ?? undefined) > 0;
-        const shouldAllowPracticalGrade = toNum(row.practicalCredit ?? undefined) > 0;
+        const shouldAllowTheoryGrade = hasAcademicCredits(row.credit);
+        const shouldAllowPracticalGrade = hasAcademicCredits(row.practicalCredit);
         const canPersistRow = !row.isLegacyRecord && Boolean(row.subjectId);
 
         const trimmedPhase1 = (state.phase1 ?? "").trim();
@@ -402,16 +435,16 @@ export default function AcademicTable({
 
         const theoryPayload = hasTheoryComponent
           ? {
-              phaseTest1Marks: toNum(trimmedPhase1) || undefined,
-              phaseTest2Marks: toNum(trimmedPhase2) || undefined,
+              phaseTest1Marks: toAcademicInputNumber(trimmedPhase1) || undefined,
+              phaseTest2Marks: toAcademicInputNumber(trimmedPhase2) || undefined,
               tutorial: trimmedTutorial || undefined,
-              finalMarks: toNum(trimmedFinal) || undefined,
+              finalMarks: toAcademicInputNumber(trimmedFinal) || undefined,
               grade: trimmedGrade || undefined,
             }
           : undefined;
         const practicalPayload = hasPracticalComponent
           ? {
-              finalMarks: toNum(trimmedPracticalFinal) || undefined,
+              finalMarks: toAcademicInputNumber(trimmedPracticalFinal) || undefined,
               grade: trimmedPracticalGrade || undefined,
               tutorial: trimmedPracticalTutorial || undefined,
             }
@@ -446,10 +479,10 @@ export default function AcademicTable({
         const practical = subject?.practical;
         const hasTheoryComponent = row.includeTheory !== false;
         const hasPracticalComponent = row.includePractical === true;
-        const hasTheoryCredits = toNum(row.credit ?? undefined) > 0;
-        const hasPracticalCredits = toNum(row.practicalCredit ?? undefined) > 0;
+        const hasTheoryCredits = hasAcademicCredits(row.credit);
+        const hasPracticalCredits = hasAcademicCredits(row.practicalCredit);
 
-        return calculateValues({
+        return calculateAcademicRowState({
           ...initialState[idx],
           phase1: hasTheoryComponent ? theory?.phaseTest1Marks?.toString() || "" : "",
           phase2: hasTheoryComponent ? theory?.phaseTest2Marks?.toString() || "" : "",
@@ -557,8 +590,8 @@ export default function AcademicTable({
             if (!state) return null;
             const hasTheoryComponent = r.includeTheory !== false;
             const hasPracticalComponent = r.includePractical === true;
-            const hasTheoryCredits = toNum(r.credit ?? undefined) > 0;
-            const hasPracticalCredits = toNum(r.practicalCredit ?? undefined) > 0;
+            const hasTheoryCredits = hasAcademicCredits(r.credit);
+            const hasPracticalCredits = hasAcademicCredits(r.practicalCredit);
             const canEditRow = canEdit && !r.isLegacyRecord && Boolean(r.subjectId);
 
             return (

@@ -40,7 +40,12 @@ import { positions } from '@/app/db/schema/auth/positions';
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
 import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
-import { marksToLetterGradeWithPolicy, type AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import type { AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import {
+    derivePracticalLetterGrade,
+    deriveTheoryLetterGrade,
+    hasAcademicCredits,
+} from '@/app/lib/academic-marks-core';
 
 type ListOpts = {
     id?: string;
@@ -65,15 +70,6 @@ type PracticalPatch = Partial<PracticalMarksRecord>;
 type MergeGradeOptions = {
     autoComputeGrade?: boolean;
 };
-
-function toFiniteNumber(value: unknown): number {
-    const num = Number(value ?? 0);
-    return Number.isFinite(num) ? num : 0;
-}
-
-function toPositiveNumber(value: unknown): number {
-    return Math.max(0, toFiniteNumber(value));
-}
 
 function mergeTheory(
     target: TheoryMarksRecord | null | undefined,
@@ -101,12 +97,7 @@ function mergeTheory(
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
     if (!hasExplicitGrade && !hasExistingGrade) {
-        // C# parity: each component contributes only when positive (Sign(x) == 1).
-        const phaseTest1 = toPositiveNumber(next.phaseTest1Marks);
-        const phaseTest2 = toPositiveNumber(next.phaseTest2Marks);
-        const tutorial = toPositiveNumber(next.tutorial);
-        const finalMarks = toPositiveNumber(next.finalMarks);
-        next.grade = marksToLetterGradeWithPolicy(phaseTest1 + phaseTest2 + tutorial + finalMarks, policy);
+        next.grade = deriveTheoryLetterGrade(next, policy);
         changed = true;
     }
     return changed ? next : target;
@@ -138,8 +129,7 @@ function mergePractical(
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
     if (!hasExplicitGrade && !hasExistingGrade) {
-        // C# parity: practical marks use positive-only value for grade mapping.
-        next.grade = marksToLetterGradeWithPolicy(toPositiveNumber(next.finalMarks), policy);
+        next.grade = derivePracticalLetterGrade(next, policy);
         changed = true;
     }
     return changed ? next : target;
@@ -250,8 +240,8 @@ export async function upsertSemesterSubjectMarks(ocId: string, semester: number,
             deletedAt: null,
         };
 
-        const hasTheoryCredits = toPositiveNumber(input.meta?.theoryCredits) > 0;
-        const hasPracticalCredits = toPositiveNumber(input.meta?.practicalCredits) > 0;
+        const hasTheoryCredits = hasAcademicCredits(input.meta?.theoryCredits);
+        const hasPracticalCredits = hasAcademicCredits(input.meta?.practicalCredits);
 
         const nextTheory = mergeTheory(base.theory, policy, input.theory, {
             autoComputeGrade: hasTheoryCredits,

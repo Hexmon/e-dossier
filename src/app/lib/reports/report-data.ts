@@ -20,10 +20,16 @@ import { ocCommissioning } from '@/app/db/schema/training/oc';
 import { FIXED_MARKS, REPORT_TYPES } from '@/app/lib/reports/types';
 import { FPR_MAX_MARKS, SPR_MAX_MARKS } from '@/app/services/performance-record.constants';
 import {
-  marksToGradePointsWithPolicy,
-  marksToLetterGradeWithPolicy,
   type AcademicGradingPolicy,
 } from '@/app/lib/grading-policy';
+import {
+  buildAcademicGpaComponent,
+  buildAcademicSubjectsGpaComponents,
+  resolvePracticalTotalMarks,
+  resolveStoredOrDerivedAcademicLetterGrade,
+  resolveTheoryTotalMarks,
+  summarizeAcademicSubjects,
+} from '@/app/lib/academic-marks-core';
 import type {
   ConsolidatedSessionalPreview,
   CourseWiseFinalPerformancePreview,
@@ -47,21 +53,6 @@ function normalizeNonNegativeValue(value: number | null | undefined): number | n
   const normalized = normalizeValue(value);
   if (normalized === null) return null;
   return Math.max(0, normalized);
-}
-
-function resolveStoredOrDerivedLetterGrade(
-  storedGrade: string | null | undefined,
-  marks: number | null | undefined,
-  policy: AcademicGradingPolicy
-): string | null {
-  const numericMarks = Number(marks);
-  if (marks !== null && marks !== undefined && Number.isFinite(numericMarks)) {
-    return marksToLetterGradeWithPolicy(numericMarks, policy);
-  }
-
-  const normalized = String(storedGrade ?? '').trim().toUpperCase();
-  if (normalized) return normalized;
-  return null;
 }
 
 function summarizeGrades(values: Array<string | null | undefined>) {
@@ -116,47 +107,6 @@ const COURSE_WISE_TAIL_COLUMNS: CourseWisePerformanceColumn[] = [
 
 function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function safeNumber(value: unknown): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function safePositiveNumber(value: unknown): number {
-  return Math.max(0, safeNumber(value));
-}
-
-function resolveTheoryTotalMarks(
-  theory: {
-    totalMarks?: number | null;
-    phaseTest1Marks?: number | null;
-    phaseTest2Marks?: number | null;
-    tutorial?: string | number | null;
-    finalMarks?: number | null;
-  } | null | undefined
-): number | null {
-  if (!theory) return null;
-  if (theory.totalMarks !== null && theory.totalMarks !== undefined && Number.isFinite(Number(theory.totalMarks))) {
-    return Number(theory.totalMarks);
-  }
-  const total =
-    safePositiveNumber(theory.phaseTest1Marks) +
-    safePositiveNumber(theory.phaseTest2Marks) +
-    safePositiveNumber(theory.tutorial) +
-    safePositiveNumber(theory.finalMarks);
-  return total > 0 ? total : null;
-}
-
-function resolvePracticalTotalMarks(
-  practical: { totalMarks?: number | null; finalMarks?: number | null } | null | undefined
-): number | null {
-  if (!practical) return null;
-  if (practical.totalMarks !== null && practical.totalMarks !== undefined && Number.isFinite(Number(practical.totalMarks))) {
-    return Number(practical.totalMarks);
-  }
-  const total = safePositiveNumber(practical.finalMarks);
-  return total > 0 ? total : null;
 }
 
 function semesterToRoman(semester: number): string {
@@ -245,28 +195,12 @@ function computeSemesterSummary(
   view: Awaited<ReturnType<typeof getOcAcademicSemester>>,
   policy: AcademicGradingPolicy
 ) {
-  let credits = 0;
-  let points = 0;
-
-  for (const subject of view.subjects ?? []) {
-    if (subject.includeTheory) {
-      const subjectCredits = Number(subject.theoryCredits ?? subject.subject.defaultTheoryCredits ?? 0);
-      const total = resolveTheoryTotalMarks(subject.theory);
-      credits += subjectCredits;
-      points += subjectCredits * marksToGradePointsWithPolicy(total, policy);
-    }
-    if (subject.includePractical) {
-      const subjectCredits = Number(subject.practicalCredits ?? subject.subject.defaultPracticalCredits ?? 0);
-      const total = resolvePracticalTotalMarks(subject.practical);
-      credits += subjectCredits;
-      points += subjectCredits * marksToGradePointsWithPolicy(total, policy);
-    }
-  }
+  const summary = summarizeAcademicSubjects(view.subjects ?? [], policy);
 
   return {
-    credits,
-    points,
-    sgpa: view.sgpa ?? (credits > 0 ? points / credits : null),
+    credits: summary.totalCredits,
+    points: summary.totalWeighted,
+    sgpa: view.sgpa ?? summary.sgpa,
   };
 }
 
@@ -377,7 +311,11 @@ export async function buildConsolidatedSessionalPreview(params: {
         finalMax: FIXED_MARKS.finalMax,
         totalObtained,
         totalMax: FIXED_MARKS.totalMax,
-        letterGrade: resolveStoredOrDerivedLetterGrade(subject?.theory?.grade ?? null, totalObtained, policy),
+        letterGrade: resolveStoredOrDerivedAcademicLetterGrade(
+          subject?.theory?.grade ?? null,
+          totalObtained,
+          policy
+        ),
       });
     }
 
@@ -390,7 +328,7 @@ export async function buildConsolidatedSessionalPreview(params: {
         branch: item.oc.branch,
         practicalObtained: normalizeNonNegativeValue(subject?.practical?.finalMarks ?? null),
         practicalMax: Number(selectedOffering.practicalCredits ?? selectedOffering.subject.defaultPracticalCredits ?? 0),
-        letterGrade: resolveStoredOrDerivedLetterGrade(
+        letterGrade: resolveStoredOrDerivedAcademicLetterGrade(
           subject?.practical?.grade ?? null,
           subject?.practical?.finalMarks ?? null,
           policy
@@ -478,10 +416,18 @@ export async function buildFinalResultCompilationPreview(params: {
 
         if (component.kind === 'L') {
           const marks = resolveTheoryTotalMarks(subject.theory);
-          subjectGrades[component.key] = resolveStoredOrDerivedLetterGrade(subject.theory?.grade ?? null, marks, policy);
+          subjectGrades[component.key] = resolveStoredOrDerivedAcademicLetterGrade(
+            subject.theory?.grade ?? null,
+            marks,
+            policy
+          );
         } else {
           const marks = resolvePracticalTotalMarks(subject.practical);
-          subjectGrades[component.key] = resolveStoredOrDerivedLetterGrade(subject.practical?.grade ?? null, marks, policy);
+          subjectGrades[component.key] = resolveStoredOrDerivedAcademicLetterGrade(
+            subject.practical?.grade ?? null,
+            marks,
+            policy
+          );
         }
       }
     }
@@ -830,31 +776,35 @@ export async function buildSemesterGradePreview(params: {
   for (const subject of semesterView.subjects) {
     if (subject.includeTheory) {
       const credits = Number(subject.theoryCredits ?? subject.subject.defaultTheoryCredits ?? 0);
-      const totalMarks = normalizeValue(subject.theory?.totalMarks ?? null);
-      const points = marksToGradePointsWithPolicy(totalMarks, policy);
+      const totalMarks = resolveTheoryTotalMarks(subject.theory);
+      const component = buildAcademicGpaComponent(totalMarks, credits, policy);
       subjectRows.push({
         sNo: sNo++,
         subject: subject.includePractical ? `${subject.subject.name} (Theory)` : subject.subject.name,
         credits,
-        letterGrade: resolveStoredOrDerivedLetterGrade(subject.theory?.grade ?? null, totalMarks, policy),
+        letterGrade: resolveStoredOrDerivedAcademicLetterGrade(subject.theory?.grade ?? null, totalMarks, policy),
         totalMarks,
-        gradePoints: points,
-        weightedGradePoints: credits * points,
+        gradePoints: component?.points ?? 0,
+        weightedGradePoints: component?.weighted ?? 0,
       });
     }
 
     if (subject.includePractical) {
       const credits = Number(subject.practicalCredits ?? subject.subject.defaultPracticalCredits ?? 0);
-      const totalMarks = normalizeValue(subject.practical?.totalMarks ?? null);
-      const points = marksToGradePointsWithPolicy(totalMarks, policy);
+      const totalMarks = resolvePracticalTotalMarks(subject.practical);
+      const component = buildAcademicGpaComponent(totalMarks, credits, policy);
       subjectRows.push({
         sNo: sNo++,
         subject: subject.includeTheory ? `${subject.subject.name} (Practical)` : subject.subject.name,
         credits,
-        letterGrade: resolveStoredOrDerivedLetterGrade(subject.practical?.grade ?? null, totalMarks, policy),
+        letterGrade: resolveStoredOrDerivedAcademicLetterGrade(
+          subject.practical?.grade ?? null,
+          totalMarks,
+          policy
+        ),
         totalMarks,
-        gradePoints: points,
-        weightedGradePoints: credits * points,
+        gradePoints: component?.points ?? 0,
+        weightedGradePoints: component?.weighted ?? 0,
       });
     }
   }
@@ -864,26 +814,7 @@ export async function buildSemesterGradePreview(params: {
 
   const allRows = allViews
     .filter((view) => view.semester <= params.semester)
-    .flatMap((view) => {
-      const rows: Array<{ credits: number; weighted: number }> = [];
-      for (const subject of view.subjects) {
-        if (subject.includeTheory) {
-          const credits = Number(subject.theoryCredits ?? subject.subject.defaultTheoryCredits ?? 0);
-          rows.push({
-            credits,
-            weighted: credits * marksToGradePointsWithPolicy(subject.theory?.totalMarks ?? null, policy),
-          });
-        }
-        if (subject.includePractical) {
-          const credits = Number(subject.practicalCredits ?? subject.subject.defaultPracticalCredits ?? 0);
-          rows.push({
-            credits,
-            weighted: credits * marksToGradePointsWithPolicy(subject.practical?.totalMarks ?? null, policy),
-          });
-        }
-      }
-      return rows;
-    });
+    .flatMap((view) => buildAcademicSubjectsGpaComponents(view.subjects, policy));
 
   const cumulativeTotalCredits = allRows.reduce((sum, row) => sum + row.credits, 0);
   const cumulativeTotalGrades = allRows.reduce((sum, row) => sum + row.weighted, 0);
