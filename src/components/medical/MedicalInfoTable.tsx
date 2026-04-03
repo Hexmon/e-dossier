@@ -12,6 +12,7 @@ interface Props {
     loading: boolean;
     editingId: string | null;
     editForm: MedInfoRow | null;
+    readOnly?: boolean;
 
     onEdit: (row: MedInfoRow) => void;
     onChange: (field: keyof MedInfoRow, value: any) => void;
@@ -27,6 +28,7 @@ export default function MedicalInfoTable({
     loading,
     editingId,
     editForm,
+    readOnly = false,
     onEdit,
     onChange,
     onSave,
@@ -173,7 +175,7 @@ export default function MedicalInfoTable({
         }
     ];
 
-    const actions: TableAction<MedInfoRow>[] = [
+    const actions: TableAction<MedInfoRow>[] = readOnly ? [] : [
         {
             key: "edit-cancel",
             label: editingId ? "Cancel" : "Edit",

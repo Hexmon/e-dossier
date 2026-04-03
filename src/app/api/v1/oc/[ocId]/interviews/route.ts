@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { interviewOcCreateSchema, interviewOcQuerySchema } from '@/app/lib/interview-oc-validators';
 import {
@@ -209,6 +209,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await ensureOcExists(ocId);
 
         const dto = interviewOcCreateSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         await validateTemplateAndPayload({
             templateId: dto.templateId,

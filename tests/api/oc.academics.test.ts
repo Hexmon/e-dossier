@@ -20,6 +20,7 @@ vi.mock('@/app/api/v1/oc/_checks', () => ({
   parseParam: vi.fn(),
   ensureOcExists: vi.fn(),
   mustBeAcademicsEditor: vi.fn(),
+  assertOcSemesterWriteAllowed: vi.fn(),
 }));
 
 vi.mock('@/lib/authorization', () => ({
@@ -119,6 +120,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   (ocChecks.parseParam as any).mockImplementation(async (_ctx: any, schema: any) => schema.parse(_ctx.params));
   (ocChecks.ensureOcExists as any).mockResolvedValue(undefined);
+  (ocChecks.assertOcSemesterWriteAllowed as any).mockResolvedValue(undefined);
   (authz.authorizeOcAccess as any).mockResolvedValue({ userId: 'u1' });
   (workflowServices.assertWorkflowDirectWriteAllowed as any).mockResolvedValue(undefined);
 });
@@ -241,6 +243,34 @@ describe('PATCH /api/v1/oc/:ocId/academics/:semester', () => {
 
     expect(res.status).toBe(409);
     expect(body.error).toBe('workflow_required');
+  });
+
+  it('returns semester_locked when a non-current semester is patched', async () => {
+    (ocChecks.mustBeAcademicsEditor as any).mockResolvedValueOnce({ userId: 'pc-user' });
+    (workflowServices.assertWorkflowDirectWriteAllowed as any).mockResolvedValueOnce(undefined);
+    (ocChecks.parseParam as any)
+      .mockResolvedValueOnce({ ocId })
+      .mockResolvedValueOnce({ semester: 1 });
+    (ocChecks.assertOcSemesterWriteAllowed as any).mockRejectedValueOnce(
+      new ApiError(403, 'Only the current semester can be modified.', 'semester_locked', {
+        currentSemester: 3,
+        requestedSemester: 1,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+      })
+    );
+
+    const req = makeJsonRequest({
+      method: 'PATCH',
+      path: `${basePath}/${ocId}/academics/1`,
+      body: { marksScored: 420 },
+    });
+    const ctx = { params: Promise.resolve({ ocId, semester: '1' }) } as any;
+    const res = await patchAcademicSummaryRoute(req as any, ctx);
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe('semester_locked');
+    expect(body.requestedSemester).toBe(1);
   });
 
   it('rejects manual sgpa/cgpa patch values', async () => {

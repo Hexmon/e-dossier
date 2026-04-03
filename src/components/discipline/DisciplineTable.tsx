@@ -21,6 +21,7 @@ interface Props {
     appointmentsLoading: boolean;
     onEditSave: (id: string, payload: Partial<HookRow>) => Promise<void> | void;
     onDelete: (row: HookRow) => Promise<void> | void;
+    readOnly?: boolean;
 }
 
 export default function DisciplineTable({
@@ -30,6 +31,7 @@ export default function DisciplineTable({
     appointmentsLoading,
     onEditSave,
     onDelete,
+    readOnly = false,
 }: Props) {
     const { punishments, fetchPunishments } = usePunishments();
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -245,7 +247,7 @@ export default function DisciplineTable({
     ];
 
     // Use separate actions with conditions instead of dynamic labels
-    const actions: TableAction<HookRow>[] = useMemo(() => [
+    const actions: TableAction<HookRow>[] = useMemo(() => (readOnly ? [] : [
         {
             key: "edit",
             label: "Edit",
@@ -278,7 +280,7 @@ export default function DisciplineTable({
             condition: (row) => editingId === row.id,
             handler: () => saveEdit()
         }
-    ], [editingId, editForm, onDelete]);
+    ]), [editingId, editForm, onDelete, readOnly]);
 
     const config: TableConfig<HookRow> = useMemo(() => ({
         columns,

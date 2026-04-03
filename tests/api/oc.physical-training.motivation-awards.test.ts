@@ -28,6 +28,7 @@ vi.mock('@/app/api/v1/oc/_checks', () => ({
   mustBeAuthed: vi.fn(),
   parseParam: vi.fn(),
   ensureOcExists: vi.fn(),
+  assertOcSemesterWriteAllowed: vi.fn(),
 }));
 
 vi.mock('@/app/services/marksReviewWorkflow', () => ({
@@ -54,6 +55,7 @@ describe('GET /api/v1/oc/[ocId]/physical-training/motivation-awards', () => {
     vi.mocked(ocChecks.mustBeAuthed).mockResolvedValue({ userId: 'user-1' } as any);
     vi.mocked(ocChecks.parseParam).mockResolvedValue({ ocId } as any);
     vi.mocked(ocChecks.ensureOcExists).mockResolvedValue(undefined);
+    vi.mocked(ocChecks.assertOcSemesterWriteAllowed).mockResolvedValue(undefined as any);
     vi.mocked(ptOcQueries.listOcPtMotivationValues).mockResolvedValue([
       {
         id: '22222222-2222-4222-8222-222222222222',
@@ -85,6 +87,7 @@ describe('DELETE /api/v1/oc/[ocId]/physical-training/motivation-awards', () => {
     vi.mocked(ocChecks.mustBeAuthed).mockResolvedValue({ userId: 'user-1' } as any);
     vi.mocked(ocChecks.parseParam).mockResolvedValue({ ocId } as any);
     vi.mocked(ocChecks.ensureOcExists).mockResolvedValue(undefined);
+    vi.mocked(ocChecks.assertOcSemesterWriteAllowed).mockResolvedValue(undefined as any);
     vi.mocked(workflowServices.assertWorkflowDirectWriteAllowed).mockResolvedValue(undefined as any);
   });
 

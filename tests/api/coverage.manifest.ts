@@ -171,6 +171,14 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts'],
   },
   {
+    testFile: 'tests/api/oc.semester-lock-derived.test.ts',
+    routeFiles: [
+      'src/app/api/v1/oc/[ocId]/camps/route.ts',
+      'src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts',
+      'src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/[id]/route.ts',
+    ],
+  },
+  {
     testFile: 'tests/api/admin.route-flow.uncovered.test.ts',
     routeFiles: [...ADMIN_UNCOVERED_ROUTE_FILES],
   },

@@ -22,13 +22,17 @@ import { toast } from "sonner";
 
 import OLQForm from "@/components/olq/OLQForm";
 import OLQView from "@/components/olq/OLQView";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 import { useOlqActions } from "@/hooks/useOlqActions";
 import { GRADE_BRACKETS } from "@/constants/app.constants";
 import { useOcDetails } from "@/hooks/useOcDetails";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Cadet } from "@/types/cadet";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 
 type OlqFormValues = Record<string, any>;
 
@@ -40,6 +44,7 @@ export default function OLQPage() {
 
     // Load cadet data via hook (no redux)
     const { cadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
 
     const {
         name = "",
@@ -48,6 +53,11 @@ export default function OLQPage() {
         ocId: cadetOcId = ocId,
         course = "",
     } = cadet ?? {};
+    const currentSemester = cadet?.currentSemester ?? 1;
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
 
     const selectedCadet = {
         name,
@@ -55,6 +65,7 @@ export default function OLQPage() {
         ocNumber,
         ocId: cadetOcId,
         course,
+        currentSemester,
     };
 
     // react-hook-form
@@ -76,30 +87,38 @@ export default function OLQPage() {
                 {selectedCadet && <SelectedCadetTable selectedCadet={selectedCadet} />}
 
                 <FormProvider {...methods}>
-                    <InnerOLQPage selectedCadet={selectedCadet} ocId={ocId} />
+                    <InnerOLQPage
+                        selectedCadet={selectedCadet}
+                        ocId={ocId}
+                        currentSemester={currentSemester}
+                        canEditLockedSemesters={canEditLockedSemesters}
+                    />
                 </FormProvider>
             </main>
         </DashboardLayout>
     );
 }
 
-function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: string; }) {
+function InnerOLQPage({
+    selectedCadet,
+    ocId,
+    currentSemester,
+    canEditLockedSemesters,
+}: {
+    selectedCadet: Cadet;
+    ocId: string;
+    currentSemester?: number | null;
+    canEditLockedSemesters?: boolean;
+}) {
     const { register, reset, getValues, handleSubmit, setValue } = useForm<OlqFormValues>();
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     const { fetchCategories, fetchSemester, createRecord, updateRecord, deleteSemester } = useOlqActions(selectedCadet);
-
-    const semParam = searchParams.get("semester");
-    const resolvedSemIndex = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - 1;
-        if (idx < 0 || idx >= TERMS.length) return 0;
-        return idx;
-    }, [semParam]);
-    const [activeSemIndex, setActiveSemIndex] = useState<number>(resolvedSemIndex);
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
+    const activeSemIndex = activeSemester - 1;
     const [activeInnerTab, setActiveInnerTab] = useState<"input" | "view">("input");
 
     const [structure, setStructure] = useState<Record<string, any[]>>({});
@@ -111,19 +130,8 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
     const [refreshFlag, setRefreshFlag] = useState<number>(0);
     const [loadingSemester, setLoadingSemester] = useState<boolean>(false);
 
-    useEffect(() => {
-        setActiveSemIndex(resolvedSemIndex);
-    }, [resolvedSemIndex]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + 1));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-
     const handleSemesterChange = (index: number) => {
-        setActiveSemIndex(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + 1);
         setActiveInnerTab("input");
     };
 
@@ -322,6 +330,13 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
         >
             <TabsContent value="olq-assessment">
                 <Card className="shadow-lg rounded-xl p-6">
+                    {isActiveSemesterLocked ? (
+                        <SemesterLockNotice
+                            activeSemester={activeSemester}
+                            currentSemester={currentSemester ?? 1}
+                            supportedSemesters={supportedSemesters}
+                        />
+                    ) : null}
                     <div className="flex justify-center mb-6 space-x-2">
                         {TERMS.map((t, idx) => {
                             return (
@@ -363,6 +378,7 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
                                             onClear={clearForm}
                                             showDelete={true}
                                             onDeleteSemester={handleDeleteSemester}
+                                            readOnly={isActiveSemesterLocked}
                                             onReset={() => {
                                                 const flatInit: any = {};
                                                 Object.values(structure).flat().forEach((s: any) => flatInit[s.id] = "");
@@ -391,7 +407,7 @@ function InnerOLQPage({ selectedCadet, ocId }: { selectedCadet: Cadet; ocId: str
                                     {/* Edit & Delete controls inside view tab */}
                                     {!templateMissingNotice && (
                                         <div className="mt-4 flex justify-center gap-4">
-                                            <Button onClick={() => setActiveInnerTab("input")}>Edit Scores</Button>
+                                            <Button onClick={() => setActiveInnerTab("input")} disabled={isActiveSemesterLocked}>Edit Scores</Button>
                                             {/* <Button variant="destructive" onClick={handleDeleteSemester}>Delete Semester</Button> */}
                                         </div>
                                     )}

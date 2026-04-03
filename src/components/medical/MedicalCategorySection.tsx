@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -15,6 +14,8 @@ import type { MedicalCategoryFormData } from "@/types/med-records";
 
 import type { RootState } from "@/store";
 import { clearMedicalCategoryForm } from "@/store/slices/medicalCategorySlice";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 
 interface Props {
     selectedCadet: {
@@ -25,13 +26,17 @@ interface Props {
         course: string;
     };
     semesters: string[];
+    currentSemester?: number | null;
+    canEditLockedSemesters?: boolean;
 }
 
-export default function MedicalCategorySection({ selectedCadet, semesters }: Props) {
+export default function MedicalCategorySection({
+    selectedCadet,
+    semesters,
+    currentSemester = 1,
+    canEditLockedSemesters = false,
+}: Props) {
     const { ocId = "" } = selectedCadet;
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     // Redux
     const dispatch = useDispatch();
@@ -48,31 +53,17 @@ export default function MedicalCategorySection({ selectedCadet, semesters }: Pro
         remove: deleteRecord,
     } = useMedicalCategory(ocId);
 
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - 1;
-        if (idx < 0 || idx >= semesters.length) return 0;
-        return idx;
-    }, [semParam, semesters.length]);
-    const [activeTab, setActiveTab] = useState(resolvedTab);
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - 1;
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<MedCatRow | null>(null);
 
-    useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + 1));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-
     const handleSemesterChange = (index: number) => {
-        setActiveTab(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + 1);
     };
 
     const loadData = useCallback(async () => {
@@ -236,6 +227,13 @@ export default function MedicalCategorySection({ selectedCadet, semesters }: Pro
             </CardHeader>
 
             <CardContent>
+                {isActiveSemesterLocked ? (
+                    <SemesterLockNotice
+                        activeSemester={activeSemester}
+                        currentSemester={currentSemester ?? 1}
+                        supportedSemesters={supportedSemesters}
+                    />
+                ) : null}
                 <div className="flex justify-center mb-6 space-x-2">
                     {semesters.map((sem, idx) => {
                         return (
@@ -255,6 +253,7 @@ export default function MedicalCategorySection({ selectedCadet, semesters }: Pro
                     rows={filtered}
                     editingId={editingId}
                     editForm={editForm}
+                    readOnly={isActiveSemesterLocked}
                     onEdit={startEdit}
                     onChange={changeEdit}
                     onSave={saveEdit}
@@ -268,6 +267,7 @@ export default function MedicalCategorySection({ selectedCadet, semesters }: Pro
                     defaultValues={getDefaultValues()}
                     ocId={ocId}
                     onClear={handleClearForm}
+                    readOnly={isActiveSemesterLocked}
                 />
 
                 <p className="text-xs text-muted-foreground mt-4 italic">

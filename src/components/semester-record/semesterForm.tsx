@@ -63,13 +63,23 @@ function semesterLabelToNumber(label: string) {
   return idx >= 0 ? idx + 1 : 1;
 }
 
-export default function SemesterForm() {
+type SemesterFormProps = {
+  initialSemester?: number;
+  onSemesterChange?: (semester: number) => void;
+  readOnly?: boolean;
+};
+
+export default function SemesterForm({
+  initialSemester = 1,
+  onSemesterChange,
+  readOnly = false,
+}: SemesterFormProps) {
   const params = useParams();
   const paramId = params?.ocId || params?.id;
   const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
 
   const dispatch = useDispatch();
-  const [activeSemester, setActiveSemester] = useState("I TERM");
+  const [activeSemester, setActiveSemester] = useState(semesters[initialSemester - 1] ?? "I TERM");
   const [isEditingRemarks, setIsEditingRemarks] = useState(false);
   const [isEditingReviews, setIsEditingReviews] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -100,6 +110,10 @@ export default function SemesterForm() {
       setCdrMarks(cachedCdr);
     }
   }, [savedData]);
+
+  useEffect(() => {
+    setActiveSemester(semesters[initialSemester - 1] ?? "I TERM");
+  }, [initialSemester]);
 
   const semesterNumber = useMemo(
     () => semesterLabelToNumber(activeSemester),
@@ -161,6 +175,20 @@ export default function SemesterForm() {
   useEffect(() => {
     loadSpr();
   }, [loadSpr]);
+
+  useEffect(() => {
+    if (readOnly) {
+      setIsEditingRemarks(false);
+      setIsEditingReviews(false);
+    }
+  }, [readOnly]);
+
+  const handleSemesterSelect = (semesterLabel: string) => {
+    setActiveSemester(semesterLabel);
+    if (onSemesterChange) {
+      onSemesterChange(semesterLabelToNumber(semesterLabel));
+    }
+  };
 
   const derivedRows = useMemo(() => {
     if (rows.length === 0) return rows;
@@ -274,7 +302,7 @@ export default function SemesterForm() {
             {semesters.map((sem) => (
               <button
                 key={sem}
-                onClick={() => setActiveSemester(sem)}
+                onClick={() => handleSemesterSelect(sem)}
                 className={`px-4 py-2 rounded-t-lg font-medium ${
                   activeSemester === sem
                     ? "bg-primary text-primary-foreground"
@@ -372,9 +400,11 @@ export default function SemesterForm() {
             ) : (
               <>
                 <UniversalTable data={displaySemesterData} config={tableConfigs[activeSemester]} />
+                {!readOnly ? (
                 <div className="flex justify-center mt-4">
                   <Button onClick={() => setIsEditingRemarks(true)}>Edit</Button>
                 </div>
+                ) : null}
               </>
             )}
           </div>
@@ -440,9 +470,11 @@ export default function SemesterForm() {
                     {localReviews.commander || "-"}
                   </p>
                 </div>
+                {!readOnly ? (
                 <div className="flex justify-center mt-4">
                   <Button onClick={() => setIsEditingReviews(true)}>Edit</Button>
                 </div>
+                ) : null}
               </div>
             )}
           </div>

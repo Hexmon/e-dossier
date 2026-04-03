@@ -13,9 +13,10 @@ interface Props {
     loading: boolean;
     onEditSave: (id: string, payload: Partial<ParentCommPayload>) => Promise<void> | void;
     onDelete: (row: ParentCommRow) => Promise<void> | void;
+    readOnly?: boolean;
 }
 
-export default function ParentCommTable({ rows, loading, onEditSave, onDelete }: Props) {
+export default function ParentCommTable({ rows, loading, onEditSave, onDelete, readOnly = false }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<ParentCommRow | null>(null);
 
@@ -123,7 +124,7 @@ export default function ParentCommTable({ rows, loading, onEditSave, onDelete }:
         }
     ];
 
-    const actions: TableAction<ParentCommRow>[] = [
+    const actions: TableAction<ParentCommRow>[] = readOnly ? [] : [
         {
             key: "edit-cancel",
             label: editingId ? "Cancel" : "Edit",

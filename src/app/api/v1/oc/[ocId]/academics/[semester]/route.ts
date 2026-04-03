@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAcademicsEditor } from '../../../_checks';
+import { parseParam, ensureOcExists, mustBeAcademicsEditor, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam, SemesterParam, academicSummaryPatchSchema } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getOcAcademicSemester, updateOcAcademicSummary, deleteOcAcademicSemester } from '@/app/services/oc-academics';
@@ -42,6 +42,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
         await authorizeOcAccess(req, ocId);
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: semester, authContext: authCtx });
         const dto = academicSummaryPatchSchema.parse(await req.json());
         const data = await updateOcAcademicSummary(ocId, semester, dto, {
             actorUserId: authCtx?.userId,
@@ -79,6 +80,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
         await authorizeOcAccess(req, ocId);
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: semester, authContext: authCtx });
         const hard = new URL(req.url).searchParams.get('hard') === 'true';
         const result = await deleteOcAcademicSemester(ocId, semester, { hard }, {
             actorUserId: authCtx?.userId,

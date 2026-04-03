@@ -25,6 +25,10 @@ import { Button } from "@/components/ui/button";
 import type { TermData } from "@/types/obstacleTrg";
 import type { RootState } from "@/store";
 import { saveObstacleTrainingForm, clearObstacleTrainingForm } from "@/store/slices/obstacleTrainingSlice";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 export default function ObstacleTrgPage() {
     const { id } = useParams();
@@ -34,6 +38,7 @@ export default function ObstacleTrgPage() {
     const searchParams = useSearchParams();
 
     const { cadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
     const {
         name = "",
         courseName = "",
@@ -41,18 +46,21 @@ export default function ObstacleTrgPage() {
         ocId: cadetOcId = ocId,
         course = "",
     } = cadet ?? {};
-    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course }), [name, courseName, ocNumber, cadetOcId, course]);
+    const currentSemester = cadet?.currentSemester ?? 1;
+    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course, currentSemester }), [name, courseName, ocNumber, cadetOcId, course, currentSemester]);
 
     const semesterApiBase = 4; // IV -> 4
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - semesterApiBase;
-        if (idx < 0 || idx >= terms.length) return 0;
-        return idx;
-    }, [semParam]);
-    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
+    const supportedSemesters = [4, 5, 6];
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters,
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - semesterApiBase;
     const semesterNumber = activeTab + semesterApiBase;
 
     // Redux
@@ -70,19 +78,15 @@ export default function ObstacleTrgPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + semesterApiBase));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-
-    useEffect(() => {
         if (!ocId) return;
         loadAll();
     }, [ocId, loadAll]);
+
+    useEffect(() => {
+        if (isActiveSemesterLocked) {
+            setIsEditingAll(false);
+        }
+    }, [isActiveSemesterLocked]);
 
     // Create stable default values - prioritize Redux cache over database
     const getDefaultValues = useCallback(() => {
@@ -221,8 +225,7 @@ export default function ObstacleTrgPage() {
     };
 
     const handleTabChange = (index: number) => {
-        setActiveTab(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + semesterApiBase);
         setIsEditingAll(false);
     };
 
@@ -266,6 +269,13 @@ export default function ObstacleTrgPage() {
                             </CardHeader>
 
                             <CardContent>
+                                {isActiveSemesterLocked ? (
+                                    <SemesterLockNotice
+                                        activeSemester={activeSemester}
+                                        currentSemester={currentSemester}
+                                        supportedSemesters={supportedSemesters}
+                                    />
+                                ) : null}
                                 {/* Term Tabs */}
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {terms.map((term, idx) => {
@@ -289,12 +299,13 @@ export default function ObstacleTrgPage() {
                                     isEditing={isEditingAll}
                                     onCancelEdit={handleCancel}
                                     formMethods={formMethods}
+                                    disabled={isActiveSemesterLocked || !isEditingAll}
                                     isSaving={isSaving}
                                 />
 
                                 {/* Edit / Save toggle */}
                                 <div className="flex justify-center mb-4">
-                                    {!isEditingAll ? (
+                                    {!isEditingAll && !isActiveSemesterLocked ? (
                                         <Button type="button" onClick={() => setIsEditingAll(true)} disabled={isSaving}>
                                             Edit
                                         </Button>

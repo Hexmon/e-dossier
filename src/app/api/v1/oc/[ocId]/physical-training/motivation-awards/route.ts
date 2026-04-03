@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import {
@@ -85,6 +85,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await ensureOcExists(ocId);
 
         const dto = ptOcMotivationUpsertSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
         const fieldIds = dto.values.map((v) => v.fieldId);
         await validateMotivationFields(dto.semester, fieldIds);
 
@@ -118,6 +119,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         await ensureOcExists(ocId);
 
         const dto = ptOcMotivationUpdateSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         if (dto.values?.length) {
             await validateMotivationFields(dto.semester, dto.values.map((v) => v.fieldId));
@@ -159,6 +161,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         await ensureOcExists(ocId);
 
         const dto = ptOcMotivationDeleteSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         const deleted = dto.fieldIds?.length
             ? await deleteOcPtMotivationValuesByIds(ocId, dto.fieldIds)

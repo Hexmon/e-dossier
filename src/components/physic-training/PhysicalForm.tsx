@@ -25,6 +25,8 @@ import { isFreeEntryPtAttemptCode, resolvePtDraftMarks } from "@/app/lib/physica
 interface PhysicalFormProps {
   ocId: string;
   readOnly?: boolean;
+  activeSemester?: number;
+  onSemesterChange?: (semester: number) => void;
 }
 
 const semesterToApiSemester: Record<string, number> = {
@@ -35,13 +37,27 @@ const semesterToApiSemester: Record<string, number> = {
   "V TERM": 5,
   "VI TERM": 6,
 };
+const apiSemesterToLabel: Record<number, string> = {
+  1: "I TERM",
+  2: "II TERM",
+  3: "III TERM",
+  4: "IV TERM",
+  5: "V TERM",
+  6: "VI TERM",
+};
 
 const isVirtualId = (id?: string) => !!id && id.startsWith("virtual:");
 
-export default function PhysicalForm({ ocId, readOnly = false }: PhysicalFormProps) {
-  const [activeSemester, setActiveSemester] = useState("I TERM");
+export default function PhysicalForm({
+  ocId,
+  readOnly = false,
+  activeSemester: controlledSemester,
+  onSemesterChange,
+}: PhysicalFormProps) {
+  const [internalSemester, setInternalSemester] = useState("I TERM");
   const [isEditing, setIsEditing] = useState(false);
   const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
+  const activeSemester = controlledSemester ? apiSemesterToLabel[controlledSemester] ?? "I TERM" : internalSemester;
 
   const {
     scores: apiScores,
@@ -193,6 +209,22 @@ export default function PhysicalForm({ ocId, readOnly = false }: PhysicalFormPro
       setIsEditing(false);
     }
   }, [readOnly]);
+
+  useEffect(() => {
+    if (!controlledSemester) return;
+    setInternalSemester(apiSemesterToLabel[controlledSemester] ?? "I TERM");
+  }, [controlledSemester]);
+
+  const handleSemesterSelect = useCallback(
+    (semesterLabel: string) => {
+      const semesterNumber = semesterToApiSemester[semesterLabel];
+      setInternalSemester(semesterLabel);
+      if (onSemesterChange && semesterNumber) {
+        onSemesterChange(semesterNumber);
+      }
+    },
+    [onSemesterChange]
+  );
 
   const handleAttemptChange = useCallback(
     (rowId: string, attemptCode: string) => {
@@ -444,7 +476,7 @@ export default function PhysicalForm({ ocId, readOnly = false }: PhysicalFormPro
             {semesters.map((sem) => (
               <button
                 key={sem}
-                onClick={() => setActiveSemester(sem)}
+                onClick={() => handleSemesterSelect(sem)}
                 disabled={isEditing || readOnly}
                 className={`px-4 py-2 rounded-t-lg font-medium ${
                   activeSemester === sem ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"

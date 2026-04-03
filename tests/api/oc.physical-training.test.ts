@@ -25,6 +25,7 @@ vi.mock('@/app/api/v1/oc/_checks', () => ({
   mustBeAuthed: vi.fn(),
   parseParam: vi.fn(),
   ensureOcExists: vi.fn(),
+  assertOcSemesterWriteAllowed: vi.fn(),
 }));
 
 vi.mock('@/app/services/marksReviewWorkflow', () => ({
@@ -53,6 +54,7 @@ describe('POST /api/v1/oc/[ocId]/physical-training', () => {
     vi.mocked(ocChecks.mustBeAuthed).mockResolvedValue({ userId: 'user-1' } as any);
     vi.mocked(ocChecks.parseParam).mockResolvedValue({ ocId } as any);
     vi.mocked(ocChecks.ensureOcExists).mockResolvedValue(undefined);
+    vi.mocked(ocChecks.assertOcSemesterWriteAllowed).mockResolvedValue(undefined as any);
     vi.mocked(workflowServices.assertWorkflowDirectWriteAllowed).mockResolvedValue(undefined as any);
     vi.mocked(ptOcQueries.upsertOcPtScores).mockResolvedValue([] as any);
     vi.mocked(ptOcQueries.listOcPtScores).mockResolvedValue([
@@ -160,6 +162,7 @@ describe('GET /api/v1/oc/[ocId]/physical-training', () => {
     vi.mocked(ocChecks.mustBeAuthed).mockResolvedValue({ userId: 'user-1' } as any);
     vi.mocked(ocChecks.parseParam).mockResolvedValue({ ocId } as any);
     vi.mocked(ocChecks.ensureOcExists).mockResolvedValue(undefined);
+    vi.mocked(ocChecks.assertOcSemesterWriteAllowed).mockResolvedValue(undefined as any);
     vi.mocked(ptOcQueries.listOcPtScores).mockResolvedValue([
       {
         id: '33333333-3333-4333-8333-333333333333',
@@ -191,6 +194,7 @@ describe('DELETE /api/v1/oc/[ocId]/physical-training', () => {
     vi.mocked(ocChecks.mustBeAuthed).mockResolvedValue({ userId: 'user-1' } as any);
     vi.mocked(ocChecks.parseParam).mockResolvedValue({ ocId } as any);
     vi.mocked(ocChecks.ensureOcExists).mockResolvedValue(undefined);
+    vi.mocked(ocChecks.assertOcSemesterWriteAllowed).mockResolvedValue(undefined as any);
     vi.mocked(workflowServices.assertWorkflowDirectWriteAllowed).mockResolvedValue(undefined as any);
     vi.mocked(ptOcQueries.deleteOcPtScoresBySemester).mockResolvedValue([
       { id: '33333333-3333-4333-8333-333333333333' },
@@ -213,5 +217,31 @@ describe('DELETE /api/v1/oc/[ocId]/physical-training', () => {
 
     expect(res.status).toBe(409);
     expect(body.error).toBe('workflow_required');
+  });
+
+  it('returns semester_locked when a stale semester is submitted', async () => {
+    vi.mocked(ocChecks.assertOcSemesterWriteAllowed).mockRejectedValueOnce(
+      new ApiError(403, 'Only the current semester can be modified.', 'semester_locked', {
+        currentSemester: 3,
+        requestedSemester: 1,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+      }) as any,
+    );
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: `/api/v1/oc/${ocId}/physical-training`,
+      body: {
+        semester: 1,
+        scores: [{ ptTaskScoreId, marksScored: 10 }],
+      },
+    });
+
+    const res = await POST(req as any, createRouteContext({ ocId }));
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe('semester_locked');
+    expect(body.currentSemester).toBe(3);
   });
 });

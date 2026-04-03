@@ -11,9 +11,10 @@ interface Props {
     loading: boolean;
     onEditSave: (id: string, payload: Partial<{ reason: string; warningType: string; date: string; warningBy: string }>) => Promise<void> | void;
     onDelete: (id: string) => Promise<void> | void;
+    readOnly?: boolean;
 }
 
-export default function CounsellingTable({ rows, loading, onEditSave, onDelete }: Props) {
+export default function CounsellingTable({ rows, loading, onEditSave, onDelete, readOnly = false }: Props) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<CounsellingRow> | null>(null);
 
@@ -110,7 +111,7 @@ export default function CounsellingTable({ rows, loading, onEditSave, onDelete }
         }
     ];
 
-    const actions: TableAction<CounsellingRow>[] = [
+    const actions: TableAction<CounsellingRow>[] = readOnly ? [] : [
         {
             key: "edit-cancel",
             label: editingId ? "Cancel" : "Edit",

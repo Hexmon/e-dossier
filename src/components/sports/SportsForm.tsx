@@ -10,6 +10,7 @@ interface Props {
     onSave: () => void;
     onCancel: () => void;
     onReset: () => void;
+    readOnly?: boolean;
 }
 
 export default function SportsForm({
@@ -19,6 +20,7 @@ export default function SportsForm({
     onSave,
     onCancel,
     onReset,
+    readOnly = false,
 }: Props) {
     const title = termKey[0].toUpperCase() + termKey.slice(1);
 
@@ -30,16 +32,16 @@ export default function SportsForm({
                         type="button"
                         className="bg-success"
                         onClick={onSave}
-                        disabled={isSaving}
-                    >
-                        {isSaving ? "Saving..." : `Save ${title}`}
-                    </Button>
+                    disabled={isSaving || readOnly}
+                >
+                    {isSaving ? "Saving..." : `Save ${title}`}
+                </Button>
 
                     <Button
                         type="button"
                         variant="outline"
                         onClick={onCancel}
-                        disabled={isSaving}
+                        disabled={isSaving || readOnly}
                     >
                         Cancel Edit
                     </Button>
@@ -49,13 +51,13 @@ export default function SportsForm({
                         variant="outline"
                         className="hover:bg-destructive hover:text-primary-foreground"
                         onClick={onReset}
-                        disabled={isSaving}
+                        disabled={isSaving || readOnly}
                     >
                         Reset
                     </Button>
                 </>
             ) : (
-                <Button type="button" onClick={onSave} disabled={isSaving}>
+                <Button type="button" onClick={onSave} disabled={isSaving || readOnly}>
                     Edit {title} Table
                 </Button>
             )}

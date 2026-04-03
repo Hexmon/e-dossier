@@ -1,6 +1,6 @@
 ﻿import { NextRequest } from 'next/server';
 import { json, handleApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists, mustBeAuthed } from '../../_checks';
+import { parseParam, ensureOcExists, mustBeAuthed, assertOcSemesterWriteAllowed } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { withRouteLogging } from '@/lib/withRouteLogging';
@@ -29,6 +29,7 @@ async function POSTOrPATCHHandler(req: NextRequest, { params }: { params: Promis
 
         const sp = new URL(req.url).searchParams;
         const qp = sprQuerySchema.parse({ semester: sp.get('semester') ?? undefined });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: qp.semester, authContext: auth });
         const dto = sprUpsertSchema.parse(await req.json());
 
         const data = await upsertSprView(

@@ -24,6 +24,7 @@ const ocChecksMock = {
   mustBeAuthed: vi.fn(),
   mustBeAdmin: vi.fn(),
   mustBeAcademicsEditor: vi.fn(),
+  assertOcSemesterWriteAllowed: vi.fn(),
   ensureOcExists: vi.fn(),
   parseParam: vi.fn(async ({ params }: any, schema: any) => {
     const resolvedParams = await params;
@@ -231,6 +232,7 @@ export function resetCommonMocks() {
   ocChecksMock.mustBeAuthed.mockResolvedValue({ userId: 'user-1', roles: ['ADMIN'] });
   ocChecksMock.mustBeAdmin.mockResolvedValue({ userId: 'admin-1', roles: ['ADMIN'] });
   ocChecksMock.mustBeAcademicsEditor.mockResolvedValue({ userId: 'admin-1', roles: ['ADMIN'] });
+  ocChecksMock.assertOcSemesterWriteAllowed.mockResolvedValue(undefined);
   ocChecksMock.ensureOcExists.mockResolvedValue(undefined);
   ocChecksMock.parseParam.mockImplementation(async ({ params }: any, schema: any) => {
     const resolvedParams = await params;

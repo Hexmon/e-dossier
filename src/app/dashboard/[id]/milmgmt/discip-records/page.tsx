@@ -1,8 +1,8 @@
 //DisciplineRecordsPage
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo } from "react";
+import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -34,14 +34,15 @@ import { getAppointments } from "@/app/lib/api/appointmentApi";
 
 import type { RootState } from "@/store";
 import { clearDisciplineForm } from "@/store/slices/disciplineRecordsSlice";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 export default function DisciplineRecordsPage() {
     // dynamic route param
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     // Redux
     const dispatch = useDispatch();
@@ -51,6 +52,7 @@ export default function DisciplineRecordsPage() {
 
     // Load cadet data via hook (no redux)
     const { cadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
 
     const {
         name = "",
@@ -58,6 +60,7 @@ export default function DisciplineRecordsPage() {
         ocNumber = "",
         ocId: cadetOcId = ocId,
         course = "",
+        currentSemester = 1,
     } = cadet ?? {};
 
     const selectedCadet = {
@@ -66,7 +69,12 @@ export default function DisciplineRecordsPage() {
         ocNumber,
         ocId: cadetOcId,
         course,
+        currentSemester,
     };
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
 
     // semesters (fallback to 6 terms if constant missing)
     const semesters = Array.isArray(SEMESTERS_CONST) && SEMESTERS_CONST.length > 0
@@ -82,29 +90,15 @@ export default function DisciplineRecordsPage() {
         deleteRecord,
     } = useDisciplineRecords(ocId, semesters.length);
 
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - 1;
-        if (idx < 0 || idx >= semesters.length) return 0;
-        return idx;
-    }, [semParam, semesters.length]);
-    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
-
-    useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + 1));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - 1;
 
     const handleSemesterChange = (index: number) => {
-        setActiveTab(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + 1);
     };
 
     const { data: appointmentOptions = [], isLoading: appointmentsLoading } = useQuery({
@@ -302,6 +296,13 @@ export default function DisciplineRecordsPage() {
                                 <div className="flex justify-center items-center mb-4">
                                     <h2 className="text-xl font-semibold text-primary">DISCIPLINE RECORDS</h2>
                                 </div>
+                                {isActiveSemesterLocked ? (
+                                    <SemesterLockNotice
+                                        activeSemester={activeSemester}
+                                        currentSemester={currentSemester ?? 1}
+                                        supportedSemesters={supportedSemesters}
+                                    />
+                                ) : null}
 
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {semesters.map((sem, index) => {
@@ -328,19 +329,22 @@ export default function DisciplineRecordsPage() {
                                     appointmentsLoading={appointmentsLoading}
                                     onEditSave={handleUpdate}
                                     onDelete={handleDelete}
+                                    readOnly={isActiveSemesterLocked}
                                 />
 
-                                <div className="mt-6">
-                                    <DisciplineForm
-                                        key={`${ocId}-${savedFormData ? 'redux' : 'default'}`}
-                                        onSubmit={handleSubmit}
-                                        defaultValues={getDefaultValues()}
-                                        ocId={ocId}
-                                        appointmentOptions={appointmentOptions}
-                                        appointmentsLoading={appointmentsLoading}
-                                        onClear={handleClearForm}
-                                    />
-                                </div>
+                                {!isActiveSemesterLocked ? (
+                                    <div className="mt-6">
+                                        <DisciplineForm
+                                            key={`${ocId}-${savedFormData ? 'redux' : 'default'}`}
+                                            onSubmit={handleSubmit}
+                                            defaultValues={getDefaultValues()}
+                                            ocId={ocId}
+                                            appointmentOptions={appointmentOptions}
+                                            appointmentsLoading={appointmentsLoading}
+                                            onClear={handleClearForm}
+                                        />
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     </div>

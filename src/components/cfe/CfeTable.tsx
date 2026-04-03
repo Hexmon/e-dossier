@@ -28,6 +28,7 @@ interface Props {
   ) => Promise<void> | void;
   onDelete: (index: number, semesterIndex: number, rows: cfeRow[]) => Promise<void> | void;
   semesterIndex: number;
+  readOnly?: boolean;
 }
 
 export default function CfeTable({
@@ -37,6 +38,7 @@ export default function CfeTable({
   onReplaceSemester,
   onDelete,
   semesterIndex,
+  readOnly = false,
 }: Props) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValues, setEditValues] = useState<{
@@ -176,7 +178,7 @@ export default function CfeTable({
     },
   ];
 
-  const actions: TableAction<cfeRow>[] = [
+  const actions: TableAction<cfeRow>[] = readOnly ? [] : [
     {
       key: "edit-cancel",
       label: editingIndex !== null ? "Cancel" : "Edit",

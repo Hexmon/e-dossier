@@ -15,6 +15,10 @@ import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Settings, Shield } from "lucide-react";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 export default function SemesterRecordPage() {
     const params = useParams();
@@ -23,6 +27,17 @@ export default function SemesterRecordPage() {
     const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
 
     const { cadet, loading: loadingCadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
+    const currentSemester = cadet?.currentSemester ?? 1;
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
 
     return (
         <DashboardLayout
@@ -87,7 +102,18 @@ export default function SemesterRecordPage() {
                                     SEMESTER RECORD
                                 </CardTitle>
                             </CardHeader>
-                            <SemesterForm />
+                            {isActiveSemesterLocked ? (
+                                <SemesterLockNotice
+                                    activeSemester={activeSemester}
+                                    currentSemester={currentSemester}
+                                    supportedSemesters={supportedSemesters}
+                                />
+                            ) : null}
+                            <SemesterForm
+                                initialSemester={activeSemester}
+                                onSemesterChange={setActiveSemester}
+                                readOnly={isActiveSemesterLocked}
+                            />
                         </Card>
                     </TabsContent>
                 </DossierTab>

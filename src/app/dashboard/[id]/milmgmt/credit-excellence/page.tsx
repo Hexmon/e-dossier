@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 
@@ -32,13 +32,14 @@ import type { cfeRow } from "@/types/cfe";
 
 import type { RootState } from "@/store";
 import { clearCfeForm } from "@/store/slices/cfeRecordsSlice";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 export default function CFEFormPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     // Redux
     const dispatch = useDispatch();
@@ -47,6 +48,7 @@ export default function CFEFormPage() {
     );
 
     const { cadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
 
     const {
         name = "",
@@ -54,9 +56,14 @@ export default function CFEFormPage() {
         ocNumber = "",
         ocId: cadetOcId = ocId,
         course = "",
+        currentSemester = 1,
     } = cadet ?? {};
 
-    const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
+    const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course, currentSemester };
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
 
     const semesters =
         Array.isArray(semestersCfe) && semestersCfe.length > 0
@@ -72,29 +79,15 @@ export default function CFEFormPage() {
         deleteRecordById,
     } = useCfeRecords(ocId, semesters.length);
 
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - 1;
-        if (idx < 0 || idx >= semesters.length) return 0;
-        return idx;
-    }, [semParam, semesters.length]);
-    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
-
-    useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + 1));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - 1;
 
     const handleSemesterChange = (index: number) => {
-        setActiveTab(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + 1);
     };
 
     useEffect(() => {
@@ -233,6 +226,13 @@ export default function CFEFormPage() {
                             </CardHeader>
 
                             <CardContent>
+                                {isActiveSemesterLocked ? (
+                                    <SemesterLockNotice
+                                        activeSemester={activeSemester}
+                                        currentSemester={currentSemester ?? 1}
+                                        supportedSemesters={supportedSemesters}
+                                    />
+                                ) : null}
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {semesters.map((s, idx) => {
                                         return (
@@ -262,25 +262,27 @@ export default function CFEFormPage() {
                                         onReplaceSemester={handleReplaceSemester}
                                         onDelete={handleDelete}
                                         semesterIndex={activeTab}
+                                        readOnly={isActiveSemesterLocked}
                                     />
                                 </div>
 
-                                {/* Form to add new records */}
-                                <div className="mt-6">
-                                    <h3 className="text-sm font-semibold text-foreground mb-3">
-                                        Add New Records for {semesters[activeTab]}
-                                    </h3>
-                                    <CfeForm
-                                        key={`${ocId}-${savedFormData ? 'redux' : 'default'}`}
-                                        onSubmit={handleSubmit}
-                                        semIndex={activeTab}
-                                        existingRows={groups[activeTab] ?? []}
-                                        loading={loading}
-                                        ocId={ocId}
-                                        defaultValues={getDefaultValues()}
-                                        onClear={handleClearForm}
-                                    />
-                                </div>
+                                {!isActiveSemesterLocked ? (
+                                    <div className="mt-6">
+                                        <h3 className="text-sm font-semibold text-foreground mb-3">
+                                            Add New Records for {semesters[activeTab]}
+                                        </h3>
+                                        <CfeForm
+                                            key={`${ocId}-${savedFormData ? 'redux' : 'default'}`}
+                                            onSubmit={handleSubmit}
+                                            semIndex={activeTab}
+                                            existingRows={groups[activeTab] ?? []}
+                                            loading={loading}
+                                            ocId={ocId}
+                                            defaultValues={getDefaultValues()}
+                                            onClear={handleClearForm}
+                                        />
+                                    </div>
+                                ) : null}
                             </CardContent>
                         </Card>
                     </TabsContent>

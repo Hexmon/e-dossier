@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import React, { useEffect, useMemo } from "react";
+import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -20,13 +20,14 @@ import Link from "next/link";
 import { ParentCommPayload } from "@/app/lib/api/parentComnApi";
 import type { RootState } from "@/store";
 import { clearParentCommForm } from "@/store/slices/parentCommSlice";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 export default function ParentCommnPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     // Redux
     const dispatch = useDispatch();
@@ -35,6 +36,7 @@ export default function ParentCommnPage() {
     );
 
     const { cadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
 
     const {
         name = "",
@@ -42,34 +44,25 @@ export default function ParentCommnPage() {
         ocNumber = "",
         ocId: cadetOcId = ocId,
         course = "",
+        currentSemester = 1,
     } = cadet ?? {};
 
-    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course }), [name, courseName, ocNumber, cadetOcId, course]);
+    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course, currentSemester }), [name, courseName, ocNumber, cadetOcId, course, currentSemester]);
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
 
     const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - 1;
-        if (idx < 0 || idx >= semesters.length) return 0;
-        return idx;
-    }, [semParam, semesters.length]);
-    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
-
-    useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + 1));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - 1;
 
     const handleSemesterChange = (index: number) => {
-        setActiveTab(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + 1);
     };
 
     const { grouped, loading, fetch, save, update, remove } = useParentComms(ocId, semesters.length);
@@ -200,6 +193,13 @@ export default function ParentCommnPage() {
                                 </CardHeader>
 
                                 <CardContent>
+                                    {isActiveSemesterLocked ? (
+                                        <SemesterLockNotice
+                                            activeSemester={activeSemester}
+                                            currentSemester={currentSemester ?? 1}
+                                            supportedSemesters={supportedSemesters}
+                                        />
+                                    ) : null}
                                     <div className="flex justify-center mb-6 space-x-2">
                                         {semesters.map((sem, index) => {
                                             return (
@@ -229,18 +229,21 @@ export default function ParentCommnPage() {
                                                     await update(id, payload);
                                                 }}
                                                 onDelete={handleDelete}
+                                                readOnly={isActiveSemesterLocked}
                                             />
                                         )}
                                     </div>
 
                                     {/* Input Form */}
-                                    <ParentCommForm
-                                        key={`${ocId}-${savedFormData ? 'redux' : 'default'}`}
-                                        onSubmit={handleSubmit}
-                                        defaultValues={getDefaultValues()}
-                                        ocId={ocId}
-                                        onClear={handleClearForm}
-                                    />
+                                    {!isActiveSemesterLocked ? (
+                                        <ParentCommForm
+                                            key={`${ocId}-${savedFormData ? 'redux' : 'default'}`}
+                                            onSubmit={handleSubmit}
+                                            defaultValues={getDefaultValues()}
+                                            ocId={ocId}
+                                            onClear={handleClearForm}
+                                        />
+                                    ) : null}
                                 </CardContent>
                             </Card>
                         </div>
