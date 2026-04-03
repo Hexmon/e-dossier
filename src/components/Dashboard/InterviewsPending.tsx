@@ -10,8 +10,7 @@ type InterviewPendingRow = {
   rankAndName: string;
   course: string | null;
   platoon: string | null;
-  completeInitial: boolean;
-  completeTerms: boolean;
+  completeSpecial: boolean;
 };
 
 type InterviewPendingResponse = {
@@ -65,7 +64,7 @@ export default function InterviewsPending() {
         }
 
         const pendingOnly = allRows
-          .filter((item) => !item.completeInitial || !item.completeTerms)
+          .filter((item) => !item.completeSpecial)
           .map((item) => ({
             ocNo: item.ocNo,
             rankAndName: item.rankAndName,
