@@ -2045,13 +2045,20 @@ export async function upsertOcCamp(
     trainingCampId: string,
     data: Partial<typeof ocCamps.$inferInsert> = {},
 ) {
-    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
+    const enrollmentId = activeEnrollment.id;
     const [campTemplate] = await db
-        .select({ id: trainingCamps.id })
+        .select({ id: trainingCamps.id, courseId: trainingCamps.courseId })
         .from(trainingCamps)
         .where(eq(trainingCamps.id, trainingCampId))
         .limit(1);
     if (!campTemplate) throw new ApiError(404, 'Training camp not found', 'not_found');
+    if (campTemplate.courseId && campTemplate.courseId !== activeEnrollment.courseId) {
+        throw new ApiError(400, 'Training camp does not belong to the active OC course', 'bad_request', {
+            trainingCampId,
+            courseId: activeEnrollment.courseId,
+        });
+    }
 
     const [existing] = await db
         .select()

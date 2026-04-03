@@ -19,6 +19,7 @@ export async function getInterviewTemplateBase(id: string) {
     const [row] = await db
         .select({
             id: interviewTemplates.id,
+            courseId: interviewTemplates.courseId,
             code: interviewTemplates.code,
             isActive: interviewTemplates.isActive,
             deletedAt: interviewTemplates.deletedAt,

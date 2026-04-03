@@ -17,8 +17,13 @@ import {
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { isFreeEntryPtAttemptCode } from '@/app/lib/physical-training-attempts';
+import { getActiveEnrollmentCourse } from '@/app/db/queries/oc-enrollments';
 
-async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: string; marksScored: number }>) {
+async function validateScores(
+    courseId: string,
+    semester: number,
+    scores: Array<{ ptTaskScoreId: string; marksScored: number }>,
+) {
     const uniqueIds = Array.from(new Set(scores.map((s) => s.ptTaskScoreId)));
     const templateRows = await listTemplateScoresByIds(uniqueIds);
     const rowById = new Map(templateRows.map((row) => [row.ptTaskScoreId, row]));
@@ -27,6 +32,10 @@ async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: s
     for (const id of uniqueIds) {
         const row = rowById.get(id);
         if (!row) {
+            invalidIds.push(id);
+            continue;
+        }
+        if (row.courseId && row.courseId !== courseId) {
             invalidIds.push(id);
             continue;
         }
@@ -100,9 +109,10 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
+        const { courseId } = await getActiveEnrollmentCourse(ocId);
 
         const dto = ptOcScoresUpsertSchema.parse(await req.json());
-        await validateScores(dto.semester, dto.scores);
+        await validateScores(courseId, dto.semester, dto.scores);
 
         await upsertOcPtScores(ocId, dto.semester, dto.scores);
         const items = await listOcPtScores(ocId, dto.semester);
@@ -131,11 +141,12 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
+        const { courseId } = await getActiveEnrollmentCourse(ocId);
 
         const dto = ptOcScoresUpdateSchema.parse(await req.json());
 
         if (dto.scores?.length) {
-            await validateScores(dto.semester, dto.scores);
+            await validateScores(courseId, dto.semester, dto.scores);
             await upsertOcPtScores(ocId, dto.semester, dto.scores);
         }
 

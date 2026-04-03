@@ -17,6 +17,7 @@ import OcCampActivitiesTable from "@/components/camps/campMarksTable";
 import OcCampReviews from "@/components/camps/campReviews";
 import { useTrainingCamps, useOcCampByName, useCampMutations, useAllOcCamps } from "@/hooks/useCampData";
 import { CreateOcCampPayload, UpdateOcCampPayload } from "@/app/lib/api/campApi";
+import { fetchOCById } from "@/app/lib/api/ocApi";
 
 interface CampContentProps {
   ocId: string;
@@ -30,6 +31,7 @@ export default function CampContent({ ocId }: CampContentProps) {
   const [selectedCampName, setSelectedCampName] = useState<string | null>(null);
   const [isEditingReviews, setIsEditingReviews] = useState(false);
   const [isEditingActivities, setIsEditingActivities] = useState(false);
+  const [courseId, setCourseId] = useState<string>("");
 
   const semesters = [1, 2, 3, 4, 5, 6] as const;
   const semesterLabels = [
@@ -50,7 +52,7 @@ export default function CampContent({ ocId }: CampContentProps) {
   // ---------------------------
   // API HOOKS
   // ---------------------------
-  const { trainingCamps, loading: loadingCamps, error: campsError } = useTrainingCamps();
+  const { trainingCamps, loading: loadingCamps, error: campsError } = useTrainingCamps(courseId);
   const { camp: currentCamp, loading: loadingCamp, refetch: refetchCamp } = useOcCampByName(
     ocId,
     selectedCampName
@@ -86,6 +88,24 @@ export default function CampContent({ ocId }: CampContentProps) {
   const showWarning = useMemo(() => {
     return selectedCampName && !currentCamp && !loadingCamp;
   }, [selectedCampName, currentCamp, loadingCamp]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!ocId) return;
+    fetchOCById(ocId)
+      .then((oc) => {
+        if (!cancelled) {
+          setCourseId(oc?.course?.id ?? "");
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to resolve OC course for camps:", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ocId]);
 
   // Calculate totals for TECHNO TAC CAMP table from API data
   const campTotals = useMemo(() => {

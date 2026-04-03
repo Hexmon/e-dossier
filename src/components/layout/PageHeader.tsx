@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, LogOut, Repeat, Loader2, Timer } from "lucide-react";
+import { Settings, LogOut, Repeat, Loader2, Timer, CalendarDays } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ import OCSelectModal from "@/components/modals/OCSelectModal";
 import { buildDossierPathForOc, extractDossierContext, isDossierManagementRoute } from "@/lib/dossier-route";
 import { logoutAndRedirect } from "@/lib/auth/logout";
 import { canAccessInterviewPendingTickerSetting } from "@/lib/interview-pending-ticker";
+import { canManageCadetAppointments } from "@/lib/platoon-commander-access";
 
 interface PageHeaderProps {
   title: string;
@@ -70,6 +71,11 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   } = apt as any;
 
   const canViewTickerSetting = canAccessInterviewPendingTickerSetting({
+    roles: data?.roles ?? [],
+    position,
+    scopeType: (scope as any)?.type ?? null,
+  });
+  const canViewCadetAppointmentsSetting = canManageCadetAppointments({
     roles: data?.roles ?? [],
     position,
     scopeType: (scope as any)?.type ?? null,
@@ -164,6 +170,15 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Device Site Settings</span>
                 </DropdownMenuItem>
+
+                {canViewCadetAppointmentsSetting && (
+                  <DropdownMenuItem
+                    onClick={() => router.push("/dashboard/settings/device/appointments")}
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    <span>Cadet Appointments</span>
+                  </DropdownMenuItem>
+                )}
 
                 {canViewTickerSetting && (
                   <DropdownMenuItem onClick={() => router.push("/dashboard/settings/ticker")}>

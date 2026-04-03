@@ -45,7 +45,10 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
         const targetSemester = dto.semester ?? existing.semester;
         const settings = await getTrainingCampSettings();
-        const activeCount = await countActiveTrainingCampsBySemester(targetSemester, { excludeCampId: campId });
+        const targetCourseId = dto.courseId ?? existing.courseId;
+        const activeCount = await countActiveTrainingCampsBySemester(targetCourseId, targetSemester, {
+            excludeCampId: campId,
+        });
         if (activeCount >= settings.maxCampsPerSemester) {
             throw new ApiError(
                 400,
@@ -65,6 +68,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
             metadata: {
                 description: `Updated training camp ${row.name}`,
                 trainingCampId: row.id,
+                courseId: row.courseId,
                 changes: Object.keys(dto),
             },
         });

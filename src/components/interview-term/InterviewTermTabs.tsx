@@ -7,8 +7,10 @@ import { useParams, usePathname, useRouter, useSearchParams } from "next/navigat
 import { RootState } from "@/store";
 import TermSubForm from "./TermSubForm";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
+import { useMe } from "@/hooks/useMe";
 import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
 import { saveTermInterviewForm, clearTermInterviewForm } from "@/store/slices/termInterviewSlice";
+import { applySignatureDefaults, getCurrentUserSignature, hasMeaningfulSignatureValue, isSignatureTemplateField } from "@/lib/currentUserSignature";
 
 type TermVariant = "beginning" | "postmid" | "special";
 
@@ -16,6 +18,15 @@ interface FormState {
     isEditing: boolean;
     isSaved: boolean;
 }
+
+const postMidPlCdrAliases = [
+    "pl cdr",
+    "plcdr",
+    "pl cdr remarks",
+    "plcdr remarks",
+    "platoon cdr",
+    "platoon commander",
+];
 
 function hasPersistedData(entry: { formFields?: Record<string, string>; specialInterviews?: unknown[] } | undefined) {
     const hasFields = Boolean(
@@ -26,6 +37,47 @@ function hasPersistedData(entry: { formFields?: Record<string, string>; specialI
     return hasFields || hasSpecial;
 }
 
+function buildTermInterviewResetValues(params: {
+    currentValues: Record<string, string>;
+    savedValues: Record<string, string>;
+    termIndex: number;
+    variant: TermVariant;
+    templateFields?: Array<{ key: string; label?: string; fieldType?: string | null; captureSignature?: boolean; groupId?: string | null }>;
+    signatureValue?: string;
+}) {
+    const out: Record<string, string> = {};
+    const prefix = `term${params.termIndex}_${params.variant}_`;
+
+    for (const key of Object.keys(params.currentValues ?? {})) {
+        out[key] = "";
+    }
+
+    for (const field of params.templateFields ?? []) {
+        if (field.groupId) continue;
+        const scopedKey = field.key.startsWith(prefix) ? field.key : `${prefix}${field.key}`;
+        out[scopedKey] = "";
+    }
+
+    for (const [key, value] of Object.entries(params.savedValues ?? {})) {
+        out[key] = value;
+    }
+
+    const signatureFields =
+        params.variant === "postmid"
+            ? (params.templateFields ?? []).filter((field) => {
+                const hay = `${field.key ?? ""} ${field.label ?? ""}`.toLowerCase();
+                return postMidPlCdrAliases.some((alias) => hay.includes(alias));
+            })
+            : params.templateFields;
+
+    return applySignatureDefaults({
+        values: out,
+        fields: signatureFields,
+        signatureValue: params.signatureValue,
+        resolveKey: (field) => (field.key.startsWith(prefix) ? field.key : `${prefix}${field.key}`),
+    });
+}
+
 export default function InterviewTermTabs() {
     const { id } = useParams();
     const router = useRouter();
@@ -33,6 +85,7 @@ export default function InterviewTermTabs() {
     const searchParams = useSearchParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
     const dispatch = useDispatch();
+    const { data: meData } = useMe();
     const hydratedRef = useRef(false);
     const isHydratingRef = useRef(false);
 
@@ -142,16 +195,56 @@ export default function InterviewTermTabs() {
     }, [ocId, fetchTerm, dispatch]);
 
     const currentVariant = subTab[selectedTerm] ?? "beginning";
+    const currentUserSignature = getCurrentUserSignature(meData);
+    const termMatch = getTemplateMatchForSemester(templateMappings, currentVariant, selectedTerm);
+    const termTemplate = termMatch?.template ?? null;
+    const specialGroup = currentVariant === "special" && termMatch?.groupId
+        ? termTemplate?.groups.find((group) => group.id === termMatch.groupId) ?? null
+        : null;
 
     // Load saved data when switching terms or variants
     useEffect(() => {
         isHydratingRef.current = true;
         const savedData = savedFormData?.formFields || {};
-        form.reset(savedData);
+        form.reset(
+            buildTermInterviewResetValues({
+                currentValues: form.getValues(),
+                savedValues: savedData,
+                termIndex: selectedTerm,
+                variant: currentVariant,
+                templateFields: Array.from(termTemplate?.fieldsByKey?.values?.() ?? []),
+            }),
+        );
         queueMicrotask(() => {
             isHydratingRef.current = false;
         });
-    }, [selectedTerm, currentVariant, ocId, form, savedFormData?.formFields]);
+    }, [selectedTerm, currentVariant, ocId, form, savedFormData?.formFields, termTemplate]);
+
+    useEffect(() => {
+        if (!currentUserSignature) return;
+
+        const prefix = `term${selectedTerm}_${currentVariant}_`;
+        const signatureFields = Array.from(termTemplate?.fieldsByKey?.values?.() ?? [])
+            .filter((field) => !field.groupId && isSignatureTemplateField(field))
+            .filter((field) => {
+                if (currentVariant !== "postmid") return true;
+                const hay = `${field.key ?? ""} ${field.label ?? ""}`.toLowerCase();
+                return postMidPlCdrAliases.some((alias) => hay.includes(alias));
+            });
+        if (!signatureFields.length) return;
+
+        for (const field of signatureFields) {
+            const scopedKey = field.key.startsWith(prefix) ? field.key : `${prefix}${field.key}`;
+            const savedValue = savedFormData?.formFields?.[scopedKey];
+            const currentValue = form.getValues(scopedKey);
+            if (hasMeaningfulSignatureValue(savedValue) || hasMeaningfulSignatureValue(currentValue)) continue;
+
+            form.setValue(scopedKey, currentUserSignature, {
+                shouldDirty: false,
+                shouldTouch: false,
+            });
+        }
+    }, [currentUserSignature, currentVariant, form, savedFormData?.formFields, selectedTerm, termTemplate]);
 
     // Auto-save to Redux on form changes
     useEffect(() => {
@@ -184,12 +277,6 @@ export default function InterviewTermTabs() {
         : { isEditing: false, isSaved: false };
     const currentFormState = formStates[stateKey] ?? defaultStateFromData;
 
-    const termMatch = getTemplateMatchForSemester(templateMappings, currentVariant, selectedTerm);
-    const termTemplate = termMatch?.template ?? null;
-    const specialGroup = currentVariant === "special" && termMatch?.groupId
-        ? termTemplate?.groups.find((group) => group.id === termMatch.groupId) ?? null
-        : null;
-
     const templatesLoaded = Boolean(templateMappings);
     const missingTemplate = templatesLoaded && !termTemplate;
     const specialGroupMissing = templatesLoaded && currentVariant === "special" && termTemplate && !specialGroup;
@@ -209,7 +296,16 @@ export default function InterviewTermTabs() {
                 termIndex: selectedTerm,
                 variant: currentVariant,
             }));
-            form.reset({});
+            form.reset(
+                buildTermInterviewResetValues({
+                    currentValues: form.getValues(),
+                    savedValues: {},
+                    termIndex: selectedTerm,
+                    variant: currentVariant,
+                    templateFields: Array.from(termTemplate?.fieldsByKey?.values?.() ?? []),
+                    signatureValue: currentUserSignature,
+                }),
+            );
         }
     };
 
@@ -307,6 +403,7 @@ export default function InterviewTermTabs() {
                     ocId={ocId}
                     savedSpecialInterviews={savedSpecialInterviews}
                     onClearForm={handleClearForm}
+                    currentUserSignature={currentUserSignature}
                 />
             ) : (
                 <div className="border rounded-lg p-6 bg-muted/40 text-center text-sm text-muted-foreground">

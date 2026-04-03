@@ -33,8 +33,13 @@ vi.mock('@/app/db/queries/physicalTrainingOc', () => ({
   deleteOcPtScoresBySemester: vi.fn(),
 }));
 
+vi.mock('@/app/db/queries/oc-enrollments', () => ({
+  getActiveEnrollmentCourse: vi.fn(),
+}));
+
 import * as ocChecks from '@/app/api/v1/oc/_checks';
 import * as ptOcQueries from '@/app/db/queries/physicalTrainingOc';
+import * as ocEnrollmentQueries from '@/app/db/queries/oc-enrollments';
 
 const ocId = '11111111-1111-4111-8111-111111111111';
 const ptTaskScoreId = '22222222-2222-4222-8222-222222222222';
@@ -45,6 +50,9 @@ describe('POST /api/v1/oc/[ocId]/physical-training', () => {
     vi.mocked(ocChecks.mustBeAuthed).mockResolvedValue({ userId: 'user-1' } as any);
     vi.mocked(ocChecks.parseParam).mockResolvedValue({ ocId } as any);
     vi.mocked(ocChecks.ensureOcExists).mockResolvedValue(undefined);
+    vi.mocked(ocEnrollmentQueries.getActiveEnrollmentCourse).mockResolvedValue({
+      courseId: '44444444-4444-4444-8444-444444444444',
+    } as any);
     vi.mocked(ptOcQueries.upsertOcPtScores).mockResolvedValue([] as any);
     vi.mocked(ptOcQueries.listOcPtScores).mockResolvedValue([
       {
@@ -59,6 +67,7 @@ describe('POST /api/v1/oc/[ocId]/physical-training', () => {
     vi.mocked(ptOcQueries.listTemplateScoresByIds).mockResolvedValue([
       {
         ptTaskScoreId,
+        courseId: '44444444-4444-4444-8444-444444444444',
         attemptCode: 'A1/C1',
         maxMarks: 26,
         semester: 1,
@@ -93,6 +102,7 @@ describe('POST /api/v1/oc/[ocId]/physical-training', () => {
     vi.mocked(ptOcQueries.listTemplateScoresByIds).mockResolvedValue([
       {
         ptTaskScoreId,
+        courseId: '44444444-4444-4444-8444-444444444444',
         attemptCode: 'B1',
         maxMarks: 26,
         semester: 1,

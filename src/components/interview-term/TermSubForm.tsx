@@ -12,6 +12,7 @@ import { Edit, Save, RotateCcw, X } from "lucide-react";
 import { saveTermInterviewForm, SpecialInterviewRecord } from "@/store/slices/termInterviewSlice";
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from "@/types/interview-templates";
 import { resolveSpecialGroupFieldMap } from "@/lib/interviewFieldUtils";
+import { hasMeaningfulSignatureValue, isSignatureTemplateField } from "@/lib/currentUserSignature";
 
 interface FormState {
     isEditing: boolean;
@@ -38,6 +39,7 @@ interface Props {
     ocId: string;
     savedSpecialInterviews: SpecialInterviewRecord[];
     onClearForm: () => void;
+    currentUserSignature?: string;
 }
 
 function normalizeSpecialInterviews(records?: SpecialInterviewRecord[]) {
@@ -160,6 +162,7 @@ export default function TermSubForm({
     ocId,
     savedSpecialInterviews,
     onClearForm,
+    currentUserSignature = "",
 }: Props) {
     const dispatch = useDispatch();
     const { register, getValues, reset } = form;
@@ -177,6 +180,11 @@ export default function TermSubForm({
     const dateLabel = getSpecialLabel(specialGroup, "date") ?? "Date";
     const summaryLabel = getSpecialLabel(specialGroup, "summary") ?? "Interview Summary";
     const interviewedByLabel = getSpecialLabel(specialGroup, "interviewedBy") ?? "Interviewed by (Name & Appt)";
+    const specialInterviewerField = React.useMemo(
+        () => (specialGroup ? resolveSpecialGroupFieldMap(specialGroup).interviewedBy ?? null : null),
+        [specialGroup],
+    );
+    const shouldAutofillSpecialInterviewer = isSignatureTemplateField(specialInterviewerField);
 
     const normalizedSavedSpecialInterviews = useMemo(
         () => normalizeSpecialInterviews(savedSpecialInterviews),
@@ -199,6 +207,24 @@ export default function TermSubForm({
             return normalizedSavedSpecialInterviews.map((record) => ({ ...record }));
         });
     }, [variant, normalizedSavedSpecialInterviews]);
+
+    useEffect(() => {
+        if (variant !== "special" || !shouldAutofillSpecialInterviewer || !currentUserSignature) return;
+
+        setSpecialInterviews((prev) => {
+            let changed = false;
+            const next = prev.map((record) => {
+                if (hasMeaningfulSignatureValue(record.interviewedBy)) {
+                    return record;
+                }
+
+                changed = true;
+                return { ...record, interviewedBy: currentUserSignature };
+            });
+
+            return changed ? next : prev;
+        });
+    }, [currentUserSignature, shouldAutofillSpecialInterviewer, variant]);
 
     // Auto-save special interviews to Redux
     useEffect(() => {
@@ -325,7 +351,12 @@ export default function TermSubForm({
             specialInterviews.reduce((max, record) => Math.max(max, record.rowIndex ?? -1), -1) + 1;
         setSpecialInterviews([
             ...specialInterviews,
-            { date: "", summary: "", interviewedBy: "", rowIndex: nextIndex },
+            {
+                date: "",
+                summary: "",
+                interviewedBy: shouldAutofillSpecialInterviewer ? currentUserSignature : "",
+                rowIndex: nextIndex,
+            },
         ]);
     };
 

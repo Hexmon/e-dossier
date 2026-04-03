@@ -18,6 +18,7 @@ import {
 } from '@/app/db/queries/interviewOc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { getActiveEnrollmentCourse } from '@/app/db/queries/oc-enrollments';
 
 function cleanText(value?: string | null) {
     if (value === undefined) return undefined;
@@ -27,6 +28,7 @@ function cleanText(value?: string | null) {
 }
 
 async function validateTemplateAndPayload(params: {
+    courseId: string;
     templateId: string;
     semester: number | null | undefined;
     fields?: Array<{ fieldId: string }>;
@@ -35,6 +37,9 @@ async function validateTemplateAndPayload(params: {
     const template = await getInterviewTemplateBase(params.templateId);
     if (!template || template.deletedAt) {
         throw new ApiError(404, 'Interview template not found', 'not_found');
+    }
+    if (template.courseId && template.courseId !== params.courseId) {
+        throw new ApiError(400, 'Interview template does not belong to OC course', 'invalid_template_course');
     }
     if (!template.isActive) {
         throw new ApiError(400, 'Interview template is inactive', 'template_inactive');
@@ -207,10 +212,12 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
+        const { courseId } = await getActiveEnrollmentCourse(ocId);
 
         const dto = interviewOcCreateSchema.parse(await req.json());
 
         await validateTemplateAndPayload({
+            courseId,
             templateId: dto.templateId,
             semester: dto.semester ?? null,
             fields: dto.fields,

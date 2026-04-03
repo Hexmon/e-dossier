@@ -8,15 +8,28 @@ import {
     ptTaskScores,
     ptMotivationAwardFields,
 } from '@/app/db/schema/training/physicalTraining';
+import { ocPtTaskScores } from '@/app/db/schema/training/physicalTrainingOc';
+import { ApiError } from '@/app/lib/http';
+import { getCourse } from '@/app/db/queries/courses';
+
+async function ensureCourseExists(courseId: string) {
+    const course = await getCourse(courseId);
+    if (!course) throw new ApiError(404, 'Course not found', 'not_found');
+    return course;
+}
 
 // Types ---------------------------------------------------------------------
-export async function listPtTypes(opts: { semester?: number; includeDeleted?: boolean } = {}) {
+export async function listPtTypes(opts: { courseId?: string | null; semester?: number; includeDeleted?: boolean } = {}) {
     const wh: any[] = [];
+    if (opts.courseId !== undefined) {
+        wh.push(opts.courseId === null ? isNull(ptTypes.courseId) : eq(ptTypes.courseId, opts.courseId));
+    }
     if (opts.semester) wh.push(eq(ptTypes.semester, opts.semester));
     if (!opts.includeDeleted) wh.push(isNull(ptTypes.deletedAt));
     return db
         .select({
             id: ptTypes.id,
+            courseId: ptTypes.courseId,
             semester: ptTypes.semester,
             code: ptTypes.code,
             title: ptTypes.title,
@@ -30,7 +43,7 @@ export async function listPtTypes(opts: { semester?: number; includeDeleted?: bo
         })
         .from(ptTypes)
         .where(wh.length ? and(...wh) : undefined)
-        .orderBy(ptTypes.semester, ptTypes.sortOrder, ptTypes.title);
+        .orderBy(ptTypes.courseId, ptTypes.semester, ptTypes.sortOrder, ptTypes.title);
 }
 
 export async function getPtType(id: string) {
@@ -47,8 +60,13 @@ export async function createPtType(data: typeof ptTypes.$inferInsert) {
     return row;
 }
 
-export async function getNextPtTypeSortOrder(semester: number, opts: { excludeId?: string } = {}) {
+export async function getNextPtTypeSortOrder(
+    courseId: string,
+    semester: number,
+    opts: { excludeId?: string } = {},
+) {
     const wh = [
+        eq(ptTypes.courseId, courseId),
         eq(ptTypes.semester, semester),
         isNull(ptTypes.deletedAt),
         ...(opts.excludeId ? [ne(ptTypes.id, opts.excludeId)] : []),
@@ -65,11 +83,13 @@ export async function getNextPtTypeSortOrder(semester: number, opts: { excludeId
 }
 
 export async function findPtTypeBySemesterAndSortOrder(
+    courseId: string | null,
     semester: number,
     sortOrder: number,
     opts: { excludeId?: string } = {},
 ) {
     const wh = [
+        courseId === null ? isNull(ptTypes.courseId) : eq(ptTypes.courseId, courseId),
         eq(ptTypes.semester, semester),
         eq(ptTypes.sortOrder, sortOrder),
         isNull(ptTypes.deletedAt),
@@ -79,6 +99,7 @@ export async function findPtTypeBySemesterAndSortOrder(
     const [row] = await db
         .select({
             id: ptTypes.id,
+            courseId: ptTypes.courseId,
             semester: ptTypes.semester,
             code: ptTypes.code,
             title: ptTypes.title,
@@ -465,13 +486,21 @@ export async function deletePtTaskScore(id: string) {
 }
 
 // Motivation fields ----------------------------------------------------------
-export async function listPtMotivationFields(opts: { semester?: number; includeDeleted?: boolean } = {}) {
+export async function listPtMotivationFields(opts: { courseId?: string | null; semester?: number; includeDeleted?: boolean } = {}) {
     const wh: any[] = [];
+    if (opts.courseId !== undefined) {
+        wh.push(
+            opts.courseId === null
+                ? isNull(ptMotivationAwardFields.courseId)
+                : eq(ptMotivationAwardFields.courseId, opts.courseId),
+        );
+    }
     if (opts.semester) wh.push(eq(ptMotivationAwardFields.semester, opts.semester));
     if (!opts.includeDeleted) wh.push(isNull(ptMotivationAwardFields.deletedAt));
     return db
         .select({
             id: ptMotivationAwardFields.id,
+            courseId: ptMotivationAwardFields.courseId,
             semester: ptMotivationAwardFields.semester,
             label: ptMotivationAwardFields.label,
             sortOrder: ptMotivationAwardFields.sortOrder,
@@ -482,7 +511,12 @@ export async function listPtMotivationFields(opts: { semester?: number; includeD
         })
         .from(ptMotivationAwardFields)
         .where(wh.length ? and(...wh) : undefined)
-        .orderBy(ptMotivationAwardFields.semester, ptMotivationAwardFields.sortOrder, ptMotivationAwardFields.label);
+        .orderBy(
+            ptMotivationAwardFields.courseId,
+            ptMotivationAwardFields.semester,
+            ptMotivationAwardFields.sortOrder,
+            ptMotivationAwardFields.label,
+        );
 }
 
 export async function getPtMotivationField(id: string) {
@@ -499,8 +533,13 @@ export async function createPtMotivationField(data: typeof ptMotivationAwardFiel
     return row;
 }
 
-export async function getNextPtMotivationFieldSortOrder(semester: number, opts: { excludeId?: string } = {}) {
+export async function getNextPtMotivationFieldSortOrder(
+    courseId: string,
+    semester: number,
+    opts: { excludeId?: string } = {},
+) {
     const wh = [
+        eq(ptMotivationAwardFields.courseId, courseId),
         eq(ptMotivationAwardFields.semester, semester),
         isNull(ptMotivationAwardFields.deletedAt),
         ...(opts.excludeId ? [ne(ptMotivationAwardFields.id, opts.excludeId)] : []),
@@ -517,11 +556,15 @@ export async function getNextPtMotivationFieldSortOrder(semester: number, opts: 
 }
 
 export async function findPtMotivationFieldBySemesterAndSortOrder(
+    courseId: string | null,
     semester: number,
     sortOrder: number,
     opts: { excludeId?: string } = {},
 ) {
     const wh = [
+        courseId === null
+            ? isNull(ptMotivationAwardFields.courseId)
+            : eq(ptMotivationAwardFields.courseId, courseId),
         eq(ptMotivationAwardFields.semester, semester),
         eq(ptMotivationAwardFields.sortOrder, sortOrder),
         isNull(ptMotivationAwardFields.deletedAt),
@@ -531,6 +574,7 @@ export async function findPtMotivationFieldBySemesterAndSortOrder(
     const [row] = await db
         .select({
             id: ptMotivationAwardFields.id,
+            courseId: ptMotivationAwardFields.courseId,
             semester: ptMotivationAwardFields.semester,
             label: ptMotivationAwardFields.label,
             sortOrder: ptMotivationAwardFields.sortOrder,
@@ -565,13 +609,22 @@ export async function deletePtMotivationField(id: string, opts: { hard?: boolean
 }
 
 // Template aggregation -------------------------------------------------------
-export async function getPtTemplateBySemester(semester: number, opts: { includeDeleted?: boolean } = {}) {
-    const types = await listPtTypes({ semester, includeDeleted: opts.includeDeleted });
+async function buildPtTemplate(
+    courseId: string | null,
+    semester: number,
+    opts: { includeDeleted?: boolean } = {},
+) {
+    const types = await listPtTypes({ courseId, semester, includeDeleted: opts.includeDeleted });
     if (!types.length) {
         return {
+            courseId,
             semester,
             types: [],
-            motivationFields: await listPtMotivationFields({ semester, includeDeleted: opts.includeDeleted }),
+            motivationFields: await listPtMotivationFields({
+                courseId,
+                semester,
+                includeDeleted: opts.includeDeleted,
+            }),
         };
     }
 
@@ -650,7 +703,11 @@ export async function getPtTemplateBySemester(semester: number, opts: { includeD
             .where(inArray(ptTaskScores.ptTaskId, taskIds))
         : [];
 
-    const motivationFields = await listPtMotivationFields({ semester, includeDeleted: opts.includeDeleted });
+    const motivationFields = await listPtMotivationFields({
+        courseId,
+        semester,
+        includeDeleted: opts.includeDeleted,
+    });
 
     const gradesByAttempt = grades.reduce<Record<string, typeof grades>>((acc, grade) => {
         acc[grade.ptAttemptId] = acc[grade.ptAttemptId] ?? [];
@@ -665,6 +722,7 @@ export async function getPtTemplateBySemester(semester: number, opts: { includeD
     }, {});
 
     return {
+        courseId,
         semester,
         types: types.map((type) => {
             const typeAttempts = attempts.filter((a) => a.ptTypeId === type.id);
@@ -705,4 +763,545 @@ export async function getPtTemplateBySemester(semester: number, opts: { includeD
         }),
         motivationFields,
     };
+}
+
+export async function getPtTemplateBySemester(semester: number, opts: { includeDeleted?: boolean } = {}) {
+    return buildPtTemplate(null, semester, opts);
+}
+
+export async function getPtTemplateByCourseSemester(
+    courseId: string,
+    semester: number,
+    opts: { includeDeleted?: boolean; fallbackToLegacyGlobal?: boolean } = {},
+) {
+    await ensureCourseExists(courseId);
+    const courseTemplate = await buildPtTemplate(courseId, semester, opts);
+    if (
+        (courseTemplate.types.length > 0 || courseTemplate.motivationFields.length > 0) ||
+        !opts.fallbackToLegacyGlobal
+    ) {
+        return courseTemplate;
+    }
+
+    return buildPtTemplate(null, semester, opts);
+}
+
+type CopyStats = {
+    created: number;
+    updated: number;
+    deactivated: number;
+    deleted: number;
+    preserved: number;
+};
+
+export type PtTemplateCopyResult = {
+    sourceCourseId: string;
+    targetCourseId: string;
+    semester: number;
+    mode: 'replace';
+    createdCount: number;
+    updatedCount: number;
+    deactivatedCount: number;
+    deletedCount: number;
+    preservedCount: number;
+    warnings: string[];
+    stats: {
+        types: CopyStats;
+        attempts: CopyStats;
+        grades: CopyStats;
+        tasks: CopyStats;
+        taskScores: CopyStats;
+        motivationFields: CopyStats;
+    };
+};
+
+function createCopyStats(): CopyStats {
+    return { created: 0, updated: 0, deactivated: 0, deleted: 0, preserved: 0 };
+}
+
+function createPtCopyResult(
+    sourceCourseId: string,
+    targetCourseId: string,
+    semester: number,
+    stats: PtTemplateCopyResult['stats'],
+    warnings: string[],
+): PtTemplateCopyResult {
+    const entityStats = Object.values(stats);
+    return {
+        sourceCourseId,
+        targetCourseId,
+        semester,
+        mode: 'replace',
+        createdCount: entityStats.reduce((sum, item) => sum + item.created, 0),
+        updatedCount: entityStats.reduce((sum, item) => sum + item.updated, 0),
+        deactivatedCount: entityStats.reduce((sum, item) => sum + item.deactivated, 0),
+        deletedCount: entityStats.reduce((sum, item) => sum + item.deleted, 0),
+        preservedCount: entityStats.reduce((sum, item) => sum + item.preserved, 0),
+        warnings,
+        stats,
+    };
+}
+
+function hasChanges(current: Record<string, unknown>, next: Record<string, unknown>) {
+    return Object.entries(next).some(([key, value]) => (current[key] ?? null) !== (value ?? null));
+}
+
+export async function copyPtTemplateToCourse(input: {
+    sourceCourseId: string;
+    targetCourseId: string;
+    semester: number;
+    mode?: 'replace';
+}): Promise<PtTemplateCopyResult> {
+    const mode = input.mode ?? 'replace';
+    if (input.sourceCourseId === input.targetCourseId) {
+        throw new ApiError(400, 'sourceCourseId and targetCourseId cannot be the same', 'bad_request');
+    }
+
+    await ensureCourseExists(input.sourceCourseId);
+    await ensureCourseExists(input.targetCourseId);
+
+    const source = await getPtTemplateByCourseSemester(input.sourceCourseId, input.semester, {
+        includeDeleted: false,
+        fallbackToLegacyGlobal: true,
+    });
+    if (source.types.length === 0 && source.motivationFields.length === 0) {
+        throw new ApiError(404, 'Source PT template course is not configured for this semester.', 'not_found');
+    }
+
+    const warnings: string[] = [];
+    const stats: PtTemplateCopyResult['stats'] = {
+        types: createCopyStats(),
+        attempts: createCopyStats(),
+        grades: createCopyStats(),
+        tasks: createCopyStats(),
+        taskScores: createCopyStats(),
+        motivationFields: createCopyStats(),
+    };
+    const now = new Date();
+
+    await db.transaction(async (tx) => {
+        const targetTypeRows = await tx
+            .select({
+                id: ptTypes.id,
+                code: ptTypes.code,
+                title: ptTypes.title,
+                description: ptTypes.description,
+                maxTotalMarks: ptTypes.maxTotalMarks,
+                sortOrder: ptTypes.sortOrder,
+                isActive: ptTypes.isActive,
+                deletedAt: ptTypes.deletedAt,
+            })
+            .from(ptTypes)
+            .where(and(eq(ptTypes.courseId, input.targetCourseId), eq(ptTypes.semester, input.semester)));
+
+        const targetTypeByCode = new Map(targetTypeRows.map((row) => [row.code, row]));
+        const visitedTypeIds = new Set<string>();
+
+        for (const sourceType of source.types) {
+            const targetType = targetTypeByCode.get(sourceType.code);
+            let targetTypeId = targetType?.id ?? '';
+
+            if (!targetType) {
+                const [createdType] = await tx
+                    .insert(ptTypes)
+                    .values({
+                        courseId: input.targetCourseId,
+                        semester: input.semester,
+                        code: sourceType.code,
+                        title: sourceType.title,
+                        description: sourceType.description ?? null,
+                        maxTotalMarks: sourceType.maxTotalMarks,
+                        sortOrder: sourceType.sortOrder,
+                        isActive: sourceType.isActive,
+                        createdAt: now,
+                        updatedAt: now,
+                    })
+                    .returning({ id: ptTypes.id });
+                targetTypeId = createdType.id;
+                stats.types.created += 1;
+            } else {
+                const patch = {
+                    title: sourceType.title,
+                    description: sourceType.description ?? null,
+                    maxTotalMarks: sourceType.maxTotalMarks,
+                    sortOrder: sourceType.sortOrder,
+                    isActive: sourceType.isActive,
+                    deletedAt: null as Date | null,
+                };
+                if (hasChanges(targetType, patch)) {
+                    await tx
+                        .update(ptTypes)
+                        .set({ ...patch, updatedAt: now })
+                        .where(eq(ptTypes.id, targetType.id));
+                    stats.types.updated += 1;
+                }
+                targetTypeId = targetType.id;
+            }
+
+            visitedTypeIds.add(targetTypeId);
+
+            const existingAttempts = await tx
+                .select({
+                    id: ptTypeAttempts.id,
+                    code: ptTypeAttempts.code,
+                    label: ptTypeAttempts.label,
+                    isCompensatory: ptTypeAttempts.isCompensatory,
+                    sortOrder: ptTypeAttempts.sortOrder,
+                    isActive: ptTypeAttempts.isActive,
+                    deletedAt: ptTypeAttempts.deletedAt,
+                })
+                .from(ptTypeAttempts)
+                .where(eq(ptTypeAttempts.ptTypeId, targetTypeId));
+
+            const attemptByCode = new Map(existingAttempts.map((row) => [row.code, row]));
+            const attemptIdByCode = new Map<string, string>();
+            const gradeIdByAttemptAndCode = new Map<string, string>();
+            const visitedAttemptIds = new Set<string>();
+            const visitedGradeIds = new Set<string>();
+
+            for (const sourceAttempt of sourceType.attempts) {
+                const targetAttempt = attemptByCode.get(sourceAttempt.code);
+                let targetAttemptId = targetAttempt?.id ?? '';
+
+                if (!targetAttempt) {
+                    const [createdAttempt] = await tx
+                        .insert(ptTypeAttempts)
+                        .values({
+                            ptTypeId: targetTypeId,
+                            code: sourceAttempt.code,
+                            label: sourceAttempt.label,
+                            isCompensatory: sourceAttempt.isCompensatory,
+                            sortOrder: sourceAttempt.sortOrder,
+                            isActive: sourceAttempt.isActive,
+                            createdAt: now,
+                            updatedAt: now,
+                        })
+                        .returning({ id: ptTypeAttempts.id });
+                    targetAttemptId = createdAttempt.id;
+                    stats.attempts.created += 1;
+                } else {
+                    const patch = {
+                        label: sourceAttempt.label,
+                        isCompensatory: sourceAttempt.isCompensatory,
+                        sortOrder: sourceAttempt.sortOrder,
+                        isActive: sourceAttempt.isActive,
+                        deletedAt: null as Date | null,
+                    };
+                    if (hasChanges(targetAttempt, patch)) {
+                        await tx
+                            .update(ptTypeAttempts)
+                            .set({ ...patch, updatedAt: now })
+                            .where(eq(ptTypeAttempts.id, targetAttempt.id));
+                        stats.attempts.updated += 1;
+                    }
+                    targetAttemptId = targetAttempt.id;
+                }
+
+                visitedAttemptIds.add(targetAttemptId);
+                attemptIdByCode.set(sourceAttempt.code, targetAttemptId);
+
+                const existingGrades = await tx
+                    .select({
+                        id: ptAttemptGrades.id,
+                        code: ptAttemptGrades.code,
+                        label: ptAttemptGrades.label,
+                        sortOrder: ptAttemptGrades.sortOrder,
+                        isActive: ptAttemptGrades.isActive,
+                        deletedAt: ptAttemptGrades.deletedAt,
+                    })
+                    .from(ptAttemptGrades)
+                    .where(eq(ptAttemptGrades.ptAttemptId, targetAttemptId));
+
+                const gradeByCode = new Map(existingGrades.map((row) => [row.code, row]));
+
+                for (const sourceGrade of sourceAttempt.grades) {
+                    const targetGrade = gradeByCode.get(sourceGrade.code);
+                    let targetGradeId = targetGrade?.id ?? '';
+
+                    if (!targetGrade) {
+                        const [createdGrade] = await tx
+                            .insert(ptAttemptGrades)
+                            .values({
+                                ptAttemptId: targetAttemptId,
+                                code: sourceGrade.code,
+                                label: sourceGrade.label,
+                                sortOrder: sourceGrade.sortOrder,
+                                isActive: sourceGrade.isActive,
+                                createdAt: now,
+                                updatedAt: now,
+                            })
+                            .returning({ id: ptAttemptGrades.id });
+                        targetGradeId = createdGrade.id;
+                        stats.grades.created += 1;
+                    } else {
+                        const patch = {
+                            label: sourceGrade.label,
+                            sortOrder: sourceGrade.sortOrder,
+                            isActive: sourceGrade.isActive,
+                            deletedAt: null as Date | null,
+                        };
+                        if (hasChanges(targetGrade, patch)) {
+                            await tx
+                                .update(ptAttemptGrades)
+                                .set({ ...patch, updatedAt: now })
+                                .where(eq(ptAttemptGrades.id, targetGrade.id));
+                            stats.grades.updated += 1;
+                        }
+                        targetGradeId = targetGrade.id;
+                    }
+
+                    visitedGradeIds.add(targetGradeId);
+                    gradeIdByAttemptAndCode.set(`${sourceAttempt.code}:${sourceGrade.code}`, targetGradeId);
+                }
+
+                const staleGradeIds = existingGrades
+                    .filter((row) => !visitedGradeIds.has(row.id))
+                    .map((row) => row.id);
+
+                if (staleGradeIds.length > 0) {
+                    await tx
+                        .update(ptAttemptGrades)
+                        .set({ deletedAt: now, updatedAt: now })
+                        .where(inArray(ptAttemptGrades.id, staleGradeIds));
+                    stats.grades.deactivated += staleGradeIds.length;
+                }
+            }
+
+            const staleAttemptIds = existingAttempts
+                .filter((row) => !visitedAttemptIds.has(row.id))
+                .map((row) => row.id);
+
+            if (staleAttemptIds.length > 0) {
+                await tx
+                    .update(ptTypeAttempts)
+                    .set({ deletedAt: now, updatedAt: now })
+                    .where(inArray(ptTypeAttempts.id, staleAttemptIds));
+                stats.attempts.deactivated += staleAttemptIds.length;
+            }
+
+            const existingTasks = await tx
+                .select({
+                    id: ptTasks.id,
+                    title: ptTasks.title,
+                    maxMarks: ptTasks.maxMarks,
+                    sortOrder: ptTasks.sortOrder,
+                    deletedAt: ptTasks.deletedAt,
+                })
+                .from(ptTasks)
+                .where(eq(ptTasks.ptTypeId, targetTypeId));
+
+            const taskByTitle = new Map(existingTasks.map((row) => [row.title, row]));
+            const visitedTaskIds = new Set<string>();
+
+            for (const sourceTask of sourceType.tasks) {
+                const targetTask = taskByTitle.get(sourceTask.title);
+                let targetTaskId = targetTask?.id ?? '';
+
+                if (!targetTask) {
+                    const [createdTask] = await tx
+                        .insert(ptTasks)
+                        .values({
+                            ptTypeId: targetTypeId,
+                            title: sourceTask.title,
+                            maxMarks: sourceTask.maxMarks,
+                            sortOrder: sourceTask.sortOrder,
+                            createdAt: now,
+                            updatedAt: now,
+                        })
+                        .returning({ id: ptTasks.id });
+                    targetTaskId = createdTask.id;
+                    stats.tasks.created += 1;
+                } else {
+                    const patch = {
+                        maxMarks: sourceTask.maxMarks,
+                        sortOrder: sourceTask.sortOrder,
+                        deletedAt: null as Date | null,
+                    };
+                    if (hasChanges(targetTask, patch)) {
+                        await tx
+                            .update(ptTasks)
+                            .set({ ...patch, updatedAt: now })
+                            .where(eq(ptTasks.id, targetTask.id));
+                        stats.tasks.updated += 1;
+                    }
+                    targetTaskId = targetTask.id;
+                }
+
+                visitedTaskIds.add(targetTaskId);
+
+                const existingScores = await tx
+                    .select({
+                        id: ptTaskScores.id,
+                        ptAttemptId: ptTaskScores.ptAttemptId,
+                        ptAttemptGradeId: ptTaskScores.ptAttemptGradeId,
+                        maxMarks: ptTaskScores.maxMarks,
+                    })
+                    .from(ptTaskScores)
+                    .where(eq(ptTaskScores.ptTaskId, targetTaskId));
+
+                const scoreByKey = new Map(
+                    existingScores.map((row) => [`${row.ptAttemptId}:${row.ptAttemptGradeId}`, row]),
+                );
+                const expectedScoreKeys = new Set<string>();
+
+                for (const sourceAttempt of sourceTask.attempts) {
+                    const targetAttemptId = attemptIdByCode.get(sourceAttempt.code);
+                    if (!targetAttemptId) continue;
+
+                    for (const sourceGrade of sourceAttempt.grades) {
+                        if (sourceGrade.maxMarks === null || sourceGrade.maxMarks === undefined) {
+                            continue;
+                        }
+
+                        const targetGradeId = gradeIdByAttemptAndCode.get(
+                            `${sourceAttempt.code}:${sourceGrade.code}`,
+                        );
+                        if (!targetGradeId) continue;
+
+                        const scoreKey = `${targetAttemptId}:${targetGradeId}`;
+                        expectedScoreKeys.add(scoreKey);
+                        const targetScore = scoreByKey.get(scoreKey);
+
+                        if (!targetScore) {
+                            await tx.insert(ptTaskScores).values({
+                                ptTaskId: targetTaskId,
+                                ptAttemptId: targetAttemptId,
+                                ptAttemptGradeId: targetGradeId,
+                                maxMarks: sourceGrade.maxMarks,
+                                createdAt: now,
+                                updatedAt: now,
+                            });
+                            stats.taskScores.created += 1;
+                            continue;
+                        }
+
+                        if (targetScore.maxMarks !== sourceGrade.maxMarks) {
+                            await tx
+                                .update(ptTaskScores)
+                                .set({ maxMarks: sourceGrade.maxMarks, updatedAt: now })
+                                .where(eq(ptTaskScores.id, targetScore.id));
+                            stats.taskScores.updated += 1;
+                        }
+                    }
+                }
+
+                for (const existingScore of existingScores) {
+                    const scoreKey = `${existingScore.ptAttemptId}:${existingScore.ptAttemptGradeId}`;
+                    if (expectedScoreKeys.has(scoreKey)) continue;
+
+                    const [linkedOcScore] = await tx
+                        .select({ id: ocPtTaskScores.id })
+                        .from(ocPtTaskScores)
+                        .where(eq(ocPtTaskScores.ptTaskScoreId, existingScore.id))
+                        .limit(1);
+
+                    if (linkedOcScore) {
+                        stats.taskScores.preserved += 1;
+                        warnings.push(
+                            `Preserved PT task score ${existingScore.id} in course ${input.targetCourseId} semester ${input.semester} because OC scores reference it.`,
+                        );
+                        continue;
+                    }
+
+                    await tx.delete(ptTaskScores).where(eq(ptTaskScores.id, existingScore.id));
+                    stats.taskScores.deleted += 1;
+                }
+            }
+
+            const staleTaskIds = existingTasks
+                .filter((row) => !visitedTaskIds.has(row.id))
+                .map((row) => row.id);
+
+            if (staleTaskIds.length > 0) {
+                await tx
+                    .update(ptTasks)
+                    .set({ deletedAt: now, updatedAt: now })
+                    .where(inArray(ptTasks.id, staleTaskIds));
+                stats.tasks.deactivated += staleTaskIds.length;
+            }
+        }
+
+        const staleTypeIds = targetTypeRows
+            .filter((row) => !visitedTypeIds.has(row.id))
+            .map((row) => row.id);
+
+        if (staleTypeIds.length > 0) {
+            await tx
+                .update(ptTypes)
+                .set({ deletedAt: now, updatedAt: now })
+                .where(inArray(ptTypes.id, staleTypeIds));
+            stats.types.deactivated += staleTypeIds.length;
+        }
+
+        const targetMotivationFields = await tx
+            .select({
+                id: ptMotivationAwardFields.id,
+                label: ptMotivationAwardFields.label,
+                sortOrder: ptMotivationAwardFields.sortOrder,
+                isActive: ptMotivationAwardFields.isActive,
+                deletedAt: ptMotivationAwardFields.deletedAt,
+            })
+            .from(ptMotivationAwardFields)
+            .where(
+                and(
+                    eq(ptMotivationAwardFields.courseId, input.targetCourseId),
+                    eq(ptMotivationAwardFields.semester, input.semester),
+                ),
+            );
+
+        const fieldByLabel = new Map(targetMotivationFields.map((row) => [row.label, row]));
+        const visitedFieldIds = new Set<string>();
+
+        for (const sourceField of source.motivationFields) {
+            const targetField = fieldByLabel.get(sourceField.label);
+            let targetFieldId = targetField?.id ?? '';
+
+            if (!targetField) {
+                const [createdField] = await tx
+                    .insert(ptMotivationAwardFields)
+                    .values({
+                        courseId: input.targetCourseId,
+                        semester: input.semester,
+                        label: sourceField.label,
+                        sortOrder: sourceField.sortOrder,
+                        isActive: sourceField.isActive,
+                        createdAt: now,
+                        updatedAt: now,
+                    })
+                    .returning({ id: ptMotivationAwardFields.id });
+                targetFieldId = createdField.id;
+                stats.motivationFields.created += 1;
+            } else {
+                const patch = {
+                    sortOrder: sourceField.sortOrder,
+                    isActive: sourceField.isActive,
+                    deletedAt: null as Date | null,
+                };
+                if (hasChanges(targetField, patch)) {
+                    await tx
+                        .update(ptMotivationAwardFields)
+                        .set({ ...patch, updatedAt: now })
+                        .where(eq(ptMotivationAwardFields.id, targetField.id));
+                    stats.motivationFields.updated += 1;
+                }
+                targetFieldId = targetField.id;
+            }
+
+            visitedFieldIds.add(targetFieldId);
+        }
+
+        const staleFieldIds = targetMotivationFields
+            .filter((row) => !visitedFieldIds.has(row.id))
+            .map((row) => row.id);
+
+        if (staleFieldIds.length > 0) {
+            await tx
+                .update(ptMotivationAwardFields)
+                .set({ deletedAt: now, updatedAt: now })
+                .where(inArray(ptMotivationAwardFields.id, staleFieldIds));
+            stats.motivationFields.deactivated += staleFieldIds.length;
+        }
+    });
+
+    return createPtCopyResult(input.sourceCourseId, input.targetCourseId, input.semester, stats, warnings);
 }

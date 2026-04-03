@@ -13,10 +13,12 @@ async function GETHandler(req: AuditNextRequest) {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
         const qp = ptMotivationFieldQuerySchema.parse({
+            courseId: sp.get('courseId') ?? undefined,
             semester: sp.get('semester') ?? undefined,
             includeDeleted: sp.get('includeDeleted') ?? undefined,
         });
         const items = await listPtMotivationFields({
+            courseId: qp.courseId,
             semester: qp.semester,
             includeDeleted: qp.includeDeleted ?? false,
         });
@@ -30,8 +32,8 @@ async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const dto = ptMotivationFieldCreateSchema.parse(await req.json());
-        const targetSortOrder = dto.sortOrder ?? (await getNextPtMotivationFieldSortOrder(dto.semester));
-        const duplicate = await findPtMotivationFieldBySemesterAndSortOrder(dto.semester, targetSortOrder);
+        const targetSortOrder = dto.sortOrder ?? (await getNextPtMotivationFieldSortOrder(dto.courseId, dto.semester));
+        const duplicate = await findPtMotivationFieldBySemesterAndSortOrder(dto.courseId, dto.semester, targetSortOrder);
         if (duplicate) {
             throw new ApiError(
                 409,
@@ -47,6 +49,7 @@ async function POSTHandler(req: AuditNextRequest) {
         }
 
         const row = await createPtMotivationField({
+            courseId: dto.courseId,
             semester: dto.semester,
             label: dto.label.trim(),
             sortOrder: targetSortOrder,
@@ -59,8 +62,9 @@ async function POSTHandler(req: AuditNextRequest) {
             actor: { type: 'user', id: adminCtx.userId },
             target: { type: AuditResourceType.PT_MOTIVATION_FIELD, id: row.id },
             metadata: {
-                description: `Created PT motivation field ${row.label} (semester ${row.semester})`,
+                description: `Created PT motivation field ${row.label} (course ${row.courseId}, semester ${row.semester})`,
                 ptMotivationFieldId: row.id,
+                courseId: row.courseId,
                 semester: row.semester,
             },
         });

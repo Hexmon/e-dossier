@@ -182,7 +182,7 @@ interface UseTrainingCampsReturn {
 /**
  * Fetch all training camps
  */
-export const useTrainingCamps = (): UseTrainingCampsReturn => {
+export const useTrainingCamps = (courseId?: string): UseTrainingCampsReturn => {
     const [trainingCamps, setTrainingCamps] = useState<TrainingCamp[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -192,6 +192,7 @@ export const useTrainingCamps = (): UseTrainingCampsReturn => {
             setLoading(true);
             setError(null);
             const { items } = await getAllTrainingCamps({
+                courseId,
                 includeActivities: true,
                 includeReviews: true,
                 includeDeleted: false,
@@ -207,7 +208,7 @@ export const useTrainingCamps = (): UseTrainingCampsReturn => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [courseId]);
 
     useEffect(() => {
         fetchTrainingCamps();
