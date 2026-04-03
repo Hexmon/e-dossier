@@ -8,6 +8,7 @@ import type { PTBulkGetItem } from '@/app/lib/api/physicalTrainingBulkApi';
 type Props = {
     template: PTTemplate;
     items: PTBulkGetItem[];
+    disabled?: boolean;
     motivationDraftValues: Record<string, Record<string, string>>;
     clearMotivationFieldIds: Record<string, string[]>;
     onMotivationChange: (ocId: string, fieldId: string, value: string) => void;
@@ -17,6 +18,7 @@ type Props = {
 export function PTBulkMotivationTable({
     template,
     items,
+    disabled = false,
     motivationDraftValues,
     clearMotivationFieldIds,
     onMotivationChange,
@@ -74,6 +76,7 @@ export function PTBulkMotivationTable({
                                         <div className="space-y-1">
                                             <Input
                                                 value={value}
+                                                disabled={disabled}
                                                 onChange={(e) => onMotivationChange(item.oc.id, field.id, e.target.value)}
                                                 placeholder="Enter value"
                                             />
@@ -82,6 +85,7 @@ export function PTBulkMotivationTable({
                                                     type="button"
                                                     className="text-xs text-primary underline"
                                                     onClick={() => onToggleClearMotivation(item.oc.id, field.id)}
+                                                    disabled={disabled}
                                                 >
                                                     {isCleared ? 'Undo clear' : 'Clear'}
                                                 </button>

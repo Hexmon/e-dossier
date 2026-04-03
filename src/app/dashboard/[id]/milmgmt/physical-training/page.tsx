@@ -15,6 +15,8 @@ import { Shield, ChevronDown } from "lucide-react";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PhysicalForm from "@/components/physic-training/PhysicalForm";
+import { useMe } from "@/hooks/useMe";
+import Link from "next/link";
 
 export default function PhysicalTrainingPage() {
   const params = useParams();
@@ -22,6 +24,8 @@ export default function PhysicalTrainingPage() {
   const paramId = params?.ocId || params?.id;
   const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
   const { cadet } = useOcDetails(ocId);
+  const { data: meData } = useMe();
+  const ptWorkflowActive = Boolean(meData?.workflowModules?.PT_BULK?.isActive);
 
   return (
     <DashboardLayout
@@ -97,7 +101,13 @@ export default function PhysicalTrainingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <PhysicalForm ocId={ocId} />
+                {ptWorkflowActive ? (
+                  <div className="mb-4 rounded-md border border-amber-400/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    Physical training editing is read-only here while the review workflow is active. Use{" "}
+                    <Link href={`/dashboard/manage-pt-marks?courseId=${cadet?.course ?? ""}`}>Manage PT Marks</Link> to draft, submit, and verify updates.
+                  </div>
+                ) : null}
+                <PhysicalForm ocId={ocId} readOnly={ptWorkflowActive} />
               </CardContent>
             </Card>
           </TabsContent>

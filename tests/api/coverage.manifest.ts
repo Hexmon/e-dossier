@@ -152,6 +152,22 @@ export const MISC_UNCOVERED_ROUTE_FILES = [
 
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
+    testFile: 'tests/api/admin.marks-review-workflow.test.ts',
+    routeFiles: ['src/app/api/v1/admin/marks-review-workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/me.workflow-notifications.test.ts',
+    routeFiles: ['src/app/api/v1/me/workflow-notifications/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.academics.workflow.test.ts',
+    routeFiles: ['src/app/api/v1/oc/academics/workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.physical-training.workflow.test.ts',
+    routeFiles: ['src/app/api/v1/oc/physical-training/workflow/route.ts'],
+  },
+  {
     testFile: 'tests/api/admin.route-flow.uncovered.test.ts',
     routeFiles: [...ADMIN_UNCOVERED_ROUTE_FILES],
   },

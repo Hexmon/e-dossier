@@ -35,6 +35,7 @@ export default function AcademicsPage() {
         roles: meData?.roles,
         position: meData?.apt?.position ?? null,
     });
+    const academicsWorkflowActive = Boolean(meData?.workflowModules?.ACADEMICS_BULK?.isActive);
 
     // If no course data yet, show loading
     if (!course) {
@@ -88,7 +89,13 @@ export default function AcademicsPage() {
                     }
                 >
                     <div>
-                        <AcademicsTabs ocId={ocId} courseId={course} canEdit={canEditAcademicsForUser} />
+                        {academicsWorkflowActive ? (
+                            <div className="mb-4 rounded-md border border-amber-400/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                Academics editing is read-only here while the review workflow is active. Use{" "}
+                                <Link href={`/dashboard/manage-marks?courseId=${course}`}>Manage Marks</Link> to draft, submit, and verify updates.
+                            </div>
+                        ) : null}
+                        <AcademicsTabs ocId={ocId} courseId={course} canEdit={canEditAcademicsForUser && !academicsWorkflowActive} />
                     </div>
                 </DossierTab>
             </main>

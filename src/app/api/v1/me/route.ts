@@ -6,6 +6,10 @@ import { eq } from 'drizzle-orm';
 import { getEffectivePermissionBundleCached } from '@/app/db/queries/authz-permissions';
 import { isAuthzV2Enabled } from '@/app/lib/acx/feature-flag';
 import {
+  listMarksWorkflowAssignmentsForUser,
+  getWorkflowModuleSettings,
+} from '@/app/services/marksReviewWorkflow';
+import {
   withAuditRoute,
   AuditEventType,
   AuditResourceType,
@@ -50,6 +54,12 @@ async function GETHandler(req: AuditNextRequest) {
 
     if (!u) return json.notFound('User not found.');
 
+    const [workflowAssignments, academicsWorkflow, ptWorkflow] = await Promise.all([
+      listMarksWorkflowAssignmentsForUser(principal.userId),
+      getWorkflowModuleSettings('ACADEMICS_BULK'),
+      getWorkflowModuleSettings('PT_BULK'),
+    ]);
+
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
       outcome: 'SUCCESS',
@@ -66,6 +76,11 @@ async function GETHandler(req: AuditNextRequest) {
       user: u,
       roles: principal.roles,
       apt: principal.apt ?? null,
+      workflowAssignments,
+      workflowModules: {
+        ACADEMICS_BULK: { isActive: academicsWorkflow.isActive },
+        PT_BULK: { isActive: ptWorkflow.isActive },
+      },
       permissions: authzBundle?.permissions ?? [],
       deniedPermissions: authzBundle?.deniedPermissions ?? [],
       policyVersion: authzBundle?.policyVersion ?? null,

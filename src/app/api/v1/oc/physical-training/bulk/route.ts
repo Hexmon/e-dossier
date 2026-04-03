@@ -1,5 +1,6 @@
 import { ApiError, handleApiError, json } from '@/app/lib/http';
 import { mustBeAuthed } from '../../_checks';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import {
     ptOcBulkQuerySchema,
     ptOcBulkUpsertSchema,
@@ -188,6 +189,7 @@ async function GETHandler(req: AuditNextRequest) {
 async function POSTHandler(req: AuditNextRequest) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const body = ptOcBulkUpsertSchema.parse(await req.json());
 
         const ocRows = await listOCsBasic({

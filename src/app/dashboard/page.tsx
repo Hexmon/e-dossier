@@ -9,6 +9,7 @@ import Courses from "@/components/Dashboard/Courses";
 import Platoons from "@/components/Dashboard/Platoons";
 import InterviewsPending from "@/components/Dashboard/InterviewsPending";
 import Appointments from "@/components/Dashboard/Appointments";
+import WorkflowNotifications from "@/components/Dashboard/WorkflowNotifications";
 import { api } from "@/app/lib/apiClient";
 import { resolveApiAction } from "@/app/lib/acx/action-map";
 import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
@@ -234,6 +235,8 @@ const DashboardPage = () => {
           <div className="w-full lg:col-span-2 mt-2">
             <Appointments />
           </div>
+
+          <WorkflowNotifications />
         </div>
       </main>
 

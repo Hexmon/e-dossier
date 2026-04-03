@@ -268,6 +268,13 @@ export default function GeneralManagementPage() {
                     icon={Monitor}
                     color="muted"
                   />
+                  <DashboardCard
+                    title="Marks Review Workflow"
+                    description="Configure data entry, verification, and override users for bulk Academics and PT workflows."
+                    to="/dashboard/genmgmt/settings/marks-review-workflow"
+                    icon={Settings}
+                    color="warning"
+                  />
                 </div>
               </TabsContent>
             </GlobalTabs>

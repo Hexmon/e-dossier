@@ -1,6 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import {
     ptOcScoresQuerySchema,
     ptOcScoresUpsertSchema,
@@ -65,6 +66,7 @@ async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: s
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -98,6 +100,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -129,6 +132,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 

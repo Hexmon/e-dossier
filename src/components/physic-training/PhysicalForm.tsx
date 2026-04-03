@@ -24,6 +24,7 @@ import { isFreeEntryPtAttemptCode, resolvePtDraftMarks } from "@/app/lib/physica
 
 interface PhysicalFormProps {
   ocId: string;
+  readOnly?: boolean;
 }
 
 const semesterToApiSemester: Record<string, number> = {
@@ -37,7 +38,7 @@ const semesterToApiSemester: Record<string, number> = {
 
 const isVirtualId = (id?: string) => !!id && id.startsWith("virtual:");
 
-export default function PhysicalForm({ ocId }: PhysicalFormProps) {
+export default function PhysicalForm({ ocId, readOnly = false }: PhysicalFormProps) {
   const [activeSemester, setActiveSemester] = useState("I TERM");
   const [isEditing, setIsEditing] = useState(false);
   const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
@@ -187,6 +188,12 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     }
   }, [hasAdvancedSections]);
 
+  useEffect(() => {
+    if (readOnly) {
+      setIsEditing(false);
+    }
+  }, [readOnly]);
+
   const handleAttemptChange = useCallback(
     (rowId: string, attemptCode: string) => {
       setSemesterTableData((prev) => ({
@@ -285,6 +292,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
   );
 
   const handleSave = useCallback(async () => {
+    if (readOnly) return;
     const semesterNum = semesterToApiSemester[activeSemester];
     if (!semesterNum) return;
 
@@ -320,7 +328,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     await updateScores(semesterNum, scoresForApi);
     setIsEditing(false);
     toast.success("PPT data saved successfully");
-  }, [semesterTableData, activeSemester, updateScores]);
+  }, [activeSemester, readOnly, semesterTableData, updateScores]);
 
   const handleIpetMarks = useCallback((marks: number) => setChildComponentMarks((p) => (p.ipet === marks ? p : { ...p, ipet: marks })), []);
   const handleSwimmingMarks = useCallback((marks: number) => setChildComponentMarks((p) => (p.swimming === marks ? p : { ...p, swimming: marks })), []);
@@ -437,10 +445,10 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
               <button
                 key={sem}
                 onClick={() => setActiveSemester(sem)}
-                disabled={isEditing}
+                disabled={isEditing || readOnly}
                 className={`px-4 py-2 rounded-t-lg font-medium ${
                   activeSemester === sem ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                } ${isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${isEditing || readOnly ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {sem}
               </button>
@@ -458,13 +466,13 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           <div className="flex gap-3 justify-center mt-6">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={readOnly}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave}>Save</Button>
+                <Button onClick={handleSave} disabled={readOnly}>Save</Button>
               </>
             ) : (
-              <Button onClick={() => setIsEditing(true)}>Edit</Button>
+              <Button onClick={() => setIsEditing(true)} disabled={readOnly}>Edit</Button>
             )}
           </div>
 
@@ -507,4 +515,3 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     </div>
   );
 }
-

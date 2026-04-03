@@ -22,12 +22,17 @@ export default function ManagePtMarksPage() {
 
         const roles = (meData?.roles ?? []).map((role) => String(role).toUpperCase());
         const permissions = new Set<string>((meData?.permissions ?? []) as string[]);
+        const workflowAssignments = meData?.workflowAssignments ?? [];
+        const isWorkflowActor = workflowAssignments.some(
+            (assignment) => assignment.module === 'PT_BULK' && assignment.actorTypes.length > 0,
+        );
 
         if (roles.includes('SUPER_ADMIN')) return true;
         if (roles.includes('ADMIN') && page.adminBaseline) return true;
         if (permissions.has('*')) return true;
+        if (isWorkflowActor) return true;
         return permissions.has(page.action);
-    }, [authzV2Enabled, meData?.permissions, meData?.roles, meLoading]);
+    }, [authzV2Enabled, meData?.permissions, meData?.roles, meData?.workflowAssignments, meLoading]);
 
     useEffect(() => {
         if (!authzV2Enabled || meLoading) return;

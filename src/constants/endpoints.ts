@@ -19,6 +19,7 @@ export const endpoints = {
             gradingPolicy: "/api/v1/admin/academics/grading-policy",
             gradingPolicyRecalculate: "/api/v1/admin/academics/grading-policy/recalculate",
         },
+        marksReviewWorkflow: "/api/v1/admin/marks-review-workflow",
         reports: {
             verification: {
                 verify: "/api/v1/admin/reports/verification/verify",
@@ -73,11 +74,15 @@ export const endpoints = {
             applyTemplate: '/api/v1/admin/olq/templates/apply',
         },
     },
+    me: {
+        workflowNotifications: "/api/v1/me/workflow-notifications",
+    },
     oc: {
         list: "/api/v1/oc",
         create: "/api/v1/oc",
         physicalTraining: {
             bulk: "/api/v1/oc/physical-training/bulk",
+            workflow: "/api/v1/oc/physical-training/workflow",
         },
         getById: (ocId: string) => `/api/v1/oc/${ocId}`,
         update: (ocId: string) => `/api/v1/oc/${ocId}`,
@@ -146,6 +151,7 @@ export const endpoints = {
             delete: (ocId: string, ocCampId: string) => `/api/v1/oc/${ocId}/camps/${ocCampId}`,
         },
         academics: {
+            workflow: "/api/v1/oc/academics/workflow",
             list: (ocId: string) => `/api/v1/oc/${ocId}/academics`,
             getBySemester: (ocId: string, semester: number) =>
                 `/api/v1/oc/${ocId}/academics/${semester}`,

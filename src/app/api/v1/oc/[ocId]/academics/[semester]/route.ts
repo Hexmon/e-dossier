@@ -3,6 +3,7 @@ import { parseParam, ensureOcExists, mustBeAcademicsEditor } from '../../../_che
 import { OcIdParam, SemesterParam, academicSummaryPatchSchema } from '@/app/lib/oc-validators';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getOcAcademicSemester, updateOcAcademicSummary, deleteOcAcademicSemester } from '@/app/services/oc-academics';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -36,6 +37,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
         const authCtx = await mustBeAcademicsEditor(req);
+        await assertWorkflowDirectWriteAllowed('ACADEMICS_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);
@@ -72,6 +74,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string; semester: string }> }) {
     try {
         const authCtx = await mustBeAcademicsEditor(req);
+        await assertWorkflowDirectWriteAllowed('ACADEMICS_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         await ensureOcExists(ocId);

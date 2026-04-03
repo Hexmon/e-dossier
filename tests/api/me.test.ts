@@ -29,6 +29,11 @@ vi.mock('@/app/lib/guard', () => ({
   requireAuth: vi.fn(),
 }));
 
+vi.mock('@/app/services/marksReviewWorkflow', () => ({
+  listMarksWorkflowAssignmentsForUser: vi.fn(async () => []),
+  getWorkflowModuleSettings: vi.fn(async () => ({ isActive: false })),
+}));
+
 vi.mock('@/app/db/client', () => {
   const select = vi.fn(() => ({
     from: () => ({

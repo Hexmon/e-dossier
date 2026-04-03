@@ -13,6 +13,10 @@ vi.mock('@/app/services/oc-academics', () => ({
   deleteOcAcademicSubject: vi.fn(),
 }));
 
+vi.mock('@/app/services/marksReviewWorkflow', () => ({
+  assertWorkflowDirectWriteAllowed: vi.fn(),
+}));
+
 vi.mock('@/app/lib/acx/engine', () => ({
   getAuthzEngine: vi.fn(),
 }));
@@ -23,6 +27,7 @@ vi.mock('@/app/lib/acx/principal', () => ({
 
 import { mustBeAuthed } from '@/app/api/v1/oc/_checks';
 import { getOcAcademicSemester } from '@/app/services/oc-academics';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import { getAuthzEngine } from '@/app/lib/acx/engine';
 import { buildPrincipalFromRequest } from '@/app/lib/acx/principal';
 import { GET } from '@/app/api/v1/oc/academics/bulk/route';
@@ -52,6 +57,7 @@ describe('OC academics bulk API', () => {
     vi.clearAllMocks();
     process.env.AUTHZ_V2_ENABLED = 'false';
     (mustBeAuthed as any).mockResolvedValue({ userId: 'u-1', roles: ['HOAT'] });
+    (assertWorkflowDirectWriteAllowed as any).mockResolvedValue(undefined);
     (getOcAcademicSemester as any).mockResolvedValue({
       semester: 1,
       subjects: [
@@ -135,5 +141,36 @@ describe('OC academics bulk API', () => {
     expect(res.status).toBe(403);
     expect(body.error).toBe('forbidden');
     expect(mustBeAuthed).not.toHaveBeenCalled();
+  });
+
+  it('returns workflow_required for POST when workflow is active', async () => {
+    const { POST } = await import('@/app/api/v1/oc/academics/bulk/route');
+    (assertWorkflowDirectWriteAllowed as any).mockRejectedValueOnce(
+      new ApiError(409, 'Workflow required', 'workflow_required'),
+    );
+
+    const req = attachAudit(
+      makeJsonRequest({
+        method: 'POST',
+        path: '/api/v1/oc/academics/bulk',
+        body: {
+          items: [
+            {
+              op: 'upsert',
+              ocId: '11111111-1111-4111-8111-111111111111',
+              semester: 1,
+              subjectId: '22222222-2222-4222-8222-222222222222',
+              theory: { phaseTest1Marks: 10 },
+            },
+          ],
+        },
+      }),
+    );
+
+    const res = await POST(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe('workflow_required');
   });
 });

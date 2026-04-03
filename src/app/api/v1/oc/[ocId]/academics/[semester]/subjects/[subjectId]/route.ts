@@ -2,6 +2,7 @@ import { json, handleApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists, mustBeAcademicsEditor } from '../../../../../_checks';
 import { OcIdParam, SemesterParam, SubjectIdParam, academicSubjectPatchSchema } from '@/app/lib/oc-validators';
 import { updateOcAcademicSubject, deleteOcAcademicSubject } from '@/app/services/oc-academics';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -12,6 +13,7 @@ async function PATCHHandler(
 ) {
     try {
         const authCtx = await mustBeAcademicsEditor(req);
+        await assertWorkflowDirectWriteAllowed('ACADEMICS_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         const { subjectId } = await parseParam({ params }, SubjectIdParam);
@@ -56,6 +58,7 @@ async function DELETEHandler(
 ) {
     try {
         const authCtx = await mustBeAcademicsEditor(req);
+        await assertWorkflowDirectWriteAllowed('ACADEMICS_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { semester } = await parseParam({ params }, SemesterParam);
         const { subjectId } = await parseParam({ params }, SubjectIdParam);
