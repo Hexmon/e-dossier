@@ -1353,6 +1353,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/marks-review-workflow",
+    "action": "admin:marks-review-workflow:read",
+    "resourceType": "admin:marks-review-workflow",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/subjects",
     "action": "admin:subjects:read",
     "resourceType": "admin:subjects",
@@ -1509,6 +1518,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/me/navigation",
     "action": "me:navigation:read",
     "resourceType": "me:navigation",
+    "category": "me",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/me/workflow-notifications",
+    "action": "me:workflow-notifications:read",
+    "resourceType": "me:workflow-notifications",
     "category": "me",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -2118,9 +2136,27 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/oc/academics/workflow",
+    "action": "oc:academics:workflow:read",
+    "resourceType": "oc:academics:workflow",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/oc/physical-training/bulk",
     "action": "oc:physical-training:bulk:read",
     "resourceType": "oc:physical-training:bulk",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/oc/physical-training/workflow",
+    "action": "oc:physical-training:workflow:read",
+    "resourceType": "oc:physical-training:workflow",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -3387,6 +3423,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/me/workflow-notifications",
+    "action": "me:workflow-notifications:update",
+    "resourceType": "me:workflow-notifications",
+    "category": "me",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/auth/signup",
     "action": "auth:signup:create",
     "resourceType": "auth:signup",
@@ -3747,6 +3792,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/oc/academics/workflow",
+    "action": "oc:academics:workflow:update",
+    "resourceType": "oc:academics:workflow",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/oc/bulk-upload",
     "action": "oc:bulk-upload:create",
     "resourceType": "oc:bulk-upload",
@@ -3759,6 +3813,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/oc/physical-training/bulk",
     "action": "oc:physical-training:bulk:create",
     "resourceType": "oc:physical-training:bulk",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/oc/physical-training/workflow",
+    "action": "oc:physical-training:workflow:update",
+    "resourceType": "oc:physical-training:workflow",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -3876,6 +3939,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/site-settings",
     "action": "admin:site-settings:update",
     "resourceType": "admin:site-settings",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/marks-review-workflow",
+    "action": "admin:marks-review-workflow:update",
+    "resourceType": "admin:marks-review-workflow",
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true
@@ -4349,6 +4421,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/genmgmt/settings/site",
     "action": "page:dashboard:genmgmt:settings:site:view",
     "resourceType": "page:dashboard:genmgmt:settings:site",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/genmgmt/settings/marks-review-workflow",
+    "action": "page:dashboard:genmgmt:settings:marks-review-workflow:view",
+    "resourceType": "page:dashboard:genmgmt:settings:marks-review-workflow",
     "category": "genmgmt",
     "adminBaseline": true
   },
