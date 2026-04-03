@@ -34,6 +34,7 @@ import {
 } from '@/app/db/schema/training/oc';
 import { dossierInspections } from '@/app/db/schema/training/dossierInspections';
 import { courses } from '@/app/db/schema/training/courses';
+import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
@@ -62,6 +63,35 @@ type ListOpts = {
 // Escape % _ \ for ILIKE
 function likeEscape(q: string) {
     return `%${q.replace(/[%_\\]/g, '\\$&')}%`;
+}
+
+function clampCurrentSemester(value: number | null | undefined): number {
+    const parsed = Number(value ?? 1);
+    if (!Number.isFinite(parsed)) return 1;
+    return Math.max(1, Math.min(Math.trunc(parsed), 6));
+}
+
+export async function listCurrentSemestersByCourseIds(courseIds: string[]) {
+    const normalizedCourseIds = Array.from(new Set(courseIds.map((value) => value.trim()).filter(Boolean)));
+    if (!normalizedCourseIds.length) {
+        return new Map<string, number>();
+    }
+
+    const rows = await db
+        .select({
+            courseId: courseOfferings.courseId,
+            currentSemester: sql<number | null>`MAX(${courseOfferings.semester})`,
+        })
+        .from(courseOfferings)
+        .where(and(inArray(courseOfferings.courseId, normalizedCourseIds), isNull(courseOfferings.deletedAt)))
+        .groupBy(courseOfferings.courseId);
+
+    return new Map(rows.map((row) => [row.courseId, clampCurrentSemester(row.currentSemester)]));
+}
+
+export async function getCurrentSemesterForCourse(courseId: string): Promise<number> {
+    const semesterMap = await listCurrentSemestersByCourseIds([courseId]);
+    return semesterMap.get(courseId) ?? 1;
 }
 
 type SemesterMarksRow = typeof ocSemesterMarks.$inferSelect;
@@ -1416,7 +1446,14 @@ export async function listOCsBasic(opts: ListOpts = {}) {
         .limit(Math.min(limit, 1000))
         .offset(offset);
 
-    return rows;
+    const semesterByCourseId = await listCurrentSemestersByCourseIds(
+        rows.map((row) => row.courseId).filter((value): value is string => Boolean(value)),
+    );
+
+    return rows.map((row) => ({
+        ...row,
+        currentSemester: semesterByCourseId.get(row.courseId) ?? 1,
+    }));
 }
 
 export async function listOCsFull(opts: ListOpts = {}) {

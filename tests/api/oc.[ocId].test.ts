@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as getOcById, PATCH as patchOcById } from "@/app/api/v1/oc/[ocId]/route";
 import { ApiError } from "@/app/lib/http";
 import * as authz from "@/app/lib/authz";
+import * as ocQueries from "@/app/db/queries/oc";
 import { db } from "@/app/db/client";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
@@ -19,6 +20,10 @@ vi.mock("@/app/db/client", () => ({
     select: vi.fn(),
     update: vi.fn(),
   },
+}));
+
+vi.mock("@/app/db/queries/oc", () => ({
+  getCurrentSemesterForCourse: vi.fn(),
 }));
 
 const path = "/api/v1/oc";
@@ -43,6 +48,7 @@ describe("GET /api/v1/oc/[ocId]", () => {
 
   it("returns the OC including jnu enrollment number", async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({ userId: "admin-1", roles: ["ADMIN"] });
+    (ocQueries.getCurrentSemesterForCourse as any).mockResolvedValueOnce(4);
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         leftJoin: () => ({
@@ -91,6 +97,7 @@ describe("GET /api/v1/oc/[ocId]", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.oc.jnuEnrollmentNo).toBe("001");
+    expect(body.oc.currentSemester).toBe(4);
   });
 });
 

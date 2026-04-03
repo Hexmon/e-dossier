@@ -8,6 +8,7 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { eq } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { getCurrentSemesterForCourse } from '@/app/db/queries/oc';
 
 const OcParam = z.object({ ocId: z.string().uuid() });
 const jnuEnrollmentNoSchema = z
@@ -93,6 +94,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             updatedAt: row.platoonUpdatedAt,
             deletedAt: row.platoonDeletedAt,
         } : null;
+        const currentSemester = course ? await getCurrentSemesterForCourse(course.id) : null;
 
         const oc = {
             id: row.id,
@@ -101,6 +103,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             uid: row.uid,
             name: row.name,
             course,
+            currentSemester,
             branch: row.branch,
             platoon,
             arrivalAtUniversity: row.arrivalAtUniversity,
