@@ -148,6 +148,23 @@ function ensureWorkflowAccess(settings: MarksWorkflowSettingsInput, actor: Actor
   }
 }
 
+function getMakerNotificationRecipients(
+  settings: WorkflowSettingsResponse,
+  ticket:
+    | {
+        submittedByUserId: string | null;
+      }
+    | null
+    | undefined,
+) {
+  return Array.from(
+    new Set([
+      ...settings.dataEntryUserIds,
+      ...(ticket?.submittedByUserId ? [ticket.submittedByUserId] : []),
+    ]),
+  );
+}
+
 function ensurePtScoreRefValid(
   row:
     | {
@@ -788,7 +805,7 @@ async function mutateWorkflowTicket(args: {
       ticketId: existingTicket.id,
       module: args.module,
       workflowStatus: 'CHANGES_REQUESTED',
-      recipients: args.settings.dataEntryUserIds,
+      recipients: getMakerNotificationRecipients(args.settings, existingTicket),
       actorUserId: args.actor.userId,
       selectionLabel: existingTicket.selectionLabel ?? liveState.selectionLabel,
       deepLink,
@@ -825,7 +842,7 @@ async function mutateWorkflowTicket(args: {
       ticketId: existingTicket.id,
       module: args.module,
       workflowStatus: 'VERIFIED',
-      recipients: args.settings.dataEntryUserIds,
+      recipients: getMakerNotificationRecipients(args.settings, existingTicket),
       actorUserId: args.actor.userId,
       selectionLabel: existingTicket.selectionLabel ?? liveState.selectionLabel,
       deepLink,
@@ -867,7 +884,10 @@ async function mutateWorkflowTicket(args: {
       ticketId: existingTicket.id,
       module: args.module,
       workflowStatus: 'VERIFIED',
-      recipients: [...args.settings.dataEntryUserIds, ...args.settings.verificationUserIds],
+      recipients: [
+        ...getMakerNotificationRecipients(args.settings, existingTicket),
+        ...args.settings.verificationUserIds,
+      ],
       actorUserId: args.actor.userId,
       selectionLabel: existingTicket.selectionLabel ?? liveState.selectionLabel,
       deepLink,
@@ -917,7 +937,7 @@ export async function updateMarksWorkflowSettingsForAdmin(
   return listMarksWorkflowSettingsForAdmin();
 }
 
-export async function listMarksWorkflowAssignmentsForUser(userId: string) {
+export async function listMarksWorkflowAssignmentsForUser(args: { userId: string; roles?: string[] | null }) {
   const settings = await listWorkflowSettingsRows();
   return (['ACADEMICS_BULK', 'PT_BULK'] as const).flatMap((module) => {
     const row = settings.find((entry: WorkflowSettingsRow) => entry.module === module) ?? null;
@@ -925,8 +945,8 @@ export async function listMarksWorkflowAssignmentsForUser(userId: string) {
     if (!isMarksWorkflowModuleActive(normalized)) return [];
     const actor = resolveWorkflowActorContext({
       settings: normalized,
-      userId,
-      roles: [],
+      userId: args.userId,
+      roles: args.roles ?? [],
     });
     const actorTypes = [
       ...(actor.isDataEntryUser ? ['DATA_ENTRY'] : []),

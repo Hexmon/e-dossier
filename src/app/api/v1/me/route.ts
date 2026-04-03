@@ -55,7 +55,10 @@ async function GETHandler(req: AuditNextRequest) {
     if (!u) return json.notFound('User not found.');
 
     const [workflowAssignments, academicsWorkflow, ptWorkflow] = await Promise.all([
-      listMarksWorkflowAssignmentsForUser(principal.userId),
+      listMarksWorkflowAssignmentsForUser({
+        userId: principal.userId,
+        roles: principal.roles ?? [],
+      }),
       getWorkflowModuleSettings('ACADEMICS_BULK'),
       getWorkflowModuleSettings('PT_BULK'),
     ]);

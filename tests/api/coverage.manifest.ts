@@ -116,7 +116,6 @@ export const OC_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/oc/[ocId]/parent-comms/route.ts',
   'src/app/api/v1/oc/[ocId]/performance-graph/route.ts',
   'src/app/api/v1/oc/[ocId]/personal/route.ts',
-  'src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts',
   'src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/[id]/route.ts',
   'src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/route.ts',
   'src/app/api/v1/oc/[ocId]/special-achievement-in-firing/route.ts',
@@ -166,6 +165,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/oc.physical-training.workflow.test.ts',
     routeFiles: ['src/app/api/v1/oc/physical-training/workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.physical-training.motivation-awards.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts'],
   },
   {
     testFile: 'tests/api/admin.route-flow.uncovered.test.ts',

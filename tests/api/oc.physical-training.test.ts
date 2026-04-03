@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { POST } from '@/app/api/v1/oc/[ocId]/physical-training/route';
+import { GET, POST, DELETE } from '@/app/api/v1/oc/[ocId]/physical-training/route';
 import { createRouteContext, makeJsonRequest } from '../utils/next';
 
 const auditLogMock = vi.fn(async () => undefined);
@@ -12,7 +12,9 @@ vi.mock('@/lib/audit', () => ({
     };
   },
   AuditEventType: {
+    API_REQUEST: 'api.request',
     OC_RECORD_CREATED: 'oc.record.created',
+    OC_RECORD_DELETED: 'oc.record.deleted',
   },
   AuditResourceType: {
     OC: 'oc',
@@ -145,6 +147,68 @@ describe('POST /api/v1/oc/[ocId]/physical-training', () => {
     });
 
     const res = await POST(req as any, createRouteContext({ ocId }));
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe('workflow_required');
+  });
+});
+
+describe('GET /api/v1/oc/[ocId]/physical-training', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(ocChecks.mustBeAuthed).mockResolvedValue({ userId: 'user-1' } as any);
+    vi.mocked(ocChecks.parseParam).mockResolvedValue({ ocId } as any);
+    vi.mocked(ocChecks.ensureOcExists).mockResolvedValue(undefined);
+    vi.mocked(ptOcQueries.listOcPtScores).mockResolvedValue([
+      {
+        id: '33333333-3333-4333-8333-333333333333',
+        ptTaskScoreId,
+        marksScored: 40,
+      },
+    ] as any);
+  });
+
+  it('returns PT scores even when the workflow is active', async () => {
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `/api/v1/oc/${ocId}/physical-training?semester=1`,
+    });
+
+    const res = await GET(req as any, createRouteContext({ ocId }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(workflowServices.assertWorkflowDirectWriteAllowed).not.toHaveBeenCalled();
+    expect(ptOcQueries.listOcPtScores).toHaveBeenCalledWith(ocId, 1);
+  });
+});
+
+describe('DELETE /api/v1/oc/[ocId]/physical-training', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(ocChecks.mustBeAuthed).mockResolvedValue({ userId: 'user-1' } as any);
+    vi.mocked(ocChecks.parseParam).mockResolvedValue({ ocId } as any);
+    vi.mocked(ocChecks.ensureOcExists).mockResolvedValue(undefined);
+    vi.mocked(workflowServices.assertWorkflowDirectWriteAllowed).mockResolvedValue(undefined as any);
+    vi.mocked(ptOcQueries.deleteOcPtScoresBySemester).mockResolvedValue([
+      { id: '33333333-3333-4333-8333-333333333333' },
+    ] as any);
+  });
+
+  it('returns workflow_required when workflow is active', async () => {
+    vi.mocked(workflowServices.assertWorkflowDirectWriteAllowed).mockRejectedValueOnce(
+      new ApiError(409, 'Workflow required', 'workflow_required') as any,
+    );
+
+    const req = makeJsonRequest({
+      method: 'DELETE',
+      path: `/api/v1/oc/${ocId}/physical-training`,
+      body: { semester: 1 },
+    });
+
+    const res = await DELETE(req as any, createRouteContext({ ocId }));
     const body = await res.json();
 
     expect(res.status).toBe(409);

@@ -29,13 +29,17 @@ type WorkflowSettingsDraft = Record<ModuleKey, WorkflowModuleDraft>;
 const MODULE_COPY: Record<ModuleKey, { title: string; description: string }> = {
     ACADEMICS_BULK: {
         title: "Academics Bulk Workflow",
-        description: "Maker-verifier flow for /dashboard/manage-marks.",
+        description: "Maker-verifier flow for /dashboard/manage-marks. Platoon commanders are implicit data-entry users.",
     },
     PT_BULK: {
         title: "PT Bulk Workflow",
-        description: "Maker-verifier flow for /dashboard/manage-pt-marks.",
+        description: "Maker-verifier flow for /dashboard/manage-pt-marks. Platoon commanders are implicit data-entry users.",
     },
 };
+
+function isModuleActive(moduleDraft: WorkflowModuleDraft) {
+    return moduleDraft.verificationUserIds.length > 0;
+}
 
 function emptyDraft(): WorkflowSettingsDraft {
     return {
@@ -170,7 +174,7 @@ export default function MarksReviewWorkflowSettingsPage() {
                     <div>
                         <h2 className="text-2xl font-bold text-primary">Marks Review Workflow</h2>
                         <p className="text-muted-foreground">
-                            Configure direct users for data entry and verification. Workflow becomes active when both lists are set.
+                            Configure additional data-entry users and verification users. Platoon commanders can draft and submit by default, and workflow becomes active once verification users are set.
                         </p>
                     </div>
                     <Button onClick={handleSave} disabled={saving || settingsQuery.isLoading || usersQuery.isLoading}>
@@ -205,8 +209,8 @@ export default function MarksReviewWorkflowSettingsPage() {
                             <CardHeader>
                                 <div className="flex flex-wrap items-center gap-3">
                                     <CardTitle>{MODULE_COPY[module].title}</CardTitle>
-                                    <Badge variant={moduleDraft.dataEntryUserIds.length && moduleDraft.verificationUserIds.length ? "default" : "outline"}>
-                                        {moduleDraft.dataEntryUserIds.length && moduleDraft.verificationUserIds.length ? "Active" : "Inactive"}
+                                    <Badge variant={isModuleActive(moduleDraft) ? "default" : "outline"}>
+                                        {isModuleActive(moduleDraft) ? "Active" : "Inactive"}
                                     </Badge>
                                 </div>
                                 <CardDescription>{MODULE_COPY[module].description}</CardDescription>
@@ -230,7 +234,7 @@ export default function MarksReviewWorkflowSettingsPage() {
                                     <div className="space-y-3">
                                         <div>
                                             <h3 className="font-semibold">Data Entry Users</h3>
-                                            <p className="text-sm text-muted-foreground">These users can save draft data and submit for verification.</p>
+                                            <p className="text-sm text-muted-foreground">These are additional maker users. Platoon commanders can already save drafts and submit for verification by default.</p>
                                         </div>
                                         <div className="max-h-80 space-y-2 overflow-auto rounded-md border p-3">
                                             {filteredUsers.length === 0 ? (

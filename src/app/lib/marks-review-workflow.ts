@@ -1,5 +1,6 @@
 import { ApiError } from '@/app/lib/http';
 import { Semester } from '@/app/lib/oc-validators';
+import { hasPlatoonCommanderRole } from '@/lib/platoon-commander-access';
 import { z } from 'zod';
 
 export const MARKS_WORKFLOW_MODULES = ['ACADEMICS_BULK', 'PT_BULK'] as const;
@@ -188,7 +189,7 @@ export function isMarksWorkflowModuleActive(
   settings: Pick<MarksWorkflowSettingsInput, 'dataEntryUserIds' | 'verificationUserIds'> | null | undefined,
 ): boolean {
   if (!settings) return false;
-  return settings.dataEntryUserIds.length > 0 && settings.verificationUserIds.length > 0;
+  return settings.verificationUserIds.length > 0;
 }
 
 export function validateWorkflowUserAssignments(
@@ -211,10 +212,10 @@ export function validateWorkflowUserAssignments(
     );
   }
 
-  if ((dataEntryUserIds.length > 0 && verificationUserIds.length === 0) || (verificationUserIds.length > 0 && dataEntryUserIds.length === 0)) {
+  if (dataEntryUserIds.length > 0 && verificationUserIds.length === 0) {
     throw new ApiError(
       400,
-      `${module} workflow becomes active only when both user lists are configured.`,
+      `${module} requires verification users before additional data-entry users can be assigned.`,
       'invalid_workflow_assignment',
       { module },
     );
@@ -256,7 +257,10 @@ export function resolveWorkflowActorContext(args: {
   const roles = new Set((args.roles ?? []).map((role) => String(role).trim().toUpperCase()));
   const isSuperAdmin = roles.has('SUPER_ADMIN');
   const isAdmin = roles.has('ADMIN') || isSuperAdmin;
-  const isDataEntryUser = Boolean(settings?.dataEntryUserIds.includes(args.userId));
+  const isImplicitPlatoonCommanderMaker = hasPlatoonCommanderRole({
+    roles: Array.from(roles),
+  });
+  const isDataEntryUser = Boolean(settings?.dataEntryUserIds.includes(args.userId)) || isImplicitPlatoonCommanderMaker;
   const isVerificationUser = Boolean(settings?.verificationUserIds.includes(args.userId));
   const canOverrideVerified =
     isSuperAdmin ||

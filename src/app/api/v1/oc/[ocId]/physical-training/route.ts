@@ -66,7 +66,6 @@ async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: s
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
-        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
@@ -173,6 +172,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 

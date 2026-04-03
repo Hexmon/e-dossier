@@ -486,6 +486,7 @@ export default function PhysicalForm({ ocId, readOnly = false }: PhysicalFormPro
                 updateScores={updateScores}
                 templates={ipetType?.rows ?? []}
                 typeTitle={ipetType?.title}
+                readOnly={readOnly}
               />
               <Swimming
                 key={`swimming-${activeSemester}`}
@@ -495,6 +496,7 @@ export default function PhysicalForm({ ocId, readOnly = false }: PhysicalFormPro
                 updateScores={updateScores}
                 templates={swimmingType?.rows ?? []}
                 typeTitle={swimmingType?.title}
+                readOnly={readOnly}
               />
               <HigherTests
                 key={`higher-tests-${activeSemester}`}
@@ -504,11 +506,12 @@ export default function PhysicalForm({ ocId, readOnly = false }: PhysicalFormPro
                 updateScores={updateScores}
                 templates={higherTestType?.rows ?? []}
                 typeTitle={higherTestType?.title}
+                readOnly={readOnly}
               />
             </>
           )}
 
-          <MotivationAwards activeSemester={activeSemester} ocId={ocId} fields={motivationFields} />
+          <MotivationAwards activeSemester={activeSemester} ocId={ocId} fields={motivationFields} readOnly={readOnly} />
           <GrandTotal grandTotalMarks={grandTotalMarks} />
         </CardContent>
       </Card>

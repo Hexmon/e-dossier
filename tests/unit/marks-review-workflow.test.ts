@@ -5,6 +5,7 @@ import {
   buildAcademicsPublishItems,
   buildPtPublishItems,
   getAllowedWorkflowActions,
+  isMarksWorkflowModuleActive,
   resolveWorkflowActorContext,
   validateWorkflowUserAssignments,
 } from '@/app/lib/marks-review-workflow';
@@ -25,15 +26,15 @@ describe('marksReviewWorkflow core', () => {
 
   it('resolves allowed actions for maker, verifier, and override actors', () => {
     const settings = {
-      dataEntryUserIds: ['maker'],
+      dataEntryUserIds: [],
       verificationUserIds: ['verifier'],
       postVerificationOverrideMode: 'ADMIN_AND_SUPER_ADMIN' as const,
     };
 
     const maker = resolveWorkflowActorContext({
       settings,
-      userId: 'maker',
-      roles: [],
+      userId: 'pl-cdr',
+      roles: ['PLATOON_COMMANDER'],
     });
     const verifier = resolveWorkflowActorContext({
       settings,
@@ -69,6 +70,19 @@ describe('marksReviewWorkflow core', () => {
         actor: adminOverride,
       }),
     ).toEqual(['OVERRIDE_PUBLISH']);
+  });
+
+  it('treats verifier-only configuration as an active workflow because platoon commanders are implicit makers', () => {
+    const settings = validateWorkflowUserAssignments(
+      {
+        dataEntryUserIds: [],
+        verificationUserIds: ['22222222-2222-4222-8222-222222222222'],
+        postVerificationOverrideMode: 'SUPER_ADMIN_ONLY',
+      },
+      'ACADEMICS_BULK',
+    );
+
+    expect(isMarksWorkflowModuleActive(settings)).toBe(true);
   });
 
   it('throws stale revision conflicts', () => {
