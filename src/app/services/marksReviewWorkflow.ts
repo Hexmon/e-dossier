@@ -478,9 +478,12 @@ async function decorateWorkflowActivityLog(ticketId: string) {
 async function buildSettingsMap() {
   const rows = await listWorkflowSettingsRows();
   const map = new Map<MarksWorkflowModule, WorkflowSettingsResponse>();
-  for (const module of ['ACADEMICS_BULK', 'PT_BULK'] as const) {
-    const row = rows.find((entry: WorkflowSettingsRow) => entry.module === module) ?? null;
-    map.set(module, await resolveSettingsResponse(module, normalizeSettingsRow(row)));
+  for (const workflowModule of ['ACADEMICS_BULK', 'PT_BULK'] as const) {
+    const row = rows.find((entry: WorkflowSettingsRow) => entry.module === workflowModule) ?? null;
+    map.set(
+      workflowModule,
+      await resolveSettingsResponse(workflowModule, normalizeSettingsRow(row))
+    );
   }
   return map;
 }
