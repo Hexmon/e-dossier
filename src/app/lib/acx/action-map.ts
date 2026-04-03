@@ -713,6 +713,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "method": "DELETE",
+    "path": "/api/v1/pl-cdr/cadet-appointments/:id",
+    "action": "pl-cdr:cadet-appointments:delete",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
     "method": "GET",
     "path": "/api/v1/admin/academics/grading-policy",
     "action": "admin:academics:grading-policy:read",
@@ -2154,6 +2163,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/pl-cdr/cadet-appointments",
+    "action": "pl-cdr:cadet-appointments:read",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/pl-cdr/cadet-appointments/:id",
+    "action": "pl-cdr:cadet-appointments:read",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/reports/academics/consolidated-sessional/preview",
     "action": "reports:academics:consolidated-sessional:preview:read",
     "resourceType": "reports:academics:consolidated-sessional:preview",
@@ -2909,6 +2936,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "method": "PATCH",
+    "path": "/api/v1/pl-cdr/cadet-appointments/:id",
+    "action": "pl-cdr:cadet-appointments:update",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": true,
+    "adminBaseline": false
+  },
+  {
     "method": "POST",
     "path": "/api/v1/admin/academics/grading-policy/recalculate",
     "action": "admin:academics:grading-policy:recalculate:create",
@@ -2994,6 +3030,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/interview/templates",
     "action": "admin:interview:templates:create",
     "resourceType": "admin:interview:templates",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/interview/templates/copy",
+    "action": "admin:interview:templates:copy:create",
+    "resourceType": "admin:interview:templates:copy",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -3102,6 +3147,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/physical-training/types",
     "action": "admin:physical-training:types:create",
     "resourceType": "admin:physical-training:types",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/physical-training/templates/copy",
+    "action": "admin:physical-training:templates:copy:create",
+    "resourceType": "admin:physical-training:templates:copy",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -3336,6 +3390,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/training-camps",
     "action": "admin:training-camps:create",
     "resourceType": "admin:training-camps",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/training-camps/copy",
+    "action": "admin:training-camps:copy:create",
+    "resourceType": "admin:training-camps:copy",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -3778,6 +3841,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "action": "platoons:image:presign:create",
     "resourceType": "platoons:image:presign",
     "category": "platoons",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/pl-cdr/cadet-appointments",
+    "action": "pl-cdr:cadet-appointments:create",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/pl-cdr/cadet-appointments/:id/transfer",
+    "action": "pl-cdr:cadet-appointments:transfer:create",
+    "resourceType": "pl-cdr:cadet-appointments:transfer",
+    "category": "pl-cdr",
     "fieldLevelCandidate": false,
     "adminBaseline": false
   },
@@ -4447,6 +4528,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/settings/device",
     "action": "page:dashboard:settings:device:view",
     "resourceType": "page:dashboard:settings:device",
+    "category": "settings",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/settings/device/appointments",
+    "action": "page:dashboard:settings:device:appointments:view",
+    "resourceType": "page:dashboard:settings:device:appointments",
     "category": "settings",
     "adminBaseline": false
   },
