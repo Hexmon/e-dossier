@@ -109,6 +109,10 @@ export type TheoryMarksRecord = {
 };
 
 export type PracticalMarksRecord = {
+    conductOfExp?: number | null;
+    maintOfApp?: number | null;
+    practicalTest?: number | null;
+    vivaVoce?: number | null;
     finalMarks?: number | null;
     grade?: string | null;
     tutorial?: string | null;
@@ -123,6 +127,7 @@ export type SemesterSubjectRecord = {
     meta?: {
         subjectId?: string | null;
         offeringId?: string | null;
+        noOfPhaseTests?: number | null;
         theoryCredits?: number | null;
         practicalCredits?: number | null;
         deletedAt?: string | null;

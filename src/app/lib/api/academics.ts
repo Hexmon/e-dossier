@@ -12,6 +12,10 @@ export interface TheoryMarks {
 }
 
 export interface PracticalMarks {
+    conductOfExp?: number;
+    maintOfApp?: number;
+    practicalTest?: number;
+    vivaVoce?: number;
     grade?: string;
     tutorial?: string;
     finalMarks?: number;
@@ -27,6 +31,10 @@ export interface SubjectMarks {
         grade?: string;
     };
     practical?: {
+        conductOfExp?: number;
+        maintOfApp?: number;
+        practicalTest?: number;
+        vivaVoce?: number;
         finalMarks?: number;
         grade?: string;
         tutorial?: string;
@@ -44,6 +52,7 @@ export interface SubjectWithMarks {
         code: string;
         name: string;
         branch: string;
+        noOfPhaseTests: number;
         hasTheory: boolean;
         hasPractical: boolean;
         defaultTheoryCredits: number;

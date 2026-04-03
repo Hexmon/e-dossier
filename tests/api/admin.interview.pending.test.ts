@@ -72,7 +72,7 @@ vi.mock('drizzle-orm', () => ({
   isNull: vi.fn(),
 }));
 
-import { buildExpectedSlots } from '@/app/api/v1/admin/interview/pending/route';
+import { buildExpectedSpecialInterviewSlots } from '@/lib/interview-pending-slots';
 
 describe('admin interview pending slot selection', () => {
   beforeEach(() => {
@@ -102,7 +102,9 @@ describe('admin interview pending slot selection', () => {
       };
     });
 
-    const result = buildExpectedSlots({} as never);
+    const result = {
+      special: buildExpectedSpecialInterviewSlots({} as never),
+    };
 
     expect(result).toEqual({
       special: [
@@ -132,7 +134,9 @@ describe('admin interview pending slot selection', () => {
       },
     }));
 
-    const result = buildExpectedSlots({} as never);
+    const result = {
+      special: buildExpectedSpecialInterviewSlots({} as never),
+    };
 
     expect(result.special).toEqual([
       { templateId: 'special-template-1', semester: 1 },

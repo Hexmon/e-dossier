@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LETTER_GRADE_VALUES } from '@/app/lib/grading';
+import { PRACTICAL_COMPONENTS, PRACTICAL_TOTAL_MAX_MARKS } from '@/lib/academics-practical';
 
 const nonEmptyPartial = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>) =>
     schema.partial().superRefine((val, ctx) => {
@@ -401,7 +402,11 @@ export const academicSubjectPatchSchema = z.object({
         grade: academicLetterGradeSchema,
     }).partial().optional(),
     practical: z.object({
-        finalMarks: z.coerce.number().optional(),
+        conductOfExp: z.coerce.number().min(0).max(PRACTICAL_COMPONENTS[0].maxMarks).optional(),
+        maintOfApp: z.coerce.number().min(0).max(PRACTICAL_COMPONENTS[1].maxMarks).optional(),
+        practicalTest: z.coerce.number().min(0).max(PRACTICAL_COMPONENTS[2].maxMarks).optional(),
+        vivaVoce: z.coerce.number().min(0).max(PRACTICAL_COMPONENTS[3].maxMarks).optional(),
+        finalMarks: z.coerce.number().min(0).max(PRACTICAL_TOTAL_MAX_MARKS).optional(),
         grade: academicLetterGradeSchema,
         tutorial: z.string().optional(),
     }).partial().optional(),

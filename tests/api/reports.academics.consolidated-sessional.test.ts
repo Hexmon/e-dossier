@@ -71,6 +71,7 @@ const previewData = {
     id: subjectId,
     code: 'MATH',
     instructorName: 'Instructor One',
+    noOfPhaseTests: 2,
   },
   theoryRows: [{ ocId: 'oc-1' }],
   practicalRows: [{ ocId: 'oc-2' }],

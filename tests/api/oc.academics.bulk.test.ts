@@ -22,10 +22,10 @@ vi.mock('@/app/lib/acx/principal', () => ({
 }));
 
 import { mustBeAuthed } from '@/app/api/v1/oc/_checks';
-import { getOcAcademicSemester } from '@/app/services/oc-academics';
+import { getOcAcademicSemester, updateOcAcademicSubject } from '@/app/services/oc-academics';
 import { getAuthzEngine } from '@/app/lib/acx/engine';
 import { buildPrincipalFromRequest } from '@/app/lib/acx/principal';
-import { GET } from '@/app/api/v1/oc/academics/bulk/route';
+import { GET, POST } from '@/app/api/v1/oc/academics/bulk/route';
 
 function attachAudit(req: any) {
   req.audit = { log: vi.fn(async () => undefined) };
@@ -135,5 +135,61 @@ describe('OC academics bulk API', () => {
     expect(res.status).toBe(403);
     expect(body.error).toBe('forbidden');
     expect(mustBeAuthed).not.toHaveBeenCalled();
+  });
+
+  it('saves structured practical component marks through bulk academics', async () => {
+    (updateOcAcademicSubject as any).mockResolvedValueOnce({
+      semester: 1,
+      subjects: [],
+    });
+
+    const req = attachAudit(
+      makeJsonRequest({
+        method: 'POST',
+        path: '/api/v1/oc/academics/bulk',
+        body: {
+          items: [
+            {
+              op: 'upsert',
+              ocId: '11111111-1111-4111-8111-111111111111',
+              semester: 1,
+              subjectId: '22222222-2222-4222-8222-222222222222',
+              practical: {
+                conductOfExp: 18,
+                maintOfApp: 17,
+                practicalTest: 39,
+                vivaVoce: 12,
+                finalMarks: 86,
+              },
+            },
+          ],
+          failFast: true,
+        },
+      }),
+    );
+
+    const res = await POST(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(updateOcAcademicSubject).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+      1,
+      '22222222-2222-4222-8222-222222222222',
+      {
+        theory: undefined,
+        practical: {
+          conductOfExp: 18,
+          maintOfApp: 17,
+          practicalTest: 39,
+          vivaVoce: 12,
+          finalMarks: 86,
+        },
+      },
+      expect.objectContaining({
+        actorUserId: 'u-1',
+      }),
+    );
   });
 });

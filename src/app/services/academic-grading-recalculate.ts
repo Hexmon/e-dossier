@@ -10,6 +10,8 @@ import {
   roundPolicyValue,
   type AcademicGradingPolicy,
 } from '@/app/lib/grading-policy';
+import { computePracticalTotal } from '@/lib/academics-practical';
+import { computeTheoryTotal } from '@/lib/academics-theory';
 
 type RecalculateScope = 'all' | 'courses';
 
@@ -65,21 +67,17 @@ function normalizeGrade(value: unknown): string {
   return String(value ?? '').trim().toUpperCase();
 }
 
-function theoryTotal(theory: TheoryMarksRecord | null | undefined): number {
+function theoryTotal(
+  theory: TheoryMarksRecord | null | undefined,
+  phaseTestCount: number | null | undefined,
+): number {
   if (!theory) return 0;
-  // C# parity: each component contributes only when positive (Sign(x) == 1).
-  return (
-    toPositiveNumber(theory.phaseTest1Marks) +
-    toPositiveNumber(theory.phaseTest2Marks) +
-    toPositiveNumber(theory.tutorial) +
-    toPositiveNumber(theory.finalMarks)
-  );
+  return computeTheoryTotal(theory, phaseTestCount);
 }
 
 function practicalTotal(practical: PracticalMarksRecord | null | undefined): number {
   if (!practical) return 0;
-  // C# parity: practical marks use positive-only value.
-  return toPositiveNumber(practical.finalMarks);
+  return computePracticalTotal(practical);
 }
 
 function computeSgpa(
@@ -137,7 +135,7 @@ function recomputeRowSubjects(
     };
 
     if (nextSubject.theory) {
-      const marks = theoryTotal(nextSubject.theory);
+      const marks = theoryTotal(nextSubject.theory, nextSubject.meta?.noOfPhaseTests);
       const derivedGrade = marksToLetterGradeWithPolicy(marks, policy);
       if (normalizeGrade(nextSubject.theory.grade) !== derivedGrade) {
         nextSubject.theory.grade = derivedGrade;

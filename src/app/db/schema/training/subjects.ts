@@ -6,6 +6,7 @@ export const subjects = pgTable('subjects', {
     name: varchar('name', { length: 160 }).notNull(),
     branch: varchar('branch', { length: 1 }).notNull(),         // 'C' | 'E' | 'M'  (Common / Electrical / Mechanical)
     noOfPeriods: integer('no_of_periods').notNull().default(0),
+    noOfPhaseTests: integer('no_of_phase_tests').notNull().default(2),
     hasTheory: boolean('has_theory').notNull().default(true),
     hasPractical: boolean('has_practical').notNull().default(false),
     defaultTheoryCredits: integer('default_theory_credits'),

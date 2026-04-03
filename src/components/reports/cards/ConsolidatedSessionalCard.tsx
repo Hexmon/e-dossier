@@ -33,6 +33,8 @@ export function ConsolidatedSessionalCard() {
     subjectId,
     enabled: viewRequested,
   });
+  const previewData = previewQuery.data?.data;
+  const phaseTestCount = previewData?.subject.noOfPhaseTests ?? 2;
   const downloads = useReportsDownloads();
 
   const coursesQuery = useQuery({
@@ -203,14 +205,14 @@ export function ConsolidatedSessionalCard() {
               </div>
             ) : null}
 
-            {viewRequested && previewQuery.data?.data ? (
+            {viewRequested && previewData ? (
               <div className="max-h-[70vh] space-y-4 overflow-auto">
                 <div className="rounded border bg-muted/20 p-3 text-sm">
-                  Preview loaded: Theory rows {previewQuery.data.data.theoryRows.length}, Practical rows{' '}
-                  {previewQuery.data.data.practicalRows.length}.
+                  Preview loaded: Theory rows {previewData.theoryRows.length}, Practical rows{' '}
+                  {previewData.practicalRows.length}.
                 </div>
 
-                {previewQuery.data.data.theoryRows.length ? (
+                {previewData.theoryRows.length ? (
                   <div className="space-y-2 rounded border p-2">
                     <div className="text-sm font-semibold">Theory</div>
                     <div className="overflow-auto rounded border">
@@ -222,7 +224,7 @@ export function ConsolidatedSessionalCard() {
                             <th className="p-2 text-left">Name</th>
                             <th className="p-2 text-left">Branch</th>
                             <th className="p-2 text-left">PT1</th>
-                            <th className="p-2 text-left">PT2</th>
+                            {phaseTestCount >= 2 ? <th className="p-2 text-left">PT2</th> : null}
                             <th className="p-2 text-left">Tutorial</th>
                             <th className="p-2 text-left">Sessional</th>
                             <th className="p-2 text-left">Final</th>
@@ -231,14 +233,14 @@ export function ConsolidatedSessionalCard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {previewQuery.data.data.theoryRows.map((row) => (
+                          {previewData.theoryRows.map((row) => (
                             <tr key={row.ocId} className="border-t">
                               <td className="p-2">{row.sNo}</td>
                               <td className="p-2">{row.ocNo}</td>
                               <td className="p-2">{row.ocName}</td>
                               <td className="p-2">{row.branch ?? '-'}</td>
                               <td className="p-2">{row.phaseTest1Obtained ?? ''}</td>
-                              <td className="p-2">{row.phaseTest2Obtained ?? ''}</td>
+                              {phaseTestCount >= 2 ? <td className="p-2">{row.phaseTest2Obtained ?? ''}</td> : null}
                               <td className="p-2">{row.tutorialObtained ?? ''}</td>
                               <td className="p-2">{row.sessionalObtained ?? ''}</td>
                               <td className="p-2">{row.finalObtained ?? ''}</td>
@@ -259,7 +261,7 @@ export function ConsolidatedSessionalCard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {previewQuery.data.data.theorySummary.map((item) => (
+                          {previewData.theorySummary.map((item) => (
                             <tr key={`theory-summary-${item.grade}`} className="border-t">
                               <td className="p-2">{item.grade}</td>
                               <td className="p-2">{item.count}</td>
@@ -268,7 +270,7 @@ export function ConsolidatedSessionalCard() {
                           <tr className="border-t font-semibold">
                             <td className="p-2">Total</td>
                             <td className="p-2">
-                              {previewQuery.data.data.theorySummary.reduce((sum, item) => sum + item.count, 0)}
+                              {previewData.theorySummary.reduce((sum, item) => sum + item.count, 0)}
                             </td>
                           </tr>
                         </tbody>
@@ -277,7 +279,7 @@ export function ConsolidatedSessionalCard() {
                   </div>
                 ) : null}
 
-                {previewQuery.data.data.practicalRows.length ? (
+                {previewData.practicalRows.length ? (
                   <div className="space-y-2 rounded border p-2">
                     <div className="text-sm font-semibold">Practical</div>
                     <div className="overflow-auto rounded border">
@@ -287,19 +289,25 @@ export function ConsolidatedSessionalCard() {
                             <th className="p-2 text-left">S.No</th>
                             <th className="p-2 text-left">OC No</th>
                             <th className="p-2 text-left">Name</th>
-                            <th className="p-2 text-left">Branch</th>
-                            <th className="p-2 text-left">Practical</th>
+                            <th className="p-2 text-left">Conduct of Exp</th>
+                            <th className="p-2 text-left">Maint of App</th>
+                            <th className="p-2 text-left">Practical Test</th>
+                            <th className="p-2 text-left">Viva Voce</th>
+                            <th className="p-2 text-left">Total</th>
                             <th className="p-2 text-left">Grade</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {previewQuery.data.data.practicalRows.map((row) => (
+                          {previewData.practicalRows.map((row) => (
                             <tr key={row.ocId} className="border-t">
                               <td className="p-2">{row.sNo}</td>
                               <td className="p-2">{row.ocNo}</td>
                               <td className="p-2">{row.ocName}</td>
-                              <td className="p-2">{row.branch ?? '-'}</td>
-                              <td className="p-2">{row.practicalObtained ?? ''}</td>
+                              <td className="p-2">{row.conductOfExpObtained ?? ''}</td>
+                              <td className="p-2">{row.maintOfAppObtained ?? ''}</td>
+                              <td className="p-2">{row.practicalTestObtained ?? ''}</td>
+                              <td className="p-2">{row.vivaVoceObtained ?? ''}</td>
+                              <td className="p-2">{row.totalObtained ?? ''}</td>
                               <td className="p-2">{row.letterGrade ?? ''}</td>
                             </tr>
                           ))}
@@ -316,7 +324,7 @@ export function ConsolidatedSessionalCard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {previewQuery.data.data.practicalSummary.map((item) => (
+                          {previewData.practicalSummary.map((item) => (
                             <tr key={`practical-summary-${item.grade}`} className="border-t">
                               <td className="p-2">{item.grade}</td>
                               <td className="p-2">{item.count}</td>
@@ -325,7 +333,7 @@ export function ConsolidatedSessionalCard() {
                           <tr className="border-t font-semibold">
                             <td className="p-2">Total</td>
                             <td className="p-2">
-                              {previewQuery.data.data.practicalSummary.reduce((sum, item) => sum + item.count, 0)}
+                              {previewData.practicalSummary.reduce((sum, item) => sum + item.count, 0)}
                             </td>
                           </tr>
                         </tbody>
@@ -334,7 +342,7 @@ export function ConsolidatedSessionalCard() {
                   </div>
                 ) : null}
 
-                {!previewQuery.data.data.theoryRows.length && !previewQuery.data.data.practicalRows.length ? (
+                {!previewData.theoryRows.length && !previewData.practicalRows.length ? (
                   <div className="rounded border p-3 text-sm text-muted-foreground">
                     No records found for selected course, semester and subject.
                   </div>
@@ -354,7 +362,7 @@ export function ConsolidatedSessionalCard() {
           preparedByRequired={false}
           checkedByRequired={false}
           initialValues={{
-            instructorName: previewQuery.data?.data?.subject.instructorName ?? '',
+            instructorName: previewData?.subject.instructorName ?? '',
           }}
           onSubmit={onDownload}
         />

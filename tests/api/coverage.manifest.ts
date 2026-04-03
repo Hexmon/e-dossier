@@ -17,6 +17,7 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/courses/[courseId]/offerings/route.ts',
   'src/app/api/v1/admin/discipline/[id]/route.ts',
   'src/app/api/v1/admin/discipline/route.ts',
+  'src/app/api/v1/admin/interview/pending/route.ts',
   'src/app/api/v1/admin/interview/templates/[templateId]/fields/[fieldId]/options/[optionId]/route.ts',
   'src/app/api/v1/admin/interview/templates/[templateId]/fields/[fieldId]/options/route.ts',
   'src/app/api/v1/admin/interview/templates/[templateId]/fields/[fieldId]/route.ts',

@@ -17,7 +17,8 @@ import {
     interviewTemplateGroups,
     interviewTemplateFields,
 } from '@/app/db/schema/training/interviewTemplates';
-import { buildTemplateMappings, getTemplateMatchForSemester } from '@/lib/interviewTemplateMatching';
+import { buildTemplateMappings } from '@/lib/interviewTemplateMatching';
+import { buildExpectedSpecialInterviewSlots } from '@/lib/interview-pending-slots';
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from '@/types/interview-templates';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -37,11 +38,6 @@ const pendingInterviewQuerySchema = z.object({
     offset: z.coerce.number().int().min(0).max(5000).optional(),
     sort: ocListSortSchema.optional(),
 });
-
-type ExpectedSlot = {
-    templateId: string;
-    semester: number;
-};
 
 function isUuid(value: string): boolean {
     return z.string().uuid().safeParse(value).success;
@@ -260,27 +256,6 @@ async function loadActiveTemplatesForMatching(): Promise<TemplateInfo[]> {
     return out;
 }
 
-function matchIsSemesterAllowed(match: ReturnType<typeof getTemplateMatchForSemester>, semester: number) {
-    if (!match) return false;
-    const semesters = match.template.semesters ?? [];
-    return semesters.length === 0 || semesters.includes(semester);
-}
-
-export function buildExpectedSlots(mappings: ReturnType<typeof buildTemplateMappings>) {
-    const specialSlotMap = new Map<string, ExpectedSlot>();
-
-    for (const semester of [1, 2, 3, 4, 5, 6] as const) {
-        const match = getTemplateMatchForSemester(mappings, 'special', semester);
-        if (!match || !matchIsSemesterAllowed(match, semester)) continue;
-        const key = `${match.template.id}:${semester}`;
-        specialSlotMap.set(key, { templateId: match.template.id, semester });
-    }
-
-    return {
-        special: Array.from(specialSlotMap.values()),
-    };
-}
-
 function interviewSlotKey(params: {
     ocId: string;
     enrollmentId: string | null;
@@ -432,7 +407,9 @@ async function GETHandler(req: AuditNextRequest) {
 
         const templates = await loadActiveTemplatesForMatching();
         const mappings = buildTemplateMappings(templates);
-        const expected = buildExpectedSlots(mappings);
+        const expected = {
+            special: buildExpectedSpecialInterviewSlots(mappings),
+        };
         const relevantTemplateIds = Array.from(new Set(expected.special.map((slot) => slot.templateId)));
 
         const ocIds = ocRows.map((row) => row.id);
