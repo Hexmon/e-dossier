@@ -28,11 +28,11 @@ const PlatoonsSection = ({
   description = "Six distinguished platoons, each with their own heritage and tradition of excellence",
 }: PlatoonsSectionProps) => {
   return (
-    <section id="platoons" className="py-16 bg-background">
+    <section id="platoons" className="bg-background py-16">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold text-primary mb-4">{title}</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{description}</p>
+        <div className="mb-12 text-center">
+          <h2 className="mb-4 text-3xl font-bold text-primary lg:text-4xl">{title}</h2>
+          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">{description}</p>
         </div>
 
         {platoons.length === 0 ? (
@@ -40,23 +40,27 @@ const PlatoonsSection = ({
             Unable to load platoons at the moment.
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {platoons.map((platoon) => (
               <Card
                 key={platoon.id}
-                className="group hover:shadow-command transition-all duration-300 border-2 hover:border-accent/20"
+                className="group flex h-full min-w-0 flex-col overflow-hidden border-2 transition-all duration-300 hover:border-accent/20 hover:shadow-command"
               >
                 <CardHeader className="pb-3">
                   <div
-                    className="w-full h-3 rounded-t-lg mb-4"
-                    style={{ backgroundColor: normalizePlatoonThemeColor(platoon.themeColor ?? DEFAULT_PLATOON_THEME_COLOR) }}
+                    className="mb-4 h-3 w-full rounded-t-lg"
+                    style={{
+                      backgroundColor: normalizePlatoonThemeColor(
+                        platoon.themeColor ?? DEFAULT_PLATOON_THEME_COLOR
+                      ),
+                    }}
                   />
-                  <CardTitle className="flex items-center gap-3 text-xl">
+                  <CardTitle className="flex min-w-0 items-center gap-3 text-xl">
                     <Shield className="h-6 w-6 text-primary" />
-                    {platoon.name}
+                    <span className="break-words">{platoon.name}</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex min-w-0 flex-1 flex-col">
                   <div className="mb-4 overflow-hidden rounded border bg-muted/20">
                     <SafeImage
                       src={platoon.imageUrl}
@@ -65,18 +69,18 @@ const PlatoonsSection = ({
                       className="h-[200px] w-full object-contain sm:h-[220px] lg:h-[240px] xl:h-[260px]"
                     />
                   </div>
-                  <p className="text-muted-foreground mb-4 leading-relaxed">
+                  <p className="mb-4 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground leading-relaxed">
                     {platoon.about || "No platoon description available."}
                   </p>
 
-                  <div className="flex items-center justify-between">
+                  <div className="mt-auto flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Users className="h-4 w-4" />
                       <span>{platoon.key}</span>
                     </div>
 
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/platoon/${platoon.key.toLowerCase()}`}>More →</Link>
+                      <Link href={`/platoon/${platoon.key.toLowerCase()}`}>More -&gt;</Link>
                     </Button>
                   </div>
                 </CardContent>
