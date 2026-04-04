@@ -3,6 +3,7 @@ import {
   deriveSidebarRoleGroup,
   filterSidebarSectionsForRoleGroup,
   getSidebarSectionsForRoleGroup,
+  hasSidebarSectionAccess,
   type SidebarSectionKey,
 } from "@/lib/sidebar-visibility";
 
@@ -109,5 +110,13 @@ describe("sidebar visibility matrix", () => {
     );
 
     expect(visible).toEqual(["dashboard", "settings", "help"]);
+  });
+
+  it("answers section access checks using the same role-group matrix", () => {
+    expect(hasSidebarSectionAccess("SUPER_ADMIN", "admin")).toBe(true);
+    expect(hasSidebarSectionAccess("ADMIN", "admin")).toBe(true);
+    expect(hasSidebarSectionAccess("ADMIN", "reports")).toBe(false);
+    expect(hasSidebarSectionAccess("OTHER_USERS", "reports")).toBe(true);
+    expect(hasSidebarSectionAccess("OTHER_USERS", "admin")).toBe(false);
   });
 });

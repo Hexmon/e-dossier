@@ -1,5 +1,10 @@
 import { verifyAccessJWT } from "@/app/lib/jwt";
-import { deriveSidebarRoleGroup, type SidebarRoleGroup } from "@/lib/sidebar-visibility";
+import {
+  deriveSidebarRoleGroup,
+  hasSidebarSectionAccess,
+  type SidebarRoleGroup,
+  type SidebarSectionKey,
+} from "@/lib/sidebar-visibility";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -46,19 +51,25 @@ export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
 }
 
 export async function requireAdminDashboardAccess(): Promise<AdminPageAuthContext> {
-  const authContext = await requireDashboardAccess();
-
-  if (authContext.roleGroup === "OTHER_USERS") {
-    redirect("/dashboard");
-  }
-
-  return authContext;
+  return requireDashboardSectionAccess("admin");
 }
 
 export async function requireNonAdminDashboardAccess(): Promise<AdminPageAuthContext> {
   const authContext = await requireDashboardAccess();
 
   if (authContext.roleGroup !== "OTHER_USERS") {
+    redirect("/dashboard");
+  }
+
+  return authContext;
+}
+
+export async function requireDashboardSectionAccess(
+  sectionKey: SidebarSectionKey
+): Promise<AdminPageAuthContext> {
+  const authContext = await requireDashboardAccess();
+
+  if (!hasSidebarSectionAccess(authContext.roleGroup, sectionKey)) {
     redirect("/dashboard");
   }
 

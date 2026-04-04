@@ -6,6 +6,7 @@ import { verifyAccessJWT } from '@/app/lib/jwt';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { eq } from 'drizzle-orm'; 
+import { isProtectedAdminApiPath } from '@/app/lib/access-control-policy';
 
 export function hasAdminRole(roles?: string[]) {
   return Array.isArray(roles) && roles.some(r =>
@@ -37,12 +38,22 @@ export async function requireAuth(req: NextRequest) {
 
   try {
     const payload = await verifyAccessJWT(token);
-    return {
+    const authContext = {
       userId: String(payload.sub),
       roles: (payload.roles ?? []) as string[],
       claims: payload,
     };
+
+    const pathname = new URL(req.url).pathname;
+    if (isProtectedAdminApiPath(pathname, req.method) && !hasAdminRole(authContext.roles)) {
+      throw new ApiError(403, 'Admin privileges required', 'forbidden');
+    }
+
+    return authContext;
   } catch (e) {
+    if (e instanceof ApiError) {
+      throw e;
+    }
     // signature/exp/nbf/iss/aud failure
     throw new ApiError(401, 'Unauthorized', 'invalid_token');
   }

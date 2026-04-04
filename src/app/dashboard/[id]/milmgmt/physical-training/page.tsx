@@ -122,7 +122,7 @@ export default function PhysicalTrainingPage() {
                   />
                 ) : null}
                 {ptWorkflowActive ? (
-                  <div className="mb-4 rounded-md border border-amber-400/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <div className="mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground">
                     Physical training editing is read-only here while the review workflow is active. Use{" "}
                     <Link href={`/dashboard/manage-pt-marks?courseId=${cadet?.course ?? ""}`}>Manage PT Marks</Link> to draft, submit, and verify updates.
                   </div>

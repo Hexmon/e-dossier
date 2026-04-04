@@ -26,7 +26,7 @@ export default function SemesterLockNotice({
 
   return (
     <div
-      className={`mb-4 rounded-md border border-amber-400/40 bg-amber-50 px-4 py-3 text-sm text-amber-900 ${className}`.trim()}
+      className={`mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground ${className}`.trim()}
     >
       {message}
     </div>

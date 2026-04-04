@@ -316,26 +316,30 @@ export default function SubjectWiseStudentsTable({
             let state = workflowState;
             const trimmedMessage = actionMessage.trim();
 
-            if (isDirty && (canSaveDraft || action === "OVERRIDE_PUBLISH")) {
-                if (action === "OVERRIDE_PUBLISH") {
-                    const payload = buildWorkflowDraftPayload(state.draftPayload, rows);
-                    state = await marksWorkflowApi.applyAcademicsWorkflowAction(
-                        { courseId, semester, subjectId },
-                        {
-                            action: "OVERRIDE_PUBLISH",
-                            revision: state.currentRevision ?? 0,
-                            payload,
-                            message: trimmedMessage,
-                        },
-                    );
-                    setWorkflowState(state);
-                    setRows(buildRowsFromWorkflowPayload(state.draftPayload));
-                    setIsDirty(false);
-                    setActionMessage("");
-                    toast.success("Verified data overridden successfully.");
-                    return;
+            if (action === "OVERRIDE_PUBLISH") {
+                if (!trimmedMessage) {
+                    throw new Error("A message is required for override publish.");
                 }
 
+                const payload = buildWorkflowDraftPayload(state.draftPayload, rows);
+                state = await marksWorkflowApi.applyAcademicsWorkflowAction(
+                    { courseId, semester, subjectId },
+                    {
+                        action: "OVERRIDE_PUBLISH",
+                        revision: state.currentRevision ?? 0,
+                        payload,
+                        message: trimmedMessage,
+                    },
+                );
+                setWorkflowState(state);
+                setRows(buildRowsFromWorkflowPayload(state.draftPayload));
+                setIsDirty(false);
+                setActionMessage("");
+                toast.success("Verified data overridden successfully.");
+                return;
+            }
+
+            if (isDirty && canSaveDraft) {
                 state = await saveWorkflowDraft({
                     message: trimmedMessage || undefined,
                     silent: true,

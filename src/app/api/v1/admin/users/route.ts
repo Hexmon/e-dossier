@@ -5,7 +5,7 @@ import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { users } from '@/app/db/schema/auth/users';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { userQuerySchema, userCreateSchema } from '@/app/lib/validators';
 import argon2 from 'argon2';
 import { listUsersWithActiveAppointments, UserListQuery } from '@/app/db/queries/users';
@@ -18,7 +18,7 @@ type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?:
 // GET /api/v1/admin/users (ADMIN)
 async function GETHandler(req: AuditNextRequest) {
     try {
-        await requireAuth(req);
+        await requireAdmin(req);
 
         const { searchParams } = new URL(req.url);
         const qp = userQuerySchema.parse({
@@ -41,7 +41,7 @@ async function GETHandler(req: AuditNextRequest) {
 // body: userCreateSchema (password optional; if provided → credentials_local)
 async function POSTHandler(req: AuditNextRequest) {
     try {
-        const authCtx = await requireAuth(req);
+        const authCtx = await requireAdmin(req);
 
         const body = await req.json();
         const parsed = userCreateSchema.safeParse(body);

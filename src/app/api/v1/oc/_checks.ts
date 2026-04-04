@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ApiError } from '@/app/lib/http';
-import { requireAuth, hasAdminRole } from '@/app/lib/authz';
+import { requireAuth, requireAdmin } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq } from 'drizzle-orm';
 import { canEditAcademics } from '@/lib/academics-access';
+import { authorizeOcAccess } from '@/lib/authorization';
 import { getCurrentSemesterForCourse, getOcCourseInfo } from '@/app/db/queries/oc';
 import { canBypassDossierSemesterLock } from '@/lib/dossier-semester-access';
 import {
@@ -16,15 +17,29 @@ import {
 
 export const Param = (name: string) => z.object({ [name]: z.string() });
 
+const OC_ROUTE_ID_PATTERN = /^\/api\/v1\/oc\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(?:\/|$)/i;
+
+function getOcIdFromRequestPath(req: NextRequest): string | null {
+    const pathname = new URL(req.url).pathname;
+    const match = pathname.match(OC_ROUTE_ID_PATTERN);
+    return match?.[1] ?? null;
+}
+
 export async function mustBeAuthed(req: NextRequest) {
-    // returns { userId, roles, claims }
+    const ocId = getOcIdFromRequestPath(req);
+    if (ocId) {
+        return authorizeOcAccess(req, ocId);
+    }
+
     return requireAuth(req);
 }
 
+export async function mustHaveOcAccess(req: NextRequest, ocId: string) {
+    return authorizeOcAccess(req, ocId);
+}
+
 export async function mustBeAdmin(req: NextRequest) {
-    const ctx = await requireAuth(req);
-    if (!hasAdminRole(ctx.roles)) throw new ApiError(403, 'Admin privileges required', 'forbidden');
-    return ctx;
+    return requireAdmin(req);
 }
 
 export async function mustBeAcademicsEditor(req: NextRequest) {

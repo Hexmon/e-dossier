@@ -1,6 +1,12 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { json } from '@/app/lib/http';
+import { verifyAccessJWT } from '@/app/lib/jwt';
+import {
+  canAccessDashboardPath,
+  isProtectedAdminApiPath,
+  isPublicApiPath,
+} from '@/app/lib/access-control-policy';
 import {
   generateCsrfToken,
   setCsrfCookie,
@@ -13,52 +19,16 @@ import {
   getRateLimitHeaders
 } from '@/lib/ratelimit';
 import { isRateLimitEnabled, shouldExcludeHealthCheck } from '@/config/ratelimit.config';
+import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
 // NOTE: Cannot import audit-log in middleware (Edge Runtime doesn't support database operations)
 // Audit logging for middleware events should be done in API routes instead
 
 const PROTECTED_PREFIX = '/api/v1/';
 const DASHBOARD_PREFIX = '/dashboard';
 
-// Public for any method (rare)
-const PUBLIC_ANY: string[] = [
-  '/api/v1/auth/login',
-  '/api/v1/auth/signup',
-  '/api/v1/auth/logout',   // allow clearing cookies
-  '/api/v1/admin/users/check-username',
-  '/api/v1/health',
-  '/api/v1/bootstrap/super-admin'
-];
-
-// Public only for specific methods
-const PUBLIC_BY_METHOD: Record<string, string[]> = {
-  // Make ONLY GET public for appointments
-  GET: [
-    //  '/api/v1/roles',
-    '/api/v1/admin/appointments',
-    '/api/v1/admin/positions',
-    '/api/v1/platoons',
-    '/api/v1/site-settings',
-  ],
-  // If you ever want some POST public, add here:
-  // POST: [ '/api/v1/some/public/post' ],
-};
-
 function matchPrefix(pathname: string, prefix: string) {
   // exact match OR prefix followed by '/...'
   return pathname === prefix || pathname.startsWith(prefix + '/');
-}
-
-function isPublic(pathname: string, method: string) {
-  if (!pathname.startsWith(PROTECTED_PREFIX)) return true;
-
-  // method-agnostic public
-  if (PUBLIC_ANY.some((p) => matchPrefix(pathname, p))) return true;
-
-  // method-specific public
-  const allowForMethod = PUBLIC_BY_METHOD[method.toUpperCase()];
-  if (allowForMethod?.some((p) => matchPrefix(pathname, p))) return true;
-
-  return false;
 }
 
 function isDashboardPath(pathname: string) {
@@ -92,6 +62,32 @@ export async function middleware(req: NextRequest) {
   if (isDashboardPath(pathname)) {
     const token = req.cookies.get('access_token')?.value ?? '';
     if (!token) {
+      const loginUrl = req.nextUrl.clone();
+      loginUrl.pathname = '/login';
+      loginUrl.search = '';
+      const nextPath = `${pathname}${req.nextUrl.search}`;
+      if (nextPath) {
+        loginUrl.searchParams.set('next', nextPath);
+      }
+      return attachRequestId(applyNoStoreHeaders(NextResponse.redirect(loginUrl)));
+    }
+
+    try {
+      const payload = await verifyAccessJWT(token);
+      const roles = Array.isArray(payload.roles)
+        ? payload.roles.filter((role): role is string => typeof role === 'string')
+        : [];
+      const position =
+        typeof (payload as any).apt?.position === 'string' ? (payload as any).apt.position : null;
+      const roleGroup = deriveSidebarRoleGroup({ roles, position });
+
+      if (!canAccessDashboardPath(pathname, roleGroup)) {
+        const dashboardUrl = req.nextUrl.clone();
+        dashboardUrl.pathname = '/dashboard';
+        dashboardUrl.search = '';
+        return attachRequestId(applyNoStoreHeaders(NextResponse.redirect(dashboardUrl)));
+      }
+    } catch {
       const loginUrl = req.nextUrl.clone();
       loginUrl.pathname = '/login';
       loginUrl.search = '';
@@ -145,9 +141,42 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  const isProtectedApi = pathname.startsWith(PROTECTED_PREFIX);
+  const isPublicApi = isPublicApiPath(pathname, method);
+
+  if (isProtectedApi && !isPublicApi) {
+    // Light gate: token required for protected routes
+    const cookieToken = req.cookies.get('access_token')?.value ?? '';
+    const bearerToken = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
+    const token = cookieToken || bearerToken;
+
+    if (!token) {
+      return attachRequestId(json.unauthorized('Missing access token'));
+    }
+
+    if (isProtectedAdminApiPath(pathname, method)) {
+      try {
+        const payload = await verifyAccessJWT(token);
+        const roles = Array.isArray(payload.roles)
+          ? payload.roles.filter((role): role is string => typeof role === 'string')
+          : [];
+        const position =
+          typeof (payload as any).apt?.position === 'string' ? (payload as any).apt.position : null;
+        const roleGroup = deriveSidebarRoleGroup({ roles, position });
+
+        if (roleGroup === 'OTHER_USERS') {
+          return attachRequestId(json.forbidden('Admin privileges required'));
+        }
+      } catch {
+        return attachRequestId(json.unauthorized('Invalid access token'));
+      }
+    }
+  }
+
   // SECURITY FIX: CSRF Protection for state-changing requests
-  // Generate CSRF token for GET requests (safe methods)
-  if (method === 'GET' && pathname.startsWith(PROTECTED_PREFIX)) {
+  // Generate CSRF token for GET requests (safe methods) after access checks so protected
+  // endpoints are not allowed to bypass auth just by being a GET.
+  if (method === 'GET' && isProtectedApi) {
     const response = NextResponse.next({ request: { headers: requestHeaders } });
     const csrfToken = await generateCsrfToken();
     setCsrfCookie(response, csrfToken);
@@ -155,7 +184,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Validate CSRF token for state-changing requests (POST, PUT, PATCH, DELETE)
-  if (requiresCsrfProtection(method) && pathname.startsWith(PROTECTED_PREFIX)) {
+  if (requiresCsrfProtection(method) && isProtectedApi) {
     // Skip CSRF validation for login/signup/logout:
     // - login/signup may not have a token yet
     // - logout relies on same-origin checks inside the route handler
@@ -173,16 +202,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  if (isPublic(pathname, method)) return NextResponse.next();
-
-  // Light gate: token required for protected routes
-  const cookieToken = req.cookies.get('access_token')?.value ?? '';
-  const bearerToken = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
-  const token = cookieToken || bearerToken;
-
-  if (!token) {
-    return attachRequestId(json.unauthorized('Missing access token'));
-  }
+  if (isPublicApi) return attachRequestId(NextResponse.next({ request: { headers: requestHeaders } }));
 
   return attachRequestId(NextResponse.next({ request: { headers: requestHeaders } }));
 }

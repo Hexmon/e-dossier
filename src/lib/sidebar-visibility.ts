@@ -74,3 +74,14 @@ export function filterSidebarSectionsForRoleGroup<T extends { key: string }>(
     .map((key) => sectionByKey.get(key))
     .filter((section): section is T => Boolean(section));
 }
+
+export function hasSidebarSectionAccess(
+  roleGroup: SidebarRoleGroup,
+  sectionKey: SidebarSectionKey
+): boolean {
+  if (roleGroup === "SUPER_ADMIN") {
+    return true;
+  }
+
+  return SIDEBAR_SECTIONS_BY_ROLE_GROUP[roleGroup].includes(sectionKey);
+}

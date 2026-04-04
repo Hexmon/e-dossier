@@ -22,6 +22,7 @@ const relegationAuthMock = {
 
 const ocChecksMock = {
   mustBeAuthed: vi.fn(),
+  mustHaveOcAccess: vi.fn(),
   mustBeAdmin: vi.fn(),
   mustBeAcademicsEditor: vi.fn(),
   assertOcSemesterWriteAllowed: vi.fn(),
@@ -230,6 +231,7 @@ export function resetCommonMocks() {
   relegationAuthMock.assertCanPromoteBatch.mockImplementation(() => undefined);
 
   ocChecksMock.mustBeAuthed.mockResolvedValue({ userId: 'user-1', roles: ['ADMIN'] });
+  ocChecksMock.mustHaveOcAccess.mockResolvedValue({ userId: 'user-1', roles: ['ADMIN'] });
   ocChecksMock.mustBeAdmin.mockResolvedValue({ userId: 'admin-1', roles: ['ADMIN'] });
   ocChecksMock.mustBeAcademicsEditor.mockResolvedValue({ userId: 'admin-1', roles: ['ADMIN'] });
   ocChecksMock.assertOcSemesterWriteAllowed.mockResolvedValue(undefined);
@@ -252,6 +254,7 @@ export function forceAuthFailure(status = 401) {
   authzMock.requireAdmin.mockRejectedValueOnce(error);
   relegationAuthMock.getRelegationAccessContext.mockRejectedValueOnce(error);
   ocChecksMock.mustBeAuthed.mockRejectedValueOnce(error);
+  ocChecksMock.mustHaveOcAccess.mockRejectedValueOnce(error);
   ocChecksMock.mustBeAdmin.mockRejectedValueOnce(error);
   ocChecksMock.mustBeAcademicsEditor.mockRejectedValueOnce(error);
   authorizationMock.authorizeOcAccess.mockRejectedValueOnce(error);
