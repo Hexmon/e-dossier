@@ -100,7 +100,7 @@ export const reportsDownloadApi = {
     return postDownload({
       endpoint: endpoints.reports.academics.consolidatedSessional.download,
       body: payload,
-      fallbackFileName: 'consolidated-sessional.pdf',
+      fallbackFileName: `consolidated-sessional-${payload.section}.pdf`,
     });
   },
 

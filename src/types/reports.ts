@@ -58,6 +58,8 @@ export type GradeSummaryItem = {
   count: number;
 };
 
+export type ConsolidatedSessionalSection = 'theory' | 'practical';
+
 export type ConsolidatedSessionalPreview = {
   reportType: 'ACADEMICS_CONSOLIDATED_SESSIONAL';
   course: { id: string; code: string; title: string };
@@ -187,6 +189,7 @@ export type ConsolidatedDownloadRequest = {
   courseId: string;
   semester: number;
   subjectId: string;
+  section: ConsolidatedSessionalSection;
   password: string;
   preparedBy?: string;
   checkedBy?: string;

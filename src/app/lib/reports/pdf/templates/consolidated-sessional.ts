@@ -1,4 +1,9 @@
-import type { ConsolidatedPracticalRow, ConsolidatedSessionalPreview, ConsolidatedTheoryRow } from '@/types/reports';
+import type {
+  ConsolidatedPracticalRow,
+  ConsolidatedSessionalPreview,
+  ConsolidatedSessionalSection,
+  ConsolidatedTheoryRow,
+} from '@/types/reports';
 import { PRACTICAL_COMPONENTS, PRACTICAL_TOTAL_MAX_MARKS } from '@/lib/academics-practical';
 import {
   computeTheorySessionalMax,
@@ -603,14 +608,18 @@ function paginatePractical(
 export function renderConsolidatedSessionalTemplate(
   doc: PDFKit.PDFDocument,
   data: ConsolidatedSessionalPreview,
-  meta: ReportRenderMeta
+  meta: ReportRenderMeta,
+  section?: ConsolidatedSessionalSection
 ) {
-  if (data.subject.hasTheory) {
+  const includeTheory = (section === undefined || section === 'theory') && data.subject.hasTheory;
+  const includePractical = (section === undefined || section === 'practical') && data.subject.hasPractical;
+
+  if (includeTheory) {
     paginateTheory(doc, data, meta);
   }
 
-  if (data.subject.hasPractical) {
-    if (data.subject.hasTheory) doc.addPage();
+  if (includePractical) {
+    if (includeTheory) doc.addPage();
     paginatePractical(doc, data, meta);
   }
 }
