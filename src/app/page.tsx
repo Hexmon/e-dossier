@@ -13,7 +13,7 @@ export default async function Home() {
   const primaryCommander = data.commanders[0];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-hidden bg-background">
       <main>
         <Navbar logoUrl={data.settings.logoUrl} siteTitle={data.settings.heroTitle} />
         <Hero
