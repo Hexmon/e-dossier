@@ -28,23 +28,16 @@ async function POSTHandler(req: AuditNextRequest) {
       semester: body.semester,
     });
 
-    const identityRows = body.identityRows ?? [];
-    const identityByOcId = new Map(
-      identityRows.map((row) => [
-        row.ocId,
-        {
-          enrolmentNumber: row.enrolmentNumber?.trim() ?? '',
-          certSerialNo: row.certSerialNo?.trim() ?? '',
-        },
-      ])
-    );
-
     const identityHash = createHash('sha256')
       .update(
         JSON.stringify(
-          [...identityByOcId.entries()]
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([ocId, value]) => ({ ocId, ...value }))
+          preview.rows
+            .map((row) => ({
+              ocId: row.ocId,
+              enrolmentNumber: row.enrolmentNumber,
+              certSerialNo: row.certSerialNo,
+            }))
+            .sort((a, b) => a.ocId.localeCompare(b.ocId))
         )
       )
       .digest('hex');
@@ -55,7 +48,6 @@ async function POSTHandler(req: AuditNextRequest) {
       `final-result-compilation-${preview.course.code}-sem-${body.semester}-${versionId}.pdf`
     );
 
-    const pdfSize = preview.subjectColumns.length > 12 ? 'A3' : 'A4';
     const preparedBy = body.preparedBy?.trim() || '-';
     const checkedBy = body.checkedBy?.trim() || '-';
     const pdf = await renderEncryptedPdf(
@@ -63,13 +55,12 @@ async function POSTHandler(req: AuditNextRequest) {
         password: body.password,
         title: 'Final Result Compilation Sheet',
         layout: 'landscape',
-        size: pdfSize,
+        size: 'A4',
       },
       (doc) => {
         renderFinalResultCompilationTemplate(doc, preview, {
           versionId,
           generatedAt,
-          identityByOcId: Object.fromEntries(identityByOcId),
           preparedBy,
           checkedBy,
         });
@@ -86,7 +77,6 @@ async function POSTHandler(req: AuditNextRequest) {
         ocCount: preview.rows.length,
         subjectColumnCount: preview.subjectColumns.length,
         identityHash,
-        providedIdentityCount: identityRows.length,
         format: 'pdf',
       },
       preparedBy,

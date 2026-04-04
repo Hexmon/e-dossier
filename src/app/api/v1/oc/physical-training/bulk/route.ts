@@ -16,6 +16,7 @@ import {
 } from '@/app/db/queries/physicalTrainingOc';
 import { listOCsBasic } from '@/app/db/queries/oc';
 import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
+import { isFreeEntryPtAttemptCode } from '@/app/lib/physical-training-attempts';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -244,7 +245,7 @@ async function POSTHandler(req: AuditNextRequest) {
                             ptTaskScoreId: score.ptTaskScoreId,
                         });
                     }
-                    if (row && score.marksScored > row.maxMarks) {
+                    if (row && score.marksScored > row.maxMarks && !isFreeEntryPtAttemptCode(row.attemptCode)) {
                         throw new ApiError(400, 'Marks exceed template max marks.', 'marks_exceed_max', {
                             ocId: item.ocId,
                             ptTaskScoreId: score.ptTaskScoreId,

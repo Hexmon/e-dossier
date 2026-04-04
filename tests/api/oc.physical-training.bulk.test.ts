@@ -115,6 +115,7 @@ describe('PT bulk API', () => {
             {
                 ptTaskScoreId: scoreId,
                 maxMarks: 100,
+                attemptCode: 'B1',
                 semester: 1,
                 typeDeletedAt: null,
                 taskDeletedAt: null,
@@ -172,5 +173,62 @@ describe('PT bulk API', () => {
         expect(body.errorCount).toBe(1);
         expect(body.items[0].status).toBe('ok');
         expect(body.items[1].status).toBe('error');
+    });
+
+    it('POST allows manual marks above template max for free-entry PT attempts', async () => {
+        const ocId = '11111111-1111-4111-8111-111111111111';
+        const scoreId = '33333333-3333-4333-8333-333333333333';
+
+        (listOCsBasic as any).mockResolvedValue([
+            {
+                id: ocId,
+                courseId: '22222222-2222-4222-8222-222222222222',
+            },
+        ]);
+
+        (listTemplateScoresByIds as any).mockResolvedValue([
+            {
+                ptTaskScoreId: scoreId,
+                maxMarks: 26,
+                attemptCode: 'A1/C1',
+                semester: 1,
+                typeDeletedAt: null,
+                taskDeletedAt: null,
+                attemptDeletedAt: null,
+                gradeDeletedAt: null,
+                typeIsActive: true,
+                attemptIsActive: true,
+                gradeIsActive: true,
+            },
+        ]);
+
+        (listMotivationFieldsByIds as any).mockResolvedValue([]);
+        (upsertOcPtScores as any).mockResolvedValue([]);
+
+        const req = attachAudit(
+            makeJsonRequest({
+                method: 'POST',
+                path: '/api/v1/oc/physical-training/bulk',
+                body: {
+                    courseId: '22222222-2222-4222-8222-222222222222',
+                    semester: 1,
+                    failFast: false,
+                    items: [
+                        {
+                            ocId,
+                            scoresUpsert: [{ ptTaskScoreId: scoreId, marksScored: 40 }],
+                        },
+                    ],
+                },
+            })
+        );
+
+        const res = await POST(req as any, { params: Promise.resolve({}) } as any);
+        const body = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(body.successCount).toBe(1);
+        expect(body.errorCount).toBe(0);
+        expect(upsertOcPtScores).toHaveBeenCalledWith(ocId, 1, [{ ptTaskScoreId: scoreId, marksScored: 40 }]);
     });
 });

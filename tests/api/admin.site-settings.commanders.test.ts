@@ -147,11 +147,19 @@ describe("Admin site settings commanders routes", () => {
     const req = makeJsonRequest({
       method: "POST",
       path: "/api/v1/admin/site-settings/commanders",
-      body: { name: "Commander", tenure: "2025", description: "valid description" },
+      body: {
+        name: "Commander",
+        designation: "Commandant",
+        tenure: "2025",
+        description: "valid description",
+      },
     });
 
     const res = await createCommander(req as any, createRouteContext());
+    const body = await res.json();
+
     expect(res.status).toBe(201);
+    expect(body.item.id).toBe("commander-1");
   });
 
   it("gets a commander by id", async () => {

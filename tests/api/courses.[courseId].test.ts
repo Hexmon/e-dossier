@@ -11,7 +11,6 @@ import * as coursesQueries from '@/app/db/queries/courses';
 
 vi.mock('@/app/lib/authz', () => ({
   requireAuth: vi.fn(),
-  requireAuth: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/courses', () => ({

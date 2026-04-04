@@ -14,10 +14,18 @@ import { withAuthz } from '@/app/lib/acx/withAuthz';
 
 export const runtime = 'nodejs';
 
+const jnuEnrollmentNoSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .regex(/^\d+$/, 'JNU Enrollment No must contain digits only')
+    .max(64);
+
 // --- Create OC (token required; no admin) -------------------------------
 const createSchema = z.object({
     name: z.string().min(2),
     ocNo: z.string().min(1),
+    jnuEnrollmentNo: jnuEnrollmentNoSchema.optional(),
     courseId: z.string().uuid(),                        // ← require courseId for now
     branch: z.enum(['E', 'M', 'O']).nullable().optional(),
     platoonId: z.string().uuid().nullable().optional(),
@@ -26,6 +34,7 @@ const createSchema = z.object({
 
 const ocListSortSchema = z.enum(['name_asc', 'updated_desc', 'created_asc']);
 const ocListQuerySchema = z.object({
+    id: z.string().uuid().optional(),
     q: z.string().trim().optional(),
     query: z.string().trim().optional(),
     courseId: z.string().uuid().optional(),
@@ -78,6 +87,7 @@ async function POSTHandler(req: AuditNextRequest) {
             .values({
                 name: body.name.trim(),
                 ocNo: body.ocNo.trim(),
+                jnuEnrollmentNo: body.jnuEnrollmentNo ?? null,
                 uid,
                 courseId: body.courseId,
                 ...(body.branch != null ? { branch: body.branch } : {}),
@@ -88,6 +98,7 @@ async function POSTHandler(req: AuditNextRequest) {
                 id: ocCadets.id,
                 name: ocCadets.name,
                 ocNo: ocCadets.ocNo,
+                jnuEnrollmentNo: ocCadets.jnuEnrollmentNo,
                 uid: ocCadets.uid,
                 courseId: ocCadets.courseId,
                 branch: ocCadets.branch,
@@ -107,6 +118,7 @@ async function POSTHandler(req: AuditNextRequest) {
                 ocId: row.id,
                 name: row.name,
                 ocNo: row.ocNo,
+                jnuEnrollmentNo: row.jnuEnrollmentNo,
                 uid: row.uid,
                 courseId: row.courseId,
                 branch: row.branch,
@@ -126,6 +138,7 @@ async function GETHandler(req: AuditNextRequest) {
         const authCtx = await requireAuth(req);
         const sp = new URL(req.url).searchParams;
         const parsedQuery = ocListQuerySchema.safeParse({
+            id: sp.get('id') ?? undefined,
             q: sp.get('q') ?? undefined,
             query: sp.get('query') ?? undefined,
             courseId: sp.get('courseId') ?? undefined,
@@ -137,11 +150,11 @@ async function GETHandler(req: AuditNextRequest) {
             sort: sp.get('sort') ?? undefined,
         });
 
-        const id = (sp.get('id') || '').trim() || undefined;
         if (!parsedQuery.success) {
             return json.badRequest('Validation failed.', { issues: parsedQuery.error.flatten() });
         }
 
+        const id = parsedQuery.data.id;
         const q = parsedQuery.data.query || parsedQuery.data.q || undefined;
         const courseId = parsedQuery.data.courseId;
         const requestedPlatoon = parsedQuery.data.platoon || parsedQuery.data.platoonId;
@@ -275,7 +288,7 @@ async function GETHandler(req: AuditNextRequest) {
 
         const anySectionIncluded = Object.values(includeFlags).some(Boolean);
 
-        const opts = { q, courseId, platoonId, platoonKey, active: activeOnly, sort, limit, offset };
+        const opts = { id, q, courseId, platoonId, platoonKey, active: activeOnly, sort, limit, offset };
 
         const writeAccessAudit = async (count: number) => {
             await req.audit.log({
@@ -288,6 +301,7 @@ async function GETHandler(req: AuditNextRequest) {
                     count,
                     query: {
                         q,
+                        id: id ?? null,
                         courseId,
                         platoon: requestedPlatoon ?? null,
                         active: activeOnly,

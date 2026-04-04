@@ -29,6 +29,7 @@ export type CreditForExcellenceEntry = {
 export const ocCadets = pgTable('oc_cadets', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocNo: varchar('oc_no', { length: 32 }).notNull(),            // “No” on the form
+    jnuEnrollmentNo: varchar('jnu_enrollment_no', { length: 64 }),
     uid: varchar('uid', { length: 64 }).notNull(),               // internal unique id (roll/UID)
     name: varchar('name', { length: 160 }).notNull(),
 

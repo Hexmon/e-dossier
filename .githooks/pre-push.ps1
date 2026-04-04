@@ -25,6 +25,24 @@ if (Test-Path ".next") {
   Write-Host "✓ No existing .next directory to remove" -ForegroundColor Green
 }
 
+& pnpm run validate:action-map
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ ACTION MAP VALIDATION FAILED - Push Blocked" -ForegroundColor Red
+  exit $LASTEXITCODE
+}
+
+& pnpm run validate:api-tests
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ API TEST COVERAGE VALIDATION FAILED - Push Blocked" -ForegroundColor Red
+  exit $LASTEXITCODE
+}
+
+& pnpm test
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ TESTS FAILED - Push Blocked" -ForegroundColor Red
+  exit $LASTEXITCODE
+}
+
 & pnpm run lint
 if ($LASTEXITCODE -ne 0) {
   Write-Host "❌ LINT FAILED - Push Blocked" -ForegroundColor Red

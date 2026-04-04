@@ -10,13 +10,21 @@ import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
 const OcParam = z.object({ ocId: z.string().uuid() });
+const jnuEnrollmentNoSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .regex(/^\d+$/, 'JNU Enrollment No must contain digits only')
+    .max(64);
 const updateSchema = z.object({
     name: z.string().min(2).optional(),
-    courseNo: z.string().min(2).optional(),
-    branch: z.enum(['E', 'M']).nullable().optional(),
+    ocNo: z.string().min(1).optional(),
+    jnuEnrollmentNo: z.union([jnuEnrollmentNoSchema, z.null()]).optional(),
+    courseId: z.string().uuid().optional(),
+    branch: z.enum(['E', 'M', 'O']).nullable().optional(),
     platoonId: z.string().uuid().nullable().optional(),
-    arrivedAt: z.coerce.date().optional(),
-    withdrawnAt: z.coerce.date().nullable().optional(),
+    arrivalAtUniversity: z.coerce.date().optional(),
+    withdrawnOn: z.coerce.date().nullable().optional(),
 });
 
 async function requireAdminForWrite(req: AuditNextRequest) {
@@ -33,6 +41,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             .select({
                 id: ocCadets.id,
                 ocNo: ocCadets.ocNo,
+                jnuEnrollmentNo: ocCadets.jnuEnrollmentNo,
                 uid: ocCadets.uid,
                 name: ocCadets.name,
                 branch: ocCadets.branch,
@@ -88,6 +97,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
         const oc = {
             id: row.id,
             ocNo: row.ocNo,
+            jnuEnrollmentNo: row.jnuEnrollmentNo,
             uid: row.uid,
             name: row.name,
             course,

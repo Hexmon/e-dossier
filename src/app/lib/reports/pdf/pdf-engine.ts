@@ -4,12 +4,13 @@ import path from 'node:path';
 import PDFDocument from 'pdfkit';
 
 export type PdfLayout = 'portrait' | 'landscape';
+export type PdfPageSize = 'A4' | 'A3' | [number, number];
 
 export type EncryptedPdfOptions = {
   password: string;
   title: string;
   layout?: PdfLayout;
-  size?: 'A4' | 'A3';
+  size?: PdfPageSize;
 };
 
 export type PdfRenderResult = {
