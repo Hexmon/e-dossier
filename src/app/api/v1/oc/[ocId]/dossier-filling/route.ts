@@ -1,7 +1,12 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists, mustHaveOcAccess } from '../../_checks';
 import { OcIdParam, dossierFillingUpsertSchema } from '@/app/lib/oc-validators';
-import { getDossierFilling, upsertDossierFilling, deleteDossierFilling } from '@/app/db/queries/oc';
+import {
+    getDossierFilling,
+    getDossierFillingView,
+    upsertDossierFilling,
+    deleteDossierFilling,
+} from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -24,7 +29,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             },
         });
 
-        return json.ok({ message: 'Dossier filling retrieved successfully.', data: await getDossierFilling(ocId) });
+        return json.ok({ message: 'Dossier filling retrieved successfully.', data: await getDossierFillingView(ocId) });
     } catch (err) { return handleApiError(err); }
 }
 

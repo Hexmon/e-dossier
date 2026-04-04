@@ -197,8 +197,28 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/oc/physical-training/workflow/route.ts'],
   },
   {
+    testFile: 'tests/api/oc.autobiography.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/autobiography/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.dossier-filling.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/dossier-filling/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.dossier-inspection.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/dossier-inspection/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.dossier-snapshot.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/dossier-snapshot/route.ts'],
+  },
+  {
     testFile: 'tests/api/oc.physical-training.motivation-awards.test.ts',
     routeFiles: ['src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.ssb.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/ssb/route.ts'],
   },
   {
     testFile: 'tests/api/oc.semester-lock-derived.test.ts',

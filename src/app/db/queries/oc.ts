@@ -525,6 +525,149 @@ export async function hardDeleteOcImage(ocId: string, kind: OcImageKind) {
         .returning();
     return row ?? null;
 }
+
+type BasicDetailsCadetBaseline = {
+    ocId: string;
+    ocNo: string;
+    name: string;
+    courseId: string | null;
+    courseCode: string | null;
+    courseTitle: string | null;
+    platoonId: string | null;
+    platoonName: string | null;
+    personalPi: string | null;
+    arrivalAtUniversity: Date | null;
+    relegatedToCourseId: string | null;
+    relegatedOn: Date | null;
+    withdrawnOn: Date | null;
+};
+
+export type DossierSnapshotViewRecord = {
+    arrivalPhoto: string | null;
+    departurePhoto: string | null;
+    tesNo: string;
+    name: string;
+    course: string;
+    pi: string;
+    dtOfArr: string;
+    relegated: string;
+    withdrawnOn: string;
+    dtOfPassingOut: string;
+    icNo: string;
+    orderOfMerit: string;
+    regtArm: string;
+    postedAtt: string;
+};
+
+export type DossierFillingViewRecord = {
+    initiatedBy: string;
+    openedOn: string;
+    initialInterview: string;
+    closedBy: string;
+    closedOn: string;
+    finalInterview: string;
+};
+
+export type AutobiographyViewRecord = {
+    generalSelf: string;
+    proficiencySports: string;
+    achievementsNote: string;
+    areasToWork: string;
+    additionalInfo: string;
+    filledOn: string;
+    platoonCommanderName: string;
+};
+
+export type SsbReportViewRecord = {
+    positives: { note: string; by: string }[];
+    negatives: { note: string; by: string }[];
+    predictiveRating: number;
+    scopeForImprovement: string;
+};
+
+function toDateOnlyString(value: Date | null | undefined) {
+    if (!value) return '';
+    return value.toISOString().split('T')[0] ?? '';
+}
+
+function toIsoString(value: Date | null | undefined) {
+    if (!value) return '';
+    return value.toISOString();
+}
+
+export async function getBasicDetailsCadetBaseline(ocId: string): Promise<BasicDetailsCadetBaseline | null> {
+    const [row] = await db
+        .select({
+            ocId: ocCadets.id,
+            ocNo: ocCadets.ocNo,
+            name: ocCadets.name,
+            courseId: ocCadets.courseId,
+            courseCode: courses.code,
+            courseTitle: courses.title,
+            platoonId: ocCadets.platoonId,
+            platoonName: platoons.name,
+            personalPi: ocPersonal.pi,
+            arrivalAtUniversity: ocCadets.arrivalAtUniversity,
+            relegatedToCourseId: ocCadets.relegatedToCourseId,
+            relegatedOn: ocCadets.relegatedOn,
+            withdrawnOn: ocCadets.withdrawnOn,
+        })
+        .from(ocCadets)
+        .leftJoin(courses, eq(courses.id, ocCadets.courseId))
+        .leftJoin(platoons, eq(platoons.id, ocCadets.platoonId))
+        .leftJoin(ocPersonal, eq(ocPersonal.ocId, ocCadets.id))
+        .where(eq(ocCadets.id, ocId))
+        .limit(1);
+
+    return row ?? null;
+}
+
+export async function getDossierSnapshotView(ocId: string): Promise<DossierSnapshotViewRecord | null> {
+    const baseline = await getBasicDetailsCadetBaseline(ocId);
+    if (!baseline) return null;
+
+    const [commissioning, relegatedCourse] = await Promise.all([
+        db
+            .select()
+            .from(ocCommissioning)
+            .where(eq(ocCommissioning.ocId, ocId))
+            .limit(1)
+            .then((rows) => rows[0] ?? null),
+        baseline.relegatedToCourseId
+            ? db
+                  .select({ code: courses.code, title: courses.title })
+                  .from(courses)
+                  .where(eq(courses.id, baseline.relegatedToCourseId))
+                  .limit(1)
+                  .then((rows) => rows[0] ?? null)
+            : Promise.resolve(null),
+    ]);
+
+    const relegatedLabel = relegatedCourse?.code || relegatedCourse?.title || 'Unknown';
+    const relegated =
+        baseline.relegatedOn && baseline.relegatedToCourseId
+            ? `Relegated to ${relegatedLabel} on ${toDateOnlyString(baseline.relegatedOn)}`
+            : '';
+
+    return {
+        arrivalPhoto: null,
+        departurePhoto: null,
+        tesNo: baseline.ocNo ?? '',
+        name: baseline.name ?? '',
+        course: baseline.courseCode ?? baseline.courseTitle ?? '',
+        pi: baseline.personalPi ?? baseline.platoonName ?? '',
+        dtOfArr: toDateOnlyString(baseline.arrivalAtUniversity),
+        relegated,
+        withdrawnOn: toDateOnlyString(baseline.withdrawnOn),
+        dtOfPassingOut: toDateOnlyString(commissioning?.passOutDate),
+        icNo: commissioning?.icNo ?? '',
+        orderOfMerit:
+            commissioning?.orderOfMerit == null ? '' : String(commissioning.orderOfMerit),
+        regtArm: commissioning?.regimentOrArm ?? '',
+        postedAtt: commissioning?.postedUnit ?? '',
+    };
+}
+
 // ---- Personal ---------------------------------------------------------------
 export async function getPersonal(ocId: string) {
     const [row] = await db.select().from(ocPersonal).where(eq(ocPersonal.ocId, ocId)).limit(1);
@@ -612,6 +755,18 @@ export async function getAutobio(ocId: string) {
     const [row] = await db.select().from(ocAutobiography).where(eq(ocAutobiography.ocId, ocId)).limit(1);
     return row ?? null;
 }
+export async function getAutobiographyView(ocId: string): Promise<AutobiographyViewRecord> {
+    const row = await getAutobio(ocId);
+    return {
+        generalSelf: row?.generalSelf ?? '',
+        proficiencySports: row?.proficiencySports ?? '',
+        achievementsNote: row?.achievementsNote ?? '',
+        areasToWork: row?.areasToWork ?? '',
+        additionalInfo: row?.additionalInfo ?? '',
+        filledOn: toIsoString(row?.filledOn),
+        platoonCommanderName: row?.platoonCommanderName ?? '',
+    };
+}
 export async function upsertAutobio(ocId: string, data: Partial<typeof ocAutobiography.$inferInsert>) {
     const existing = await getAutobio(ocId);
     if (existing) {
@@ -630,6 +785,31 @@ export async function deleteAutobio(ocId: string) {
 export async function getSsbReport(ocId: string) {
     const [row] = await db.select().from(ocSsbReports).where(eq(ocSsbReports.ocId, ocId));
     return row ?? null;
+}
+export async function getSsbReportView(ocId: string): Promise<SsbReportViewRecord> {
+    const report = await getSsbReport(ocId);
+    const points = report ? await listSsbPoints(report.id) : [];
+    const positives: SsbReportViewRecord['positives'] = [];
+    const negatives: SsbReportViewRecord['negatives'] = [];
+
+    for (const point of points) {
+        const mapped = {
+            note: point.remark,
+            by: point.authorName ?? '',
+        };
+        if (point.kind === 'POSITIVE') {
+            positives.push(mapped);
+        } else if (point.kind === 'NEGATIVE') {
+            negatives.push(mapped);
+        }
+    }
+
+    return {
+        positives,
+        negatives,
+        predictiveRating: report?.overallPredictiveRating ?? 0,
+        scopeForImprovement: report?.scopeOfImprovement ?? '',
+    };
 }
 export async function upsertSsbReport(ocId: string, data: Partial<typeof ocSsbReports.$inferInsert>) {
     const existing = await getSsbReport(ocId);
@@ -2247,6 +2427,17 @@ export async function recomputeOcCampTotal(ocCampId: string) {
 export async function getDossierFilling(ocId: string) {
     const [row] = await db.select().from(ocDossierFilling).where(eq(ocDossierFilling.ocId, ocId)).limit(1);
     return row ?? null;
+}
+export async function getDossierFillingView(ocId: string): Promise<DossierFillingViewRecord> {
+    const row = await getDossierFilling(ocId);
+    return {
+        initiatedBy: row?.initiatedBy ?? '',
+        openedOn: toIsoString(row?.openedOn),
+        initialInterview: row?.initialInterview ?? '',
+        closedBy: row?.closedBy ?? '',
+        closedOn: toIsoString(row?.closedOn),
+        finalInterview: row?.finalInterview ?? '',
+    };
 }
 export async function upsertDossierFilling(ocId: string, data: Partial<typeof ocDossierFilling.$inferInsert>) {
     const existing = await getDossierFilling(ocId);

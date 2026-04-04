@@ -260,6 +260,53 @@ function defaultAsyncValue(name: string): unknown {
       ],
     };
   }
+  if (name === 'getDossierSnapshotView') {
+    return {
+      arrivalPhoto: null,
+      departurePhoto: null,
+      tesNo: 'OC-001',
+      name: 'Officer Cadet',
+      course: 'TES-50',
+      pi: 'ARJUN',
+      dtOfArr: '2026-01-01',
+      relegated: '',
+      withdrawnOn: '',
+      dtOfPassingOut: '',
+      icNo: '',
+      orderOfMerit: '',
+      regtArm: '',
+      postedAtt: '',
+    };
+  }
+  if (name === 'getDossierFillingView') {
+    return {
+      initiatedBy: '',
+      openedOn: '',
+      initialInterview: '',
+      closedBy: '',
+      closedOn: '',
+      finalInterview: '',
+    };
+  }
+  if (name === 'getAutobiographyView') {
+    return {
+      generalSelf: '',
+      proficiencySports: '',
+      achievementsNote: '',
+      areasToWork: '',
+      additionalInfo: '',
+      filledOn: '',
+      platoonCommanderName: '',
+    };
+  }
+  if (name === 'getSsbReportView') {
+    return {
+      positives: [],
+      negatives: [],
+      predictiveRating: 0,
+      scopeForImprovement: '',
+    };
+  }
   if (name === 'buildCourseWisePerformancePreview') {
     return {
       course: {

@@ -1,6 +1,7 @@
 // app/dashboard/[id]/milmgmt/background-detls/page.tsx
 "use client";
 
+import { useEffect } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -25,6 +26,11 @@ import AutobiographySection from "@/components/background/AutobiographySection";
 
 import { useOcPersonal } from "@/hooks/useOcPersonal";
 import Link from "next/link";
+import {
+    buildBackgroundDetailSearchParams,
+    resolveBackgroundDetailTab,
+    type BackgroundDetailTab,
+} from "@/lib/background-detail-tabs";
 
 export default function BackgroundDetlsPage() {
     const { id } = useParams();
@@ -34,10 +40,16 @@ export default function BackgroundDetlsPage() {
 
     const { cadet } = useOcPersonal(ocId);
 
-    const activeTab = searchParams.get("tab") || "family-bgrnd";
+    const { activeTab, shouldCanonicalize } = resolveBackgroundDetailTab(searchParams);
+
+    useEffect(() => {
+        if (!shouldCanonicalize) return;
+        const params = buildBackgroundDetailSearchParams(searchParams, activeTab);
+        router.replace(`?${params.toString()}`, { scroll: false });
+    }, [activeTab, router, searchParams, shouldCanonicalize]);
+
     const setActiveTab = (tab: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("tab", tab);
+        const params = buildBackgroundDetailSearchParams(searchParams, tab as BackgroundDetailTab);
         router.replace(`?${params.toString()}`, { scroll: false });
     };
 
