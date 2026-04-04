@@ -21,12 +21,14 @@ async function GETHandler(req: AuditNextRequest) {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
         const qp = trainingCampQuerySchema.parse({
+            courseId: sp.get('courseId') ?? undefined,
             semester: sp.get('semester') ?? undefined,
             includeActivities: sp.get('includeActivities') ?? undefined,
             includeDeleted: sp.get('includeDeleted') ?? undefined,
         });
 
         const items = await listTrainingCamps({
+            courseId: qp.courseId,
             semester: qp.semester,
             includeActivities: qp.includeActivities ?? false,
             includeDeleted: qp.includeDeleted ?? false,
@@ -43,7 +45,7 @@ async function POSTHandler(req: AuditNextRequest) {
         const adminCtx = await requireAuth(req);
         const dto = trainingCampCreateSchema.parse(await req.json());
         const settings = await getTrainingCampSettings();
-        const activeCount = await countActiveTrainingCampsBySemester(dto.semester);
+        const activeCount = await countActiveTrainingCampsBySemester(dto.courseId, dto.semester);
         if (activeCount >= settings.maxCampsPerSemester) {
             throw new ApiError(
                 400,
@@ -52,6 +54,7 @@ async function POSTHandler(req: AuditNextRequest) {
             );
         }
         const row = await createTrainingCamp({
+            courseId: dto.courseId,
             name: dto.name.trim(),
             semester: dto.semester,
             sortOrder: dto.sortOrder ?? activeCount + 1,
@@ -73,6 +76,7 @@ async function POSTHandler(req: AuditNextRequest) {
             metadata: {
                 description: `Created training camp ${row.name}`,
                 trainingCampId: row.id,
+                courseId: row.courseId,
                 semester: row.semester,
                 maxTotalMarks: row.maxTotalMarks,
             },

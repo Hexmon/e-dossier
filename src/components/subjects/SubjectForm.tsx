@@ -34,6 +34,7 @@ export default function SubjectForm({
         name: "",
         branch: "C",
         noOfPeriods: 0,
+        noOfPhaseTests: 2,
         hasTheory: true,
         hasPractical: false,
         defaultTheoryCredits: 0,
@@ -51,6 +52,7 @@ export default function SubjectForm({
                 name: "",
                 branch: "C",
                 noOfPeriods: 0,
+                noOfPhaseTests: 2,
                 hasTheory: true,
                 hasPractical: false,
                 defaultTheoryCredits: 0,
@@ -137,12 +139,32 @@ export default function SubjectForm({
                 />
             </div>
 
+            {formData.hasTheory && (
+                <div className="space-y-2">
+                    <Label htmlFor="noOfPhaseTests">No. of Phase Tests *</Label>
+                    <Input
+                        id="noOfPhaseTests"
+                        type="number"
+                        value={formData.noOfPhaseTests}
+                        onChange={(e) => handleChange("noOfPhaseTests", parseInt(e.target.value, 10) || 0)}
+                        min="0"
+                        max="2"
+                        step="1"
+                        required
+                    />
+                </div>
+            )}
+
             {/* Has Theory */}
             <div className="flex items-center space-x-2">
                 <Checkbox
                     id="hasTheory"
                     checked={formData.hasTheory}
-                    onCheckedChange={(checked) => handleChange("hasTheory", !!checked)}
+                    onCheckedChange={(checked) => {
+                        const enabled = !!checked;
+                        handleChange("hasTheory", enabled);
+                        handleChange("noOfPhaseTests", enabled ? Math.max(1, formData.noOfPhaseTests || 2) : 0);
+                    }}
                 />
                 <Label htmlFor="hasTheory" className="cursor-pointer">Has Theory</Label>
             </div>

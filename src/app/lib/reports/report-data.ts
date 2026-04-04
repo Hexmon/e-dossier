@@ -17,13 +17,29 @@ import { courses } from '@/app/db/schema/training/courses';
 import { courseOfferingInstructors } from '@/app/db/schema/training/courseOfferings';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { ocCommissioning } from '@/app/db/schema/training/oc';
-import { FIXED_MARKS, REPORT_TYPES } from '@/app/lib/reports/types';
+import { REPORT_TYPES } from '@/app/lib/reports/types';
 import { FPR_MAX_MARKS, SPR_MAX_MARKS } from '@/app/services/performance-record.constants';
 import {
   marksToGradePointsWithPolicy,
   marksToLetterGradeWithPolicy,
   type AcademicGradingPolicy,
 } from '@/app/lib/grading-policy';
+import {
+  computePracticalTotal,
+  getPracticalComponentValue,
+  PRACTICAL_COMPONENTS,
+  PRACTICAL_TOTAL_MAX_MARKS,
+} from '@/lib/academics-practical';
+import {
+  computeTheorySessional,
+  computeTheorySessionalMax,
+  computeTheoryTotal,
+  computeTheoryTotalMax,
+  normalizePhaseTestCount,
+  PHASE_TEST_MAX_MARKS,
+  THEORY_FINAL_MAX_MARKS,
+  THEORY_TUTORIAL_MAX_MARKS,
+} from '@/lib/academics-theory';
 import type {
   ConsolidatedSessionalPreview,
   CourseWiseFinalPerformancePreview,
@@ -134,28 +150,32 @@ function resolveTheoryTotalMarks(
     phaseTest2Marks?: number | null;
     tutorial?: string | number | null;
     finalMarks?: number | null;
-  } | null | undefined
+  } | null | undefined,
+  phaseTestCount: number | null | undefined,
 ): number | null {
   if (!theory) return null;
   if (theory.totalMarks !== null && theory.totalMarks !== undefined && Number.isFinite(Number(theory.totalMarks))) {
     return Number(theory.totalMarks);
   }
-  const total =
-    safePositiveNumber(theory.phaseTest1Marks) +
-    safePositiveNumber(theory.phaseTest2Marks) +
-    safePositiveNumber(theory.tutorial) +
-    safePositiveNumber(theory.finalMarks);
+  const total = computeTheoryTotal(theory, phaseTestCount);
   return total > 0 ? total : null;
 }
 
 function resolvePracticalTotalMarks(
-  practical: { totalMarks?: number | null; finalMarks?: number | null } | null | undefined
+  practical: {
+    totalMarks?: number | null;
+    finalMarks?: number | null;
+    conductOfExp?: number | null;
+    maintOfApp?: number | null;
+    practicalTest?: number | null;
+    vivaVoce?: number | null;
+  } | null | undefined
 ): number | null {
   if (!practical) return null;
   if (practical.totalMarks !== null && practical.totalMarks !== undefined && Number.isFinite(Number(practical.totalMarks))) {
     return Number(practical.totalMarks);
   }
-  const total = safePositiveNumber(practical.finalMarks);
+  const total = computePracticalTotal(practical);
   return total > 0 ? total : null;
 }
 
@@ -251,7 +271,7 @@ function computeSemesterSummary(
   for (const subject of view.subjects ?? []) {
     if (subject.includeTheory) {
       const subjectCredits = Number(subject.theoryCredits ?? subject.subject.defaultTheoryCredits ?? 0);
-      const total = resolveTheoryTotalMarks(subject.theory);
+      const total = resolveTheoryTotalMarks(subject.theory, subject.subject.noOfPhaseTests);
       credits += subjectCredits;
       points += subjectCredits * marksToGradePointsWithPolicy(total, policy);
     }
@@ -341,6 +361,9 @@ export async function buildConsolidatedSessionalPreview(params: {
 
   const primaryInstructor =
     offeringInstructorRows.find((item) => item.role === 'PRIMARY') ?? offeringInstructorRows[0] ?? null;
+  const phaseTestCount = normalizePhaseTestCount(selectedOffering.subject.noOfPhaseTests, selectedOffering.includeTheory);
+  const sessionalMax = computeTheorySessionalMax(phaseTestCount);
+  const theoryTotalMax = computeTheoryTotalMax(phaseTestCount);
 
   for (const [index, item] of semesterViews.entries()) {
     const subject = item.view.subjects.find(
@@ -349,15 +372,24 @@ export async function buildConsolidatedSessionalPreview(params: {
 
     if (selectedOffering.includeTheory) {
       const phaseTest1 = normalizeNonNegativeValue(subject?.theory?.phaseTest1Marks ?? null);
-      const phaseTest2 = normalizeNonNegativeValue(subject?.theory?.phaseTest2Marks ?? null);
+      const phaseTest2 =
+        phaseTestCount >= 2
+          ? normalizeNonNegativeValue(subject?.theory?.phaseTest2Marks ?? null)
+          : null;
       const tutorial = normalizeNonNegativeValue(subject?.theory?.tutorial ? Number(subject.theory.tutorial) : null);
       const sessional =
         phaseTest1 === null && phaseTest2 === null && tutorial === null
           ? null
-          : (phaseTest1 ?? 0) + (phaseTest2 ?? 0) + (tutorial ?? 0);
+          : computeTheorySessional(
+              {
+                phaseTest1Marks: phaseTest1,
+                phaseTest2Marks: phaseTest2,
+                tutorial,
+              },
+              phaseTestCount,
+            );
       const finalObtained = normalizeNonNegativeValue(subject?.theory?.finalMarks ?? null);
-      const totalObtained =
-        sessional === null && finalObtained === null ? null : (sessional ?? 0) + (finalObtained ?? 0);
+      const totalObtained = resolveTheoryTotalMarks(subject?.theory, phaseTestCount);
 
       theoryRows.push({
         ocId: item.oc.id,
@@ -366,33 +398,47 @@ export async function buildConsolidatedSessionalPreview(params: {
         ocName: item.oc.name,
         branch: item.oc.branch,
         phaseTest1Obtained: phaseTest1,
-        phaseTest1Max: FIXED_MARKS.phaseTest1Max,
+        phaseTest1Max: PHASE_TEST_MAX_MARKS,
         phaseTest2Obtained: phaseTest2,
-        phaseTest2Max: FIXED_MARKS.phaseTest2Max,
+        phaseTest2Max: phaseTestCount >= 2 ? PHASE_TEST_MAX_MARKS : 0,
         tutorialObtained: tutorial,
-        tutorialMax: FIXED_MARKS.tutorialMax,
+        tutorialMax: THEORY_TUTORIAL_MAX_MARKS,
         sessionalObtained: sessional,
-        sessionalMax: FIXED_MARKS.sessionalMax,
+        sessionalMax,
         finalObtained,
-        finalMax: FIXED_MARKS.finalMax,
+        finalMax: THEORY_FINAL_MAX_MARKS,
         totalObtained,
-        totalMax: FIXED_MARKS.totalMax,
+        totalMax: theoryTotalMax,
         letterGrade: resolveStoredOrDerivedLetterGrade(subject?.theory?.grade ?? null, totalObtained, policy),
       });
     }
 
     if (selectedOffering.includePractical) {
+      const conductOfExp = normalizeNonNegativeValue(getPracticalComponentValue(subject?.practical, 'conductOfExp'));
+      const maintOfApp = normalizeNonNegativeValue(getPracticalComponentValue(subject?.practical, 'maintOfApp'));
+      const practicalTest = normalizeNonNegativeValue(getPracticalComponentValue(subject?.practical, 'practicalTest'));
+      const vivaVoce = normalizeNonNegativeValue(getPracticalComponentValue(subject?.practical, 'vivaVoce'));
+      const totalObtained = normalizeNonNegativeValue(resolvePracticalTotalMarks(subject?.practical));
+
       practicalRows.push({
         ocId: item.oc.id,
         sNo: index + 1,
         ocNo: item.oc.ocNo,
         ocName: item.oc.name,
         branch: item.oc.branch,
-        practicalObtained: normalizeNonNegativeValue(subject?.practical?.finalMarks ?? null),
-        practicalMax: Number(selectedOffering.practicalCredits ?? selectedOffering.subject.defaultPracticalCredits ?? 0),
+        conductOfExpObtained: conductOfExp,
+        conductOfExpMax: PRACTICAL_COMPONENTS[0].maxMarks,
+        maintOfAppObtained: maintOfApp,
+        maintOfAppMax: PRACTICAL_COMPONENTS[1].maxMarks,
+        practicalTestObtained: practicalTest,
+        practicalTestMax: PRACTICAL_COMPONENTS[2].maxMarks,
+        vivaVoceObtained: vivaVoce,
+        vivaVoceMax: PRACTICAL_COMPONENTS[3].maxMarks,
+        totalObtained,
+        totalMax: PRACTICAL_TOTAL_MAX_MARKS,
         letterGrade: resolveStoredOrDerivedLetterGrade(
           subject?.practical?.grade ?? null,
-          subject?.practical?.finalMarks ?? null,
+          totalObtained,
           policy
         ),
       });
@@ -410,6 +456,7 @@ export async function buildConsolidatedSessionalPreview(params: {
       branch: (['C', 'E', 'M'].includes(selectedOffering.subject.branch)
         ? selectedOffering.subject.branch
         : 'C') as 'C' | 'E' | 'M',
+      noOfPhaseTests: phaseTestCount,
       hasTheory: selectedOffering.includeTheory,
       hasPractical: selectedOffering.includePractical,
       theoryCredits: selectedOffering.theoryCredits ?? selectedOffering.subject.defaultTheoryCredits ?? null,
@@ -477,7 +524,7 @@ export async function buildFinalResultCompilationPreview(params: {
         }
 
         if (component.kind === 'L') {
-          const marks = resolveTheoryTotalMarks(subject.theory);
+          const marks = resolveTheoryTotalMarks(subject.theory, subject.subject.noOfPhaseTests);
           subjectGrades[component.key] = resolveStoredOrDerivedLetterGrade(subject.theory?.grade ?? null, marks, policy);
         } else {
           const marks = resolvePracticalTotalMarks(subject.practical);

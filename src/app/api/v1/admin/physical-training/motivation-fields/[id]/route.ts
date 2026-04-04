@@ -28,9 +28,15 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const existing = await getPtMotivationField(id);
         if (!existing) throw new ApiError(404, 'PT motivation field not found', 'not_found');
 
+        const targetCourseId = dto.courseId ?? existing.courseId;
         const targetSemester = dto.semester ?? existing.semester;
         const targetSortOrder = dto.sortOrder ?? existing.sortOrder;
-        const duplicate = await findPtMotivationFieldBySemesterAndSortOrder(targetSemester, targetSortOrder, { excludeId: id });
+        const duplicate = await findPtMotivationFieldBySemesterAndSortOrder(
+            targetCourseId,
+            targetSemester,
+            targetSortOrder,
+            { excludeId: id },
+        );
         if (duplicate) {
             throw new ApiError(
                 409,
@@ -39,6 +45,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
                 {
                     field: 'sortOrder',
                     sortOrder: targetSortOrder,
+                    courseId: targetCourseId,
                     semester: targetSemester,
                     conflictingFieldId: duplicate.id,
                 },
@@ -59,6 +66,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
             metadata: {
                 description: `Updated PT motivation field ${row.label}`,
                 ptMotivationFieldId: row.id,
+                courseId: row.courseId,
                 changes: Object.keys(dto),
             },
         });

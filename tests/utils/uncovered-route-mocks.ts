@@ -136,6 +136,7 @@ vi.mock('argon2', () => {
 vi.mock('@/app/db/queries/academicGradingPolicy', () => genericModuleMock);
 vi.mock('@/app/db/queries/appointment-transfer', () => genericModuleMock);
 vi.mock('@/app/db/queries/appointments', () => genericModuleMock);
+vi.mock('@/app/db/queries/cadet-appointments', () => genericModuleMock);
 vi.mock('@/app/db/queries/courses', () => genericModuleMock);
 vi.mock('@/app/db/queries/instructors', () => genericModuleMock);
 vi.mock('@/app/db/queries/interviewOc', () => genericModuleMock);
@@ -188,6 +189,7 @@ vi.mock('@/app/lib/validators.rbac', () => schemaModuleMock);
 vi.mock('@/app/lib/validators.relegation', () => schemaModuleMock);
 vi.mock('@/app/lib/validators.reports', () => schemaModuleMock);
 vi.mock('@/app/lib/validators.site-settings', () => schemaModuleMock);
+vi.mock('@/app/lib/platoon-commander-auth', () => genericModuleMock);
 
 export function resetCommonMocks() {
   vi.clearAllMocks();

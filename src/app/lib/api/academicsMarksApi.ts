@@ -18,6 +18,7 @@ export interface Subject {
     semester: number;
     branch?: string;
     description?: string;
+    noOfPhaseTests?: number;
     hasPractical?: boolean;
     hasTheory?: boolean;
     defaultPracticalCredits?: number;
@@ -60,6 +61,10 @@ export interface TheoryMarks {
 }
 
 export interface PracticalMarks {
+    conductOfExp?: number;
+    maintOfApp?: number;
+    practicalTest?: number;
+    vivaVoce?: number;
     finalMarks?: number;
     totalMarks?: number;
 }

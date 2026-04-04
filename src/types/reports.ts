@@ -40,8 +40,16 @@ export type ConsolidatedPracticalRow = {
   ocNo: string;
   ocName: string;
   branch: string | null;
-  practicalObtained: number | null;
-  practicalMax: number;
+  conductOfExpObtained: number | null;
+  conductOfExpMax: number;
+  maintOfAppObtained: number | null;
+  maintOfAppMax: number;
+  practicalTestObtained: number | null;
+  practicalTestMax: number;
+  vivaVoceObtained: number | null;
+  vivaVoceMax: number;
+  totalObtained: number | null;
+  totalMax: number;
   letterGrade: string | null;
 };
 
@@ -49,6 +57,8 @@ export type GradeSummaryItem = {
   grade: string;
   count: number;
 };
+
+export type ConsolidatedSessionalSection = 'theory' | 'practical';
 
 export type ConsolidatedSessionalPreview = {
   reportType: 'ACADEMICS_CONSOLIDATED_SESSIONAL';
@@ -59,6 +69,7 @@ export type ConsolidatedSessionalPreview = {
     code: string;
     name: string;
     branch: 'C' | 'E' | 'M';
+    noOfPhaseTests: number;
     hasTheory: boolean;
     hasPractical: boolean;
     theoryCredits: number | null;
@@ -178,6 +189,7 @@ export type ConsolidatedDownloadRequest = {
   courseId: string;
   semester: number;
   subjectId: string;
+  section: ConsolidatedSessionalSection;
   password: string;
   preparedBy?: string;
   checkedBy?: string;

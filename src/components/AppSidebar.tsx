@@ -46,6 +46,7 @@ import {
   filterSidebarSectionsForRoleGroup,
 } from "@/lib/sidebar-visibility";
 import { buildCurrentDossierRoot, isDossierManagementRoute } from "@/lib/dossier-route";
+import { canManageCadetAppointments } from "@/lib/platoon-commander-access";
 
 // Map string icon keys to Lucide components
 const ICON_MAP: Record<string, any> = {
@@ -79,11 +80,41 @@ export function AppSidebar() {
   // User info
   const { apt = {}, roles: meRoles = [] } = meData ?? {};
   const { position = "" } = apt as any;
+  const scopeType = (apt as any)?.scope?.type ?? null;
   const userId = (meData?.user as any)?.id || "";
   const isDossierRouteActive = isDossierManagementRoute(pathname);
   const effectiveRoles = meRoles.length > 0 ? meRoles : navData?.userRoleSummary ?? [];
   const roleGroup = deriveSidebarRoleGroup({ roles: effectiveRoles, position });
-  const visibleSections = filterSidebarSectionsForRoleGroup(navData?.sections ?? [], roleGroup);
+  const canViewCadetAppointmentsSettings = canManageCadetAppointments({
+    roles: effectiveRoles,
+    position,
+    scopeType,
+  });
+  const visibleSections = filterSidebarSectionsForRoleGroup(
+    navData?.sections ?? [],
+    roleGroup
+  ).map((section) => {
+    if (section.key !== "settings" || !canViewCadetAppointmentsSettings) {
+      return section;
+    }
+
+    if (section.items.some((item) => item.key === "cadet_appointments")) {
+      return section;
+    }
+
+    return {
+      ...section,
+      items: [
+        ...section.items,
+        {
+          key: "cadet_appointments",
+          label: "Cadet Appointments",
+          url: "/dashboard/settings/device/appointments",
+          icon: "CalendarDays",
+        },
+      ],
+    };
+  });
   const mainSections = visibleSections.filter((section) => section.key !== "help");
   const pinnedSections = visibleSections.filter((section) => section.key === "help");
 

@@ -7,8 +7,10 @@ import { useParams, usePathname, useRouter, useSearchParams } from "next/navigat
 import { RootState } from "@/store";
 import { InterviewOfficer } from "@/types/interview";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
+import { useMe } from "@/hooks/useMe";
 import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
 import { saveInterviewForm, clearInterviewForm, type InterviewFormData } from "@/store/slices/initialInterviewSlice";
+import { applySignatureDefaults, getCurrentUserSignature, hasMeaningfulSignatureValue, isSignatureTemplateField } from "@/lib/currentUserSignature";
 
 import DSCoordForm from "./forms/DSCoordForm";
 import DyCdrForm from "./forms/DyCdrForm";
@@ -25,6 +27,7 @@ function buildInitialInterviewResetValues(params: {
     currentValues: FormWrapperFields;
     savedValues: FormWrapperFields;
     templateFields?: Array<{ key: string; fieldType?: string | null; groupId?: string | null }>;
+    signatureValue?: string;
 }): FormWrapperFields {
     const out: FormWrapperFields = {};
 
@@ -42,7 +45,11 @@ function buildInitialInterviewResetValues(params: {
         out[key] = value;
     }
 
-    return out;
+    return applySignatureDefaults({
+        values: out,
+        fields: params.templateFields,
+        signatureValue: params.signatureValue,
+    });
 }
 
 export default function InterviewTabs() {
@@ -52,6 +59,7 @@ export default function InterviewTabs() {
     const searchParams = useSearchParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
     const dispatch = useDispatch();
+    const { data: meData } = useMe();
 
     const parseSemesterParam = (value: string | null) => {
         const n = Number(value);
@@ -71,6 +79,7 @@ export default function InterviewTabs() {
     const usesSemester = activeSemesters.length > 0;
     const semesterAllowed = !usesSemester || activeSemesters.includes(selectedTerm);
     const activeSemesterKey = String(selectedTerm);
+    const currentUserSignature = getCurrentUserSignature(meData);
 
     useEffect(() => {
         const semFromUrl = parseSemesterParam(searchParams.get("sem"));
@@ -182,6 +191,30 @@ export default function InterviewTabs() {
         });
     }, [active, ocId, activeSemesterKey, activeTemplate, savedFormData]);
 
+    useEffect(() => {
+        if (!currentUserSignature) return;
+
+        const signatureFields = Array.from(activeTemplate?.fieldsByKey?.values?.() ?? []).filter(
+            (field) => !field.groupId && isSignatureTemplateField(field),
+        );
+        if (!signatureFields.length) return;
+
+        let updated = false;
+        for (const field of signatureFields) {
+            const savedValue = savedFormData?.[field.key];
+            const currentValue = form.getValues(field.key);
+            if (hasMeaningfulSignatureValue(savedValue) || hasMeaningfulSignatureValue(currentValue)) continue;
+
+            form.setValue(field.key, currentUserSignature, {
+                shouldDirty: false,
+                shouldTouch: false,
+            });
+            updated = true;
+        }
+
+        if (!updated) return;
+    }, [activeTemplate, currentUserSignature, form, savedFormData]);
+
     // Auto-save unsaved changes to Redux
     useEffect(() => {
         const subscription = form.watch((value) => {
@@ -221,7 +254,14 @@ export default function InterviewTabs() {
     const handleClearForm = () => {
         if (confirm("Are you sure you want to clear all unsaved changes?")) {
             dispatch(clearInterviewForm({ ocId, semesterKey: activeSemesterKey, officer: active }));
-            form.reset({});
+            form.reset(
+                buildInitialInterviewResetValues({
+                    currentValues: (form.getValues() ?? {}) as FormWrapperFields,
+                    savedValues: EMPTY_FORM_WRAPPER_FIELDS,
+                    templateFields: Array.from(activeTemplate?.fieldsByKey?.values?.() ?? []),
+                    signatureValue: currentUserSignature,
+                }),
+            );
         }
     };
 

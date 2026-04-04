@@ -145,12 +145,25 @@ export const REPORT_UNCOVERED_ROUTE_FILES = [
 
 export const MISC_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/bootstrap/super-admin/route.ts',
-  'src/app/api/v1/dashboard/data/appointments/route.ts',
   'src/app/api/v1/dashboard/data/course/route.ts',
   'src/app/api/v1/dashboard/data/platoon/route.ts',
 ] as const;
 
+export const PL_CDR_UNCOVERED_ROUTE_FILES = [
+  'src/app/api/v1/pl-cdr/cadet-appointments/[id]/route.ts',
+  'src/app/api/v1/pl-cdr/cadet-appointments/[id]/transfer/route.ts',
+  'src/app/api/v1/pl-cdr/cadet-appointments/route.ts',
+] as const;
+
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
+  {
+    testFile: 'tests/api/admin.template-copy.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/interview/templates/copy/route.ts',
+      'src/app/api/v1/admin/physical-training/templates/copy/route.ts',
+      'src/app/api/v1/admin/training-camps/copy/route.ts',
+    ],
+  },
   {
     testFile: 'tests/api/admin.route-flow.uncovered.test.ts',
     routeFiles: [...ADMIN_UNCOVERED_ROUTE_FILES],
@@ -166,6 +179,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/misc.route-flow.uncovered.test.ts',
     routeFiles: [...MISC_UNCOVERED_ROUTE_FILES],
+  },
+  {
+    testFile: 'tests/api/pl-cdr.route-flow.uncovered.test.ts',
+    routeFiles: [...PL_CDR_UNCOVERED_ROUTE_FILES],
   },
 ];
 

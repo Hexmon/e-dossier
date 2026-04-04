@@ -22,8 +22,7 @@ type InterviewPendingMarqueeRow = {
   rankAndName: string;
   course: string | null;
   platoon: string | null;
-  completeInitial: boolean;
-  completeTerms: boolean;
+  completeSpecial: boolean;
 };
 
 type InterviewPendingMarqueeResponse = {
@@ -61,7 +60,7 @@ function buildPendingCountsMarqueeData(items: InterviewPendingMarqueeRow[]): str
     if (!label) continue;
 
     const prev = pendingByPlatoon.get(label) ?? 0;
-    const next = !item.completeInitial || !item.completeTerms ? prev + 1 : prev;
+    const next = !item.completeSpecial ? prev + 1 : prev;
     pendingByPlatoon.set(label, next);
   }
 

@@ -7,12 +7,25 @@ import { toast } from "sonner";
 import { TableColumn, TableConfig, UniversalTable } from "../layout/TableLayout";
 import { BulkAcademicItem } from "@/app/lib/api/academicsMarksApi";
 import { useAcademicsMarks } from "@/hooks/useAcademicsMarks";
+import {
+    computePracticalTotal,
+    getPracticalComponentValue,
+    PRACTICAL_COMPONENTS,
+    PRACTICAL_TOTAL_MAX_MARKS,
+    type PracticalComponentKey,
+} from "@/lib/academics-practical";
+import {
+    computeTheorySessional,
+    computeTheoryTotal,
+    normalizePhaseTestCount,
+} from "@/lib/academics-theory";
 
 interface Props {
     courseId: string;
     semester: number;
     subjectId: string;
     subjectBranch: string | null;
+    subjectPhaseTestCount: number;
 }
 
 export type StudentRow = {
@@ -24,7 +37,11 @@ export type StudentRow = {
     tutorial: string;
     sessional: number;
     final: string;
-    practical: string;
+    conductOfExp: string;
+    maintOfApp: string;
+    practicalTest: string;
+    vivaVoce: string;
+    practicalTotal: number;
     total: number;
 };
 
@@ -33,6 +50,7 @@ export default function SubjectWiseStudentsTable({
     semester,
     subjectId,
     subjectBranch,
+    subjectPhaseTestCount,
 }: Props) {
     const {
         allOCs,
@@ -47,6 +65,12 @@ export default function SubjectWiseStudentsTable({
     const [isSaved, setIsSaved] = useState(false);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const phaseTestCount = normalizePhaseTestCount(subjectPhaseTestCount);
+
+    const toNum = (v: string): number => {
+        const num = Number(v);
+        return isNaN(num) ? 0 : num;
+    };
 
     // Filter OCs and fetch their academic records
     useEffect(() => {
@@ -93,13 +117,27 @@ export default function SubjectWiseStudentsTable({
                 );
 
                 const phase1 = record?.theory?.phaseTest1Marks?.toString() ?? "";
-                const phase2 = record?.theory?.phaseTest2Marks?.toString() ?? "";
+                const phase2 =
+                    phaseTestCount >= 2 ? record?.theory?.phaseTest2Marks?.toString() ?? "" : "";
                 const tutorial = record?.theory?.tutorial ?? "";
                 const final = record?.theory?.finalMarks?.toString() ?? "";
-                const practical = record?.practical?.finalMarks?.toString() ?? "";
+                const conductOfExp = getPracticalComponentValue(record?.practical, "conductOfExp")?.toString() ?? "";
+                const maintOfApp = getPracticalComponentValue(record?.practical, "maintOfApp")?.toString() ?? "";
+                const practicalTest = getPracticalComponentValue(record?.practical, "practicalTest")?.toString() ?? "";
+                const vivaVoce = getPracticalComponentValue(record?.practical, "vivaVoce")?.toString() ?? "";
 
-                const sessional = toNum(phase1) + toNum(phase2) + toNum(tutorial);
-                const total = sessional + toNum(final) + toNum(practical);
+                const sessional = computeTheorySessional({
+                    phaseTest1Marks: toNum(phase1),
+                    phaseTest2Marks: toNum(phase2),
+                    tutorial,
+                }, phaseTestCount);
+                const practicalTotal = computePracticalTotal(record?.practical);
+                const total = computeTheoryTotal({
+                    phaseTest1Marks: toNum(phase1),
+                    phaseTest2Marks: toNum(phase2),
+                    tutorial,
+                    finalMarks: toNum(final),
+                }, phaseTestCount) + practicalTotal;
 
                 return {
                     id: oc.id,
@@ -110,7 +148,11 @@ export default function SubjectWiseStudentsTable({
                     tutorial,
                     sessional,
                     final,
-                    practical,
+                    conductOfExp,
+                    maintOfApp,
+                    practicalTest,
+                    vivaVoce,
+                    practicalTotal,
                     total,
                 };
             });
@@ -121,23 +163,32 @@ export default function SubjectWiseStudentsTable({
         };
 
         loadAcademicRecords();
-    }, [allOCs, loadingOCs, courseId, semester, subjectId, subjectBranch, getFilteredOCsByBranch, fetchBulkAcademics]);
-
-    const toNum = (v: string): number => {
-        const num = Number(v);
-        return isNaN(num) ? 0 : num;
-    };
+    }, [allOCs, loadingOCs, courseId, semester, subjectId, subjectBranch, phaseTestCount, getFilteredOCsByBranch, fetchBulkAcademics]);
 
     const updateRow = (index: number, key: keyof StudentRow, value: string) => {
         setRows((prev) => {
             const next = [...prev];
             const row = { ...next[index], [key]: value };
 
-            const sessional =
-                toNum(row.phase1) + toNum(row.phase2) + toNum(row.tutorial);
-            const total = sessional + toNum(row.final) + toNum(row.practical);
+            const sessional = computeTheorySessional({
+                phaseTest1Marks: toNum(row.phase1),
+                phaseTest2Marks: toNum(row.phase2),
+                tutorial: row.tutorial,
+            }, phaseTestCount);
+            const practicalTotal =
+                toNum(row.conductOfExp) +
+                toNum(row.maintOfApp) +
+                toNum(row.practicalTest) +
+                toNum(row.vivaVoce);
+            const total = computeTheoryTotal({
+                phaseTest1Marks: toNum(row.phase1),
+                phaseTest2Marks: toNum(row.phase2),
+                tutorial: row.tutorial,
+                finalMarks: toNum(row.final),
+            }, phaseTestCount) + practicalTotal;
 
             row.sessional = sessional;
+            row.practicalTotal = practicalTotal;
             row.total = total;
 
             next[index] = row;
@@ -157,11 +208,15 @@ export default function SubjectWiseStudentsTable({
             theory: {
                 tutorial: row.tutorial,
                 phaseTest1Marks: toNum(row.phase1),
-                phaseTest2Marks: toNum(row.phase2),
+                phaseTest2Marks: phaseTestCount >= 2 ? toNum(row.phase2) : undefined,
                 finalMarks: toNum(row.final),
             },
             practical: {
-                finalMarks: toNum(row.practical),
+                conductOfExp: toNum(row.conductOfExp),
+                maintOfApp: toNum(row.maintOfApp),
+                practicalTest: toNum(row.practicalTest),
+                vivaVoce: toNum(row.vivaVoce),
+                finalMarks: row.practicalTotal,
             },
         }));
 
@@ -194,7 +249,9 @@ export default function SubjectWiseStudentsTable({
                 width: "220px",
                 className: "text-xs font-medium break-words",
             },
-            ...(["phase1", "phase2", "tutorial"] as const).map((key) => ({
+            ...(["phase1", "phase2", "tutorial"] as const)
+                .filter((key) => key !== "phase2" || phaseTestCount >= 2)
+                .map((key) => ({
                 key,
                 label:
                     key === "phase1"
@@ -233,19 +290,27 @@ export default function SubjectWiseStudentsTable({
                     />
                 ),
             },
-            {
-                key: "practical",
-                label: "Practical",
-                width: "80px",
+            ...PRACTICAL_COMPONENTS.map((component) => ({
+                key: component.key as keyof StudentRow,
+                label: `${component.label} (${component.maxMarks})`,
+                width: "110px",
                 render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
                     <Input
-                        value={row.practical}
+                        value={row[component.key as PracticalComponentKey]}
                         disabled={isSaved}
-                        onChange={(e) => updateRow(index, "practical", e.target.value)}
+                        min={0}
+                        max={component.maxMarks}
+                        onChange={(e) => updateRow(index, component.key as keyof StudentRow, e.target.value)}
                         className="h-7 text-xs text-center"
-                        type="text"
+                        type="number"
                     />
                 ),
+            })),
+            {
+                key: "practicalTotal",
+                label: `Prac Total (${PRACTICAL_TOTAL_MAX_MARKS})`,
+                width: "95px",
+                className: "text-xs font-semibold bg-muted/50 text-center",
             },
             {
                 key: "total",
@@ -254,7 +319,7 @@ export default function SubjectWiseStudentsTable({
                 className: "text-xs font-bold bg-muted/50 text-center",
             },
         ],
-        [isSaved]
+        [isSaved, phaseTestCount]
     );
 
     const config: TableConfig<StudentRow> = {

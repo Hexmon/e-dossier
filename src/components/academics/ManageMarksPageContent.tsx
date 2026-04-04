@@ -23,6 +23,11 @@ export default function ManageMarksPageContent() {
         return offering?.subject.branch || null;
     }, [courseOfferings, subjectId]);
 
+    const selectedPhaseTestCount = useMemo(() => {
+        const offering = courseOfferings.find((co) => co.subject.id === subjectId);
+        return offering?.subject.noOfPhaseTests ?? 2;
+    }, [courseOfferings, subjectId]);
+
     const handleCourseChange = (value: string) => {
         setCourseId(value);
         setSemester(null);
@@ -54,6 +59,7 @@ export default function ManageMarksPageContent() {
                     semester={semester}
                     subjectId={subjectId}
                     subjectBranch={selectedSubjectBranch}
+                    subjectPhaseTestCount={selectedPhaseTestCount}
                 />
             )}
         </div>

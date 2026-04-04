@@ -16,6 +16,7 @@ import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy
 import { listSubjectsByIdsOrCodes } from '@/app/db/queries/subjects';
 import { marksToGradePointsWithPolicy, roundPolicyValue, type AcademicGradingPolicy } from '@/app/lib/grading-policy';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
+import { normalizePhaseTestCount } from '@/lib/academics-theory';
 
 type BranchTag = 'C' | 'E' | 'M';
 
@@ -107,6 +108,10 @@ export function hydrateAcademicViewsWithSubjectCatalog(
                     id: subject.subject.id ?? catalogSubject.id,
                     name: subject.subject.name || catalogSubject.name,
                     branch: (subject.subject.branch || catalogSubject.branch) as BranchTag,
+                    noOfPhaseTests: normalizePhaseTestCount(
+                        subject.subject.noOfPhaseTests ?? catalogSubject.noOfPhaseTests,
+                        subject.subject.hasTheory || catalogSubject.hasTheory,
+                    ),
                     hasTheory: subject.subject.hasTheory || catalogSubject.hasTheory,
                     hasPractical: subject.subject.hasPractical || catalogSubject.hasPractical,
                     defaultTheoryCredits:
@@ -382,16 +387,17 @@ export async function updateOcAcademicSubject(
         semesterBranchTag: determineBranchForSemester(semester, ocInfo.branch),
         subjectBranch: (offering.subject.branch ?? 'C') as BranchTag,
         subjectCode: offering.subject.code,
-        subjectName: offering.subject.name,
-        theory: data.theory,
-        practical: data.practical,
-        meta: {
-            subjectId: offering.subject.id,
-            offeringId: offering.id,
-            theoryCredits: offering.theoryCredits ?? offering.subject.defaultTheoryCredits ?? null,
-            practicalCredits: offering.practicalCredits ?? offering.subject.defaultPracticalCredits ?? null,
-        },
-    });
+            subjectName: offering.subject.name,
+            theory: data.theory,
+            practical: data.practical,
+            meta: {
+                subjectId: offering.subject.id,
+                offeringId: offering.id,
+                noOfPhaseTests: normalizePhaseTestCount(offering.subject.noOfPhaseTests, offering.includeTheory),
+                theoryCredits: offering.theoryCredits ?? offering.subject.defaultTheoryCredits ?? null,
+                practicalCredits: offering.practicalCredits ?? offering.subject.defaultPracticalCredits ?? null,
+            },
+        });
 
     await logAcademicEvent(
         auditContext,

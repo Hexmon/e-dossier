@@ -6,6 +6,7 @@ import { api } from "@/app/lib/apiClient";
 
 export interface PTType {
     id: string;
+    courseId: string | null;
     semester: number;
     code: string;
     title: string;
@@ -65,6 +66,7 @@ export interface PTTaskScore {
 
 export interface PTMotivationField {
     id: string;
+    courseId: string | null;
     semester: number;
     label: string;
     sortOrder: number;
@@ -75,9 +77,47 @@ export interface PTMotivationField {
 }
 
 export interface PTTemplate {
+    courseId: string | null;
     semester: number;
     types: PTTemplateType[];
     motivationFields: PTMotivationField[];
+}
+
+export interface PTTemplateCopyStats {
+    created: number;
+    updated: number;
+    deactivated: number;
+    deleted: number;
+    preserved: number;
+}
+
+export interface PTTemplateCopyPayload {
+    sourceCourseId: string;
+    targetCourseId: string;
+    semester: number;
+    mode?: "replace";
+}
+
+export interface PTTemplateCopyResponse {
+    message: string;
+    sourceCourseId: string;
+    targetCourseId: string;
+    semester: number;
+    mode: "replace";
+    createdCount: number;
+    updatedCount: number;
+    deactivatedCount: number;
+    deletedCount: number;
+    preservedCount: number;
+    warnings: string[];
+    stats: {
+        types: PTTemplateCopyStats;
+        attempts: PTTemplateCopyStats;
+        grades: PTTemplateCopyStats;
+        tasks: PTTemplateCopyStats;
+        taskScores: PTTemplateCopyStats;
+        motivationFields: PTTemplateCopyStats;
+    };
 }
 
 export interface PTTemplateType extends PTType {
@@ -118,6 +158,7 @@ export interface PTTemplateTaskGrade {
 // ============================================================================
 
 export interface PTTypeCreate {
+    courseId?: string;
     semester: number;
     code: string;
     title: string;
@@ -127,6 +168,7 @@ export interface PTTypeCreate {
 }
 
 export interface PTTypeUpdate {
+    courseId?: string;
     code?: string;
     title?: string;
     maxTotalMarks?: number;
@@ -187,6 +229,7 @@ export interface PTTaskScoreUpdate {
 }
 
 export interface PTMotivationFieldCreate {
+    courseId?: string;
     semester: number;
     label: string;
     sortOrder?: number;
@@ -194,6 +237,7 @@ export interface PTMotivationFieldCreate {
 }
 
 export interface PTMotivationFieldUpdate {
+    courseId?: string;
     label?: string;
     sortOrder?: number;
     isActive?: boolean;
@@ -207,22 +251,38 @@ export interface DeleteOptions {
 // TEMPLATE API
 // ============================================================================
 
-export async function getPTTemplate(semester: number): Promise<PTTemplate> {
+export async function getPTTemplate(courseIdOrSemester: string | number, maybeSemester?: number): Promise<PTTemplate> {
+    const courseId = typeof courseIdOrSemester === "string" ? courseIdOrSemester : undefined;
+    const semester = typeof courseIdOrSemester === "number" ? courseIdOrSemester : (maybeSemester as number);
     const response = await api.get<{ data: PTTemplate }>(
         `/api/v1/admin/physical-training/templates`,
-        { query: { semester } }
+        { query: { ...(courseId ? { courseId } : {}), semester } }
     );
     return response.data;
+}
+
+export async function copyPTTemplate(
+    payload: PTTemplateCopyPayload
+): Promise<PTTemplateCopyResponse> {
+    return api.post<PTTemplateCopyResponse, PTTemplateCopyPayload>(
+        `/api/v1/admin/physical-training/templates/copy`,
+        payload
+    );
 }
 
 // ============================================================================
 // PT TYPES API
 // ============================================================================
 
-export async function listPTTypes(semester: number): Promise<{ items: PTType[]; count: number }> {
+export async function listPTTypes(
+    courseIdOrSemester: string | number,
+    maybeSemester?: number,
+): Promise<{ items: PTType[]; count: number }> {
+    const courseId = typeof courseIdOrSemester === "string" ? courseIdOrSemester : undefined;
+    const semester = typeof courseIdOrSemester === "number" ? courseIdOrSemester : (maybeSemester as number);
     return await api.get<{ items: PTType[]; count: number }>(
         `/api/v1/admin/physical-training/types`,
-        { query: { semester } }
+        { query: { ...(courseId ? { courseId } : {}), semester } }
     );
 }
 
@@ -485,11 +545,14 @@ export async function deletePTTaskScore(
 // ============================================================================
 
 export async function listPTMotivationFields(
-    semester: number
+    courseIdOrSemester: string | number,
+    maybeSemester?: number,
 ): Promise<{ items: PTMotivationField[]; count: number }> {
+    const courseId = typeof courseIdOrSemester === "string" ? courseIdOrSemester : undefined;
+    const semester = typeof courseIdOrSemester === "number" ? courseIdOrSemester : (maybeSemester as number);
     return await api.get<{ items: PTMotivationField[]; count: number }>(
         `/api/v1/admin/physical-training/motivation-fields`,
-        { query: { semester } }
+        { query: { ...(courseId ? { courseId } : {}), semester } }
     );
 }
 

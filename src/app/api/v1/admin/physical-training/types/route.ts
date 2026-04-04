@@ -13,10 +13,12 @@ async function GETHandler(req: AuditNextRequest) {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
         const qp = ptTypeQuerySchema.parse({
+            courseId: sp.get('courseId') ?? undefined,
             semester: sp.get('semester') ?? undefined,
             includeDeleted: sp.get('includeDeleted') ?? undefined,
         });
         const items = await listPtTypes({
+            courseId: qp.courseId,
             semester: qp.semester,
             includeDeleted: qp.includeDeleted ?? false,
         });
@@ -30,8 +32,8 @@ async function POSTHandler(req: AuditNextRequest) {
     try {
         const adminCtx = await requireAuth(req);
         const dto = ptTypeCreateSchema.parse(await req.json());
-        const targetSortOrder = dto.sortOrder ?? (await getNextPtTypeSortOrder(dto.semester));
-        const duplicate = await findPtTypeBySemesterAndSortOrder(dto.semester, targetSortOrder);
+        const targetSortOrder = dto.sortOrder ?? (await getNextPtTypeSortOrder(dto.courseId, dto.semester));
+        const duplicate = await findPtTypeBySemesterAndSortOrder(dto.courseId, dto.semester, targetSortOrder);
         if (duplicate) {
             throw new ApiError(
                 409,
@@ -47,6 +49,7 @@ async function POSTHandler(req: AuditNextRequest) {
         }
 
         const row = await createPtType({
+            courseId: dto.courseId,
             semester: dto.semester,
             code: dto.code.trim(),
             title: dto.title.trim(),
@@ -62,8 +65,9 @@ async function POSTHandler(req: AuditNextRequest) {
             actor: { type: 'user', id: adminCtx.userId },
             target: { type: AuditResourceType.PT_TYPE, id: row.id },
             metadata: {
-                description: `Created PT type ${row.code} (semester ${row.semester})`,
+                description: `Created PT type ${row.code} (course ${row.courseId}, semester ${row.semester})`,
                 ptTypeId: row.id,
+                courseId: row.courseId,
                 semester: row.semester,
                 code: row.code,
             },
