@@ -217,6 +217,20 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts'],
   },
   {
+    testFile: 'tests/api/oc.medical.test.ts',
+    routeFiles: [
+      'src/app/api/v1/oc/[ocId]/medical/route.ts',
+      'src/app/api/v1/oc/[ocId]/medical/[id]/route.ts',
+    ],
+  },
+  {
+    testFile: 'tests/api/oc.medical-category.test.ts',
+    routeFiles: [
+      'src/app/api/v1/oc/[ocId]/medical-category/route.ts',
+      'src/app/api/v1/oc/[ocId]/medical-category/[id]/route.ts',
+    ],
+  },
+  {
     testFile: 'tests/api/oc.ssb.test.ts',
     routeFiles: ['src/app/api/v1/oc/[ocId]/ssb/route.ts'],
   },

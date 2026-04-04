@@ -102,13 +102,12 @@ export default function SemesterRecordPage() {
                                     SEMESTER RECORD
                                 </CardTitle>
                             </CardHeader>
-                            {isActiveSemesterLocked ? (
-                                <SemesterLockNotice
+                            <SemesterLockNotice
                                     activeSemester={activeSemester}
                                     currentSemester={currentSemester}
                                     supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                                 />
-                            ) : null}
                             <SemesterForm
                                 initialSemester={activeSemester}
                                 onSemesterChange={setActiveSemester}

@@ -161,6 +161,19 @@ describe('GET /api/v1/oc/:ocId/academics', () => {
     expect(body.items).toHaveLength(1);
   });
 
+  it('accepts the legacy semister query key', async () => {
+    (ocChecks.parseParam as any).mockResolvedValueOnce({ ocId });
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `${basePath}/${ocId}/academics?semister=2`,
+    });
+    const ctx = { params: Promise.resolve({ ocId }) } as any;
+    const res = await listAcademicsRoute(req as any, ctx);
+
+    expect(res.status).toBe(200);
+    expect(academicServices.getOcAcademics).toHaveBeenCalledWith(ocId, { semester: 2 });
+  });
+
   it('returns 400 for invalid semester query', async () => {
     (ocChecks.parseParam as any).mockResolvedValueOnce({ ocId });
     const req = makeJsonRequest({

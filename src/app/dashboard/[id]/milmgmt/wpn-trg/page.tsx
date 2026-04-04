@@ -330,13 +330,12 @@ export default function WpnTrgPage() {
                                         );
                                     })}
                                 </div>
-                                {isActiveSemesterLocked ? (
-                                    <SemesterLockNotice
+                                <SemesterLockNotice
                                         activeSemester={activeSemester}
                                         currentSemester={currentSemester ?? 1}
                                         supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                                     />
-                                ) : null}
 
                                 <WeaponTrainingForm
                                     semesterNumber={semesterApiNumber}

@@ -339,13 +339,12 @@ export default function SportsGamesPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                {isActiveSemesterLocked ? (
-                                    <SemesterLockNotice
+                                <SemesterLockNotice
                                         activeSemester={activeSemester}
                                         currentSemester={currentSemester ?? 1}
                                         supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                                     />
-                                ) : null}
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {semesters.map((sem, idx) => {
                                         return (

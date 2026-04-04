@@ -58,7 +58,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     if (Array.isArray(body)) {
       const items = creditForExcellenceCreateSchema.array().parse(body);
       for (const item of items) {
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: item.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: item.semester, request: req, authContext: authCtx });
       }
       const rows = await createManyCreditForExcellence(ocId, items);
 
@@ -79,7 +79,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     }
 
     const dto = creditForExcellenceCreateSchema.parse(body);
-    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
     const row = await createCreditForExcellence(ocId, dto);
 
     await req.audit.log({

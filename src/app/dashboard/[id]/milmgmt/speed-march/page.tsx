@@ -347,13 +347,12 @@ export default function SpeedMarchPage() {
                             </CardHeader>
 
                             <CardContent>
-                                {isActiveSemesterLocked ? (
-                                    <SemesterLockNotice
+                                <SemesterLockNotice
                                         activeSemester={activeSemester}
                                         currentSemester={currentSemester}
                                         supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                                     />
-                                ) : null}
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {terms.map((term, idx) => {
                                         return (

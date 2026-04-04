@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
+import { mustBeAuthed, mustBeMedicalWriter, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam, medicalUpdateSchema } from '@/app/lib/oc-validators';
 import { getMedical, updateMedical, deleteMedical } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -32,8 +32,9 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await mustBeAuthed(req);
-        const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
+        const { ocId } = await parseParam({params}, OcIdParam);
+        const authCtx = await mustBeMedicalWriter(req, ocId);
+        await ensureOcExists(ocId);
         const { id } = await parseParam({params}, IdSchema);
         const dto = medicalUpdateSchema.parse(await req.json());
         const previous = await getMedical(ocId, id);
@@ -41,6 +42,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         await assertOcSemesterWriteAllowed({
             ocId,
             requestedSemester: dto.semester ?? previous.semester,
+            request: req,
             authContext: authCtx,
         });
         const row = await updateMedical(ocId, id, dto);
@@ -65,12 +67,13 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await mustBeAuthed(req);
-        const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
+        const { ocId } = await parseParam({params}, OcIdParam);
+        const authCtx = await mustBeMedicalWriter(req, ocId);
+        await ensureOcExists(ocId);
         const { id } = await parseParam({params}, IdSchema);
         const previous = await getMedical(ocId, id);
         if (!previous) throw new ApiError(404, 'Medical record not found', 'not_found');
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, request: req, authContext: authCtx });
         const row = await deleteMedical(ocId, id); if (!row) throw new ApiError(404, 'Medical record not found', 'not_found');
 
         await req.audit.log({

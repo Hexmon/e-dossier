@@ -108,11 +108,12 @@ export default function AcademicsPage() {
                                 <Link href={`/dashboard/manage-marks?courseId=${course}`}>Manage Marks</Link> to draft, submit, and verify updates.
                             </div>
                         ) : null}
-                        {!academicsWorkflowActive && isActiveSemesterLocked ? (
+                        {!academicsWorkflowActive ? (
                             <SemesterLockNotice
                                 activeSemester={activeSemester}
                                 currentSemester={currentSemester ?? 1}
                                 supportedSemesters={supportedSemesters}
+                                canOverrideLockedSemester={canEditLockedSemesters}
                             />
                         ) : null}
                         <AcademicsTabs

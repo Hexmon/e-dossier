@@ -18,6 +18,7 @@ import {
 } from '@/app/db/queries/interviewOc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { readSemesterSearchParam } from '@/lib/dossier-semester';
 
 function cleanText(value?: string | null) {
     if (value === undefined) return undefined;
@@ -176,7 +177,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
         const sp = new URL(req.url).searchParams;
         const qp = interviewOcQuerySchema.parse({
             templateId: sp.get('templateId') ?? undefined,
-            semester: sp.get('semester') ?? undefined,
+            semester: readSemesterSearchParam(sp),
         });
 
         const items = await buildInterviewItems(ocId, { templateId: qp.templateId, semester: qp.semester });
@@ -209,7 +210,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await ensureOcExists(ocId);
 
         const dto = interviewOcCreateSchema.parse(await req.json());
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
 
         await validateTemplateAndPayload({
             templateId: dto.templateId,

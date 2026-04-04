@@ -186,6 +186,18 @@ describe('GET /api/v1/oc/[ocId]/physical-training', () => {
     expect(workflowServices.assertWorkflowDirectWriteAllowed).not.toHaveBeenCalled();
     expect(ptOcQueries.listOcPtScores).toHaveBeenCalledWith(ocId, 1);
   });
+
+  it('accepts the legacy sem query key', async () => {
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `/api/v1/oc/${ocId}/physical-training?sem=1`,
+    });
+
+    const res = await GET(req as any, createRouteContext({ ocId }));
+
+    expect(res.status).toBe(200);
+    expect(ptOcQueries.listOcPtScores).toHaveBeenCalledWith(ocId, 1);
+  });
 });
 
 describe('DELETE /api/v1/oc/[ocId]/physical-training', () => {

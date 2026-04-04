@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/app/lib/http";
+import { makeJsonRequest } from "../utils/next";
+import { SEMESTER_OVERRIDE_REASON_HEADER } from "@/lib/semester-override";
 
 vi.mock("@/app/db/client", () => ({
   db: {
@@ -64,17 +66,78 @@ describe("assertOcSemesterWriteAllowed", () => {
     } satisfies Partial<ApiError>);
   });
 
-  it("allows admin bypass for locked semesters", async () => {
+  it("rejects locked semesters for admins", async () => {
     await expect(
       ocChecks.assertOcSemesterWriteAllowed({
         ocId: "oc-1",
         requestedSemester: 1,
         authContext: { roles: ["ADMIN"], claims: {} },
       })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: "semester_locked",
+      extras: {
+        currentSemester: 3,
+        requestedSemester: 1,
+      },
+    } satisfies Partial<ApiError>);
+  });
+
+  it("requires an override reason for super admin historical writes", async () => {
+    await expect(
+      ocChecks.assertOcSemesterWriteAllowed({
+        ocId: "oc-1",
+        requestedSemester: 1,
+        authContext: { userId: "sa-1", roles: ["SUPER_ADMIN"], claims: {} },
+        request: makeJsonRequest({
+          method: "PATCH",
+          path: "/api/v1/oc/oc-1/spr?semester=1",
+        }) as any,
+      })
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "override_reason_required",
+      extras: {
+        currentSemester: 3,
+        requestedSemester: 1,
+      },
+    } satisfies Partial<ApiError>);
+  });
+
+  it("allows super admin historical writes when an override reason is supplied", async () => {
+    const auditLog = vi.fn(async () => undefined);
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: "/api/v1/oc/oc-1/spr?semester=1",
+      headers: {
+        [SEMESTER_OVERRIDE_REASON_HEADER]: "Historical correction",
+      },
+    }) as any;
+    req.audit = { log: auditLog };
+
+    await expect(
+      ocChecks.assertOcSemesterWriteAllowed({
+        ocId: "oc-1",
+        requestedSemester: 1,
+        authContext: { userId: "sa-1", roles: ["SUPER_ADMIN"], claims: {} },
+        request: req,
+      })
     ).resolves.toMatchObject({
       currentSemester: 3,
       requestedSemester: 1,
+      overrideApplied: true,
+      overrideReason: "Historical correction",
     });
+    expect(auditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "OC.SEMESTER_OVERRIDE",
+        metadata: expect.objectContaining({
+          requestedSemester: 1,
+          currentSemester: 3,
+          overrideReason: "Historical correction",
+        }),
+      })
+    );
   });
 
   it("returns the route-specific supported semesters in the error payload", async () => {

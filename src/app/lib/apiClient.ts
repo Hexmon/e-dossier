@@ -10,6 +10,10 @@
 
 import z from "zod";
 import { isSwitchSessionInProgress } from "@/lib/auth/switch-session";
+import {
+    SEMESTER_OVERRIDE_REASON_HEADER,
+    type SemesterOverrideOptions,
+} from "@/lib/semester-override";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -66,6 +70,8 @@ export type ApiRequestOptions<B = unknown> = {
     body?: B;
     /** Extra headers (Content-Type auto-added for JSON) */
     headers?: Record<string, string>;
+    /** Optional semester override metadata for super-admin audited edits */
+    semesterOverride?: SemesterOverrideOptions;
     /** Abort support */
     signal?: AbortSignal;
     /** Skip CSRF token fetch/header (use for login/signup/logout) */
@@ -200,6 +206,7 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
         query,
         body,
         headers,
+        semesterOverride,
         signal,
         skipCsrf,
         skipAuth,
@@ -249,6 +256,14 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
             init.headers = { "Content-Type": "text/plain;charset=UTF-8", ...(init.headers ?? {}) };
             (init as any).body = String(body);
         }
+    }
+
+    const overrideReason = semesterOverride?.overrideReason?.trim();
+    if (overrideReason) {
+        init.headers = {
+            ...(init.headers ?? {}),
+            [SEMESTER_OVERRIDE_REASON_HEADER]: overrideReason,
+        };
     }
 
     const res = await fetch(url, init);
@@ -315,6 +330,29 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
             : null;
 
     if (env) {
+        const canRetryWithOverrideReason =
+            typeof window !== "undefined" &&
+            env.error === "override_reason_required" &&
+            ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) &&
+            !overrideReason;
+
+        if (canRetryWithOverrideReason) {
+            const reason = window.prompt(
+                "This semester is outside the current term. Enter an override reason to continue."
+            );
+            const normalizedReason = reason?.trim();
+
+            if (normalizedReason) {
+                return apiRequest<T, B>({
+                    ...opts,
+                    semesterOverride: {
+                        ...(semesterOverride ?? {}),
+                        overrideReason: normalizedReason,
+                    },
+                });
+            }
+        }
+
         throw new ApiClientError(
             env.message ?? "Request failed",
             env.status ?? res.status,

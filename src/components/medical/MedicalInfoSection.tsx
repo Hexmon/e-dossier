@@ -52,17 +52,20 @@ export default function MedicalInfoSection({
     semesters,
     currentSemester = 1,
     canEditLockedSemesters = false,
+    canWriteMedical = false,
 }: {
     selectedCadet: any;
     semesters: string[];
     currentSemester?: number | null;
     canEditLockedSemesters?: boolean;
+    canWriteMedical?: boolean;
 }) {
     const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
         currentSemester,
         supportedSemesters: [1, 2, 3, 4, 5, 6],
         canEditLockedSemesters,
     });
+    const isReadOnly = isActiveSemesterLocked || !canWriteMedical;
     const activeTab = activeSemester - 1;
     const [savedMedInfo, setSavedMedInfo] = useState<MedInfoRow[]>([]);
     const [loading, setLoading] = useState(false);
@@ -386,7 +389,7 @@ export default function MedicalInfoSection({
         };
     };
 
-    const canEditDetails = Boolean(getLatestDetailsForActiveTab()?.id);
+    const canEditDetails = canWriteMedical && Boolean(getLatestDetailsForActiveTab()?.id);
 
     return (
         <Card className="p-6 shadow-lg rounded-xl max-w-6xl mx-auto">
@@ -397,12 +400,16 @@ export default function MedicalInfoSection({
             </CardHeader>
 
             <CardContent>
-                {isActiveSemesterLocked ? (
-                    <SemesterLockNotice
-                        activeSemester={activeSemester}
-                        currentSemester={currentSemester ?? 1}
-                        supportedSemesters={supportedSemesters}
-                    />
+                <SemesterLockNotice
+                    activeSemester={activeSemester}
+                    currentSemester={currentSemester ?? 1}
+                    supportedSemesters={supportedSemesters}
+                    canOverrideLockedSemester={canEditLockedSemesters}
+                />
+                {!canWriteMedical ? (
+                    <div className="mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground">
+                        Medical updates are restricted to the commander-equivalent role for this platoon.
+                    </div>
                 ) : null}
                 <div className="flex justify-center mb-6 space-x-2">
                     {semesters.map((s, i) => {
@@ -426,7 +433,7 @@ export default function MedicalInfoSection({
                     loading={loading}
                     editingId={editingId}
                     editForm={editForm}
-                    readOnly={isActiveSemesterLocked}
+                    readOnly={isReadOnly}
                     onEdit={handleEdit}
                     onChange={handleChange}
                     onSave={handleSave}
@@ -446,7 +453,7 @@ export default function MedicalInfoSection({
                     defaultValues={getDefaultValues()}
                     ocId={selectedCadet?.ocId || ""}
                     onClear={handleClearForm}
-                    readOnly={isActiveSemesterLocked}
+                    readOnly={isReadOnly}
                 />
             </CardContent>
         </Card>

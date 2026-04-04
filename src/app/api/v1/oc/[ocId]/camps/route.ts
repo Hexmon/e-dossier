@@ -21,6 +21,7 @@ import { db } from '@/app/db/client';
 import { ocCamps, ocCampActivityScores, ocCampReviews, trainingCamps } from '@/app/db/schema/training/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { readSemesterSearchParam } from '@/lib/dossier-semester';
 
 async function assertOcCampOwnedByOc(ocCampId: string, ocId: string) {
     const [row] = await db
@@ -105,7 +106,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
         const sp = new URL(req.url).searchParams;
         const qp = ocCampQuerySchema.parse({
-            semester: sp.get('semester') ?? undefined,
+            semester: readSemesterSearchParam(sp),
             ocCampId: sp.get('ocCampId') ?? undefined,
             campName: sp.get('campName') ?? undefined,
             withReviews: sp.get('withReviews') ?? undefined,
@@ -157,6 +158,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await assertOcSemesterWriteAllowed({
             ocId,
             requestedSemester: await getTrainingCampSemester(trainingCampId),
+            request: req,
             authContext: authCtx,
         });
         const ocCamp = await upsertOcCamp(ocId, trainingCampId, { year: year });
@@ -222,7 +224,7 @@ async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{
             }
             requestedSemester = owned.semester;
         }
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester, request: req, authContext: authCtx });
 
         const ocCamp = await upsertOcCamp(ocId, dto.trainingCampId, { year: dto.year });
 
@@ -284,18 +286,18 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         let deletedMeta: Record<string, any> | null = null;
         if (ocCampId) {
             const owned = await assertOcCampOwnedByOc(ocCampId, ocId);
-            await assertOcSemesterWriteAllowed({ ocId, requestedSemester: owned.semester, authContext: authCtx });
+            await assertOcSemesterWriteAllowed({ ocId, requestedSemester: owned.semester, request: req, authContext: authCtx });
             await deleteOcCamp(ocCampId);
             deletedMeta = { target: 'camp', ocCampId };
         } else if (reviewId) {
             const parentCamp = await getParentCampIdFromReview(reviewId, ocId);
-            await assertOcSemesterWriteAllowed({ ocId, requestedSemester: parentCamp.semester, authContext: authCtx });
+            await assertOcSemesterWriteAllowed({ ocId, requestedSemester: parentCamp.semester, request: req, authContext: authCtx });
             await deleteOcCampReview(reviewId);
             await recomputeOcCampTotal(parentCamp.ocCampId);
             deletedMeta = { target: 'camp_review', reviewId, ocCampId: parentCamp.ocCampId };
         } else if (activityScoreId) {
             const parentCamp = await getParentCampIdFromActivityScore(activityScoreId, ocId);
-            await assertOcSemesterWriteAllowed({ ocId, requestedSemester: parentCamp.semester, authContext: authCtx });
+            await assertOcSemesterWriteAllowed({ ocId, requestedSemester: parentCamp.semester, request: req, authContext: authCtx });
             await deleteOcCampActivityScore(activityScoreId);
             await recomputeOcCampTotal(parentCamp.ocCampId);
             deletedMeta = { target: 'camp_activity', activityScoreId, ocCampId: parentCamp.ocCampId };

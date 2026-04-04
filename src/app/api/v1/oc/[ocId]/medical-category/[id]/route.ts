@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
+import { mustBeAuthed, mustBeMedicalWriter, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam, medCatUpdateSchema } from '@/app/lib/oc-validators';
 import { getMedCat, updateMedCat, deleteMedCat } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -31,14 +31,17 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 }
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
-  try { const adminCtx = await mustBeAdmin(req);
-    const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
+  try {
+    const { ocId } = await parseParam({params}, OcIdParam);
+    const adminCtx = await mustBeMedicalWriter(req, ocId);
+    await ensureOcExists(ocId);
     const { id } = await parseParam({params}, IdSchema);
     const dto = medCatUpdateSchema.parse(await req.json());
     const previous = await getMedCat(ocId, id); if (!previous) throw new ApiError(404,'Medical category not found','not_found');
     await assertOcSemesterWriteAllowed({
       ocId,
       requestedSemester: dto.semester ?? previous.semester,
+      request: req,
       authContext: adminCtx,
     });
     const row = await updateMedCat(ocId, id, dto); if (!row) throw new ApiError(404,'Medical category not found','not_found');
@@ -61,11 +64,13 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 }
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
-  try { const adminCtx = await mustBeAdmin(req);
-    const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
+  try {
+    const { ocId } = await parseParam({params}, OcIdParam);
+    const adminCtx = await mustBeMedicalWriter(req, ocId);
+    await ensureOcExists(ocId);
     const { id } = await parseParam({params}, IdSchema);
     const previous = await getMedCat(ocId, id); if (!previous) throw new ApiError(404,'Medical category not found','not_found');
-    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, authContext: adminCtx });
+    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, request: req, authContext: adminCtx });
     const row = await deleteMedCat(ocId, id); if (!row) throw new ApiError(404,'Medical category not found','not_found');
 
     await req.audit.log({

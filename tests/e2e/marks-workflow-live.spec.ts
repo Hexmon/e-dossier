@@ -13,19 +13,29 @@ const JWT_AUDIENCE = 'e-dossier-api';
 
 const MAKER_USER_ID = '8bf30fde-3cec-4b28-b2a8-1377da9d428a';
 const VERIFIER_USER_ID = '312d3216-7ff0-4663-b270-f181d8f29039';
+const COURSE_ID = '802f9be3-55b6-4d11-bd8a-03b7860b23f8';
 
-const ACADEMICS_TARGET = {
-  courseId: '802f9be3-55b6-4d11-bd8a-03b7860b23f8',
-  semester: 2,
-  subjectId: '3e1c31e3-41ec-4ac1-b65b-dccbc097689a',
-  selectionLabel: 'Course-100 - Course Course-100 / Semester 2 / CSIT-001 - COMPUTER SCIENCE & IT',
+type AcademicsTarget = {
+  courseId: string;
+  semester: number;
+  subjectId: string;
+  selectionLabel: string;
 };
 
-const PT_TARGET = {
-  courseId: '802f9be3-55b6-4d11-bd8a-03b7860b23f8',
-  semester: 2,
-  selectionLabel: 'Course-100 - Course Course-100 / Semester 2 / PT Bulk',
+type PtTarget = {
+  courseId: string;
+  semester: number;
+  selectionLabel: string;
 };
+
+type CourseOfferingSnapshot = Array<{
+  id: string;
+  deletedAt: string | null;
+}>;
+
+let ACADEMICS_TARGET: AcademicsTarget;
+let PT_TARGET: PtTarget;
+let originalHigherSemesterOfferings: CourseOfferingSnapshot = [];
 
 const ADMIN_SESSION = {
   userId: VERIFIER_USER_ID,
@@ -115,6 +125,129 @@ async function createAuthedContext(browser: Browser, session: typeof ADMIN_SESSI
     },
   ]);
   return context;
+}
+
+async function loadWorkflowTargets() {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const res = await client.query(
+      `
+        with current_semester as (
+          select coalesce(max(semester), 1) as semester
+          from course_offerings
+          where course_id = $1 and deleted_at is null
+        )
+        select
+          c.id as "courseId",
+          c.code as "courseCode",
+          c.title as "courseTitle",
+          cs.semester as semester,
+          s.id as "subjectId",
+          s.code as "subjectCode",
+          s.name as "subjectName"
+        from current_semester cs
+        join courses c on c.id = $1
+        join course_offerings co
+          on co.course_id = c.id
+         and co.semester = cs.semester
+         and co.deleted_at is null
+        join subjects s on s.id = co.subject_id
+        order by s.code asc
+        limit 1
+      `,
+      [COURSE_ID],
+    );
+
+    const row = res.rows[0] as
+      | {
+          courseId: string;
+          courseCode: string;
+          courseTitle: string;
+          semester: number;
+          subjectId: string;
+          subjectCode: string;
+          subjectName: string;
+        }
+      | undefined;
+
+    if (!row) {
+      throw new Error('Missing live workflow targets for the configured course.');
+    }
+
+    ACADEMICS_TARGET = {
+      courseId: row.courseId,
+      semester: Number(row.semester),
+      subjectId: row.subjectId,
+      selectionLabel: `${row.courseCode} - ${row.courseTitle} / Semester ${row.semester} / ${row.subjectCode} - ${row.subjectName}`,
+    };
+
+    PT_TARGET = {
+      courseId: row.courseId,
+      semester: Number(row.semester),
+      selectionLabel: `${row.courseCode} - ${row.courseTitle} / Semester ${row.semester} / PT Bulk`,
+    };
+  } finally {
+    await client.end();
+  }
+}
+
+async function snapshotHigherSemesterOfferings(courseId: string, semesterFloor: number) {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const res = await client.query(
+      `
+        select id, deleted_at as "deletedAt"
+        from course_offerings
+        where course_id = $1 and semester > $2
+        order by semester asc, id asc
+      `,
+      [courseId, semesterFloor],
+    );
+
+    return res.rows as CourseOfferingSnapshot;
+  } finally {
+    await client.end();
+  }
+}
+
+async function forceCourseCurrentSemester(courseId: string, semesterFloor: number) {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query(
+      `
+        update course_offerings
+        set deleted_at = now()
+        where course_id = $1 and semester > $2
+      `,
+      [courseId, semesterFloor],
+    );
+  } finally {
+    await client.end();
+  }
+}
+
+async function restoreCourseOfferings(snapshot: CourseOfferingSnapshot) {
+  if (!snapshot.length) return;
+
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    for (const row of snapshot) {
+      await client.query(
+        `
+          update course_offerings
+          set deleted_at = $2::timestamptz
+          where id = $1
+        `,
+        [row.id, row.deletedAt],
+      );
+    }
+  } finally {
+    await client.end();
+  }
 }
 
 async function clearWorkflowStateForTarget() {
@@ -284,7 +417,15 @@ async function fillChangedText(locator: ReturnType<Page['locator']>, preferredVa
 
 test.describe.serial('Marks workflow live browser flow', () => {
   test.beforeAll(async () => {
+    originalHigherSemesterOfferings = await snapshotHigherSemesterOfferings(COURSE_ID, 2);
+    await forceCourseCurrentSemester(COURSE_ID, 2);
+    await loadWorkflowTargets();
     await clearWorkflowStateForTarget();
+  });
+
+  test.afterAll(async () => {
+    await restoreCourseOfferings(originalHigherSemesterOfferings);
+    originalHigherSemesterOfferings = [];
   });
 
   test('settings page loads after workflow setup', async ({ browser }) => {

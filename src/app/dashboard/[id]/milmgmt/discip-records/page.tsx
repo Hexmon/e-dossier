@@ -296,13 +296,12 @@ export default function DisciplineRecordsPage() {
                                 <div className="flex justify-center items-center mb-4">
                                     <h2 className="text-xl font-semibold text-primary">DISCIPLINE RECORDS</h2>
                                 </div>
-                                {isActiveSemesterLocked ? (
-                                    <SemesterLockNotice
+                                <SemesterLockNotice
                                         activeSemester={activeSemester}
                                         currentSemester={currentSemester ?? 1}
                                         supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                                     />
-                                ) : null}
 
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {semesters.map((sem, index) => {

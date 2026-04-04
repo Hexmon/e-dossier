@@ -125,7 +125,7 @@ describe("derived semester route locks", () => {
     expect(res.status).toBe(403);
     expect(body.error).toBe("semester_locked");
     expect(ocChecks.assertOcSemesterWriteAllowed).toHaveBeenCalledWith(
-      expect.objectContaining({ requestedSemester: 1 })
+      expect.objectContaining({ requestedSemester: 1, request: req })
     );
   });
 
@@ -154,7 +154,7 @@ describe("derived semester route locks", () => {
     expect(res.status).toBe(403);
     expect(body.error).toBe("semester_locked");
     expect(ocChecks.assertOcSemesterWriteAllowed).toHaveBeenCalledWith(
-      expect.objectContaining({ requestedSemester: 2 })
+      expect.objectContaining({ requestedSemester: 2, request: req })
     );
   });
 
@@ -179,7 +179,7 @@ describe("derived semester route locks", () => {
     expect(res.status).toBe(403);
     expect(body.error).toBe("semester_locked");
     expect(ocChecks.assertOcSemesterWriteAllowed).toHaveBeenCalledWith(
-      expect.objectContaining({ requestedSemester: 1 })
+      expect.objectContaining({ requestedSemester: 1, request: req })
     );
     expect(ocQueries.deleteOcCampReview).not.toHaveBeenCalled();
   });

@@ -28,6 +28,7 @@ interface Props {
     semesters: string[];
     currentSemester?: number | null;
     canEditLockedSemesters?: boolean;
+    canWriteMedical?: boolean;
 }
 
 export default function MedicalCategorySection({
@@ -35,6 +36,7 @@ export default function MedicalCategorySection({
     semesters,
     currentSemester = 1,
     canEditLockedSemesters = false,
+    canWriteMedical = false,
 }: Props) {
     const { ocId = "" } = selectedCadet;
 
@@ -58,6 +60,7 @@ export default function MedicalCategorySection({
         supportedSemesters: [1, 2, 3, 4, 5, 6],
         canEditLockedSemesters,
     });
+    const isReadOnly = isActiveSemesterLocked || !canWriteMedical;
     const activeTab = activeSemester - 1;
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<MedCatRow | null>(null);
@@ -227,12 +230,16 @@ export default function MedicalCategorySection({
             </CardHeader>
 
             <CardContent>
-                {isActiveSemesterLocked ? (
-                    <SemesterLockNotice
-                        activeSemester={activeSemester}
-                        currentSemester={currentSemester ?? 1}
-                        supportedSemesters={supportedSemesters}
-                    />
+                <SemesterLockNotice
+                    activeSemester={activeSemester}
+                    currentSemester={currentSemester ?? 1}
+                    supportedSemesters={supportedSemesters}
+                    canOverrideLockedSemester={canEditLockedSemesters}
+                />
+                {!canWriteMedical ? (
+                    <div className="mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground">
+                        Medical updates are restricted to the commander-equivalent role for this platoon.
+                    </div>
                 ) : null}
                 <div className="flex justify-center mb-6 space-x-2">
                     {semesters.map((sem, idx) => {
@@ -253,7 +260,7 @@ export default function MedicalCategorySection({
                     rows={filtered}
                     editingId={editingId}
                     editForm={editForm}
-                    readOnly={isActiveSemesterLocked}
+                    readOnly={isReadOnly}
                     onEdit={startEdit}
                     onChange={changeEdit}
                     onSave={saveEdit}
@@ -267,7 +274,7 @@ export default function MedicalCategorySection({
                     defaultValues={getDefaultValues()}
                     ocId={ocId}
                     onClear={handleClearForm}
-                    readOnly={isActiveSemesterLocked}
+                    readOnly={isReadOnly}
                 />
 
                 <p className="text-xs text-muted-foreground mt-4 italic">
