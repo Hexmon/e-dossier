@@ -94,9 +94,19 @@ function LoginPageContent() {
     return Array.from(set);
   }, [appointments]);
 
-  const platoonCommanders = useMemo(() => {
+  const platoonScopedAppointments = useMemo(() => {
     return appointments.filter((a) => a.scopeType === "PLATOON");
   }, [appointments]);
+
+  const selectedAppointmentChoices = useMemo(
+    () => appointments.filter((a) => a.positionName === appointment),
+    [appointment, appointments]
+  );
+
+  const selectedAppointmentRequiresPlatoon = useMemo(
+    () => selectedAppointmentChoices.some((a) => a.scopeType === "PLATOON"),
+    [selectedAppointmentChoices]
+  );
 
   const hasAppointmentsData = useMemo(() => {
     return !loadingAppointments && !appointmentsFetchError && appointments.length > 0;
@@ -113,26 +123,29 @@ function LoginPageContent() {
     }
 
     try {
-      const isPlatoonCommander = data.appointment === "Platoon Commander";
-      const selectedPlatoonCommander = platoonCommanders.find(
-        (p) => p.platoonName === data.platoon
+      const selectedScopedAppointment = selectedAppointmentChoices.find(
+        (candidate) =>
+          candidate.scopeType === "PLATOON" && candidate.platoonName === data.platoon
       );
 
-      const selectedAppointment = isPlatoonCommander
-        ? selectedPlatoonCommander
-        : appointments.find((a) => a.positionName === data.appointment);
+      const selectedAppointment = selectedAppointmentRequiresPlatoon
+        ? selectedScopedAppointment
+        : appointments.find(
+            (candidate) =>
+              candidate.positionName === data.appointment && candidate.scopeType !== "PLATOON"
+          ) ?? appointments.find((candidate) => candidate.positionName === data.appointment);
 
       if (!selectedAppointment) {
         toast.error("Please select a valid appointment.");
         return;
       }
 
-      if (isPlatoonCommander && !selectedAppointment.scopeId) {
+      if (selectedAppointment.scopeType === "PLATOON" && !selectedAppointment.scopeId) {
         toast.error("Selected platoon mapping is invalid. Please reselect.");
         return;
       }
 
-      const payload = isPlatoonCommander
+      const payload = selectedAppointment.scopeType === "PLATOON"
         ? {
             appointmentId: selectedAppointment.id,
             platoonId: selectedAppointment.scopeId as string,
@@ -186,13 +199,13 @@ function LoginPageContent() {
 
   const handleAppointmentChange = (value: string) => {
     setValue("appointment", value);
-    if (value !== "Platoon Commander") {
-      const selectedAppointment = appointments.find(a => a.positionName === value);
-      if (selectedAppointment?.username) {
-        setValue("username", selectedAppointment.username);
-      } else {
-        setValue("username", "");
-      }
+    const matchingAppointments = appointments.filter((a) => a.positionName === value);
+    const requiresPlatoon = matchingAppointments.some((a) => a.scopeType === "PLATOON");
+
+    if (!requiresPlatoon) {
+      const selectedAppointment =
+        matchingAppointments.find((a) => a.scopeType !== "PLATOON") ?? matchingAppointments[0];
+      setValue("username", selectedAppointment?.username ?? "");
       setValue("platoon", "");
     } else {
       setValue("username", "");
@@ -203,7 +216,7 @@ function LoginPageContent() {
   const handlePlatoonChange = (value: string) => {
     setValue("platoon", value);
 
-    const selectedPlatoon = platoonCommanders.find(
+    const selectedPlatoon = platoonScopedAppointments.find(
       ({ platoonName }) => platoonName === value
     );
 
@@ -293,7 +306,7 @@ function LoginPageContent() {
                 </div>
 
                 {/* Platoon Dropdown */}
-                {(appointment ?? "") === "Platoon Commander" && (
+                {selectedAppointmentRequiresPlatoon && (
                   <div className="space-y-2">
                     <Label htmlFor="platoon">Platoon</Label>
                     <Select
@@ -305,11 +318,13 @@ function LoginPageContent() {
                         <SelectValue placeholder="Select your platoon" />
                       </SelectTrigger>
                       <SelectContent>
-                        {platoonCommanders.map(({ id, platoonName }) => (
+                        {platoonScopedAppointments
+                          .filter((candidate) => candidate.positionName === appointment)
+                          .map(({ id, platoonName }) => (
                           <SelectItem key={id} value={platoonName ?? ""}>
                             {platoonName ?? ""}
                           </SelectItem>
-                        ))}
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>

@@ -7,6 +7,8 @@ import { and, eq, ne} from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
+import { requireAdmin } from '@/app/lib/authz';
+import { assertCanManagePosition } from '@/app/lib/admin-boundaries';
 
 export const runtime = 'nodejs';
 
@@ -48,10 +50,11 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const adminCtx = await requireAuth(req);
+    const adminCtx = await requireAdmin(req);
 
     const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
+    await assertCanManagePosition(adminCtx, rawId);
 
     const body = await req.json();
     const parsed = positionUpdateSchema.safeParse(body);
@@ -115,10 +118,11 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const adminCtx = await requireAuth(req);
+    const adminCtx = await requireAdmin(req);
 
     const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
+    await assertCanManagePosition(adminCtx, rawId);
 
     const [row] = await db.delete(positions).where(eq(positions.id, rawId)).returning();
     if (!row) throw new ApiError(404, 'Position not found');

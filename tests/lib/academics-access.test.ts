@@ -8,9 +8,12 @@ describe("canEditAcademics", () => {
     ).toBe(true);
   });
 
-  it("allows custom platoon commander key ending with plcdr", () => {
+  it("allows the mapped commander-equivalent capability", () => {
     expect(
-      canEditAcademics({ roles: ["arjunplcdr"], position: "arjunplcdr" })
+      canEditAcademics({
+        roles: ["PLATOON_COMMANDER_EQUIVALENT"],
+        position: "arjunplcdr",
+      })
     ).toBe(true);
   });
 
@@ -24,4 +27,3 @@ describe("canEditAcademics", () => {
     expect(canEditAcademics({ roles: ["INSTRUCTOR"], position: "INSTRUCTOR" })).toBe(false);
   });
 });
-

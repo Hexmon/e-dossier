@@ -159,8 +159,30 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/admin/module-access/route.ts'],
   },
   {
+    testFile: 'tests/api/admin.hierarchy.nodes.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/hierarchy/nodes/route.ts',
+      'src/app/api/v1/admin/hierarchy/nodes/[id]/route.ts',
+    ],
+  },
+  {
+    testFile: 'tests/api/admin.hierarchy.functional-role-mappings.test.ts',
+    routeFiles: ['src/app/api/v1/admin/hierarchy/functional-role-mappings/route.ts'],
+  },
+  {
+    testFile: 'tests/api/admin.delegations.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/delegations/route.ts',
+      'src/app/api/v1/admin/delegations/[id]/terminate/route.ts',
+    ],
+  },
+  {
     testFile: 'tests/api/me.workflow-notifications.test.ts',
     routeFiles: ['src/app/api/v1/me/workflow-notifications/route.ts'],
+  },
+  {
+    testFile: 'tests/api/me.switchable-identities.test.ts',
+    routeFiles: ['src/app/api/v1/me/switchable-identities/route.ts'],
   },
   {
     testFile: 'tests/api/reports.module-access.test.ts',

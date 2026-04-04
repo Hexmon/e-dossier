@@ -1,3 +1,5 @@
+import { COMMANDER_EQUIVALENT_CAPABILITY } from "@/lib/functional-role-capabilities";
+
 type PlatoonCommanderAccessInput = {
   roles?: Array<string | null | undefined> | null;
   position?: string | null;
@@ -24,12 +26,13 @@ function collectTokens(input: PlatoonCommanderAccessInput): string[] {
 
 export function isPlatoonCommanderToken(token: string): boolean {
   if (!token) return false;
-  if (token === "PLATOON_COMMANDER" || token === "PLATOON_CDR") return true;
-  if (token === "PL_CDR" || token === "PLCDR") return true;
-
-  const compact = token.replace(/[^A-Z0-9]/g, "");
-  if (compact.includes("PLATOONCOMMANDER")) return true;
-  return compact.endsWith("PLCDR");
+  return (
+    token === COMMANDER_EQUIVALENT_CAPABILITY ||
+    token === "PLATOON_COMMANDER" ||
+    token === "PLATOON_CDR" ||
+    token === "PL_CDR" ||
+    token === "PLCDR"
+  );
 }
 
 export function hasPlatoonCommanderRole(input: PlatoonCommanderAccessInput): boolean {

@@ -41,7 +41,7 @@ const ADMIN_SESSION = {
 
 const MAKER_SESSION = {
   userId: MAKER_USER_ID,
-  roles: [] as string[],
+  roles: ['PLATOON_COMMANDER_EQUIVALENT'],
   apt: {
     id: 'c3e284e7-84f0-473f-9062-f4d67a393c14',
     position: 'arjunplcdr',

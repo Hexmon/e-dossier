@@ -6,6 +6,7 @@ import { platoons } from "@/app/db/schema/auth/platoons";
 import { positions } from "@/app/db/schema/auth/positions";
 import { users } from "@/app/db/schema/auth/users";
 import { ApiError } from "@/app/lib/http";
+import { resolveCommanderEquivalentMapping } from "@/app/db/queries/functional-role-mappings";
 
 export type PlatoonCommanderHistoryPlatoon = {
   id: string;
@@ -76,6 +77,11 @@ export async function getPlatoonCommanderHistoryByIdOrKey(idOrKey: string): Prom
   }
 
   const now = new Date();
+  const mapping = await resolveCommanderEquivalentMapping();
+
+  if (!mapping?.positionId) {
+    return { platoon, items: [] };
+  }
 
   const rows = await db
     .select({
@@ -93,7 +99,7 @@ export async function getPlatoonCommanderHistoryByIdOrKey(idOrKey: string): Prom
     .innerJoin(users, eq(users.id, appointments.userId))
     .where(
       and(
-        eq(positions.key, "PLATOON_COMMANDER"),
+        eq(appointments.positionId, mapping.positionId),
         eq(appointments.scopeType, "PLATOON"),
         eq(appointments.scopeId, platoon.id),
         isNull(appointments.deletedAt),

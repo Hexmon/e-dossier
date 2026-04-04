@@ -10,6 +10,7 @@ import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq, and, isNull } from 'drizzle-orm';
 import { SCOPE } from '@/constants/app.constants';
 import { setRequestTenant } from '@/lib/audit-log';
+import { hasPlatoonCommanderRole } from '@/lib/platoon-commander-access';
 
 /**
  * Authorization context from JWT
@@ -158,8 +159,14 @@ export async function authorizeOcAccess(
     return context;
   }
   
-  // Check if user is platoon commander for this OC's platoon
-  if (oc.platoonId && hasPosition(context, 'PLATOON_COMMANDER')) {
+  // Check if user holds commander-equivalent authority for this platoon.
+  if (
+    oc.platoonId &&
+    hasPlatoonCommanderRole({
+      roles: context.roles,
+      position: context.apt?.position ?? null,
+    })
+  ) {
     if (context.apt?.scope.type === SCOPE.PLATOON && context.apt?.scope.id === oc.platoonId) {
       return context;
     }

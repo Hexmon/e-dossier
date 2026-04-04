@@ -232,6 +232,13 @@
       "when": 1775284200000,
       "tag": "0032_module_access_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1775287800000,
+      "tag": "0033_hierarchy_functional_roles_and_delegations",
+      "breakpoints": true
     }
   ]
 }

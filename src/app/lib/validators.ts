@@ -90,6 +90,7 @@ export const appointmentCreateSchema = z.object({
 });
 
 export const appointmentUpdateSchema = z.object({
+  userId: z.string().uuid().optional(),
   assignment: z.enum(['PRIMARY', 'OFFICIATING']).optional(),
   scopeType: z.enum(['GLOBAL', 'PLATOON']).optional(),
   scopeId: z.string().uuid().nullable().optional(),

@@ -23,8 +23,9 @@ describe("switch-user helpers", () => {
 
   it("filterSavedAccounts excludes the active account", () => {
     const accounts = [
-      { userId: "user-a", appointmentId: "apt-a", roleKey: "ADMIN" },
-      { userId: "user-b", appointmentId: "apt-b", roleKey: "SUPER_ADMIN" },
+      { userId: "user-a", appointmentId: "apt-a", roleKey: "ADMIN", username: "admin_a" },
+      { userId: "user-a", appointmentId: "apt-b", roleKey: "TRAINING_OFFICER", username: "admin_a" },
+      { userId: "user-b", appointmentId: "apt-d", roleKey: "SUPER_ADMIN" },
       { userId: "user-c", appointmentId: "apt-c", roleKey: "PLATOON_COMMANDER" },
     ];
 
@@ -34,10 +35,10 @@ describe("switch-user helpers", () => {
       roleKey: "ADMIN",
     });
 
-    expect(result.map((item) => item.userId)).toEqual(["user-b", "user-c"]);
+    expect(result.map((item) => item.appointmentId)).toEqual(["apt-b", "apt-d", "apt-c"]);
   });
 
-  it("filterSwitchableAppointments excludes same role and active identity", () => {
+  it("filterSwitchableAppointments excludes only the active authority", () => {
     const appointments = [
       {
         id: "apt-active",
@@ -47,11 +48,11 @@ describe("switch-user helpers", () => {
         positionName: "Admin",
       },
       {
-        id: "apt-other-admin",
-        userId: "user-other-admin",
-        username: "admin_2",
-        positionKey: "ADMIN",
-        positionName: "Admin",
+        id: "apt-same-user-other-role",
+        userId: "user-active",
+        username: "admin_user",
+        positionKey: "TRAINING_OFFICER",
+        positionName: "Training Officer",
       },
       {
         id: "apt-super",
@@ -69,10 +70,10 @@ describe("switch-user helpers", () => {
       username: "admin_user",
     });
 
-    expect(result.map((item) => item.id)).toEqual(["apt-other-admin", "apt-super"]);
+    expect(result.map((item) => item.id)).toEqual(["apt-same-user-other-role", "apt-super"]);
   });
 
-  it("isSameIdentity detects same account after relogin", () => {
+  it("isSameIdentity distinguishes multiple authorities for the same user", () => {
     const previous = {
       userId: "user-123",
       appointmentId: "apt-123",
@@ -83,8 +84,28 @@ describe("switch-user helpers", () => {
     const next = {
       userId: "user-123",
       appointmentId: "apt-999",
-      roleKey: "SUPER_ADMIN",
-      username: "other_name",
+      roleKey: "TRAINING_OFFICER",
+      username: "admin_user",
+    };
+
+    expect(isSameIdentity(previous, next)).toBe(false);
+  });
+
+  it("isSameIdentity matches the same delegation authority", () => {
+    const previous = {
+      userId: "user-123",
+      appointmentId: "apt-123",
+      delegationId: "del-123",
+      roleKey: "TRAINING_OFFICER",
+      username: "delegate_user",
+    };
+
+    const next = {
+      userId: "user-123",
+      appointmentId: "apt-999",
+      delegationId: "del-123",
+      roleKey: "TRAINING_OFFICER",
+      username: "delegate_user",
     };
 
     expect(isSameIdentity(previous, next)).toBe(true);

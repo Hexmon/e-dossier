@@ -10,6 +10,8 @@ import { and, eq, sql, isNull } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
+import { requireAdmin } from '@/app/lib/authz';
+import { assertCanAssignAppointment } from '@/app/lib/admin-boundaries';
 
 export const runtime = 'nodejs';
 
@@ -78,7 +80,7 @@ async function GETHandler(req: AuditNextRequest) {
 
 async function POSTHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await requireAuth(req);
+        const adminCtx = await requireAdmin(req);
 
         const body = await req.json();
         const parsed = appointmentCreateSchema.safeParse(body);
@@ -93,6 +95,7 @@ async function POSTHandler(req: AuditNextRequest) {
             positionId = pos.id;
         }
         if (!positionId) throw new ApiError(400, 'positionId or positionKey is required');
+        await assertCanAssignAppointment(adminCtx, { positionId, userId: p.userId });
 
         // scope rules
         if (p.scopeType === 'PLATOON') {

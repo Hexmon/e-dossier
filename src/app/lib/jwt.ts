@@ -58,6 +58,11 @@ export type AptClaim = {
   scope: { type: string; id: string | null };      // 'GLOBAL'|'PLATOON'
   valid_from: string | null;                       // ISO
   valid_to: string | null;                         // ISO
+  auth_kind?: 'APPOINTMENT' | 'DELEGATION';
+  delegation_id?: string | null;
+  source_appointment_id?: string | null;
+  grantor_user_id?: string | null;
+  grantor_username?: string | null;
 };
 
 export async function signAccessJWT(opts: {
