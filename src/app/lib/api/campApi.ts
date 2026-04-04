@@ -106,18 +106,16 @@ export interface UpdateOcCampPayload extends CreateOcCampPayload {
  * Get all training camps with optional filters
  */
 export const getAllTrainingCamps = async (params?: {
-    courseId?: string;
     includeActivities?: boolean;
     includeReviews?: boolean;
     includeDeleted?: boolean;
 }): Promise<{ items: TrainingCamp[]; count: number }> => {
-    const { courseId, includeActivities = true, includeReviews = true, includeDeleted = false } = params || {};
+    const { includeActivities = true, includeReviews = true, includeDeleted = false } = params || {};
 
     return api.get<{ items: TrainingCamp[]; count: number }>(
         endpoints.admin.trainingCamps.list,
         {
             query: {
-                ...(courseId ? { courseId } : {}),
                 includeActivities,
                 includeReviews,
                 includeDeleted,

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../_checks';
 import {
     OcIdParam,
     ocCampQuerySchema,
@@ -18,7 +18,7 @@ import {
     recomputeOcCampTotal,
 } from '@/app/db/queries/oc';
 import { db } from '@/app/db/client';
-import { ocCamps, ocCampActivityScores, ocCampReviews } from '@/app/db/schema/training/oc';
+import { ocCamps, ocCampActivityScores, ocCampReviews, trainingCamps } from '@/app/db/schema/training/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -28,8 +28,10 @@ async function assertOcCampOwnedByOc(ocCampId: string, ocId: string) {
             id: ocCamps.id,
             ocId: ocCamps.ocId,
             trainingCampId: ocCamps.trainingCampId,
+            semester: trainingCamps.semester,
         })
         .from(ocCamps)
+        .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
         .where(eq(ocCamps.id, ocCampId))
         .limit(1);
 
@@ -42,14 +44,16 @@ async function getParentCampIdFromReview(reviewId: string, ocId: string) {
         .select({
             ocCampId: ocCampReviews.ocCampId,
             ownerOcId: ocCamps.ocId,
+            semester: trainingCamps.semester,
         })
         .from(ocCampReviews)
         .innerJoin(ocCamps, eq(ocCamps.id, ocCampReviews.ocCampId))
+        .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
         .where(eq(ocCampReviews.id, reviewId))
         .limit(1);
 
     if (!row || row.ownerOcId !== ocId) throw new ApiError(404, 'Camp review not found', 'not_found');
-    return row.ocCampId;
+    return { ocCampId: row.ocCampId, semester: row.semester };
 }
 
 async function getParentCampIdFromActivityScore(activityScoreId: string, ocId: string) {
@@ -57,16 +61,32 @@ async function getParentCampIdFromActivityScore(activityScoreId: string, ocId: s
         .select({
             ocCampId: ocCampActivityScores.ocCampId,
             ownerOcId: ocCamps.ocId,
+            semester: trainingCamps.semester,
         })
         .from(ocCampActivityScores)
         .innerJoin(ocCamps, eq(ocCamps.id, ocCampActivityScores.ocCampId))
+        .innerJoin(trainingCamps, eq(trainingCamps.id, ocCamps.trainingCampId))
         .where(eq(ocCampActivityScores.id, activityScoreId))
         .limit(1);
 
     if (!row || row.ownerOcId !== ocId) {
         throw new ApiError(404, 'Camp activity score not found', 'not_found');
     }
-    return row.ocCampId;
+    return { ocCampId: row.ocCampId, semester: row.semester };
+}
+
+async function getTrainingCampSemester(trainingCampId: string) {
+    const [row] = await db
+        .select({ semester: trainingCamps.semester })
+        .from(trainingCamps)
+        .where(eq(trainingCamps.id, trainingCampId))
+        .limit(1);
+
+    if (!row) {
+        throw new ApiError(404, 'Training camp not found', 'not_found');
+    }
+
+    return row.semester;
 }
 
 async function loadAllCamps(ocId: string) {
@@ -134,6 +154,11 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await ensureOcExists(ocId);
         const dto = ocCampUpsertSchema.parse(await req.json());
         const { trainingCampId, year, reviews, activities } = dto || {}
+        await assertOcSemesterWriteAllowed({
+            ocId,
+            requestedSemester: await getTrainingCampSemester(trainingCampId),
+            authContext: authCtx,
+        });
         const ocCamp = await upsertOcCamp(ocId, trainingCampId, { year: year });
 
         if (reviews?.length) {
@@ -188,13 +213,16 @@ async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{
         await ensureOcExists(ocId);
 
         const dto = ocCampUpdateSchema.parse(await req.json());
+        let requestedSemester = await getTrainingCampSemester(dto.trainingCampId);
 
         if (dto.ocCampId) {
             const owned = await assertOcCampOwnedByOc(dto.ocCampId, ocId);
             if (owned.trainingCampId !== dto.trainingCampId) {
                 throw new ApiError(400, 'trainingCampId must match the camp being updated', 'bad_request');
             }
+            requestedSemester = owned.semester;
         }
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester, authContext: authCtx });
 
         const ocCamp = await upsertOcCamp(ocId, dto.trainingCampId, { year: dto.year });
 
@@ -255,19 +283,22 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
 
         let deletedMeta: Record<string, any> | null = null;
         if (ocCampId) {
-            await assertOcCampOwnedByOc(ocCampId, ocId);
+            const owned = await assertOcCampOwnedByOc(ocCampId, ocId);
+            await assertOcSemesterWriteAllowed({ ocId, requestedSemester: owned.semester, authContext: authCtx });
             await deleteOcCamp(ocCampId);
             deletedMeta = { target: 'camp', ocCampId };
         } else if (reviewId) {
-            const parentCampId = await getParentCampIdFromReview(reviewId, ocId);
+            const parentCamp = await getParentCampIdFromReview(reviewId, ocId);
+            await assertOcSemesterWriteAllowed({ ocId, requestedSemester: parentCamp.semester, authContext: authCtx });
             await deleteOcCampReview(reviewId);
-            await recomputeOcCampTotal(parentCampId);
-            deletedMeta = { target: 'camp_review', reviewId, ocCampId: parentCampId };
+            await recomputeOcCampTotal(parentCamp.ocCampId);
+            deletedMeta = { target: 'camp_review', reviewId, ocCampId: parentCamp.ocCampId };
         } else if (activityScoreId) {
-            const parentCampId = await getParentCampIdFromActivityScore(activityScoreId, ocId);
+            const parentCamp = await getParentCampIdFromActivityScore(activityScoreId, ocId);
+            await assertOcSemesterWriteAllowed({ ocId, requestedSemester: parentCamp.semester, authContext: authCtx });
             await deleteOcCampActivityScore(activityScoreId);
-            await recomputeOcCampTotal(parentCampId);
-            deletedMeta = { target: 'camp_activity', activityScoreId, ocCampId: parentCampId };
+            await recomputeOcCampTotal(parentCamp.ocCampId);
+            deletedMeta = { target: 'camp_activity', activityScoreId, ocCampId: parentCamp.ocCampId };
         } else {
             throw new ApiError(400, 'Specify ocCampId, reviewId or activityScoreId', 'bad_request');
         }

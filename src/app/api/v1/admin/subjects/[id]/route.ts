@@ -43,7 +43,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const body = subjectUpdateSchema.parse(await req.json());
 
         const patch: any = {};
-        for (const k of ['code', 'name', 'branch', 'noOfPeriods', 'noOfPhaseTests', 'hasTheory', 'hasPractical', 'defaultTheoryCredits', 'defaultPracticalCredits', 'description'] as const) {
+        for (const k of ['code', 'name', 'branch', 'noOfPeriods', 'hasTheory', 'hasPractical', 'defaultTheoryCredits', 'defaultPracticalCredits', 'description'] as const) {
             if (k in body) (patch as any)[k] = (body as any)[k];
         }
 

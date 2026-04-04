@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 
@@ -25,11 +25,15 @@ import { Shield, ChevronDown } from "lucide-react";
 
 import { updateOcLeaveRecord } from "@/app/lib/api/leaveApi";
 import { toast } from "sonner";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useOcDetails } from "@/hooks/useOcDetails";
 import Link from "next/link";
 import { clearLeaveForm, saveLeaveForm } from "@/store/slices/leaveRecordsSlice";
 import { Cadet } from "@/types/cadet";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 export default function LeavePage() {
     const { id } = useParams();
@@ -43,6 +47,7 @@ export default function LeavePage() {
 
     // Load cadet data via hook (no redux)
     const { cadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
 
     const {
         name = "",
@@ -51,6 +56,11 @@ export default function LeavePage() {
         ocId: cadetOcId = ocId,
         course = "",
     } = cadet ?? {};
+    const currentSemester = cadet?.currentSemester ?? 1;
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
 
     const selectedCadet = {
         name,
@@ -58,6 +68,7 @@ export default function LeavePage() {
         ocNumber,
         ocId: cadetOcId,
         course,
+        currentSemester,
     };
 
     // Initialize form with saved data or defaults
@@ -110,6 +121,8 @@ export default function LeavePage() {
                         selectedCadet={selectedCadet}
                         ocId={ocId}
                         onClearForm={handleClearForm}
+                        currentSemester={currentSemester}
+                        canEditLockedSemesters={canEditLockedSemesters}
                     />
                 </FormProvider>
             </main>
@@ -124,30 +137,27 @@ export default function LeavePage() {
 function InnerLeavePage({
     selectedCadet,
     ocId,
-    onClearForm
+    onClearForm,
+    currentSemester,
+    canEditLockedSemesters,
 }: {
     selectedCadet: Cadet;
     ocId: string;
     onClearForm: () => void;
+    currentSemester?: number | null;
+    canEditLockedSemesters?: boolean;
 }) {
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
     const dispatch = useDispatch();
     const { control, register, setValue, handleSubmit, getValues, watch, reset } = useFormContext<LeaveFormValues>();
     const { fields, append, remove } = useFieldArray({ control, name: "leaveRows" });
 
     const { submitLeave, fetchLeave, deleteLeave, deleteSavedLeave } = useLeaveActions(selectedCadet);
-
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - 1;
-        if (idx < 0 || idx >= semesters.length) return 0;
-        return idx;
-    }, [semParam]);
-    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - 1;
     const [savedData, setSavedData] = useState<LeaveRow[][]>(semesters.map(() => []));
 
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
@@ -155,21 +165,16 @@ function InnerLeavePage({
     const [refreshFlag, setRefreshFlag] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + 1));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-
     const handleSemesterChange = (index: number) => {
-        setActiveTab(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + 1);
         cancelEdit();
     };
+
+    useEffect(() => {
+        if (isActiveSemesterLocked) {
+            cancelEdit();
+        }
+    }, [isActiveSemesterLocked]);
 
     // Auto-save to Redux on form changes
     useEffect(() => {
@@ -328,6 +333,13 @@ function InnerLeavePage({
                     </CardHeader>
 
                     <CardContent>
+                        {isActiveSemesterLocked ? (
+                            <SemesterLockNotice
+                                activeSemester={activeSemester}
+                                currentSemester={currentSemester ?? 1}
+                                supportedSemesters={supportedSemesters}
+                            />
+                        ) : null}
                         {/* Term Tabs */}
                         <div className="flex justify-center mb-6 space-x-2">
                             {semesters.map((term, idx) => {
@@ -359,6 +371,7 @@ function InnerLeavePage({
                             cancelInlineEdit={cancelEdit}
                             onSubmit={handleNewSubmit}
                             onReset={onClearForm}
+                            readOnly={isActiveSemesterLocked}
                         />
 
                         {/* Auto-save indicator */}

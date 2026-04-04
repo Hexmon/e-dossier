@@ -6,6 +6,7 @@ import { positions } from '../schema/auth/positions';
 import { authzPolicyState, permissionFieldRules } from '../schema/auth/rbac-extensions';
 import { API_ACTION_MAP, PAGE_ACTION_MAP } from '@/app/lib/acx/action-map';
 import { effectivePermissionsCache } from '@/app/lib/acx/cache';
+import { hasPlatoonCommanderRole } from '@/lib/platoon-commander-access';
 
 type AptClaim = {
   id?: string;
@@ -74,6 +75,24 @@ const ADMIN_BASELINE_ACTIONS = new Set<string>([
 ]);
 
 const WRITE_ACTION_SUFFIX = new Set([':create', ':update', ':delete']);
+const DEFAULT_PLATOON_COMMANDER_MARKS_ACTIONS = new Set<string>([
+  'page:dashboard:manage-marks:view',
+  'page:dashboard:manage-pt-marks:view',
+  'page:dashboard:milmgmt:academics:view',
+  'page:dashboard:milmgmt:physical-training:view',
+  'admin:courses:read',
+  'admin:courses:offerings:read',
+  'admin:physical-training:templates:read',
+  'oc:read',
+  'platoons:read',
+  'oc:academics:read',
+  'oc:academics:bulk:read',
+  'oc:academics:bulk:create',
+  'oc:physical-training:read',
+  'oc:physical-training:motivation-awards:read',
+  'oc:physical-training:bulk:read',
+  'oc:physical-training:bulk:create',
+]);
 
 function toUpperRole(role: string): string {
   return role.trim().replace(/[-\s]+/g, '_').toUpperCase();
@@ -302,6 +321,21 @@ export function getAdminBaselineActions(): string[] {
   return Array.from(ADMIN_BASELINE_ACTIONS).sort();
 }
 
+export function applyPlatoonCommanderMarksEntryOverrides(
+  normalizedRoles: string[],
+  permissionSet: Set<string>
+): { isPlatoonCommander: boolean } {
+  const isPlatoonCommander = hasPlatoonCommanderRole({ roles: normalizedRoles });
+
+  if (isPlatoonCommander) {
+    for (const action of DEFAULT_PLATOON_COMMANDER_MARKS_ACTIONS) {
+      permissionSet.add(action);
+    }
+  }
+
+  return { isPlatoonCommander };
+}
+
 export async function getEffectivePermissionBundle(input: PermissionInput): Promise<EffectivePermissionBundle> {
   const normalizedRoles = normalizeRoleSet(input.roles);
   const appointment = await resolveAppointmentContext(input.userId, input.apt);
@@ -319,6 +353,7 @@ export async function getEffectivePermissionBundle(input: PermissionInput): Prom
 
   const permissionSet = new Set<string>([...positionPerms, ...rolePerms]);
   const { isAdmin, isSuperAdmin } = applyAdminAndSuperAdminOverrides(uniqueRoles, permissionSet);
+  applyPlatoonCommanderMarksEntryOverrides(uniqueRoles, permissionSet);
 
   const sortedPermissions = Array.from(permissionSet).sort();
   const fieldRulesByAction = await loadFieldRules(

@@ -24,6 +24,7 @@ interface Props {
     defaultValues: MedicalInfoForm;
     ocId: string;
     onClear: () => void;
+    readOnly?: boolean;
 }
 
 const parseFloatValue = (value: string) => {
@@ -51,7 +52,8 @@ export default function MedicalInfoFormComponent({
     onDetailsSave,
     defaultValues,
     ocId,
-    onClear
+    onClear,
+    readOnly = false,
 }: Props) {
     const dispatch = useDispatch();
 
@@ -145,13 +147,14 @@ export default function MedicalInfoFormComponent({
                                                     type={f === "date" ? "date" : "number"}
                                                     step={f === "date" ? undefined : "any"}
                                                     inputMode={f === "date" ? undefined : "decimal"}
+                                                    disabled={readOnly}
                                                 />
                                             </td>
                                         );
                                     })}
 
                                     <td className="border p-2 text-center">
-                                        <Button type="button" variant="destructive" size="sm" onClick={() => remove(i)}>
+                                        <Button type="button" variant="destructive" size="sm" onClick={() => remove(i)} disabled={readOnly}>
                                             Remove
                                         </Button>
                                     </td>
@@ -172,7 +175,7 @@ export default function MedicalInfoFormComponent({
                     overw: "",
                     bmi: "",
                     chest: "",
-                })}>
+                })} disabled={readOnly}>
                     + Add Row
                 </Button>
 
@@ -181,13 +184,14 @@ export default function MedicalInfoFormComponent({
                     className="hover:bg-destructive hover:text-primary-foreground"
                     type="button"
                     onClick={onClear}
+                    disabled={readOnly}
                 >
                     Clear Form
                 </Button>
             </div>
 
             <div className="flex flex-col items-center mt-4 gap-2">
-                <Button type="submit" className="w-64 bg-primary">
+                <Button type="submit" className="w-64 bg-primary" disabled={readOnly}>
                     Submit Medical Info
                 </Button>
 
@@ -246,7 +250,7 @@ export default function MedicalInfoFormComponent({
                         variant="outline"
                         size="sm"
                         onClick={onDetailsEdit}
-                        disabled={!canEditDetails}
+                        disabled={readOnly || !canEditDetails}
                     >
                         Edit Details
                     </Button>

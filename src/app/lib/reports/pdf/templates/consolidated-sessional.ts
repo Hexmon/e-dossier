@@ -1,18 +1,4 @@
-import type {
-  ConsolidatedPracticalRow,
-  ConsolidatedSessionalPreview,
-  ConsolidatedSessionalSection,
-  ConsolidatedTheoryRow,
-} from '@/types/reports';
-import { PRACTICAL_COMPONENTS, PRACTICAL_TOTAL_MAX_MARKS } from '@/lib/academics-practical';
-import {
-  computeTheorySessionalMax,
-  computeTheoryTotalMax,
-  normalizePhaseTestCount,
-  PHASE_TEST_MAX_MARKS,
-  THEORY_FINAL_MAX_MARKS,
-  THEORY_TUTORIAL_MAX_MARKS,
-} from '@/lib/academics-theory';
+import type { ConsolidatedPracticalRow, ConsolidatedSessionalPreview, ConsolidatedTheoryRow } from '@/types/reports';
 
 type ReportRenderMeta = {
   versionId: string;
@@ -231,9 +217,8 @@ function drawTheoryTableOnPage(
   startY: number,
   tableW: number,
   rows: ConsolidatedTheoryRow[],
-  phaseTestCount: number
+  showPhaseTest2: boolean
 ) {
-  const showPhaseTest2 = phaseTestCount >= 2;
   const widths = showPhaseTest2
     ? distributeWidths(tableW, [6, 9, 28, 8, 9, 9, 9, 9, 9, 9, 10])
     : distributeWidths(tableW, [6, 9, 31, 8, 10, 10, 10, 10, 10, 12]);
@@ -329,17 +314,17 @@ function drawTheoryTableOnPage(
           ocName: 'No records found',
           branch: '-',
           phaseTest1Obtained: null,
-          phaseTest1Max: PHASE_TEST_MAX_MARKS,
+          phaseTest1Max: 20,
           phaseTest2Obtained: null,
-          phaseTest2Max: showPhaseTest2 ? PHASE_TEST_MAX_MARKS : 0,
+          phaseTest2Max: 20,
           tutorialObtained: null,
-          tutorialMax: THEORY_TUTORIAL_MAX_MARKS,
+          tutorialMax: 10,
           sessionalObtained: null,
-          sessionalMax: computeTheorySessionalMax(phaseTestCount),
+          sessionalMax: 50,
           finalObtained: null,
-          finalMax: THEORY_FINAL_MAX_MARKS,
+          finalMax: 50,
           totalObtained: null,
-          totalMax: computeTheoryTotalMax(phaseTestCount),
+          totalMax: 100,
           letterGrade: null,
         },
       ];
@@ -381,7 +366,7 @@ function drawPracticalTableOnPage(
   tableW: number,
   rows: ConsolidatedPracticalRow[]
 ) {
-  const widths = distributeWidths(tableW, [7, 10, 28, 11, 11, 12, 10, 10, 11]);
+  const widths = distributeWidths(tableW, [7, 10, 40, 9, 14, 14]);
   const xs = boundaryXs(tableX, widths);
 
   const header1H = 20;
@@ -397,7 +382,7 @@ function drawPracticalTableOnPage(
     drawLine(doc, xs[i]!, startY, xs[i]!, tableBottom);
   }
 
-  drawLine(doc, xs[3]!, startY + header1H, xs[8]!, startY + header1H);
+  drawLine(doc, xs[4]!, startY + header1H, xs[5]!, startY + header1H);
   drawLine(doc, tableX, startY + header1H + header2H, tableX + tableW, startY + header1H + header2H);
 
   for (let i = 1; i < dataCount; i += 1) {
@@ -410,17 +395,10 @@ function drawPracticalTableOnPage(
   textInBox(doc, 'S.No', xs[0]!, startY, widths[0]!, rowspanH, { bold: true });
   textInBox(doc, 'GC No', xs[1]!, startY, widths[1]!, rowspanH, { bold: true });
   textInBox(doc, 'Name', xs[2]!, startY, widths[2]!, rowspanH, { bold: true });
-  textInBox(doc, 'Conduct of Exp', xs[3]!, startY, widths[3]!, header1H, { bold: true, size: 7.5 });
-  textInBox(doc, 'Maint of App', xs[4]!, startY, widths[4]!, header1H, { bold: true, size: 7.5 });
-  textInBox(doc, 'Practical Test', xs[5]!, startY, widths[5]!, header1H, { bold: true, size: 7.5 });
-  textInBox(doc, 'Viva Voce', xs[6]!, startY, widths[6]!, header1H, { bold: true, size: 7.5 });
-  textInBox(doc, 'Total', xs[7]!, startY, widths[7]!, header1H, { bold: true });
-  textInBox(doc, 'Letter Grade', xs[8]!, startY, widths[8]!, rowspanH, { bold: true, size: 7.5 });
-  textInBox(doc, `(${first?.conductOfExpMax ?? PRACTICAL_COMPONENTS[0].maxMarks})`, xs[3]!, startY + header1H, widths[3]!, header2H, { bold: true });
-  textInBox(doc, `(${first?.maintOfAppMax ?? PRACTICAL_COMPONENTS[1].maxMarks})`, xs[4]!, startY + header1H, widths[4]!, header2H, { bold: true });
-  textInBox(doc, `(${first?.practicalTestMax ?? PRACTICAL_COMPONENTS[2].maxMarks})`, xs[5]!, startY + header1H, widths[5]!, header2H, { bold: true });
-  textInBox(doc, `(${first?.vivaVoceMax ?? PRACTICAL_COMPONENTS[3].maxMarks})`, xs[6]!, startY + header1H, widths[6]!, header2H, { bold: true });
-  textInBox(doc, `(${first?.totalMax ?? PRACTICAL_TOTAL_MAX_MARKS})`, xs[7]!, startY + header1H, widths[7]!, header2H, { bold: true });
+  textInBox(doc, 'Branch', xs[3]!, startY, widths[3]!, rowspanH, { bold: true });
+  textInBox(doc, 'Practical', xs[4]!, startY, widths[4]!, header1H, { bold: true });
+  textInBox(doc, 'Letter\nGrade', xs[5]!, startY, widths[5]!, rowspanH, { bold: true });
+  textInBox(doc, `(${first?.practicalMax ?? 0})`, xs[4]!, startY + header1H, widths[4]!, header2H, { bold: true });
 
   const dataRows = rows.length
     ? rows
@@ -431,16 +409,8 @@ function drawPracticalTableOnPage(
           ocNo: '-',
           ocName: 'No records found',
           branch: '-',
-          conductOfExpObtained: null,
-          conductOfExpMax: PRACTICAL_COMPONENTS[0].maxMarks,
-          maintOfAppObtained: null,
-          maintOfAppMax: PRACTICAL_COMPONENTS[1].maxMarks,
-          practicalTestObtained: null,
-          practicalTestMax: PRACTICAL_COMPONENTS[2].maxMarks,
-          vivaVoceObtained: null,
-          vivaVoceMax: PRACTICAL_COMPONENTS[3].maxMarks,
-          totalObtained: null,
-          totalMax: PRACTICAL_TOTAL_MAX_MARKS,
+          practicalObtained: null,
+          practicalMax: 0,
           letterGrade: null,
         },
       ];
@@ -451,12 +421,9 @@ function drawPracticalTableOnPage(
     textInBox(doc, safe(row.sNo), xs[0]!, y, widths[0]!, rowH, { align: 'center' });
     textInBox(doc, safe(row.ocNo), xs[1]!, y, widths[1]!, rowH, { align: 'center' });
     textInBox(doc, safe(row.ocName), xs[2]!, y, widths[2]!, rowH, { align: 'left' });
-    textInBox(doc, safe(row.conductOfExpObtained), xs[3]!, y, widths[3]!, rowH, { align: 'center' });
-    textInBox(doc, safe(row.maintOfAppObtained), xs[4]!, y, widths[4]!, rowH, { align: 'center' });
-    textInBox(doc, safe(row.practicalTestObtained), xs[5]!, y, widths[5]!, rowH, { align: 'center' });
-    textInBox(doc, safe(row.vivaVoceObtained), xs[6]!, y, widths[6]!, rowH, { align: 'center' });
-    textInBox(doc, safe(row.totalObtained), xs[7]!, y, widths[7]!, rowH, { align: 'center' });
-    textInBox(doc, safe(row.letterGrade), xs[8]!, y, widths[8]!, rowH, { align: 'center' });
+    textInBox(doc, safe(row.branch), xs[3]!, y, widths[3]!, rowH, { align: 'center' });
+    textInBox(doc, safe(row.practicalObtained), xs[4]!, y, widths[4]!, rowH, { align: 'center' });
+    textInBox(doc, safe(row.letterGrade), xs[5]!, y, widths[5]!, rowH, { align: 'center' });
   });
 
   return {
@@ -472,7 +439,7 @@ function paginateTheory(
   meta: ReportRenderMeta
 ) {
   const allRows = data.theoryRows;
-  const phaseTestCount = normalizePhaseTestCount(data.subject.noOfPhaseTests, data.subject.hasTheory);
+  const showPhaseTest2 = allRows.some((row) => row.phaseTest2Obtained !== null);
   const summaryItems = data.theorySummary;
 
   const summaryX = doc.page.width - PAGE_MARGIN - SUMMARY_WIDTH;
@@ -487,7 +454,7 @@ function paginateTheory(
   if (allRows.length === 0) {
     const startY = drawHeader(doc, data, 'Theory', data.subject.theoryCredits, meta);
     finalStartY = startY;
-    const table = drawTheoryTableOnPage(doc, tableX, startY, tableW, [] as ConsolidatedTheoryRow[], phaseTestCount);
+    const table = drawTheoryTableOnPage(doc, tableX, startY, tableW, [] as ConsolidatedTheoryRow[], showPhaseTest2);
     finalTableBottom = table.tableBottom;
   } else {
     while (cursor < allRows.length) {
@@ -516,7 +483,7 @@ function paginateTheory(
       const chunk = allRows.slice(cursor, cursor + chunkSize);
 
       finalStartY = startY;
-      const table = drawTheoryTableOnPage(doc, tableX, startY, tableW, chunk, phaseTestCount);
+      const table = drawTheoryTableOnPage(doc, tableX, startY, tableW, chunk, showPhaseTest2);
       finalTableBottom = table.tableBottom;
 
       cursor += chunkSize;
@@ -608,18 +575,14 @@ function paginatePractical(
 export function renderConsolidatedSessionalTemplate(
   doc: PDFKit.PDFDocument,
   data: ConsolidatedSessionalPreview,
-  meta: ReportRenderMeta,
-  section?: ConsolidatedSessionalSection
+  meta: ReportRenderMeta
 ) {
-  const includeTheory = (section === undefined || section === 'theory') && data.subject.hasTheory;
-  const includePractical = (section === undefined || section === 'practical') && data.subject.hasPractical;
-
-  if (includeTheory) {
+  if (data.subject.hasTheory) {
     paginateTheory(doc, data, meta);
   }
 
-  if (includePractical) {
-    if (includeTheory) doc.addPage();
+  if (data.subject.hasPractical) {
+    if (data.subject.hasTheory) doc.addPage();
     paginatePractical(doc, data, meta);
   }
 }

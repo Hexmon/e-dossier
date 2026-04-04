@@ -16,7 +16,6 @@ export const Semester = z.coerce.number().int().min(1).max(6);
 
 // Templates -----------------------------------------------------------------
 export const interviewTemplateCreateSchema = z.object({
-    courseId: z.string().uuid(),
     code: z.string().trim().min(1).max(32),
     title: z.string().trim().min(1).max(160),
     description: z.string().trim().max(2000).optional().nullable(),
@@ -27,18 +26,11 @@ export const interviewTemplateCreateSchema = z.object({
 export const interviewTemplateUpdateSchema = nonEmptyPartial(interviewTemplateCreateSchema);
 
 export const interviewTemplateQuerySchema = z.object({
-    courseId: z.string().uuid().optional(),
     semester: Semester.optional(),
     includeDeleted: BoolString.optional(),
 });
 
 export const interviewTemplateParam = z.object({ templateId: z.string().uuid() });
-
-export const interviewTemplateCopySchema = z.object({
-    sourceCourseId: z.string().uuid(),
-    targetCourseId: z.string().uuid(),
-    mode: z.literal('replace').default('replace'),
-});
 
 // Template semesters ---------------------------------------------------------
 export const interviewTemplateSemesterCreateSchema = z.object({

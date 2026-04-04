@@ -116,7 +116,6 @@ export const OC_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/oc/[ocId]/parent-comms/route.ts',
   'src/app/api/v1/oc/[ocId]/performance-graph/route.ts',
   'src/app/api/v1/oc/[ocId]/personal/route.ts',
-  'src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts',
   'src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/[id]/route.ts',
   'src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/route.ts',
   'src/app/api/v1/oc/[ocId]/special-achievement-in-firing/route.ts',
@@ -145,23 +144,46 @@ export const REPORT_UNCOVERED_ROUTE_FILES = [
 
 export const MISC_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/bootstrap/super-admin/route.ts',
+  'src/app/api/v1/dashboard/data/appointments/route.ts',
   'src/app/api/v1/dashboard/data/course/route.ts',
   'src/app/api/v1/dashboard/data/platoon/route.ts',
 ] as const;
 
-export const PL_CDR_UNCOVERED_ROUTE_FILES = [
-  'src/app/api/v1/pl-cdr/cadet-appointments/[id]/route.ts',
-  'src/app/api/v1/pl-cdr/cadet-appointments/[id]/transfer/route.ts',
-  'src/app/api/v1/pl-cdr/cadet-appointments/route.ts',
-] as const;
-
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
-    testFile: 'tests/api/admin.template-copy.test.ts',
+    testFile: 'tests/api/admin.marks-review-workflow.test.ts',
+    routeFiles: ['src/app/api/v1/admin/marks-review-workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/admin.module-access.test.ts',
+    routeFiles: ['src/app/api/v1/admin/module-access/route.ts'],
+  },
+  {
+    testFile: 'tests/api/me.workflow-notifications.test.ts',
+    routeFiles: ['src/app/api/v1/me/workflow-notifications/route.ts'],
+  },
+  {
+    testFile: 'tests/api/reports.module-access.test.ts',
+    routeFiles: ['src/app/api/v1/reports/metadata/course-semesters/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.academics.workflow.test.ts',
+    routeFiles: ['src/app/api/v1/oc/academics/workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.physical-training.workflow.test.ts',
+    routeFiles: ['src/app/api/v1/oc/physical-training/workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.physical-training.motivation-awards.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.semester-lock-derived.test.ts',
     routeFiles: [
-      'src/app/api/v1/admin/interview/templates/copy/route.ts',
-      'src/app/api/v1/admin/physical-training/templates/copy/route.ts',
-      'src/app/api/v1/admin/training-camps/copy/route.ts',
+      'src/app/api/v1/oc/[ocId]/camps/route.ts',
+      'src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts',
+      'src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/[id]/route.ts',
     ],
   },
   {
@@ -179,10 +201,6 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/misc.route-flow.uncovered.test.ts',
     routeFiles: [...MISC_UNCOVERED_ROUTE_FILES],
-  },
-  {
-    testFile: 'tests/api/pl-cdr.route-flow.uncovered.test.ts',
-    routeFiles: [...PL_CDR_UNCOVERED_ROUTE_FILES],
   },
 ];
 

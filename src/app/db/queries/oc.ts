@@ -34,15 +34,19 @@ import {
 } from '@/app/db/schema/training/oc';
 import { dossierInspections } from '@/app/db/schema/training/dossierInspections';
 import { courses } from '@/app/db/schema/training/courses';
+import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
 import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
-import { marksToLetterGradeWithPolicy, type AcademicGradingPolicy } from '@/app/lib/grading-policy';
-import { computePracticalTotal, hasStructuredPracticalMarks } from '@/lib/academics-practical';
-import { computeTheoryTotal, normalizePhaseTestCount } from '@/lib/academics-theory';
+import type { AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import {
+    derivePracticalLetterGrade,
+    deriveTheoryLetterGrade,
+    hasAcademicCredits,
+} from '@/app/lib/academic-marks-core';
 
 type ListOpts = {
     id?: string;
@@ -61,22 +65,41 @@ function likeEscape(q: string) {
     return `%${q.replace(/[%_\\]/g, '\\$&')}%`;
 }
 
+function clampCurrentSemester(value: number | null | undefined): number {
+    const parsed = Number(value ?? 1);
+    if (!Number.isFinite(parsed)) return 1;
+    return Math.max(1, Math.min(Math.trunc(parsed), 6));
+}
+
+export async function listCurrentSemestersByCourseIds(courseIds: string[]) {
+    const normalizedCourseIds = Array.from(new Set(courseIds.map((value) => value.trim()).filter(Boolean)));
+    if (!normalizedCourseIds.length) {
+        return new Map<string, number>();
+    }
+
+    const rows = await db
+        .select({
+            courseId: courseOfferings.courseId,
+            currentSemester: sql<number | null>`MAX(${courseOfferings.semester})`,
+        })
+        .from(courseOfferings)
+        .where(and(inArray(courseOfferings.courseId, normalizedCourseIds), isNull(courseOfferings.deletedAt)))
+        .groupBy(courseOfferings.courseId);
+
+    return new Map(rows.map((row) => [row.courseId, clampCurrentSemester(row.currentSemester)]));
+}
+
+export async function getCurrentSemesterForCourse(courseId: string): Promise<number> {
+    const semesterMap = await listCurrentSemestersByCourseIds([courseId]);
+    return semesterMap.get(courseId) ?? 1;
+}
+
 type SemesterMarksRow = typeof ocSemesterMarks.$inferSelect;
 type TheoryPatch = Partial<TheoryMarksRecord>;
 type PracticalPatch = Partial<PracticalMarksRecord>;
 type MergeGradeOptions = {
     autoComputeGrade?: boolean;
-    phaseTestCount?: number | null;
 };
-
-function toFiniteNumber(value: unknown): number {
-    const num = Number(value ?? 0);
-    return Number.isFinite(num) ? num : 0;
-}
-
-function toPositiveNumber(value: unknown): number {
-    return Math.max(0, toFiniteNumber(value));
-}
 
 function mergeTheory(
     target: TheoryMarksRecord | null | undefined,
@@ -87,20 +110,24 @@ function mergeTheory(
     if (!patch) return target ?? undefined;
     const next: TheoryMarksRecord = { ...(target ?? {}) };
     const autoComputeGrade = options.autoComputeGrade !== false;
-    const phaseTestCount = normalizePhaseTestCount(options.phaseTestCount);
     let changed = false;
     for (const [key, value] of Object.entries(patch)) {
         if (value === undefined) continue;
         (next as any)[key] = value;
         changed = true;
     }
+    if (!autoComputeGrade) {
+        if (next.grade !== undefined) {
+            next.grade = undefined;
+            changed = true;
+        }
+        return changed ? next : target;
+    }
+
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
-    if (!hasExplicitGrade && !autoComputeGrade && hasExistingGrade) {
-        next.grade = undefined;
-        changed = true;
-    } else if (!hasExplicitGrade && autoComputeGrade && !hasExistingGrade) {
-        next.grade = marksToLetterGradeWithPolicy(computeTheoryTotal(next, phaseTestCount), policy);
+    if (!hasExplicitGrade && !hasExistingGrade) {
+        next.grade = deriveTheoryLetterGrade(next, policy);
         changed = true;
     }
     return changed ? next : target;
@@ -121,18 +148,18 @@ function mergePractical(
         (next as any)[key] = value;
         changed = true;
     }
-    if (hasStructuredPracticalMarks(next)) {
-        next.finalMarks = computePracticalTotal(next);
-        changed = true;
+    if (!autoComputeGrade) {
+        if (next.grade !== undefined) {
+            next.grade = undefined;
+            changed = true;
+        }
+        return changed ? next : target;
     }
+
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
-    if (!hasExplicitGrade && !autoComputeGrade && hasExistingGrade) {
-        next.grade = undefined;
-        changed = true;
-    } else if (!hasExplicitGrade && autoComputeGrade && !hasExistingGrade) {
-        // C# parity: practical marks use positive-only value for grade mapping.
-        next.grade = marksToLetterGradeWithPolicy(computePracticalTotal(next), policy);
+    if (!hasExplicitGrade && !hasExistingGrade) {
+        next.grade = derivePracticalLetterGrade(next, policy);
         changed = true;
     }
     return changed ? next : target;
@@ -243,12 +270,11 @@ export async function upsertSemesterSubjectMarks(ocId: string, semester: number,
             deletedAt: null,
         };
 
-        const hasTheoryCredits = toPositiveNumber(input.meta?.theoryCredits) > 0;
-        const hasPracticalCredits = toPositiveNumber(input.meta?.practicalCredits) > 0;
+        const hasTheoryCredits = hasAcademicCredits(input.meta?.theoryCredits);
+        const hasPracticalCredits = hasAcademicCredits(input.meta?.practicalCredits);
 
         const nextTheory = mergeTheory(base.theory, policy, input.theory, {
             autoComputeGrade: hasTheoryCredits,
-            phaseTestCount: base.meta?.noOfPhaseTests,
         });
         if (nextTheory) base.theory = nextTheory;
         const nextPractical = mergePractical(base.practical, policy, input.practical, {
@@ -1420,7 +1446,14 @@ export async function listOCsBasic(opts: ListOpts = {}) {
         .limit(Math.min(limit, 1000))
         .offset(offset);
 
-    return rows;
+    const semesterByCourseId = await listCurrentSemestersByCourseIds(
+        rows.map((row) => row.courseId).filter((value): value is string => Boolean(value)),
+    );
+
+    return rows.map((row) => ({
+        ...row,
+        currentSemester: semesterByCourseId.get(row.courseId) ?? 1,
+    }));
 }
 
 export async function listOCsFull(opts: ListOpts = {}) {
@@ -2049,20 +2082,13 @@ export async function upsertOcCamp(
     trainingCampId: string,
     data: Partial<typeof ocCamps.$inferInsert> = {},
 ) {
-    const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
-    const enrollmentId = activeEnrollment.id;
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [campTemplate] = await db
-        .select({ id: trainingCamps.id, courseId: trainingCamps.courseId })
+        .select({ id: trainingCamps.id })
         .from(trainingCamps)
         .where(eq(trainingCamps.id, trainingCampId))
         .limit(1);
     if (!campTemplate) throw new ApiError(404, 'Training camp not found', 'not_found');
-    if (campTemplate.courseId && campTemplate.courseId !== activeEnrollment.courseId) {
-        throw new ApiError(400, 'Training camp does not belong to the active OC course', 'bad_request', {
-            trainingCampId,
-            courseId: activeEnrollment.courseId,
-        });
-    }
 
     const [existing] = await db
         .select()

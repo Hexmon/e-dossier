@@ -129,6 +129,27 @@ describe("GET /api/v1/oc", () => {
     );
   });
 
+  it("returns current semester from the OC list payload", async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      claims: { apt: { scope: { type: "GLOBAL", id: null } } },
+    });
+    (ocQueries.listOCsBasic as any).mockResolvedValueOnce([
+      { id: selectedOcId, name: "Selected OC", currentSemester: 3 },
+    ]);
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path,
+    });
+    const res = await getOcList(req as any, createRouteContext());
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items[0].currentSemester).toBe(3);
+  });
+
   it("caps limit to 1000", async () => {
     (authz.requireAuth as any).mockResolvedValueOnce({
       userId: "admin-1",

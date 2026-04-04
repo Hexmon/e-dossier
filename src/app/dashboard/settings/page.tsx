@@ -4,18 +4,9 @@ import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Settings, Shield, Timer } from "lucide-react";
-import { useMe } from "@/hooks/useMe";
-import { canManageCadetAppointments } from "@/lib/platoon-commander-access";
+import { Settings, Shield, Timer } from "lucide-react";
 
 export default function SettingsLandingPage() {
-  const { data: meData } = useMe();
-  const canViewCadetAppointments = canManageCadetAppointments({
-    roles: meData?.roles ?? [],
-    position: meData?.apt?.position ?? null,
-    scopeType: meData?.apt?.scope?.type ?? null,
-  });
-
   return (
     <DashboardLayout title="Settings" description="Device and access-control configuration">
       <section className="space-y-6 p-6">
@@ -41,30 +32,6 @@ export default function SettingsLandingPage() {
               </Button>
             </CardFooter>
           </Card>
-
-          {canViewCadetAppointments && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5" />
-                  Cadet Appointments
-                </CardTitle>
-                <CardDescription>
-                  Create, transfer, and manage cadet appointments inside your assigned platoon.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  This settings area is available only for platoon commander logins.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button asChild className="w-full">
-                  <Link href="/dashboard/settings/device/appointments">Open Cadet Appointments</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          )}
 
           <Card>
             <CardHeader>

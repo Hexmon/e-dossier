@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { InterviewIdParam, interviewOcUpdateSchema } from '@/app/lib/interview-oc-validators';
 import {
@@ -20,7 +20,6 @@ import {
 } from '@/app/db/queries/interviewOc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
-import { getActiveEnrollmentCourse } from '@/app/db/queries/oc-enrollments';
 
 function cleanText(value?: string | null) {
     if (value === undefined) return undefined;
@@ -30,7 +29,6 @@ function cleanText(value?: string | null) {
 }
 
 async function validateTemplateAndPayload(params: {
-    courseId: string;
     templateId: string;
     semester: number | null | undefined;
     fields?: Array<{ fieldId: string }>;
@@ -39,9 +37,6 @@ async function validateTemplateAndPayload(params: {
     const template = await getInterviewTemplateBase(params.templateId);
     if (!template || template.deletedAt) {
         throw new ApiError(404, 'Interview template not found', 'not_found');
-    }
-    if (template.courseId && template.courseId !== params.courseId) {
-        throw new ApiError(400, 'Interview template does not belong to OC course', 'invalid_template_course');
     }
     if (!template.isActive) {
         throw new ApiError(400, 'Interview template is inactive', 'template_inactive');
@@ -169,7 +164,6 @@ async function GETHandler(
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { interviewId } = await parseParam({ params }, InterviewIdParam);
         await ensureOcExists(ocId);
-        const { courseId } = await getActiveEnrollmentCourse(ocId);
 
         const interview = await getOcInterview(interviewId);
         if (!interview || interview.ocId !== ocId) throw new ApiError(404, 'Interview record not found', 'not_found');
@@ -208,7 +202,6 @@ async function PATCHHandler(
         const { ocId } = await parseParam({ params }, OcIdParam);
         const { interviewId } = await parseParam({ params }, InterviewIdParam);
         await ensureOcExists(ocId);
-        const { courseId } = await getActiveEnrollmentCourse(ocId);
 
         const interview = await getOcInterview(interviewId);
         if (!interview || interview.ocId !== ocId) throw new ApiError(404, 'Interview record not found', 'not_found');
@@ -224,8 +217,8 @@ async function PATCHHandler(
                     ? null
                     : Number(interview.semester)
                 : Number(dto.semester);
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: effectiveSemester, authContext: authCtx });
         await validateTemplateAndPayload({
-            courseId,
             templateId: interview.templateId,
             semester: effectiveSemester,
             fields: dto.fields,
@@ -327,6 +320,11 @@ async function DELETEHandler(
 
         const interview = await getOcInterview(interviewId);
         if (!interview || interview.ocId !== ocId) throw new ApiError(404, 'Interview record not found', 'not_found');
+        await assertOcSemesterWriteAllowed({
+            ocId,
+            requestedSemester: interview.semester == null ? null : Number(interview.semester),
+            authContext: authCtx,
+        });
 
         await deleteOcInterview(interviewId);
 

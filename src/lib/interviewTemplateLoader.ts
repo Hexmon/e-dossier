@@ -2,18 +2,13 @@ import { apiRequest } from "@/app/lib/apiClient";
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from "@/types/interview-templates";
 
 const templateCache = {
-    data: new Map<string, TemplateInfo[]>(),
-    promise: new Map<string, Promise<TemplateInfo[]>>(),
+    data: null as TemplateInfo[] | null,
+    promise: null as Promise<TemplateInfo[]> | null,
 };
 
-export function clearInterviewTemplateCache(courseId?: string) {
-    if (courseId) {
-        templateCache.data.delete(courseId);
-        templateCache.promise.delete(courseId);
-        return;
-    }
-    templateCache.data.clear();
-    templateCache.promise.clear();
+export function clearInterviewTemplateCache() {
+    templateCache.data = null;
+    templateCache.promise = null;
 }
 
 function normalizeKey(value: string) {
@@ -60,15 +55,14 @@ function sortSections(sections: TemplateSection[]) {
     return [...sections].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 }
 
-export async function loadInterviewTemplates(courseId: string): Promise<TemplateInfo[]> {
-    if (templateCache.data.has(courseId)) return templateCache.data.get(courseId)!;
-    if (templateCache.promise.has(courseId)) return templateCache.promise.get(courseId)!;
+export async function loadInterviewTemplates(): Promise<TemplateInfo[]> {
+    if (templateCache.data) return templateCache.data;
+    if (templateCache.promise) return templateCache.promise;
 
-    const promise = (async () => {
+    templateCache.promise = (async () => {
         const resp: any = await apiRequest<any>({
             method: "GET",
             endpoint: "/api/v1/admin/interview/templates",
-            query: { courseId },
         });
         const templates: any[] = resp?.items ?? [];
 
@@ -165,17 +159,15 @@ export async function loadInterviewTemplates(courseId: string): Promise<Template
             })
         );
 
-        templateCache.data.set(courseId, detailed);
+        templateCache.data = detailed;
         return detailed;
     })();
 
-    templateCache.promise.set(courseId, promise);
-
-    promise.catch((err) => {
-        templateCache.data.delete(courseId);
-        templateCache.promise.delete(courseId);
+    templateCache.promise.catch((err) => {
+        templateCache.data = null;
+        templateCache.promise = null;
         console.error("Failed to load interview templates:", err);
     });
 
-    return promise;
+    return templateCache.promise;
 }

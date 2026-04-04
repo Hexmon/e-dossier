@@ -17,26 +17,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { academicsApi } from '@/app/lib/api/academicsMarksApi';
 import { DownloadDialog } from '@/components/reports/common/DownloadDialog';
 import { useConsolidatedSessionalPreview, useCourseSemesters, useReportsDownloads } from '@/hooks/useReports';
-import type {
-  ConsolidatedPracticalRow,
-  ConsolidatedSessionalSection,
-  ConsolidatedTheoryRow,
-  GradeSummaryItem,
-} from '@/types/reports';
-
-const SECTION_LABELS: Record<ConsolidatedSessionalSection, string> = {
-  theory: 'Theory',
-  practical: 'Practical',
-};
 
 export function ConsolidatedSessionalCard() {
   const [courseId, setCourseId] = useState('');
   const [semester, setSemester] = useState<number | null>(null);
   const [subjectId, setSubjectId] = useState('');
   const [downloadOpen, setDownloadOpen] = useState(false);
-  const [downloadSection, setDownloadSection] = useState<ConsolidatedSessionalSection | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [viewSection, setViewSection] = useState<ConsolidatedSessionalSection | null>(null);
   const [viewRequested, setViewRequested] = useState(false);
 
   const courseSemesters = useCourseSemesters(courseId || null);
@@ -46,8 +33,6 @@ export function ConsolidatedSessionalCard() {
     subjectId,
     enabled: viewRequested,
   });
-  const previewData = previewQuery.data?.data;
-  const phaseTestCount = previewData?.subject.noOfPhaseTests ?? 2;
   const downloads = useReportsDownloads();
 
   const coursesQuery = useQuery({
@@ -70,35 +55,9 @@ export function ConsolidatedSessionalCard() {
     return Array.from(map.values());
   }, [offeringsQuery.data]);
 
-  const selectedOffering = useMemo(
-    () => (offeringsQuery.data ?? []).find((offering) => offering.subject.id === subjectId),
-    [offeringsQuery.data, subjectId]
-  );
-  const selectedOfferingWithFlags = selectedOffering as
-    | {
-        subject: { hasTheory?: boolean; hasPractical?: boolean };
-        includeTheory?: boolean;
-        includePractical?: boolean;
-      }
-    | undefined;
-
-  const hasTheorySection = Boolean(
-    subjectId &&
-      (previewData?.subject.hasTheory ?? selectedOfferingWithFlags?.includeTheory ?? selectedOffering?.subject.hasTheory)
-  );
-  const hasPracticalSection = Boolean(
-    subjectId &&
-      (previewData?.subject.hasPractical ??
-        selectedOfferingWithFlags?.includePractical ??
-        selectedOffering?.subject.hasPractical)
-  );
-
   useEffect(() => {
     setViewRequested(false);
     setViewModalOpen(false);
-    setViewSection(null);
-    setDownloadOpen(false);
-    setDownloadSection(null);
   }, [courseId, semester, subjectId]);
 
   const onDownload = async (meta: {
@@ -107,7 +66,7 @@ export function ConsolidatedSessionalCard() {
     checkedBy: string;
     instructorName?: string;
   }) => {
-    if (!courseId || !semester || !subjectId || !downloadSection) {
+    if (!courseId || !semester || !subjectId) {
       toast.error('Select course, semester and subject first.');
       return;
     }
@@ -117,32 +76,17 @@ export function ConsolidatedSessionalCard() {
         courseId,
         semester,
         subjectId,
-        section: downloadSection,
         password: meta.password,
         preparedBy: meta.preparedBy.trim() || undefined,
         checkedBy: meta.checkedBy.trim() || undefined,
         instructorName: meta.instructorName?.trim() || undefined,
       });
-      toast.success(`${SECTION_LABELS[downloadSection]} PDF download started.`);
+      toast.success('Encrypted PDF download started.');
       setDownloadOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to download report.');
     }
   };
-
-  const openView = (section: ConsolidatedSessionalSection) => {
-    setViewSection(section);
-    if (!viewRequested) setViewRequested(true);
-    setViewModalOpen(true);
-    void previewQuery.refetch();
-  };
-
-  const openDownload = (section: ConsolidatedSessionalSection) => {
-    setDownloadSection(section);
-    setDownloadOpen(true);
-  };
-
-  const currentViewLabel = viewSection ? SECTION_LABELS[viewSection] : 'Sessional';
 
   return (
     <Card>
@@ -217,72 +161,35 @@ export function ConsolidatedSessionalCard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-lg border p-4">
-            <div className="space-y-1">
-              <div className="text-sm font-semibold">Theory</div>
-              <p className="text-sm text-muted-foreground">
-                View and download the theory sessional marksheet separately.
-              </p>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => openView('theory')}
-                disabled={!courseId || !semester || !subjectId || !hasTheorySection || previewQuery.isFetching}
-              >
-                {previewQuery.isFetching && viewSection === 'theory' ? 'Loading...' : 'View Theory'}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => openDownload('theory')}
-                disabled={!courseId || !semester || !subjectId || !hasTheorySection}
-              >
-                Download Theory PDF
-              </Button>
-            </div>
-          </div>
-
-          <div className="rounded-lg border p-4">
-            <div className="space-y-1">
-              <div className="text-sm font-semibold">Practical</div>
-              <p className="text-sm text-muted-foreground">
-                View and download the practical sessional marksheet separately.
-              </p>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => openView('practical')}
-                disabled={!courseId || !semester || !subjectId || !hasPracticalSection || previewQuery.isFetching}
-              >
-                {previewQuery.isFetching && viewSection === 'practical' ? 'Loading...' : 'View Practical'}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => openDownload('practical')}
-                disabled={!courseId || !semester || !subjectId || !hasPracticalSection}
-              >
-                Download Practical PDF
-              </Button>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={() => {
+              setDownloadOpen(true);
+            }}
+            disabled={!courseId || !semester || !subjectId}
+          >
+            Download PDF
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!viewRequested) setViewRequested(true);
+              setViewModalOpen(true);
+              void previewQuery.refetch();
+            }}
+            disabled={!courseId || !semester || !subjectId || previewQuery.isFetching}
+          >
+            {previewQuery.isFetching ? 'Loading...' : 'View'}
+          </Button>
         </div>
 
-        <Dialog
-          open={viewModalOpen}
-          onOpenChange={(open) => {
-            setViewModalOpen(open);
-            if (!open) setViewSection(null);
-          }}
-        >
+        <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
           <DialogContent className="w-[96vw] max-w-[96vw] md:w-[85vw] md:max-w-[85vw] lg:w-[88vw] lg:max-w-[88vw] xl:w-[90vw] xl:max-w-[90vw]">
             <DialogHeader>
-              <DialogTitle>{currentViewLabel} Consolidated Sessional Preview</DialogTitle>
+              <DialogTitle>Consolidated Sessional Preview</DialogTitle>
               <DialogDescription>
-                View the selected sessional marksheet separately for the chosen course, semester, and subject.
+                Theory and practical rows for selected course, semester, and subject.
               </DialogDescription>
             </DialogHeader>
 
@@ -296,64 +203,142 @@ export function ConsolidatedSessionalCard() {
               </div>
             ) : null}
 
-            {viewRequested && previewData && viewSection ? (
+            {viewRequested && previewQuery.data?.data ? (
               <div className="max-h-[70vh] space-y-4 overflow-auto">
-                <div className="grid grid-cols-1 gap-2 rounded border bg-muted/20 p-3 text-sm md:grid-cols-2">
-                  <div>
-                    <span className="font-medium">Course:</span> {previewData.course.code} - {previewData.course.title}
-                  </div>
-                  <div>
-                    <span className="font-medium">Semester:</span> {previewData.semester}
-                  </div>
-                  <div>
-                    <span className="font-medium">Subject:</span> {previewData.subject.code} - {previewData.subject.name}
-                  </div>
-                  <div>
-                    <span className="font-medium">Credits:</span>{' '}
-                    {viewSection === 'theory'
-                      ? (previewData.subject.theoryCredits ?? '-')
-                      : (previewData.subject.practicalCredits ?? '-')}
-                  </div>
-                  <div className="md:col-span-2">
-                    <span className="font-medium">Instructor:</span> {previewData.subject.instructorName ?? '-'}
-                  </div>
+                <div className="rounded border bg-muted/20 p-3 text-sm">
+                  Preview loaded: Theory rows {previewQuery.data.data.theoryRows.length}, Practical rows{' '}
+                  {previewQuery.data.data.practicalRows.length}.
                 </div>
 
-                {viewSection === 'theory' ? (
-                  previewData.theoryRows.length ? (
-                    <div className="space-y-3 rounded border p-3">
-                      <div className="text-sm font-semibold">Theory Sessional Marksheet</div>
-                      <div className="overflow-auto rounded border">
-                        <TheoryPreviewTable rows={previewData.theoryRows} phaseTestCount={phaseTestCount} />
-                      </div>
-                      <div className="flex justify-end">
-                        <div className="w-full max-w-xs overflow-auto rounded border">
-                          <GradeSummaryTable summary={previewData.theorySummary} />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded border p-3 text-sm text-muted-foreground">
-                      No theory records found for the selected course, semester and subject.
-                    </div>
-                  )
-                ) : previewData.practicalRows.length ? (
-                  <div className="space-y-3 rounded border p-3">
-                    <div className="text-sm font-semibold">Practical Sessional Marksheet</div>
+                {previewQuery.data.data.theoryRows.length ? (
+                  <div className="space-y-2 rounded border p-2">
+                    <div className="text-sm font-semibold">Theory</div>
                     <div className="overflow-auto rounded border">
-                      <PracticalPreviewTable rows={previewData.practicalRows} />
+                      <table className="min-w-full text-xs">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="p-2 text-left">S.No</th>
+                            <th className="p-2 text-left">OC No</th>
+                            <th className="p-2 text-left">Name</th>
+                            <th className="p-2 text-left">Branch</th>
+                            <th className="p-2 text-left">PT1</th>
+                            <th className="p-2 text-left">PT2</th>
+                            <th className="p-2 text-left">Tutorial</th>
+                            <th className="p-2 text-left">Sessional</th>
+                            <th className="p-2 text-left">Final</th>
+                            <th className="p-2 text-left">Total</th>
+                            <th className="p-2 text-left">Grade</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewQuery.data.data.theoryRows.map((row) => (
+                            <tr key={row.ocId} className="border-t">
+                              <td className="p-2">{row.sNo}</td>
+                              <td className="p-2">{row.ocNo}</td>
+                              <td className="p-2">{row.ocName}</td>
+                              <td className="p-2">{row.branch ?? '-'}</td>
+                              <td className="p-2">{row.phaseTest1Obtained ?? ''}</td>
+                              <td className="p-2">{row.phaseTest2Obtained ?? ''}</td>
+                              <td className="p-2">{row.tutorialObtained ?? ''}</td>
+                              <td className="p-2">{row.sessionalObtained ?? ''}</td>
+                              <td className="p-2">{row.finalObtained ?? ''}</td>
+                              <td className="p-2">{row.totalObtained ?? ''}</td>
+                              <td className="p-2">{row.letterGrade ?? ''}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <div className="flex justify-end">
-                      <div className="w-full max-w-xs overflow-auto rounded border">
-                        <GradeSummaryTable summary={previewData.practicalSummary} />
-                      </div>
+
+                    <div className="w-full max-w-xs overflow-auto rounded border">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="p-2 text-left">Grade</th>
+                            <th className="p-2 text-left">Count</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewQuery.data.data.theorySummary.map((item) => (
+                            <tr key={`theory-summary-${item.grade}`} className="border-t">
+                              <td className="p-2">{item.grade}</td>
+                              <td className="p-2">{item.count}</td>
+                            </tr>
+                          ))}
+                          <tr className="border-t font-semibold">
+                            <td className="p-2">Total</td>
+                            <td className="p-2">
+                              {previewQuery.data.data.theorySummary.reduce((sum, item) => sum + item.count, 0)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                ) : (
+                ) : null}
+
+                {previewQuery.data.data.practicalRows.length ? (
+                  <div className="space-y-2 rounded border p-2">
+                    <div className="text-sm font-semibold">Practical</div>
+                    <div className="overflow-auto rounded border">
+                      <table className="min-w-full text-xs">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="p-2 text-left">S.No</th>
+                            <th className="p-2 text-left">OC No</th>
+                            <th className="p-2 text-left">Name</th>
+                            <th className="p-2 text-left">Branch</th>
+                            <th className="p-2 text-left">Practical</th>
+                            <th className="p-2 text-left">Grade</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewQuery.data.data.practicalRows.map((row) => (
+                            <tr key={row.ocId} className="border-t">
+                              <td className="p-2">{row.sNo}</td>
+                              <td className="p-2">{row.ocNo}</td>
+                              <td className="p-2">{row.ocName}</td>
+                              <td className="p-2">{row.branch ?? '-'}</td>
+                              <td className="p-2">{row.practicalObtained ?? ''}</td>
+                              <td className="p-2">{row.letterGrade ?? ''}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="w-full max-w-xs overflow-auto rounded border">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="p-2 text-left">Grade</th>
+                            <th className="p-2 text-left">Count</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewQuery.data.data.practicalSummary.map((item) => (
+                            <tr key={`practical-summary-${item.grade}`} className="border-t">
+                              <td className="p-2">{item.grade}</td>
+                              <td className="p-2">{item.count}</td>
+                            </tr>
+                          ))}
+                          <tr className="border-t font-semibold">
+                            <td className="p-2">Total</td>
+                            <td className="p-2">
+                              {previewQuery.data.data.practicalSummary.reduce((sum, item) => sum + item.count, 0)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
+
+                {!previewQuery.data.data.theoryRows.length && !previewQuery.data.data.practicalRows.length ? (
                   <div className="rounded border p-3 text-sm text-muted-foreground">
-                    No practical records found for the selected course, semester and subject.
+                    No records found for selected course, semester and subject.
                   </div>
-                )}
+                ) : null}
               </div>
             ) : null}
           </DialogContent>
@@ -361,131 +346,19 @@ export function ConsolidatedSessionalCard() {
 
         <DownloadDialog
           open={downloadOpen}
-          onOpenChange={(open) => {
-            setDownloadOpen(open);
-            if (!open) setDownloadSection(null);
-          }}
-          title={
-            downloadSection
-              ? `Download ${SECTION_LABELS[downloadSection]} Consolidated Sessional (PDF)`
-              : 'Download Consolidated Sessional (PDF)'
-          }
-          description="File will be downloaded as a password-protected PDF for the selected section. Instructor / Prepared By / Checked By are optional."
+          onOpenChange={setDownloadOpen}
+          title="Download Consolidated Sessional (PDF)"
+          description="File will be downloaded as password-protected PDF. Instructor / Prepared By / Checked By are optional."
           isPending={downloads.consolidatedDownload.isPending}
           includeInstructorField
           preparedByRequired={false}
           checkedByRequired={false}
           initialValues={{
-            instructorName: previewData?.subject.instructorName ?? '',
+            instructorName: previewQuery.data?.data?.subject.instructorName ?? '',
           }}
           onSubmit={onDownload}
         />
       </CardContent>
     </Card>
-  );
-}
-
-function TheoryPreviewTable(props: { rows: ConsolidatedTheoryRow[]; phaseTestCount: number }) {
-  const { rows, phaseTestCount } = props;
-
-  return (
-    <table className="min-w-full text-xs">
-      <thead className="bg-muted/50">
-        <tr>
-          <th className="p-2 text-left">S.No</th>
-          <th className="p-2 text-left">GC No</th>
-          <th className="p-2 text-left">Name</th>
-          <th className="p-2 text-left">Branch</th>
-          <th className="p-2 text-left">PT1</th>
-          {phaseTestCount >= 2 ? <th className="p-2 text-left">PT2</th> : null}
-          <th className="p-2 text-left">Tutorial</th>
-          <th className="p-2 text-left">Sessional</th>
-          <th className="p-2 text-left">Final</th>
-          <th className="p-2 text-left">Total</th>
-          <th className="p-2 text-left">Grade</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.ocId} className="border-t">
-            <td className="p-2">{row.sNo}</td>
-            <td className="p-2">{row.ocNo}</td>
-            <td className="p-2">{row.ocName}</td>
-            <td className="p-2">{row.branch ?? '-'}</td>
-            <td className="p-2">{row.phaseTest1Obtained ?? ''}</td>
-            {phaseTestCount >= 2 ? <td className="p-2">{row.phaseTest2Obtained ?? ''}</td> : null}
-            <td className="p-2">{row.tutorialObtained ?? ''}</td>
-            <td className="p-2">{row.sessionalObtained ?? ''}</td>
-            <td className="p-2">{row.finalObtained ?? ''}</td>
-            <td className="p-2">{row.totalObtained ?? ''}</td>
-            <td className="p-2">{row.letterGrade ?? ''}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function PracticalPreviewTable(props: { rows: ConsolidatedPracticalRow[] }) {
-  const { rows } = props;
-
-  return (
-    <table className="min-w-full text-xs">
-      <thead className="bg-muted/50">
-        <tr>
-          <th className="p-2 text-left">S.No</th>
-          <th className="p-2 text-left">GC No</th>
-          <th className="p-2 text-left">Name</th>
-          <th className="p-2 text-left">Conduct of Exp</th>
-          <th className="p-2 text-left">Maint of App</th>
-          <th className="p-2 text-left">Practical Test</th>
-          <th className="p-2 text-left">Viva Voce</th>
-          <th className="p-2 text-left">Total</th>
-          <th className="p-2 text-left">Grade</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.ocId} className="border-t">
-            <td className="p-2">{row.sNo}</td>
-            <td className="p-2">{row.ocNo}</td>
-            <td className="p-2">{row.ocName}</td>
-            <td className="p-2">{row.conductOfExpObtained ?? ''}</td>
-            <td className="p-2">{row.maintOfAppObtained ?? ''}</td>
-            <td className="p-2">{row.practicalTestObtained ?? ''}</td>
-            <td className="p-2">{row.vivaVoceObtained ?? ''}</td>
-            <td className="p-2">{row.totalObtained ?? ''}</td>
-            <td className="p-2">{row.letterGrade ?? ''}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function GradeSummaryTable(props: { summary: GradeSummaryItem[] }) {
-  const total = props.summary.reduce((sum, item) => sum + item.count, 0);
-
-  return (
-    <table className="w-full text-xs">
-      <thead className="bg-muted/50">
-        <tr>
-          <th className="p-2 text-left">Grade</th>
-          <th className="p-2 text-left">Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        {props.summary.map((item) => (
-          <tr key={`summary-${item.grade}`} className="border-t">
-            <td className="p-2">{item.grade}</td>
-            <td className="p-2">{item.count}</td>
-          </tr>
-        ))}
-        <tr className="border-t font-semibold">
-          <td className="p-2">Total</td>
-          <td className="p-2">{total}</td>
-        </tr>
-      </tbody>
-    </table>
   );
 }

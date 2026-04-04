@@ -28,12 +28,9 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const existing = await getPtType(typeId);
         if (!existing) throw new ApiError(404, 'PT type not found', 'not_found');
 
-        const targetCourseId = dto.courseId ?? existing.courseId;
         const targetSemester = dto.semester ?? existing.semester;
         const targetSortOrder = dto.sortOrder ?? existing.sortOrder;
-        const duplicate = await findPtTypeBySemesterAndSortOrder(targetCourseId, targetSemester, targetSortOrder, {
-            excludeId: typeId,
-        });
+        const duplicate = await findPtTypeBySemesterAndSortOrder(targetSemester, targetSortOrder, { excludeId: typeId });
         if (duplicate) {
             throw new ApiError(
                 409,
@@ -42,7 +39,6 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
                 {
                     field: 'sortOrder',
                     sortOrder: targetSortOrder,
-                    courseId: targetCourseId,
                     semester: targetSemester,
                     conflictingTypeId: duplicate.id,
                 },
@@ -63,9 +59,8 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
             actor: { type: 'user', id: adminCtx.userId },
             target: { type: AuditResourceType.PT_TYPE, id: row.id },
             metadata: {
-                description: `Updated PT type ${row.code} (course ${row.courseId}, semester ${row.semester})`,
+                description: `Updated PT type ${row.code} (semester ${row.semester})`,
                 ptTypeId: row.id,
-                courseId: row.courseId,
                 changes: Object.keys(dto),
             },
         });

@@ -6,7 +6,6 @@ import { InterviewFormRecord, InterviewOfficer } from "@/types/interview";
 import { SpecialInterviewRecord, TermVariant } from "@/store/slices/termInterviewSlice";
 import { loadInterviewTemplates } from "@/lib/interviewTemplateLoader";
 import { buildTemplateMappings, type TemplateMappings } from "@/lib/interviewTemplateMatching";
-import { fetchOCById } from "@/app/lib/api/ocApi";
 import {
     fetchInitialInterviews,
     fetchTermInterviews,
@@ -32,33 +31,13 @@ export function useInterviewForms(ocId?: string) {
             }
         >
     >({});
-    const courseIdRef = useRef<string | null>(null);
-
-    const resolveCourseId = useCallback(async () => {
-        if (!ocId) throw new Error("No cadet selected");
-        if (courseIdRef.current) return courseIdRef.current;
-        const oc = await fetchOCById(ocId);
-        const courseId = oc?.course?.id ?? null;
-        if (!courseId) throw new Error("Failed to resolve cadet course");
-        courseIdRef.current = courseId;
-        return courseId;
-    }, [ocId]);
 
     useEffect(() => {
         mountedRef.current = true;
         setTemplatesLoading(true);
         setTemplatesError(null);
-        courseIdRef.current = null;
 
-        if (!ocId) {
-            setTemplatesLoading(false);
-            return () => {
-                mountedRef.current = false;
-            };
-        }
-
-        resolveCourseId()
-            .then((courseId) => loadInterviewTemplates(courseId))
+        loadInterviewTemplates()
             .then((templates) => {
                 if (!mountedRef.current) return;
                 const mappings = buildTemplateMappings(templates);
@@ -77,16 +56,15 @@ export function useInterviewForms(ocId?: string) {
         return () => {
             mountedRef.current = false;
         };
-    }, [ocId, resolveCourseId]);
+    }, []);
 
     const ensureMappings = useCallback(async () => {
         if (mappingsRef.current) return mappingsRef.current;
-        const courseId = await resolveCourseId();
-        const templates = await loadInterviewTemplates(courseId);
+        const templates = await loadInterviewTemplates();
         const mappings = buildTemplateMappings(templates);
         mappingsRef.current = mappings;
         return mappings;
-    }, [resolveCourseId]);
+    }, []);
 
     const fetchInitial = useCallback(async () => {
         if (!ocId) return null;

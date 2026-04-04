@@ -18,12 +18,13 @@ interface Props {
     showDelete?: boolean;
     onReset?: () => void;
     onDeleteSemester?: () => void;
+    readOnly?: boolean;
 }
 
-export default function OLQForm({ register, structure, onSubmit, onClear, showDelete = false, onReset, onDeleteSemester }: Props) {
+export default function OLQForm({ register, structure, onSubmit, onClear, showDelete = false, onReset, onDeleteSemester, readOnly = false }: Props) {
     return (
         <form
-            onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+            onSubmit={(e) => { e.preventDefault(); if (!readOnly) onSubmit(); }}
             className="space-y-6"
         >
             {Object.entries(structure).map(([title, subtitles]) => {
@@ -44,6 +45,7 @@ export default function OLQForm({ register, structure, onSubmit, onClear, showDe
                                 {subtitles.map((s: any) => (
                                     <Input
                                         key={s.id}
+                                        disabled={readOnly}
                                         type="number"
                                         min={0}
                                         max={s.maxMarks ?? 100}
@@ -58,8 +60,8 @@ export default function OLQForm({ register, structure, onSubmit, onClear, showDe
             })}
 
             <div className="flex justify-center gap-4">
-                <Button type="submit" className="w-40">Submit</Button>
-                <Button type="button" variant="outline" className="w-40" onClick={onClear}>Clear</Button>
+                <Button type="submit" className="w-40" disabled={readOnly}>Submit</Button>
+                <Button type="button" variant="outline" className="w-40" onClick={onClear} disabled={readOnly}>Clear</Button>
                 {/* {onReset && (
                     <Button type="button" variant="ghost" className="w-40" onClick={onReset}>Reset Form</Button>
                 )}

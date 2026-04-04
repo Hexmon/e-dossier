@@ -27,7 +27,6 @@ import {
     createPTMotivationField,
     updatePTMotivationField,
     deletePTMotivationField,
-    copyPTTemplate,
     PTTypeCreate,
     PTTypeUpdate,
     PTAttemptCreate,
@@ -51,9 +50,9 @@ import {
 // Query key factory — single source of truth for all keys + invalidation
 // ---------------------------------------------------------------------------
 const QK = {
-    template: (courseId: string, semester: number) => ["pt", "template", courseId, semester] as const,
-    types: (courseId: string, semester: number) => ["pt", "types", courseId, semester] as const,
-    motivationFields: (courseId: string, semester: number) => ["pt", "motivationFields", courseId, semester] as const,
+    template: (semester: number) => ["pt", "template", semester] as const,
+    types: (semester: number) => ["pt", "types", semester] as const,
+    motivationFields: (semester: number) => ["pt", "motivationFields", semester] as const,
     attempts: (typeId: string) => ["pt", "attempts", typeId] as const,
     tasks: (typeId: string) => ["pt", "tasks", typeId] as const,
     // allGrades fetches grades across every attempt for a given type
@@ -67,7 +66,6 @@ const QK = {
 // Hook options — all IDs flow in from the page's local state
 // ---------------------------------------------------------------------------
 export interface UsePhysicalTrainingMgmtOptions {
-    courseId: string;
     semester: number;
     typeId: string | null;
     attemptId: string | null;
@@ -75,7 +73,7 @@ export interface UsePhysicalTrainingMgmtOptions {
 }
 
 export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions) {
-    const { courseId, semester, typeId, attemptId, taskId } = options;
+    const { semester, typeId, attemptId, taskId } = options;
     const queryClient = useQueryClient();
 
     // Derived booleans — keeps every `enabled` guard readable
@@ -87,30 +85,27 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
     // Queries
     // -----------------------------------------------------------------------
     const templateQuery = useQuery({
-        queryKey: QK.template(courseId, semester),
-        queryFn: () => getPTTemplate(courseId, semester),
+        queryKey: QK.template(semester),
+        queryFn: () => getPTTemplate(semester),
         staleTime: 5 * 60 * 1000,
-        enabled: Boolean(courseId),
     });
 
     const typesQuery = useQuery({
-        queryKey: QK.types(courseId, semester),
+        queryKey: QK.types(semester),
         queryFn: async () => {
-            const data = await listPTTypes(courseId, semester);
+            const data = await listPTTypes(semester);
             return data?.items ?? [];
         },
         staleTime: 5 * 60 * 1000,
-        enabled: Boolean(courseId),
     });
 
     const motivationFieldsQuery = useQuery({
-        queryKey: QK.motivationFields(courseId, semester),
+        queryKey: QK.motivationFields(semester),
         queryFn: async () => {
-            const data = await listPTMotivationFields(courseId, semester);
+            const data = await listPTMotivationFields(semester);
             return data?.items ?? [];
         },
         staleTime: 5 * 60 * 1000,
-        enabled: Boolean(courseId),
     });
 
     const attemptsQuery = useQuery({
@@ -180,7 +175,7 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
     const createTypeMutation = useMutation({
         mutationFn: (payload: PTTypeCreate) => createPTType(payload),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QK.types(courseId, semester) });
+            queryClient.invalidateQueries({ queryKey: QK.types(semester) });
             toast.success("PT Type created successfully");
         },
         onError: (error) => {
@@ -193,7 +188,7 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
         mutationFn: ({ id, updates }: { id: string; updates: PTTypeUpdate }) =>
             updatePTType(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QK.types(courseId, semester) });
+            queryClient.invalidateQueries({ queryKey: QK.types(semester) });
             toast.success("PT Type updated successfully");
         },
         onError: (error) => {
@@ -206,7 +201,7 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
         mutationFn: ({ id, opts }: { id: string; opts?: DeleteOptions }) =>
             deletePTType(id, opts),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QK.types(courseId, semester) });
+            queryClient.invalidateQueries({ queryKey: QK.types(semester) });
             toast.success("PT Type deleted successfully");
         },
         onError: (error) => {
@@ -400,7 +395,7 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
     const createMotivationFieldMutation = useMutation({
         mutationFn: (payload: PTMotivationFieldCreate) => createPTMotivationField(payload),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QK.motivationFields(courseId, semester) });
+            queryClient.invalidateQueries({ queryKey: QK.motivationFields(semester) });
             toast.success("Motivation field created successfully");
         },
         onError: (error) => {
@@ -413,7 +408,7 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
         mutationFn: ({ id, updates }: { id: string; updates: PTMotivationFieldUpdate }) =>
             updatePTMotivationField(id, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QK.motivationFields(courseId, semester) });
+            queryClient.invalidateQueries({ queryKey: QK.motivationFields(semester) });
             toast.success("Motivation field updated successfully");
         },
         onError: (error) => {
@@ -426,7 +421,7 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
         mutationFn: ({ id, opts }: { id: string; opts?: DeleteOptions }) =>
             deletePTMotivationField(id, opts),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QK.motivationFields(courseId, semester) });
+            queryClient.invalidateQueries({ queryKey: QK.motivationFields(semester) });
             toast.success("Motivation field deleted successfully");
         },
         onError: (error) => {
@@ -461,35 +456,6 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
         onError: (error) => {
             console.error("Error applying PT template:", error);
             toast.error("Failed to apply PT template");
-        },
-    });
-
-    const copyPtTemplateMutation = useMutation({
-        mutationFn: ({
-            sourceCourseId,
-            targetCourseId,
-            semester: targetSemester,
-        }: {
-            sourceCourseId: string;
-            targetCourseId: string;
-            semester: number;
-        }) =>
-            copyPTTemplate({
-                sourceCourseId,
-                targetCourseId,
-                semester: targetSemester,
-                mode: "replace",
-            }),
-        onSuccess: (result) => {
-            queryClient.invalidateQueries({ queryKey: ["pt"] });
-            toast.success(result.message || "PT template copied successfully");
-            if (result.warnings.length > 0) {
-                toast.warning(`Completed with ${result.warnings.length} warning(s).`);
-            }
-        },
-        onError: (error) => {
-            console.error("Error copying PT template:", error);
-            toast.error("Failed to copy PT template");
         },
     });
 
@@ -578,14 +544,5 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
             profile?: "default";
         } = {}): Promise<ApplyOrgTemplateResponse> =>
             applyPtTemplateMutation.mutateAsync({ dryRun, profile }),
-        copyTemplate: ({
-            sourceCourseId,
-            targetCourseId,
-            semester,
-        }: {
-            sourceCourseId: string;
-            targetCourseId: string;
-            semester: number;
-        }) => copyPtTemplateMutation.mutateAsync({ sourceCourseId, targetCourseId, semester }),
     };
 }

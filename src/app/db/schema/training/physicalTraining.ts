@@ -1,13 +1,11 @@
-import { pgTable, uuid, varchar, timestamp, integer, boolean, text, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, integer, boolean, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { courses } from './courses';
 
 // ---------------------------------------------------------------------------
 // Physical training templates (admin-managed, global)
 // ---------------------------------------------------------------------------
 export const ptTypes = pgTable('pt_types', {
     id: uuid('id').primaryKey().defaultRandom(),
-    courseId: uuid('course_id').references(() => courses.id, { onDelete: 'restrict' }),
     semester: integer('semester').notNull(),
     code: varchar('code', { length: 32 }).notNull(),
     title: varchar('title', { length: 160 }).notNull(),
@@ -19,8 +17,7 @@ export const ptTypes = pgTable('pt_types', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
-    uqCourseSemesterCode: uniqueIndex('uq_pt_type_course_semester_code').on(t.courseId, t.semester, t.code),
-    idxCourseSemesterSort: index('idx_pt_type_course_semester_sort').on(t.courseId, t.semester, t.sortOrder),
+    uqSemesterCode: uniqueIndex('uq_pt_type_semester_code').on(t.semester, t.code),
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
 }));
 
@@ -91,7 +88,6 @@ export const ptTaskScores = pgTable('pt_task_scores', {
 
 export const ptMotivationAwardFields = pgTable('pt_motivation_award_fields', {
     id: uuid('id').primaryKey().defaultRandom(),
-    courseId: uuid('course_id').references(() => courses.id, { onDelete: 'restrict' }),
     semester: integer('semester').notNull(),
     label: varchar('label', { length: 160 }).notNull(),
     sortOrder: integer('sort_order').notNull().default(0),
@@ -100,7 +96,6 @@ export const ptMotivationAwardFields = pgTable('pt_motivation_award_fields', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
-    uqFieldPerCourseSemester: uniqueIndex('uq_pt_motivation_field_course_semester').on(t.courseId, t.semester, t.label),
-    idxFieldCourseSemesterSort: index('idx_pt_motivation_field_course_semester_sort').on(t.courseId, t.semester, t.sortOrder),
+    uqFieldPerSemester: uniqueIndex('uq_pt_motivation_field_semester').on(t.semester, t.label),
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
 }));

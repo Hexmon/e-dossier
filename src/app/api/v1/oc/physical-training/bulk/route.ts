@@ -1,5 +1,6 @@
 import { ApiError, handleApiError, json } from '@/app/lib/http';
 import { mustBeAuthed } from '../../_checks';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import {
     ptOcBulkQuerySchema,
     ptOcBulkUpsertSchema,
@@ -15,7 +16,7 @@ import {
     upsertOcPtScores,
 } from '@/app/db/queries/physicalTrainingOc';
 import { listOCsBasic } from '@/app/db/queries/oc';
-import { getPtTemplateByCourseSemester } from '@/app/db/queries/physicalTraining';
+import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
 import { isFreeEntryPtAttemptCode } from '@/app/lib/physical-training-attempts';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -52,7 +53,6 @@ function normalizeError(err: unknown) {
 function ensureValidTemplateScoreRef(
     row:
         | {
-            courseId: string | null;
             semester: number;
             typeDeletedAt: Date | null;
             taskDeletedAt: Date | null;
@@ -64,10 +64,8 @@ function ensureValidTemplateScoreRef(
         }
         | undefined,
     semester: number,
-    courseId: string,
 ) {
     if (!row) return false;
-    if (row.courseId && row.courseId !== courseId) return false;
     if (row.semester !== semester) return false;
     if (row.typeDeletedAt || row.taskDeletedAt || row.attemptDeletedAt || row.gradeDeletedAt) return false;
     if (!row.typeIsActive || !row.attemptIsActive || !row.gradeIsActive) return false;
@@ -77,17 +75,14 @@ function ensureValidTemplateScoreRef(
 function ensureValidMotivationFieldRef(
     row:
         | {
-            courseId: string | null;
             semester: number;
             isActive: boolean;
             deletedAt: Date | null;
         }
         | undefined,
     semester: number,
-    courseId: string,
 ) {
     if (!row) return false;
-    if (row.courseId && row.courseId !== courseId) return false;
     if (row.semester !== semester) return false;
     if (row.deletedAt || !row.isActive) return false;
     return true;
@@ -120,10 +115,7 @@ async function GETHandler(req: AuditNextRequest) {
         }
 
         const [template, ocRows] = await Promise.all([
-            getPtTemplateByCourseSemester(query.courseId, query.semester, {
-                includeDeleted: false,
-                fallbackToLegacyGlobal: true,
-            }),
+            getPtTemplateBySemester(query.semester, { includeDeleted: false }),
             listOCsBasic({
                 courseId: query.courseId,
                 active: query.active,
@@ -197,6 +189,7 @@ async function GETHandler(req: AuditNextRequest) {
 async function POSTHandler(req: AuditNextRequest) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const body = ptOcBulkUpsertSchema.parse(await req.json());
 
         const ocRows = await listOCsBasic({
@@ -238,7 +231,7 @@ async function POSTHandler(req: AuditNextRequest) {
 
                 for (const ptTaskScoreId of item.clearScoreIds ?? []) {
                     const row = scoreTemplateById.get(ptTaskScoreId);
-                    if (!ensureValidTemplateScoreRef(row, body.semester, body.courseId)) {
+                    if (!ensureValidTemplateScoreRef(row, body.semester)) {
                         throw new ApiError(400, 'Invalid PT score reference.', 'invalid_score', {
                             ocId: item.ocId,
                             ptTaskScoreId,
@@ -248,7 +241,7 @@ async function POSTHandler(req: AuditNextRequest) {
 
                 for (const score of item.scoresUpsert ?? []) {
                     const row = scoreTemplateById.get(score.ptTaskScoreId);
-                    if (!ensureValidTemplateScoreRef(row, body.semester, body.courseId)) {
+                    if (!ensureValidTemplateScoreRef(row, body.semester)) {
                         throw new ApiError(400, 'Invalid PT score reference.', 'invalid_score', {
                             ocId: item.ocId,
                             ptTaskScoreId: score.ptTaskScoreId,
@@ -266,7 +259,7 @@ async function POSTHandler(req: AuditNextRequest) {
 
                 for (const fieldId of item.clearMotivationFieldIds ?? []) {
                     const row = motivationFieldById.get(fieldId);
-                    if (!ensureValidMotivationFieldRef(row, body.semester, body.courseId)) {
+                    if (!ensureValidMotivationFieldRef(row, body.semester)) {
                         throw new ApiError(400, 'Invalid PT motivation field.', 'invalid_field', {
                             ocId: item.ocId,
                             fieldId,
@@ -276,7 +269,7 @@ async function POSTHandler(req: AuditNextRequest) {
 
                 for (const entry of item.motivationUpsert ?? []) {
                     const row = motivationFieldById.get(entry.fieldId);
-                    if (!ensureValidMotivationFieldRef(row, body.semester, body.courseId)) {
+                    if (!ensureValidMotivationFieldRef(row, body.semester)) {
                         throw new ApiError(400, 'Invalid PT motivation field.', 'invalid_field', {
                             ocId: item.ocId,
                             fieldId: entry.fieldId,

@@ -1,45 +1,43 @@
 type PlatoonCommanderAccessInput = {
-  roles?: string[] | null;
+  roles?: Array<string | null | undefined> | null;
   position?: string | null;
   scopeType?: string | null;
 };
 
-function normalizeRoleToken(value: string | null | undefined): string {
+export function normalizeAccessToken(value: string | null | undefined): string {
   return String(value ?? "")
     .trim()
     .toUpperCase()
     .replace(/[\s-]+/g, "_");
 }
 
-function collectRoleTokens(input: PlatoonCommanderAccessInput): Set<string> {
-  const tokens = new Set((input.roles ?? []).map(normalizeRoleToken).filter(Boolean));
-  const normalizedPosition = normalizeRoleToken(input.position);
-  if (normalizedPosition) {
-    tokens.add(normalizedPosition);
+function collectTokens(input: PlatoonCommanderAccessInput): string[] {
+  const out = (input.roles ?? [])
+    .map((value) => normalizeAccessToken(value))
+    .filter(Boolean);
+  const positionToken = normalizeAccessToken(input.position);
+  if (positionToken) {
+    out.push(positionToken);
   }
-  return tokens;
+  return out;
 }
 
-export function isPlatoonCommanderToken(token: string | null | undefined): boolean {
-  const normalized = normalizeRoleToken(token);
-  if (!normalized) return false;
-  if (normalized === "PLATOON_COMMANDER" || normalized === "PLATOON_CDR") return true;
-  return normalized.endsWith("PLCDR");
+export function isPlatoonCommanderToken(token: string): boolean {
+  if (!token) return false;
+  if (token === "PLATOON_COMMANDER" || token === "PLATOON_CDR") return true;
+  if (token === "PL_CDR" || token === "PLCDR") return true;
+
+  const compact = token.replace(/[^A-Z0-9]/g, "");
+  if (compact.includes("PLATOONCOMMANDER")) return true;
+  return compact.endsWith("PLCDR");
 }
 
-export function canManageCadetAppointments(
-  input: PlatoonCommanderAccessInput
-): boolean {
-  const normalizedScopeType = normalizeRoleToken(input.scopeType);
-  if (normalizedScopeType !== "PLATOON") {
-    return false;
-  }
+export function hasPlatoonCommanderRole(input: PlatoonCommanderAccessInput): boolean {
+  return collectTokens(input).some((token) => isPlatoonCommanderToken(token));
+}
 
-  for (const token of collectRoleTokens(input)) {
-    if (isPlatoonCommanderToken(token)) {
-      return true;
-    }
-  }
-
-  return false;
+export function isScopedPlatoonCommander(input: PlatoonCommanderAccessInput): boolean {
+  const scopeType = normalizeAccessToken(input.scopeType);
+  if (scopeType !== "PLATOON") return false;
+  return hasPlatoonCommanderRole(input);
 }

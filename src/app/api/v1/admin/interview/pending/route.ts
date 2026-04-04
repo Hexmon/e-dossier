@@ -17,8 +17,7 @@ import {
     interviewTemplateGroups,
     interviewTemplateFields,
 } from '@/app/db/schema/training/interviewTemplates';
-import { buildTemplateMappings } from '@/lib/interviewTemplateMatching';
-import { buildExpectedSpecialInterviewSlots } from '@/lib/interview-pending-slots';
+import { buildTemplateMappings, getTemplateMatchForSemester } from '@/lib/interviewTemplateMatching';
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from '@/types/interview-templates';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -38,6 +37,11 @@ const pendingInterviewQuerySchema = z.object({
     offset: z.coerce.number().int().min(0).max(5000).optional(),
     sort: ocListSortSchema.optional(),
 });
+
+type ExpectedSlot = {
+    templateId: string;
+    semester: number;
+};
 
 function isUuid(value: string): boolean {
     return z.string().uuid().safeParse(value).success;
@@ -256,6 +260,41 @@ async function loadActiveTemplatesForMatching(): Promise<TemplateInfo[]> {
     return out;
 }
 
+function matchIsSemesterAllowed(match: ReturnType<typeof getTemplateMatchForSemester>, semester: number) {
+    if (!match) return false;
+    const semesters = match.template.semesters ?? [];
+    return semesters.length === 0 || semesters.includes(semester);
+}
+
+function buildExpectedSlots(mappings: ReturnType<typeof buildTemplateMappings>) {
+    const initialKinds = ['plcdr', 'dscoord', 'dycdr', 'cdr'] as const;
+    const termKinds = ['beginning', 'postmid', 'special'] as const;
+
+    const initialSlotMap = new Map<string, ExpectedSlot>();
+    const termSlotMap = new Map<string, ExpectedSlot>();
+
+    for (const semester of [1, 2, 3, 4, 5, 6] as const) {
+        for (const kind of initialKinds) {
+            const match = getTemplateMatchForSemester(mappings, kind, semester);
+            if (!match || !matchIsSemesterAllowed(match, semester)) continue;
+            const key = `${match.template.id}:${semester}`;
+            initialSlotMap.set(key, { templateId: match.template.id, semester });
+        }
+
+        for (const kind of termKinds) {
+            const match = getTemplateMatchForSemester(mappings, kind, semester);
+            if (!match || !matchIsSemesterAllowed(match, semester)) continue;
+            const key = `${match.template.id}:${semester}`;
+            termSlotMap.set(key, { templateId: match.template.id, semester });
+        }
+    }
+
+    return {
+        initial: Array.from(initialSlotMap.values()),
+        terms: Array.from(termSlotMap.values()),
+    };
+}
+
 function interviewSlotKey(params: {
     ocId: string;
     enrollmentId: string | null;
@@ -407,10 +446,10 @@ async function GETHandler(req: AuditNextRequest) {
 
         const templates = await loadActiveTemplatesForMatching();
         const mappings = buildTemplateMappings(templates);
-        const expected = {
-            special: buildExpectedSpecialInterviewSlots(mappings),
-        };
-        const relevantTemplateIds = Array.from(new Set(expected.special.map((slot) => slot.templateId)));
+        const expected = buildExpectedSlots(mappings);
+        const relevantTemplateIds = Array.from(
+            new Set([...expected.initial, ...expected.terms].map((slot) => slot.templateId)),
+        );
 
         const ocIds = ocRows.map((row) => row.id);
         const activeEnrollments = await db
@@ -531,7 +570,19 @@ async function GETHandler(req: AuditNextRequest) {
         const items = ocRows.map((row) => {
             const enrollmentId = activeEnrollmentByOcId.get(row.id) ?? null;
 
-            const completeSpecial = expected.special.every((slot) => {
+            const completeInitial = expected.initial.every((slot) => {
+                if (!enrollmentId) return false;
+                const key = interviewSlotKey({
+                    ocId: row.id,
+                    enrollmentId,
+                    templateId: slot.templateId,
+                    semester: slot.semester,
+                });
+                const latest = latestInterviewBySlot.get(key);
+                return !!latest && contentfulInterviewIds.has(latest.interviewId);
+            });
+
+            const completeTerms = expected.terms.every((slot) => {
                 if (!enrollmentId) return false;
                 const key = interviewSlotKey({
                     ocId: row.id,
@@ -551,9 +602,8 @@ async function GETHandler(req: AuditNextRequest) {
                 rankAndName: `OC ${row.name}`,
                 course,
                 platoon,
-                completeInitial: true,
-                completeTerms: completeSpecial,
-                completeSpecial,
+                completeInitial,
+                completeTerms,
             };
         });
 
@@ -567,7 +617,8 @@ async function GETHandler(req: AuditNextRequest) {
                 count: items.length,
                 query: { q, courseId, requestedPlatoon, activeOnly, sort, limit, offset },
                 scopeEnforcedPlatoonId: isPlatoonScoped ? scopePlatoonId : null,
-                requiredSpecialSlots: expected.special.length,
+                requiredInitialSlots: expected.initial.length,
+                requiredTermSlots: expected.terms.length,
             },
         });
 

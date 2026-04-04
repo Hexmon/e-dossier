@@ -1,42 +1,24 @@
+import { isScopedPlatoonCommander, normalizeAccessToken } from "@/lib/platoon-commander-access";
+
 type InterviewTickerAccessInput = {
   roles?: Array<string | null | undefined> | null;
   position?: string | null;
   scopeType?: string | null;
 };
 
-function normalizeToken(value: string | null | undefined): string {
-  return String(value ?? "")
-    .trim()
-    .toUpperCase()
-    .replace(/[\s-]+/g, "_");
-}
-
 function collectTokens(input: InterviewTickerAccessInput): string[] {
   const out = (input.roles ?? [])
-    .map((value) => normalizeToken(value))
+    .map((value) => normalizeAccessToken(value))
     .filter(Boolean);
-  const positionToken = normalizeToken(input.position);
+  const positionToken = normalizeAccessToken(input.position);
   if (positionToken) {
     out.push(positionToken);
   }
   return out;
 }
 
-function isPlatoonCommanderToken(token: string): boolean {
-  if (!token) return false;
-  if (token === "PLATOON_COMMANDER" || token === "PLATOON_CDR") return true;
-  if (token === "PL_CDR" || token === "PLCDR") return true;
-
-  const compact = token.replace(/[^A-Z0-9]/g, "");
-  if (compact.includes("PLATOONCOMMANDER")) return true;
-  return compact.endsWith("PLCDR");
-}
-
 export function isPlatoonCommanderDashboardUser(input: InterviewTickerAccessInput): boolean {
-  const scopeType = normalizeToken(input.scopeType);
-  if (scopeType !== "PLATOON") return false;
-
-  return collectTokens(input).some((token) => isPlatoonCommanderToken(token));
+  return isScopedPlatoonCommander(input);
 }
 
 export function isAdminDashboardUser(input: InterviewTickerAccessInput): boolean {

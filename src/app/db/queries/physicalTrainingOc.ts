@@ -24,7 +24,6 @@ export async function listTemplateScoresByIds(ids: string[]) {
             ptAttemptId: ptTypeAttempts.id,
             ptAttemptGradeId: ptAttemptGrades.id,
             attemptCode: ptTypeAttempts.code,
-            courseId: ptTypes.courseId,
             semester: ptTypes.semester,
             typeIsActive: ptTypes.isActive,
             attemptIsActive: ptTypeAttempts.isActive,
@@ -47,7 +46,6 @@ export async function listMotivationFieldsByIds(ids: string[]) {
     return db
         .select({
             id: ptMotivationAwardFields.id,
-            courseId: ptMotivationAwardFields.courseId,
             semester: ptMotivationAwardFields.semester,
             isActive: ptMotivationAwardFields.isActive,
             deletedAt: ptMotivationAwardFields.deletedAt,

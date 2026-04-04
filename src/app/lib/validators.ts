@@ -108,28 +108,6 @@ export const appointmentTransferBody = z.object({
   reason: z.string().max(500).optional(),
 });
 
-export const cadetAppointmentCreateSchema = z.object({
-  cadetId: z.string().uuid(),
-  appointmentName: z.string().trim().min(1).max(128),
-  startsAt: z.coerce.date(),
-  reason: z.string().trim().max(500).optional(),
-});
-
-export const cadetAppointmentUpdateSchema = z.object({
-  cadetId: z.string().uuid().optional(),
-  appointmentName: z.string().trim().min(1).max(128).optional(),
-  startsAt: z.coerce.date().optional(),
-  endsAt: z.coerce.date().nullable().optional(),
-  reason: z.string().trim().max(500).nullable().optional(),
-});
-
-export const cadetAppointmentTransferSchema = z.object({
-  newCadetId: z.string().uuid(),
-  prevEndsAt: z.string().datetime(),
-  newStartsAt: z.string().datetime(),
-  reason: z.string().trim().max(500).optional(),
-});
-
 // Query params for GET /appointments
 export const appointmentListQuerySchema = z.object({
   active: z

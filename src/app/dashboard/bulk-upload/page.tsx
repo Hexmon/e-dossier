@@ -1,50 +1,29 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen, Dumbbell } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { DashboardCard } from "@/components/cards/DashboardCard";
 import { useMe } from "@/hooks/useMe";
-import { resolvePageAction } from "@/app/lib/acx/action-map";
-import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
 
 export default function BulkUploadPage() {
   const router = useRouter();
   const { data: meData, isLoading: meLoading } = useMe();
-  const authzV2Enabled = isAuthzV2Enabled();
-
-  const canAccessRoute = useMemo(() => {
-    return (route: string) => {
-      if (!authzV2Enabled) return true;
-      if (meLoading) return true;
-
-      const page = resolvePageAction(route);
-      if (!page) return true;
-
-      const roles = (meData?.roles ?? []).map((role) => String(role).toUpperCase());
-      const permissions = new Set<string>((meData?.permissions ?? []) as string[]);
-
-      if (roles.includes("SUPER_ADMIN")) return true;
-      if (roles.includes("ADMIN") && page.adminBaseline) return true;
-      if (permissions.has("*")) return true;
-      return permissions.has(page.action);
-    };
-  }, [authzV2Enabled, meData?.permissions, meData?.roles, meLoading]);
-
-  const canViewAcademics = canAccessRoute("/dashboard/manage-marks");
-  const canViewPt = canAccessRoute("/dashboard/manage-pt-marks");
-  const canViewHub = canAccessRoute("/dashboard/bulk-upload") || canViewAcademics || canViewPt;
+  const moduleAccess = meData?.moduleAccess;
+  const canViewAcademics = moduleAccess?.canAccessAcademicsBulk ?? true;
+  const canViewPt = moduleAccess?.canAccessPtBulk ?? true;
+  const canViewHub = moduleAccess?.canAccessBulkUpload ?? (canViewAcademics || canViewPt);
   const hasAnyCard = canViewAcademics || canViewPt;
 
   useEffect(() => {
-    if (!authzV2Enabled || meLoading) return;
+    if (meLoading) return;
     if (!canViewHub || !hasAnyCard) {
       router.replace("/dashboard");
     }
-  }, [authzV2Enabled, canViewHub, hasAnyCard, meLoading, router]);
+  }, [canViewHub, hasAnyCard, meLoading, router]);
 
-  if (authzV2Enabled && !meLoading && (!canViewHub || !hasAnyCard)) {
+  if (!meLoading && (!canViewHub || !hasAnyCard)) {
     return null;
   }
 

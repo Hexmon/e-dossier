@@ -1,13 +1,15 @@
 import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, hasAdminRole } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { eq } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { getCurrentSemesterForCourse } from '@/app/db/queries/oc';
+import { mustHaveOcAccess } from '../_checks';
 
 const OcParam = z.object({ ocId: z.string().uuid() });
 const jnuEnrollmentNoSchema = z
@@ -28,15 +30,13 @@ const updateSchema = z.object({
 });
 
 async function requireAdminForWrite(req: AuditNextRequest) {
-    const ctx = await requireAuth(req);
-    if (!hasAdminRole(ctx.roles)) throw new ApiError(403, 'Admin privileges required', 'forbidden');
-    return ctx;
+    return requireAdmin(req);
 }
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await requireAuth(req);
         const { ocId } = await OcParam.parseAsync(await params);
+        const authCtx = await mustHaveOcAccess(req, ocId);
         const [row] = await db
             .select({
                 id: ocCadets.id,
@@ -93,6 +93,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             updatedAt: row.platoonUpdatedAt,
             deletedAt: row.platoonDeletedAt,
         } : null;
+        const currentSemester = course ? await getCurrentSemesterForCourse(course.id) : null;
 
         const oc = {
             id: row.id,
@@ -101,6 +102,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             uid: row.uid,
             name: row.name,
             course,
+            currentSemester,
             branch: row.branch,
             platoon,
             arrivalAtUniversity: row.arrivalAtUniversity,

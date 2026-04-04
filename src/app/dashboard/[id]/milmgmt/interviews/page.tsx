@@ -18,6 +18,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Shield } from "lucide-react";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 type InterviewModule = "initial" | "terms";
 
@@ -29,6 +33,7 @@ export default function InterviewsPage() {
   const ocId = Array.isArray(params.id) ? params.id[0] : params.id ?? "";
 
   const { cadet } = useOcDetails(ocId);
+  const { data: meData } = useMe();
   const {
     name = "",
     courseName = "",
@@ -36,6 +41,7 @@ export default function InterviewsPage() {
     ocId: cadetOcId = ocId,
     course = "",
   } = cadet ?? {};
+  const currentSemester = cadet?.currentSemester ?? 1;
 
   const selectedTab = searchParams.get("interview");
   const activeModule: InterviewModule = selectedTab === "terms" ? "terms" : "initial";
@@ -46,7 +52,18 @@ export default function InterviewsPage() {
     ocNumber,
     ocId: cadetOcId,
     course,
+    currentSemester,
   };
+  const canEditLockedSemesters = canBypassDossierSemesterLock({
+    roles: meData?.roles,
+    position: meData?.apt?.position ?? null,
+  });
+  const { activeSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+    currentSemester,
+    supportedSemesters: [1, 2, 3, 4, 5, 6],
+    canEditLockedSemesters,
+    legacyQueryKeys: ["sem", "semister"],
+  });
 
   const buildInterviewPath = (module: InterviewModule) => {
     const nextParams = new URLSearchParams(searchParams.toString());
@@ -129,7 +146,19 @@ export default function InterviewsPage() {
             </button>
           </div>
 
-          {activeModule === "terms" ? <InterviewTermTabs /> : <InterviewTabs />}
+          {isActiveSemesterLocked ? (
+            <SemesterLockNotice
+              activeSemester={activeSemester}
+              currentSemester={currentSemester}
+              supportedSemesters={supportedSemesters}
+            />
+          ) : null}
+
+          {activeModule === "terms" ? (
+            <InterviewTermTabs readOnly={isActiveSemesterLocked} currentSemester={currentSemester} canEditLockedSemesters={canEditLockedSemesters} />
+          ) : (
+            <InterviewTabs readOnly={isActiveSemesterLocked} currentSemester={currentSemester} canEditLockedSemesters={canEditLockedSemesters} />
+          )}
         </DossierTab>
       </main>
     </DashboardLayout>

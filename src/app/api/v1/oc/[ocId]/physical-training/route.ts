@@ -1,6 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import {
     ptOcScoresQuerySchema,
     ptOcScoresUpsertSchema,
@@ -17,13 +18,8 @@ import {
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { isFreeEntryPtAttemptCode } from '@/app/lib/physical-training-attempts';
-import { getActiveEnrollmentCourse } from '@/app/db/queries/oc-enrollments';
 
-async function validateScores(
-    courseId: string,
-    semester: number,
-    scores: Array<{ ptTaskScoreId: string; marksScored: number }>,
-) {
+async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: string; marksScored: number }>) {
     const uniqueIds = Array.from(new Set(scores.map((s) => s.ptTaskScoreId)));
     const templateRows = await listTemplateScoresByIds(uniqueIds);
     const rowById = new Map(templateRows.map((row) => [row.ptTaskScoreId, row]));
@@ -32,10 +28,6 @@ async function validateScores(
     for (const id of uniqueIds) {
         const row = rowById.get(id);
         if (!row) {
-            invalidIds.push(id);
-            continue;
-        }
-        if (row.courseId && row.courseId !== courseId) {
             invalidIds.push(id);
             continue;
         }
@@ -107,12 +99,13 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
-        const { courseId } = await getActiveEnrollmentCourse(ocId);
 
         const dto = ptOcScoresUpsertSchema.parse(await req.json());
-        await validateScores(courseId, dto.semester, dto.scores);
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await validateScores(dto.semester, dto.scores);
 
         await upsertOcPtScores(ocId, dto.semester, dto.scores);
         const items = await listOcPtScores(ocId, dto.semester);
@@ -139,14 +132,15 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
-        const { courseId } = await getActiveEnrollmentCourse(ocId);
 
         const dto = ptOcScoresUpdateSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         if (dto.scores?.length) {
-            await validateScores(courseId, dto.semester, dto.scores);
+            await validateScores(dto.semester, dto.scores);
             await upsertOcPtScores(ocId, dto.semester, dto.scores);
         }
 
@@ -180,10 +174,12 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
         const dto = ptOcScoresDeleteSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         const deleted = dto.scoreIds?.length
             ? await deleteOcPtScoresByIds(ocId, dto.scoreIds)

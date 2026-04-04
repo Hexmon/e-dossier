@@ -7,7 +7,6 @@ import { endpoints } from "@/constants/endpoints";
 
 export interface TrainingCamp {
     id: string;
-    courseId: string | null;
     name: string;
     semester: 1 | 2 | 3 | 4 | 5 | 6;
     sortOrder: number;
@@ -37,7 +36,6 @@ export interface TrainingCampActivity {
 }
 
 export interface TrainingCampCreate {
-    courseId: string;
     name: string;
     semester: 1 | 2 | 3 | 4 | 5 | 6;
     sortOrder?: number;
@@ -52,7 +50,6 @@ export interface TrainingCampCreate {
 }
 
 export interface TrainingCampUpdate {
-    courseId?: string;
     name?: string;
     semester?: 1 | 2 | 3 | 4 | 5 | 6;
     sortOrder?: number;
@@ -85,47 +82,15 @@ export interface TrainingCampSettings {
     maxCampsPerSemester: number;
 }
 
-export interface TrainingCampTemplateCopyPayload {
-    sourceCourseId: string;
-    targetCourseId: string;
-    semester: 1 | 2 | 3 | 4 | 5 | 6;
-    mode?: "replace";
-}
-
-export interface TrainingCampTemplateCopyResponse {
-    message: string;
-    sourceCourseId: string;
-    targetCourseId: string;
-    semester: number;
-    mode: "replace";
-    createdCount: number;
-    updatedCount: number;
-    deactivatedCount: number;
-    stats: {
-        camps: {
-            created: number;
-            updated: number;
-            deactivated: number;
-        };
-        activities: {
-            created: number;
-            updated: number;
-            deactivated: number;
-        };
-    };
-}
-
 /**
  * Fetch all training camps
  */
 export async function fetchTrainingCamps(params?: {
-    courseId?: string;
     semester?: 1 | 2 | 3 | 4 | 5 | 6;
     includeActivities?: boolean;
     includeDeleted?: boolean;
 }): Promise<TrainingCamp[]> {
     const query: Record<string, string> = {};
-    if (params?.courseId) query.courseId = params.courseId;
     if (params?.semester) query.semester = String(params.semester);
     if (params?.includeActivities) query.includeActivities = "true";
     if (params?.includeDeleted) query.includeDeleted = "true";
@@ -156,16 +121,6 @@ export async function updateTrainingCampSettings(
         body: updates,
     });
     return data.settings;
-}
-
-export async function copyTrainingCampTemplate(
-    payload: TrainingCampTemplateCopyPayload
-): Promise<TrainingCampTemplateCopyResponse> {
-    return apiRequest<TrainingCampTemplateCopyResponse>({
-        method: "POST",
-        endpoint: "/api/v1/admin/training-camps/copy",
-        body: payload,
-    });
 }
 
 /**

@@ -66,24 +66,14 @@ const previewData = {
   course: {
     id: courseId,
     code: 'TES-50',
-    title: 'TES 50',
   },
-  semester: 1,
   subject: {
     id: subjectId,
     code: 'MATH',
-    name: 'Mathematics',
     instructorName: 'Instructor One',
-    noOfPhaseTests: 2,
-    hasTheory: true,
-    hasPractical: true,
-    theoryCredits: 4,
-    practicalCredits: 1,
   },
   theoryRows: [{ ocId: 'oc-1' }],
   practicalRows: [{ ocId: 'oc-2' }],
-  theorySummary: [{ grade: 'AO', count: 1 }],
-  practicalSummary: [{ grade: 'AP', count: 1 }],
 };
 
 beforeEach(() => {
@@ -171,7 +161,6 @@ describe('Consolidated sessional report routes', () => {
         courseId,
         semester: 1,
         subjectId,
-        section: 'theory',
         password: 'password123',
         preparedBy: 'Prepared By',
         checkedBy: 'Checked By',
@@ -191,7 +180,6 @@ describe('Consolidated sessional report routes', () => {
         courseId,
         semester: 1,
         subjectId,
-        section: 'practical',
         instructorName: 'Instructor One',
         password: 'password123',
         preparedBy: 'Prepared By',
@@ -203,18 +191,13 @@ describe('Consolidated sessional report routes', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/pdf');
-    expect(res.headers.get('Content-Disposition')).toContain(
-      'consolidated-sessional-practical-TES-50-sem-1-MATH-RPT-0001.pdf',
-    );
+    expect(res.headers.get('Content-Disposition')).toContain('consolidated-sessional-TES-50-sem-1-MATH-RPT-0001.pdf');
     expect(reportDownloadVersions.createReportDownloadVersion).toHaveBeenCalledWith(
       expect.objectContaining({
         versionId: 'RPT-0001',
         requestedByUserId: 'user-1',
-        fileName: 'consolidated-sessional-practical-TES-50-sem-1-MATH-RPT-0001.pdf',
+        fileName: 'consolidated-sessional-TES-50-sem-1-MATH-RPT-0001.pdf',
         encrypted: true,
-        filters: expect.objectContaining({
-          section: 'practical',
-        }),
       }),
     );
     expect(auditLogMock).toHaveBeenCalledWith(
@@ -222,40 +205,9 @@ describe('Consolidated sessional report routes', () => {
         outcome: 'SUCCESS',
         metadata: expect.objectContaining({
           reportType: 'ACADEMICS_CONSOLIDATED_SESSIONAL',
-          section: 'practical',
           versionId: 'RPT-0001',
         }),
       }),
     );
-  });
-
-  it('download rejects a section that is not available for the subject', async () => {
-    vi.mocked(reportData.buildConsolidatedSessionalPreview).mockResolvedValueOnce({
-      ...previewData,
-      subject: {
-        ...previewData.subject,
-        hasPractical: false,
-      },
-    } as Awaited<ReturnType<typeof reportData.buildConsolidatedSessionalPreview>>);
-
-    const req = makeJsonRequest({
-      method: 'POST',
-      path: '/api/v1/reports/academics/consolidated-sessional/download',
-      body: {
-        courseId,
-        semester: 1,
-        subjectId,
-        section: 'practical',
-        password: 'password123',
-        preparedBy: 'Prepared By',
-        checkedBy: 'Checked By',
-      },
-    });
-
-    const res = await downloadConsolidatedSessional(req as any, createRouteContext());
-    const body = await res.json();
-
-    expect(res.status).toBe(400);
-    expect(body.message).toBe('Practical sessional marksheet is not available for this subject.');
   });
 });

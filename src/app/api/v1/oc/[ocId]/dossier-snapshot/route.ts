@@ -1,8 +1,7 @@
 import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists } from '../../_checks';
-import { requireAuth } from '@/app/lib/authz';
+import { parseParam, ensureOcExists, mustHaveOcAccess } from '../../_checks';
 import { ocCadets, ocCommissioning, ocImages } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -29,8 +28,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
   try {
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
-    // Allow any authenticated user to read dossier snapshots (read-only summary data)
-    const authCtx = await requireAuth(req);
+    const authCtx = await mustHaveOcAccess(req, ocId);
 
     // Fetch OC data
     const [ocRow] = await db
@@ -193,9 +191,9 @@ async function uploadImage(ocId: string, file: File, kind: 'CIVIL_DRESS' | 'UNIF
 
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const adminCtx = await requireAuth(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
+    const adminCtx = await mustHaveOcAccess(req, ocId);
 
     let dto: any;
     let arrivalPhoto: File | null = null;
@@ -274,9 +272,9 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 
 async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const adminCtx = await requireAuth(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
+    const adminCtx = await mustHaveOcAccess(req, ocId);
 
     let dto: any;
     let arrivalPhoto: File | null = null;

@@ -2,25 +2,53 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from '@/app/api/v1/me/navigation/route';
 import { NextRequest } from 'next/server';
 
-// Mock dependencies
-vi.mock('@/app/lib/acx/principal', () => ({
-    buildPrincipalFromRequest: vi.fn(),
+vi.mock('@/app/lib/guard', () => ({
+    requireAuth: vi.fn(),
 }));
 
-import { buildPrincipalFromRequest } from '@/app/lib/acx/principal';
+vi.mock('@/app/lib/module-access', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@/app/lib/module-access')>();
+    return {
+        ...actual,
+        resolveModuleAccessForUser: vi.fn(),
+    };
+});
+
+import { requireAuth } from '@/app/lib/guard';
+import { resolveModuleAccessForUser } from '@/app/lib/module-access';
 
 describe('GET /api/v1/me/navigation', () => {
-    const mockBuildPrincipal = buildPrincipalFromRequest as any;
+    const mockRequireAuth = requireAuth as any;
+    const mockResolveModuleAccess = resolveModuleAccessForUser as any;
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockRequireAuth.mockResolvedValue({
+            userId: 'user-1',
+            roles: ['PLATOON CDR'],
+            apt: { position: 'PLATOON CDR' },
+        });
     });
 
     it('should return full navigation for SUPER_ADMIN', async () => {
-        mockBuildPrincipal.mockResolvedValue({
-            id: 'super-admin',
+        mockRequireAuth.mockResolvedValue({
+            userId: 'super-admin',
             roles: ['SUPER_ADMIN'],
-            permissions: [],
+            apt: { position: 'SUPER_ADMIN' },
+        });
+        mockResolveModuleAccess.mockResolvedValue({
+            sections: {
+                dashboard: true,
+                admin: true,
+                settings: true,
+                dossier: true,
+                bulk_upload: true,
+                reports: true,
+                help: true,
+            },
+            canAccessDossier: true,
+            canAccessBulkUpload: true,
+            canAccessReports: true,
         });
 
         const req = new NextRequest('http://localhost/api/v1/me/navigation');
@@ -34,10 +62,19 @@ describe('GET /api/v1/me/navigation', () => {
     });
 
     it('should return correct view for OTHER roles', async () => {
-        mockBuildPrincipal.mockResolvedValue({
-            id: 'pl-cdr-1',
-            roles: ['PLATOON CDR'],
-            permissions: [],
+        mockResolveModuleAccess.mockResolvedValue({
+            sections: {
+                dashboard: true,
+                admin: false,
+                settings: true,
+                dossier: true,
+                bulk_upload: true,
+                reports: true,
+                help: true,
+            },
+            canAccessDossier: true,
+            canAccessBulkUpload: true,
+            canAccessReports: true,
         });
 
         const req = new NextRequest('http://localhost/api/v1/me/navigation');
@@ -64,10 +101,24 @@ describe('GET /api/v1/me/navigation', () => {
     });
 
     it('should return correct view for ADMIN (No Dossier/Bulk Upload/Reports)', async () => {
-        mockBuildPrincipal.mockResolvedValue({
-            id: 'admin-1',
+        mockRequireAuth.mockResolvedValue({
+            userId: 'admin-1',
             roles: ['ADMIN'],
-            permissions: [],
+            apt: { position: 'ADMIN' },
+        });
+        mockResolveModuleAccess.mockResolvedValue({
+            sections: {
+                dashboard: true,
+                admin: true,
+                settings: true,
+                dossier: false,
+                bulk_upload: false,
+                reports: false,
+                help: true,
+            },
+            canAccessDossier: false,
+            canAccessBulkUpload: false,
+            canAccessReports: false,
         });
 
         const req = new NextRequest('http://localhost/api/v1/me/navigation');
@@ -87,5 +138,36 @@ describe('GET /api/v1/me/navigation', () => {
         expect(data.sections.find((s: any) => s.key === 'reports')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'help')).toBeDefined();
+    });
+
+    it('shows dossier, bulk upload, and reports for ADMIN when backend policy enables them', async () => {
+        mockRequireAuth.mockResolvedValue({
+            userId: 'admin-1',
+            roles: ['ADMIN'],
+            apt: { position: 'ADMIN' },
+        });
+        mockResolveModuleAccess.mockResolvedValue({
+            sections: {
+                dashboard: true,
+                admin: true,
+                settings: true,
+                dossier: true,
+                bulk_upload: true,
+                reports: true,
+                help: true,
+            },
+            canAccessDossier: true,
+            canAccessBulkUpload: true,
+            canAccessReports: true,
+        });
+
+        const req = new NextRequest('http://localhost/api/v1/me/navigation');
+        const res = await GET(req);
+        const data = await res.json();
+
+        expect(data.sections.find((s: any) => s.key === 'admin')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'dossier')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
     });
 });

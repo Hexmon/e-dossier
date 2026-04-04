@@ -22,8 +22,10 @@ const relegationAuthMock = {
 
 const ocChecksMock = {
   mustBeAuthed: vi.fn(),
+  mustHaveOcAccess: vi.fn(),
   mustBeAdmin: vi.fn(),
   mustBeAcademicsEditor: vi.fn(),
+  assertOcSemesterWriteAllowed: vi.fn(),
   ensureOcExists: vi.fn(),
   parseParam: vi.fn(async ({ params }: any, schema: any) => {
     const resolvedParams = await params;
@@ -136,7 +138,6 @@ vi.mock('argon2', () => {
 vi.mock('@/app/db/queries/academicGradingPolicy', () => genericModuleMock);
 vi.mock('@/app/db/queries/appointment-transfer', () => genericModuleMock);
 vi.mock('@/app/db/queries/appointments', () => genericModuleMock);
-vi.mock('@/app/db/queries/cadet-appointments', () => genericModuleMock);
 vi.mock('@/app/db/queries/courses', () => genericModuleMock);
 vi.mock('@/app/db/queries/instructors', () => genericModuleMock);
 vi.mock('@/app/db/queries/interviewOc', () => genericModuleMock);
@@ -189,7 +190,6 @@ vi.mock('@/app/lib/validators.rbac', () => schemaModuleMock);
 vi.mock('@/app/lib/validators.relegation', () => schemaModuleMock);
 vi.mock('@/app/lib/validators.reports', () => schemaModuleMock);
 vi.mock('@/app/lib/validators.site-settings', () => schemaModuleMock);
-vi.mock('@/app/lib/platoon-commander-auth', () => genericModuleMock);
 
 export function resetCommonMocks() {
   vi.clearAllMocks();
@@ -231,8 +231,10 @@ export function resetCommonMocks() {
   relegationAuthMock.assertCanPromoteBatch.mockImplementation(() => undefined);
 
   ocChecksMock.mustBeAuthed.mockResolvedValue({ userId: 'user-1', roles: ['ADMIN'] });
+  ocChecksMock.mustHaveOcAccess.mockResolvedValue({ userId: 'user-1', roles: ['ADMIN'] });
   ocChecksMock.mustBeAdmin.mockResolvedValue({ userId: 'admin-1', roles: ['ADMIN'] });
   ocChecksMock.mustBeAcademicsEditor.mockResolvedValue({ userId: 'admin-1', roles: ['ADMIN'] });
+  ocChecksMock.assertOcSemesterWriteAllowed.mockResolvedValue(undefined);
   ocChecksMock.ensureOcExists.mockResolvedValue(undefined);
   ocChecksMock.parseParam.mockImplementation(async ({ params }: any, schema: any) => {
     const resolvedParams = await params;
@@ -252,6 +254,7 @@ export function forceAuthFailure(status = 401) {
   authzMock.requireAdmin.mockRejectedValueOnce(error);
   relegationAuthMock.getRelegationAccessContext.mockRejectedValueOnce(error);
   ocChecksMock.mustBeAuthed.mockRejectedValueOnce(error);
+  ocChecksMock.mustHaveOcAccess.mockRejectedValueOnce(error);
   ocChecksMock.mustBeAdmin.mockRejectedValueOnce(error);
   ocChecksMock.mustBeAcademicsEditor.mockRejectedValueOnce(error);
   authorizationMock.authorizeOcAccess.mockRejectedValueOnce(error);

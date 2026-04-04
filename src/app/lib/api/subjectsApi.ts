@@ -7,7 +7,6 @@ export interface Subject {
     name: string;
     branch: string;
     noOfPeriods: number;
-    noOfPhaseTests: number;
     hasTheory: boolean;
     hasPractical: boolean;
     defaultTheoryCredits: number;
@@ -20,7 +19,6 @@ export interface SubjectCreate {
     name: string;
     branch: string;
     noOfPeriods: number;
-    noOfPhaseTests: number;
     hasTheory: boolean;
     hasPractical: boolean;
     defaultTheoryCredits: number;
@@ -33,7 +31,6 @@ export interface SubjectUpdate {
     name?: string;
     branch?: string;
     noOfPeriods?: number;
-    noOfPhaseTests?: number;
     hasTheory?: boolean;
     hasPractical?: boolean;
     defaultTheoryCredits?: number;

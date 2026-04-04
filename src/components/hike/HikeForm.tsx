@@ -28,6 +28,7 @@ interface Props {
 
     onSubmit: (e?: React.BaseSyntheticEvent) => void;
     onReset: () => void;
+    readOnly?: boolean;
 }
 
 export default function HikeForm({
@@ -47,6 +48,7 @@ export default function HikeForm({
 
     onSubmit,
     onReset,
+    readOnly = false,
 }: Props) {
     // Saved rows table columns
     const savedColumns: TableColumn<HikeRow>[] = [
@@ -68,6 +70,7 @@ export default function HikeForm({
                 const isEditing = editingRowId === row.id;
                 return isEditing ? (
                     <Input
+                        disabled={readOnly}
                         value={editingValues?.reason ?? ""}
                         onChange={(e) => setEditingField("reason", e.target.value)}
                     />
@@ -84,6 +87,7 @@ export default function HikeForm({
                 const isEditing = editingRowId === row.id;
                 return isEditing ? (
                     <Input
+                        disabled={readOnly}
                         type="date"
                         value={editingValues?.dateFrom ?? ""}
                         onChange={(e) => setEditingField("dateFrom", e.target.value)}
@@ -101,6 +105,7 @@ export default function HikeForm({
                 const isEditing = editingRowId === row.id;
                 return isEditing ? (
                     <Input
+                        disabled={readOnly}
                         type="date"
                         value={editingValues?.dateTo ?? ""}
                         onChange={(e) => setEditingField("dateTo", e.target.value)}
@@ -117,6 +122,7 @@ export default function HikeForm({
                 const isEditing = editingRowId === row.id;
                 return isEditing ? (
                     <Input
+                        disabled={readOnly}
                         value={editingValues?.remark ?? ""}
                         onChange={(e) => setEditingField("remark", e.target.value)}
                     />
@@ -127,7 +133,9 @@ export default function HikeForm({
         }
     ];
 
-    const savedActions: TableAction<HikeRow>[] = [
+    const savedActions: TableAction<HikeRow>[] = readOnly
+        ? []
+        : [
         {
             key: "edit-cancel",
             label: editingRowId ? "Cancel" : "Edit",
@@ -194,7 +202,7 @@ export default function HikeForm({
             key: "reason",
             label: "Hike Detls / Reason",
             render: (value, row, index) => (
-                <Input {...register(`hikeRows.${index}.reason`)} />
+                <Input disabled={readOnly} {...register(`hikeRows.${index}.reason`)} />
             )
         },
         {
@@ -202,7 +210,7 @@ export default function HikeForm({
             label: "From",
             type: "date",
             render: (value, row, index) => (
-                <Input type="date" {...register(`hikeRows.${index}.dateFrom`)} />
+                <Input disabled={readOnly} type="date" {...register(`hikeRows.${index}.dateFrom`)} />
             )
         },
         {
@@ -210,19 +218,21 @@ export default function HikeForm({
             label: "To",
             type: "date",
             render: (value, row, index) => (
-                <Input type="date" {...register(`hikeRows.${index}.dateTo`)} />
+                <Input disabled={readOnly} type="date" {...register(`hikeRows.${index}.dateTo`)} />
             )
         },
         {
             key: "remark",
             label: "Remarks",
             render: (value, row, index) => (
-                <Input {...register(`hikeRows.${index}.remark`)} />
+                <Input disabled={readOnly} {...register(`hikeRows.${index}.remark`)} />
             )
         }
     ];
 
-    const newEntryActions: TableAction<FieldArrayWithId<HikeFormValues, "hikeRows", "id">>[] = [
+    const newEntryActions: TableAction<FieldArrayWithId<HikeFormValues, "hikeRows", "id">>[] = readOnly
+        ? []
+        : [
         {
             key: "remove",
             label: "Remove",
@@ -272,13 +282,17 @@ export default function HikeForm({
                 </div>
 
                 <div className="mt-4 flex justify-center gap-4">
-                    <Button type="button" onClick={() => append({ id: null, semester: 1, reason: "", type: "HIKE", dateFrom: "", dateTo: "", remark: "" })}>
+                    <Button
+                        type="button"
+                        disabled={readOnly}
+                        onClick={() => append({ id: null, semester: 1, reason: "", type: "HIKE", dateFrom: "", dateTo: "", remark: "" })}
+                    >
                         + Add Row
                     </Button>
 
-                    <Button type="submit" className="bg-success hover:bg-success/90">Submit</Button>
+                    <Button type="submit" className="bg-success hover:bg-success/90" disabled={readOnly}>Submit</Button>
 
-                    <Button type="button" variant="outline" onClick={onReset}>Reset</Button>
+                    <Button type="button" variant="outline" onClick={onReset} disabled={readOnly}>Reset</Button>
                 </div>
             </form>
         </div>

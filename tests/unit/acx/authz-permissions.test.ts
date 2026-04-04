@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyPlatoonCommanderMarksEntryOverrides,
   applyAdminAndSuperAdminOverrides,
   getAdminBaselineActions,
   normalizeRoleSet,
@@ -33,5 +34,22 @@ describe('authz-permissions helpers', () => {
     expect(result.isAdmin).toBe(true);
     expect(result.isSuperAdmin).toBe(true);
     expect(permissionSet.has('*')).toBe(true);
+  });
+
+  it('grants default manage-marks and manage-pt permissions to platoon commanders', () => {
+    const permissionSet = new Set<string>();
+    const result = applyPlatoonCommanderMarksEntryOverrides(['PLATOON_COMMANDER'], permissionSet);
+
+    expect(result.isPlatoonCommander).toBe(true);
+    expect(permissionSet.has('page:dashboard:manage-marks:view')).toBe(true);
+    expect(permissionSet.has('page:dashboard:manage-pt-marks:view')).toBe(true);
+    expect(permissionSet.has('page:dashboard:milmgmt:academics:view')).toBe(true);
+    expect(permissionSet.has('page:dashboard:milmgmt:physical-training:view')).toBe(true);
+    expect(permissionSet.has('admin:physical-training:templates:read')).toBe(true);
+    expect(permissionSet.has('oc:academics:read')).toBe(true);
+    expect(permissionSet.has('oc:physical-training:read')).toBe(true);
+    expect(permissionSet.has('oc:physical-training:motivation-awards:read')).toBe(true);
+    expect(permissionSet.has('oc:academics:bulk:create')).toBe(true);
+    expect(permissionSet.has('oc:physical-training:bulk:create')).toBe(true);
   });
 });

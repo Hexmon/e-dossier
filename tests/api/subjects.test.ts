@@ -24,7 +24,6 @@ vi.mock('@/app/db/client', () => {
           name: 'Subject 1',
           branch: 'C',
           noOfPeriods: 6,
-          noOfPhaseTests: 2,
           hasTheory: true,
           hasPractical: false,
           defaultTheoryCredits: 3,
@@ -113,7 +112,6 @@ describe('GET /api/v1/subjects', () => {
         name: 'Subject 1',
         branch: 'C',
         noOfPeriods: 6,
-        noOfPhaseTests: 2,
         hasTheory: true,
         hasPractical: false,
       },
@@ -256,7 +254,6 @@ describe('POST /api/v1/subjects', () => {
         name: 'Subject 1',
         branch: 'C',
         noOfPeriods: 6,
-        noOfPhaseTests: 1,
         hasTheory: true,
         hasPractical: false,
       },
@@ -269,6 +266,5 @@ describe('POST /api/v1/subjects', () => {
     expect(body.subject.id).toBe('sub-1');
     expect(body.subject.code).toBe('SUB-1');
     expect(body.subject.noOfPeriods).toBe(6);
-    expect(body.subject.noOfPhaseTests).toBe(2);
   });
 });

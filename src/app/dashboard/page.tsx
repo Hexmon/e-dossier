@@ -9,6 +9,7 @@ import Courses from "@/components/Dashboard/Courses";
 import Platoons from "@/components/Dashboard/Platoons";
 import InterviewsPending from "@/components/Dashboard/InterviewsPending";
 import Appointments from "@/components/Dashboard/Appointments";
+import WorkflowNotifications from "@/components/Dashboard/WorkflowNotifications";
 import { api } from "@/app/lib/apiClient";
 import { resolveApiAction } from "@/app/lib/acx/action-map";
 import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
@@ -22,7 +23,8 @@ type InterviewPendingMarqueeRow = {
   rankAndName: string;
   course: string | null;
   platoon: string | null;
-  completeSpecial: boolean;
+  completeInitial: boolean;
+  completeTerms: boolean;
 };
 
 type InterviewPendingMarqueeResponse = {
@@ -60,7 +62,7 @@ function buildPendingCountsMarqueeData(items: InterviewPendingMarqueeRow[]): str
     if (!label) continue;
 
     const prev = pendingByPlatoon.get(label) ?? 0;
-    const next = !item.completeSpecial ? prev + 1 : prev;
+    const next = !item.completeInitial || !item.completeTerms ? prev + 1 : prev;
     pendingByPlatoon.set(label, next);
   }
 
@@ -233,6 +235,8 @@ const DashboardPage = () => {
           <div className="w-full lg:col-span-2 mt-2">
             <Appointments />
           </div>
+
+          <WorkflowNotifications />
         </div>
       </main>
 

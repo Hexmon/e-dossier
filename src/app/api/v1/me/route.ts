@@ -6,6 +6,11 @@ import { eq } from 'drizzle-orm';
 import { getEffectivePermissionBundleCached } from '@/app/db/queries/authz-permissions';
 import { isAuthzV2Enabled } from '@/app/lib/acx/feature-flag';
 import {
+  listMarksWorkflowAssignmentsForUser,
+  getWorkflowModuleSettings,
+} from '@/app/services/marksReviewWorkflow';
+import { resolveModuleAccessForUser } from '@/app/lib/module-access';
+import {
   withAuditRoute,
   AuditEventType,
   AuditResourceType,
@@ -50,6 +55,24 @@ async function GETHandler(req: AuditNextRequest) {
 
     if (!u) return json.notFound('User not found.');
 
+    const [workflowAssignments, academicsWorkflow, ptWorkflow] = await Promise.all([
+      listMarksWorkflowAssignmentsForUser({
+        userId: principal.userId,
+        roles: principal.roles ?? [],
+      }),
+      getWorkflowModuleSettings('ACADEMICS_BULK'),
+      getWorkflowModuleSettings('PT_BULK'),
+    ]);
+    const moduleAccess = await resolveModuleAccessForUser({
+      userId: principal.userId,
+      roles: principal.roles ?? [],
+      position:
+        typeof (principal.apt as any)?.position === 'string'
+          ? String((principal.apt as any).position)
+          : null,
+      workflowAssignments,
+    });
+
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
       outcome: 'SUCCESS',
@@ -66,6 +89,18 @@ async function GETHandler(req: AuditNextRequest) {
       user: u,
       roles: principal.roles,
       apt: principal.apt ?? null,
+      workflowAssignments,
+      workflowModules: {
+        ACADEMICS_BULK: { isActive: academicsWorkflow.isActive },
+        PT_BULK: { isActive: ptWorkflow.isActive },
+      },
+      moduleAccess: {
+        canAccessDossier: moduleAccess.canAccessDossier,
+        canAccessBulkUpload: moduleAccess.canAccessBulkUpload,
+        canAccessReports: moduleAccess.canAccessReports,
+        canAccessAcademicsBulk: moduleAccess.canAccessAcademicsBulk,
+        canAccessPtBulk: moduleAccess.canAccessPtBulk,
+      },
       permissions: authzBundle?.permissions ?? [],
       deniedPermissions: authzBundle?.deniedPermissions ?? [],
       policyVersion: authzBundle?.policyVersion ?? null,

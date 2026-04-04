@@ -28,6 +28,7 @@ interface Props {
 
     onSubmit: (e?: React.BaseSyntheticEvent) => void;
     onReset: () => void;
+    readOnly?: boolean;
 }
 
 export default function LeaveForm({
@@ -47,6 +48,7 @@ export default function LeaveForm({
 
     onSubmit,
     onReset,
+    readOnly = false,
 }: Props) {
     // Saved rows table columns
     const savedColumns: TableColumn<LeaveRow>[] = [
@@ -68,6 +70,7 @@ export default function LeaveForm({
                 const isEditing = editingRowId === row.id;
                 return isEditing ? (
                     <Input
+                        disabled={readOnly}
                         value={editingValues?.reason ?? ""}
                         onChange={(e) => setEditingField("reason", e.target.value)}
                     />
@@ -84,6 +87,7 @@ export default function LeaveForm({
                 const isEditing = editingRowId === row.id;
                 return isEditing ? (
                     <Input
+                        disabled={readOnly}
                         type="date"
                         value={editingValues?.dateFrom ?? ""}
                         onChange={(e) => setEditingField("dateFrom", e.target.value)}
@@ -101,6 +105,7 @@ export default function LeaveForm({
                 const isEditing = editingRowId === row.id;
                 return isEditing ? (
                     <Input
+                        disabled={readOnly}
                         type="date"
                         value={editingValues?.dateTo ?? ""}
                         onChange={(e) => setEditingField("dateTo", e.target.value)}
@@ -117,6 +122,7 @@ export default function LeaveForm({
                 const isEditing = editingRowId === row.id;
                 return isEditing ? (
                     <Input
+                        disabled={readOnly}
                         value={editingValues?.remark ?? ""}
                         onChange={(e) => setEditingField("remark", e.target.value)}
                     />
@@ -127,7 +133,9 @@ export default function LeaveForm({
         }
     ];
 
-    const savedActions: TableAction<LeaveRow>[] = [
+    const savedActions: TableAction<LeaveRow>[] = readOnly
+        ? []
+        : [
         {
             key: "edit-cancel",
             label: editingRowId ? "Cancel" : "Edit",
@@ -194,7 +202,7 @@ export default function LeaveForm({
             key: "reason",
             label: "Lve Detls / Reason",
             render: (value, row, index) => (
-                <Input {...register(`leaveRows.${index}.reason`)} />
+                <Input disabled={readOnly} {...register(`leaveRows.${index}.reason`)} />
             )
         },
         {
@@ -202,7 +210,7 @@ export default function LeaveForm({
             label: "From",
             type: "date",
             render: (value, row, index) => (
-                <Input type="date" {...register(`leaveRows.${index}.dateFrom`)} />
+                <Input disabled={readOnly} type="date" {...register(`leaveRows.${index}.dateFrom`)} />
             )
         },
         {
@@ -210,19 +218,21 @@ export default function LeaveForm({
             label: "To",
             type: "date",
             render: (value, row, index) => (
-                <Input type="date" {...register(`leaveRows.${index}.dateTo`)} />
+                <Input disabled={readOnly} type="date" {...register(`leaveRows.${index}.dateTo`)} />
             )
         },
         {
             key: "remark",
             label: "Remarks",
             render: (value, row, index) => (
-                <Input {...register(`leaveRows.${index}.remark`)} />
+                <Input disabled={readOnly} {...register(`leaveRows.${index}.remark`)} />
             )
         }
     ];
 
-    const newEntryActions: TableAction<FieldArrayWithId<LeaveFormValues, "leaveRows", "id">>[] = [
+    const newEntryActions: TableAction<FieldArrayWithId<LeaveFormValues, "leaveRows", "id">>[] = readOnly
+        ? []
+        : [
         {
             key: "remove",
             label: "Remove",
@@ -274,6 +284,7 @@ export default function LeaveForm({
                 <div className="mt-4 flex justify-center gap-4">
                     <Button
                         type="button"
+                        disabled={readOnly}
                         onClick={() =>
                             append({
                                 id: null,
@@ -289,11 +300,11 @@ export default function LeaveForm({
                         + Add Row
                     </Button>
 
-                    <Button type="submit" className="bg-success hover:bg-success/90">
+                    <Button type="submit" className="bg-success hover:bg-success/90" disabled={readOnly}>
                         Submit
                     </Button>
 
-                    <Button type="button" variant="outline" onClick={onReset}>
+                    <Button type="button" variant="outline" onClick={onReset} disabled={readOnly}>
                         Reset
                     </Button>
                 </div>

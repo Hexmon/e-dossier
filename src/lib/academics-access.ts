@@ -1,4 +1,5 @@
 import { deriveSidebarRoleGroup } from "@/lib/sidebar-visibility";
+import { hasPlatoonCommanderRole } from "@/lib/platoon-commander-access";
 
 type AcademicsAccessInput = {
   roles?: string[] | null;
@@ -21,14 +22,6 @@ function collectRoleTokens(input: AcademicsAccessInput): Set<string> {
   return tokens;
 }
 
-function isPlatoonCommanderToken(token: string): boolean {
-  if (!token) return false;
-  if (token === "PLATOON_COMMANDER" || token === "PLATOON_CDR") return true;
-
-  // Support deployments that use custom position keys like "<name>plcdr".
-  return token.endsWith("PLCDR");
-}
-
 export function canEditAcademics(input: AcademicsAccessInput): boolean {
   const roleGroup = deriveSidebarRoleGroup({
     roles: input.roles ?? [],
@@ -44,10 +37,13 @@ export function canEditAcademics(input: AcademicsAccessInput): boolean {
     return true;
   }
 
-  for (const token of tokens) {
-    if (isPlatoonCommanderToken(token)) {
-      return true;
-    }
+  if (
+    hasPlatoonCommanderRole({
+      roles: input.roles ?? [],
+      position: input.position ?? null,
+    })
+  ) {
+    return true;
   }
 
   return false;

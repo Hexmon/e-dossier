@@ -22,8 +22,6 @@ export const reportCourseSemesterMetadataQuerySchema = z.object({
   courseId: z.string().uuid(),
 });
 
-export const consolidatedSessionalSectionSchema = z.enum(['theory', 'practical']);
-
 export const consolidatedSessionalPreviewQuerySchema = z.object({
   courseId: z.string().uuid(),
   semester: reportSemesterSchema,
@@ -32,7 +30,6 @@ export const consolidatedSessionalPreviewQuerySchema = z.object({
 
 export const consolidatedSessionalDownloadBodySchema = consolidatedSessionalPreviewQuerySchema.merge(
   z.object({
-    section: consolidatedSessionalSectionSchema,
     password: z.string().min(1).max(128),
     preparedBy: optionalMetaString,
     checkedBy: optionalMetaString,

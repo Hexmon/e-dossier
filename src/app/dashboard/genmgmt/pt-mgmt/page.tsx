@@ -1,7 +1,7 @@
 // app/dashboard/genmgmt/pt-mgmt/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TabsContent } from "@/components/ui/tabs";
@@ -40,8 +40,6 @@ import PTTypesTab from "@/components/pt-mgmt/Pttypestab";
 import { usePhysicalTrainingMgmt } from "@/hooks/usePhysicalTrainingMgmt";
 import { logoutAndRedirect } from "@/lib/auth/logout";
 import type { PtTemplateApplyResult } from "@/app/lib/bootstrap/types";
-import { useQuery } from "@tanstack/react-query";
-import { getAllCourses, type CourseResponse } from "@/app/lib/api/courseApi";
 
 const ptTabs = [
     { value: "template", title: "Template View", icon: List },
@@ -59,27 +57,11 @@ export default function PhysicalTrainingPage() {
     // Selection state — this is the only local state the page needs.
     // Changing any of these causes React Query to enable/disable the right queries.
     // ---------------------------------------------------------------------------
-    const [selectedCourseId, setSelectedCourseId] = useState("");
     const [selectedSemester, setSelectedSemester] = useState(1);
     const [activeTab, setActiveTab] = useState("template");
     const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
     const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-
-    const { data: courseItems = [] } = useQuery({
-        queryKey: ["courses", "pt-mgmt"],
-        queryFn: async () => {
-            const response = await getAllCourses();
-            return (response.items ?? []).filter((course) => !course.deleted_at);
-        },
-        staleTime: 60_000,
-    });
-
-    useEffect(() => {
-        if (!selectedCourseId && courseItems.length > 0) {
-            setSelectedCourseId(courseItems[0].id);
-        }
-    }, [courseItems, selectedCourseId]);
 
     const {
         loading,
@@ -109,9 +91,7 @@ export default function PhysicalTrainingPage() {
         editMotivationField,
         removeMotivationField,
         applyDefaultTemplate,
-        copyTemplate,
     } = usePhysicalTrainingMgmt({
-        courseId: selectedCourseId,
         semester: selectedSemester,
         typeId: selectedTypeId,
         attemptId: selectedAttemptId,
@@ -134,7 +114,7 @@ export default function PhysicalTrainingPage() {
     // ---------------------------------------------------------------------------
     const handleAddType = async (data: PTTypeCreate) => {
         try {
-            await addType({ ...data, courseId: selectedCourseId });
+            await addType(data);
             return true;
         } catch {
             return false;
@@ -302,7 +282,7 @@ export default function PhysicalTrainingPage() {
     // ---------------------------------------------------------------------------
     const handleAddField = async (data: PTMotivationFieldCreate) => {
         try {
-            await addMotivationField({ ...data, courseId: selectedCourseId });
+            await addMotivationField(data);
             return true;
         } catch {
             return false;
@@ -336,9 +316,6 @@ export default function PhysicalTrainingPage() {
         }
         return result;
     };
-
-    const handleCopyTemplate = async (sourceCourseId: string, targetCourseId: string, semester: number) =>
-        copyTemplate({ sourceCourseId, targetCourseId, semester });
 
     // ---------------------------------------------------------------------------
     // Render
@@ -374,21 +351,6 @@ export default function PhysicalTrainingPage() {
 
                         <div className="mb-6 flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium">Course:</label>
-                                <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-                                    <SelectTrigger className="w-56">
-                                        <SelectValue placeholder="Select course" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {courseItems.map((course: CourseResponse) => (
-                                            <SelectItem key={course.id} value={course.id}>
-                                                {course.code} - {course.title}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium">Semester:</label>
                                 <Select
                                     value={String(selectedSemester)}
@@ -418,11 +380,8 @@ export default function PhysicalTrainingPage() {
                                 <PTTemplateView
                                     template={template}
                                     loading={loading}
-                                    currentCourseId={selectedCourseId}
-                                    availableCourses={courseItems}
                                     semester={selectedSemester}
                                     onApplyDefaultTemplate={handleApplyDefaultTemplate}
-                                    onCopyTemplate={handleCopyTemplate}
                                 />
                             </TabsContent>
 

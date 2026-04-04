@@ -35,7 +35,6 @@ import type { RootState } from "@/store";
 import { saveAutobiographyForm, clearAutobiographyForm } from "@/store/slices/autobiographySlice";
 import { useMe } from "@/hooks/useMe";
 import { ApiClientError } from "@/app/lib/apiClient";
-import { getCurrentUserSignature, hasMeaningfulSignatureValue } from "@/lib/currentUserSignature";
 
 type Props = {
     ocId: string;
@@ -81,7 +80,9 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
 
     // Fetch logged-in user for Platoon Commander display in view mode
     const { data: meData } = useMe();
-    const meSignature = getCurrentUserSignature(meData);
+    const meSignature = meData?.user
+        ? `${meData.user.rank ? meData.user.rank + " " : ""}${meData.user.name}`
+        : "";
 
     // Redux
     const dispatch = useDispatch();
@@ -196,10 +197,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
 
         // If no backend data but we have saved form data in Redux
         if (savedFormData && isInitialLoad.current) {
-            reset({
-                ...savedFormData,
-                sign_pi: savedFormData.sign_pi || meSignature,
-            });
+            reset(savedFormData);
             setIsEditing(true);
             isInitialLoad.current = false;
             return;
@@ -214,17 +212,12 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                 additional: "",
                 date: todayStr(),
                 sign_oc: cadetName,
-                sign_pi: meSignature,
+                sign_pi: "",
             });
             setIsEditing(true);
             isInitialLoad.current = false;
         }
-    }, [autoBio, cadetName, meSignature, reset, savedFormData]);
-
-    useEffect(() => {
-        if (!meSignature || hasMeaningfulSignatureValue(selectedCommander)) return;
-        setValue("sign_pi", meSignature, { shouldDirty: false });
-    }, [meSignature, selectedCommander, setValue]);
+    }, [autoBio, cadetName]);
 
     // Save handler
     const onSubmit = async (form: AutoBio) => {

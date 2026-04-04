@@ -713,15 +713,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
-    "method": "DELETE",
-    "path": "/api/v1/pl-cdr/cadet-appointments/:id",
-    "action": "pl-cdr:cadet-appointments:delete",
-    "resourceType": "pl-cdr:cadet-appointments",
-    "category": "pl-cdr",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
     "method": "GET",
     "path": "/api/v1/admin/academics/grading-policy",
     "action": "admin:academics:grading-policy:read",
@@ -1362,6 +1353,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/marks-review-workflow",
+    "action": "admin:marks-review-workflow:read",
+    "resourceType": "admin:marks-review-workflow",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/module-access",
+    "action": "admin:module-access:read",
+    "resourceType": "admin:module-access",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/subjects",
     "action": "admin:subjects:read",
     "resourceType": "admin:subjects",
@@ -1518,6 +1527,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/me/navigation",
     "action": "me:navigation:read",
     "resourceType": "me:navigation",
+    "category": "me",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/me/workflow-notifications",
+    "action": "me:workflow-notifications:read",
+    "resourceType": "me:workflow-notifications",
     "category": "me",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -2127,9 +2145,27 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/oc/academics/workflow",
+    "action": "oc:academics:workflow:read",
+    "resourceType": "oc:academics:workflow",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/oc/physical-training/bulk",
     "action": "oc:physical-training:bulk:read",
     "resourceType": "oc:physical-training:bulk",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/oc/physical-training/workflow",
+    "action": "oc:physical-training:workflow:read",
+    "resourceType": "oc:physical-training:workflow",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -2158,24 +2194,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "action": "platoons:commander-history:read",
     "resourceType": "platoons:commander-history",
     "category": "platoons",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/pl-cdr/cadet-appointments",
-    "action": "pl-cdr:cadet-appointments:read",
-    "resourceType": "pl-cdr:cadet-appointments",
-    "category": "pl-cdr",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/pl-cdr/cadet-appointments/:id",
-    "action": "pl-cdr:cadet-appointments:read",
-    "resourceType": "pl-cdr:cadet-appointments",
-    "category": "pl-cdr",
     "fieldLevelCandidate": false,
     "adminBaseline": false
   },
@@ -2936,15 +2954,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
-    "method": "PATCH",
-    "path": "/api/v1/pl-cdr/cadet-appointments/:id",
-    "action": "pl-cdr:cadet-appointments:update",
-    "resourceType": "pl-cdr:cadet-appointments",
-    "category": "pl-cdr",
-    "fieldLevelCandidate": true,
-    "adminBaseline": false
-  },
-  {
     "method": "POST",
     "path": "/api/v1/admin/academics/grading-policy/recalculate",
     "action": "admin:academics:grading-policy:recalculate:create",
@@ -3030,15 +3039,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/interview/templates",
     "action": "admin:interview:templates:create",
     "resourceType": "admin:interview:templates",
-    "category": "admin",
-    "fieldLevelCandidate": false,
-    "adminBaseline": true
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/admin/interview/templates/copy",
-    "action": "admin:interview:templates:copy:create",
-    "resourceType": "admin:interview:templates:copy",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -3147,15 +3147,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/physical-training/types",
     "action": "admin:physical-training:types:create",
     "resourceType": "admin:physical-training:types",
-    "category": "admin",
-    "fieldLevelCandidate": false,
-    "adminBaseline": true
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/admin/physical-training/templates/copy",
-    "action": "admin:physical-training:templates:copy:create",
-    "resourceType": "admin:physical-training:templates:copy",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -3396,15 +3387,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
-    "path": "/api/v1/admin/training-camps/copy",
-    "action": "admin:training-camps:copy:create",
-    "resourceType": "admin:training-camps:copy",
-    "category": "admin",
-    "fieldLevelCandidate": false,
-    "adminBaseline": true
-  },
-  {
-    "method": "POST",
     "path": "/api/v1/admin/training-camps/:campId/activities",
     "action": "admin:training-camps:activities:create",
     "resourceType": "admin:training-camps:activities",
@@ -3445,6 +3427,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "action": "auth:logout:create",
     "resourceType": "auth:logout",
     "category": "auth",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/me/workflow-notifications",
+    "action": "me:workflow-notifications:update",
+    "resourceType": "me:workflow-notifications",
+    "category": "me",
     "fieldLevelCandidate": false,
     "adminBaseline": false
   },
@@ -3810,6 +3801,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/oc/academics/workflow",
+    "action": "oc:academics:workflow:update",
+    "resourceType": "oc:academics:workflow",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/oc/bulk-upload",
     "action": "oc:bulk-upload:create",
     "resourceType": "oc:bulk-upload",
@@ -3822,6 +3822,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/oc/physical-training/bulk",
     "action": "oc:physical-training:bulk:create",
     "resourceType": "oc:physical-training:bulk",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/oc/physical-training/workflow",
+    "action": "oc:physical-training:workflow:update",
+    "resourceType": "oc:physical-training:workflow",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -3841,24 +3850,6 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "action": "platoons:image:presign:create",
     "resourceType": "platoons:image:presign",
     "category": "platoons",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/pl-cdr/cadet-appointments",
-    "action": "pl-cdr:cadet-appointments:create",
-    "resourceType": "pl-cdr:cadet-appointments",
-    "category": "pl-cdr",
-    "fieldLevelCandidate": false,
-    "adminBaseline": false
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/pl-cdr/cadet-appointments/:id/transfer",
-    "action": "pl-cdr:cadet-appointments:transfer:create",
-    "resourceType": "pl-cdr:cadet-appointments:transfer",
-    "category": "pl-cdr",
     "fieldLevelCandidate": false,
     "adminBaseline": false
   },
@@ -3960,6 +3951,24 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/marks-review-workflow",
+    "action": "admin:marks-review-workflow:update",
+    "resourceType": "admin:marks-review-workflow",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/module-access",
+    "action": "admin:module-access:update",
+    "resourceType": "admin:module-access",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": false
   },
   {
     "method": "PUT",
@@ -4434,6 +4443,20 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "route": "/dashboard/genmgmt/settings/marks-review-workflow",
+    "action": "page:dashboard:genmgmt:settings:marks-review-workflow:view",
+    "resourceType": "page:dashboard:genmgmt:settings:marks-review-workflow",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/genmgmt/settings/module-access",
+    "action": "page:dashboard:genmgmt:settings:module-access:view",
+    "resourceType": "page:dashboard:genmgmt:settings:module-access",
+    "category": "genmgmt",
+    "adminBaseline": false
+  },
+  {
     "route": "/dashboard/genmgmt/subjectmgmt",
     "action": "page:dashboard:genmgmt:subjectmgmt:view",
     "resourceType": "page:dashboard:genmgmt:subjectmgmt",
@@ -4528,13 +4551,6 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/settings/device",
     "action": "page:dashboard:settings:device:view",
     "resourceType": "page:dashboard:settings:device",
-    "category": "settings",
-    "adminBaseline": false
-  },
-  {
-    "route": "/dashboard/settings/device/appointments",
-    "action": "page:dashboard:settings:device:appointments:view",
-    "resourceType": "page:dashboard:settings:device:appointments",
     "category": "settings",
     "adminBaseline": false
   },

@@ -7,10 +7,9 @@ import { useParams, usePathname, useRouter, useSearchParams } from "next/navigat
 import { RootState } from "@/store";
 import TermSubForm from "./TermSubForm";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
-import { useMe } from "@/hooks/useMe";
 import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
 import { saveTermInterviewForm, clearTermInterviewForm } from "@/store/slices/termInterviewSlice";
-import { applySignatureDefaults, getCurrentUserSignature, hasMeaningfulSignatureValue, isSignatureTemplateField } from "@/lib/currentUserSignature";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 
 type TermVariant = "beginning" | "postmid" | "special";
 
@@ -18,15 +17,6 @@ interface FormState {
     isEditing: boolean;
     isSaved: boolean;
 }
-
-const postMidPlCdrAliases = [
-    "pl cdr",
-    "plcdr",
-    "pl cdr remarks",
-    "plcdr remarks",
-    "platoon cdr",
-    "platoon commander",
-];
 
 function hasPersistedData(entry: { formFields?: Record<string, string>; specialInterviews?: unknown[] } | undefined) {
     const hasFields = Boolean(
@@ -37,64 +27,28 @@ function hasPersistedData(entry: { formFields?: Record<string, string>; specialI
     return hasFields || hasSpecial;
 }
 
-function buildTermInterviewResetValues(params: {
-    currentValues: Record<string, string>;
-    savedValues: Record<string, string>;
-    termIndex: number;
-    variant: TermVariant;
-    templateFields?: Array<{ key: string; label?: string; fieldType?: string | null; captureSignature?: boolean; groupId?: string | null }>;
-    signatureValue?: string;
+export default function InterviewTermTabs({
+    readOnly = false,
+    currentSemester = 1,
+    canEditLockedSemesters = false,
+}: {
+    readOnly?: boolean;
+    currentSemester?: number | null;
+    canEditLockedSemesters?: boolean;
 }) {
-    const out: Record<string, string> = {};
-    const prefix = `term${params.termIndex}_${params.variant}_`;
-
-    for (const key of Object.keys(params.currentValues ?? {})) {
-        out[key] = "";
-    }
-
-    for (const field of params.templateFields ?? []) {
-        if (field.groupId) continue;
-        const scopedKey = field.key.startsWith(prefix) ? field.key : `${prefix}${field.key}`;
-        out[scopedKey] = "";
-    }
-
-    for (const [key, value] of Object.entries(params.savedValues ?? {})) {
-        out[key] = value;
-    }
-
-    const signatureFields =
-        params.variant === "postmid"
-            ? (params.templateFields ?? []).filter((field) => {
-                const hay = `${field.key ?? ""} ${field.label ?? ""}`.toLowerCase();
-                return postMidPlCdrAliases.some((alias) => hay.includes(alias));
-            })
-            : params.templateFields;
-
-    return applySignatureDefaults({
-        values: out,
-        fields: signatureFields,
-        signatureValue: params.signatureValue,
-        resolveKey: (field) => (field.key.startsWith(prefix) ? field.key : `${prefix}${field.key}`),
-    });
-}
-
-export default function InterviewTermTabs() {
     const { id } = useParams();
-    const router = useRouter();
-    const pathname = usePathname();
     const searchParams = useSearchParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
     const dispatch = useDispatch();
-    const { data: meData } = useMe();
     const hydratedRef = useRef(false);
     const isHydratingRef = useRef(false);
 
-    const parseSemesterParam = (value: string | null) => {
-        const n = Number(value);
-        return Number.isInteger(n) && n >= 1 && n <= 6 ? n : 1;
-    };
-
-    const [selectedTerm, setSelectedTerm] = useState<number>(() => parseSemesterParam(searchParams.get("sem")));
+    const { activeSemester: selectedTerm, setActiveSemester } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+        legacyQueryKeys: ["sem", "semister"],
+    });
 
     const initialSub: Record<number, TermVariant> = {
         1: "postmid",
@@ -126,20 +80,6 @@ export default function InterviewTermTabs() {
     const { fetchTerm, saveTerm, templateMappings } = useInterviewForms(ocId);
     const allSavedForms = useSelector((state: RootState) => state.termInterview.forms[ocId] || {});
     const savedFormsRef = useRef(allSavedForms);
-
-    useEffect(() => {
-        const semFromUrl = parseSemesterParam(searchParams.get("sem"));
-        setSelectedTerm((current) => (current === semFromUrl ? current : semFromUrl));
-    }, [searchParams]);
-
-    useEffect(() => {
-        const currentUrlSem = parseSemesterParam(searchParams.get("sem"));
-        if (currentUrlSem === selectedTerm) return;
-
-        const next = new URLSearchParams(searchParams.toString());
-        next.set("sem", String(selectedTerm));
-        router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-    }, [selectedTerm, pathname, router, searchParams]);
 
     useEffect(() => {
         hydratedRef.current = false;
@@ -195,56 +135,16 @@ export default function InterviewTermTabs() {
     }, [ocId, fetchTerm, dispatch]);
 
     const currentVariant = subTab[selectedTerm] ?? "beginning";
-    const currentUserSignature = getCurrentUserSignature(meData);
-    const termMatch = getTemplateMatchForSemester(templateMappings, currentVariant, selectedTerm);
-    const termTemplate = termMatch?.template ?? null;
-    const specialGroup = currentVariant === "special" && termMatch?.groupId
-        ? termTemplate?.groups.find((group) => group.id === termMatch.groupId) ?? null
-        : null;
 
     // Load saved data when switching terms or variants
     useEffect(() => {
         isHydratingRef.current = true;
         const savedData = savedFormData?.formFields || {};
-        form.reset(
-            buildTermInterviewResetValues({
-                currentValues: form.getValues(),
-                savedValues: savedData,
-                termIndex: selectedTerm,
-                variant: currentVariant,
-                templateFields: Array.from(termTemplate?.fieldsByKey?.values?.() ?? []),
-            }),
-        );
+        form.reset(savedData);
         queueMicrotask(() => {
             isHydratingRef.current = false;
         });
-    }, [selectedTerm, currentVariant, ocId, form, savedFormData?.formFields, termTemplate]);
-
-    useEffect(() => {
-        if (!currentUserSignature) return;
-
-        const prefix = `term${selectedTerm}_${currentVariant}_`;
-        const signatureFields = Array.from(termTemplate?.fieldsByKey?.values?.() ?? [])
-            .filter((field) => !field.groupId && isSignatureTemplateField(field))
-            .filter((field) => {
-                if (currentVariant !== "postmid") return true;
-                const hay = `${field.key ?? ""} ${field.label ?? ""}`.toLowerCase();
-                return postMidPlCdrAliases.some((alias) => hay.includes(alias));
-            });
-        if (!signatureFields.length) return;
-
-        for (const field of signatureFields) {
-            const scopedKey = field.key.startsWith(prefix) ? field.key : `${prefix}${field.key}`;
-            const savedValue = savedFormData?.formFields?.[scopedKey];
-            const currentValue = form.getValues(scopedKey);
-            if (hasMeaningfulSignatureValue(savedValue) || hasMeaningfulSignatureValue(currentValue)) continue;
-
-            form.setValue(scopedKey, currentUserSignature, {
-                shouldDirty: false,
-                shouldTouch: false,
-            });
-        }
-    }, [currentUserSignature, currentVariant, form, savedFormData?.formFields, selectedTerm, termTemplate]);
+    }, [selectedTerm, currentVariant, ocId, form, savedFormData?.formFields]);
 
     // Auto-save to Redux on form changes
     useEffect(() => {
@@ -277,6 +177,12 @@ export default function InterviewTermTabs() {
         : { isEditing: false, isSaved: false };
     const currentFormState = formStates[stateKey] ?? defaultStateFromData;
 
+    const termMatch = getTemplateMatchForSemester(templateMappings, currentVariant, selectedTerm);
+    const termTemplate = termMatch?.template ?? null;
+    const specialGroup = currentVariant === "special" && termMatch?.groupId
+        ? termTemplate?.groups.find((group) => group.id === termMatch.groupId) ?? null
+        : null;
+
     const templatesLoaded = Boolean(templateMappings);
     const missingTemplate = templatesLoaded && !termTemplate;
     const specialGroupMissing = templatesLoaded && currentVariant === "special" && termTemplate && !specialGroup;
@@ -290,22 +196,14 @@ export default function InterviewTermTabs() {
     };
 
     const handleClearForm = () => {
+        if (readOnly) return;
         if (confirm("Are you sure you want to clear all unsaved changes?")) {
             dispatch(clearTermInterviewForm({
                 ocId,
                 termIndex: selectedTerm,
                 variant: currentVariant,
             }));
-            form.reset(
-                buildTermInterviewResetValues({
-                    currentValues: form.getValues(),
-                    savedValues: {},
-                    termIndex: selectedTerm,
-                    variant: currentVariant,
-                    templateFields: Array.from(termTemplate?.fieldsByKey?.values?.() ?? []),
-                    signatureValue: currentUserSignature,
-                }),
-            );
+            form.reset({});
         }
     };
 
@@ -329,7 +227,7 @@ export default function InterviewTermTabs() {
                 <button
                     key={term}
                     type="button"
-                    onClick={() => setSelectedTerm(term)}
+                    onClick={() => setActiveSemester(term)}
                     className={`px-4 py-2 rounded-t-lg ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                 >
                     {`TERM ${label}`}
@@ -380,6 +278,7 @@ export default function InterviewTermTabs() {
 
             {/* FORM AREA */}
             {formAvailable ? (
+                <div className={readOnly ? "pointer-events-none opacity-80" : ""}>
                 <TermSubForm
                     form={form}
                     termIndex={selectedTerm}
@@ -403,8 +302,8 @@ export default function InterviewTermTabs() {
                     ocId={ocId}
                     savedSpecialInterviews={savedSpecialInterviews}
                     onClearForm={handleClearForm}
-                    currentUserSignature={currentUserSignature}
                 />
+                </div>
             ) : (
                 <div className="border rounded-lg p-6 bg-muted/40 text-center text-sm text-muted-foreground">
                     {!templatesLoaded ? (

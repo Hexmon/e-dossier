@@ -14,9 +14,13 @@ import {
 import { TheoryMarksRecord, PracticalMarksRecord } from '@/app/db/schema/training/oc';
 import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
 import { listSubjectsByIdsOrCodes } from '@/app/db/queries/subjects';
-import { marksToGradePointsWithPolicy, roundPolicyValue, type AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import type { AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import {
+    computeAcademicCgpa,
+    summarizeAcademicSubjects,
+    type AcademicCumulativeSemester,
+} from '@/app/lib/academic-marks-core';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
-import { normalizePhaseTestCount } from '@/lib/academics-theory';
 
 type BranchTag = 'C' | 'E' | 'M';
 
@@ -91,29 +95,36 @@ export function hydrateAcademicViewsWithSubjectCatalog(
 
             if (!catalogSubject) return subject;
 
+            const hasTheory = Boolean(catalogSubject.hasTheory);
+            const hasPractical = Boolean(catalogSubject.hasPractical);
+            const includeTheory = hasTheory ? Boolean(subject.includeTheory || subject.theory) : false;
+            const includePractical = hasPractical ? Boolean(subject.includePractical || subject.practical) : false;
+
             return {
                 ...subject,
-                theoryCredits:
-                    subject.theoryCredits ??
-                    catalogSubject.defaultTheoryCredits ??
-                    subject.subject.defaultTheoryCredits ??
-                    null,
-                practicalCredits:
-                    subject.practicalCredits ??
-                    catalogSubject.defaultPracticalCredits ??
-                    subject.subject.defaultPracticalCredits ??
-                    null,
+                includeTheory,
+                includePractical,
+                theoryCredits: includeTheory
+                    ? subject.theoryCredits ??
+                      catalogSubject.defaultTheoryCredits ??
+                      subject.subject.defaultTheoryCredits ??
+                      null
+                    : null,
+                practicalCredits: includePractical
+                    ? subject.practicalCredits ??
+                      catalogSubject.defaultPracticalCredits ??
+                      subject.subject.defaultPracticalCredits ??
+                      null
+                    : null,
+                theory: includeTheory ? subject.theory : undefined,
+                practical: includePractical ? subject.practical : undefined,
                 subject: {
                     ...subject.subject,
                     id: subject.subject.id ?? catalogSubject.id,
                     name: subject.subject.name || catalogSubject.name,
                     branch: (subject.subject.branch || catalogSubject.branch) as BranchTag,
-                    noOfPhaseTests: normalizePhaseTestCount(
-                        subject.subject.noOfPhaseTests ?? catalogSubject.noOfPhaseTests,
-                        subject.subject.hasTheory || catalogSubject.hasTheory,
-                    ),
-                    hasTheory: subject.subject.hasTheory || catalogSubject.hasTheory,
-                    hasPractical: subject.subject.hasPractical || catalogSubject.hasPractical,
+                    hasTheory,
+                    hasPractical,
                     defaultTheoryCredits:
                         subject.subject.defaultTheoryCredits ?? catalogSubject.defaultTheoryCredits ?? null,
                     defaultPracticalCredits:
@@ -129,43 +140,10 @@ export function hydrateAcademicViewsWithSubjectCatalog(
 }
 
 export function computeSemesterGpa(view: AcademicSemesterView, policy: AcademicGradingPolicy) {
-    let totalCredits = 0;
-    let totalWeighted = 0;
-    let totalPoints = 0;
-    let pointComponents = 0;
-
-    for (const subject of view.subjects ?? []) {
-        if (subject.includeTheory) {
-            const credits = Number(subject.theoryCredits ?? subject.subject?.defaultTheoryCredits ?? 0);
-            if (credits > 0) {
-                const points = marksToGradePointsWithPolicy(subject.theory?.totalMarks ?? 0, policy);
-                totalCredits += credits;
-                totalWeighted += credits * points;
-                totalPoints += points;
-                pointComponents += 1;
-            }
-        }
-        if (subject.includePractical) {
-            const credits = Number(subject.practicalCredits ?? subject.subject?.defaultPracticalCredits ?? 0);
-            if (credits > 0) {
-                const points = marksToGradePointsWithPolicy(subject.practical?.totalMarks ?? 0, policy);
-                totalCredits += credits;
-                totalWeighted += credits * points;
-                totalPoints += points;
-                pointComponents += 1;
-            }
-        }
-    }
-
-    let sgpa: number | null = null;
-    if (policy.sgpaFormulaTemplate === 'SEMESTER_AVG') {
-        sgpa = pointComponents > 0 ? totalPoints / pointComponents : null;
-    } else {
-        sgpa = totalCredits > 0 ? totalWeighted / totalCredits : null;
-    }
+    const { sgpa, totalCredits, totalWeighted } = summarizeAcademicSubjects(view.subjects ?? [], policy);
 
     return {
-        sgpa: roundPolicyValue(sgpa, policy.roundingScale),
+        sgpa,
         totalCredits,
         totalWeighted,
     };
@@ -179,34 +157,20 @@ function computeDerivedGpaBySemester(
     const ordered = [...views].sort((a, b) => a.semester - b.semester);
     const derived = new Map<number, { sgpa: number | null; cgpa: number | null }>();
 
-    let cumulativeCredits = 0;
-    let cumulativeWeighted = 0;
-    let cumulativeSgpa = 0;
-    let cumulativeSgpaCount = 0;
+    const semesterComponents: AcademicCumulativeSemester[] = [];
 
     for (const view of ordered) {
         if (semestersWithRows && !semestersWithRows.has(view.semester)) {
             continue;
         }
 
-        const { sgpa, totalCredits, totalWeighted } = computeSemesterGpa(view, policy);
-        cumulativeCredits += totalCredits;
-        cumulativeWeighted += totalWeighted;
-        if (sgpa !== null) {
-            cumulativeSgpa += sgpa;
-            cumulativeSgpaCount += 1;
-        }
-
-        let cgpa: number | null = null;
-        if (policy.cgpaFormulaTemplate === 'SEMESTER_AVG') {
-            cgpa = cumulativeSgpaCount > 0 ? cumulativeSgpa / cumulativeSgpaCount : null;
-        } else {
-            cgpa = cumulativeCredits > 0 ? cumulativeWeighted / cumulativeCredits : null;
-        }
+        const { components, sgpa } = summarizeAcademicSubjects(view.subjects ?? [], policy);
+        semesterComponents.push({ sgpa, components });
+        const cgpa = computeAcademicCgpa(semesterComponents, semesterComponents.length - 1, policy);
 
         derived.set(view.semester, {
             sgpa,
-            cgpa: roundPolicyValue(cgpa, policy.roundingScale),
+            cgpa,
         });
     }
 
@@ -387,17 +351,16 @@ export async function updateOcAcademicSubject(
         semesterBranchTag: determineBranchForSemester(semester, ocInfo.branch),
         subjectBranch: (offering.subject.branch ?? 'C') as BranchTag,
         subjectCode: offering.subject.code,
-            subjectName: offering.subject.name,
-            theory: data.theory,
-            practical: data.practical,
-            meta: {
-                subjectId: offering.subject.id,
-                offeringId: offering.id,
-                noOfPhaseTests: normalizePhaseTestCount(offering.subject.noOfPhaseTests, offering.includeTheory),
-                theoryCredits: offering.theoryCredits ?? offering.subject.defaultTheoryCredits ?? null,
-                practicalCredits: offering.practicalCredits ?? offering.subject.defaultPracticalCredits ?? null,
-            },
-        });
+        subjectName: offering.subject.name,
+        theory: data.theory,
+        practical: data.practical,
+        meta: {
+            subjectId: offering.subject.id,
+            offeringId: offering.id,
+            theoryCredits: offering.theoryCredits ?? offering.subject.defaultTheoryCredits ?? null,
+            practicalCredits: offering.practicalCredits ?? offering.subject.defaultPracticalCredits ?? null,
+        },
+    });
 
     await logAcademicEvent(
         auditContext,

@@ -52,6 +52,16 @@ describe("buildDossierPathForOc", () => {
     ).toBe("/dashboard/oc-2/milmgmt/performance-graph?tab=mil-trg");
   });
 
+  it("drops stale semester-like query params when switching OCs", () => {
+    expect(
+      buildDossierPathForOc(
+        "oc-2",
+        "/dashboard/oc-1/milmgmt/academics",
+        "tab=settings&semester=4&sem=4&semister=4"
+      )
+    ).toBe("/dashboard/oc-2/milmgmt/academics?tab=settings");
+  });
+
   it("falls back to dossier root when current route is not dossier", () => {
     expect(buildDossierPathForOc("oc-2", "/dashboard/reports", "")).toBe("/dashboard/oc-2/milmgmt");
   });

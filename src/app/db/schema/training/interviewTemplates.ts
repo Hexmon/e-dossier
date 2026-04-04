@@ -1,12 +1,10 @@
-import { pgTable, uuid, varchar, timestamp, integer, boolean, text, uniqueIndex, index } from 'drizzle-orm/pg-core';
-import { courses } from './courses';
+import { pgTable, uuid, varchar, timestamp, integer, boolean, text, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // ---------------------------------------------------------------------------
 // Interview templates (admin-managed, global)
 // ---------------------------------------------------------------------------
 export const interviewTemplates = pgTable('interview_templates', {
     id: uuid('id').primaryKey().defaultRandom(),
-    courseId: uuid('course_id').references(() => courses.id, { onDelete: 'restrict' }),
     code: varchar('code', { length: 32 }).notNull(),
     title: varchar('title', { length: 160 }).notNull(),
     description: text('description'),
@@ -17,8 +15,7 @@ export const interviewTemplates = pgTable('interview_templates', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
-    uqTemplateCodePerCourse: uniqueIndex('uq_interview_template_course_code').on(t.courseId, t.code),
-    idxInterviewTemplateCourseSort: index('idx_interview_template_course_sort').on(t.courseId, t.sortOrder),
+    uqTemplateCode: uniqueIndex('uq_interview_template_code').on(t.code),
 }));
 
 export const interviewTemplateSemesters = pgTable('interview_template_semesters', {

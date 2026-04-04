@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { ApiError, handleApiError } from '@/app/lib/http';
+import { handleApiError } from '@/app/lib/http';
 import { consolidatedSessionalDownloadBodySchema } from '@/app/lib/validators.reports';
 import { assertSemesterAllowed, resolveCourseWithSemesters } from '@/app/lib/reports/semester-resolution';
 import { buildConsolidatedSessionalPreview } from '@/app/lib/reports/report-data';
@@ -24,14 +24,6 @@ async function POSTHandler(req: AuditNextRequest) {
     assertSemesterAllowed(body.semester, courseMeta.allowedSemesters);
 
     const preview = await buildConsolidatedSessionalPreview(body);
-    const sectionLabel = body.section === 'theory' ? 'Theory' : 'Practical';
-    const sectionAvailable =
-      body.section === 'theory' ? preview.subject.hasTheory : preview.subject.hasPractical;
-
-    if (!sectionAvailable) {
-      throw new ApiError(400, `${sectionLabel} sessional marksheet is not available for this subject.`, 'bad_request');
-    }
-
     const versionId = generateReportVersionId();
     const generatedAt = new Date();
     const preparedBy = body.preparedBy?.trim() || '-';
@@ -39,13 +31,13 @@ async function POSTHandler(req: AuditNextRequest) {
     const instructorName = body.instructorName?.trim() || preview.subject.instructorName?.trim() || '-';
 
     const fileName = sanitizePdfFileName(
-      `consolidated-sessional-${body.section}-${preview.course.code}-sem-${body.semester}-${preview.subject.code}-${versionId}.pdf`
+      `consolidated-sessional-${preview.course.code}-sem-${body.semester}-${preview.subject.code}-${versionId}.pdf`
     );
 
     const pdf = await renderEncryptedPdf(
       {
         password: body.password,
-        title: `${sectionLabel} Consolidated Sessional Mark Sheet`,
+        title: 'Consolidated Sessional Mark Sheet',
         layout: 'landscape',
       },
       (doc) => {
@@ -55,7 +47,7 @@ async function POSTHandler(req: AuditNextRequest) {
           checkedBy,
           instructorName,
           generatedAt,
-        }, body.section);
+        });
       }
     );
 
@@ -69,7 +61,6 @@ async function POSTHandler(req: AuditNextRequest) {
         courseId: body.courseId,
         semester: body.semester,
         subjectId: body.subjectId,
-        section: body.section,
         instructorName,
         format: 'pdf',
       },
@@ -92,7 +83,6 @@ async function POSTHandler(req: AuditNextRequest) {
         courseId: body.courseId,
         semester: body.semester,
         subjectId: body.subjectId,
-        section: body.section,
         format: 'pdf',
         versionId,
       },

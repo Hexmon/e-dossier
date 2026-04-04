@@ -1,17 +1,26 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '@/app/db/client';
-import { ocCadets, ocSemesterMarks, type PracticalMarksRecord, type SemesterSubjectRecord, type TheoryMarksRecord } from '@/app/db/schema/training/oc';
+import { ocCadets, ocSemesterMarks, type SemesterSubjectRecord } from '@/app/db/schema/training/oc';
 import {
   getAcademicGradingPolicy,
 } from '@/app/db/queries/academicGradingPolicy';
 import {
-  marksToGradePointsWithPolicy,
-  marksToLetterGradeWithPolicy,
   roundPolicyValue,
   type AcademicGradingPolicy,
 } from '@/app/lib/grading-policy';
-import { computePracticalTotal } from '@/lib/academics-practical';
-import { computeTheoryTotal } from '@/lib/academics-theory';
+import {
+  buildAcademicGpaComponent,
+  computeAcademicCgpa,
+  computeAcademicSgpa,
+  computePracticalTotalMarks,
+  computeTheoryTotalMarks,
+  derivePracticalLetterGrade,
+  deriveTheoryLetterGrade,
+  normalizeAcademicCredits,
+  normalizeAcademicGrade,
+  type AcademicCumulativeSemester,
+  type AcademicGpaComponent,
+} from '@/app/lib/academic-marks-core';
 
 type RecalculateScope = 'all' | 'courses';
 
@@ -42,81 +51,10 @@ export type AcademicRecalcResult = {
   sampleChanges: AcademicRecalcSampleChange[];
 };
 
-type SemesterComponent = {
-  credits: number;
-  points: number;
-  weighted: number;
-};
-
 type RowComputation = {
   subjects: SemesterSubjectRecord[];
   gradeFieldChanges: number;
-  components: SemesterComponent[];
-};
-
-function toFiniteNumber(value: unknown): number {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function toPositiveNumber(value: unknown): number {
-  return Math.max(0, toFiniteNumber(value));
-}
-
-function normalizeGrade(value: unknown): string {
-  return String(value ?? '').trim().toUpperCase();
-}
-
-function theoryTotal(
-  theory: TheoryMarksRecord | null | undefined,
-  phaseTestCount: number | null | undefined,
-): number {
-  if (!theory) return 0;
-  return computeTheoryTotal(theory, phaseTestCount);
-}
-
-function practicalTotal(practical: PracticalMarksRecord | null | undefined): number {
-  if (!practical) return 0;
-  return computePracticalTotal(practical);
-}
-
-function computeSgpa(
-  components: SemesterComponent[],
-  policy: AcademicGradingPolicy
-): number | null {
-  if (!components.length) return null;
-
-  if (policy.sgpaFormulaTemplate === 'SEMESTER_AVG') {
-    const avg = components.reduce((sum, component) => sum + component.points, 0) / components.length;
-    return roundPolicyValue(avg, policy.roundingScale);
-  }
-
-  const totalCredits = components.reduce((sum, component) => sum + component.credits, 0);
-  if (totalCredits <= 0) return null;
-  const totalWeighted = components.reduce((sum, component) => sum + component.weighted, 0);
-  return roundPolicyValue(totalWeighted / totalCredits, policy.roundingScale);
-}
-
-function computeCgpa(
-  semesters: Array<{ sgpa: number | null; components: SemesterComponent[] }>,
-  index: number,
-  policy: AcademicGradingPolicy
-): number | null {
-  const upto = semesters.slice(0, index + 1);
-  if (!upto.length) return null;
-
-  if (policy.cgpaFormulaTemplate === 'SEMESTER_AVG') {
-    const sgpas = upto.map((entry) => entry.sgpa).filter((value): value is number => value !== null);
-    if (!sgpas.length) return null;
-    const avg = sgpas.reduce((sum, value) => sum + value, 0) / sgpas.length;
-    return roundPolicyValue(avg, policy.roundingScale);
-  }
-
-  const components = upto.flatMap((entry) => entry.components);
-  const totalCredits = components.reduce((sum, component) => sum + component.credits, 0);
-  if (totalCredits <= 0) return null;
-  const totalWeighted = components.reduce((sum, component) => sum + component.weighted, 0);
-  return roundPolicyValue(totalWeighted / totalCredits, policy.roundingScale);
+  components: AcademicGpaComponent[];
 }
 
 function recomputeRowSubjects(
@@ -124,7 +62,7 @@ function recomputeRowSubjects(
   policy: AcademicGradingPolicy
 ): RowComputation {
   let gradeFieldChanges = 0;
-  const components: SemesterComponent[] = [];
+  const components: AcademicGpaComponent[] = [];
 
   const nextSubjects = subjects.map((subject) => {
     const nextSubject: SemesterSubjectRecord = {
@@ -135,37 +73,43 @@ function recomputeRowSubjects(
     };
 
     if (nextSubject.theory) {
-      const marks = theoryTotal(nextSubject.theory, nextSubject.meta?.noOfPhaseTests);
-      const derivedGrade = marksToLetterGradeWithPolicy(marks, policy);
-      if (normalizeGrade(nextSubject.theory.grade) !== derivedGrade) {
-        nextSubject.theory.grade = derivedGrade;
-        gradeFieldChanges += 1;
-      }
+      const marks = computeTheoryTotalMarks(nextSubject.theory);
+      const credits = normalizeAcademicCredits(nextSubject.meta?.theoryCredits);
+      if (credits <= 0) {
+        if (normalizeAcademicGrade(nextSubject.theory.grade) !== '') {
+          nextSubject.theory.grade = undefined;
+          gradeFieldChanges += 1;
+        }
+      } else {
+        const derivedGrade = deriveTheoryLetterGrade(nextSubject.theory, policy);
+        if (normalizeAcademicGrade(nextSubject.theory.grade) !== derivedGrade) {
+          nextSubject.theory.grade = derivedGrade;
+          gradeFieldChanges += 1;
+        }
 
-      const credits = Math.max(0, toFiniteNumber(nextSubject.meta?.theoryCredits));
-      const points = marksToGradePointsWithPolicy(marks, policy);
-      components.push({
-        credits,
-        points,
-        weighted: credits * points,
-      });
+        const component = buildAcademicGpaComponent(marks, credits, policy);
+        if (component) components.push(component);
+      }
     }
 
     if (nextSubject.practical) {
-      const marks = practicalTotal(nextSubject.practical);
-      const derivedGrade = marksToLetterGradeWithPolicy(marks, policy);
-      if (normalizeGrade(nextSubject.practical.grade) !== derivedGrade) {
-        nextSubject.practical.grade = derivedGrade;
-        gradeFieldChanges += 1;
-      }
+      const marks = computePracticalTotalMarks(nextSubject.practical);
+      const credits = normalizeAcademicCredits(nextSubject.meta?.practicalCredits);
+      if (credits <= 0) {
+        if (normalizeAcademicGrade(nextSubject.practical.grade) !== '') {
+          nextSubject.practical.grade = undefined;
+          gradeFieldChanges += 1;
+        }
+      } else {
+        const derivedGrade = derivePracticalLetterGrade(nextSubject.practical, policy);
+        if (normalizeAcademicGrade(nextSubject.practical.grade) !== derivedGrade) {
+          nextSubject.practical.grade = derivedGrade;
+          gradeFieldChanges += 1;
+        }
 
-      const credits = Math.max(0, toFiniteNumber(nextSubject.meta?.practicalCredits));
-      const points = marksToGradePointsWithPolicy(marks, policy);
-      components.push({
-        credits,
-        points,
-        weighted: credits * points,
-      });
+        const component = buildAcademicGpaComponent(marks, credits, policy);
+        if (component) components.push(component);
+      }
     }
 
     return nextSubject;
@@ -239,13 +183,13 @@ export async function recalculateAcademicGrading(
   for (const [ocId, ocRows] of rowsByOc.entries()) {
     const sortedRows = [...ocRows].sort((a, b) => a.semester - b.semester);
     const semesterComputations = sortedRows.map((row) => recomputeRowSubjects(row.subjects, policy));
-    const sgpaValues = semesterComputations.map((entry) => computeSgpa(entry.components, policy));
+    const sgpaValues = semesterComputations.map((entry) => computeAcademicSgpa(entry.components, policy));
+    const cumulativeSemesters: AcademicCumulativeSemester[] = sgpaValues.map((sgpa, i) => ({
+      sgpa,
+      components: semesterComputations[i].components,
+    }));
     const cgpaValues = sgpaValues.map((_, index) =>
-      computeCgpa(
-        sgpaValues.map((sgpa, i) => ({ sgpa, components: semesterComputations[i].components })),
-        index,
-        policy
-      )
+      computeAcademicCgpa(cumulativeSemesters, index, policy)
     );
 
     for (let i = 0; i < sortedRows.length; i += 1) {

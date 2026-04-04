@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -28,15 +28,17 @@ import type { RootState } from "@/store";
 import { saveWeaponTrainingForm, clearWeaponTrainingForm } from "@/store/slices/weaponTrainingSlice";
 import Link from "next/link";
 import { resolveTabStateClasses, resolveToneClasses } from "@/lib/theme-color";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 export default function WpnTrgPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     const { cadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
     const {
         name = "",
         courseName = "",
@@ -44,20 +46,23 @@ export default function WpnTrgPage() {
         ocId: cadetOcId = ocId,
         course = "",
     } = cadet ?? {};
+    const currentSemester = cadet?.currentSemester ?? 1;
 
-    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course }), [name, courseName, ocNumber, cadetOcId, course]);
+    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course, currentSemester }), [name, courseName, ocNumber, cadetOcId, course, currentSemester]);
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
 
     const terms = useMemo(() => ["III TERM", "IV TERM", "V TERM", "VI TERM"], []);
     const semesterApiBase = 3;
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - semesterApiBase;
-        if (idx < 0 || idx >= terms.length) return 0;
-        return idx;
-    }, [semParam, terms.length]);
-    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
+    const supportedSemesters = [3, 4, 5, 6];
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters,
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - semesterApiBase;
     const semesterApiNumber = activeTab + semesterApiBase;
 
     // Redux
@@ -83,6 +88,12 @@ export default function WpnTrgPage() {
         if (!ocId) return;
         loadAll();
     }, [ocId, loadAll]);
+
+    useEffect(() => {
+        if (isActiveSemesterLocked) {
+            setEditing(false);
+        }
+    }, [isActiveSemesterLocked]);
 
     // Create stable default values - prioritize Redux cache over database
     const getDefaultValues = useCallback(() => {
@@ -137,16 +148,6 @@ export default function WpnTrgPage() {
 
     const [isSaving, setIsSaving] = useState(false);
     const [editing, setEditing] = useState(false);
-
-    useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + semesterApiBase));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
 
     // Reset form when activeTab changes
     useEffect(() => {
@@ -318,8 +319,8 @@ export default function WpnTrgPage() {
                                                 key={t}
                                                 type="button"
                                                 onClick={() => {
-                                                    setActiveTab(i);
-                                                    updateSemesterParam(i);
+                                                    setActiveSemester(i + semesterApiBase);
+                                                    setEditing(false);
                                                     loadAll();
                                                 }}
                                                 className={`px-4 py-2 rounded-t-lg font-medium ${resolveTabStateClasses(activeTab === i)}`}
@@ -329,6 +330,13 @@ export default function WpnTrgPage() {
                                         );
                                     })}
                                 </div>
+                                {isActiveSemesterLocked ? (
+                                    <SemesterLockNotice
+                                        activeSemester={activeSemester}
+                                        currentSemester={currentSemester ?? 1}
+                                        supportedSemesters={supportedSemesters}
+                                    />
+                                ) : null}
 
                                 <WeaponTrainingForm
                                     semesterNumber={semesterApiNumber}
@@ -336,7 +344,7 @@ export default function WpnTrgPage() {
                                     savedRecords={weaponRecords}
                                     onSave={onSaveWeapon}
                                     formMethods={weaponFormMethods}
-                                    disabled={!editing}
+                                    disabled={isActiveSemesterLocked || !editing}
                                     editing={editing}
                                     onEdit={() => setEditing(true)}
                                     onCancel={handleCancel}
@@ -352,7 +360,7 @@ export default function WpnTrgPage() {
                                             await deleteAchievement(id);
                                             await loadAll();
                                         }}
-                                        disabled={!editing}
+                                        disabled={isActiveSemesterLocked || !editing}
                                         control={weaponFormMethods.control}
                                         register={weaponFormMethods.register}
                                     />

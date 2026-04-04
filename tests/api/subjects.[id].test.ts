@@ -95,7 +95,6 @@ describe('GET /api/v1/subjects/[id]', () => {
               name: 'Subject 1',
               branch: 'C',
               noOfPeriods: 6,
-              noOfPhaseTests: 2,
             },
           ],
         }),
@@ -111,7 +110,6 @@ describe('GET /api/v1/subjects/[id]', () => {
     expect(body.ok).toBe(true);
     expect(body.subject.id).toBe(subjectId);
     expect(body.subject.noOfPeriods).toBe(6);
-    expect(body.subject.noOfPhaseTests).toBe(2);
   });
 });
 
@@ -180,7 +178,6 @@ describe('PATCH /api/v1/subjects/[id]', () => {
               code: 'SUB-1',
               name: 'Subject 1',
               noOfPeriods: 6,
-              noOfPhaseTests: 2,
             },
           ],
         }),
@@ -223,7 +220,6 @@ describe('PATCH /api/v1/subjects/[id]', () => {
               code: 'SUB-1',
               name: 'Subject 1',
               noOfPeriods: 6,
-              noOfPhaseTests: 2,
             },
           ],
         }),
@@ -238,7 +234,6 @@ describe('PATCH /api/v1/subjects/[id]', () => {
               code: 'SUB-2',
               name: 'Updated Subject',
               noOfPeriods: 8,
-              noOfPhaseTests: 1,
             },
           ],
         }),
@@ -248,7 +243,7 @@ describe('PATCH /api/v1/subjects/[id]', () => {
     const req = makeJsonRequest({
       method: 'PATCH',
       path: `${basePath}/${subjectId}`,
-      body: { name: 'Updated Subject', noOfPeriods: 8, noOfPhaseTests: 1 },
+      body: { name: 'Updated Subject', noOfPeriods: 8 },
     });
     const ctx = { params: Promise.resolve({ id: subjectId }) } as any;
 
@@ -259,7 +254,6 @@ describe('PATCH /api/v1/subjects/[id]', () => {
     expect(body.subject.id).toBe(subjectId);
     expect(body.subject.name).toBe('Updated Subject');
     expect(body.subject.noOfPeriods).toBe(8);
-    expect(body.subject.noOfPhaseTests).toBe(1);
   });
 });
 

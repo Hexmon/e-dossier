@@ -48,7 +48,14 @@ const securityHeaders = isProd
   : sharedHeaders;
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   poweredByHeader: false,
+  outputFileTracingIncludes: {
+    '/*': [
+      'docs/help/**/*',
+      'public/images/**/*',
+    ],
+  },
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },

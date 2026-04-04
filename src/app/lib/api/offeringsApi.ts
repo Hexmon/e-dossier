@@ -14,7 +14,6 @@ export interface Subject {
     name: string;
     branch: string;
     noOfPeriods: number;
-    noOfPhaseTests: number;
     hasTheory: boolean;
     hasPractical: boolean;
     defaultTheoryCredits: number;

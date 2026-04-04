@@ -7,10 +7,9 @@ import { useParams, usePathname, useRouter, useSearchParams } from "next/navigat
 import { RootState } from "@/store";
 import { InterviewOfficer } from "@/types/interview";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
-import { useMe } from "@/hooks/useMe";
 import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
 import { saveInterviewForm, clearInterviewForm, type InterviewFormData } from "@/store/slices/initialInterviewSlice";
-import { applySignatureDefaults, getCurrentUserSignature, hasMeaningfulSignatureValue, isSignatureTemplateField } from "@/lib/currentUserSignature";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 
 import DSCoordForm from "./forms/DSCoordForm";
 import DyCdrForm from "./forms/DyCdrForm";
@@ -27,7 +26,6 @@ function buildInitialInterviewResetValues(params: {
     currentValues: FormWrapperFields;
     savedValues: FormWrapperFields;
     templateFields?: Array<{ key: string; fieldType?: string | null; groupId?: string | null }>;
-    signatureValue?: string;
 }): FormWrapperFields {
     const out: FormWrapperFields = {};
 
@@ -45,28 +43,29 @@ function buildInitialInterviewResetValues(params: {
         out[key] = value;
     }
 
-    return applySignatureDefaults({
-        values: out,
-        fields: params.templateFields,
-        signatureValue: params.signatureValue,
-    });
+    return out;
 }
 
-export default function InterviewTabs() {
+export default function InterviewTabs({
+    readOnly = false,
+    currentSemester = 1,
+    canEditLockedSemesters = false,
+}: {
+    readOnly?: boolean;
+    currentSemester?: number | null;
+    canEditLockedSemesters?: boolean;
+}) {
     const { id } = useParams();
-    const router = useRouter();
-    const pathname = usePathname();
     const searchParams = useSearchParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
     const dispatch = useDispatch();
-    const { data: meData } = useMe();
 
-    const parseSemesterParam = (value: string | null) => {
-        const n = Number(value);
-        return Number.isInteger(n) && n >= 1 && n <= 6 ? n : 1;
-    };
-
-    const [selectedTerm, setSelectedTerm] = useState<number>(() => parseSemesterParam(searchParams.get("sem")));
+    const { activeSemester: selectedTerm, setActiveSemester } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+        legacyQueryKeys: ["sem", "semister"],
+    });
     const [active, setActive] = useState<InterviewOfficer>("plcdr");
     const { loading, templatesLoading, templatesError, fetchInitial, saveInitial, templateMappings } = useInterviewForms(ocId);
     const hydratedRef = useRef(false);
@@ -79,21 +78,6 @@ export default function InterviewTabs() {
     const usesSemester = activeSemesters.length > 0;
     const semesterAllowed = !usesSemester || activeSemesters.includes(selectedTerm);
     const activeSemesterKey = String(selectedTerm);
-    const currentUserSignature = getCurrentUserSignature(meData);
-
-    useEffect(() => {
-        const semFromUrl = parseSemesterParam(searchParams.get("sem"));
-        setSelectedTerm((current) => (current === semFromUrl ? current : semFromUrl));
-    }, [searchParams]);
-
-    useEffect(() => {
-        const currentUrlSem = parseSemesterParam(searchParams.get("sem"));
-        if (currentUrlSem === selectedTerm) return;
-
-        const next = new URLSearchParams(searchParams.toString());
-        next.set("sem", String(selectedTerm));
-        router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-    }, [selectedTerm, pathname, router, searchParams]);
 
     // Get saved form data from Redux for current officer
     const savedFormData = useSelector((state: RootState) =>
@@ -191,30 +175,6 @@ export default function InterviewTabs() {
         });
     }, [active, ocId, activeSemesterKey, activeTemplate, savedFormData]);
 
-    useEffect(() => {
-        if (!currentUserSignature) return;
-
-        const signatureFields = Array.from(activeTemplate?.fieldsByKey?.values?.() ?? []).filter(
-            (field) => !field.groupId && isSignatureTemplateField(field),
-        );
-        if (!signatureFields.length) return;
-
-        let updated = false;
-        for (const field of signatureFields) {
-            const savedValue = savedFormData?.[field.key];
-            const currentValue = form.getValues(field.key);
-            if (hasMeaningfulSignatureValue(savedValue) || hasMeaningfulSignatureValue(currentValue)) continue;
-
-            form.setValue(field.key, currentUserSignature, {
-                shouldDirty: false,
-                shouldTouch: false,
-            });
-            updated = true;
-        }
-
-        if (!updated) return;
-    }, [activeTemplate, currentUserSignature, form, savedFormData]);
-
     // Auto-save unsaved changes to Redux
     useEffect(() => {
         const subscription = form.watch((value) => {
@@ -242,6 +202,7 @@ export default function InterviewTabs() {
     }, [form, dispatch, ocId, active, activeSemesterKey]);
 
     async function handleSave(officer: InterviewOfficer, data: FormWrapperFields) {
+        if (readOnly) return null;
         if (usesSemester && !semesterAllowed) return null;
         const resp = await saveInitial(officer, data, selectedTerm);
         if (resp) {
@@ -252,16 +213,10 @@ export default function InterviewTabs() {
     }
 
     const handleClearForm = () => {
+        if (readOnly) return;
         if (confirm("Are you sure you want to clear all unsaved changes?")) {
             dispatch(clearInterviewForm({ ocId, semesterKey: activeSemesterKey, officer: active }));
-            form.reset(
-                buildInitialInterviewResetValues({
-                    currentValues: (form.getValues() ?? {}) as FormWrapperFields,
-                    savedValues: EMPTY_FORM_WRAPPER_FIELDS,
-                    templateFields: Array.from(activeTemplate?.fieldsByKey?.values?.() ?? []),
-                    signatureValue: currentUserSignature,
-                }),
-            );
+            form.reset({});
         }
     };
 
@@ -280,7 +235,7 @@ export default function InterviewTabs() {
                         <button
                             key={term}
                             type="button"
-                            onClick={() => setSelectedTerm(term)}
+                            onClick={() => setActiveSemester(term)}
                             className={`px-4 py-2 rounded-t-lg ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                         >
                             {`TERM ${label}`}
@@ -317,6 +272,7 @@ export default function InterviewTabs() {
                     Failed to load interview templates. {templatesError}
                 </div>
             ) : semesterAllowed ? (
+                <div className={readOnly ? "pointer-events-none opacity-80" : ""}>
                 <form onSubmit={form.handleSubmit((data) => handleSave(active, data))}>
                     <div className="space-y-6">
                         {active === "plcdr" && (
@@ -360,6 +316,7 @@ export default function InterviewTabs() {
                         )}
                     </div>
                 </form>
+                </div>
             ) : (
                 <div className="border rounded-lg p-6 bg-muted/40 text-center text-sm text-muted-foreground">
                     The selected interview template is not configured for this term.

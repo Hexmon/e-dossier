@@ -17,13 +17,20 @@ import OcCampActivitiesTable from "@/components/camps/campMarksTable";
 import OcCampReviews from "@/components/camps/campReviews";
 import { useTrainingCamps, useOcCampByName, useCampMutations, useAllOcCamps } from "@/hooks/useCampData";
 import { CreateOcCampPayload, UpdateOcCampPayload } from "@/app/lib/api/campApi";
-import { fetchOCById } from "@/app/lib/api/ocApi";
 
 interface CampContentProps {
   ocId: string;
+  activeSemester?: number;
+  onSemesterChange?: (semester: number) => void;
+  readOnly?: boolean;
 }
 
-export default function CampContent({ ocId }: CampContentProps) {
+export default function CampContent({
+  ocId,
+  activeSemester: controlledSemester,
+  onSemesterChange,
+  readOnly = false,
+}: CampContentProps) {
   // ---------------------------
   // STATE MANAGEMENT
   // ---------------------------
@@ -31,16 +38,15 @@ export default function CampContent({ ocId }: CampContentProps) {
   const [selectedCampName, setSelectedCampName] = useState<string | null>(null);
   const [isEditingReviews, setIsEditingReviews] = useState(false);
   const [isEditingActivities, setIsEditingActivities] = useState(false);
-  const [courseId, setCourseId] = useState<string>("");
 
   const semesters = [1, 2, 3, 4, 5, 6] as const;
   const semesterLabels = [
-    "FIRST TERM",
-    "SECOND TERM",
-    "THIRD TERM",
-    "FOURTH TERM",
-    "FIFTH TERM",
-    "SIXTH TERM",
+    "TERM 1",
+    "TERM 2",
+    "TERM 3",
+    "TERM 4",
+    "TERM 5",
+    "TERM 6",
   ] as const;
   const currentSemester = semesters[activeSemester] ?? 1;
 
@@ -52,7 +58,7 @@ export default function CampContent({ ocId }: CampContentProps) {
   // ---------------------------
   // API HOOKS
   // ---------------------------
-  const { trainingCamps, loading: loadingCamps, error: campsError } = useTrainingCamps(courseId);
+  const { trainingCamps, loading: loadingCamps, error: campsError } = useTrainingCamps();
   const { camp: currentCamp, loading: loadingCamp, refetch: refetchCamp } = useOcCampByName(
     ocId,
     selectedCampName
@@ -88,24 +94,6 @@ export default function CampContent({ ocId }: CampContentProps) {
   const showWarning = useMemo(() => {
     return selectedCampName && !currentCamp && !loadingCamp;
   }, [selectedCampName, currentCamp, loadingCamp]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!ocId) return;
-    fetchOCById(ocId)
-      .then((oc) => {
-        if (!cancelled) {
-          setCourseId(oc?.course?.id ?? "");
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to resolve OC course for camps:", error);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ocId]);
 
   // Calculate totals for TECHNO TAC CAMP table from API data
   const campTotals = useMemo(() => {
@@ -149,10 +137,23 @@ export default function CampContent({ ocId }: CampContentProps) {
   // ---------------------------
   const handleSemesterChange = (index: number) => {
     setActiveSemester(index);
+    onSemesterChange?.(semesters[index] ?? 1);
     setSelectedCampName(null);
     setIsEditingReviews(false);
     setIsEditingActivities(false);
   };
+
+  useEffect(() => {
+    if (!controlledSemester) return;
+    setActiveSemester(Math.max(0, semesters.indexOf(controlledSemester as (typeof semesters)[number])));
+  }, [controlledSemester]);
+
+  useEffect(() => {
+    if (readOnly) {
+      setIsEditingReviews(false);
+      setIsEditingActivities(false);
+    }
+  }, [readOnly]);
 
   // Set first camp as selected when available camps change
   useEffect(() => {
@@ -465,7 +466,7 @@ export default function CampContent({ ocId }: CampContentProps) {
               secondarySignatureLabel={selectedTrainingCamp?.signatureSecondaryLabel || "PI Cdr"}
             />
 
-            {!isEditingReviews && (
+            {!isEditingReviews && !readOnly && (
               <div className="flex justify-center mt-4">
                 <Button
                   type="button"
@@ -518,10 +519,10 @@ export default function CampContent({ ocId }: CampContentProps) {
             campName={selectedCampName}
           />
 
-          {!isEditingActivities && (
-            <div className="flex justify-center mt-4">
-              <Button
-                type="button"
+            {!isEditingActivities && !readOnly && (
+              <div className="flex justify-center mt-4">
+                <Button
+                  type="button"
                 onClick={() => setIsEditingActivities(true)}
                 disabled={isCreating || isUpdating}
               >

@@ -8,13 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 type AppointmentRow = {
     positionName: string;
     officerName: string;
-    ocNo: string | null;
-    courseName: string | null;
     startsAt: string | null;
 };
 
 type DashboardAppointmentsResponse = {
-    source?: 'admin' | 'platoon-cadet';
     items: AppointmentRow[];
 };
 
@@ -28,11 +25,8 @@ const formatDate = (dateString: string | null | undefined): string => {
     return `${day}/${month}/${year}`; // DD/MM/YYYY format
 };
 
-const formatText = (value: string | null | undefined): string => value?.trim() || '-';
-
 export default function Appointments() {
     const [appointmentsData, setAppointmentsData] = useState<AppointmentRow[]>([]);
-    const [showCadetColumns, setShowCadetColumns] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const didFetch = useRef(false);
@@ -47,12 +41,10 @@ export default function Appointments() {
             try {
                 const res = await api.get<DashboardAppointmentsResponse>("/api/v1/dashboard/data/appointments");
                 setAppointmentsData(res.items ?? []);
-                setShowCadetColumns(res.source === 'platoon-cadet');
             } catch (err) {
                 const message = err instanceof Error ? err.message : "Failed to load appointments";
                 setError(message);
                 setAppointmentsData([]);
-                setShowCadetColumns(false);
                 console.error("Failed to load appointments", err);
             } finally {
                 setIsLoading(false);
@@ -63,66 +55,34 @@ export default function Appointments() {
     }, []);
 
     // Configure the table
-    const baseColumns: TableConfig<AppointmentRow>['columns'] = [
-        {
-            key: 'positionName',
-            label: 'Appointment Name',
-            type: 'text',
-            sortable: true,
-            filterable: false,
-            width: showCadetColumns ? '25%' : '35%',
-        },
-        {
-            key: 'officerName',
-            label: 'Assigned To',
-            type: 'text',
-            sortable: true,
-            filterable: false,
-            width: showCadetColumns ? '24%' : '35%',
-        },
-    ];
-
-    const cadetColumns: TableConfig<AppointmentRow>['columns'] = [
-        {
-            key: 'ocNo',
-            label: 'OC No',
-            type: 'custom',
-            sortable: true,
-            filterable: false,
-            width: '14%',
-            render: (value: string | null) => formatText(value),
-        },
-        {
-            key: 'courseName',
-            label: 'Course',
-            type: 'custom',
-            sortable: true,
-            filterable: false,
-            width: '17%',
-            render: (value: string | null) => formatText(value),
-        },
-    ];
-
-    const trailingColumns: TableConfig<AppointmentRow>['columns'] = [
-        {
-            key: 'startsAt',
-            label: 'Assumption Of Charge',
-            type: 'custom',
-            sortable: true,
-            filterable: false,
-            width: showCadetColumns ? '20%' : '30%',
-            render: (value) => formatDate(value),
-        },
-    ];
-
-    const columns: TableConfig<AppointmentRow>['columns'] = [
-        ...baseColumns,
-        ...(showCadetColumns ? cadetColumns : []),
-        ...trailingColumns,
-    ];
-
     const tableConfig: TableConfig<AppointmentRow> = {
-        columns,
+        columns: [
+            {
+                key: 'positionName',
+                label: 'Appointment Name',
+                type: 'text',
+                sortable: true,
+                filterable: false,
+                width: '35%',
+            },
+            {
+                key: 'officerName',
+                label: 'Officer Name',
+                type: 'text',
+                sortable: true,
+                filterable: false,
+                width: '35%',
+            },
+            {
+                key: 'startsAt',
+                label: 'Assumption Of Charge',
+                type: 'custom', // Changed from 'date' to 'custom'
+                sortable: true,
+                filterable: false,
+                width: '30%',
+                render: (value) => formatDate(value), // Custom render function
+            },
+        ],
         theme: {
             variant: "blue"
         },

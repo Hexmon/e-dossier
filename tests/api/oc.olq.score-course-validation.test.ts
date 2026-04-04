@@ -12,6 +12,7 @@ vi.mock('@/app/api/v1/oc/_checks', () => ({
     mustBeAuthed: vi.fn(),
     parseParam: vi.fn(),
     ensureOcExists: vi.fn(),
+    assertOcSemesterWriteAllowed: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/olq', () => ({
@@ -36,6 +37,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     (ocChecks.mustBeAuthed as any).mockResolvedValue({ userId: 'u-1', roles: ['ADMIN'] });
     (ocChecks.ensureOcExists as any).mockResolvedValue(undefined);
+    (ocChecks.assertOcSemesterWriteAllowed as any).mockResolvedValue(undefined);
     (ocChecks.parseParam as any).mockImplementation(async ({ params }: any, schema: any) => schema.parse(await params));
     (ocQueries.getOcCourseInfo as any).mockResolvedValue({ id: ocId, courseId: 'course-1' });
     (olqQueries.getCourseTemplateCategories as any).mockResolvedValue([

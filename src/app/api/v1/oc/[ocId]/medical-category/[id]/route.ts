@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam, medCatUpdateSchema } from '@/app/lib/oc-validators';
 import { getMedCat, updateMedCat, deleteMedCat } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -35,6 +35,12 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
     const { id } = await parseParam({params}, IdSchema);
     const dto = medCatUpdateSchema.parse(await req.json());
+    const previous = await getMedCat(ocId, id); if (!previous) throw new ApiError(404,'Medical category not found','not_found');
+    await assertOcSemesterWriteAllowed({
+      ocId,
+      requestedSemester: dto.semester ?? previous.semester,
+      authContext: adminCtx,
+    });
     const row = await updateMedCat(ocId, id, dto); if (!row) throw new ApiError(404,'Medical category not found','not_found');
 
     await req.audit.log({
@@ -58,6 +64,8 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
   try { const adminCtx = await mustBeAdmin(req);
     const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
     const { id } = await parseParam({params}, IdSchema);
+    const previous = await getMedCat(ocId, id); if (!previous) throw new ApiError(404,'Medical category not found','not_found');
+    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, authContext: adminCtx });
     const row = await deleteMedCat(ocId, id); if (!row) throw new ApiError(404,'Medical category not found','not_found');
 
     await req.audit.log({
