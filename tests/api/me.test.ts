@@ -34,6 +34,16 @@ vi.mock('@/app/services/marksReviewWorkflow', () => ({
   getWorkflowModuleSettings: vi.fn(async () => ({ isActive: false })),
 }));
 
+vi.mock('@/app/lib/module-access', () => ({
+  resolveModuleAccessForUser: vi.fn(async () => ({
+    canAccessDossier: false,
+    canAccessBulkUpload: false,
+    canAccessReports: false,
+    canAccessAcademicsBulk: false,
+    canAccessPtBulk: false,
+  })),
+}));
+
 vi.mock('@/app/db/client', () => {
   const select = vi.fn(() => ({
     from: () => ({
@@ -102,5 +112,12 @@ describe('GET /api/v1/me', () => {
     expect(body.user.username).toBe('testuser');
     expect(body.roles).toContain('ADMIN');
     expect(body.apt).toEqual({ id: 'apt-1', position: 'ADMIN' });
+    expect(body.moduleAccess).toEqual({
+      canAccessDossier: false,
+      canAccessBulkUpload: false,
+      canAccessReports: false,
+      canAccessAcademicsBulk: false,
+      canAccessPtBulk: false,
+    });
   });
 });

@@ -50,7 +50,14 @@ beforeEach(() => {
 });
 
 describe("middleware access-control hardening", () => {
-  it("redirects an ordinary dashboard user away from /dashboard/genmgmt", async () => {
+  it("redirects unauthenticated dashboard traffic to login", async () => {
+    const res = await middleware(makeRequest("/dashboard/genmgmt"));
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login");
+  });
+
+  it("allows an authenticated ordinary dashboard user through /dashboard/genmgmt", async () => {
     vi.mocked(verifyAccessJWT).mockResolvedValueOnce({
       sub: "pc-1",
       roles: ["PLATOON_COMMANDER"],
@@ -61,8 +68,8 @@ describe("middleware access-control hardening", () => {
 
     const res = await middleware(makeRequest("/dashboard/genmgmt", { token: "pc-token" }));
 
-    expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe("http://localhost:3000/dashboard");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
   });
 
   it("allows an admin to access /dashboard/genmgmt", async () => {
@@ -80,7 +87,7 @@ describe("middleware access-control hardening", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  it("redirects an admin away from /dashboard/reports", async () => {
+  it("allows an admin to reach /dashboard/reports and defer policy checks to server layouts", async () => {
     vi.mocked(verifyAccessJWT).mockResolvedValueOnce({
       sub: "admin-1",
       roles: ["ADMIN"],
@@ -91,8 +98,8 @@ describe("middleware access-control hardening", () => {
 
     const res = await middleware(makeRequest("/dashboard/reports", { token: "admin-token" }));
 
-    expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe("http://localhost:3000/dashboard");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
   });
 
   it("allows an ordinary dashboard user to access /dashboard/reports", async () => {

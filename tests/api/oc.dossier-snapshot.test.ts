@@ -74,6 +74,23 @@ describe("GET /api/v1/oc/[ocId]/dossier-snapshot", () => {
     expect(body.error).toBe("forbidden");
   });
 
+  it("returns 403 when admin dossier access is disabled by module settings", async () => {
+    vi.mocked(ocChecks.mustHaveOcAccess).mockRejectedValueOnce(
+      new ApiError(
+        403,
+        "DOSSIER access is disabled for ADMIN by module access settings.",
+        "module_access_denied"
+      )
+    );
+
+    const req = makeJsonRequest({ method: "GET", path: `/api/v1/oc/${ocId}/dossier-snapshot` });
+    const res = await getDossierSnapshot(req as any, createRouteContext({ ocId }));
+
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe("module_access_denied");
+  });
+
   it("returns dossier snapshot data for an in-scope OC", async () => {
     (db.select as any)
       .mockImplementationOnce(() => ({

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { requireDashboardModuleAccess } from "@/app/lib/server-page-auth";
 
-export default async function ReportsLayout({
+export default async function MilitaryManagementLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  await requireDashboardModuleAccess("REPORTS");
+  await requireDashboardModuleAccess("DOSSIER");
   return children;
 }

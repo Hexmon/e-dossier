@@ -44,7 +44,7 @@ export function deriveSidebarRoleGroup({
     return "SUPER_ADMIN";
   }
 
-  if (roleSet.has("ADMIN")) {
+  if (roleSet.has("ADMIN") || roleSet.has("COMMANDANT")) {
     return "ADMIN";
   }
 

@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { json } from '@/app/lib/http';
 import { verifyAccessJWT } from '@/app/lib/jwt';
 import {
-  canAccessDashboardPath,
   isProtectedAdminApiPath,
   isPublicApiPath,
 } from '@/app/lib/access-control-policy';
@@ -73,20 +72,7 @@ export async function middleware(req: NextRequest) {
     }
 
     try {
-      const payload = await verifyAccessJWT(token);
-      const roles = Array.isArray(payload.roles)
-        ? payload.roles.filter((role): role is string => typeof role === 'string')
-        : [];
-      const position =
-        typeof (payload as any).apt?.position === 'string' ? (payload as any).apt.position : null;
-      const roleGroup = deriveSidebarRoleGroup({ roles, position });
-
-      if (!canAccessDashboardPath(pathname, roleGroup)) {
-        const dashboardUrl = req.nextUrl.clone();
-        dashboardUrl.pathname = '/dashboard';
-        dashboardUrl.search = '';
-        return attachRequestId(applyNoStoreHeaders(NextResponse.redirect(dashboardUrl)));
-      }
+      await verifyAccessJWT(token);
     } catch {
       const loginUrl = req.nextUrl.clone();
       loginUrl.pathname = '/login';

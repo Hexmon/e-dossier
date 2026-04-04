@@ -26,6 +26,10 @@ describe("deriveSidebarRoleGroup", () => {
     );
   });
 
+  it("treats COMMANDANT as the ADMIN role group for shared legacy access checks", () => {
+    expect(deriveSidebarRoleGroup({ roles: ["COMMANDANT"], position: null })).toBe("ADMIN");
+  });
+
   it("returns OTHER_USERS for non-admin roles", () => {
     expect(
       deriveSidebarRoleGroup({ roles: ["PLATOON_COMMANDER"], position: "PLATOON_COMMANDER" })

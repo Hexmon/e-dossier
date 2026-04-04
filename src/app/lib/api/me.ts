@@ -22,6 +22,13 @@ export interface MeResponse {
         ACADEMICS_BULK: { isActive: boolean };
         PT_BULK: { isActive: boolean };
     };
+    moduleAccess?: {
+        canAccessDossier: boolean;
+        canAccessBulkUpload: boolean;
+        canAccessReports: boolean;
+        canAccessAcademicsBulk: boolean;
+        canAccessPtBulk: boolean;
+    };
     permissions?: string[];
     deniedPermissions?: string[];
     policyVersion?: number | null;

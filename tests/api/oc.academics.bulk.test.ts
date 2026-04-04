@@ -173,4 +173,27 @@ describe('OC academics bulk API', () => {
     expect(res.status).toBe(409);
     expect(body.error).toBe('workflow_required');
   });
+
+  it('returns 403 when admin bulk access is disabled by module access settings', async () => {
+    (mustBeAuthed as any).mockRejectedValueOnce(
+      new ApiError(
+        403,
+        'Bulk Upload access is disabled for ADMIN by module access settings.',
+        'module_access_denied',
+      ),
+    );
+
+    const req = attachAudit(
+      makeJsonRequest({
+        method: 'GET',
+        path: '/api/v1/oc/academics/bulk?ocIds=oc-1&semester=1',
+      }),
+    );
+
+    const res = await GET(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe('module_access_denied');
+  });
 });

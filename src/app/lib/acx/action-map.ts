@@ -1362,6 +1362,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/module-access",
+    "action": "admin:module-access:read",
+    "resourceType": "admin:module-access",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/subjects",
     "action": "admin:subjects:read",
     "resourceType": "admin:subjects",
@@ -3954,6 +3963,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PUT",
+    "path": "/api/v1/admin/module-access",
+    "action": "admin:module-access:update",
+    "resourceType": "admin:module-access",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": false
+  },
+  {
+    "method": "PUT",
     "path": "/api/v1/admin/site-settings/awards/:id",
     "action": "admin:site-settings:awards:update",
     "resourceType": "admin:site-settings:awards",
@@ -4430,6 +4448,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "resourceType": "page:dashboard:genmgmt:settings:marks-review-workflow",
     "category": "genmgmt",
     "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/genmgmt/settings/module-access",
+    "action": "page:dashboard:genmgmt:settings:module-access:view",
+    "resourceType": "page:dashboard:genmgmt:settings:module-access",
+    "category": "genmgmt",
+    "adminBaseline": false
   },
   {
     "route": "/dashboard/genmgmt/subjectmgmt",

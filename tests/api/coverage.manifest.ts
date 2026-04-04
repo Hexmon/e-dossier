@@ -155,8 +155,16 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/admin/marks-review-workflow/route.ts'],
   },
   {
+    testFile: 'tests/api/admin.module-access.test.ts',
+    routeFiles: ['src/app/api/v1/admin/module-access/route.ts'],
+  },
+  {
     testFile: 'tests/api/me.workflow-notifications.test.ts',
     routeFiles: ['src/app/api/v1/me/workflow-notifications/route.ts'],
+  },
+  {
+    testFile: 'tests/api/reports.module-access.test.ts',
+    routeFiles: ['src/app/api/v1/reports/metadata/course-semesters/route.ts'],
   },
   {
     testFile: 'tests/api/oc.academics.workflow.test.ts',

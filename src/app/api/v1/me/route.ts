@@ -9,6 +9,7 @@ import {
   listMarksWorkflowAssignmentsForUser,
   getWorkflowModuleSettings,
 } from '@/app/services/marksReviewWorkflow';
+import { resolveModuleAccessForUser } from '@/app/lib/module-access';
 import {
   withAuditRoute,
   AuditEventType,
@@ -62,6 +63,15 @@ async function GETHandler(req: AuditNextRequest) {
       getWorkflowModuleSettings('ACADEMICS_BULK'),
       getWorkflowModuleSettings('PT_BULK'),
     ]);
+    const moduleAccess = await resolveModuleAccessForUser({
+      userId: principal.userId,
+      roles: principal.roles ?? [],
+      position:
+        typeof (principal.apt as any)?.position === 'string'
+          ? String((principal.apt as any).position)
+          : null,
+      workflowAssignments,
+    });
 
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
@@ -83,6 +93,13 @@ async function GETHandler(req: AuditNextRequest) {
       workflowModules: {
         ACADEMICS_BULK: { isActive: academicsWorkflow.isActive },
         PT_BULK: { isActive: ptWorkflow.isActive },
+      },
+      moduleAccess: {
+        canAccessDossier: moduleAccess.canAccessDossier,
+        canAccessBulkUpload: moduleAccess.canAccessBulkUpload,
+        canAccessReports: moduleAccess.canAccessReports,
+        canAccessAcademicsBulk: moduleAccess.canAccessAcademicsBulk,
+        canAccessPtBulk: moduleAccess.canAccessPtBulk,
       },
       permissions: authzBundle?.permissions ?? [],
       deniedPermissions: authzBundle?.deniedPermissions ?? [],

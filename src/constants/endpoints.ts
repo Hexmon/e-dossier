@@ -15,6 +15,7 @@ export const endpoints = {
         transferappt: (appointmentId: string) =>
             `/api/v1/admin/appointments/${appointmentId}/transfer`,
         bootstrapTemplateApply: "/api/v1/admin/bootstrap/templates/apply",
+        moduleAccess: "/api/v1/admin/module-access",
         academics: {
             gradingPolicy: "/api/v1/admin/academics/grading-policy",
             gradingPolicyRecalculate: "/api/v1/admin/academics/grading-policy/recalculate",

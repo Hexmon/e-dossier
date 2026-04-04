@@ -41,10 +41,6 @@ import { useMe } from "@/hooks/useMe";
 import OCSelectModal from "@/components/modals/OCSelectModal";
 import { useNavigation, NavItem } from "@/hooks/useNavigation";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  deriveSidebarRoleGroup,
-  filterSidebarSectionsForRoleGroup,
-} from "@/lib/sidebar-visibility";
 import { buildCurrentDossierRoot, isDossierManagementRoute } from "@/lib/dossier-route";
 
 // Map string icon keys to Lucide components
@@ -77,13 +73,11 @@ export function AppSidebar() {
   const { data: navData, isLoading: navLoading, error: navError } = useNavigation();
 
   // User info
-  const { apt = {}, roles: meRoles = [] } = meData ?? {};
+  const { apt = {} } = meData ?? {};
   const { position = "" } = apt as any;
   const userId = (meData?.user as any)?.id || "";
   const isDossierRouteActive = isDossierManagementRoute(pathname);
-  const effectiveRoles = meRoles.length > 0 ? meRoles : navData?.userRoleSummary ?? [];
-  const roleGroup = deriveSidebarRoleGroup({ roles: effectiveRoles, position });
-  const visibleSections = filterSidebarSectionsForRoleGroup(navData?.sections ?? [], roleGroup);
+  const visibleSections = navData?.sections ?? [];
   const mainSections = visibleSections.filter((section) => section.key !== "help");
   const pinnedSections = visibleSections.filter((section) => section.key === "help");
 

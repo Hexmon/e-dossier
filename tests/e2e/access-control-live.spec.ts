@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { test, expect, type Browser, type BrowserContext } from '@playwright/test';
 import { SignJWT, importPKCS8 } from 'jose';
+import { acquireLiveSuiteLock } from './live-suite-lock';
 
 const BASE_URL =
   process.env.PLAYWRIGHT_BASE_URL ??
@@ -42,6 +43,17 @@ type OcListItem = {
   platoonId: string | null;
   platoonKey: string | null;
 };
+
+let releaseLiveSuiteLock: null | (() => Promise<void>) = null;
+
+test.beforeAll(async () => {
+  releaseLiveSuiteLock = await acquireLiveSuiteLock();
+});
+
+test.afterAll(async () => {
+  await releaseLiveSuiteLock?.();
+  releaseLiveSuiteLock = null;
+});
 
 function normalizePem(value?: string) {
   return (value ?? '').replace(/\\n/g, '\n').replace(/^"+|"+$/g, '').trim();

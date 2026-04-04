@@ -1,9 +1,3 @@
-import {
-  hasSidebarSectionAccess,
-  type SidebarRoleGroup,
-  type SidebarSectionKey,
-} from "@/lib/sidebar-visibility";
-
 type PathRule = {
   path: string;
   exact?: boolean;
@@ -35,12 +29,6 @@ const SHARED_AUTHENTICATED_ADMIN_METHOD_RULES: Readonly<Record<string, readonly 
     { path: "/api/v1/admin/courses" },
   ],
 };
-
-const DASHBOARD_SECTION_RULES: readonly { path: string; section: SidebarSectionKey }[] = [
-  { path: "/dashboard/genmgmt", section: "admin" },
-  { path: "/dashboard/reports", section: "reports" },
-  { path: "/dashboard/bulk-upload", section: "bulk_upload" },
-];
 
 export function matchPathRule(pathname: string, rule: PathRule): boolean {
   if (rule.exact) {
@@ -82,23 +70,4 @@ export function isProtectedAdminApiPath(pathname: string, method: string): boole
     !isPublicApiPath(pathname, method) &&
     !isSharedAuthenticatedAdminApiPath(pathname, method)
   );
-}
-
-export function getRequiredDashboardSection(pathname: string): SidebarSectionKey | null {
-  for (const rule of DASHBOARD_SECTION_RULES) {
-    if (pathname === rule.path || pathname.startsWith(`${rule.path}/`)) {
-      return rule.section;
-    }
-  }
-
-  return null;
-}
-
-export function canAccessDashboardPath(pathname: string, roleGroup: SidebarRoleGroup): boolean {
-  const requiredSection = getRequiredDashboardSection(pathname);
-  if (!requiredSection) {
-    return true;
-  }
-
-  return hasSidebarSectionAccess(roleGroup, requiredSection);
 }
