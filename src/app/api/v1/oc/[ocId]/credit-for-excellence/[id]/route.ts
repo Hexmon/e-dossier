@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam, creditForExcellenceUpdateSchema } from '@/app/lib/oc-validators';
 import { getCreditForExcellence, updateCreditForExcellence, deleteCreditForExcellence } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -41,6 +41,13 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
     const dto = creditForExcellenceUpdateSchema.parse(await req.json());
+    const previous = await getCreditForExcellence(ocId, id);
+    if (!previous) throw new ApiError(404, 'Credit for excellence record not found', 'not_found');
+    await assertOcSemesterWriteAllowed({
+      ocId,
+      requestedSemester: dto.semester ?? previous.semester,
+      authContext: authCtx,
+    });
     const row = await updateCreditForExcellence(ocId, id, dto);
     if (!row) throw new ApiError(404, 'Credit for excellence record not found', 'not_found');
 
@@ -72,6 +79,9 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     const { id } = await parseParam({ params }, IdSchema);
     const sp = new URL(req.url).searchParams;
     const hard = sp.get('hard') === 'true';
+    const previous = await getCreditForExcellence(ocId, id);
+    if (!previous) throw new ApiError(404, 'Credit for excellence record not found', 'not_found');
+    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, authContext: authCtx });
     const row = await deleteCreditForExcellence(ocId, id, { hard });
     if (!row) throw new ApiError(404, 'Credit for excellence record not found', 'not_found');
 

@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam, disciplineUpdateSchema } from '@/app/lib/oc-validators';
 import { getDiscipline, updateDiscipline, deleteDiscipline } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -41,6 +41,13 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
     const dto = disciplineUpdateSchema.parse(await req.json());
+    const previous = await getDiscipline(ocId, id);
+    if (!previous) throw new ApiError(404, 'Discipline record not found', 'not_found');
+    await assertOcSemesterWriteAllowed({
+      ocId,
+      requestedSemester: dto.semester ?? previous.semester,
+      authContext: authCtx,
+    });
     const row = await updateDiscipline(ocId, id, dto);
     if (!row) throw new ApiError(404, 'Discipline record not found', 'not_found');
 
@@ -70,6 +77,9 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
+    const previous = await getDiscipline(ocId, id);
+    if (!previous) throw new ApiError(404, 'Discipline record not found', 'not_found');
+    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, authContext: authCtx });
     const row = await deleteDiscipline(ocId, id);
     if (!row) throw new ApiError(404, 'Discipline record not found', 'not_found');
 

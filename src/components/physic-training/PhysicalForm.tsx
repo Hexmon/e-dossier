@@ -24,6 +24,9 @@ import { isFreeEntryPtAttemptCode, resolvePtDraftMarks } from "@/app/lib/physica
 
 interface PhysicalFormProps {
   ocId: string;
+  readOnly?: boolean;
+  activeSemester?: number;
+  onSemesterChange?: (semester: number) => void;
 }
 
 const semesterToApiSemester: Record<string, number> = {
@@ -34,13 +37,27 @@ const semesterToApiSemester: Record<string, number> = {
   "V TERM": 5,
   "VI TERM": 6,
 };
+const apiSemesterToLabel: Record<number, string> = {
+  1: "I TERM",
+  2: "II TERM",
+  3: "III TERM",
+  4: "IV TERM",
+  5: "V TERM",
+  6: "VI TERM",
+};
 
 const isVirtualId = (id?: string) => !!id && id.startsWith("virtual:");
 
-export default function PhysicalForm({ ocId }: PhysicalFormProps) {
-  const [activeSemester, setActiveSemester] = useState("I TERM");
+export default function PhysicalForm({
+  ocId,
+  readOnly = false,
+  activeSemester: controlledSemester,
+  onSemesterChange,
+}: PhysicalFormProps) {
+  const [internalSemester, setInternalSemester] = useState("I TERM");
   const [isEditing, setIsEditing] = useState(false);
   const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
+  const activeSemester = controlledSemester ? apiSemesterToLabel[controlledSemester] ?? "I TERM" : internalSemester;
 
   const {
     scores: apiScores,
@@ -187,6 +204,28 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     }
   }, [hasAdvancedSections]);
 
+  useEffect(() => {
+    if (readOnly) {
+      setIsEditing(false);
+    }
+  }, [readOnly]);
+
+  useEffect(() => {
+    if (!controlledSemester) return;
+    setInternalSemester(apiSemesterToLabel[controlledSemester] ?? "I TERM");
+  }, [controlledSemester]);
+
+  const handleSemesterSelect = useCallback(
+    (semesterLabel: string) => {
+      const semesterNumber = semesterToApiSemester[semesterLabel];
+      setInternalSemester(semesterLabel);
+      if (onSemesterChange && semesterNumber) {
+        onSemesterChange(semesterNumber);
+      }
+    },
+    [onSemesterChange]
+  );
+
   const handleAttemptChange = useCallback(
     (rowId: string, attemptCode: string) => {
       setSemesterTableData((prev) => ({
@@ -285,6 +324,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
   );
 
   const handleSave = useCallback(async () => {
+    if (readOnly) return;
     const semesterNum = semesterToApiSemester[activeSemester];
     if (!semesterNum) return;
 
@@ -320,7 +360,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     await updateScores(semesterNum, scoresForApi);
     setIsEditing(false);
     toast.success("PPT data saved successfully");
-  }, [semesterTableData, activeSemester, updateScores]);
+  }, [activeSemester, readOnly, semesterTableData, updateScores]);
 
   const handleIpetMarks = useCallback((marks: number) => setChildComponentMarks((p) => (p.ipet === marks ? p : { ...p, ipet: marks })), []);
   const handleSwimmingMarks = useCallback((marks: number) => setChildComponentMarks((p) => (p.swimming === marks ? p : { ...p, swimming: marks })), []);
@@ -436,11 +476,11 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
             {semesters.map((sem) => (
               <button
                 key={sem}
-                onClick={() => setActiveSemester(sem)}
-                disabled={isEditing}
+                onClick={() => handleSemesterSelect(sem)}
+                disabled={isEditing || readOnly}
                 className={`px-4 py-2 rounded-t-lg font-medium ${
                   activeSemester === sem ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                } ${isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${isEditing || readOnly ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {sem}
               </button>
@@ -458,13 +498,13 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           <div className="flex gap-3 justify-center mt-6">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={readOnly}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave}>Save</Button>
+                <Button onClick={handleSave} disabled={readOnly}>Save</Button>
               </>
             ) : (
-              <Button onClick={() => setIsEditing(true)}>Edit</Button>
+              <Button onClick={() => setIsEditing(true)} disabled={readOnly}>Edit</Button>
             )}
           </div>
 
@@ -478,6 +518,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                 updateScores={updateScores}
                 templates={ipetType?.rows ?? []}
                 typeTitle={ipetType?.title}
+                readOnly={readOnly}
               />
               <Swimming
                 key={`swimming-${activeSemester}`}
@@ -487,6 +528,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                 updateScores={updateScores}
                 templates={swimmingType?.rows ?? []}
                 typeTitle={swimmingType?.title}
+                readOnly={readOnly}
               />
               <HigherTests
                 key={`higher-tests-${activeSemester}`}
@@ -496,15 +538,15 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                 updateScores={updateScores}
                 templates={higherTestType?.rows ?? []}
                 typeTitle={higherTestType?.title}
+                readOnly={readOnly}
               />
             </>
           )}
 
-          <MotivationAwards activeSemester={activeSemester} ocId={ocId} fields={motivationFields} />
+          <MotivationAwards activeSemester={activeSemester} ocId={ocId} fields={motivationFields} readOnly={readOnly} />
           <GrandTotal grandTotalMarks={grandTotalMarks} />
         </CardContent>
       </Card>
     </div>
   );
 }
-

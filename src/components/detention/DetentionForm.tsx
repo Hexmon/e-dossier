@@ -31,6 +31,7 @@ interface Props {
 
     onSubmit: (e?: React.BaseSyntheticEvent) => void;
     onReset: () => void;
+    readOnly?: boolean;
 }
 
 export default function DetentionForm({
@@ -50,6 +51,7 @@ export default function DetentionForm({
 
     onSubmit,
     onReset,
+    readOnly = false,
 }: Props) {
     return (
         <div className="space-y-6">
@@ -83,6 +85,7 @@ export default function DetentionForm({
                                         <td className="p-2 border">
                                             {isEditing ? (
                                                 <Input
+                                                    disabled={readOnly}
                                                     value={editingValues?.reason ?? ""}
                                                     onChange={(e) => setEditingField("reason", e.target.value)}
                                                 />
@@ -94,6 +97,7 @@ export default function DetentionForm({
                                         <td className="p-2 border">
                                             {isEditing ? (
                                                 <Input
+                                                    disabled={readOnly}
                                                     type="date"
                                                     value={editingValues?.dateFrom ?? ""}
                                                     onChange={(e) => setEditingField("dateFrom", e.target.value)}
@@ -106,6 +110,7 @@ export default function DetentionForm({
                                         <td className="p-2 border">
                                             {isEditing ? (
                                                 <Input
+                                                    disabled={readOnly}
                                                     type="date"
                                                     value={editingValues?.dateTo ?? ""}
                                                     onChange={(e) => setEditingField("dateTo", e.target.value)}
@@ -118,6 +123,7 @@ export default function DetentionForm({
                                         <td className="p-2 border">
                                             {isEditing ? (
                                                 <Input
+                                                    disabled={readOnly}
                                                     value={editingValues?.remark ?? ""}
                                                     onChange={(e) => setEditingField("remark", e.target.value)}
                                                 />
@@ -129,15 +135,16 @@ export default function DetentionForm({
                                         <td className="p-2 border text-center">
                                             {isEditing ? (
                                                 <>
-                                                    <Button onClick={() => saveInlineEdit(i)}>Save</Button>
-                                                    <Button variant="outline" onClick={cancelInlineEdit}>Cancel</Button>
+                                                    <Button onClick={() => saveInlineEdit(i)} disabled={readOnly}>Save</Button>
+                                                    <Button variant="outline" onClick={cancelInlineEdit} disabled={readOnly}>Cancel</Button>
                                                 </>
-                                            ) : (
+                                            ) : !readOnly ? (
                                                 <>
                                                     <Button onClick={() => onEditRow(row)}>Edit</Button>
                                                     <Button variant="destructive" onClick={() => onDeleteSaved(i)}>Delete</Button>
                                                 </>
-                                            )}
+                                            ) : null
+                                            }
                                         </td>
                                     </tr>
                                 );
@@ -166,19 +173,21 @@ export default function DetentionForm({
                                 <tr key={field.id}>
                                     <td className="p-2 border">{i + 1}</td>
                                     <td className="p-2 border">
-                                        <Input {...register(`detentionRows.${i}.reason`)} />
+                                        <Input disabled={readOnly} {...register(`detentionRows.${i}.reason`)} />
                                     </td>
                                     <td className="p-2 border">
-                                        <Input type="date" {...register(`detentionRows.${i}.dateFrom`)} />
+                                        <Input disabled={readOnly} type="date" {...register(`detentionRows.${i}.dateFrom`)} />
                                     </td>
                                     <td className="p-2 border">
-                                        <Input type="date" {...register(`detentionRows.${i}.dateTo`)} />
+                                        <Input disabled={readOnly} type="date" {...register(`detentionRows.${i}.dateTo`)} />
                                     </td>
                                     <td className="p-2 border">
-                                        <Input {...register(`detentionRows.${i}.remark`)} />
+                                        <Input disabled={readOnly} {...register(`detentionRows.${i}.remark`)} />
                                     </td>
                                     <td className="p-2 border text-center">
-                                        <Button variant="destructive" onClick={() => remove(i)}>Remove</Button>
+                                        {!readOnly ? (
+                                            <Button variant="destructive" onClick={() => remove(i)}>Remove</Button>
+                                        ) : null}
                                     </td>
                                 </tr>
                             )
@@ -189,6 +198,7 @@ export default function DetentionForm({
                 <div className="flex justify-center gap-4 mt-4">
                     <Button
                         type="button"
+                        disabled={readOnly}
                         onClick={() =>
                             append({
                                 id: null,
@@ -204,8 +214,8 @@ export default function DetentionForm({
                         + Add Row
                     </Button>
 
-                    <Button type="submit" className="bg-success">Submit</Button>
-                    <Button type="button" variant="outline" onClick={onReset}>
+                    <Button type="submit" className="bg-success" disabled={readOnly}>Submit</Button>
+                    <Button type="button" variant="outline" onClick={onReset} disabled={readOnly}>
                         Reset
                     </Button>
                 </div>

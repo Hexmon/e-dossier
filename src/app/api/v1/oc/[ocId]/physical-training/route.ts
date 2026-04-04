@@ -1,6 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import {
     ptOcScoresQuerySchema,
     ptOcScoresUpsertSchema,
@@ -98,10 +99,12 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
         const dto = ptOcScoresUpsertSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
         await validateScores(dto.semester, dto.scores);
 
         await upsertOcPtScores(ocId, dto.semester, dto.scores);
@@ -129,10 +132,12 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
         const dto = ptOcScoresUpdateSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         if (dto.scores?.length) {
             await validateScores(dto.semester, dto.scores);
@@ -169,10 +174,12 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('PT_BULK');
         const { ocId } = await parseParam({ params }, OcIdParam);
         await ensureOcExists(ocId);
 
         const dto = ptOcScoresDeleteSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         const deleted = dto.scoreIds?.length
             ? await deleteOcPtScoresByIds(ocId, dto.scoreIds)

@@ -9,6 +9,7 @@ import TermSubForm from "./TermSubForm";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
 import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
 import { saveTermInterviewForm, clearTermInterviewForm } from "@/store/slices/termInterviewSlice";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 
 type TermVariant = "beginning" | "postmid" | "special";
 
@@ -26,22 +27,28 @@ function hasPersistedData(entry: { formFields?: Record<string, string>; specialI
     return hasFields || hasSpecial;
 }
 
-export default function InterviewTermTabs() {
+export default function InterviewTermTabs({
+    readOnly = false,
+    currentSemester = 1,
+    canEditLockedSemesters = false,
+}: {
+    readOnly?: boolean;
+    currentSemester?: number | null;
+    canEditLockedSemesters?: boolean;
+}) {
     const { id } = useParams();
-    const router = useRouter();
-    const pathname = usePathname();
     const searchParams = useSearchParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
     const dispatch = useDispatch();
     const hydratedRef = useRef(false);
     const isHydratingRef = useRef(false);
 
-    const parseSemesterParam = (value: string | null) => {
-        const n = Number(value);
-        return Number.isInteger(n) && n >= 1 && n <= 6 ? n : 1;
-    };
-
-    const [selectedTerm, setSelectedTerm] = useState<number>(() => parseSemesterParam(searchParams.get("sem")));
+    const { activeSemester: selectedTerm, setActiveSemester } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+        legacyQueryKeys: ["sem", "semister"],
+    });
 
     const initialSub: Record<number, TermVariant> = {
         1: "postmid",
@@ -73,20 +80,6 @@ export default function InterviewTermTabs() {
     const { fetchTerm, saveTerm, templateMappings } = useInterviewForms(ocId);
     const allSavedForms = useSelector((state: RootState) => state.termInterview.forms[ocId] || {});
     const savedFormsRef = useRef(allSavedForms);
-
-    useEffect(() => {
-        const semFromUrl = parseSemesterParam(searchParams.get("sem"));
-        setSelectedTerm((current) => (current === semFromUrl ? current : semFromUrl));
-    }, [searchParams]);
-
-    useEffect(() => {
-        const currentUrlSem = parseSemesterParam(searchParams.get("sem"));
-        if (currentUrlSem === selectedTerm) return;
-
-        const next = new URLSearchParams(searchParams.toString());
-        next.set("sem", String(selectedTerm));
-        router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-    }, [selectedTerm, pathname, router, searchParams]);
 
     useEffect(() => {
         hydratedRef.current = false;
@@ -203,6 +196,7 @@ export default function InterviewTermTabs() {
     };
 
     const handleClearForm = () => {
+        if (readOnly) return;
         if (confirm("Are you sure you want to clear all unsaved changes?")) {
             dispatch(clearTermInterviewForm({
                 ocId,
@@ -233,7 +227,7 @@ export default function InterviewTermTabs() {
                 <button
                     key={term}
                     type="button"
-                    onClick={() => setSelectedTerm(term)}
+                    onClick={() => setActiveSemester(term)}
                     className={`px-4 py-2 rounded-t-lg ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
                 >
                     {`TERM ${label}`}
@@ -284,6 +278,7 @@ export default function InterviewTermTabs() {
 
             {/* FORM AREA */}
             {formAvailable ? (
+                <div className={readOnly ? "pointer-events-none opacity-80" : ""}>
                 <TermSubForm
                     form={form}
                     termIndex={selectedTerm}
@@ -308,6 +303,7 @@ export default function InterviewTermTabs() {
                     savedSpecialInterviews={savedSpecialInterviews}
                     onClearForm={handleClearForm}
                 />
+                </div>
             ) : (
                 <div className="border rounded-lg p-6 bg-muted/40 text-center text-sm text-muted-foreground">
                     {!templatesLoaded ? (

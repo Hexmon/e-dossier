@@ -22,6 +22,10 @@ import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 
 import CampContent from "@/components/camps/CampContent";
 import { useOcDetails } from "@/hooks/useOcDetails";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 interface FormValues {
   campsByName: {
@@ -55,6 +59,17 @@ export default function OcCampsPage() {
   const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
 
   const { cadet, loading: loadingCadet } = useOcDetails(ocId);
+  const { data: meData } = useMe();
+  const currentSemester = cadet?.currentSemester ?? 1;
+  const canEditLockedSemesters = canBypassDossierSemesterLock({
+    roles: meData?.roles,
+    position: meData?.apt?.position ?? null,
+  });
+  const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+    currentSemester,
+    supportedSemesters: [1, 2, 3, 4, 5, 6],
+    canEditLockedSemesters,
+  });
 
   // ---------------------------
   // FORM SETUP
@@ -132,7 +147,19 @@ export default function OcCampsPage() {
               }
             >
               <TabsContent value="camps">
-                <CampContent ocId={ocId} />
+                {isActiveSemesterLocked ? (
+                  <SemesterLockNotice
+                    activeSemester={activeSemester}
+                    currentSemester={currentSemester}
+                    supportedSemesters={supportedSemesters}
+                  />
+                ) : null}
+                <CampContent
+                  ocId={ocId}
+                  activeSemester={activeSemester}
+                  onSemesterChange={setActiveSemester}
+                  readOnly={isActiveSemesterLocked}
+                />
               </TabsContent>
             </DossierTab>
           </main>

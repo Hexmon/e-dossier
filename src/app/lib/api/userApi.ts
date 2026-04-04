@@ -13,6 +13,9 @@ export interface User {
     isActive?: boolean;
     createdAt?: string;
     updatedAt?: string;
+    deletedAt?: string | null;
+    deactivatedAt?: string | null;
+    hasActiveAppointment?: boolean;
 }
 
 // API Response Types
@@ -32,8 +35,22 @@ interface UserActionResponse {
 /* ============================================================
    🔹 Get All Users
 ============================================================ */
-export async function getAllUsers(): Promise<User[]> {
-    const response = await api.get<GetUsersResponse>(endpoints.admin.users, { baseURL });
+export async function getAllUsers(options?: {
+    limit?: number;
+    offset?: number;
+    includeDeleted?: boolean;
+    isActive?: boolean;
+}): Promise<User[]> {
+    const query: Record<string, string> = {};
+    if (typeof options?.limit === "number") query.limit = String(options.limit);
+    if (typeof options?.offset === "number") query.offset = String(options.offset);
+    if (typeof options?.includeDeleted === "boolean") query.includeDeleted = String(options.includeDeleted);
+    if (typeof options?.isActive === "boolean") query.isActive = String(options.isActive);
+
+    const response = await api.get<GetUsersResponse>(endpoints.admin.users, {
+        baseURL,
+        query,
+    });
     return response.items;
 }
 

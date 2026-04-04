@@ -1,5 +1,11 @@
 import { ocSemesterMarks, SemesterSubjectRecord, TheoryMarksRecord, PracticalMarksRecord } from '@/app/db/schema/training/oc';
 import type { CourseOfferingRow } from '@/app/db/queries/courses';
+import {
+    computePracticalTotalMarks,
+    computeTheorySessionalMarks,
+    computeTheoryTotalMarks,
+    hasAcademicCredits,
+} from '@/app/lib/academic-marks-core';
 
 export type SemesterMarksRow = typeof ocSemesterMarks.$inferSelect;
 
@@ -51,22 +57,10 @@ function toIso(value?: Date | null) {
     return value ? value.toISOString() : null;
 }
 
-function toPositiveNumber(value: unknown): number {
-    const parsed = Number(value ?? 0);
-    if (!Number.isFinite(parsed)) return 0;
-    return Math.max(0, parsed);
-}
-
 function computeTheory(theory?: TheoryMarksRecord | null): TheoryMarksResponse | undefined {
     if (!theory) return undefined;
-    const tutorialRaw = typeof theory.tutorial === 'string' ? Number(theory.tutorial.replace(/[^\d.-]/g, '')) : Number(theory.tutorial ?? 0);
-    const tutorialMarks = toPositiveNumber(tutorialRaw);
-    // C# parity: each component contributes only when positive (Sign(x) == 1).
-    const sessional =
-        toPositiveNumber(theory.phaseTest1Marks) +
-        toPositiveNumber(theory.phaseTest2Marks) +
-        tutorialMarks;
-    const total = sessional + toPositiveNumber(theory.finalMarks);
+    const sessional = computeTheorySessionalMarks(theory);
+    const total = computeTheoryTotalMarks(theory);
     return {
         ...theory,
         sessionalMarks: sessional,
@@ -78,7 +72,7 @@ function computePractical(practical?: PracticalMarksRecord | null): PracticalMar
     if (!practical) return undefined;
     return {
         ...practical,
-        totalMarks: toPositiveNumber(practical.finalMarks),
+        totalMarks: computePracticalTotalMarks(practical),
     };
 }
 
@@ -134,8 +128,10 @@ function entryFromOffering(
     record?: SemesterSubjectRecord | null,
 ): AcademicSubjectView {
     const subjectInfo = baseSubjectInfo(offering);
-    const theory = record?.theory ?? null;
-    const practical = record?.practical ?? null;
+    const includeTheory = Boolean(offering.includeTheory && subjectInfo.hasTheory);
+    const includePractical = Boolean(offering.includePractical && subjectInfo.hasPractical);
+    const theory = includeTheory ? (record?.theory ?? null) : null;
+    const practical = includePractical ? (record?.practical ?? null) : null;
     const theoryCredits =
         offering.theoryCredits ?? record?.meta?.theoryCredits ?? subjectInfo.defaultTheoryCredits ?? null;
     const practicalCredits =
@@ -143,17 +139,17 @@ function entryFromOffering(
     const theoryView = computeTheory(theory ?? undefined);
     const practicalView = computePractical(practical ?? undefined);
 
-    if ((Number(theoryCredits ?? 0) <= 0) && theoryView) {
+    if (!hasAcademicCredits(theoryCredits) && theoryView) {
         theoryView.grade = undefined;
     }
-    if ((Number(practicalCredits ?? 0) <= 0) && practicalView) {
+    if (!hasAcademicCredits(practicalCredits) && practicalView) {
         practicalView.grade = undefined;
     }
 
     return {
         offeringId: offering.id,
-        includeTheory: offering.includeTheory,
-        includePractical: offering.includePractical,
+        includeTheory,
+        includePractical,
         theoryCredits,
         practicalCredits,
         subject: subjectInfo,
@@ -168,10 +164,10 @@ function entryFromRecord(record: SemesterSubjectRecord): AcademicSubjectView {
     const theoryView = computeTheory(record.theory);
     const practicalView = computePractical(record.practical);
 
-    if ((Number(theoryCredits ?? 0) <= 0) && theoryView) {
+    if (!hasAcademicCredits(theoryCredits) && theoryView) {
         theoryView.grade = undefined;
     }
-    if ((Number(practicalCredits ?? 0) <= 0) && practicalView) {
+    if (!hasAcademicCredits(practicalCredits) && practicalView) {
         practicalView.grade = undefined;
     }
 

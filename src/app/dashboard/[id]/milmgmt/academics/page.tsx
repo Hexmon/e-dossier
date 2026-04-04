@@ -14,6 +14,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import Link from "next/link";
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { ChevronDown, Shield } from "lucide-react";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
 
 export default function AcademicsPage() {
     const { id } = useParams();
@@ -28,12 +31,23 @@ export default function AcademicsPage() {
         ocNumber = "",
         ocId: cadetOcId = ocId,
         course = "",
+        currentSemester = 1,
     } = cadet || {};
 
-    const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
+    const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course, currentSemester };
     const canEditAcademicsForUser = canEditAcademics({
         roles: meData?.roles,
         position: meData?.apt?.position ?? null,
+    });
+    const academicsWorkflowActive = Boolean(meData?.workflowModules?.ACADEMICS_BULK?.isActive);
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
+    const { activeSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
     });
 
     // If no course data yet, show loading
@@ -88,7 +102,26 @@ export default function AcademicsPage() {
                     }
                 >
                     <div>
-                        <AcademicsTabs ocId={ocId} courseId={course} canEdit={canEditAcademicsForUser} />
+                        {academicsWorkflowActive ? (
+                            <div className="mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground">
+                                Academics editing is read-only here while the review workflow is active. Use{" "}
+                                <Link href={`/dashboard/manage-marks?courseId=${course}`}>Manage Marks</Link> to draft, submit, and verify updates.
+                            </div>
+                        ) : null}
+                        {!academicsWorkflowActive && isActiveSemesterLocked ? (
+                            <SemesterLockNotice
+                                activeSemester={activeSemester}
+                                currentSemester={currentSemester ?? 1}
+                                supportedSemesters={supportedSemesters}
+                            />
+                        ) : null}
+                        <AcademicsTabs
+                            ocId={ocId}
+                            courseId={course}
+                            canEdit={canEditAcademicsForUser && !academicsWorkflowActive}
+                            currentSemester={currentSemester ?? 1}
+                            canEditLockedSemesters={canEditLockedSemesters}
+                        />
                     </div>
                 </DossierTab>
             </main>

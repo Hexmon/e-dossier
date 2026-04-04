@@ -24,12 +24,15 @@ import MedicalInfoSection from "@/components/medical/MedicalInfoSection";
 import MedicalCategorySection from "@/components/medical/MedicalCategorySection";
 
 import { useOcPersonal } from "@/hooks/useOcPersonal";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
 
 export default function MedicalRecordsPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
 
     const { cadet } = useOcPersonal(ocId);
+    const { data: meData } = useMe();
 
     const {
         name = "",
@@ -37,6 +40,7 @@ export default function MedicalRecordsPage() {
         ocNumber = "",
         ocId: cadetOcId = ocId,
         course = "",
+        currentSemester = 1,
     } = cadet ?? {};
 
     const selectedCadet = {
@@ -45,7 +49,12 @@ export default function MedicalRecordsPage() {
         ocNumber,
         ocId: cadetOcId,
         course,
+        currentSemester,
     };
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
 
     const semesters = [
         "I TERM",
@@ -116,6 +125,8 @@ export default function MedicalRecordsPage() {
                                 <MedicalInfoSection
                                     selectedCadet={selectedCadet}
                                     semesters={semesters}
+                                    currentSemester={currentSemester}
+                                    canEditLockedSemesters={canEditLockedSemesters}
                                 />
                             </TabsContent>
 
@@ -123,6 +134,8 @@ export default function MedicalRecordsPage() {
                                 <MedicalCategorySection
                                     selectedCadet={selectedCadet}
                                     semesters={semesters}
+                                    currentSemester={currentSemester}
+                                    canEditLockedSemesters={canEditLockedSemesters}
                                 />
                             </TabsContent>
                         </Tabs>

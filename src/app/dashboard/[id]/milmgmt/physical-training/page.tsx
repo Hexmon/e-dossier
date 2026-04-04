@@ -15,6 +15,11 @@ import { Shield, ChevronDown } from "lucide-react";
 import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PhysicalForm from "@/components/physic-training/PhysicalForm";
+import { useMe } from "@/hooks/useMe";
+import Link from "next/link";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 export default function PhysicalTrainingPage() {
   const params = useParams();
@@ -22,6 +27,18 @@ export default function PhysicalTrainingPage() {
   const paramId = params?.ocId || params?.id;
   const ocId = Array.isArray(paramId) ? paramId[0] : paramId ?? "";
   const { cadet } = useOcDetails(ocId);
+  const { data: meData } = useMe();
+  const ptWorkflowActive = Boolean(meData?.workflowModules?.PT_BULK?.isActive);
+  const currentSemester = cadet?.currentSemester ?? 1;
+  const canEditLockedSemesters = canBypassDossierSemesterLock({
+    roles: meData?.roles,
+    position: meData?.apt?.position ?? null,
+  });
+  const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+    currentSemester,
+    supportedSemesters: [1, 2, 3, 4, 5, 6],
+    canEditLockedSemesters,
+  });
 
   return (
     <DashboardLayout
@@ -97,7 +114,25 @@ export default function PhysicalTrainingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <PhysicalForm ocId={ocId} />
+                {!ptWorkflowActive && isActiveSemesterLocked ? (
+                  <SemesterLockNotice
+                    activeSemester={activeSemester}
+                    currentSemester={currentSemester}
+                    supportedSemesters={supportedSemesters}
+                  />
+                ) : null}
+                {ptWorkflowActive ? (
+                  <div className="mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground">
+                    Physical training editing is read-only here while the review workflow is active. Use{" "}
+                    <Link href={`/dashboard/manage-pt-marks?courseId=${cadet?.course ?? ""}`}>Manage PT Marks</Link> to draft, submit, and verify updates.
+                  </div>
+                ) : null}
+                <PhysicalForm
+                  ocId={ocId}
+                  readOnly={ptWorkflowActive || isActiveSemesterLocked}
+                  activeSemester={activeSemester}
+                  onSemesterChange={setActiveSemester}
+                />
               </CardContent>
             </Card>
           </TabsContent>

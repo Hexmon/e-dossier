@@ -9,6 +9,7 @@ interface Props {
     rows: MedCatRow[];
     editingId: string | null;
     editForm: MedCatRow | null;
+    readOnly?: boolean;
 
     onEdit: (row: MedCatRow) => void;
     onChange: <K extends keyof MedCatRow>(key: K, value: MedCatRow[K]) => void;
@@ -21,6 +22,7 @@ export default function MedicalCategoryTable({
     rows,
     editingId,
     editForm,
+    readOnly = false,
     onEdit,
     onChange,
     onSave,
@@ -155,7 +157,7 @@ export default function MedicalCategoryTable({
         }
     ];
 
-    const actions: TableAction<MedCatRow>[] = [
+    const actions: TableAction<MedCatRow>[] = readOnly ? [] : [
         {
             key: "edit-cancel",
             label: editingId ? "Cancel" : "Edit",

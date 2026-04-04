@@ -41,6 +41,7 @@ export interface OCRecord {
   course?: CourseRef;
   platoon?: PlatoonRef;
   courseId?: string;
+  currentSemester?: number | null;
 }
 
 /** Optional denormalized fields the list API now returns */
@@ -48,6 +49,7 @@ export interface OCDenorm {
   course?: Course;
   courseCode?: string;
   courseTitle?: string;
+  currentSemester?: number | null;
   platoonKey?: string | null;
   platoonName?: string | null;
 

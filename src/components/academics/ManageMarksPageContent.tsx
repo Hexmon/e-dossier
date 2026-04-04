@@ -1,10 +1,12 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import CourseSemesterSubjectFilter from "./CourseSemesterSubjectFilter";
 import SubjectWiseStudentsTable from "./SubjectWiseStudentsTable";
 import { useAcademicsMarks } from "@/hooks/useAcademicsMarks";
 
 export default function ManageMarksPageContent() {
+    const searchParams = useSearchParams();
     const [courseId, setCourseId] = useState("");
     const [semester, setSemester] = useState<number | null>(null);
     const [subjectId, setSubjectId] = useState("");
@@ -22,6 +24,17 @@ export default function ManageMarksPageContent() {
         const offering = courseOfferings.find((co) => co.subject.id === subjectId);
         return offering?.subject.branch || null;
     }, [courseOfferings, subjectId]);
+
+    useEffect(() => {
+        const nextCourseId = searchParams.get("courseId") ?? "";
+        const nextSemesterRaw = searchParams.get("semester");
+        const nextSubjectId = searchParams.get("subjectId") ?? "";
+        const nextSemester = nextSemesterRaw ? Number(nextSemesterRaw) : null;
+
+        setCourseId(nextCourseId);
+        setSemester(nextSemester && Number.isFinite(nextSemester) ? nextSemester : null);
+        setSubjectId(nextSubjectId);
+    }, [searchParams]);
 
     const handleCourseChange = (value: string) => {
         setCourseId(value);

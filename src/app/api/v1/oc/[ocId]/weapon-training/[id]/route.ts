@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam, weaponTrainingUpdateSchema } from '@/app/lib/oc-validators';
 import { getWeaponTraining, updateWeaponTraining, deleteWeaponTraining } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -41,6 +41,14 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
     const dto = weaponTrainingUpdateSchema.parse(await req.json());
+    const previous = await getWeaponTraining(ocId, id);
+    if (!previous) throw new ApiError(404, 'Weapon training record not found', 'not_found');
+    await assertOcSemesterWriteAllowed({
+      ocId,
+      requestedSemester: dto.semester ?? previous.semester,
+      authContext: authCtx,
+      supportedSemesters: [3, 4, 5, 6],
+    });
     const row = await updateWeaponTraining(ocId, id, dto);
     if (!row) throw new ApiError(404, 'Weapon training record not found', 'not_found');
 
@@ -72,6 +80,14 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     const { id } = await parseParam({ params }, IdSchema);
     const sp = new URL(req.url).searchParams;
     const hard = sp.get('hard') === 'true';
+    const previous = await getWeaponTraining(ocId, id);
+    if (!previous) throw new ApiError(404, 'Weapon training record not found', 'not_found');
+    await assertOcSemesterWriteAllowed({
+      ocId,
+      requestedSemester: previous.semester,
+      authContext: authCtx,
+      supportedSemesters: [3, 4, 5, 6],
+    });
     const row = await deleteWeaponTraining(ocId, id, { hard });
     if (!row) throw new ApiError(404, 'Weapon training record not found', 'not_found');
 

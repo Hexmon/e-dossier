@@ -33,6 +33,7 @@ interface IpetFormProps {
   updateScores: UpdatePhysicalTrainingScores;
   templates: PhysicalTrainingTemplateRow[];
   typeTitle?: string;
+  readOnly?: boolean;
 }
 
 // Semester to API semester mapping (1-based index)
@@ -54,6 +55,7 @@ export default function IpetForm({
   updateScores,
   templates,
   typeTitle,
+  readOnly = false,
 }: IpetFormProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [tableData, setTableData] = useState<PTTableRow[]>([]);
@@ -91,6 +93,12 @@ export default function IpetForm({
   useEffect(() => {
     return () => onMarksChange(0);
   }, [onMarksChange]);
+
+  useEffect(() => {
+    if (readOnly) {
+      setIsEditing(false);
+    }
+  }, [readOnly]);
 
   const handleAttemptChange = useCallback(
     (rowId: string, attemptCode: string) => {
@@ -273,7 +281,7 @@ export default function IpetForm({
             <Select
               value={row.selectedAttempt || ""}
               onValueChange={(val) => handleAttemptChange(row.id, val)}
-              disabled={!isEditing || attemptOptions.length === 0}
+              disabled={readOnly || !isEditing || attemptOptions.length === 0}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select attempt" />
@@ -304,7 +312,7 @@ export default function IpetForm({
             <Select
               value={row.selectedGrade || ""}
               onValueChange={(val) => handleGradeChange(row.id, val)}
-              disabled={!isEditing || gradeOptions.length === 0}
+              disabled={readOnly || !isEditing || gradeOptions.length === 0}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select grade" />
@@ -340,7 +348,7 @@ export default function IpetForm({
               onChange={(e) => handleMarksChange(row.id, e.target.value)}
               placeholder={disabled ? "No scoreId" : "Enter marks"}
               className="w-full"
-              disabled={disabled}
+              disabled={readOnly || disabled}
             />
           ) : (
             <span>{value ?? "-"}</span>
@@ -348,7 +356,7 @@ export default function IpetForm({
         },
       },
     ],
-    [handleAttemptChange, handleGradeChange, handleMarksChange, isEditing, tableTotal]
+    [handleAttemptChange, handleGradeChange, handleMarksChange, isEditing, readOnly, tableTotal]
   );
 
   const config: TableConfig<PTTableRow> = {
@@ -383,13 +391,13 @@ export default function IpetForm({
         <div className="flex gap-3 justify-center mt-4">
           {isEditing ? (
             <>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button variant="outline" onClick={() => setIsEditing(false)} disabled={readOnly}>
                 Cancel
               </Button>
-              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={handleSave} disabled={readOnly}>Save</Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)}>Edit</Button>
+            <Button onClick={() => setIsEditing(true)} disabled={readOnly}>Edit</Button>
           )}
         </div>
 
@@ -400,4 +408,3 @@ export default function IpetForm({
     </div>
   );
 }
-

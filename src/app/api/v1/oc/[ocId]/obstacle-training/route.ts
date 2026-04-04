@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../_checks';
 import { OcIdParam, listQuerySchema, obstacleTrainingCreateSchema } from '@/app/lib/oc-validators';
 import { listObstacleTraining, createObstacleTraining } from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
@@ -46,6 +46,12 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const dto = obstacleTrainingCreateSchema.parse(await req.json());
+    await assertOcSemesterWriteAllowed({
+      ocId,
+      requestedSemester: dto.semester,
+      authContext: authCtx,
+      supportedSemesters: [4, 5, 6],
+    });
     const row = await createObstacleTraining(ocId, dto);
 
     await req.audit.log({

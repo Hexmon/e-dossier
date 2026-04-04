@@ -27,6 +27,7 @@ export function useOcDetails(ocId?: string) {
                 courseName: oc.course.code || "",
                 ocNumber: oc.ocNo,
                 ocId: oc.id,
+                currentSemester: oc.currentSemester ?? null,
             });
         } catch (err) {
             setError("Failed to load cadet details");

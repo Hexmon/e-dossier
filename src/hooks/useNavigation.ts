@@ -23,6 +23,11 @@ export type NavigationResponse = {
     sections: NavSection[];
     generatedAt: string;
     userRoleSummary: string[];
+    moduleAccess?: {
+        canAccessDossier: boolean;
+        canAccessBulkUpload: boolean;
+        canAccessReports: boolean;
+    };
 };
 
 async function fetchNavigation(): Promise<NavigationResponse> {

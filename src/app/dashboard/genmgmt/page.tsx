@@ -21,8 +21,6 @@ import { CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Monitor, Search, Settings } from "lucide-react";
 import { useMe } from "@/hooks/useMe";
-import { resolvePageAction } from "@/app/lib/acx/action-map";
-import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
 import { resolveToneClasses, type ColorTone } from "@/lib/theme-color";
 
 export default function GeneralManagementPage() {
@@ -33,12 +31,16 @@ export default function GeneralManagementPage() {
   const [moduleSearch, setModuleSearch] = useState("");
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const { data: meData, isLoading: meLoading } = useMe();
-  const authzV2Enabled = isAuthzV2Enabled();
   const tabParam = searchParams.get("tab");
   const validTabs = managementTabs.map((tab) => tab.value);
   const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : "Gen Mgmt";
   const activeTabLabel =
     managementTabs.find((tab) => tab.value === activeTab)?.title ?? "Admin Management";
+  const isSuperAdmin = useMemo(
+    () =>
+      (meData?.roles ?? []).some((role) => String(role).trim().toUpperCase() === "SUPER_ADMIN"),
+    [meData?.roles]
+  );
 
   const updateTab = (value: string) => {
     if (value === activeTab) return;
@@ -54,22 +56,6 @@ export default function GeneralManagementPage() {
     const queryString = params.toString();
     return queryString ? `${path}?${queryString}` : path;
   };
-
-  const hasPageAccess = useMemo(() => {
-    if (!authzV2Enabled) return true;
-    if (meLoading) return true;
-
-    const page = resolvePageAction("/dashboard/genmgmt");
-    if (!page) return true;
-
-    const roles = (meData?.roles ?? []).map((role) => String(role).toUpperCase());
-    const permissions = new Set<string>((meData?.permissions ?? []) as string[]);
-
-    if (roles.includes("SUPER_ADMIN")) return true;
-    if (roles.includes("ADMIN") && page.adminBaseline) return true;
-    if (permissions.has("*")) return true;
-    return permissions.has(page.action);
-  }, [authzV2Enabled, meData?.permissions, meData?.roles, meLoading]);
 
   const filterCards = <T extends { title?: string; description?: string }>(
     cards: T[],
@@ -93,17 +79,6 @@ export default function GeneralManagementPage() {
     () => filterCards(moduleManagementCard, moduleSearch),
     [moduleSearch]
   );
-
-  useEffect(() => {
-    if (!authzV2Enabled || meLoading) return;
-    if (!hasPageAccess) {
-      router.replace("/dashboard");
-    }
-  }, [authzV2Enabled, hasPageAccess, meLoading, router]);
-
-  if (authzV2Enabled && !meLoading && !hasPageAccess) {
-    return null;
-  }
 
   return (
     <SidebarProvider>
@@ -268,6 +243,22 @@ export default function GeneralManagementPage() {
                     icon={Monitor}
                     color="muted"
                   />
+                  <DashboardCard
+                    title="Marks Review Workflow"
+                    description="Configure data entry, verification, and override users for bulk Academics and PT workflows."
+                    to="/dashboard/genmgmt/settings/marks-review-workflow"
+                    icon={Settings}
+                    color="warning"
+                  />
+                  {isSuperAdmin ? (
+                    <DashboardCard
+                      title="Module Access Settings"
+                      description="Configure whether ADMIN can access Dossier Management, Bulk Upload, and Reports."
+                      to="/dashboard/genmgmt/settings/module-access"
+                      icon={Settings}
+                      color="info"
+                    />
+                  ) : null}
                 </div>
               </TabsContent>
             </GlobalTabs>

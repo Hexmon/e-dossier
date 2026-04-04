@@ -26,6 +26,10 @@ import SpeedMarchForm from "@/components/speedMarch/SpeedMarchForm";
 import type { RootState } from "@/store";
 import { saveSpeedMarchForm, clearSpeedMarchForm } from "@/store/slices/speedMarchSlice";
 import { resolveTabStateClasses, resolveToneClasses } from "@/lib/theme-color";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 type Row = {
     id?: string;
@@ -52,6 +56,7 @@ export default function SpeedMarchPage() {
     const searchParams = useSearchParams();
 
     const { cadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
     const {
         name = "",
         courseName = "",
@@ -59,19 +64,22 @@ export default function SpeedMarchPage() {
         ocId: cadetOcId = ocId,
         course = "",
     } = cadet ?? {};
-    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course }), [name, courseName, ocNumber, cadetOcId, course]);
+    const currentSemester = cadet?.currentSemester ?? 1;
+    const selectedCadet = useMemo(() => ({ name, courseName, ocNumber, ocId: cadetOcId, course, currentSemester }), [name, courseName, ocNumber, cadetOcId, course, currentSemester]);
 
     const terms = useMemo(() => termsConst, []);
     const semesterBase = 4; // IV -> 4
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - semesterBase;
-        if (idx < 0 || idx >= terms.length) return 0;
-        return idx;
-    }, [semParam, terms.length]);
-    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
+    const supportedSemesters = [4, 5, 6];
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters,
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - semesterBase;
     const semesterNumber = activeTab + semesterBase;
 
     // Redux
@@ -89,19 +97,15 @@ export default function SpeedMarchPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + semesterBase));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-
-    useEffect(() => {
         if (!ocId) return;
         void loadAll();
     }, [ocId, loadAll]);
+
+    useEffect(() => {
+        if (isActiveSemesterLocked) {
+            setIsEditingAll(false);
+        }
+    }, [isActiveSemesterLocked]);
 
     // Create stable default values - prioritize Redux cache over database
     const getDefaultValues = useCallback(() => {
@@ -297,8 +301,7 @@ export default function SpeedMarchPage() {
     };
 
     const handleTabChange = (index: number) => {
-        setActiveTab(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + semesterBase);
         setIsEditingAll(false);
     };
 
@@ -344,6 +347,13 @@ export default function SpeedMarchPage() {
                             </CardHeader>
 
                             <CardContent>
+                                {isActiveSemesterLocked ? (
+                                    <SemesterLockNotice
+                                        activeSemester={activeSemester}
+                                        currentSemester={currentSemester}
+                                        supportedSemesters={supportedSemesters}
+                                    />
+                                ) : null}
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {terms.map((term, idx) => {
                                         return (
@@ -366,11 +376,12 @@ export default function SpeedMarchPage() {
                                     isEditing={isEditingAll}
                                     onCancelEdit={handleCancel}
                                     formMethods={formMethods}
+                                    disabled={isActiveSemesterLocked || !isEditingAll}
                                     isSaving={isSaving}
                                 />
 
                                 <div className="flex justify-center mb-4">
-                                    {!isEditingAll ? (
+                                    {!isEditingAll && !isActiveSemesterLocked ? (
                                         <Button type="button" onClick={() => setIsEditingAll(true)} disabled={isSaving}>
                                             Edit Table
                                         </Button>

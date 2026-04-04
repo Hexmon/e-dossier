@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -19,6 +18,8 @@ import { ApiClientError } from "@/app/lib/apiClient";
 
 import MedicalInfoTable from "./MedicalInfoTable";
 import MedicalInfoFormComponent from "./MedicalInfoForm";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 
 import type { RootState } from "@/store";
 import { clearMedicalInfoForm } from "@/store/slices/medicalInfoSlice";
@@ -49,41 +50,28 @@ const calculateBmiValue = (abw?: number, heightCm?: number) => {
 export default function MedicalInfoSection({
     selectedCadet,
     semesters,
+    currentSemester = 1,
+    canEditLockedSemesters = false,
 }: {
     selectedCadet: any;
     semesters: string[];
+    currentSemester?: number | null;
+    canEditLockedSemesters?: boolean;
 }) {
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - 1;
-        if (idx < 0 || idx >= semesters.length) return 0;
-        return idx;
-    }, [semParam, semesters.length]);
-    const [activeTab, setActiveTab] = useState(resolvedTab);
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - 1;
     const [savedMedInfo, setSavedMedInfo] = useState<MedInfoRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<MedInfoRow | null>(null);
     const [detailsEditing, setDetailsEditing] = useState(false);
 
-    useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + 1));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-
     const handleSemesterChange = (index: number) => {
-        setActiveTab(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + 1);
     };
 
     // Redux
@@ -409,6 +397,13 @@ export default function MedicalInfoSection({
             </CardHeader>
 
             <CardContent>
+                {isActiveSemesterLocked ? (
+                    <SemesterLockNotice
+                        activeSemester={activeSemester}
+                        currentSemester={currentSemester ?? 1}
+                        supportedSemesters={supportedSemesters}
+                    />
+                ) : null}
                 <div className="flex justify-center mb-6 space-x-2">
                     {semesters.map((s, i) => {
                         return (
@@ -431,6 +426,7 @@ export default function MedicalInfoSection({
                     loading={loading}
                     editingId={editingId}
                     editForm={editForm}
+                    readOnly={isActiveSemesterLocked}
                     onEdit={handleEdit}
                     onChange={handleChange}
                     onSave={handleSave}
@@ -450,6 +446,7 @@ export default function MedicalInfoSection({
                     defaultValues={getDefaultValues()}
                     ocId={selectedCadet?.ocId || ""}
                     onClear={handleClearForm}
+                    readOnly={isActiveSemesterLocked}
                 />
             </CardContent>
         </Card>

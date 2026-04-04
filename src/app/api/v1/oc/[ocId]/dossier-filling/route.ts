@@ -1,8 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { parseParam, ensureOcExists } from '../../_checks';
+import { parseParam, ensureOcExists, mustHaveOcAccess } from '../../_checks';
 import { OcIdParam, dossierFillingUpsertSchema } from '@/app/lib/oc-validators';
 import { getDossierFilling, upsertDossierFilling, deleteDossierFilling } from '@/app/db/queries/oc';
-import { requireAuth } from '@/app/lib/authz';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -10,9 +9,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
     try {
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
-
-        // SECURITY FIX: Proper authorization check to prevent IDOR
-        const authCtx = await requireAuth(req);
+        const authCtx = await mustHaveOcAccess(req, ocId);
 
         await req.audit.log({
             action: AuditEventType.API_REQUEST,
@@ -34,7 +31,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
-        const authCtx = await requireAuth(req);
+        const authCtx = await mustHaveOcAccess(req, ocId);
         if (await getDossierFilling(ocId)) throw new ApiError(409, 'Dossier filling exists. Use PATCH (admin).', 'conflict');
         const dto = dossierFillingUpsertSchema.parse(await req.json());
         const saved = await upsertDossierFilling(ocId, dto);
@@ -57,8 +54,8 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
+        const adminCtx = await mustHaveOcAccess(req, ocId);
         const dto = dossierFillingUpsertSchema.partial().parse(await req.json());
         const saved = await upsertDossierFilling(ocId, dto);
 
@@ -81,8 +78,8 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
+        const adminCtx = await mustHaveOcAccess(req, ocId);
         const deleted = await deleteDossierFilling(ocId);
 
         await req.audit.log({

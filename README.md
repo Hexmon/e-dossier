@@ -211,6 +211,15 @@ VM-2 (Data: Postgres + MinIO)
 4. Firewall: allow only VM-1 to reach ports 5432/9000. Do not expose MinIO console (9001).
 
 VM-1 (App)
+Recommended for air-gapped / customer-hosted installs:
+1. Build a runtime-only artifact on your trusted build machine:
+   - `pnpm install --frozen-lockfile`
+   - `pnpm build`
+   - `pnpm run package:runtime`
+2. Transfer `.artifacts/runtime/e-dossier-runtime.tar.gz` to the App VM.
+3. Follow [AIRGAP_RUNTIME_DEPLOYMENT.md](docs/deploy/AIRGAP_RUNTIME_DEPLOYMENT.md).
+
+Legacy source-checkout flow:
 1. `pnpm install`.
 2. `cp .env.production.example .env` and set:
    - `DATABASE_URL=postgresql://...@<VM-2-IP>:5432/...`

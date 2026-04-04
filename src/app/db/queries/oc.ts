@@ -34,13 +34,19 @@ import {
 } from '@/app/db/schema/training/oc';
 import { dossierInspections } from '@/app/db/schema/training/dossierInspections';
 import { courses } from '@/app/db/schema/training/courses';
+import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
 import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
-import { marksToLetterGradeWithPolicy, type AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import type { AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import {
+    derivePracticalLetterGrade,
+    deriveTheoryLetterGrade,
+    hasAcademicCredits,
+} from '@/app/lib/academic-marks-core';
 
 type ListOpts = {
     id?: string;
@@ -59,21 +65,41 @@ function likeEscape(q: string) {
     return `%${q.replace(/[%_\\]/g, '\\$&')}%`;
 }
 
+function clampCurrentSemester(value: number | null | undefined): number {
+    const parsed = Number(value ?? 1);
+    if (!Number.isFinite(parsed)) return 1;
+    return Math.max(1, Math.min(Math.trunc(parsed), 6));
+}
+
+export async function listCurrentSemestersByCourseIds(courseIds: string[]) {
+    const normalizedCourseIds = Array.from(new Set(courseIds.map((value) => value.trim()).filter(Boolean)));
+    if (!normalizedCourseIds.length) {
+        return new Map<string, number>();
+    }
+
+    const rows = await db
+        .select({
+            courseId: courseOfferings.courseId,
+            currentSemester: sql<number | null>`MAX(${courseOfferings.semester})`,
+        })
+        .from(courseOfferings)
+        .where(and(inArray(courseOfferings.courseId, normalizedCourseIds), isNull(courseOfferings.deletedAt)))
+        .groupBy(courseOfferings.courseId);
+
+    return new Map(rows.map((row) => [row.courseId, clampCurrentSemester(row.currentSemester)]));
+}
+
+export async function getCurrentSemesterForCourse(courseId: string): Promise<number> {
+    const semesterMap = await listCurrentSemestersByCourseIds([courseId]);
+    return semesterMap.get(courseId) ?? 1;
+}
+
 type SemesterMarksRow = typeof ocSemesterMarks.$inferSelect;
 type TheoryPatch = Partial<TheoryMarksRecord>;
 type PracticalPatch = Partial<PracticalMarksRecord>;
 type MergeGradeOptions = {
     autoComputeGrade?: boolean;
 };
-
-function toFiniteNumber(value: unknown): number {
-    const num = Number(value ?? 0);
-    return Number.isFinite(num) ? num : 0;
-}
-
-function toPositiveNumber(value: unknown): number {
-    return Math.max(0, toFiniteNumber(value));
-}
 
 function mergeTheory(
     target: TheoryMarksRecord | null | undefined,
@@ -90,18 +116,18 @@ function mergeTheory(
         (next as any)[key] = value;
         changed = true;
     }
+    if (!autoComputeGrade) {
+        if (next.grade !== undefined) {
+            next.grade = undefined;
+            changed = true;
+        }
+        return changed ? next : target;
+    }
+
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
-    if (!hasExplicitGrade && !autoComputeGrade && hasExistingGrade) {
-        next.grade = undefined;
-        changed = true;
-    } else if (!hasExplicitGrade && autoComputeGrade && !hasExistingGrade) {
-        // C# parity: each component contributes only when positive (Sign(x) == 1).
-        const phaseTest1 = toPositiveNumber(next.phaseTest1Marks);
-        const phaseTest2 = toPositiveNumber(next.phaseTest2Marks);
-        const tutorial = toPositiveNumber(next.tutorial);
-        const finalMarks = toPositiveNumber(next.finalMarks);
-        next.grade = marksToLetterGradeWithPolicy(phaseTest1 + phaseTest2 + tutorial + finalMarks, policy);
+    if (!hasExplicitGrade && !hasExistingGrade) {
+        next.grade = deriveTheoryLetterGrade(next, policy);
         changed = true;
     }
     return changed ? next : target;
@@ -122,14 +148,18 @@ function mergePractical(
         (next as any)[key] = value;
         changed = true;
     }
+    if (!autoComputeGrade) {
+        if (next.grade !== undefined) {
+            next.grade = undefined;
+            changed = true;
+        }
+        return changed ? next : target;
+    }
+
     const hasExplicitGrade = typeof patch.grade === 'string' && patch.grade.trim().length > 0;
     const hasExistingGrade = typeof next.grade === 'string' && next.grade.trim().length > 0;
-    if (!hasExplicitGrade && !autoComputeGrade && hasExistingGrade) {
-        next.grade = undefined;
-        changed = true;
-    } else if (!hasExplicitGrade && autoComputeGrade && !hasExistingGrade) {
-        // C# parity: practical marks use positive-only value for grade mapping.
-        next.grade = marksToLetterGradeWithPolicy(toPositiveNumber(next.finalMarks), policy);
+    if (!hasExplicitGrade && !hasExistingGrade) {
+        next.grade = derivePracticalLetterGrade(next, policy);
         changed = true;
     }
     return changed ? next : target;
@@ -240,8 +270,8 @@ export async function upsertSemesterSubjectMarks(ocId: string, semester: number,
             deletedAt: null,
         };
 
-        const hasTheoryCredits = toPositiveNumber(input.meta?.theoryCredits) > 0;
-        const hasPracticalCredits = toPositiveNumber(input.meta?.practicalCredits) > 0;
+        const hasTheoryCredits = hasAcademicCredits(input.meta?.theoryCredits);
+        const hasPracticalCredits = hasAcademicCredits(input.meta?.practicalCredits);
 
         const nextTheory = mergeTheory(base.theory, policy, input.theory, {
             autoComputeGrade: hasTheoryCredits,
@@ -1416,7 +1446,14 @@ export async function listOCsBasic(opts: ListOpts = {}) {
         .limit(Math.min(limit, 1000))
         .offset(offset);
 
-    return rows;
+    const semesterByCourseId = await listCurrentSemestersByCourseIds(
+        rows.map((row) => row.courseId).filter((value): value is string => Boolean(value)),
+    );
+
+    return rows.map((row) => ({
+        ...row,
+        currentSemester: semesterByCourseId.get(row.courseId) ?? 1,
+    }));
 }
 
 export async function listOCsFull(opts: ListOpts = {}) {
