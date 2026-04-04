@@ -116,11 +116,8 @@ export const OC_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/oc/[ocId]/parent-comms/route.ts',
   'src/app/api/v1/oc/[ocId]/performance-graph/route.ts',
   'src/app/api/v1/oc/[ocId]/personal/route.ts',
-  'src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts',
-  'src/app/api/v1/oc/[ocId]/physical-training/route.ts',
   'src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/[id]/route.ts',
   'src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/route.ts',
-  'src/app/api/v1/oc/[ocId]/route.ts',
   'src/app/api/v1/oc/[ocId]/special-achievement-in-firing/route.ts',
   'src/app/api/v1/oc/[ocId]/speed-march/route.ts',
   'src/app/api/v1/oc/[ocId]/sports-and-games/route.ts',
@@ -135,14 +132,10 @@ export const REPORT_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/reports/verification/verify/route.ts',
   'src/app/api/v1/reports/academics/consolidated-sessional/download/route.ts',
   'src/app/api/v1/reports/academics/consolidated-sessional/preview/route.ts',
-  'src/app/api/v1/reports/academics/final-result-compilation/download/route.ts',
-  'src/app/api/v1/reports/academics/final-result-compilation/preview/route.ts',
   'src/app/api/v1/reports/academics/semester-grade/candidates/route.ts',
   'src/app/api/v1/reports/academics/semester-grade/download/route.ts',
   'src/app/api/v1/reports/academics/semester-grade/preview/[ocId]/route.ts',
   'src/app/api/v1/reports/metadata/course-semesters/route.ts',
-  'src/app/api/v1/reports/mil-training/physical-assessment/download/route.ts',
-  'src/app/api/v1/reports/mil-training/physical-assessment/preview/route.ts',
   'src/app/api/v1/reports/overall-training/course-wise-final-performance/download/route.ts',
   'src/app/api/v1/reports/overall-training/course-wise-final-performance/preview/route.ts',
   'src/app/api/v1/reports/overall-training/course-wise-performance/download/route.ts',
@@ -157,6 +150,42 @@ export const MISC_UNCOVERED_ROUTE_FILES = [
 ] as const;
 
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
+  {
+    testFile: 'tests/api/admin.marks-review-workflow.test.ts',
+    routeFiles: ['src/app/api/v1/admin/marks-review-workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/admin.module-access.test.ts',
+    routeFiles: ['src/app/api/v1/admin/module-access/route.ts'],
+  },
+  {
+    testFile: 'tests/api/me.workflow-notifications.test.ts',
+    routeFiles: ['src/app/api/v1/me/workflow-notifications/route.ts'],
+  },
+  {
+    testFile: 'tests/api/reports.module-access.test.ts',
+    routeFiles: ['src/app/api/v1/reports/metadata/course-semesters/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.academics.workflow.test.ts',
+    routeFiles: ['src/app/api/v1/oc/academics/workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.physical-training.workflow.test.ts',
+    routeFiles: ['src/app/api/v1/oc/physical-training/workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.physical-training.motivation-awards.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.semester-lock-derived.test.ts',
+    routeFiles: [
+      'src/app/api/v1/oc/[ocId]/camps/route.ts',
+      'src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts',
+      'src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/[id]/route.ts',
+    ],
+  },
   {
     testFile: 'tests/api/admin.route-flow.uncovered.test.ts',
     routeFiles: [...ADMIN_UNCOVERED_ROUTE_FILES],

@@ -15,6 +15,7 @@ import {
 type Props = {
     template: PTTemplate;
     items: PTBulkGetItem[];
+    disabled?: boolean;
     selectedTypeCode: string;
     onSelectedTypeCodeChange: (value: string) => void;
     scoreDraftValues: Record<string, Record<string, PTBulkTaskSelection>>;
@@ -26,6 +27,7 @@ type Props = {
 export function PTBulkScoresTable({
     template,
     items,
+    disabled = false,
     selectedTypeCode,
     onSelectedTypeCodeChange,
     scoreDraftValues,
@@ -57,6 +59,7 @@ export function PTBulkScoresTable({
                     <select
                         className="rounded-md border px-3 py-2 text-sm"
                         value={selectedType.code}
+                        disabled={disabled}
                         onChange={(e) => onSelectedTypeCodeChange(e.target.value)}
                     >
                         {template.types.map((type) => (
@@ -80,6 +83,7 @@ export function PTBulkScoresTable({
                 <select
                     className="rounded-md border px-3 py-2 text-sm"
                     value={selectedType.code}
+                    disabled={disabled}
                     onChange={(e) => onSelectedTypeCodeChange(e.target.value)}
                 >
                     {template.types.map((type) => (
@@ -126,7 +130,7 @@ export function PTBulkScoresTable({
                                                 <select
                                                     className="h-8 w-full rounded-md border px-2 text-xs disabled:cursor-not-allowed disabled:bg-muted/60"
                                                     value={selection?.selectedAttemptCode ?? ''}
-                                                    disabled={isCleared || !selection}
+                                                    disabled={disabled || isCleared || !selection}
                                                     onChange={(e) => {
                                                         const nextAttempt = task.attempts.find(
                                                             (attempt) => attempt.attemptCode === e.target.value,
@@ -140,7 +144,7 @@ export function PTBulkScoresTable({
                                                             nextGrade.gradeCode,
                                                             initialSelection?.selectedScoreId === nextGrade.scoreId
                                                                 ? initialSelection.marks
-                                                                : nextGrade.maxMarks,
+                                                                : undefined,
                                                         );
                                                         if (!nextSelection) return;
                                                         onTaskSelectionChange(item.oc.id, task.taskId, nextSelection);
@@ -156,7 +160,7 @@ export function PTBulkScoresTable({
                                                 <select
                                                     className="h-8 w-full rounded-md border px-2 text-xs disabled:cursor-not-allowed disabled:bg-muted/60"
                                                     value={selection?.selectedGradeCode ?? ''}
-                                                    disabled={isCleared || !selection}
+                                                    disabled={disabled || isCleared || !selection}
                                                     onChange={(e) => {
                                                         if (!selection) return;
                                                         const nextSelection = createPTBulkTaskSelection(
@@ -168,16 +172,7 @@ export function PTBulkScoresTable({
                                                                 : undefined,
                                                         );
                                                         if (!nextSelection) return;
-
-                                                        const marks =
-                                                            initialSelection?.selectedScoreId === nextSelection.selectedScoreId
-                                                                ? initialSelection.marks
-                                                                : nextSelection.maxMarks;
-
-                                                        onTaskSelectionChange(item.oc.id, task.taskId, {
-                                                            ...nextSelection,
-                                                            marks: String(marks),
-                                                        });
+                                                        onTaskSelectionChange(item.oc.id, task.taskId, nextSelection);
                                                     }}
                                                 >
                                                     {(task.attempts.find(
@@ -204,7 +199,7 @@ export function PTBulkScoresTable({
                                                     inputMode="numeric"
                                                     placeholder="-"
                                                     className="h-8"
-                                                    disabled={isCleared || !selection}
+                                                    disabled={disabled || isCleared || !selection}
                                                 />
 
                                                 <div className="text-[11px] text-muted-foreground">
@@ -216,6 +211,7 @@ export function PTBulkScoresTable({
                                                         type="button"
                                                         className="text-xs text-primary underline"
                                                         onClick={() => onToggleClearScore(item.oc.id, task.taskId)}
+                                                        disabled={disabled}
                                                     >
                                                         {isCleared ? 'Undo clear' : 'Clear'}
                                                     </button>

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET, POST } from '@/app/api/v1/oc/physical-training/bulk/route';
 import { makeJsonRequest } from '../utils/next';
+import { ApiError } from '@/app/lib/http';
 
 vi.mock('@/app/lib/acx/feature-flag', () => ({
     isAuthzV2Enabled: () => false,
@@ -8,6 +9,10 @@ vi.mock('@/app/lib/acx/feature-flag', () => ({
 
 vi.mock('@/app/api/v1/oc/_checks', () => ({
     mustBeAuthed: vi.fn(),
+}));
+
+vi.mock('@/app/services/marksReviewWorkflow', () => ({
+    assertWorkflowDirectWriteAllowed: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/oc', () => ({
@@ -30,6 +35,7 @@ vi.mock('@/app/db/queries/physicalTrainingOc', () => ({
 }));
 
 import { mustBeAuthed } from '@/app/api/v1/oc/_checks';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import { listOCsBasic } from '@/app/db/queries/oc';
 import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
 import {
@@ -52,6 +58,7 @@ describe('PT bulk API', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         (mustBeAuthed as any).mockResolvedValue({ userId: 'u-1' });
+        (assertWorkflowDirectWriteAllowed as any).mockResolvedValue(undefined);
     });
 
     it('GET returns template and per-oc items', async () => {
@@ -115,6 +122,7 @@ describe('PT bulk API', () => {
             {
                 ptTaskScoreId: scoreId,
                 maxMarks: 100,
+                attemptCode: 'B1',
                 semester: 1,
                 typeDeletedAt: null,
                 taskDeletedAt: null,
@@ -172,5 +180,96 @@ describe('PT bulk API', () => {
         expect(body.errorCount).toBe(1);
         expect(body.items[0].status).toBe('ok');
         expect(body.items[1].status).toBe('error');
+    });
+
+    it('POST allows manual marks above template max for free-entry PT attempts', async () => {
+        const ocId = '11111111-1111-4111-8111-111111111111';
+        const scoreId = '33333333-3333-4333-8333-333333333333';
+
+        (listOCsBasic as any).mockResolvedValue([
+            {
+                id: ocId,
+                courseId: '22222222-2222-4222-8222-222222222222',
+            },
+        ]);
+
+        (listTemplateScoresByIds as any).mockResolvedValue([
+            {
+                ptTaskScoreId: scoreId,
+                maxMarks: 26,
+                attemptCode: 'A1/C1',
+                semester: 1,
+                typeDeletedAt: null,
+                taskDeletedAt: null,
+                attemptDeletedAt: null,
+                gradeDeletedAt: null,
+                typeIsActive: true,
+                attemptIsActive: true,
+                gradeIsActive: true,
+            },
+        ]);
+
+        (listMotivationFieldsByIds as any).mockResolvedValue([]);
+        (upsertOcPtScores as any).mockResolvedValue([]);
+
+        const req = attachAudit(
+            makeJsonRequest({
+                method: 'POST',
+                path: '/api/v1/oc/physical-training/bulk',
+                body: {
+                    courseId: '22222222-2222-4222-8222-222222222222',
+                    semester: 1,
+                    failFast: false,
+                    items: [
+                        {
+                            ocId,
+                            scoresUpsert: [{ ptTaskScoreId: scoreId, marksScored: 40 }],
+                        },
+                    ],
+                },
+            })
+        );
+
+        const res = await POST(req as any, { params: Promise.resolve({}) } as any);
+        const body = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(body.successCount).toBe(1);
+        expect(body.errorCount).toBe(0);
+        expect(upsertOcPtScores).toHaveBeenCalledWith(ocId, 1, [{ ptTaskScoreId: scoreId, marksScored: 40 }]);
+    });
+
+    it('POST returns workflow_required when workflow is active', async () => {
+        (assertWorkflowDirectWriteAllowed as any).mockRejectedValueOnce(
+            new ApiError(409, 'Workflow required', 'workflow_required'),
+        );
+
+        const req = attachAudit(
+            makeJsonRequest({
+                method: 'POST',
+                path: '/api/v1/oc/physical-training/bulk',
+                body: {
+                    courseId: '22222222-2222-4222-8222-222222222222',
+                    semester: 1,
+                    items: [
+                        {
+                            ocId: '11111111-1111-4111-8111-111111111111',
+                            scoresUpsert: [
+                                {
+                                    ptTaskScoreId: '33333333-3333-4333-8333-333333333333',
+                                    marksScored: 10,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            }),
+        );
+
+        const res = await POST(req as any, { params: Promise.resolve({}) } as any);
+        const body = await res.json();
+
+        expect(res.status).toBe(409);
+        expect(body.error).toBe('workflow_required');
     });
 });

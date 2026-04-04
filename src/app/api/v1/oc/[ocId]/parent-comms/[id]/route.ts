@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam, commUpdateSchema } from '@/app/lib/oc-validators';
 import { getComm, updateComm, deleteComm } from '@/app/db/queries/oc';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -41,6 +41,13 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
     const dto = commUpdateSchema.parse(await req.json());
+    const previous = await getComm(ocId, id);
+    if (!previous) throw new ApiError(404, 'Communication not found', 'not_found');
+    await assertOcSemesterWriteAllowed({
+      ocId,
+      requestedSemester: dto.semester ?? previous.semester,
+      authContext: authCtx,
+    });
     const row = await updateComm(ocId, id, dto);
     if (!row) throw new ApiError(404, 'Communication not found', 'not_found');
 
@@ -70,6 +77,9 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
+    const previous = await getComm(ocId, id);
+    if (!previous) throw new ApiError(404, 'Communication not found', 'not_found');
+    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, authContext: authCtx });
     const row = await deleteComm(ocId, id);
     if (!row) throw new ApiError(404, 'Communication not found', 'not_found');
 

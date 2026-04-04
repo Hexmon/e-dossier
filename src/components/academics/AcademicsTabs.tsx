@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import TechSeminarForm from "./TechSeminarForm";
 import MiniProjectForm from "./MiniProjectForm";
 import { SemesterTableI, SemesterTableII, SemesterTableIII, SemesterTableIV, SemesterTableV_Mech, SemesterTableVI_Mech } from "./SemesterTables";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 
 type SubTab = "mech" | "tech" | "mini" | "single";
 
@@ -12,20 +12,17 @@ interface AcademicsTabsProps {
     ocId: string;
     courseId: string;
     canEdit?: boolean;
+    currentSemester?: number | null;
+    canEditLockedSemesters?: boolean;
 }
 
-export default function AcademicsTabs({ ocId, courseId, canEdit = false }: AcademicsTabsProps) {
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
-
-    const semesterFromQuery = useMemo(() => {
-        const value = Number(searchParams.get("semester") ?? 1);
-        if (!Number.isFinite(value)) return 1;
-        if (value < 1 || value > 6) return 1;
-        return Math.trunc(value);
-    }, [searchParams]);
-
+export default function AcademicsTabs({
+    ocId,
+    courseId,
+    canEdit = false,
+    currentSemester = 1,
+    canEditLockedSemesters = false,
+}: AcademicsTabsProps) {
     const [subTab, setSubTab] = useState<Record<number, SubTab>>({
         1: "single",
         2: "single",
@@ -44,7 +41,11 @@ export default function AcademicsTabs({ ocId, courseId, canEdit = false }: Acade
         6: "VI"
     };
 
-    const selectedTerm = semesterFromQuery;
+    const { activeSemester: selectedTerm, setActiveSemester, isLockedSemester } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
 
     useEffect(() => {
         setSubTab({
@@ -57,19 +58,11 @@ export default function AcademicsTabs({ ocId, courseId, canEdit = false }: Acade
         });
     }, [ocId, courseId]);
 
-    const updateSemesterParam = (term: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        const nextValue = String(term);
-        if (params.get("semester") === nextValue) {
-            return;
-        }
-        params.set("semester", nextValue);
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    const handleTermChange = (term: number) => {
+        setActiveSemester(term);
     };
 
-    const handleTermChange = (term: number) => {
-        updateSemesterParam(term);
-    };
+    const canEditSelectedTerm = canEdit && !isLockedSemester(selectedTerm);
 
     return (
         <div>
@@ -127,15 +120,15 @@ export default function AcademicsTabs({ ocId, courseId, canEdit = false }: Acade
             </div>
 
             <div>
-                {selectedTerm === 1 && <SemesterTableI ocId={ocId} courseId={courseId} canEdit={canEdit} />}
-                {selectedTerm === 2 && <SemesterTableII ocId={ocId} courseId={courseId} canEdit={canEdit} />}
-                {selectedTerm === 3 && <SemesterTableIII ocId={ocId} courseId={courseId} canEdit={canEdit} />}
-                {selectedTerm === 4 && <SemesterTableIV ocId={ocId} courseId={courseId} canEdit={canEdit} />}
+                {selectedTerm === 1 && <SemesterTableI ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
+                {selectedTerm === 2 && <SemesterTableII ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
+                {selectedTerm === 3 && <SemesterTableIII ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
+                {selectedTerm === 4 && <SemesterTableIV ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
 
-                {selectedTerm === 5 && subTab[5] === "mech" && <SemesterTableV_Mech ocId={ocId} courseId={courseId} canEdit={canEdit} />}
+                {selectedTerm === 5 && subTab[5] === "mech" && <SemesterTableV_Mech ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
                 {selectedTerm === 5 && subTab[5] === "tech" && <TechSeminarForm ocId={ocId} />}
 
-                {selectedTerm === 6 && subTab[6] === "mech" && <SemesterTableVI_Mech ocId={ocId} courseId={courseId} canEdit={canEdit} />}
+                {selectedTerm === 6 && subTab[6] === "mech" && <SemesterTableVI_Mech ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
                 {selectedTerm === 6 && subTab[6] === "mini" && <MiniProjectForm ocId={ocId} />}
             </div>
         </div>

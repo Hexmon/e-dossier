@@ -19,9 +19,10 @@ interface MotivationAwardsProps {
     activeSemester: string;
     ocId: string;
     fields: MotivationField[];
+    readOnly?: boolean;
 }
 
-export default function MotivationAwards({ activeSemester, ocId, fields }: MotivationAwardsProps) {
+export default function MotivationAwards({ activeSemester, ocId, fields, readOnly = false }: MotivationAwardsProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [localValues, setLocalValues] = useState<Record<string, string>>({});
 
@@ -67,6 +68,12 @@ export default function MotivationAwards({ activeSemester, ocId, fields }: Motiv
         });
         setLocalValues(valueMap);
     }, [effectiveFields, values]);
+
+    useEffect(() => {
+        if (readOnly) {
+            setIsEditing(false);
+        }
+    }, [readOnly]);
 
     const handleChange = (fieldId: string, value: string) => {
         setLocalValues(prev => ({
@@ -144,7 +151,7 @@ export default function MotivationAwards({ activeSemester, ocId, fields }: Motiv
                     onChange={(e) => handleChange(row.fieldId, e.target.value)}
                     placeholder="Enter Motivation Award"
                     className="border border-border px-4 py-2"
-                    disabled={!isEditing}
+                    disabled={readOnly || !isEditing}
                 />
             )
         }
@@ -191,12 +198,12 @@ export default function MotivationAwards({ activeSemester, ocId, fields }: Motiv
                         <Button variant="outline" onClick={handleCancel}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSave} disabled={loading}>
+                        <Button onClick={handleSave} disabled={loading || readOnly}>
                             {loading ? "Saving..." : "Save"}
                         </Button>
                     </>
                 ) : (
-                    <Button onClick={handleEdit}>Edit</Button>
+                    <Button onClick={handleEdit} disabled={readOnly}>Edit</Button>
                 )}
             </div>
         </div>

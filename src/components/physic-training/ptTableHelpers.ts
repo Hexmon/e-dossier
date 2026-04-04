@@ -5,6 +5,7 @@ import {
   PhysicalTrainingTemplateRow,
   PhysicalTrainingTemplateTypeInfo,
 } from "@/hooks/usePhysicalTraining";
+import { resolvePtDraftMarks } from "@/app/lib/physical-training-attempts";
 
 export interface AttemptGradeEntry {
   attemptCode: string;
@@ -25,7 +26,7 @@ export interface PTTableRow {
   column3: number; // status-linked marks used for validation/defaults
   column4: string; // category (attempt)
   column5: string; // status (grade)
-  column6: number; // marks scored
+  column6: number | null; // marks scored
   attemptGroups: AttemptGroup[];
   selectedAttempt: string;
   selectedGrade: string;
@@ -77,7 +78,7 @@ export function buildPTTableRows(
 
     let selectedAttempt = "";
     let selectedGrade = "";
-    let marks = 0;
+    let marks: number | null = null;
     let selectedScoreId = "";
     let maxMarks = 0;
 
@@ -106,8 +107,7 @@ export function buildPTTableRows(
         selectedGrade = firstGrade.gradeCode;
         selectedScoreId = firstGrade.scoreId;
         maxMarks = firstGrade.maxMarks;
-        // Default to status-linked marks when no saved score exists.
-        marks = firstGrade.maxMarks;
+        marks = resolvePtDraftMarks(firstGroup.attemptCode, firstGrade.maxMarks);
       }
     }
 

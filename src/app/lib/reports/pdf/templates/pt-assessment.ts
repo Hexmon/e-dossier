@@ -1,4 +1,4 @@
-import type { PtAssessmentPreview, PtAssessmentRow } from '@/types/reports';
+import type { PtAssessmentPreview } from '@/types/reports';
 
 type ReportRenderMeta = {
   versionId: string;
@@ -7,29 +7,51 @@ type ReportRenderMeta = {
   generatedAt: Date;
 };
 
-type TaskGroup = {
+type CombinedTaskGroup = {
+  key: string;
+  ptTypeId: string;
+  ptTypeCode: string;
   taskId: string;
-  title: string;
-  entries: Array<{ key: string; attemptCode: string; gradeCode: string }>;
+  taskTitle: string;
 };
 
-const PAGE_MARGIN = 24;
-const ROWS_PER_PAGE = 10;
-const HEADER_TOP_1 = 34;
-const HEADER_TOP_2 = 66;
-const TABLE_Y = 96;
-const ROW_H1 = 26; // PPT group header
-const ROW_H2 = 96; // Task title band
-const ROW_H3 = 30; // Attempt/E-G-S/Mks band
-const DATA_ROW_H = 46;
-const FIXED_COL_WIDTHS = {
-  sno: 34,
-  tesNo: 46,
-  rank: 46,
-  name: 130,
-  total: 50,
+type CombinedTypeGroup = {
+  key: string;
+  label: string;
+  span: number;
 };
-const TASK_SUB_COL_W = 20;
+
+type CombinedRow = {
+  ocId: string;
+  sNo: number;
+  tesNo: string;
+  rank: string;
+  name: string;
+  totalMarksScored: number;
+  cells: Record<string, { attemptCode: string | null; gradeCode: string | null; marks: number | null }>;
+};
+
+const EMPTY_TASK_ID = '__no_task__';
+const EMPTY_TASK_TITLE = 'NO TASKS';
+const PAGE_MARGIN = 24;
+const MIN_PAGE_WIDTH = 1190;
+const MIN_PAGE_HEIGHT = 842;
+const TITLE_Y = PAGE_MARGIN;
+const SUBTITLE_Y = TITLE_Y + 28;
+const TABLE_Y = SUBTITLE_Y + 36;
+const FOOTER_GAP = 16;
+const ROW_H1 = 28;
+const ROW_H2 = 96;
+const ROW_H3 = 34;
+const DATA_ROW_H = 26;
+const FIXED_COL_WIDTHS = {
+  sno: 40,
+  tesNo: 70,
+  rank: 56,
+  name: 180,
+  total: 72,
+};
+const TASK_SUB_COL_W = 44;
 const TABLE_LINE_W = 0.8;
 
 function toTermLabel(semester: number): string {
@@ -51,35 +73,63 @@ function toTermLabel(semester: number): string {
   }
 }
 
-function makeTaskGroups(data: PtAssessmentPreview): TaskGroup[] {
-  const groups: TaskGroup[] = [];
-  for (const task of data.tasks) {
-    const entries: TaskGroup['entries'] = [];
-    for (const attempt of task.attempts) {
-      for (const grade of attempt.grades) {
-        entries.push({
-          key: `${task.taskId}:${attempt.attemptId}:${grade.gradeCode}`,
-          attemptCode: attempt.attemptCode,
-          gradeCode: grade.gradeCode,
-        });
-      }
-    }
-    groups.push({
+function buildCombinedMatrix(data: PtAssessmentPreview) {
+  const taskGroups = data.sections.flatMap((section) =>
+    (section.tasks.length ? section.tasks : [{ taskId: EMPTY_TASK_ID, title: EMPTY_TASK_TITLE }]).map((task) => ({
+      key: `${section.ptType.id}:${task.taskId}`,
+      ptTypeId: section.ptType.id,
+      ptTypeCode: section.ptType.code.toUpperCase(),
       taskId: task.taskId,
-      title: task.title.toUpperCase(),
-      entries,
-    });
+      taskTitle: task.title.toUpperCase(),
+    })),
+  );
+
+  const rowsByOc = new Map<string, CombinedRow>();
+  for (const section of data.sections) {
+    for (const row of section.rows) {
+      const combined = rowsByOc.get(row.ocId) ?? {
+        ocId: row.ocId,
+        sNo: row.sNo,
+        tesNo: row.tesNo,
+        rank: row.rank,
+        name: row.name,
+        totalMarksScored: 0,
+        cells: {},
+      };
+
+      combined.totalMarksScored += row.totalMarksScored;
+      for (const task of section.tasks) {
+        combined.cells[`${section.ptType.id}:${task.taskId}`] = row.cells[task.taskId] ?? {
+          attemptCode: null,
+          gradeCode: null,
+          marks: null,
+        };
+      }
+      rowsByOc.set(row.ocId, combined);
+    }
   }
-  return groups;
+
+  return {
+    taskGroups,
+    rows: Array.from(rowsByOc.values()).sort((left, right) => left.sNo - right.sNo),
+  };
 }
 
-function chunk<T>(items: T[], size: number): T[][] {
-  if (size <= 0) return [items];
-  const result: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    result.push(items.slice(i, i + size));
-  }
-  return result;
+function buildVisibleTypeGroups(taskGroups: CombinedTaskGroup[]): CombinedTypeGroup[] {
+  return taskGroups.reduce<CombinedTypeGroup[]>((groups, task) => {
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup?.key === task.ptTypeId) {
+      lastGroup.span += 3;
+      return groups;
+    }
+
+    groups.push({
+      key: task.ptTypeId,
+      label: task.ptTypeCode,
+      span: 3,
+    });
+    return groups;
+  }, []);
 }
 
 function drawRect(doc: PDFKit.PDFDocument, x: number, y: number, w: number, h: number) {
@@ -97,15 +147,32 @@ function textInBox(
   y: number,
   width: number,
   height: number,
-  opts: { align?: 'left' | 'center' | 'right'; bold?: boolean; size?: number } = {}
+  opts: {
+    align?: 'left' | 'center' | 'right';
+    bold?: boolean;
+    size?: number;
+    lineBreak?: boolean;
+  } = {},
 ) {
-  doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(opts.size ?? 8.5);
-  doc.text(text, x + 2, y + 2, {
-    width: Math.max(0, width - 4),
+  const fontSize = opts.size ?? 8.5;
+  const lineBreak = opts.lineBreak ?? true;
+  const contentWidth = Math.max(0, width - 6);
+  doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
+
+  const rendered = (text ?? '').toString();
+  const textHeight = doc.heightOfString(rendered, {
+    width: contentWidth,
+    align: opts.align ?? 'center',
+    lineBreak,
+  });
+  const contentY = y + Math.max(2, (height - Math.min(height - 4, textHeight)) / 2);
+
+  doc.text(rendered, x + 3, contentY, {
+    width: contentWidth,
     height: Math.max(0, height - 4),
     align: opts.align ?? 'center',
-    lineBreak: false,
-    ellipsis: true,
+    lineBreak,
+    ellipsis: !lineBreak,
   });
 }
 
@@ -116,54 +183,52 @@ function textVerticalCenter(
   y: number,
   width: number,
   height: number,
-  opts: { bold?: boolean; size?: number } = {}
+  opts: { bold?: boolean; size?: number } = {},
 ) {
   const fontSize = opts.size ?? 8.5;
+  const rendered = (text ?? '').toString();
   doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
 
-  const trimmed = (text ?? '').toString();
-  const textWidth = doc.widthOfString(trimmed);
-
+  const textWidth = doc.widthOfString(rendered, { lineBreak: false });
   doc.save();
   doc.translate(x + width / 2, y + height / 2);
   doc.rotate(-90);
-  // Draw a single vertical line of text without wrapped layout to avoid implicit page flow.
-  doc.text(trimmed, -textWidth / 2, -fontSize / 2, {
+  doc.text(rendered, -textWidth / 2, -fontSize / 2, {
     lineBreak: false,
     ellipsis: true,
   });
   doc.restore();
 }
 
-function buildTaskCellValues(row: PtAssessmentRow | undefined, group: TaskGroup) {
-  if (!row || !group.entries.length) return { attempt: '', grade: '', marks: '' };
-  const entriesWithValues = group.entries
-    .map((entry) => ({ entry, value: row.cells[entry.key] }))
-    .filter((item) => item.value !== null && item.value !== undefined) as Array<{
-      entry: TaskGroup['entries'][number];
-      value: number;
-    }>;
+function getTableWidth(taskCount: number) {
+  return (
+    FIXED_COL_WIDTHS.sno +
+    FIXED_COL_WIDTHS.tesNo +
+    FIXED_COL_WIDTHS.rank +
+    FIXED_COL_WIDTHS.name +
+    taskCount * TASK_SUB_COL_W * 3 +
+    FIXED_COL_WIDTHS.total
+  );
+}
 
-  if (!entriesWithValues.length) return { attempt: '', grade: '', marks: '' };
+function getTableHeight(rowCount: number) {
+  return ROW_H1 + ROW_H2 + ROW_H3 + Math.max(1, rowCount) * DATA_ROW_H;
+}
 
-  const attempts = Array.from(new Set(entriesWithValues.map((item) => item.entry.attemptCode)));
-  const grades = Array.from(new Set(entriesWithValues.map((item) => item.entry.gradeCode)));
-  const marks = entriesWithValues.reduce((sum, item) => sum + item.value, 0);
-
-  return {
-    attempt: attempts.join('/'),
-    grade: grades.join('/'),
-    marks: String(marks),
-  };
+export function getPtAssessmentPdfPageSize(data: PtAssessmentPreview): [number, number] {
+  const matrix = buildCombinedMatrix(data);
+  const width = Math.max(MIN_PAGE_WIDTH, PAGE_MARGIN * 2 + getTableWidth(matrix.taskGroups.length));
+  const height = Math.max(MIN_PAGE_HEIGHT, TABLE_Y + getTableHeight(matrix.rows.length) + FOOTER_GAP + PAGE_MARGIN);
+  return [Math.ceil(width), Math.ceil(height)];
 }
 
 function drawPageHeader(doc: PDFKit.PDFDocument, semester: number) {
   const contentWidth = doc.page.width - PAGE_MARGIN * 2;
-  doc.font('Helvetica-Bold').fontSize(20).text('ASSESSMENT : PHY TRG', PAGE_MARGIN, HEADER_TOP_1, {
+  doc.font('Helvetica-Bold').fontSize(20).text('ASSESSMENT : PHY TRG', PAGE_MARGIN, TITLE_Y, {
     width: contentWidth,
     align: 'center',
   });
-  doc.font('Helvetica-Bold').fontSize(18).text(toTermLabel(semester), PAGE_MARGIN, HEADER_TOP_2, {
+  doc.font('Helvetica-Bold').fontSize(18).text(toTermLabel(semester), PAGE_MARGIN, SUBTITLE_Y, {
     width: contentWidth,
     align: 'center',
   });
@@ -171,7 +236,6 @@ function drawPageHeader(doc: PDFKit.PDFDocument, semester: number) {
 
 function drawPageFooter(doc: PDFKit.PDFDocument, versionId: string) {
   const contentWidth = doc.page.width - PAGE_MARGIN * 2;
-  // Keep footer inside printable bounds; writing below bottom margin can trigger an implicit new page.
   const footerY = doc.page.height - PAGE_MARGIN - 10;
   doc.font('Helvetica').fontSize(7).text(`Version: ${versionId}`, PAGE_MARGIN, footerY, {
     width: contentWidth,
@@ -180,63 +244,50 @@ function drawPageFooter(doc: PDFKit.PDFDocument, versionId: string) {
   });
 }
 
-function drawMatrixPage(
+export function renderPtAssessmentTemplate(
   doc: PDFKit.PDFDocument,
-  taskGroups: TaskGroup[],
-  rows: PtAssessmentRow[],
-  rowStartIndex: number
+  data: PtAssessmentPreview,
+  meta: ReportRenderMeta,
 ) {
-  const x = PAGE_MARGIN;
+  const matrix = buildCombinedMatrix(data);
+  const visibleTypeGroups = buildVisibleTypeGroups(matrix.taskGroups);
+  const dataRowCount = Math.max(1, matrix.rows.length);
   const headerTotal = ROW_H1 + ROW_H2 + ROW_H3;
-  const dataRowCount = ROWS_PER_PAGE;
   const taskGroupW = TASK_SUB_COL_W * 3;
-  const taskAreaW = taskGroups.length * taskGroupW;
-
-  const tableW =
-    FIXED_COL_WIDTHS.sno +
-    FIXED_COL_WIDTHS.tesNo +
-    FIXED_COL_WIDTHS.rank +
-    FIXED_COL_WIDTHS.name +
-    taskAreaW +
-    FIXED_COL_WIDTHS.total;
-  const tableH = headerTotal + dataRowCount * DATA_ROW_H;
+  const taskAreaW = matrix.taskGroups.length * taskGroupW;
+  const tableW = getTableWidth(matrix.taskGroups.length);
+  const tableH = getTableHeight(matrix.rows.length);
+  const yH1 = TABLE_Y + ROW_H1;
+  const yH2 = TABLE_Y + ROW_H1 + ROW_H2;
+  const yHeaderBottom = TABLE_Y + headerTotal;
 
   const xs = {
-    tableStart: x,
-    snoStart: x,
-    tesStart: x + FIXED_COL_WIDTHS.sno,
-    rankStart: x + FIXED_COL_WIDTHS.sno + FIXED_COL_WIDTHS.tesNo,
-    nameStart: x + FIXED_COL_WIDTHS.sno + FIXED_COL_WIDTHS.tesNo + FIXED_COL_WIDTHS.rank,
-    taskStart: x + FIXED_COL_WIDTHS.sno + FIXED_COL_WIDTHS.tesNo + FIXED_COL_WIDTHS.rank + FIXED_COL_WIDTHS.name,
+    tableStart: PAGE_MARGIN,
+    snoStart: PAGE_MARGIN,
+    tesStart: PAGE_MARGIN + FIXED_COL_WIDTHS.sno,
+    rankStart: PAGE_MARGIN + FIXED_COL_WIDTHS.sno + FIXED_COL_WIDTHS.tesNo,
+    nameStart: PAGE_MARGIN + FIXED_COL_WIDTHS.sno + FIXED_COL_WIDTHS.tesNo + FIXED_COL_WIDTHS.rank,
+    taskStart:
+      PAGE_MARGIN + FIXED_COL_WIDTHS.sno + FIXED_COL_WIDTHS.tesNo + FIXED_COL_WIDTHS.rank + FIXED_COL_WIDTHS.name,
     totalStart:
-      x +
+      PAGE_MARGIN +
       FIXED_COL_WIDTHS.sno +
       FIXED_COL_WIDTHS.tesNo +
       FIXED_COL_WIDTHS.rank +
       FIXED_COL_WIDTHS.name +
       taskAreaW,
-    tableEnd:
-      x +
-      FIXED_COL_WIDTHS.sno +
-      FIXED_COL_WIDTHS.tesNo +
-      FIXED_COL_WIDTHS.rank +
-      FIXED_COL_WIDTHS.name +
-      taskAreaW +
-      FIXED_COL_WIDTHS.total,
+    tableEnd: PAGE_MARGIN + tableW,
   };
 
   doc.lineWidth(TABLE_LINE_W);
-  drawRect(doc, xs.tableStart, TABLE_Y, tableW, tableH);
+  drawPageHeader(doc, data.semester);
 
+  drawRect(doc, xs.tableStart, TABLE_Y, tableW, tableH);
   drawLine(doc, xs.tesStart, TABLE_Y, xs.tesStart, TABLE_Y + tableH);
   drawLine(doc, xs.rankStart, TABLE_Y, xs.rankStart, TABLE_Y + tableH);
   drawLine(doc, xs.nameStart, TABLE_Y, xs.nameStart, TABLE_Y + tableH);
   drawLine(doc, xs.taskStart, TABLE_Y, xs.taskStart, TABLE_Y + tableH);
   drawLine(doc, xs.totalStart, TABLE_Y, xs.totalStart, TABLE_Y + tableH);
-
-  const yH1 = TABLE_Y + ROW_H1;
-  const yH2 = TABLE_Y + ROW_H1 + ROW_H2;
-  const yHeaderBottom = TABLE_Y + headerTotal;
 
   if (taskAreaW > 0) {
     drawLine(doc, xs.taskStart, yH1, xs.totalStart, yH1);
@@ -249,92 +300,107 @@ function drawMatrixPage(
     drawLine(doc, xs.tableStart, y, xs.tableEnd, y);
   }
 
-  textVerticalCenter(doc, 'S. No', xs.snoStart, TABLE_Y, FIXED_COL_WIDTHS.sno, headerTotal, { bold: true, size: 10 });
+  textVerticalCenter(doc, 'S.No', xs.snoStart, TABLE_Y, FIXED_COL_WIDTHS.sno, headerTotal, { bold: true, size: 10 });
   textVerticalCenter(doc, 'TES No', xs.tesStart, TABLE_Y, FIXED_COL_WIDTHS.tesNo, headerTotal, { bold: true, size: 10 });
-  textVerticalCenter(doc, 'RANK', xs.rankStart, TABLE_Y, FIXED_COL_WIDTHS.rank, headerTotal, { bold: true, size: 10 });
-  textVerticalCenter(doc, 'NAME', xs.nameStart, TABLE_Y, FIXED_COL_WIDTHS.name, headerTotal, { bold: true, size: 10 });
-  textVerticalCenter(
-    doc,
-    'MKS SCORED',
-    xs.totalStart,
-    TABLE_Y,
-    FIXED_COL_WIDTHS.total,
-    headerTotal,
-    { bold: true, size: 10 }
-  );
+  textVerticalCenter(doc, 'Rank', xs.rankStart, TABLE_Y, FIXED_COL_WIDTHS.rank, headerTotal, { bold: true, size: 10 });
+  textVerticalCenter(doc, 'Name', xs.nameStart, TABLE_Y, FIXED_COL_WIDTHS.name, headerTotal, { bold: true, size: 10 });
+  textVerticalCenter(doc, 'Marks Scored', xs.totalStart, TABLE_Y, FIXED_COL_WIDTHS.total, headerTotal, {
+    bold: true,
+    size: 10,
+  });
 
-  if (taskGroups.length > 0) {
-    textInBox(doc, 'PPT', xs.taskStart, TABLE_Y, taskAreaW, ROW_H1, { bold: true, size: 11 });
+  let typeOffset = xs.taskStart;
+  for (const group of visibleTypeGroups) {
+    const width = group.span * TASK_SUB_COL_W;
+    textInBox(doc, group.label, typeOffset, TABLE_Y, width, ROW_H1, {
+      align: 'center',
+      bold: true,
+      size: 11,
+      lineBreak: false,
+    });
+    typeOffset += width;
+  }
 
-    for (let i = 0; i < taskGroups.length; i += 1) {
-      const gx = xs.taskStart + i * taskGroupW;
-      if (i > 0) drawLine(doc, gx, TABLE_Y, gx, TABLE_Y + tableH);
-      drawLine(doc, gx + TASK_SUB_COL_W, yH1, gx + TASK_SUB_COL_W, TABLE_Y + tableH);
-      drawLine(doc, gx + TASK_SUB_COL_W * 2, yH1, gx + TASK_SUB_COL_W * 2, TABLE_Y + tableH);
+  for (let i = 0; i < matrix.taskGroups.length; i += 1) {
+    const task = matrix.taskGroups[i];
+    const gx = xs.taskStart + i * taskGroupW;
+    if (i > 0) drawLine(doc, gx, TABLE_Y, gx, TABLE_Y + tableH);
+    drawLine(doc, gx + TASK_SUB_COL_W, yH1, gx + TASK_SUB_COL_W, TABLE_Y + tableH);
+    drawLine(doc, gx + TASK_SUB_COL_W * 2, yH1, gx + TASK_SUB_COL_W * 2, TABLE_Y + tableH);
 
-      textVerticalCenter(doc, taskGroups[i]?.title ?? '', gx, yH1, taskGroupW, ROW_H2, { bold: true, size: 9 });
-      textVerticalCenter(doc, 'Attempt', gx, yH2, TASK_SUB_COL_W, ROW_H3, { bold: true, size: 8.8 });
-      textVerticalCenter(doc, 'E / G / S', gx + TASK_SUB_COL_W, yH2, TASK_SUB_COL_W, ROW_H3, { bold: true, size: 8.8 });
-      textVerticalCenter(doc, 'Mks', gx + TASK_SUB_COL_W * 2, yH2, TASK_SUB_COL_W, ROW_H3, { bold: true, size: 8.8 });
-    }
+    textVerticalCenter(doc, task?.taskTitle ?? '', gx, yH1, taskGroupW, ROW_H2, { bold: true, size: 8.5 });
+    textVerticalCenter(doc, 'Attempt', gx, yH2, TASK_SUB_COL_W, ROW_H3, { bold: true, size: 8 });
+    textVerticalCenter(doc, 'E/G/S', gx + TASK_SUB_COL_W, yH2, TASK_SUB_COL_W, ROW_H3, { bold: true, size: 8 });
+    textVerticalCenter(doc, 'Mks', gx + TASK_SUB_COL_W * 2, yH2, TASK_SUB_COL_W, ROW_H3, { bold: true, size: 8 });
   }
 
   for (let rowIndex = 0; rowIndex < dataRowCount; rowIndex += 1) {
-    const sourceRow = rows[rowIndex];
+    const sourceRow = matrix.rows[rowIndex];
     const y = yHeaderBottom + rowIndex * DATA_ROW_H;
-    const displayNo = rowStartIndex + rowIndex + 1;
 
-    textInBox(doc, String(displayNo), xs.snoStart, y, FIXED_COL_WIDTHS.sno, DATA_ROW_H, { size: 12, align: 'center' });
-    textInBox(doc, sourceRow?.tesNo ?? '', xs.tesStart, y, FIXED_COL_WIDTHS.tesNo, DATA_ROW_H, { size: 11 });
-    textInBox(doc, sourceRow?.rank ?? '', xs.rankStart, y, FIXED_COL_WIDTHS.rank, DATA_ROW_H, { size: 10 });
-    textInBox(doc, sourceRow?.name ?? '', xs.nameStart, y, FIXED_COL_WIDTHS.name, DATA_ROW_H, { size: 10, align: 'left' });
-
-    for (let i = 0; i < taskGroups.length; i += 1) {
-      const groupX = xs.taskStart + i * taskGroupW;
-      const values = buildTaskCellValues(sourceRow, taskGroups[i]!);
-      textInBox(doc, values.attempt, groupX, y, TASK_SUB_COL_W, DATA_ROW_H, { size: 10 });
-      textInBox(doc, values.grade, groupX + TASK_SUB_COL_W, y, TASK_SUB_COL_W, DATA_ROW_H, { size: 10 });
-      textInBox(doc, values.marks, groupX + TASK_SUB_COL_W * 2, y, TASK_SUB_COL_W, DATA_ROW_H, { size: 10 });
-    }
-
-    textInBox(doc, sourceRow ? String(sourceRow.totalMarksScored) : '', xs.totalStart, y, FIXED_COL_WIDTHS.total, DATA_ROW_H, {
-      size: 11,
+    textInBox(doc, sourceRow ? String(sourceRow.sNo) : '', xs.snoStart, y, FIXED_COL_WIDTHS.sno, DATA_ROW_H, {
+      align: 'center',
+      size: 9,
+      lineBreak: false,
     });
-  }
-}
+    textInBox(doc, sourceRow?.tesNo ?? '', xs.tesStart, y, FIXED_COL_WIDTHS.tesNo, DATA_ROW_H, {
+      align: 'center',
+      size: 9,
+      lineBreak: false,
+    });
+    textInBox(doc, sourceRow?.rank ?? '', xs.rankStart, y, FIXED_COL_WIDTHS.rank, DATA_ROW_H, {
+      align: 'center',
+      size: 9,
+      lineBreak: false,
+    });
+    textInBox(doc, sourceRow?.name ?? '', xs.nameStart, y, FIXED_COL_WIDTHS.name, DATA_ROW_H, {
+      align: 'left',
+      size: 9,
+      lineBreak: false,
+    });
 
-export function renderPtAssessmentTemplate(
-  doc: PDFKit.PDFDocument,
-  data: PtAssessmentPreview,
-  meta: ReportRenderMeta
-) {
-  const allTaskGroups = makeTaskGroups(data);
-  const contentWidth = doc.page.width - PAGE_MARGIN * 2;
-  const fixedWidth =
-    FIXED_COL_WIDTHS.sno +
-    FIXED_COL_WIDTHS.tesNo +
-    FIXED_COL_WIDTHS.rank +
-    FIXED_COL_WIDTHS.name +
-    FIXED_COL_WIDTHS.total;
-  const taskGroupWidth = TASK_SUB_COL_W * 3;
-  const maxTaskGroupsPerPage = Math.max(1, Math.floor((contentWidth - fixedWidth) / taskGroupWidth));
-  const taskChunks = chunk(allTaskGroups, maxTaskGroupsPerPage);
-  const rows = data.rows;
-
-  let firstPage = true;
-  for (const taskChunk of taskChunks) {
-    const totalPagesForRows = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
-
-    for (let pageIndex = 0; pageIndex < totalPagesForRows; pageIndex += 1) {
-      if (!firstPage) doc.addPage();
-      firstPage = false;
-
-      drawPageHeader(doc, data.semester);
-
-      const start = pageIndex * ROWS_PER_PAGE;
-      const slice = rows.slice(start, start + ROWS_PER_PAGE);
-      drawMatrixPage(doc, taskChunk, slice, start);
-      drawPageFooter(doc, meta.versionId);
+    for (let i = 0; i < matrix.taskGroups.length; i += 1) {
+      const groupX = xs.taskStart + i * taskGroupW;
+      const cell = sourceRow?.cells[matrix.taskGroups[i]!.key];
+      textInBox(doc, cell?.attemptCode ?? '', groupX, y, TASK_SUB_COL_W, DATA_ROW_H, {
+        align: 'center',
+        size: 8.5,
+        lineBreak: false,
+      });
+      textInBox(doc, cell?.gradeCode ?? '', groupX + TASK_SUB_COL_W, y, TASK_SUB_COL_W, DATA_ROW_H, {
+        align: 'center',
+        size: 8.5,
+        lineBreak: false,
+      });
+      textInBox(
+        doc,
+        cell?.marks !== null && cell?.marks !== undefined ? String(cell.marks) : '',
+        groupX + TASK_SUB_COL_W * 2,
+        y,
+        TASK_SUB_COL_W,
+        DATA_ROW_H,
+        {
+          align: 'center',
+          size: 8.5,
+          lineBreak: false,
+        },
+      );
     }
+
+    textInBox(
+      doc,
+      sourceRow?.totalMarksScored !== undefined ? String(sourceRow.totalMarksScored) : '',
+      xs.totalStart,
+      y,
+      FIXED_COL_WIDTHS.total,
+      DATA_ROW_H,
+      {
+        align: 'center',
+        size: 9,
+        lineBreak: false,
+      },
+    );
   }
+
+  drawPageFooter(doc, meta.versionId);
 }

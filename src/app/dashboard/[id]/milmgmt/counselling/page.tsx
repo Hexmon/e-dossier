@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo } from "react";
+import { useParams } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 
@@ -30,14 +30,15 @@ import CounsellingTable from "@/components/counselling/CounsellingTable";
 import CounsellingForm from "@/components/counselling/CounsellingForm";
 import { CounsellingFormData } from "@/types/counselling";
 import { saveCounsellingForm, clearCounsellingForm } from "@/store/slices/counsellingRecordsSlice";
+import { useMe } from "@/hooks/useMe";
+import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
+import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
+import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
 
 export default function CounsellingWarningPage() {
     // route param
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
     const dispatch = useDispatch();
 
     // Get saved form data from Redux
@@ -47,6 +48,7 @@ export default function CounsellingWarningPage() {
 
     // cadet data via hook (no redux)
     const { cadet } = useOcDetails(ocId);
+    const { data: meData } = useMe();
 
     const {
         name = "",
@@ -54,9 +56,14 @@ export default function CounsellingWarningPage() {
         ocNumber = "",
         ocId: cadetOcId = ocId,
         course = "",
+        currentSemester = 1,
     } = cadet ?? {};
 
-    const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course };
+    const selectedCadet = { name, courseName, ocNumber, ocId: cadetOcId, course, currentSemester };
+    const canEditLockedSemesters = canBypassDossierSemesterLock({
+        roles: meData?.roles,
+        position: meData?.apt?.position ?? null,
+    });
 
     // semesters fallback (use provided constant)
     const semesters =
@@ -74,29 +81,15 @@ export default function CounsellingWarningPage() {
         deleteRecord,
     } = useCounsellingRecords(ocId, semesters);
 
-    const semParam = searchParams.get("semester");
-    const resolvedTab = useMemo(() => {
-        const parsed = Number(semParam);
-        if (!Number.isFinite(parsed)) return 0;
-        const idx = parsed - 1;
-        if (idx < 0 || idx >= semesters.length) return 0;
-        return idx;
-    }, [semParam, semesters.length]);
-    const [activeTab, setActiveTab] = useState<number>(resolvedTab);
-
-    useEffect(() => {
-        setActiveTab(resolvedTab);
-    }, [resolvedTab]);
-
-    const updateSemesterParam = (index: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("semester", String(index + 1));
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
+    const { activeSemester, setActiveSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
+        currentSemester,
+        supportedSemesters: [1, 2, 3, 4, 5, 6],
+        canEditLockedSemesters,
+    });
+    const activeTab = activeSemester - 1;
 
     const handleSemesterChange = (index: number) => {
-        setActiveTab(index);
-        updateSemesterParam(index);
+        setActiveSemester(index + 1);
     };
 
     useEffect(() => {
@@ -192,6 +185,13 @@ export default function CounsellingWarningPage() {
                                 </CardHeader>
 
                                 <CardContent>
+                                    {isActiveSemesterLocked ? (
+                                        <SemesterLockNotice
+                                            activeSemester={activeSemester}
+                                            currentSemester={currentSemester ?? 1}
+                                            supportedSemesters={supportedSemesters}
+                                        />
+                                    ) : null}
                                     <div className="flex justify-center mb-6 space-x-2">
                                         {semesters.map((term, idx) => {
                                             return (
@@ -215,17 +215,20 @@ export default function CounsellingWarningPage() {
                                         loading={loading}
                                         onEditSave={handleEditSave}
                                         onDelete={handleDelete}
+                                        readOnly={isActiveSemesterLocked}
                                     />
 
-                                    <div className="mt-6">
-                                        <CounsellingForm
-                                            onSubmit={handleSubmit}
-                                            semLabel={semesters[activeTab] ?? semesters[0]}
-                                            ocId={ocId}
-                                            savedFormData={savedFormData}
-                                            onClearForm={handleClearForm}
-                                        />
-                                    </div>
+                                    {!isActiveSemesterLocked ? (
+                                        <div className="mt-6">
+                                            <CounsellingForm
+                                                onSubmit={handleSubmit}
+                                                semLabel={semesters[activeTab] ?? semesters[0]}
+                                                ocId={ocId}
+                                                savedFormData={savedFormData}
+                                                onClearForm={handleClearForm}
+                                            />
+                                        </div>
+                                    ) : null}
                                 </CardContent>
                             </Card>
                         </section>

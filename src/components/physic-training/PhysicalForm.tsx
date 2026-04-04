@@ -20,9 +20,13 @@ import HigherTests from "./HigherTests";
 import Swimming from "./Swimming";
 import { resolveTemplatesByType, ResolvedTemplateType, buildPTTableRows, PTTableRow } from "./ptTableHelpers";
 import { usePhysicalTraining, PhysicalTrainingScore } from "@/hooks/usePhysicalTraining";
+import { isFreeEntryPtAttemptCode, resolvePtDraftMarks } from "@/app/lib/physical-training-attempts";
 
 interface PhysicalFormProps {
   ocId: string;
+  readOnly?: boolean;
+  activeSemester?: number;
+  onSemesterChange?: (semester: number) => void;
 }
 
 const semesterToApiSemester: Record<string, number> = {
@@ -33,13 +37,27 @@ const semesterToApiSemester: Record<string, number> = {
   "V TERM": 5,
   "VI TERM": 6,
 };
+const apiSemesterToLabel: Record<number, string> = {
+  1: "I TERM",
+  2: "II TERM",
+  3: "III TERM",
+  4: "IV TERM",
+  5: "V TERM",
+  6: "VI TERM",
+};
 
 const isVirtualId = (id?: string) => !!id && id.startsWith("virtual:");
 
-export default function PhysicalForm({ ocId }: PhysicalFormProps) {
-  const [activeSemester, setActiveSemester] = useState("I TERM");
+export default function PhysicalForm({
+  ocId,
+  readOnly = false,
+  activeSemester: controlledSemester,
+  onSemesterChange,
+}: PhysicalFormProps) {
+  const [internalSemester, setInternalSemester] = useState("I TERM");
   const [isEditing, setIsEditing] = useState(false);
   const semesters = ["I TERM", "II TERM", "III TERM", "IV TERM", "V TERM", "VI TERM"];
+  const activeSemester = controlledSemester ? apiSemesterToLabel[controlledSemester] ?? "I TERM" : internalSemester;
 
   const {
     scores: apiScores,
@@ -172,7 +190,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
   const pptTableMaxMarks = useMemo(() => nonTotalRows.reduce((sum, r) => sum + (r.column3 || 0), 0), [nonTotalRows]);
   const hasAdvancedSections = useMemo(
     () => ["III TERM", "IV TERM", "V TERM", "VI TERM"].includes(activeSemester),
-    [activeSemester]
+    [activeSemester, scoreById]
   );
 
   const grandTotalMarks = useMemo(() => {
@@ -186,6 +204,28 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     }
   }, [hasAdvancedSections]);
 
+  useEffect(() => {
+    if (readOnly) {
+      setIsEditing(false);
+    }
+  }, [readOnly]);
+
+  useEffect(() => {
+    if (!controlledSemester) return;
+    setInternalSemester(apiSemesterToLabel[controlledSemester] ?? "I TERM");
+  }, [controlledSemester]);
+
+  const handleSemesterSelect = useCallback(
+    (semesterLabel: string) => {
+      const semesterNumber = semesterToApiSemester[semesterLabel];
+      setInternalSemester(semesterLabel);
+      if (onSemesterChange && semesterNumber) {
+        onSemesterChange(semesterNumber);
+      }
+    },
+    [onSemesterChange]
+  );
+
   const handleAttemptChange = useCallback(
     (rowId: string, attemptCode: string) => {
       setSemesterTableData((prev) => ({
@@ -198,7 +238,11 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           const nextScoreId = nextGrade?.scoreId ?? row.selectedScoreId;
 
           const statusMarks = nextGrade?.maxMarks ?? row.column3;
-          const marks = statusMarks;
+          const marks = resolvePtDraftMarks(
+            attemptCode,
+            statusMarks,
+            scoreById.get(nextScoreId)?.marksScored ?? null,
+          );
 
           return {
             ...row,
@@ -228,7 +272,11 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           const nextScoreId = grade?.scoreId ?? row.selectedScoreId;
 
           const statusMarks = grade?.maxMarks ?? row.column3;
-          const marks = statusMarks;
+          const marks = resolvePtDraftMarks(
+            row.selectedAttempt,
+            statusMarks,
+            scoreById.get(nextScoreId)?.marksScored ?? null,
+          );
 
           return {
             ...row,
@@ -241,7 +289,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
         }),
       }));
     },
-    [activeSemester]
+    [activeSemester, scoreById]
   );
 
   const handleMarksChange = useCallback(
@@ -256,14 +304,14 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
             return row;
           }
 
-          if (value.trim() === "") return { ...row, column6: 0 };
+          if (value.trim() === "") return { ...row, column6: null };
 
           const numValue = parseFloat(value);
           if (isNaN(numValue) || numValue < 0) {
             toast.error("Marks must be a valid positive number");
             return row;
           }
-          if (numValue > row.column3) {
+          if (!isFreeEntryPtAttemptCode(row.selectedAttempt) && numValue > row.column3) {
             toast.error(`Marks scored cannot exceed status marks (${row.column3})`);
             return row;
           }
@@ -276,6 +324,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
   );
 
   const handleSave = useCallback(async () => {
+    if (readOnly) return;
     const semesterNum = semesterToApiSemester[activeSemester];
     if (!semesterNum) return;
 
@@ -283,7 +332,12 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     const dataRows = rows.filter((r) => !r.id.startsWith("total-"));
 
     for (const row of dataRows) {
-      if (!isVirtualId(row.selectedScoreId) && row.column6 > row.column3) {
+      if (
+        !isVirtualId(row.selectedScoreId) &&
+        row.column6 !== null &&
+        !isFreeEntryPtAttemptCode(row.selectedAttempt) &&
+        row.column6 > row.column3
+      ) {
         toast.error(`Invalid marks for ${row.column2}. Marks must be between 0 and status marks (${row.column3})`);
         return;
       }
@@ -293,7 +347,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
       .filter((row) => row.selectedScoreId && !isVirtualId(row.selectedScoreId))
       .map((row) => ({
         ptTaskScoreId: row.selectedScoreId,
-        marksScored: row.column6 || 0,
+        marksScored: row.column6 ?? 0,
         attemptCode: row.selectedAttempt,
         gradeCode: row.selectedGrade,
       }));
@@ -306,7 +360,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
     await updateScores(semesterNum, scoresForApi);
     setIsEditing(false);
     toast.success("PPT data saved successfully");
-  }, [semesterTableData, activeSemester, updateScores]);
+  }, [activeSemester, readOnly, semesterTableData, updateScores]);
 
   const handleIpetMarks = useCallback((marks: number) => setChildComponentMarks((p) => (p.ipet === marks ? p : { ...p, ipet: marks })), []);
   const handleSwimmingMarks = useCallback((marks: number) => setChildComponentMarks((p) => (p.swimming === marks ? p : { ...p, swimming: marks })), []);
@@ -391,14 +445,14 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           return isEditing ? (
             <Input
               type="number"
-              value={value}
+              value={value ?? ""}
               onChange={(e) => handleMarksChange(row.id, e.target.value)}
               placeholder={disabled ? "No scoreId" : "Enter marks"}
               className="w-full"
               disabled={disabled}
             />
           ) : (
-            <span>{value || "-"}</span>
+            <span>{value ?? "-"}</span>
           );
         },
       },
@@ -422,11 +476,11 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
             {semesters.map((sem) => (
               <button
                 key={sem}
-                onClick={() => setActiveSemester(sem)}
-                disabled={isEditing}
+                onClick={() => handleSemesterSelect(sem)}
+                disabled={isEditing || readOnly}
                 className={`px-4 py-2 rounded-t-lg font-medium ${
                   activeSemester === sem ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                } ${isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${isEditing || readOnly ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {sem}
               </button>
@@ -444,13 +498,13 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
           <div className="flex gap-3 justify-center mt-6">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={readOnly}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave}>Save</Button>
+                <Button onClick={handleSave} disabled={readOnly}>Save</Button>
               </>
             ) : (
-              <Button onClick={() => setIsEditing(true)}>Edit</Button>
+              <Button onClick={() => setIsEditing(true)} disabled={readOnly}>Edit</Button>
             )}
           </div>
 
@@ -464,6 +518,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                 updateScores={updateScores}
                 templates={ipetType?.rows ?? []}
                 typeTitle={ipetType?.title}
+                readOnly={readOnly}
               />
               <Swimming
                 key={`swimming-${activeSemester}`}
@@ -473,6 +528,7 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                 updateScores={updateScores}
                 templates={swimmingType?.rows ?? []}
                 typeTitle={swimmingType?.title}
+                readOnly={readOnly}
               />
               <HigherTests
                 key={`higher-tests-${activeSemester}`}
@@ -482,15 +538,15 @@ export default function PhysicalForm({ ocId }: PhysicalFormProps) {
                 updateScores={updateScores}
                 templates={higherTestType?.rows ?? []}
                 typeTitle={higherTestType?.title}
+                readOnly={readOnly}
               />
             </>
           )}
 
-          <MotivationAwards activeSemester={activeSemester} ocId={ocId} fields={motivationFields} />
+          <MotivationAwards activeSemester={activeSemester} ocId={ocId} fields={motivationFields} readOnly={readOnly} />
           <GrandTotal grandTotalMarks={grandTotalMarks} />
         </CardContent>
       </Card>
     </div>
   );
 }
-

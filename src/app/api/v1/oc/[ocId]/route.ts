@@ -1,38 +1,47 @@
 import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth, hasAdminRole } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { eq } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { getCurrentSemesterForCourse } from '@/app/db/queries/oc';
+import { mustHaveOcAccess } from '../_checks';
 
 const OcParam = z.object({ ocId: z.string().uuid() });
+const jnuEnrollmentNoSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .regex(/^\d+$/, 'JNU Enrollment No must contain digits only')
+    .max(64);
 const updateSchema = z.object({
     name: z.string().min(2).optional(),
-    courseNo: z.string().min(2).optional(),
-    branch: z.enum(['E', 'M']).nullable().optional(),
+    ocNo: z.string().min(1).optional(),
+    jnuEnrollmentNo: z.union([jnuEnrollmentNoSchema, z.null()]).optional(),
+    courseId: z.string().uuid().optional(),
+    branch: z.enum(['E', 'M', 'O']).nullable().optional(),
     platoonId: z.string().uuid().nullable().optional(),
-    arrivedAt: z.coerce.date().optional(),
-    withdrawnAt: z.coerce.date().nullable().optional(),
+    arrivalAtUniversity: z.coerce.date().optional(),
+    withdrawnOn: z.coerce.date().nullable().optional(),
 });
 
 async function requireAdminForWrite(req: AuditNextRequest) {
-    const ctx = await requireAuth(req);
-    if (!hasAdminRole(ctx.roles)) throw new ApiError(403, 'Admin privileges required', 'forbidden');
-    return ctx;
+    return requireAdmin(req);
 }
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await requireAuth(req);
         const { ocId } = await OcParam.parseAsync(await params);
+        const authCtx = await mustHaveOcAccess(req, ocId);
         const [row] = await db
             .select({
                 id: ocCadets.id,
                 ocNo: ocCadets.ocNo,
+                jnuEnrollmentNo: ocCadets.jnuEnrollmentNo,
                 uid: ocCadets.uid,
                 name: ocCadets.name,
                 branch: ocCadets.branch,
@@ -84,13 +93,16 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             updatedAt: row.platoonUpdatedAt,
             deletedAt: row.platoonDeletedAt,
         } : null;
+        const currentSemester = course ? await getCurrentSemesterForCourse(course.id) : null;
 
         const oc = {
             id: row.id,
             ocNo: row.ocNo,
+            jnuEnrollmentNo: row.jnuEnrollmentNo,
             uid: row.uid,
             name: row.name,
             course,
+            currentSemester,
             branch: row.branch,
             platoon,
             arrivalAtUniversity: row.arrivalAtUniversity,

@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { InterviewIdParam, interviewOcUpdateSchema } from '@/app/lib/interview-oc-validators';
 import {
@@ -217,6 +217,7 @@ async function PATCHHandler(
                     ? null
                     : Number(interview.semester)
                 : Number(dto.semester);
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: effectiveSemester, authContext: authCtx });
         await validateTemplateAndPayload({
             templateId: interview.templateId,
             semester: effectiveSemester,
@@ -319,6 +320,11 @@ async function DELETEHandler(
 
         const interview = await getOcInterview(interviewId);
         if (!interview || interview.ocId !== ocId) throw new ApiError(404, 'Interview record not found', 'not_found');
+        await assertOcSemesterWriteAllowed({
+            ocId,
+            requestedSemester: interview.semester == null ? null : Number(interview.semester),
+            authContext: authCtx,
+        });
 
         await deleteOcInterview(interviewId);
 

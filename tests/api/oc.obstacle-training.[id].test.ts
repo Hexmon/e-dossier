@@ -16,6 +16,7 @@ vi.mock('@/app/api/v1/oc/_checks', () => ({
   mustBeAdmin: vi.fn(),
   parseParam: vi.fn(),
   ensureOcExists: vi.fn(),
+  assertOcSemesterWriteAllowed: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/oc', () => ({
@@ -53,6 +54,13 @@ const id = '22222222-2222-4222-8222-222222222222';
 beforeEach(() => {
   vi.clearAllMocks();
   (auditLog.createAuditLog as any).mockClear?.();
+  (ocChecks.assertOcSemesterWriteAllowed as any).mockResolvedValue(undefined);
+  (ocQueries.getObstacleTraining as any).mockResolvedValue({
+    id,
+    ocId,
+    semester: 4,
+    obstacle: 'High wall',
+  });
 });
 
 describe('GET /api/v1/oc/:ocId/obstacle-training/:id', () => {

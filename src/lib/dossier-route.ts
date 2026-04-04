@@ -27,7 +27,12 @@ export function buildDossierPathForOc(
   pathname: string,
   search?: string
 ): string {
-  const query = normalizeSearch(search);
+  const normalizedSearch = normalizeSearch(search);
+  const params = new URLSearchParams(normalizedSearch.startsWith("?") ? normalizedSearch.slice(1) : normalizedSearch);
+  params.delete("semester");
+  params.delete("sem");
+  params.delete("semister");
+  const query = params.toString() ? `?${params.toString()}` : "";
   const context = extractDossierContext(pathname);
 
   if (!context) {

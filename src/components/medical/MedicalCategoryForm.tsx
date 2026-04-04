@@ -13,9 +13,10 @@ interface Props {
     defaultValues: MedicalCategoryFormData;
     ocId: string;
     onClear: () => void;
+    readOnly?: boolean;
 }
 
-export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onClear }: Props) {
+export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onClear, readOnly = false }: Props) {
     const dispatch = useDispatch();
 
     const form = useForm<MedicalCategoryFormData>({
@@ -75,39 +76,39 @@ export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onC
                             return (
                                 <tr key={field.id}>
                                     <td className="border p-2">
-                                        <Input type="date" {...register(`records.${index}.date`)} className="w-24 h-7 px-1 text-xs" />
+                                        <Input type="date" {...register(`records.${index}.date`)} className="w-24 h-7 px-1 text-xs" disabled={readOnly} />
                                     </td>
 
                                     <td className="border p-2">
-                                        <Input type="text" {...register(`records.${index}.diagnosis`)} />
+                                        <Input type="text" {...register(`records.${index}.diagnosis`)} disabled={readOnly} />
                                     </td>
 
                                     <td className="border p-2">
-                                        <Input type="date" {...register(`records.${index}.catFrom`)} className="w-24 h-7 px-1 text-xs" />
+                                        <Input type="date" {...register(`records.${index}.catFrom`)} className="w-24 h-7 px-1 text-xs" disabled={readOnly} />
                                     </td>
 
                                     <td className="border p-2">
-                                        <Input type="date" {...register(`records.${index}.catTo`)} className="w-24 h-7 px-1 text-xs" />
+                                        <Input type="date" {...register(`records.${index}.catTo`)} className="w-24 h-7 px-1 text-xs" disabled={readOnly} />
                                     </td>
 
                                     <td className="border p-2">
-                                        <Input type="date" {...register(`records.${index}.mhFrom`)} className="w-24 h-7 px-1 text-xs" />
+                                        <Input type="date" {...register(`records.${index}.mhFrom`)} className="w-24 h-7 px-1 text-xs" disabled={readOnly} />
                                     </td>
 
                                     <td className="border p-2">
-                                        <Input type="date" {...register(`records.${index}.mhTo`)} className="w-24 h-7 px-1 text-xs" />
+                                        <Input type="date" {...register(`records.${index}.mhTo`)} className="w-24 h-7 px-1 text-xs" disabled={readOnly} />
                                     </td>
 
                                     <td className="border p-2">
-                                        <Input type="text" {...register(`records.${index}.absence`)} />
+                                        <Input type="text" {...register(`records.${index}.absence`)} disabled={readOnly} />
                                     </td>
 
                                     <td className="border p-2">
-                                        <Input type="text" {...register(`records.${index}.piCdrInitial`)} />
+                                        <Input type="text" {...register(`records.${index}.piCdrInitial`)} disabled={readOnly} />
                                     </td>
 
                                     <td className="border p-2 text-center">
-                                        <Button type="button" variant="destructive" onClick={() => remove(index)}>
+                                        <Button type="button" variant="destructive" onClick={() => remove(index)} disabled={readOnly}>
                                             Remove
                                         </Button>
                                     </td>
@@ -133,11 +134,12 @@ export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onC
                             piCdrInitial: "",
                         })
                     }
+                    disabled={readOnly}
                 >
                     + Add Row
                 </Button>
 
-                <Button type="submit" className="bg-primary">
+                <Button type="submit" className="bg-primary" disabled={readOnly}>
                     Submit MED CAT
                 </Button>
 
@@ -146,6 +148,7 @@ export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onC
                     variant="outline"
                     className="hover:bg-destructive hover:text-primary-foreground"
                     onClick={onClear}
+                    disabled={readOnly}
                 >
                     Clear Form
                 </Button>

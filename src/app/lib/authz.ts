@@ -6,6 +6,9 @@ import { verifyAccessJWT } from '@/app/lib/jwt';
 import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { eq } from 'drizzle-orm'; 
+import { isProtectedAdminApiPath } from '@/app/lib/access-control-policy';
+import { assertModuleApiAccessByPath } from '@/app/lib/module-access';
+import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
 
 export function hasAdminRole(roles?: string[]) {
   return Array.isArray(roles) && roles.some(r =>
@@ -37,12 +40,30 @@ export async function requireAuth(req: NextRequest) {
 
   try {
     const payload = await verifyAccessJWT(token);
-    return {
+    const authContext = {
       userId: String(payload.sub),
       roles: (payload.roles ?? []) as string[],
       claims: payload,
     };
+
+    const pathname = new URL(req.url).pathname;
+    if (isProtectedAdminApiPath(pathname, req.method) && !hasAdminRole(authContext.roles)) {
+      throw new ApiError(403, 'Admin privileges required', 'forbidden');
+    }
+
+    const position =
+      typeof (payload as any)?.apt?.position === 'string' ? String((payload as any).apt.position) : null;
+    await assertModuleApiAccessByPath(pathname, {
+      userId: authContext.userId,
+      roles: authContext.roles,
+      position,
+    });
+
+    return authContext;
   } catch (e) {
+    if (e instanceof ApiError) {
+      throw e;
+    }
     // signature/exp/nbf/iss/aud failure
     throw new ApiError(401, 'Unauthorized', 'invalid_token');
   }
@@ -65,4 +86,18 @@ export async function requireAdmin(req: NextRequest) {
 
   // Return enriched context for downstream handlers if needed
   return { userId, roles: effectiveRoles, claims };
+}
+
+export async function requireSuperAdmin(req: NextRequest) {
+  const adminCtx = await requireAdmin(req);
+  const roleGroup = deriveSidebarRoleGroup({
+    roles: adminCtx.roles,
+    position: adminCtx.claims?.apt?.position ?? null,
+  });
+
+  if (roleGroup !== 'SUPER_ADMIN') {
+    throw new ApiError(403, 'Super admin privileges required', 'forbidden');
+  }
+
+  return adminCtx;
 }

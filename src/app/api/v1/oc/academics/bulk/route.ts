@@ -2,6 +2,7 @@ import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { academicSubjectBulkRequestSchema, Semester } from '@/app/lib/oc-validators';
 import { mustBeAuthed } from '../../_checks';
 import { updateOcAcademicSubject, deleteOcAcademicSubject, getOcAcademicSemester, getOcAcademics } from '@/app/services/oc-academics';
+import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -123,6 +124,7 @@ async function GETHandler(req: AuditNextRequest) {
 async function POSTHandler(req: AuditNextRequest) {
     try {
         const authCtx = await mustBeAuthed(req);
+        await assertWorkflowDirectWriteAllowed('ACADEMICS_BULK');
         const body = academicSubjectBulkRequestSchema.parse(await req.json());
 
         const results: BulkResult[] = [];

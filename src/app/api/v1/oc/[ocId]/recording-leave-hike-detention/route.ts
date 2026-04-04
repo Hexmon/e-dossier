@@ -1,5 +1,5 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../_checks';
 import {
     OcIdParam,
     listQuerySchema,
@@ -50,6 +50,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
         const dto = recordingLeaveHikeDetentionCreateSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
         const row = await createRecordingLeaveHikeDetention(ocId, dto);
 
         await req.audit.log({

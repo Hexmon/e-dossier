@@ -2,9 +2,10 @@
 "use client";
 
 import { Cadet } from "@/types/cadet";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PerformanceGraphModal from "@/components/performance_graph/PerformanceGraphModal";
 import type { PerformanceGraphData } from "@/types/performanceGraph";
+import { fetchOCById } from "@/app/lib/api/ocApi";
 
 type CadetTableProps = {
   selectedCadet: Cadet | null;
@@ -16,6 +17,34 @@ export default function SelectedCadetTable({
   performanceData,
 }: CadetTableProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [resolvedSemester, setResolvedSemester] = useState<number | null>(selectedCadet?.currentSemester ?? null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedCadet) {
+      setResolvedSemester(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setResolvedSemester(selectedCadet.currentSemester ?? null);
+
+    if (selectedCadet.currentSemester != null || !selectedCadet.ocId) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void fetchOCById(selectedCadet.ocId).then((oc) => {
+      if (cancelled) return;
+      setResolvedSemester(oc?.currentSemester ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCadet]);
 
   if (!selectedCadet) return null;
 
@@ -35,6 +64,9 @@ export default function SelectedCadetTable({
                 OC Number
               </th>
               <th className="px-6 py-3 text-center font-semibold border border-border">
+                Semester
+              </th>
+              <th className="px-6 py-3 text-center font-semibold border border-border">
                 Performance Graph
               </th>
             </tr>
@@ -49,6 +81,9 @@ export default function SelectedCadetTable({
               </td>
               <td className="px-6 py-3 border border-border">
                 {selectedCadet.ocNumber}
+              </td>
+              <td className="px-6 py-3 border border-border">
+                {resolvedSemester ?? "-"}
               </td>
               <td className="px-6 py-3 border border-border">
                 <button

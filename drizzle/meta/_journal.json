@@ -211,6 +211,27 @@
       "when": 1772841600000,
       "tag": "0029_interview_pending_ticker_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1774396800000,
+      "tag": "0030_preserve_jnu_enrollment_no",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1775197800000,
+      "tag": "0031_marks_review_workflow",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1775284200000,
+      "tag": "0032_module_access_settings",
+      "breakpoints": true
     }
   ]
 }

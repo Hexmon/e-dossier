@@ -1,5 +1,5 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import {
     olqUpsertSchema,
@@ -118,6 +118,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 
         const raw = await req.json();
         const dto = olqUpsertSchema.parse({ ...raw, ocId });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         await upsertOlqWithScores({
             ocId,
@@ -160,6 +161,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
         const raw = await req.json();
         const dto = olqUpdateSchema.parse(raw);
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         await updateOlqWithScores({
             ocId,
@@ -203,6 +205,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         await ensureOcExists(ocId);
 
         const dto = olqDeleteSchema.parse(await req.json());
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
 
         const sheet = await getOlqSheet({
             ocId,

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { mustHaveOcAccess } from '../../_checks';
 import { dossierInspections } from '@/app/db/schema/training/dossierInspections';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
@@ -19,8 +19,8 @@ const inspectionSchema = z.object({
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const authCtx = await requireAuth(req);
     const { ocId } = await params;
+    const authCtx = await mustHaveOcAccess(req, ocId);
 
     // Verify OC exists
     const [oc] = await db
@@ -79,8 +79,8 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const authCtx = await requireAuth(req);
     const { ocId } = await params;
+    const authCtx = await mustHaveOcAccess(req, ocId);
     const body = inspectionSchema.parse(await req.json());
 
     // Verify OC exists
@@ -165,8 +165,8 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const authCtx = await requireAuth(req);
     const { ocId } = await params;
+    const authCtx = await mustHaveOcAccess(req, ocId);
     const url = new URL(req.url);
     const inspectionId = url.searchParams.get('id');
 
@@ -253,8 +253,8 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const authCtx = await requireAuth(req);
     const { ocId } = await params;
+    const authCtx = await mustHaveOcAccess(req, ocId);
     const url = new URL(req.url);
     const inspectionId = url.searchParams.get('id');
 

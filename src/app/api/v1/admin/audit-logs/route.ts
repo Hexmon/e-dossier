@@ -2,7 +2,7 @@ import { json, handleApiError } from '@/app/lib/http';
 
 export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
-import { requireAuth } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { auditLogs } from '@/app/db/schema/auth/audit';
 import { auditEvents } from '@/app/db/schema/auth/audit-events';
@@ -39,7 +39,7 @@ type AuditLogListItem = {
 
 async function GETHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await requireAdmin(req);
     const { searchParams } = new URL(req.url);
     const parsed = auditLogQuerySchema.parse({
       actorUserId: searchParams.get('actorUserId') ?? undefined,

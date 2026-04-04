@@ -13,7 +13,13 @@ import {
 } from '@/app/db/queries/oc';
 import { TheoryMarksRecord, PracticalMarksRecord } from '@/app/db/schema/training/oc';
 import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
-import { marksToGradePointsWithPolicy, roundPolicyValue, type AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import { listSubjectsByIdsOrCodes } from '@/app/db/queries/subjects';
+import type { AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import {
+    computeAcademicCgpa,
+    summarizeAcademicSubjects,
+    type AcademicCumulativeSemester,
+} from '@/app/lib/academic-marks-core';
 import { createAuditLog, AuditEventType, AuditResourceType } from '@/lib/audit-log';
 
 type BranchTag = 'C' | 'E' | 'M';
@@ -63,44 +69,81 @@ function determineBranchForSemester(semester: number, branch?: string | null): B
     return 'C';
 }
 
+function toIsoDate(value?: Date | null) {
+    return value ? value.toISOString() : null;
+}
+
+function normalizeSubjectCode(value: string | null | undefined) {
+    return (value ?? '').trim().toUpperCase();
+}
+
+export function hydrateAcademicViewsWithSubjectCatalog(
+    views: AcademicSemesterView[],
+    catalog: Array<Awaited<ReturnType<typeof listSubjectsByIdsOrCodes>>[number]>,
+) {
+    if (!catalog.length) return views;
+
+    const byId = new Map(catalog.map((subject) => [subject.id, subject] as const));
+    const byCode = new Map(catalog.map((subject) => [normalizeSubjectCode(subject.code), subject] as const));
+
+    return views.map((view) => ({
+        ...view,
+        subjects: view.subjects.map((subject) => {
+            const catalogSubject =
+                (subject.subject.id ? byId.get(subject.subject.id) : undefined) ??
+                byCode.get(normalizeSubjectCode(subject.subject.code));
+
+            if (!catalogSubject) return subject;
+
+            const hasTheory = Boolean(catalogSubject.hasTheory);
+            const hasPractical = Boolean(catalogSubject.hasPractical);
+            const includeTheory = hasTheory ? Boolean(subject.includeTheory || subject.theory) : false;
+            const includePractical = hasPractical ? Boolean(subject.includePractical || subject.practical) : false;
+
+            return {
+                ...subject,
+                includeTheory,
+                includePractical,
+                theoryCredits: includeTheory
+                    ? subject.theoryCredits ??
+                      catalogSubject.defaultTheoryCredits ??
+                      subject.subject.defaultTheoryCredits ??
+                      null
+                    : null,
+                practicalCredits: includePractical
+                    ? subject.practicalCredits ??
+                      catalogSubject.defaultPracticalCredits ??
+                      subject.subject.defaultPracticalCredits ??
+                      null
+                    : null,
+                theory: includeTheory ? subject.theory : undefined,
+                practical: includePractical ? subject.practical : undefined,
+                subject: {
+                    ...subject.subject,
+                    id: subject.subject.id ?? catalogSubject.id,
+                    name: subject.subject.name || catalogSubject.name,
+                    branch: (subject.subject.branch || catalogSubject.branch) as BranchTag,
+                    hasTheory,
+                    hasPractical,
+                    defaultTheoryCredits:
+                        subject.subject.defaultTheoryCredits ?? catalogSubject.defaultTheoryCredits ?? null,
+                    defaultPracticalCredits:
+                        subject.subject.defaultPracticalCredits ?? catalogSubject.defaultPracticalCredits ?? null,
+                    description: subject.subject.description ?? catalogSubject.description ?? null,
+                    createdAt: subject.subject.createdAt ?? toIsoDate(catalogSubject.createdAt),
+                    updatedAt: subject.subject.updatedAt ?? toIsoDate(catalogSubject.updatedAt),
+                    deletedAt: subject.subject.deletedAt ?? toIsoDate(catalogSubject.deletedAt),
+                },
+            };
+        }),
+    }));
+}
+
 export function computeSemesterGpa(view: AcademicSemesterView, policy: AcademicGradingPolicy) {
-    let totalCredits = 0;
-    let totalWeighted = 0;
-    let totalPoints = 0;
-    let pointComponents = 0;
-
-    for (const subject of view.subjects ?? []) {
-        if (subject.includeTheory) {
-            const credits = Number(subject.theoryCredits ?? subject.subject?.defaultTheoryCredits ?? 0);
-            if (credits > 0) {
-                const points = marksToGradePointsWithPolicy(subject.theory?.totalMarks ?? 0, policy);
-                totalCredits += credits;
-                totalWeighted += credits * points;
-                totalPoints += points;
-                pointComponents += 1;
-            }
-        }
-        if (subject.includePractical) {
-            const credits = Number(subject.practicalCredits ?? subject.subject?.defaultPracticalCredits ?? 0);
-            if (credits > 0) {
-                const points = marksToGradePointsWithPolicy(subject.practical?.totalMarks ?? 0, policy);
-                totalCredits += credits;
-                totalWeighted += credits * points;
-                totalPoints += points;
-                pointComponents += 1;
-            }
-        }
-    }
-
-    let sgpa: number | null = null;
-    if (policy.sgpaFormulaTemplate === 'SEMESTER_AVG') {
-        sgpa = pointComponents > 0 ? totalPoints / pointComponents : null;
-    } else {
-        sgpa = totalCredits > 0 ? totalWeighted / totalCredits : null;
-    }
+    const { sgpa, totalCredits, totalWeighted } = summarizeAcademicSubjects(view.subjects ?? [], policy);
 
     return {
-        sgpa: roundPolicyValue(sgpa, policy.roundingScale),
+        sgpa,
         totalCredits,
         totalWeighted,
     };
@@ -114,34 +157,20 @@ function computeDerivedGpaBySemester(
     const ordered = [...views].sort((a, b) => a.semester - b.semester);
     const derived = new Map<number, { sgpa: number | null; cgpa: number | null }>();
 
-    let cumulativeCredits = 0;
-    let cumulativeWeighted = 0;
-    let cumulativeSgpa = 0;
-    let cumulativeSgpaCount = 0;
+    const semesterComponents: AcademicCumulativeSemester[] = [];
 
     for (const view of ordered) {
         if (semestersWithRows && !semestersWithRows.has(view.semester)) {
             continue;
         }
 
-        const { sgpa, totalCredits, totalWeighted } = computeSemesterGpa(view, policy);
-        cumulativeCredits += totalCredits;
-        cumulativeWeighted += totalWeighted;
-        if (sgpa !== null) {
-            cumulativeSgpa += sgpa;
-            cumulativeSgpaCount += 1;
-        }
-
-        let cgpa: number | null = null;
-        if (policy.cgpaFormulaTemplate === 'SEMESTER_AVG') {
-            cgpa = cumulativeSgpaCount > 0 ? cumulativeSgpa / cumulativeSgpaCount : null;
-        } else {
-            cgpa = cumulativeCredits > 0 ? cumulativeWeighted / cumulativeCredits : null;
-        }
+        const { components, sgpa } = summarizeAcademicSubjects(view.subjects ?? [], policy);
+        semesterComponents.push({ sgpa, components });
+        const cgpa = computeAcademicCgpa(semesterComponents, semesterComponents.length - 1, policy);
 
         derived.set(view.semester, {
             sgpa,
-            cgpa: roundPolicyValue(cgpa, policy.roundingScale),
+            cgpa,
         });
     }
 
@@ -200,6 +229,15 @@ export async function getOcAcademics(ocId: string, opts?: { semester?: number })
         if (row) rowMap.set(row.semester, row);
     }
 
+    const legacySubjectIds = new Set<string>();
+    const legacySubjectCodes = new Set<string>();
+    for (const row of rows) {
+        for (const subject of row.subjects ?? []) {
+            if (subject.meta?.subjectId) legacySubjectIds.add(subject.meta.subjectId);
+            if (subject.subjectCode) legacySubjectCodes.add(subject.subjectCode);
+        }
+    }
+
     const groupedOfferings = groupOfferingsBySemester(offerings);
     const semesterSet = new Set<number>();
     for (const key of groupedOfferings.keys()) semesterSet.add(key);
@@ -222,8 +260,14 @@ export async function getOcAcademics(ocId: string, opts?: { semester?: number })
         });
     });
 
+    const subjectCatalog = await listSubjectsByIdsOrCodes({
+        ids: Array.from(legacySubjectIds),
+        codes: Array.from(legacySubjectCodes),
+    });
+    const hydratedViews = hydrateAcademicViewsWithSubjectCatalog(views, subjectCatalog);
+
     const semestersWithRows = new Set(rows.map((r) => r.semester));
-    const computedViews = applyComputedGpaToViews(views, semestersWithRows, policy);
+    const computedViews = applyComputedGpaToViews(hydratedViews, semestersWithRows, policy);
 
     if (opts?.semester) {
         return computedViews.filter((view) => view.semester === opts.semester);

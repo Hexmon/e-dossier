@@ -24,6 +24,7 @@ import {
   PhysicalTrainingTemplateRow,
 } from "@/hooks/usePhysicalTraining";
 import { buildPTTableRows, PTTableRow } from "./ptTableHelpers";
+import { isFreeEntryPtAttemptCode, resolvePtDraftMarks } from "@/app/lib/physical-training-attempts";
 
 interface IpetFormProps {
   onMarksChange: (marks: number) => void;
@@ -32,6 +33,7 @@ interface IpetFormProps {
   updateScores: UpdatePhysicalTrainingScores;
   templates: PhysicalTrainingTemplateRow[];
   typeTitle?: string;
+  readOnly?: boolean;
 }
 
 // Semester to API semester mapping (1-based index)
@@ -53,6 +55,7 @@ export default function IpetForm({
   updateScores,
   templates,
   typeTitle,
+  readOnly = false,
 }: IpetFormProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [tableData, setTableData] = useState<PTTableRow[]>([]);
@@ -91,6 +94,12 @@ export default function IpetForm({
     return () => onMarksChange(0);
   }, [onMarksChange]);
 
+  useEffect(() => {
+    if (readOnly) {
+      setIsEditing(false);
+    }
+  }, [readOnly]);
+
   const handleAttemptChange = useCallback(
     (rowId: string, attemptCode: string) => {
       setTableData((prev) =>
@@ -104,7 +113,11 @@ export default function IpetForm({
           const nextScoreId = nextGrade?.scoreId ?? row.selectedScoreId;
 
           const statusMarks = nextGrade?.maxMarks ?? row.column3;
-          const marks = statusMarks;
+          const marks = resolvePtDraftMarks(
+            attemptCode,
+            statusMarks,
+            scoreById.get(nextScoreId)?.marksScored ?? null
+          );
 
           return {
             ...row,
@@ -119,7 +132,7 @@ export default function IpetForm({
         })
       );
     },
-    []
+    [scoreById]
   );
 
   const handleGradeChange = useCallback(
@@ -135,7 +148,11 @@ export default function IpetForm({
           const nextScoreId = grade?.scoreId ?? row.selectedScoreId;
 
           const statusMarks = grade?.maxMarks ?? row.column3;
-          const marks = statusMarks;
+          const marks = resolvePtDraftMarks(
+            row.selectedAttempt,
+            statusMarks,
+            scoreById.get(nextScoreId)?.marksScored ?? null
+          );
 
           return {
             ...row,
@@ -148,7 +165,7 @@ export default function IpetForm({
         })
       );
     },
-    []
+    [scoreById]
   );
 
   const handleMarksChange = useCallback((rowId: string, value: string) => {
@@ -165,7 +182,7 @@ export default function IpetForm({
         }
 
         if (value.trim() === "") {
-          return { ...row, column6: 0 };
+          return { ...row, column6: null };
         }
 
         const numValue = parseFloat(value);
@@ -174,7 +191,7 @@ export default function IpetForm({
           return row;
         }
 
-        if (numValue > row.column3) {
+        if (!isFreeEntryPtAttemptCode(row.selectedAttempt) && numValue > row.column3) {
           toast.error(`Marks scored cannot exceed status marks (${row.column3})`);
           return row;
         }
@@ -189,7 +206,12 @@ export default function IpetForm({
     if (!semesterNum) return;
 
     for (const row of tableData) {
-      if (!isVirtualId(row.selectedScoreId) && row.column6 > 0 && row.column6 > row.column3) {
+      if (
+        !isVirtualId(row.selectedScoreId) &&
+        row.column6 !== null &&
+        !isFreeEntryPtAttemptCode(row.selectedAttempt) &&
+        row.column6 > row.column3
+      ) {
         toast.error(
           `Invalid marks for ${row.column2}. Marks must be between 0 and status marks (${row.column3})`
         );
@@ -201,7 +223,7 @@ export default function IpetForm({
       .filter((row) => row.selectedScoreId && !isVirtualId(row.selectedScoreId))
       .map((row) => ({
         ptTaskScoreId: row.selectedScoreId,
-        marksScored: row.column6 || 0,
+        marksScored: row.column6 ?? 0,
         attemptCode: row.selectedAttempt,
         gradeCode: row.selectedGrade,
       }));
@@ -259,7 +281,7 @@ export default function IpetForm({
             <Select
               value={row.selectedAttempt || ""}
               onValueChange={(val) => handleAttemptChange(row.id, val)}
-              disabled={!isEditing || attemptOptions.length === 0}
+              disabled={readOnly || !isEditing || attemptOptions.length === 0}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select attempt" />
@@ -290,7 +312,7 @@ export default function IpetForm({
             <Select
               value={row.selectedGrade || ""}
               onValueChange={(val) => handleGradeChange(row.id, val)}
-              disabled={!isEditing || gradeOptions.length === 0}
+              disabled={readOnly || !isEditing || gradeOptions.length === 0}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select grade" />
@@ -322,19 +344,19 @@ export default function IpetForm({
           return isEditing ? (
             <Input
               type="number"
-              value={value}
+              value={value ?? ""}
               onChange={(e) => handleMarksChange(row.id, e.target.value)}
               placeholder={disabled ? "No scoreId" : "Enter marks"}
               className="w-full"
-              disabled={disabled}
+              disabled={readOnly || disabled}
             />
           ) : (
-            <span>{value || "-"}</span>
+            <span>{value ?? "-"}</span>
           );
         },
       },
     ],
-    [handleAttemptChange, handleGradeChange, handleMarksChange, isEditing, tableTotal]
+    [handleAttemptChange, handleGradeChange, handleMarksChange, isEditing, readOnly, tableTotal]
   );
 
   const config: TableConfig<PTTableRow> = {
@@ -369,13 +391,13 @@ export default function IpetForm({
         <div className="flex gap-3 justify-center mt-4">
           {isEditing ? (
             <>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button variant="outline" onClick={() => setIsEditing(false)} disabled={readOnly}>
                 Cancel
               </Button>
-              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={handleSave} disabled={readOnly}>Save</Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)}>Edit</Button>
+            <Button onClick={() => setIsEditing(true)} disabled={readOnly}>Edit</Button>
           )}
         </div>
 
@@ -386,4 +408,3 @@ export default function IpetForm({
     </div>
   );
 }
-

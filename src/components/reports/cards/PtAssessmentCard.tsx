@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,9 +15,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { academicsApi } from '@/app/lib/api/academicsMarksApi';
-import { getPTTemplate } from '@/app/lib/api/Physicaltrainingapi';
+import { listPTTypes } from '@/app/lib/api/Physicaltrainingapi';
 import { DownloadDialog } from '@/components/reports/common/DownloadDialog';
 import { useCourseSemesters, usePtAssessmentPreview, useReportsDownloads } from '@/hooks/useReports';
+
+const EMPTY_TASK_ID = '__no_task__';
+const EMPTY_TASK_TITLE = 'No Tasks';
 
 export function PtAssessmentCard() {
   const [courseId, setCourseId] = useState('');
@@ -35,27 +38,86 @@ export function PtAssessmentCard() {
     queryFn: () => academicsApi.getCourses().then((res) => res.items ?? []),
   });
 
-  const ptTemplateQuery = useQuery({
-    queryKey: ['reports', 'pt-template', semester],
-    queryFn: () => getPTTemplate(semester as number),
+  const ptTypesQuery = useQuery({
+    queryKey: ['reports', 'pt-types', semester],
+    queryFn: () => listPTTypes(semester as number).then((res) => res.items ?? []),
     enabled: Boolean(semester),
   });
 
-  const ptTypeOptions = useMemo(() => ptTemplateQuery.data?.types ?? [], [ptTemplateQuery.data]);
-  const previewColumns = useMemo(() => {
+  const ptTypeOptions = useMemo(
+    () => [{ id: 'ALL', code: 'ALL', title: 'All PT Types' }, ...(ptTypesQuery.data ?? [])],
+    [ptTypesQuery.data]
+  );
+  const combinedPreview = useMemo(() => {
     const data = previewQuery.data?.data;
-    if (!data) return [];
+    if (!data) return null;
 
-    return data.tasks.flatMap((task) =>
-      task.attempts.flatMap((attempt) =>
-        attempt.grades.map((grade) => ({
-          key: `${task.taskId}:${attempt.attemptId}:${grade.gradeCode}`,
-          task: task.title,
-          attempt: attempt.attemptCode,
-          grade: grade.gradeCode,
-        }))
-      )
+    const taskGroups = data.sections.flatMap((section) =>
+      (section.tasks.length ? section.tasks : [{ taskId: EMPTY_TASK_ID, title: EMPTY_TASK_TITLE }]).map((task) => ({
+        key: `${section.ptType.id}:${task.taskId}`,
+        ptTypeId: section.ptType.id,
+        ptTypeCode: section.ptType.code,
+        taskId: task.taskId,
+        taskTitle: task.title,
+      }))
     );
+
+    const typeGroups = taskGroups.reduce<Array<{ key: string; label: string; colSpan: number }>>((groups, task) => {
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup?.key === task.ptTypeId) {
+        lastGroup.colSpan += 3;
+        return groups;
+      }
+      groups.push({
+        key: task.ptTypeId,
+        label: task.ptTypeCode,
+        colSpan: 3,
+      });
+      return groups;
+    }, []);
+
+    const rowMap = new Map<
+      string,
+      {
+        ocId: string;
+        sNo: number;
+        tesNo: string;
+        rank: string;
+        name: string;
+        totalMarksScored: number;
+        cells: Record<string, { attemptCode: string | null; gradeCode: string | null; marks: number | null }>;
+      }
+    >();
+
+    for (const section of data.sections) {
+      for (const row of section.rows) {
+        const existing = rowMap.get(row.ocId) ?? {
+          ocId: row.ocId,
+          sNo: row.sNo,
+          tesNo: row.tesNo,
+          rank: row.rank,
+          name: row.name,
+          totalMarksScored: 0,
+          cells: {},
+        };
+
+        existing.totalMarksScored += row.totalMarksScored;
+        for (const task of section.tasks) {
+          existing.cells[`${section.ptType.id}:${task.taskId}`] = row.cells[task.taskId] ?? {
+            attemptCode: null,
+            gradeCode: null,
+            marks: null,
+          };
+        }
+        rowMap.set(row.ocId, existing);
+      }
+    }
+
+    return {
+      taskGroups,
+      typeGroups,
+      rows: Array.from(rowMap.values()).sort((left, right) => left.sNo - right.sNo),
+    };
   }, [previewQuery.data]);
 
   const onDownload = async (meta: { password: string; preparedBy: string; checkedBy: string }) => {
@@ -83,7 +145,7 @@ export function PtAssessmentCard() {
       <CardHeader>
         <CardTitle>Physical Assessment Training (All Semesters)</CardTitle>
         <CardDescription>
-          View PT matrix and generate encrypted PDF for one PT type in selected semester.
+          View PT matrix and generate encrypted PDF for one PT type or all PT types in the selected semester.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -173,7 +235,7 @@ export function PtAssessmentCard() {
             <DialogHeader>
               <DialogTitle>Physical Assessment Preview</DialogTitle>
               <DialogDescription>
-                PT matrix preview for selected course, semester and PT type.
+                PT matrix preview for the selected course, semester and PT type selection.
               </DialogDescription>
             </DialogHeader>
 
@@ -191,42 +253,62 @@ export function PtAssessmentCard() {
               <div className="max-h-[72vh] space-y-3 overflow-auto">
                 <div className="rounded border bg-muted/20 p-3 text-sm">
                   Course {previewQuery.data.data.course.code} | Semester {previewQuery.data.data.semester} | PT Type{' '}
-                  {previewQuery.data.data.ptType.code} - {previewQuery.data.data.ptType.title}
+                  {previewQuery.data.data.selection.label}
                 </div>
-                <div className="overflow-auto rounded border">
-                  <table className="min-w-full text-xs">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="p-2 text-left">S.No</th>
-                        <th className="p-2 text-left">TES No</th>
-                        <th className="p-2 text-left">Rank</th>
-                        <th className="p-2 text-left">Name</th>
-                        {previewColumns.map((column) => (
-                          <th key={column.key} className="p-2 text-left">
-                            {column.task} | {column.attempt}-{column.grade}
-                          </th>
-                        ))}
-                        <th className="p-2 text-left">Marks Scored</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewQuery.data.data.rows.map((row) => (
-                        <tr key={row.ocId} className="border-t">
-                          <td className="p-2">{row.sNo}</td>
-                          <td className="p-2">{row.tesNo}</td>
-                          <td className="p-2">{row.rank}</td>
-                          <td className="p-2">{row.name}</td>
-                          {previewColumns.map((column) => (
-                            <td key={`${row.ocId}-${column.key}`} className="p-2">
-                              {row.cells[column.key] ?? ''}
-                            </td>
+                {combinedPreview ? (
+                  <div className="overflow-auto rounded border">
+                    <table className="min-w-full text-xs">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="border p-2 text-left align-middle" rowSpan={3}>S.No</th>
+                          <th className="border p-2 text-left align-middle" rowSpan={3}>TES No</th>
+                          <th className="border p-2 text-left align-middle" rowSpan={3}>Rank</th>
+                          <th className="border p-2 text-left align-middle" rowSpan={3}>Name</th>
+                          {combinedPreview.typeGroups.map((group) => (
+                            <th key={group.key} className="border p-2 text-center" colSpan={group.colSpan}>
+                              {group.label}
+                            </th>
                           ))}
-                          <td className="p-2">{row.totalMarksScored}</td>
+                          <th className="border p-2 text-left align-middle" rowSpan={3}>Marks Scored</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                        <tr>
+                          {combinedPreview.taskGroups.map((task) => (
+                            <th key={task.key} className="border p-2 text-center" colSpan={3}>
+                              {task.taskTitle}
+                            </th>
+                          ))}
+                        </tr>
+                        <tr>
+                          {combinedPreview.taskGroups.map((task) => (
+                            <Fragment key={task.key}>
+                              <th className="border p-2 text-left">Attempt</th>
+                              <th className="border p-2 text-left">E/G/S</th>
+                              <th className="border p-2 text-left">Mks</th>
+                            </Fragment>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {combinedPreview.rows.map((row) => (
+                          <tr key={row.ocId} className="border-t">
+                            <td className="border p-2">{row.sNo}</td>
+                            <td className="border p-2">{row.tesNo}</td>
+                            <td className="border p-2">{row.rank}</td>
+                            <td className="border p-2">{row.name}</td>
+                            {combinedPreview.taskGroups.map((task) => (
+                              <Fragment key={`${row.ocId}-${task.key}`}>
+                                <td className="border p-2">{row.cells[task.key]?.attemptCode ?? ''}</td>
+                                <td className="border p-2">{row.cells[task.key]?.gradeCode ?? ''}</td>
+                                <td className="border p-2">{row.cells[task.key]?.marks ?? ''}</td>
+                              </Fragment>
+                            ))}
+                            <td className="border p-2">{row.totalMarksScored}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </DialogContent>

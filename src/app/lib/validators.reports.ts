@@ -64,10 +64,14 @@ export const semesterGradeDownloadBodySchema = z
   })
   .merge(reportDownloadMetaSchema);
 
+const ptAssessmentTypeIdSchema = z.string().trim().transform((value) => {
+  return value.toUpperCase() === 'ALL' ? 'ALL' : value;
+}).pipe(z.union([z.string().uuid(), z.literal('ALL')]));
+
 export const ptAssessmentPreviewQuerySchema = z.object({
   courseId: z.string().uuid(),
   semester: reportSemesterSchema,
-  ptTypeId: z.string().uuid(),
+  ptTypeId: ptAssessmentTypeIdSchema,
 });
 
 export const ptAssessmentDownloadBodySchema = ptAssessmentPreviewQuerySchema.merge(

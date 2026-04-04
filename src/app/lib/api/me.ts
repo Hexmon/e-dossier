@@ -14,6 +14,21 @@ export interface MeResponse {
         currentAppointmentId: string | null;
     };
     roles: string[];
+    workflowAssignments?: Array<{
+        module: "ACADEMICS_BULK" | "PT_BULK";
+        actorTypes: Array<"DATA_ENTRY" | "VERIFICATION">;
+    }>;
+    workflowModules?: {
+        ACADEMICS_BULK: { isActive: boolean };
+        PT_BULK: { isActive: boolean };
+    };
+    moduleAccess?: {
+        canAccessDossier: boolean;
+        canAccessBulkUpload: boolean;
+        canAccessReports: boolean;
+        canAccessAcademicsBulk: boolean;
+        canAccessPtBulk: boolean;
+    };
     permissions?: string[];
     deniedPermissions?: string[];
     policyVersion?: number | null;

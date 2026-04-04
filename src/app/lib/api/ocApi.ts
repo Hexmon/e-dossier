@@ -31,6 +31,7 @@ export interface OCRecord {
   photo: File;
   name: string;
   ocNo: string;
+  jnuEnrollmentNo?: string | null;
   uid?: string;
   branch?: "E" | "M" | "O" | null; // FIXED: Changed "C" to "O"
   platoonId?: string | null;
@@ -40,6 +41,7 @@ export interface OCRecord {
   course?: CourseRef;
   platoon?: PlatoonRef;
   courseId?: string;
+  currentSemester?: number | null;
 }
 
 /** Optional denormalized fields the list API now returns */
@@ -47,6 +49,7 @@ export interface OCDenorm {
   course?: Course;
   courseCode?: string;
   courseTitle?: string;
+  currentSemester?: number | null;
   platoonKey?: string | null;
   platoonName?: string | null;
 

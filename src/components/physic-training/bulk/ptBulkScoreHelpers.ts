@@ -4,6 +4,7 @@ import type {
   PTTemplateType,
 } from "@/app/lib/api/Physicaltrainingapi";
 import type { PTBulkGetItem } from "@/app/lib/api/physicalTrainingBulkApi";
+import { resolvePtDraftMarks } from "@/app/lib/physical-training-attempts";
 
 export type PTBulkTaskGradeOption = {
   gradeCode: string;
@@ -33,6 +34,25 @@ export type PTBulkTaskSelection = {
 };
 
 export type PTBulkTaskSelectionMap = Record<string, Record<string, PTBulkTaskSelection>>;
+
+function resolvePTBulkSelectionMarks(
+  attemptCode: string,
+  maxMarks: number,
+  savedMarks?: string | number | null,
+) {
+  const normalizedSavedMarks =
+    typeof savedMarks === 'string'
+      ? savedMarks.trim() === ''
+        ? undefined
+        : Number(savedMarks)
+      : savedMarks ?? undefined;
+  const resolved = resolvePtDraftMarks(
+    attemptCode,
+    maxMarks,
+    normalizedSavedMarks !== undefined && Number.isFinite(normalizedSavedMarks) ? normalizedSavedMarks : undefined,
+  );
+  return resolved === null ? '' : String(resolved);
+}
 
 function buildAttemptOptions(task: PTTemplateTask): PTBulkTaskAttemptOption[] {
   return (task.attempts ?? [])
@@ -81,7 +101,7 @@ export function getDefaultPTBulkTaskSelection(task: PTBulkTaskDefinition): PTBul
     selectedAttemptCode: firstAttempt.attemptCode,
     selectedGradeCode: firstGrade.gradeCode,
     selectedScoreId: firstGrade.scoreId,
-    marks: String(firstGrade.maxMarks),
+    marks: resolvePTBulkSelectionMarks(firstAttempt.attemptCode, firstGrade.maxMarks),
     maxMarks: firstGrade.maxMarks,
   };
 }
@@ -100,7 +120,7 @@ export function createPTBulkTaskSelection(
   task: PTBulkTaskDefinition,
   attemptCode: string,
   gradeCode: string,
-  marks?: string | number,
+  marks?: string | number | null,
 ): PTBulkTaskSelection | null {
   const grade = findPTBulkGradeOption(task, attemptCode, gradeCode);
   if (!grade) return null;
@@ -110,7 +130,7 @@ export function createPTBulkTaskSelection(
     selectedAttemptCode: attemptCode,
     selectedGradeCode: gradeCode,
     selectedScoreId: grade.scoreId,
-    marks: marks !== undefined ? String(marks) : String(grade.maxMarks),
+    marks: marks !== undefined ? String(marks ?? '') : resolvePTBulkSelectionMarks(attemptCode, grade.maxMarks),
     maxMarks: grade.maxMarks,
   };
 }
