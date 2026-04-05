@@ -28,8 +28,8 @@ describe("LoginPageClient", () => {
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain('autoComplete="username"');
     expect(html).toContain('autoComplete="current-password"');
-    expect(html).toContain("Enter the username for the selected appointment.");
-    expect(html).not.toContain("Username is auto-filled from the appointment selection.");
+    expect(html).toContain("Username is auto-filled from the selected appointment.");
+    expect(html).not.toContain("Enter the username for the selected appointment.");
   });
 
   it("renders the normal sign-in flow without the setup CTA once bootstrap is complete", () => {

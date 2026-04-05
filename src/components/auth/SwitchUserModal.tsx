@@ -11,15 +11,18 @@ import {
   getSwitchableIdentities,
   type SwitchableIdentityResponseItem,
 } from "@/app/lib/api/switchableIdentityApi";
+import { getLoginAppointments } from "@/app/lib/api/appointmentApi";
 import { loginUser } from "@/app/lib/api/authApi";
 import { ApiClientError } from "@/app/lib/apiClient";
 import { fetchMe } from "@/app/lib/api/me";
 import { clearReturnUrl } from "@/lib/auth-return-url";
 import { beginSwitchSession, endSwitchSession } from "@/lib/auth/switch-session";
 import {
+  buildSwitchableAppointmentLabel,
   type CurrentIdentity,
   filterSwitchableAppointments,
   isSameIdentity,
+  mergeSwitchableAppointments,
 } from "@/lib/switch-user";
 import { type LoginForm } from "@/types/login";
 import { appLogoutReset, persistor, store } from "@/store";
@@ -131,10 +134,30 @@ export default function SwitchUserModal({
 
     setLoadingAppointments(true);
 
-    getSwitchableIdentities()
-      .then((data) => {
+    Promise.allSettled([getLoginAppointments(), getSwitchableIdentities()])
+      .then(([loginAppointmentsResult, switchableIdentitiesResult]) => {
+        const loginAppointments =
+          loginAppointmentsResult.status === "fulfilled"
+            ? loginAppointmentsResult.value
+            : [];
+        const switchableIdentities =
+          switchableIdentitiesResult.status === "fulfilled"
+            ? switchableIdentitiesResult.value
+            : [];
+        const mergedAppointments = mergeSwitchableAppointments(
+          loginAppointments,
+          switchableIdentities
+        ) as SwitchableIdentityResponseItem[];
+
+        if (
+          loginAppointmentsResult.status === "rejected" &&
+          switchableIdentitiesResult.status === "rejected"
+        ) {
+          throw new Error("Unable to load switchable accounts.");
+        }
+
         hasFetchedRef.current = true;
-        setAppointments(data);
+        setAppointments(mergedAppointments);
         setAppointmentsFetchError(false);
       })
       .catch(() => {
@@ -322,9 +345,7 @@ export default function SwitchUserModal({
               <SelectContent>
                 {switchableAppointments.map((apt) => (
                   <SelectItem key={apt.id} value={apt.id}>
-                    {`${apt.positionName ?? apt.positionKey ?? "Appointment"}${
-                      apt.platoonName ? ` - ${apt.platoonName}` : ""
-                    } (${apt.username ?? "unknown"})`}
+                    {`${buildSwitchableAppointmentLabel(apt)} (${apt.username ?? "unknown"})`}
                   </SelectItem>
                 ))}
               </SelectContent>

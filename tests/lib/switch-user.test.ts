@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildSwitchableAppointmentLabel,
   filterSavedAccounts,
   filterSwitchableAppointments,
   filterUserTypes,
   isSameIdentity,
+  mergeSwitchableAppointments,
+  normalizeLoginAppointmentForSwitching,
 } from "@/lib/switch-user";
 
 describe("switch-user helpers", () => {
@@ -109,5 +112,118 @@ describe("switch-user helpers", () => {
     };
 
     expect(isSameIdentity(previous, next)).toBe(true);
+  });
+
+  it("normalizes login appointments into switchable appointment options", () => {
+    const result = normalizeLoginAppointmentForSwitching({
+      id: "apt-1",
+      username: "admin_user",
+      positionKey: "ADMIN",
+      positionName: "Admin",
+      scopeType: "GLOBAL",
+      scopeId: null,
+      platoonName: null,
+    });
+
+    expect(result).toMatchObject({
+      kind: "APPOINTMENT",
+      id: "apt-1",
+      username: "admin_user",
+      appointmentId: "apt-1",
+      delegationId: null,
+      label: "Admin",
+    });
+  });
+
+  it("merges login appointments with switchable delegation identities without dropping delegations", () => {
+    const result = mergeSwitchableAppointments(
+      [
+        {
+          id: "apt-1",
+          username: "admin_user",
+          positionKey: "ADMIN",
+          positionName: "Admin",
+          scopeType: "GLOBAL",
+          scopeId: null,
+          platoonName: null,
+        },
+      ],
+      [
+        {
+          kind: "DELEGATION" as const,
+          id: "del-1",
+          userId: "user-1",
+          username: "admin_user",
+          positionKey: "PLATOON_COMMANDER",
+          positionName: "Platoon Commander",
+          scopeType: "PLATOON",
+          scopeId: "platoon-1",
+          platoonName: "Alpha Platoon",
+          grantorLabel: "grantor_user",
+          appointmentId: "apt-2",
+          delegationId: "del-1",
+          label: "Platoon Commander • Alpha Platoon • Acting for grantor_user",
+        },
+      ]
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result.map((item) => item.id)).toEqual(["apt-1", "del-1"]);
+  });
+
+  it("filterSwitchableAppointments excludes the active delegation when current delegation id is present", () => {
+    const result = filterSwitchableAppointments(
+      [
+        {
+          kind: "DELEGATION" as const,
+          id: "del-active",
+          userId: "user-1",
+          username: "delegate_user",
+          positionKey: "PLATOON_COMMANDER",
+          delegationId: "del-active",
+          appointmentId: "apt-grantor",
+        },
+        {
+          kind: "APPOINTMENT" as const,
+          id: "apt-other",
+          userId: null,
+          username: "admin_user",
+          positionKey: "ADMIN",
+          appointmentId: "apt-other",
+          delegationId: null,
+        },
+      ],
+      {
+        userId: "user-1",
+        appointmentId: "apt-grantor",
+        delegationId: "del-active",
+        roleKey: "PLATOON_COMMANDER",
+        username: "delegate_user",
+      }
+    );
+
+    expect(result.map((item) => item.id)).toEqual(["apt-other"]);
+  });
+
+  it("builds switchable labels consistently for appointments and delegations", () => {
+    expect(
+      buildSwitchableAppointmentLabel({
+        positionName: "Admin",
+        positionKey: "ADMIN",
+        platoonName: null,
+        kind: "APPOINTMENT",
+        grantorLabel: null,
+      })
+    ).toBe("Admin");
+
+    expect(
+      buildSwitchableAppointmentLabel({
+        positionName: "Platoon Commander",
+        positionKey: "PLATOON_COMMANDER",
+        platoonName: "Alpha Platoon",
+        kind: "DELEGATION",
+        grantorLabel: "grantor_user",
+      })
+    ).toBe("Platoon Commander • Alpha Platoon • Acting for grantor_user");
   });
 });

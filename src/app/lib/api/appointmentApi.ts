@@ -38,6 +38,7 @@ export async function getAppointments(): Promise<Appointment[]> {
 
 export interface LoginAppointmentOption {
   id: string;
+  username: string;
   positionId: string;
   positionKey: string;
   positionName: string;

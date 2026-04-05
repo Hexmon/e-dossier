@@ -5,7 +5,7 @@ export type SwitchableIdentityResponseItem = {
   kind: "APPOINTMENT" | "DELEGATION";
   id: string;
   label: string;
-  userId: string;
+  userId: string | null;
   username: string;
   positionKey: string;
   positionName: string | null;

@@ -81,6 +81,7 @@ describe("admin appointments and positions access", () => {
       expect(Object.keys(selection)).toEqual(
         expect.arrayContaining([
           "id",
+          "username",
           "positionId",
           "positionKey",
           "positionName",
@@ -91,7 +92,6 @@ describe("admin appointments and positions access", () => {
         ])
       );
       expect(selection).not.toHaveProperty("userId");
-      expect(selection).not.toHaveProperty("username");
       expect(selection).not.toHaveProperty("reason");
       expect(selection).not.toHaveProperty("createdAt");
       expect(selection).not.toHaveProperty("updatedAt");
@@ -99,6 +99,7 @@ describe("admin appointments and positions access", () => {
       return buildAppointmentsSelectResult([
         {
           id: "appointment-1",
+          username: "holder-1",
           positionId: "position-1",
           positionKey: "PLATOON_COMMANDER",
           positionName: "Platoon Commander",
@@ -121,12 +122,12 @@ describe("admin appointments and positions access", () => {
     expect(body.data).toEqual([
       expect.objectContaining({
         id: "appointment-1",
+        username: "holder-1",
         positionName: "Platoon Commander",
         platoonName: "Alpha Platoon",
       }),
     ]);
     expect(body.data[0]).not.toHaveProperty("userId");
-    expect(body.data[0]).not.toHaveProperty("username");
     expect(body.data[0]).not.toHaveProperty("reason");
   });
 

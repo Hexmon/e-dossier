@@ -17,6 +17,19 @@ export type SwitchableAppointment = {
   delegationId?: string | null;
   scopeType?: string | null;
   scopeId?: string | null;
+  platoonName?: string | null;
+  grantorLabel?: string | null;
+  label?: string | null;
+};
+
+export type LoginSwitchableAppointment = {
+  id: string;
+  username: string;
+  positionKey: string;
+  positionName: string | null;
+  scopeType: string;
+  scopeId: string | null;
+  platoonName: string | null;
 };
 
 export type UserTypeOption = {
@@ -132,4 +145,66 @@ export function filterSwitchableAppointments<T extends SwitchableAppointment>(
 
     return !isSameIdentity(current, candidate);
   });
+}
+
+export function buildSwitchableAppointmentLabel(
+  appointment: Pick<
+    SwitchableAppointment,
+    "positionName" | "positionKey" | "platoonName" | "kind" | "grantorLabel"
+  >
+): string {
+  const base = appointment.positionName ?? appointment.positionKey ?? "Appointment";
+  const scoped = appointment.platoonName ? `${base} • ${appointment.platoonName}` : base;
+
+  if (appointment.kind === "DELEGATION") {
+    return appointment.grantorLabel
+      ? `${scoped} • Acting for ${appointment.grantorLabel}`
+      : `${scoped} • Delegated`;
+  }
+
+  return scoped;
+}
+
+export function normalizeLoginAppointmentForSwitching(
+  appointment: LoginSwitchableAppointment
+): SwitchableAppointment {
+  return {
+    kind: "APPOINTMENT",
+    id: appointment.id,
+    userId: null,
+    username: appointment.username,
+    positionKey: appointment.positionKey,
+    positionName: appointment.positionName,
+    scopeType: appointment.scopeType,
+    scopeId: appointment.scopeId,
+    platoonName: appointment.platoonName,
+    grantorLabel: null,
+    appointmentId: appointment.id,
+    delegationId: null,
+    label: buildSwitchableAppointmentLabel({
+      positionName: appointment.positionName,
+      positionKey: appointment.positionKey,
+      platoonName: appointment.platoonName,
+      kind: "APPOINTMENT",
+      grantorLabel: null,
+    }),
+  };
+}
+
+export function mergeSwitchableAppointments<T extends SwitchableAppointment>(
+  loginAppointments: readonly LoginSwitchableAppointment[],
+  identities: readonly T[]
+): Array<T | SwitchableAppointment> {
+  const merged = new Map<string, T | SwitchableAppointment>();
+
+  for (const appointment of loginAppointments) {
+    const normalized = normalizeLoginAppointmentForSwitching(appointment);
+    merged.set(`APPOINTMENT:${normalized.id}`, normalized);
+  }
+
+  for (const identity of identities) {
+    merged.set(`${identity.kind ?? "APPOINTMENT"}:${identity.id}`, identity);
+  }
+
+  return Array.from(merged.values());
 }

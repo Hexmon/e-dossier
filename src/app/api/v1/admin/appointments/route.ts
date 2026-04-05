@@ -99,6 +99,7 @@ async function GETHandler(req: AuditNextRequest) {
                 : await db
                     .select({
                         id: appointments.id,
+                        username: users.username,
                         positionId: appointments.positionId,
                         positionKey: positions.key,
                         positionName: positions.displayName,

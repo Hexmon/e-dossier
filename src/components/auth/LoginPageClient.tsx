@@ -93,6 +93,14 @@ export default function LoginPageClient({
     [appointment, appointments]
   );
 
+  useEffect(() => {
+    setValue("username", selectedAppointment?.username ?? "", {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false,
+    });
+  }, [selectedAppointment, setValue]);
+
   const hasAppointmentsData = useMemo(
     () => !loadingAppointments && !appointmentsFetchError && appointments.length > 0,
     [loadingAppointments, appointmentsFetchError, appointments]
@@ -112,7 +120,7 @@ export default function LoginPageClient({
   const passwordHelpId = "login-password-help";
 
   const onSubmit = async (data: LoginForm) => {
-    if (!data.username || !data.password || !data.appointment) {
+    if (!data.password || !data.appointment) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -133,12 +141,12 @@ export default function LoginPageClient({
           ? {
               appointmentId: selectedAppointment.id,
               platoonId: selectedAppointment.scopeId as string,
-              username: data.username,
+              username: selectedAppointment.username,
               password: data.password,
             }
           : {
               appointmentId: selectedAppointment.id,
-              username: data.username,
+              username: selectedAppointment.username,
               password: data.password,
             };
 
@@ -306,14 +314,23 @@ export default function LoginPageClient({
                     <Input
                       id="username"
                       {...register("username")}
-                      placeholder="Enter username"
+                      placeholder={
+                        selectedAppointment?.username ?? "Select an appointment first"
+                      }
                       required
                       disabled={!appointment}
+                      readOnly={Boolean(selectedAppointment)}
                       autoComplete="username"
                       aria-describedby={usernameHelpId}
+                      aria-readonly={selectedAppointment ? "true" : undefined}
+                      className={
+                        selectedAppointment
+                          ? "cursor-not-allowed bg-muted text-muted-foreground"
+                          : undefined
+                      }
                     />
                     <p id={usernameHelpId} className="text-sm text-muted-foreground">
-                      Enter the username for the selected appointment.
+                      Username is auto-filled from the selected appointment.
                     </p>
                   </div>
 
