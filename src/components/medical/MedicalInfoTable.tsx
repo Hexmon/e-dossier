@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { MedInfoRow } from "@/types/med-records";
 import { UniversalTable, TableColumn, TableAction, TableConfig } from "@/components/layout/TableLayout";
@@ -13,6 +13,7 @@ interface Props {
     editingId: string | null;
     editForm: MedInfoRow | null;
     readOnly?: boolean;
+    describedBy?: string;
 
     onEdit: (row: MedInfoRow) => void;
     onChange: (field: keyof MedInfoRow, value: any) => void;
@@ -29,6 +30,7 @@ export default function MedicalInfoTable({
     editingId,
     editForm,
     readOnly = false,
+    describedBy,
     onEdit,
     onChange,
     onSave,
@@ -181,6 +183,10 @@ export default function MedicalInfoTable({
             label: editingId ? "Cancel" : "Edit",
             variant: editingId ? "outline" : "outline",
             size: "sm",
+            ariaLabel: (row) =>
+                editingId === row.id
+                    ? `Cancel editing medical record dated ${row.date || "unknown date"}`
+                    : `Edit medical record dated ${row.date || "unknown date"}`,
             handler: (row) => {
                 if (editingId === row.id) {
                     onCancel();
@@ -194,6 +200,10 @@ export default function MedicalInfoTable({
             label: editingId ? "Save" : "Delete",
             variant: editingId ? "default" : "destructive",
             size: "sm",
+            ariaLabel: (row) =>
+                editingId === row.id
+                    ? `Save medical record dated ${row.date || "unknown date"}`
+                    : `Delete medical record dated ${row.date || "unknown date"}`,
             handler: (row) => {
                 if (editingId === row.id) {
                     onSave();
@@ -222,6 +232,10 @@ export default function MedicalInfoTable({
         },
         emptyState: {
             message: filtered.length === 0 ? "No records yet." : "No data found"
+        },
+        accessibility: {
+            caption: `Medical information records for ${semesters[activeTab]}.`,
+            describedBy,
         },
         loading
     };

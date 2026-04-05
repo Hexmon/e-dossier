@@ -28,6 +28,7 @@ export interface TableAction<T = any> {
     handler: (row: T, index: number) => void;
     condition?: (row: T, index: number) => boolean;
     className?: string;
+    ariaLabel?: string | ((row: T, index: number) => string);
 }
 
 export interface TableConfig<T = any> {
@@ -81,6 +82,10 @@ export interface TableConfig<T = any> {
         message?: string;
         icon?: React.ComponentType<{ className?: string }>;
     };
+    accessibility?: {
+        caption?: string;
+        describedBy?: string;
+    };
     loading?: boolean;
 }
 
@@ -116,6 +121,7 @@ export function UniversalTable<T extends Record<string, any>>({
         theme = {},
         pagination = {},
         emptyState = {},
+        accessibility = {},
         loading = false,
     } = config;
 
@@ -337,11 +343,14 @@ export function UniversalTable<T extends Record<string, any>>({
 
             {/* Table */}
             <div className={tableClasses}>
-                <table className="min-w-full text-sm ">
+                <table className="min-w-full text-sm" aria-describedby={accessibility.describedBy}>
+                    {accessibility.caption ? (
+                        <caption className="sr-only">{accessibility.caption}</caption>
+                    ) : null}
                     <thead className={`text-left ${activeTheme.headerTextColor}`}>
                         <tr className={`text-left ${activeTheme.headerBg}`}>
                             {features.selection && (
-                                <th className="px-3 py-[var(--density-table-header-py)] w-12">
+                                <th scope="col" className="px-3 py-[var(--density-table-header-py)] w-12">
                                     <input
                                         type="checkbox"
                                         onChange={(e) => {
@@ -357,6 +366,7 @@ export function UniversalTable<T extends Record<string, any>>({
                             {columns.map((column) => (
                                 <th
                                     key={String(column.key)}
+                                    scope="col"
                                     className={`px-3 py-[var(--density-table-header-py)] ${column.className || ''} ${column.sortable && features.sorting ? 'cursor-pointer hover:bg-muted/70' : ''
                                         }`}
                                     style={{ width: column.width }}
@@ -385,7 +395,7 @@ export function UniversalTable<T extends Record<string, any>>({
                                 </th>
                             ))}
                             {actions.length > 0 && (
-                                <th className="px-3 py-[var(--density-table-header-py)]">Actions</th>
+                                <th scope="col" className="px-3 py-[var(--density-table-header-py)]">Actions</th>
                             )}
                         </tr>
                     </thead>
@@ -451,6 +461,10 @@ export function UniversalTable<T extends Record<string, any>>({
                                                     const iconClass = `h-3 w-3${showLabel ? " mr-1" : ""}`;
                                                     const buttonClass =
                                                         `${action.className ?? ""} ${iconOnly ? "px-2" : ""}`.trim();
+                                                    const resolvedAriaLabel =
+                                                        typeof action.ariaLabel === "function"
+                                                            ? action.ariaLabel(row, index)
+                                                            : action.ariaLabel;
 
                                                     const actionButton = (
                                                         <Button
@@ -459,7 +473,7 @@ export function UniversalTable<T extends Record<string, any>>({
                                                             size={action.size || 'sm'}
                                                             onClick={() => action.handler(row, index)}
                                                             className={buttonClass || undefined}
-                                                            aria-label={iconOnly ? action.label : undefined}
+                                                            aria-label={resolvedAriaLabel ?? (iconOnly ? action.label : undefined)}
                                                         >
                                                             {IconComponent && <IconComponent className={iconClass} />}
                                                             {showLabel && action.label}

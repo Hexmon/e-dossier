@@ -67,6 +67,14 @@ export default function MedicalInfoSection({
     });
     const isReadOnly = isActiveSemesterLocked || !canWriteMedical;
     const activeTab = activeSemester - 1;
+    const lockNoticeId = `${selectedCadet?.ocId ?? "oc"}-medical-lock-notice`;
+    const medicalWriterNoticeId = `${selectedCadet?.ocId ?? "oc"}-medical-writer-notice`;
+    const readOnlyDescriptionIds = [
+        isActiveSemesterLocked ? lockNoticeId : null,
+        !canWriteMedical ? medicalWriterNoticeId : null,
+    ]
+        .filter((value): value is string => Boolean(value))
+        .join(" ") || undefined;
     const [savedMedInfo, setSavedMedInfo] = useState<MedInfoRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -401,13 +409,17 @@ export default function MedicalInfoSection({
 
             <CardContent>
                 <SemesterLockNotice
+                    id={lockNoticeId}
                     activeSemester={activeSemester}
                     currentSemester={currentSemester ?? 1}
                     supportedSemesters={supportedSemesters}
                     canOverrideLockedSemester={canEditLockedSemesters}
                 />
                 {!canWriteMedical ? (
-                    <div className="mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground">
+                    <div
+                        id={medicalWriterNoticeId}
+                        className="mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground"
+                    >
                         Medical updates are restricted to the commander-equivalent role for this platoon.
                     </div>
                 ) : null}
@@ -434,6 +446,7 @@ export default function MedicalInfoSection({
                     editingId={editingId}
                     editForm={editForm}
                     readOnly={isReadOnly}
+                    describedBy={readOnlyDescriptionIds}
                     onEdit={handleEdit}
                     onChange={handleChange}
                     onSave={handleSave}
@@ -454,6 +467,7 @@ export default function MedicalInfoSection({
                     ocId={selectedCadet?.ocId || ""}
                     onClear={handleClearForm}
                     readOnly={isReadOnly}
+                    readOnlyNoticeId={readOnlyDescriptionIds}
                 />
             </CardContent>
         </Card>

@@ -1,10 +1,12 @@
 "use client";
 
+import React from "react";
 import { useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MedicalInfoForm } from "@/types/med-records";
 import { saveMedicalInfoForm } from "@/store/slices/medicalInfoSlice";
@@ -25,6 +27,7 @@ interface Props {
     ocId: string;
     onClear: () => void;
     readOnly?: boolean;
+    readOnlyNoticeId?: string;
 }
 
 const parseFloatValue = (value: string) => {
@@ -54,6 +57,7 @@ export default function MedicalInfoFormComponent({
     ocId,
     onClear,
     readOnly = false,
+    readOnlyNoticeId,
 }: Props) {
     const dispatch = useDispatch();
 
@@ -108,13 +112,16 @@ export default function MedicalInfoFormComponent({
     }, [medInfoRows, setValue]);
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)} aria-describedby={readOnlyNoticeId}>
             <div className="overflow-x-auto">
                 <table className="w-full border text-sm">
+                    <caption className="sr-only">
+                        Medical information entry rows for the selected semester.
+                    </caption>
                     <thead>
                         <tr>
                             {["Date", "Age", "Ht", "IBW", "ABW", "Overwt", "BMI", "Chest", "Action"].map((h) => (
-                                <th key={h} className="border p-2">{h}</th>
+                                <th key={h} scope="col" className="border p-2">{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -154,7 +161,14 @@ export default function MedicalInfoFormComponent({
                                     })}
 
                                     <td className="border p-2 text-center">
-                                        <Button type="button" variant="destructive" size="sm" onClick={() => remove(i)} disabled={readOnly}>
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => remove(i)}
+                                            disabled={readOnly}
+                                            aria-label={`Remove medical information row ${i + 1}`}
+                                        >
                                             Remove
                                         </Button>
                                     </td>
@@ -202,21 +216,33 @@ export default function MedicalInfoFormComponent({
             </div>
 
             <div className="mt-6 space-y-4">
-                <Textarea
-                    {...register("medicalHistory")}
-                    placeholder="Medical History"
-                    disabled={disabled}
-                />
-                <Textarea
-                    {...register("medicalIssues")}
-                    placeholder="Medical Issues"
-                    disabled={disabled}
-                />
-                <Textarea
-                    {...register("allergies")}
-                    placeholder="Allergies"
-                    disabled={disabled}
-                />
+                <div className="space-y-2">
+                    <Label htmlFor="medical-history">Medical History</Label>
+                    <Textarea
+                        id="medical-history"
+                        {...register("medicalHistory")}
+                        placeholder="Medical History"
+                        disabled={disabled || readOnly}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="medical-issues">Medical Issues</Label>
+                    <Textarea
+                        id="medical-issues"
+                        {...register("medicalIssues")}
+                        placeholder="Medical Issues"
+                        disabled={disabled || readOnly}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="medical-allergies">Allergies</Label>
+                    <Textarea
+                        id="medical-allergies"
+                        {...register("allergies")}
+                        placeholder="Allergies"
+                        disabled={disabled || readOnly}
+                    />
+                </div>
             </div>
 
             <div className="mt-3 flex justify-center gap-2">

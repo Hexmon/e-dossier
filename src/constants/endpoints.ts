@@ -1,5 +1,11 @@
 export const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
 export const endpoints = {
+    setup: {
+        status: "/api/v1/setup/status",
+    },
+    bootstrap: {
+        superAdmin: "/api/v1/bootstrap/super-admin",
+    },
     auth: {
         login: "/api/v1/auth/login",
         signup: "/api/v1/auth/signup",

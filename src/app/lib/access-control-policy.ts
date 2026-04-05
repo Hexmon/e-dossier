@@ -18,6 +18,7 @@ const PUBLIC_API_METHOD_RULES: Readonly<Record<string, readonly PathRule[]>> = {
     { path: "/api/v1/admin/positions", exact: true },
     { path: "/api/v1/platoons" },
     { path: "/api/v1/site-settings", exact: true },
+    { path: "/api/v1/setup/status", exact: true },
   ],
 };
 

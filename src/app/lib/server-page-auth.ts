@@ -29,24 +29,23 @@ type AdminPageAuthContext = {
   moduleAccess: ResolvedModuleAccess;
 };
 
-export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("access_token")?.value;
-
+async function buildDashboardAuthContext(
+  accessToken: string | null | undefined
+): Promise<AdminPageAuthContext | null> {
   if (!accessToken) {
-    redirect("/login");
+    return null;
   }
 
   let payload: Awaited<ReturnType<typeof verifyAccessJWT>>;
   try {
     payload = await verifyAccessJWT(accessToken);
   } catch {
-    redirect("/login");
+    return null;
   }
 
   const userId = String(payload.sub ?? "");
   if (!userId) {
-    redirect("/login");
+    return null;
   }
 
   const roles = Array.isArray(payload.roles)
@@ -74,6 +73,23 @@ export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
     scopeId,
     moduleAccess,
   };
+}
+
+export async function getOptionalDashboardAccess(): Promise<AdminPageAuthContext | null> {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("access_token")?.value;
+
+  return buildDashboardAuthContext(accessToken);
+}
+
+export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
+  const authContext = await getOptionalDashboardAccess();
+
+  if (!authContext) {
+    redirect("/login");
+  }
+
+  return authContext;
 }
 
 export async function requireAdminDashboardAccess(): Promise<AdminPageAuthContext> {

@@ -3449,6 +3449,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "method": "GET",
+    "path": "/api/v1/setup/status",
+    "action": "setup:status:read",
+    "resourceType": "setup:status",
+    "category": "setup",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
     "method": "POST",
     "path": "/api/v1/bootstrap/super-admin",
     "action": "bootstrap:super-admin:create",

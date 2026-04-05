@@ -15,6 +15,7 @@ import { hierarchyAdminApi, type HierarchyNodeInput } from "@/app/lib/api/hierar
 import { getPlatoons } from "@/app/lib/api/platoonApi";
 import { getPositions } from "@/app/lib/api/appointmentApi";
 import { useMe } from "@/hooks/useMe";
+import { SetupReturnBanner } from "@/components/setup/SetupReturnBanner";
 
 type HierarchyDraft = {
   key: string;
@@ -200,6 +201,11 @@ export default function HierarchyManagementPage() {
             { label: "General Management", href: "/dashboard/genmgmt" },
             { label: "Hierarchy" },
           ]}
+        />
+
+        <SetupReturnBanner
+          title="Setup step: Hierarchy"
+          description="Link each platoon into the hierarchy tree, then return to the setup checklist."
         />
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">

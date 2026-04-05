@@ -1,6 +1,7 @@
 import React from "react";
 
 interface SemesterLockNoticeProps {
+  id?: string;
   activeSemester: number;
   currentSemester: number;
   supportedSemesters?: readonly number[];
@@ -9,6 +10,7 @@ interface SemesterLockNoticeProps {
 }
 
 export default function SemesterLockNotice({
+  id,
   activeSemester,
   currentSemester,
   supportedSemesters = [1, 2, 3, 4, 5, 6],
@@ -37,6 +39,7 @@ export default function SemesterLockNotice({
 
   return (
     <div
+      id={id}
       className={`mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground ${className}`.trim()}
     >
       {message}

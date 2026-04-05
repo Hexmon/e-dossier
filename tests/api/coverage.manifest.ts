@@ -143,7 +143,6 @@ export const REPORT_UNCOVERED_ROUTE_FILES = [
 ] as const;
 
 export const MISC_UNCOVERED_ROUTE_FILES = [
-  'src/app/api/v1/bootstrap/super-admin/route.ts',
   'src/app/api/v1/dashboard/data/appointments/route.ts',
   'src/app/api/v1/dashboard/data/course/route.ts',
   'src/app/api/v1/dashboard/data/platoon/route.ts',
@@ -177,6 +176,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     ],
   },
   {
+    testFile: 'tests/api/bootstrap.super-admin.test.ts',
+    routeFiles: ['src/app/api/v1/bootstrap/super-admin/route.ts'],
+  },
+  {
     testFile: 'tests/api/me.workflow-notifications.test.ts',
     routeFiles: ['src/app/api/v1/me/workflow-notifications/route.ts'],
   },
@@ -187,6 +190,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/reports.module-access.test.ts',
     routeFiles: ['src/app/api/v1/reports/metadata/course-semesters/route.ts'],
+  },
+  {
+    testFile: 'tests/api/setup.status.test.ts',
+    routeFiles: ['src/app/api/v1/setup/status/route.ts'],
   },
   {
     testFile: 'tests/api/oc.academics.workflow.test.ts',
