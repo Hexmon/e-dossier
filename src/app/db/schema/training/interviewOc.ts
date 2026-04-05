@@ -7,11 +7,12 @@ import { interviewTemplates, interviewTemplateFields, interviewTemplateGroups } 
 // ---------------------------------------------------------------------------
 export const ocInterviews = pgTable('oc_interviews', {
     id: uuid('id').primaryKey().defaultRandom(),
-    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
     enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     templateId: uuid('template_id').notNull().references(() => interviewTemplates.id, { onDelete: 'restrict' }),
     semester: integer('semester'),
     course: varchar('course', { length: 160 }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

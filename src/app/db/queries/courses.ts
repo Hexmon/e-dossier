@@ -105,7 +105,7 @@ export async function countAssignedOCsForCourse(courseId: string): Promise<numbe
     const [row] = await db
         .select({ count: sql<number>`count(*)` })
         .from(ocCadets)
-        .where(eq(ocCadets.courseId, courseId));
+        .where(and(eq(ocCadets.courseId, courseId), isNull(ocCadets.deletedAt)));
 
     return Number(row?.count ?? 0);
 }

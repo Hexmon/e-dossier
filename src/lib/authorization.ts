@@ -138,20 +138,20 @@ export async function authorizeOcAccess(
   const context = normalizeAuthContext(await requireAuth(req));
   setRequestTenant(req, ocId);
   
-  // Admin can access any OC record
-  if (isAdmin(context)) {
-    return context;
-  }
-  
   // Get OC record to check platoon
   const [oc] = await db
     .select({ platoonId: ocCadets.platoonId })
     .from(ocCadets)
-    .where(eq(ocCadets.id, ocId))
+    .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
     .limit(1);
   
   if (!oc) {
     throw new ApiError(404, 'OC record not found', 'not_found');
+  }
+
+  // Admin can access any active OC record
+  if (isAdmin(context)) {
+    return context;
   }
   
   // Check if user has scope access to this OC's platoon

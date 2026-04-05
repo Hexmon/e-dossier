@@ -4,7 +4,7 @@ import { ApiError } from '@/app/lib/http';
 import { requireAuth, requireAdmin } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { ocCadets } from '@/app/db/schema/training/oc';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { canEditAcademics } from '@/lib/academics-access';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getCurrentSemesterForCourse, getOcCourseInfo } from '@/app/db/queries/oc';
@@ -74,7 +74,11 @@ export async function parseParam<T extends z.ZodTypeAny>(
 }
 
 export async function ensureOcExists(ocId: string) {
-    const [row] = await db.select({ id: ocCadets.id }).from(ocCadets).where(eq(ocCadets.id, ocId)).limit(1);
+    const [row] = await db
+        .select({ id: ocCadets.id })
+        .from(ocCadets)
+        .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
+        .limit(1);
     if (!row) throw new ApiError(404, 'OC not found', 'not_found');
 }
 

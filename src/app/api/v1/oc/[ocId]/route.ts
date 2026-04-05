@@ -5,7 +5,7 @@ import { requireAdmin } from '@/app/lib/authz';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { getCurrentSemesterForCourse } from '@/app/db/queries/oc';
@@ -71,7 +71,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             .from(ocCadets)
             .leftJoin(courses, eq(courses.id, ocCadets.courseId))
             .leftJoin(platoons, eq(platoons.id, ocCadets.platoonId))
-            .where(eq(ocCadets.id, ocId))
+            .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
             .limit(1);
         if (!row) throw new ApiError(404, 'OC not found', 'not_found');
         const course = row.courseId ? {
@@ -135,9 +135,17 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const adminCtx = await requireAdminForWrite(req);
         const { ocId } = await OcParam.parseAsync(await params);
         const dto = updateSchema.parse(await req.json());
-        const [existing] = await db.select().from(ocCadets).where(eq(ocCadets.id, ocId)).limit(1);
+        const [existing] = await db
+            .select()
+            .from(ocCadets)
+            .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
+            .limit(1);
         if (!existing) throw new ApiError(404, 'OC not found', 'not_found');
-        const [row] = await db.update(ocCadets).set(dto).where(eq(ocCadets.id, ocId)).returning();
+        const [row] = await db
+            .update(ocCadets)
+            .set(dto)
+            .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
+            .returning();
 
         await req.audit.log({
             action: AuditEventType.OC_UPDATED,
@@ -158,7 +166,16 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     try {
         const adminCtx = await requireAdminForWrite(req);
         const { ocId } = await OcParam.parseAsync(await params);
-        const [row] = await db.delete(ocCadets).where(eq(ocCadets.id, ocId)).returning();
+        const now = new Date();
+        const [row] = await db
+            .update(ocCadets)
+            .set({
+                status: 'INACTIVE',
+                deletedAt: now,
+                updatedAt: now,
+            })
+            .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
+            .returning();
         if (!row) throw new ApiError(404, 'OC not found', 'not_found');
 
         await req.audit.log({
@@ -167,12 +184,13 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
             actor: { type: 'user', id: adminCtx.userId },
             target: { type: AuditResourceType.OC, id: ocId },
             metadata: {
-                description: `Deleted OC ${ocId}`,
+                description: `Archived OC ${ocId}`,
                 ocId,
-                hardDeleted: true,
+                archived: true,
+                hardDeleted: false,
             },
         });
-        return json.ok({ message: 'OC deleted successfully.', id: row.id });
+        return json.ok({ message: 'OC archived successfully.', id: row.id, archived: true });
     } catch (err) { return handleApiError(err); }
 }
 export const GET = withAuditRoute('GET', GETHandler);

@@ -158,7 +158,11 @@ async function findOcIdByTesNo(client: Client, tesNo: string) {
 }
 
 async function deleteOcByTesNo(client: Client, tesNo: string) {
-  await client.query(`delete from oc_cadets where oc_no = $1`, [tesNo]);
+  const ocId = await findOcIdByTesNo(client, tesNo);
+  if (!ocId) return;
+
+  await client.query(`delete from oc_personal where oc_id = $1`, [ocId]);
+  await client.query(`delete from oc_cadets where id = $1`, [ocId]);
 }
 
 test("bulk-uploaded OC core data renders across the dossier basic-details cluster and background tabs canonicalize cleanly", async ({

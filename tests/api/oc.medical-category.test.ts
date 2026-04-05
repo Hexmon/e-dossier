@@ -135,6 +135,23 @@ describe("medical category routes", () => {
     expect(ocChecks.mustBeMedicalWriter).toHaveBeenCalledTimes(2);
   });
 
+  it("returns not_found once a medical category record has already been soft deleted", async () => {
+    vi.mocked(ocQueries.getMedCat).mockResolvedValueOnce(null as any);
+
+    const res = await deleteMedicalCategoryRoute(
+      makeJsonRequest({
+        method: "DELETE",
+        path: `/api/v1/oc/${ocId}/medical-category/${recordId}`,
+      }) as any,
+      createRouteContext({ ocId, id: recordId })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(body.error).toBe("not_found");
+    expect(ocQueries.deleteMedCat).not.toHaveBeenCalled();
+  });
+
   it("returns override_reason_required for historical writes without a reason", async () => {
     vi.mocked(ocQueries.getMedCat).mockResolvedValue({
       id: recordId,

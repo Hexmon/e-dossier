@@ -340,7 +340,7 @@ async function DELETEHandler(
                 module: 'interview',
                 templateId: interview.templateId,
                 interviewId,
-                hardDeleted: true,
+                hardDeleted: false,
             },
         });
         return json.ok({ message: 'Interview record deleted successfully.', deleted: interviewId });

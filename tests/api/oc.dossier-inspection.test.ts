@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "@/app/api/v1/oc/[ocId]/dossier-inspection/route";
+import { DELETE, GET } from "@/app/api/v1/oc/[ocId]/dossier-inspection/route";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
 const auditLogMock = vi.fn(async () => undefined);
@@ -27,6 +27,7 @@ vi.mock("@/app/api/v1/oc/_checks", () => ({
 vi.mock("@/app/db/client", () => ({
   db: {
     select: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -75,5 +76,53 @@ describe("GET /api/v1/oc/[ocId]/dossier-inspection", () => {
 
     expect(res.status).toBe(200);
     expect(body.inspections).toEqual([]);
+  });
+
+  it("soft deletes an inspection and returns not_found after it is gone from active rows", async () => {
+    (db.select as any).mockImplementationOnce(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [
+            {
+              id: "inspection-1",
+              inspectorUserId: "user-2",
+              date: new Date("2026-04-05T00:00:00Z"),
+              remarks: "Initial remark",
+            },
+          ],
+        }),
+      }),
+    }));
+    (db.update as any).mockImplementationOnce(() => ({
+      set: () => ({
+        where: async () => undefined,
+      }),
+    }));
+
+    const deleteReq = makeJsonRequest({
+      method: "DELETE",
+      path: `/api/v1/oc/${ocId}/dossier-inspection?id=inspection-1`,
+    });
+    const deleteRes = await DELETE(deleteReq as any, createRouteContext({ ocId }));
+
+    expect(deleteRes.status).toBe(200);
+
+    (db.select as any).mockImplementationOnce(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [],
+        }),
+      }),
+    }));
+
+    const secondDeleteReq = makeJsonRequest({
+      method: "DELETE",
+      path: `/api/v1/oc/${ocId}/dossier-inspection?id=inspection-1`,
+    });
+    const secondDeleteRes = await DELETE(secondDeleteReq as any, createRouteContext({ ocId }));
+    const body = await secondDeleteRes.json();
+
+    expect(secondDeleteRes.status).toBe(404);
+    expect(body.error).toBe("not_found");
   });
 });

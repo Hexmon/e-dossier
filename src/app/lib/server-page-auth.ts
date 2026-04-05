@@ -12,14 +12,20 @@ import {
   type ModuleAccessKey,
   type ResolvedModuleAccess,
 } from "@/app/lib/module-access";
+import { db } from "@/app/db/client";
+import { ocCadets } from "@/app/db/schema/training/oc";
+import { hasScopeAccess } from "@/lib/authorization";
+import { and, eq, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 type AdminPageAuthContext = {
   userId: string;
   roles: string[];
   roleGroup: SidebarRoleGroup;
   position: string | null;
+  scopeType: string | null;
+  scopeId: string | null;
   moduleAccess: ResolvedModuleAccess;
 };
 
@@ -48,6 +54,10 @@ export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
     : [];
   const position =
     typeof (payload as any).apt?.position === "string" ? (payload as any).apt.position : null;
+  const scopeType =
+    typeof (payload as any).apt?.scope?.type === "string" ? (payload as any).apt.scope.type : null;
+  const scopeId =
+    (payload as any).apt?.scope?.id == null ? null : String((payload as any).apt.scope.id);
   const roleGroup = deriveSidebarRoleGroup({ roles, position });
   const moduleAccess = await resolveModuleAccessForUser({
     userId,
@@ -60,6 +70,8 @@ export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
     roles,
     roleGroup,
     position,
+    scopeType,
+    scopeId,
     moduleAccess,
   };
 }
@@ -122,6 +134,54 @@ export async function requireDashboardBulkWorkflowAccess(
   const authContext = await requireDashboardAccess();
 
   if (!canAccessBulkWorkflowModule(authContext.moduleAccess, workflowModule)) {
+    redirect("/dashboard");
+  }
+
+  return authContext;
+}
+
+export async function requireDashboardOcModuleAccess(
+  ocId: string,
+  moduleKey: ModuleAccessKey
+): Promise<AdminPageAuthContext> {
+  const authContext = await requireDashboardModuleAccess(moduleKey);
+
+  const [oc] = await db
+    .select({ id: ocCadets.id, platoonId: ocCadets.platoonId })
+    .from(ocCadets)
+    .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
+    .limit(1);
+
+  if (!oc) {
+    notFound();
+  }
+
+  if (authContext.roleGroup === "SUPER_ADMIN" || authContext.roleGroup === "ADMIN") {
+    return authContext;
+  }
+
+  const canAccessOc = Boolean(
+    oc.platoonId &&
+      hasScopeAccess(
+        {
+          userId: authContext.userId,
+          roles: authContext.roles,
+          apt: authContext.scopeType
+            ? {
+                id: "",
+                position: authContext.position ?? "",
+                scope: {
+                  type: authContext.scopeType,
+                  id: authContext.scopeId,
+                },
+              }
+            : null,
+        },
+        { type: "PLATOON", id: oc.platoonId }
+      )
+  );
+
+  if (!canAccessOc) {
     redirect("/dashboard");
   }
 

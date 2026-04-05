@@ -231,8 +231,20 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     ],
   },
   {
+    testFile: 'tests/api/oc.discipline.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/discipline/[id]/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.parent-comms.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/parent-comms/[id]/route.ts'],
+  },
+  {
     testFile: 'tests/api/oc.ssb.test.ts',
     routeFiles: ['src/app/api/v1/oc/[ocId]/ssb/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.interviews.[interviewId].test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts'],
   },
   {
     testFile: 'tests/api/oc.semester-lock-derived.test.ts',

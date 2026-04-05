@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { fetchOCById, type OCListRow } from "@/app/lib/api/ocApi";
@@ -10,6 +11,7 @@ export function useOcDetails(ocId?: string) {
     const [cadet, setCadet] = useState<Cadet | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
 
     const load = useCallback(async () => {
         if (!ocId) return;
@@ -19,7 +21,12 @@ export function useOcDetails(ocId?: string) {
 
         try {
             const oc: OCListRow | null = await fetchOCById(ocId);
-            if (!oc || !oc.course) return;
+            if (!oc || !oc.course) {
+                setCadet(null);
+                setError("OC not found");
+                router.replace("/dashboard");
+                return;
+            }
 
             setCadet({
                 name: oc.name,
@@ -35,7 +42,7 @@ export function useOcDetails(ocId?: string) {
         } finally {
             setLoading(false);
         }
-    }, [ocId]);
+    }, [ocId, router]);
 
     useEffect(() => {
         load();

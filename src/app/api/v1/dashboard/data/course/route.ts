@@ -30,6 +30,7 @@ async function GETHandler(req: AuditNextRequest) {
                 ocCadets,
                 and(
                     eq(ocCadets.courseId, courses.id),
+                    isNull(ocCadets.deletedAt),
                     isNull(ocCadets.withdrawnOn),
                     ...(scopePlatoonId ? [eq(ocCadets.platoonId, scopePlatoonId)] : []),
                 )

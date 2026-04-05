@@ -38,7 +38,7 @@ export async function createBaselineEnrollmentForOc(
       createdAt: ocCadets.createdAt,
     })
     .from(ocCadets)
-    .where(eq(ocCadets.id, ocId))
+    .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
     .limit(1);
 
   if (!ocRow) throw new ApiError(404, "OC not found", "not_found");

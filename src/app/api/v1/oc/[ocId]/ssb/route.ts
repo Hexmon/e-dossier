@@ -177,6 +177,9 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const deleted = await deleteSsbReport(ocId);
+        if (!deleted) {
+            return json.notFound('SSB report not found.');
+        }
 
         await req.audit.log({
             action: AuditEventType.OC_RECORD_DELETED,
@@ -187,8 +190,8 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
                 description: `Deleted SSB report for OC ${ocId}`,
                 ocId,
                 module: 'ssb',
-                recordId: deleted?.id ?? null,
-                hardDeleted: true,
+                recordId: deleted.id,
+                hardDeleted: false,
             },
         });
         return json.ok({ message: 'SSB report deleted successfully.', deleted });

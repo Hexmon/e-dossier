@@ -83,7 +83,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         ocId,
         module: 'medical_category',
         recordId: id,
-        hardDeleted: true,
+        hardDeleted: false,
       },
     });
     return json.ok({ message: 'Medical category record deleted successfully.', id: row.id });

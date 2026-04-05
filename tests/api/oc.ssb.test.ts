@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET, POST } from "@/app/api/v1/oc/[ocId]/ssb/route";
+import { DELETE, GET, POST } from "@/app/api/v1/oc/[ocId]/ssb/route";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
 const auditLogMock = vi.fn(async () => undefined);
@@ -109,5 +109,37 @@ describe("POST /api/v1/oc/[ocId]/ssb", () => {
       positives: [{ note: "Calm", by: "Staff" }],
       negatives: [{ note: "Hesitant", by: "Staff" }],
     });
+  });
+});
+
+describe("DELETE /api/v1/oc/[ocId]/ssb", () => {
+  it("soft deletes the active SSB report", async () => {
+    vi.mocked(ocQueries.deleteSsbReport).mockResolvedValueOnce({ id: reportId } as any);
+
+    const req = makeJsonRequest({
+      method: "DELETE",
+      path: `/api/v1/oc/${ocId}/ssb`,
+    });
+
+    const res = await DELETE(req as any, createRouteContext({ ocId }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.deleted.id).toBe(reportId);
+  });
+
+  it("returns not_found when the SSB report was already soft deleted", async () => {
+    vi.mocked(ocQueries.deleteSsbReport).mockResolvedValueOnce(null as any);
+
+    const req = makeJsonRequest({
+      method: "DELETE",
+      path: `/api/v1/oc/${ocId}/ssb`,
+    });
+
+    const res = await DELETE(req as any, createRouteContext({ ocId }));
+    const body = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(body.error).toBe("not_found");
   });
 });

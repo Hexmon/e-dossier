@@ -1,5 +1,5 @@
 // src/app/lib/api/ocApi.ts
-import { api } from "@/app/lib/apiClient";
+import { api, ApiClientError } from "@/app/lib/apiClient";
 import { baseURL, endpoints } from "@/constants/endpoints";
 
 /** Course object */
@@ -318,6 +318,12 @@ export async function fetchOCById(ocId: string): Promise<OCListRow | null> {
     );
     return res.oc;
   } catch (err) {
-    return null;
+    if (
+      err instanceof ApiClientError &&
+      (err.status === 403 || err.status === 404)
+    ) {
+      return null;
+    }
+    throw err;
   }
 }
