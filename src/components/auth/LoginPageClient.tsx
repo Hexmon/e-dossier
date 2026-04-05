@@ -9,7 +9,10 @@ import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
-import { getAppointments, type Appointment } from "@/app/lib/api/appointmentApi";
+import {
+  getLoginAppointments,
+  type LoginAppointmentOption,
+} from "@/app/lib/api/appointmentApi";
 import { loginUser } from "@/app/lib/api/authApi";
 import { ApiClientError } from "@/app/lib/apiClient";
 import {
@@ -41,7 +44,7 @@ export default function LoginPageClient({
   const searchParams = useSearchParams();
   const isOcCorner = searchParams.get("role") === "oc";
 
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<LoginAppointmentOption[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [appointmentsFetchError, setAppointmentsFetchError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -56,7 +59,7 @@ export default function LoginPageClient({
     formState: { isSubmitting },
   } = useForm<LoginForm>({
     defaultValues: {
-      appointment: isOcCorner ? "OC" : "",
+      appointment: "",
       username: "",
       password: "",
       platoon: "",
@@ -64,11 +67,10 @@ export default function LoginPageClient({
   });
 
   const appointment = watch("appointment");
-  const platoon = watch("platoon");
 
   const fetchAppointments = async () => {
     try {
-      const data = await getAppointments();
+      const data = await getLoginAppointments();
       setAppointments(data);
       setAppointmentsFetchError(false);
     } catch {
@@ -86,31 +88,9 @@ export default function LoginPageClient({
     void fetchAppointments();
   }, []);
 
-  const uniqueAppointmentNames = useMemo(() => {
-    const seen = new Set<string>();
-
-    appointments.forEach(({ positionName }) => {
-      if (positionName && !seen.has(positionName)) {
-        seen.add(positionName);
-      }
-    });
-
-    return Array.from(seen);
-  }, [appointments]);
-
-  const platoonScopedAppointments = useMemo(
-    () => appointments.filter((candidate) => candidate.scopeType === "PLATOON"),
-    [appointments]
-  );
-
-  const selectedAppointmentChoices = useMemo(
-    () => appointments.filter((candidate) => candidate.positionName === appointment),
+  const selectedAppointment = useMemo(
+    () => appointments.find((candidate) => candidate.id === appointment) ?? null,
     [appointment, appointments]
-  );
-
-  const selectedAppointmentRequiresPlatoon = useMemo(
-    () => selectedAppointmentChoices.some((candidate) => candidate.scopeType === "PLATOON"),
-    [selectedAppointmentChoices]
   );
 
   const hasAppointmentsData = useMemo(
@@ -128,7 +108,6 @@ export default function LoginPageClient({
   const appointmentDescribedBy = appointmentsFetchError
     ? `${appointmentHelpId} ${appointmentErrorId}`
     : appointmentHelpId;
-  const platoonHelpId = "login-platoon-help";
   const usernameHelpId = "login-username-help";
   const passwordHelpId = "login-password-help";
 
@@ -139,22 +118,6 @@ export default function LoginPageClient({
     }
 
     try {
-      const selectedScopedAppointment = selectedAppointmentChoices.find(
-        (candidate) =>
-          candidate.scopeType === "PLATOON" && candidate.platoonName === data.platoon
-      );
-
-      const selectedAppointment = selectedAppointmentRequiresPlatoon
-        ? selectedScopedAppointment
-        : appointments.find(
-            (candidate) =>
-              candidate.positionName === data.appointment &&
-              candidate.scopeType !== "PLATOON"
-          ) ??
-          appointments.find(
-            (candidate) => candidate.positionName === data.appointment
-          );
-
       if (!selectedAppointment) {
         toast.error("Please select a valid appointment.");
         return;
@@ -181,7 +144,7 @@ export default function LoginPageClient({
 
       await loginUser(payload);
 
-      toast.success(`Welcome, ${data.appointment}!`);
+      toast.success(`Welcome, ${selectedAppointment.positionName || "appointment"}!`);
       const redirectTo = resolvePostAuthRedirect({
         nextParam: searchParams.get("next"),
         storedReturnUrl: readReturnUrl(),
@@ -217,34 +180,16 @@ export default function LoginPageClient({
 
   const handleAppointmentChange = (value: string) => {
     setValue("appointment", value);
-    const matchingAppointments = appointments.filter(
-      (candidate) => candidate.positionName === value
-    );
-    const requiresPlatoon = matchingAppointments.some(
-      (candidate) => candidate.scopeType === "PLATOON"
-    );
-
-    if (!requiresPlatoon) {
-      const selectedAppointment =
-        matchingAppointments.find((candidate) => candidate.scopeType !== "PLATOON") ??
-        matchingAppointments[0];
-      setValue("username", selectedAppointment?.username ?? "");
-      setValue("platoon", "");
-      return;
-    }
-
-    setValue("username", "");
   };
 
-  const handlePlatoonChange = (value: string) => {
-    setValue("platoon", value);
-
-    const selectedPlatoon = platoonScopedAppointments.find(
-      ({ platoonName, positionName }) =>
-        platoonName === value && positionName === appointment
-    );
-
-    setValue("username", selectedPlatoon?.username ?? "");
+  const describeAppointment = (candidate: LoginAppointmentOption) => {
+    const positionLabel = candidate.positionName || candidate.positionKey || "Appointment";
+    if (candidate.scopeType === "PLATOON") {
+      return candidate.platoonName
+        ? `${positionLabel} (${candidate.platoonName})`
+        : `${positionLabel} (Platoon scope)`;
+    }
+    return positionLabel;
   };
 
   return (
@@ -339,9 +284,9 @@ export default function LoginPageClient({
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {uniqueAppointmentNames.map((name) => (
-                          <SelectItem key={name} value={name}>
-                            {name}
+                        {appointments.map((candidate) => (
+                          <SelectItem key={candidate.id} value={candidate.id}>
+                            {describeAppointment(candidate)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -356,37 +301,6 @@ export default function LoginPageClient({
                     ) : null}
                   </div>
 
-                  {selectedAppointmentRequiresPlatoon ? (
-                    <div className="space-y-2">
-                      <Label htmlFor="platoon-trigger">Platoon</Label>
-                      <Select
-                        value={platoon}
-                        onValueChange={handlePlatoonChange}
-                        disabled={shouldDisableOtherFields}
-                      >
-                        <SelectTrigger
-                          id="platoon-trigger"
-                          className="w-full"
-                          aria-describedby={platoonHelpId}
-                        >
-                          <SelectValue placeholder="Select your platoon" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {platoonScopedAppointments
-                            .filter((candidate) => candidate.positionName === appointment)
-                            .map(({ id, platoonName }) => (
-                              <SelectItem key={id} value={platoonName ?? ""}>
-                                {platoonName ?? ""}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      <p id={platoonHelpId} className="text-sm text-muted-foreground">
-                        Select the platoon scope for the chosen appointment.
-                      </p>
-                    </div>
-                  ) : null}
-
                   <div className="space-y-2">
                     <Label htmlFor="username">Username</Label>
                     <Input
@@ -394,12 +308,12 @@ export default function LoginPageClient({
                       {...register("username")}
                       placeholder="Enter username"
                       required
-                      disabled
+                      disabled={!appointment}
                       autoComplete="username"
                       aria-describedby={usernameHelpId}
                     />
                     <p id={usernameHelpId} className="text-sm text-muted-foreground">
-                      Username is auto-filled from the appointment selection.
+                      Enter the username for the selected appointment.
                     </p>
                   </div>
 

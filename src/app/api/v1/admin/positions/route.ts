@@ -1,7 +1,6 @@
 import { db } from '@/app/db/client';
 import { positions } from '@/app/db/schema/auth/positions';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
 import { positionCreateSchema } from '@/app/lib/validators';
 import { asc, eq, isNull } from 'drizzle-orm';
 import { platoons } from '@/app/db/schema/auth/platoons';
@@ -15,11 +14,8 @@ export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest) {
     try {
-        let actor: { type: 'user' | 'anonymous'; id: string } = { type: 'anonymous', id: 'unknown' };
-        try {
-            const authCtx = await requireAuth(req);
-            actor = { type: 'user', id: authCtx.userId };
-        } catch {}
+        const adminCtx = await requireAdmin(req);
+        const actor = { type: 'user' as const, id: adminCtx.userId };
 
         const url = new URL(req.url);
         const includePlatoons =

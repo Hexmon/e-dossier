@@ -15,7 +15,6 @@ const PUBLIC_API_ANY_RULES: readonly PathRule[] = [
 const PUBLIC_API_METHOD_RULES: Readonly<Record<string, readonly PathRule[]>> = {
   GET: [
     { path: "/api/v1/admin/appointments", exact: true },
-    { path: "/api/v1/admin/positions", exact: true },
     { path: "/api/v1/platoons" },
     { path: "/api/v1/site-settings", exact: true },
     { path: "/api/v1/setup/status", exact: true },

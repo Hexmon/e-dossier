@@ -190,7 +190,7 @@ export async function buildAuthorityRoleKeys(authority: Pick<EffectiveAuthorityC
   return Array.from(roles);
 }
 
-export async function listSwitchableIdentities(): Promise<SwitchableIdentity[]> {
+export async function listSwitchableIdentities(userId: string): Promise<SwitchableIdentity[]> {
   const grantorUsers = alias(users, "switch_grantor_users");
 
   const [appointmentRows, delegationRows] = await Promise.all([
@@ -215,6 +215,7 @@ export async function listSwitchableIdentities(): Promise<SwitchableIdentity[]> 
       .leftJoin(platoons, eq(platoons.id, appointments.scopeId))
       .where(
         and(
+          eq(appointments.userId, userId),
           isNull(appointments.deletedAt),
           lte(appointments.startsAt, new Date()),
           or(isNull(appointments.endsAt), gte(appointments.endsAt, new Date()))
@@ -244,6 +245,7 @@ export async function listSwitchableIdentities(): Promise<SwitchableIdentity[]> 
       .leftJoin(platoons, eq(platoons.id, appointments.scopeId))
       .where(
         and(
+          eq(delegations.granteeUserId, userId),
           isNull(delegations.deletedAt),
           isNull(delegations.terminatedAt),
           lte(delegations.startsAt, new Date()),

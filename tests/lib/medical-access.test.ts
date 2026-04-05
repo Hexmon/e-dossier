@@ -39,4 +39,14 @@ describe("canWriteMedicalRecords", () => {
       })
     ).toBe(false);
   });
+
+  it("rejects legacy commander aliases that are no longer authorization tokens", () => {
+    expect(
+      canWriteMedicalRecords({
+        roles: ["PL_CDR"],
+        position: "PL_CDR",
+        scopeType: "PLATOON",
+      })
+    ).toBe(false);
+  });
 });

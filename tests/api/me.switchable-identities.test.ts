@@ -46,8 +46,8 @@ describe("GET /api/v1/me/switchable-identities", () => {
         kind: "APPOINTMENT",
         id: "appointment-1",
         label: "Admin",
-        userId: "user-2",
-        username: "otheradmin",
+        userId: "user-1",
+        username: "currentuser",
         positionKey: "ADMIN",
         positionName: "Admin",
         scopeType: "GLOBAL",
@@ -61,8 +61,8 @@ describe("GET /api/v1/me/switchable-identities", () => {
         kind: "DELEGATION",
         id: "delegation-1",
         label: "Acting Commander",
-        userId: "user-3",
-        username: "delegate",
+        userId: "user-1",
+        username: "currentuser",
         positionKey: "TRAINING_OFFICER",
         positionName: "Training Officer",
         scopeType: "PLATOON",
@@ -82,9 +82,50 @@ describe("GET /api/v1/me/switchable-identities", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
+    expect(listSwitchableIdentities).toHaveBeenCalledWith("user-1");
     expect(body.items).toHaveLength(2);
+    expect(body.items[0].userId).toBe("user-1");
     expect(body.items[1].kind).toBe("DELEGATION");
     expect(body.items[1].grantorLabel).toBe("grantor-user");
+  });
+
+  it("scopes switchable identities to the authenticated user id", async () => {
+    (listSwitchableIdentities as any).mockImplementationOnce(async (userId: string) => {
+      expect(userId).toBe("user-1");
+      return [
+        {
+          kind: "APPOINTMENT",
+          id: "appointment-1",
+          label: "Admin",
+          userId,
+          username: "currentuser",
+          positionKey: "ADMIN",
+          positionName: "Admin",
+          scopeType: "GLOBAL",
+          scopeId: null,
+          platoonName: null,
+          grantorLabel: null,
+          appointmentId: "appointment-1",
+          delegationId: null,
+        },
+      ];
+    });
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path: "/api/v1/me/switchable-identities",
+    });
+    const res = await GET(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(listSwitchableIdentities).not.toHaveBeenCalledWith("user-2");
+    expect(body.items).toEqual([
+      expect.objectContaining({
+        userId: "user-1",
+        appointmentId: "appointment-1",
+      }),
+    ]);
   });
 
   it("returns 401 when auth fails", async () => {

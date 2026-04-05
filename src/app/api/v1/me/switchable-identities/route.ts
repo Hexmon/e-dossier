@@ -11,7 +11,7 @@ import type { AuditNextRequest } from "@/lib/audit";
 async function GETHandler(req: AuditNextRequest) {
   try {
     const principal = await requireAuth(req);
-    const identities = await listSwitchableIdentities();
+    const identities = await listSwitchableIdentities(principal.userId);
 
     await req.audit.log({
       action: AuditEventType.API_REQUEST,

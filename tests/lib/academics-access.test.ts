@@ -26,4 +26,8 @@ describe("canEditAcademics", () => {
   it("denies other users", () => {
     expect(canEditAcademics({ roles: ["INSTRUCTOR"], position: "INSTRUCTOR" })).toBe(false);
   });
+
+  it("denies legacy commander aliases that are not the mapped capability", () => {
+    expect(canEditAcademics({ roles: ["PL_CDR"], position: "PL_CDR" })).toBe(false);
+  });
 });

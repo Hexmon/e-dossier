@@ -26,13 +26,7 @@ function collectTokens(input: PlatoonCommanderAccessInput): string[] {
 
 export function isPlatoonCommanderToken(token: string): boolean {
   if (!token) return false;
-  return (
-    token === COMMANDER_EQUIVALENT_CAPABILITY ||
-    token === "PLATOON_COMMANDER" ||
-    token === "PLATOON_CDR" ||
-    token === "PL_CDR" ||
-    token === "PLCDR"
-  );
+  return token === COMMANDER_EQUIVALENT_CAPABILITY || token === "PLATOON_COMMANDER";
 }
 
 export function hasPlatoonCommanderRole(input: PlatoonCommanderAccessInput): boolean {

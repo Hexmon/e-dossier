@@ -12,6 +12,7 @@ import {
   type ModuleAccessKey,
   type ResolvedModuleAccess,
 } from "@/app/lib/module-access";
+import { assertActiveAuthorityFromPayload } from "@/app/lib/active-authority";
 import { db } from "@/app/db/client";
 import { ocCadets } from "@/app/db/schema/training/oc";
 import { hasScopeAccess } from "@/lib/authorization";
@@ -39,6 +40,7 @@ async function buildDashboardAuthContext(
   let payload: Awaited<ReturnType<typeof verifyAccessJWT>>;
   try {
     payload = await verifyAccessJWT(accessToken);
+    await assertActiveAuthorityFromPayload(payload as Record<string, any>);
   } catch {
     return null;
   }

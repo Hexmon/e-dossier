@@ -11,7 +11,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/academics/grading-policy/route.ts',
   'src/app/api/v1/admin/appointments/[id]/route.ts',
   'src/app/api/v1/admin/appointments/[id]/transfer/route.ts',
-  'src/app/api/v1/admin/appointments/route.ts',
   'src/app/api/v1/admin/audit-logs/route.ts',
   'src/app/api/v1/admin/courses/[courseId]/offerings/[offeringId]/route.ts',
   'src/app/api/v1/admin/courses/[courseId]/offerings/route.ts',
@@ -47,7 +46,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/platoons/[idOrKey]/commander-history/route.ts',
   'src/app/api/v1/admin/positions/[id]/route.ts',
   'src/app/api/v1/admin/positions/active-holder/route.ts',
-  'src/app/api/v1/admin/positions/route.ts',
   'src/app/api/v1/admin/positions/slots/route.ts',
   'src/app/api/v1/admin/punishments/[id]/route.ts',
   'src/app/api/v1/admin/punishments/route.ts',
@@ -149,6 +147,13 @@ export const MISC_UNCOVERED_ROUTE_FILES = [
 ] as const;
 
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
+  {
+    testFile: 'tests/api/admin.appointments-and-positions.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/appointments/route.ts',
+      'src/app/api/v1/admin/positions/route.ts',
+    ],
+  },
   {
     testFile: 'tests/api/admin.marks-review-workflow.test.ts',
     routeFiles: ['src/app/api/v1/admin/marks-review-workflow/route.ts'],

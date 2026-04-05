@@ -17,6 +17,10 @@ vi.mock("@/app/lib/jwt", () => ({
   verifyAccessJWT: vi.fn(),
 }));
 
+vi.mock("@/app/lib/active-authority", () => ({
+  assertActiveAuthorityFromPayload: vi.fn(),
+}));
+
 vi.mock("@/app/lib/module-access", () => {
   const resolveModuleAccessForUser = vi.fn();
 
@@ -52,10 +56,12 @@ vi.mock("@/lib/authorization", () => ({
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { verifyAccessJWT } from "@/app/lib/jwt";
+import { assertActiveAuthorityFromPayload } from "@/app/lib/active-authority";
 import { resolveModuleAccessForUser } from "@/app/lib/module-access";
 import { db } from "@/app/db/client";
 import { hasScopeAccess } from "@/lib/authorization";
 import {
+  requireDashboardAccess,
   requireDashboardBulkHubAccess,
   requireDashboardBulkWorkflowAccess,
   requireDashboardModuleAccess,
@@ -86,6 +92,7 @@ describe("server page auth", () => {
         },
       },
     });
+    (assertActiveAuthorityFromPayload as any).mockResolvedValue(undefined);
     (resolveModuleAccessForUser as any).mockResolvedValue({
       roleGroup: "ADMIN",
       isAdmin: true,
@@ -198,6 +205,38 @@ describe("server page auth", () => {
   it("redirects non-super-admin users away from super-admin-only pages", async () => {
     await expect(requireSuperAdminDashboardAccess()).rejects.toThrow("REDIRECT:/dashboard");
     expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("redirects to login when the selected appointment is no longer active", async () => {
+    (assertActiveAuthorityFromPayload as any).mockRejectedValueOnce(
+      new Error("appointment inactive")
+    );
+
+    await expect(requireDashboardModuleAccess("REPORTS")).rejects.toThrow("REDIRECT:/login");
+    expect(redirect).toHaveBeenCalledWith("/login");
+  });
+
+  it("redirects to login when delegated authority is terminated", async () => {
+    (verifyAccessJWT as any).mockResolvedValueOnce({
+      sub: "delegate-1",
+      roles: ["PLATOON_COMMANDER_EQUIVALENT"],
+      apt: {
+        id: "appointment-1",
+        auth_kind: "DELEGATION",
+        delegation_id: "delegation-1",
+        position: "ARJUNPLCDR",
+        scope: {
+          type: "PLATOON",
+          id: "platoon-1",
+        },
+      },
+    });
+    (assertActiveAuthorityFromPayload as any).mockRejectedValueOnce(
+      new Error("delegation inactive")
+    );
+
+    await expect(requireDashboardAccess()).rejects.toThrow("REDIRECT:/login");
+    expect(redirect).toHaveBeenCalledWith("/login");
   });
 
   it("returns not found when the dossier page OC is archived or missing", async () => {
