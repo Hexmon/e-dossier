@@ -6,6 +6,7 @@ import { createRouteContext, makeJsonRequest } from "../utils/next";
 
 import * as ocChecks from "@/app/api/v1/oc/_checks";
 import { db } from "@/app/db/client";
+import * as ocQueries from "@/app/db/queries/oc";
 
 const auditLogMock = vi.fn(async () => undefined);
 
@@ -44,6 +45,7 @@ vi.mock("@/app/lib/storage", () => ({
 }));
 
 vi.mock("@/app/db/queries/oc", () => ({
+  getDossierSnapshotView: vi.fn(),
   getOcImage: vi.fn(),
   upsertOcImage: vi.fn(),
 }));
@@ -58,6 +60,22 @@ beforeEach(() => {
     userId: "pc-1",
     roles: ["PLATOON_COMMANDER"],
   } as any);
+  vi.mocked(ocQueries.getDossierSnapshotView).mockResolvedValue({
+    arrivalPhoto: null,
+    departurePhoto: null,
+    tesNo: "TES-50",
+    name: "Cadet One",
+    course: "TES 50",
+    pi: "ARJUN",
+    dtOfArr: "2026-01-01",
+    relegated: "",
+    withdrawnOn: "",
+    dtOfPassingOut: "",
+    icNo: "",
+    orderOfMerit: "",
+    regtArm: "",
+    postedAtt: "",
+  });
 });
 
 describe("GET /api/v1/oc/[ocId]/dossier-snapshot", () => {
@@ -95,46 +113,26 @@ describe("GET /api/v1/oc/[ocId]/dossier-snapshot", () => {
     (db.select as any)
       .mockImplementationOnce(() => ({
         from: () => ({
-          leftJoin: () => ({
-            where: () => ({
-              limit: async () => [
-                {
-                  id: ocId,
-                  name: "Cadet One",
-                  arrivalAtUniversity: new Date("2026-01-01T00:00:00Z"),
-                  relegatedToCourseId: null,
-                  relegatedOn: null,
-                  withdrawnOn: null,
-                  courseId: "course-1",
-                  platoonId: null,
-                  courseCode: "TES-50",
-                  courseTitle: "TES 50",
-                },
-              ],
-            }),
-          }),
-        }),
-      }))
-      .mockImplementationOnce(() => ({
-        from: () => ({
-          where: () => ({
-            limit: async () => [
-              {
-                passOutDate: new Date("2026-12-31T00:00:00Z"),
-                icNo: "IC-7",
-                orderOfMerit: 5,
-                regimentOrArm: "Signals",
-                postedUnit: "Unit A",
-              },
-            ],
-          }),
-        }),
-      }))
-      .mockImplementationOnce(() => ({
-        from: () => ({
           where: async () => [],
         }),
       }));
+
+    vi.mocked(ocQueries.getDossierSnapshotView).mockResolvedValueOnce({
+      arrivalPhoto: null,
+      departurePhoto: null,
+      tesNo: "7501",
+      name: "Cadet One",
+      course: "TES-50",
+      pi: "PI-102",
+      dtOfArr: "2026-01-01",
+      relegated: "",
+      withdrawnOn: "",
+      dtOfPassingOut: "2026-12-31",
+      icNo: "IC-7",
+      orderOfMerit: "5",
+      regtArm: "Signals",
+      postedAtt: "Unit A",
+    });
 
     const req = makeJsonRequest({ method: "GET", path: `/api/v1/oc/${ocId}/dossier-snapshot` });
     const res = await getDossierSnapshot(req as any, createRouteContext({ ocId }));
@@ -142,7 +140,44 @@ describe("GET /api/v1/oc/[ocId]/dossier-snapshot", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data.name).toBe("Cadet One");
-    expect(body.data.course).toBe("TES 50");
+    expect(body.data.tesNo).toBe("7501");
+    expect(body.data.course).toBe("TES-50");
     expect(body.data.icNo).toBe("IC-7");
+  });
+
+  it("composes snapshot defaults from core OC data when commissioning is missing", async () => {
+    (db.select as any).mockImplementationOnce(() => ({
+      from: () => ({
+        where: async () => [],
+      }),
+    }));
+
+    vi.mocked(ocQueries.getDossierSnapshotView).mockResolvedValueOnce({
+      arrivalPhoto: null,
+      departurePhoto: null,
+      tesNo: "8123",
+      name: "Bulk Uploaded OC",
+      course: "TES-51",
+      pi: "PI-101",
+      dtOfArr: "2026-02-20",
+      relegated: "",
+      withdrawnOn: "",
+      dtOfPassingOut: "",
+      icNo: "",
+      orderOfMerit: "",
+      regtArm: "",
+      postedAtt: "",
+    });
+
+    const req = makeJsonRequest({ method: "GET", path: `/api/v1/oc/${ocId}/dossier-snapshot` });
+    const res = await getDossierSnapshot(req as any, createRouteContext({ ocId }));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.tesNo).toBe("8123");
+    expect(body.data.name).toBe("Bulk Uploaded OC");
+    expect(body.data.dtOfPassingOut).toBe("");
+    expect(body.data.icNo).toBe("");
+    expect(body.data.arrivalPhoto).toBeNull();
   });
 });

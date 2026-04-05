@@ -49,6 +49,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     await assertOcSemesterWriteAllowed({
       ocId,
       requestedSemester: dto.semester,
+      request: req,
       authContext: authCtx,
       supportedSemesters: [3, 4, 5, 6],
     });

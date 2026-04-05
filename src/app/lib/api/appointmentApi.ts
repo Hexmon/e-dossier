@@ -36,6 +36,54 @@ export async function getAppointments(): Promise<Appointment[]> {
   return response.data;
 }
 
+export interface LoginAppointmentOption {
+  id: string;
+  username: string;
+  positionId: string;
+  positionKey: string;
+  positionName: string;
+  scopeType: string;
+  scopeId: string | null;
+  platoonKey: string | null;
+  platoonName: string | null;
+}
+
+interface LoginAppointmentResponse {
+  data: LoginAppointmentOption[];
+}
+
+export async function getLoginAppointments(): Promise<LoginAppointmentOption[]> {
+  const response = await api.get<LoginAppointmentResponse>(
+    endpoints.admin.appointments,
+    {
+      baseURL,
+      query: { active: true },
+    }
+  );
+
+  return response.data;
+}
+
+export type DashboardAppointmentHolder = {
+  appointmentId: string;
+  positionName: string | null;
+  officerName: string | null;
+  startsAt: string;
+};
+
+interface DashboardAppointmentsResponse {
+  items: DashboardAppointmentHolder[];
+}
+
+export async function getDashboardAppointmentHolders(): Promise<DashboardAppointmentHolder[]> {
+  const response = await api.get<DashboardAppointmentsResponse>(
+    "/api/v1/dashboard/data/appointments",
+    { baseURL }
+  );
+
+  return response.items;
+}
+
 
 /*--------------------Transfer appointment------------------*/
 

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useDispatch } from "react-redux";
@@ -14,9 +15,17 @@ interface Props {
     ocId: string;
     onClear: () => void;
     readOnly?: boolean;
+    readOnlyNoticeId?: string;
 }
 
-export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onClear, readOnly = false }: Props) {
+export default function MedicalCategoryForm({
+    onSubmit,
+    defaultValues,
+    ocId,
+    onClear,
+    readOnly = false,
+    readOnlyNoticeId,
+}: Props) {
     const dispatch = useDispatch();
 
     const form = useForm<MedicalCategoryFormData>({
@@ -48,9 +57,12 @@ export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onC
     }, [watch, dispatch, ocId]);
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)} aria-describedby={readOnlyNoticeId}>
             <div className="overflow-x-auto border rounded-lg shadow">
                 <table className="w-full border text-sm">
+                    <caption className="sr-only">
+                        Medical category entry rows for the selected semester.
+                    </caption>
                     <thead className="bg-muted/70">
                         <tr>
                             {[
@@ -65,7 +77,7 @@ export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onC
                                 "Action",
                             ].map((h) => {
                                 return (
-                                    <th key={h} className="border p-2 text-center">{h}</th>
+                                    <th key={h} scope="col" className="border p-2 text-center">{h}</th>
                                 )
                             })}
                         </tr>
@@ -108,7 +120,13 @@ export default function MedicalCategoryForm({ onSubmit, defaultValues, ocId, onC
                                     </td>
 
                                     <td className="border p-2 text-center">
-                                        <Button type="button" variant="destructive" onClick={() => remove(index)} disabled={readOnly}>
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            onClick={() => remove(index)}
+                                            disabled={readOnly}
+                                            aria-label={`Remove medical category row ${index + 1}`}
+                                        >
                                             Remove
                                         </Button>
                                     </td>

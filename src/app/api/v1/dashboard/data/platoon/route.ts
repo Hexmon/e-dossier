@@ -22,6 +22,7 @@ async function GETHandler(req: AuditNextRequest) {
                 ocCadets,
                 and(
                     eq(ocCadets.platoonId, platoons.id),
+                    isNull(ocCadets.deletedAt),
                     isNull(ocCadets.withdrawnOn)
                 )
             )

@@ -71,6 +71,14 @@ function clampCurrentSemester(value: number | null | undefined): number {
     return Math.max(1, Math.min(Math.trunc(parsed), 6));
 }
 
+export function activeOcPredicate() {
+    return isNull(ocCadets.deletedAt);
+}
+
+export function activeOcIdPredicate(ocId: string) {
+    return and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt));
+}
+
 export async function listCurrentSemestersByCourseIds(courseIds: string[]) {
     const normalizedCourseIds = Array.from(new Set(courseIds.map((value) => value.trim()).filter(Boolean)));
     if (!normalizedCourseIds.length) {
@@ -179,7 +187,7 @@ export async function getOcCourseInfo(ocId: string) {
     const [row] = await db
         .select({ id: ocCadets.id, branch: ocCadets.branch, courseId: ocCadets.courseId })
         .from(ocCadets)
-        .where(eq(ocCadets.id, ocId))
+        .where(activeOcIdPredicate(ocId))
         .limit(1);
     return row ?? null;
 }
@@ -525,6 +533,149 @@ export async function hardDeleteOcImage(ocId: string, kind: OcImageKind) {
         .returning();
     return row ?? null;
 }
+
+type BasicDetailsCadetBaseline = {
+    ocId: string;
+    ocNo: string;
+    name: string;
+    courseId: string | null;
+    courseCode: string | null;
+    courseTitle: string | null;
+    platoonId: string | null;
+    platoonName: string | null;
+    personalPi: string | null;
+    arrivalAtUniversity: Date | null;
+    relegatedToCourseId: string | null;
+    relegatedOn: Date | null;
+    withdrawnOn: Date | null;
+};
+
+export type DossierSnapshotViewRecord = {
+    arrivalPhoto: string | null;
+    departurePhoto: string | null;
+    tesNo: string;
+    name: string;
+    course: string;
+    pi: string;
+    dtOfArr: string;
+    relegated: string;
+    withdrawnOn: string;
+    dtOfPassingOut: string;
+    icNo: string;
+    orderOfMerit: string;
+    regtArm: string;
+    postedAtt: string;
+};
+
+export type DossierFillingViewRecord = {
+    initiatedBy: string;
+    openedOn: string;
+    initialInterview: string;
+    closedBy: string;
+    closedOn: string;
+    finalInterview: string;
+};
+
+export type AutobiographyViewRecord = {
+    generalSelf: string;
+    proficiencySports: string;
+    achievementsNote: string;
+    areasToWork: string;
+    additionalInfo: string;
+    filledOn: string;
+    platoonCommanderName: string;
+};
+
+export type SsbReportViewRecord = {
+    positives: { note: string; by: string }[];
+    negatives: { note: string; by: string }[];
+    predictiveRating: number;
+    scopeForImprovement: string;
+};
+
+function toDateOnlyString(value: Date | null | undefined) {
+    if (!value) return '';
+    return value.toISOString().split('T')[0] ?? '';
+}
+
+function toIsoString(value: Date | null | undefined) {
+    if (!value) return '';
+    return value.toISOString();
+}
+
+export async function getBasicDetailsCadetBaseline(ocId: string): Promise<BasicDetailsCadetBaseline | null> {
+    const [row] = await db
+        .select({
+            ocId: ocCadets.id,
+            ocNo: ocCadets.ocNo,
+            name: ocCadets.name,
+            courseId: ocCadets.courseId,
+            courseCode: courses.code,
+            courseTitle: courses.title,
+            platoonId: ocCadets.platoonId,
+            platoonName: platoons.name,
+            personalPi: ocPersonal.pi,
+            arrivalAtUniversity: ocCadets.arrivalAtUniversity,
+            relegatedToCourseId: ocCadets.relegatedToCourseId,
+            relegatedOn: ocCadets.relegatedOn,
+            withdrawnOn: ocCadets.withdrawnOn,
+        })
+        .from(ocCadets)
+        .leftJoin(courses, eq(courses.id, ocCadets.courseId))
+        .leftJoin(platoons, eq(platoons.id, ocCadets.platoonId))
+        .leftJoin(ocPersonal, eq(ocPersonal.ocId, ocCadets.id))
+        .where(activeOcIdPredicate(ocId))
+        .limit(1);
+
+    return row ?? null;
+}
+
+export async function getDossierSnapshotView(ocId: string): Promise<DossierSnapshotViewRecord | null> {
+    const baseline = await getBasicDetailsCadetBaseline(ocId);
+    if (!baseline) return null;
+
+    const [commissioning, relegatedCourse] = await Promise.all([
+        db
+            .select()
+            .from(ocCommissioning)
+            .where(eq(ocCommissioning.ocId, ocId))
+            .limit(1)
+            .then((rows) => rows[0] ?? null),
+        baseline.relegatedToCourseId
+            ? db
+                  .select({ code: courses.code, title: courses.title })
+                  .from(courses)
+                  .where(eq(courses.id, baseline.relegatedToCourseId))
+                  .limit(1)
+                  .then((rows) => rows[0] ?? null)
+            : Promise.resolve(null),
+    ]);
+
+    const relegatedLabel = relegatedCourse?.code || relegatedCourse?.title || 'Unknown';
+    const relegated =
+        baseline.relegatedOn && baseline.relegatedToCourseId
+            ? `Relegated to ${relegatedLabel} on ${toDateOnlyString(baseline.relegatedOn)}`
+            : '';
+
+    return {
+        arrivalPhoto: null,
+        departurePhoto: null,
+        tesNo: baseline.ocNo ?? '',
+        name: baseline.name ?? '',
+        course: baseline.courseCode ?? baseline.courseTitle ?? '',
+        pi: baseline.personalPi ?? baseline.platoonName ?? '',
+        dtOfArr: toDateOnlyString(baseline.arrivalAtUniversity),
+        relegated,
+        withdrawnOn: toDateOnlyString(baseline.withdrawnOn),
+        dtOfPassingOut: toDateOnlyString(commissioning?.passOutDate),
+        icNo: commissioning?.icNo ?? '',
+        orderOfMerit:
+            commissioning?.orderOfMerit == null ? '' : String(commissioning.orderOfMerit),
+        regtArm: commissioning?.regimentOrArm ?? '',
+        postedAtt: commissioning?.postedUnit ?? '',
+    };
+}
+
 // ---- Personal ---------------------------------------------------------------
 export async function getPersonal(ocId: string) {
     const [row] = await db.select().from(ocPersonal).where(eq(ocPersonal.ocId, ocId)).limit(1);
@@ -612,6 +763,18 @@ export async function getAutobio(ocId: string) {
     const [row] = await db.select().from(ocAutobiography).where(eq(ocAutobiography.ocId, ocId)).limit(1);
     return row ?? null;
 }
+export async function getAutobiographyView(ocId: string): Promise<AutobiographyViewRecord> {
+    const row = await getAutobio(ocId);
+    return {
+        generalSelf: row?.generalSelf ?? '',
+        proficiencySports: row?.proficiencySports ?? '',
+        achievementsNote: row?.achievementsNote ?? '',
+        areasToWork: row?.areasToWork ?? '',
+        additionalInfo: row?.additionalInfo ?? '',
+        filledOn: toIsoString(row?.filledOn),
+        platoonCommanderName: row?.platoonCommanderName ?? '',
+    };
+}
 export async function upsertAutobio(ocId: string, data: Partial<typeof ocAutobiography.$inferInsert>) {
     const existing = await getAutobio(ocId);
     if (existing) {
@@ -628,8 +791,37 @@ export async function deleteAutobio(ocId: string) {
 
 // ---- SSB report + points ----------------------------------------------------
 export async function getSsbReport(ocId: string) {
-    const [row] = await db.select().from(ocSsbReports).where(eq(ocSsbReports.ocId, ocId));
+    const [row] = await db
+        .select()
+        .from(ocSsbReports)
+        .where(and(eq(ocSsbReports.ocId, ocId), isNull(ocSsbReports.deletedAt)))
+        .limit(1);
     return row ?? null;
+}
+export async function getSsbReportView(ocId: string): Promise<SsbReportViewRecord> {
+    const report = await getSsbReport(ocId);
+    const points = report ? await listSsbPoints(report.id) : [];
+    const positives: SsbReportViewRecord['positives'] = [];
+    const negatives: SsbReportViewRecord['negatives'] = [];
+
+    for (const point of points) {
+        const mapped = {
+            note: point.remark,
+            by: point.authorName ?? '',
+        };
+        if (point.kind === 'POSITIVE') {
+            positives.push(mapped);
+        } else if (point.kind === 'NEGATIVE') {
+            negatives.push(mapped);
+        }
+    }
+
+    return {
+        positives,
+        negatives,
+        predictiveRating: report?.overallPredictiveRating ?? 0,
+        scopeForImprovement: report?.scopeOfImprovement ?? '',
+    };
 }
 export async function upsertSsbReport(ocId: string, data: Partial<typeof ocSsbReports.$inferInsert>) {
     const existing = await getSsbReport(ocId);
@@ -668,6 +860,7 @@ export async function upsertSsbReportWithPoints(ocId: string, input: SsbReportWi
                 .set({
                     overallPredictiveRating: input.overallPredictiveRating,
                     scopeOfImprovement: input.scopeOfImprovement,
+                    deletedAt: null,
                 })
                 .where(eq(ocSsbReports.ocId, ocId))
                 .returning();
@@ -679,6 +872,7 @@ export async function upsertSsbReportWithPoints(ocId: string, input: SsbReportWi
                     ocId,
                     overallPredictiveRating: input.overallPredictiveRating,
                     scopeOfImprovement: input.scopeOfImprovement,
+                    deletedAt: null,
                 })
                 .returning();
             report = created;
@@ -712,7 +906,11 @@ export async function upsertSsbReportWithPoints(ocId: string, input: SsbReportWi
 }
 
 export async function deleteSsbReport(ocId: string) {
-    const [row] = await db.delete(ocSsbReports).where(eq(ocSsbReports.ocId, ocId)).returning();
+    const [row] = await db
+        .update(ocSsbReports)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocSsbReports.ocId, ocId), isNull(ocSsbReports.deletedAt)))
+        .returning();
     return row ?? null;
 }
 
@@ -738,43 +936,77 @@ export async function deleteSsbPoint(reportId: string, id: string) {
 
 // ---- Medicals ---------------------------------------------------------------
 export async function listMedicals(ocId: string, limit = 100, offset = 0) {
-    return db.select().from(ocMedicals).where(eq(ocMedicals.ocId, ocId)).limit(limit).offset(offset);
+    return db
+        .select()
+        .from(ocMedicals)
+        .where(and(eq(ocMedicals.ocId, ocId), isNull(ocMedicals.deletedAt)))
+        .limit(limit)
+        .offset(offset);
 }
 export async function createMedical(ocId: string, data: Omit<typeof ocMedicals.$inferInsert, 'id' | 'ocId'>) {
-    const [row] = await db.insert(ocMedicals).values({ ocId, ...data }).returning();
+    const [row] = await db.insert(ocMedicals).values({ ocId, deletedAt: null, ...data }).returning();
     return row;
 }
 export async function getMedical(ocId: string, id: string) {
-    const [row] = await db.select().from(ocMedicals).where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId))).limit(1);
+    const [row] = await db
+        .select()
+        .from(ocMedicals)
+        .where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId), isNull(ocMedicals.deletedAt)))
+        .limit(1);
     return row ?? null;
 }
 export async function updateMedical(ocId: string, id: string, data: Partial<typeof ocMedicals.$inferInsert>) {
-    const [row] = await db.update(ocMedicals).set(data).where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId))).returning();
+    const [row] = await db
+        .update(ocMedicals)
+        .set(data)
+        .where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId), isNull(ocMedicals.deletedAt)))
+        .returning();
     return row ?? null;
 }
 export async function deleteMedical(ocId: string, id: string) {
-    const [row] = await db.delete(ocMedicals).where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId))).returning();
+    const [row] = await db
+        .update(ocMedicals)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId), isNull(ocMedicals.deletedAt)))
+        .returning();
     return row ?? null;
 }
 
 // ---- Medical Category -------------------------------------------------------
 export async function listMedCats(ocId: string, limit = 100, offset = 0) {
-    return db.select().from(ocMedicalCategory).where(eq(ocMedicalCategory.ocId, ocId)).limit(limit).offset(offset);
+    return db
+        .select()
+        .from(ocMedicalCategory)
+        .where(and(eq(ocMedicalCategory.ocId, ocId), isNull(ocMedicalCategory.deletedAt)))
+        .limit(limit)
+        .offset(offset);
 }
 export async function createMedCat(ocId: string, data: Omit<typeof ocMedicalCategory.$inferInsert, 'id' | 'ocId'>) {
-    const [row] = await db.insert(ocMedicalCategory).values({ ocId, ...data }).returning();
+    const [row] = await db.insert(ocMedicalCategory).values({ ocId, deletedAt: null, ...data }).returning();
     return row;
 }
 export async function getMedCat(ocId: string, id: string) {
-    const [row] = await db.select().from(ocMedicalCategory).where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId))).limit(1);
+    const [row] = await db
+        .select()
+        .from(ocMedicalCategory)
+        .where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId), isNull(ocMedicalCategory.deletedAt)))
+        .limit(1);
     return row ?? null;
 }
 export async function updateMedCat(ocId: string, id: string, data: Partial<typeof ocMedicalCategory.$inferInsert>) {
-    const [row] = await db.update(ocMedicalCategory).set(data).where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId))).returning();
+    const [row] = await db
+        .update(ocMedicalCategory)
+        .set(data)
+        .where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId), isNull(ocMedicalCategory.deletedAt)))
+        .returning();
     return row ?? null;
 }
 export async function deleteMedCat(ocId: string, id: string) {
-    const [row] = await db.delete(ocMedicalCategory).where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId))).returning();
+    const [row] = await db
+        .update(ocMedicalCategory)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId), isNull(ocMedicalCategory.deletedAt)))
+        .returning();
     return row ?? null;
 }
 
@@ -784,13 +1016,13 @@ export async function listDiscipline(ocId: string, limit = 100, offset = 0) {
     return db
         .select()
         .from(ocDiscipline)
-        .where(and(eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId)))
+        .where(and(eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId), isNull(ocDiscipline.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
 export async function createDiscipline(ocId: string, data: Omit<typeof ocDiscipline.$inferInsert, 'id' | 'ocId'>) {
     const enrollmentId = await getActiveEnrollmentId(ocId);
-    const [row] = await db.insert(ocDiscipline).values({ ocId, enrollmentId, ...data }).returning();
+    const [row] = await db.insert(ocDiscipline).values({ ocId, enrollmentId, deletedAt: null, ...data }).returning();
     return row;
 }
 export async function getDiscipline(ocId: string, id: string) {
@@ -798,7 +1030,7 @@ export async function getDiscipline(ocId: string, id: string) {
     const [row] = await db
         .select()
         .from(ocDiscipline)
-        .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId)))
+        .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId), isNull(ocDiscipline.deletedAt)))
         .limit(1);
     return row ?? null;
 }
@@ -807,37 +1039,55 @@ export async function updateDiscipline(ocId: string, id: string, data: Partial<t
     const [row] = await db
         .update(ocDiscipline)
         .set(data)
-        .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId)))
+        .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId), isNull(ocDiscipline.deletedAt)))
         .returning();
     return row ?? null;
 }
 export async function deleteDiscipline(ocId: string, id: string) {
     const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
-        .delete(ocDiscipline)
-        .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId)))
+        .update(ocDiscipline)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId), isNull(ocDiscipline.deletedAt)))
         .returning();
     return row ?? null;
 }
 
 // ---- Parent communications --------------------------------------------------
 export async function listComms(ocId: string, limit = 100, offset = 0) {
-    return db.select().from(ocParentComms).where(eq(ocParentComms.ocId, ocId)).limit(limit).offset(offset);
+    return db
+        .select()
+        .from(ocParentComms)
+        .where(and(eq(ocParentComms.ocId, ocId), isNull(ocParentComms.deletedAt)))
+        .limit(limit)
+        .offset(offset);
 }
 export async function createComm(ocId: string, data: Omit<typeof ocParentComms.$inferInsert, 'id' | 'ocId'>) {
-    const [row] = await db.insert(ocParentComms).values({ ocId, ...data }).returning();
+    const [row] = await db.insert(ocParentComms).values({ ocId, deletedAt: null, ...data }).returning();
     return row;
 }
 export async function getComm(ocId: string, id: string) {
-    const [row] = await db.select().from(ocParentComms).where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId))).limit(1);
+    const [row] = await db
+        .select()
+        .from(ocParentComms)
+        .where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId), isNull(ocParentComms.deletedAt)))
+        .limit(1);
     return row ?? null;
 }
 export async function updateComm(ocId: string, id: string, data: Partial<typeof ocParentComms.$inferInsert>) {
-    const [row] = await db.update(ocParentComms).set(data).where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId))).returning();
+    const [row] = await db
+        .update(ocParentComms)
+        .set(data)
+        .where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId), isNull(ocParentComms.deletedAt)))
+        .returning();
     return row ?? null;
 }
 export async function deleteComm(ocId: string, id: string) {
-    const [row] = await db.delete(ocParentComms).where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId))).returning();
+    const [row] = await db
+        .update(ocParentComms)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId), isNull(ocParentComms.deletedAt)))
+        .returning();
     return row ?? null;
 }
 
@@ -1397,7 +1647,7 @@ export async function listOCsBasic(opts: ListOpts = {}) {
         offset = 0,
     } = opts;
 
-    const wh: any[] = [];
+    const wh: any[] = [activeOcPredicate()];
     if (id && id.trim()) wh.push(eq(ocCadets.id, id.trim()));
     if (q && q.trim()) {
         const pattern = likeEscape(q.trim());
@@ -1492,20 +1742,20 @@ export async function listOCsFull(opts: ListOpts = {}) {
         db.select().from(ocFamilyMembers).where(inArray(ocFamilyMembers.ocId, ocIds)),
         db.select().from(ocEducation).where(inArray(ocEducation.ocId, ocIds)),
         db.select().from(ocAchievements).where(inArray(ocAchievements.ocId, ocIds)),
-        db.select().from(ocSsbReports).where(inArray(ocSsbReports.ocId, ocIds)),
-        db.select().from(ocMedicals).where(inArray(ocMedicals.ocId, ocIds)),
-        db.select().from(ocMedicalCategory).where(inArray(ocMedicalCategory.ocId, ocIds)),
-        db.select().from(ocDiscipline).where(inArray(ocDiscipline.ocId, ocIds)),
-        db.select().from(ocParentComms).where(inArray(ocParentComms.ocId, ocIds)),
+        db.select().from(ocSsbReports).where(and(inArray(ocSsbReports.ocId, ocIds), isNull(ocSsbReports.deletedAt))),
+        db.select().from(ocMedicals).where(and(inArray(ocMedicals.ocId, ocIds), isNull(ocMedicals.deletedAt))),
+        db.select().from(ocMedicalCategory).where(and(inArray(ocMedicalCategory.ocId, ocIds), isNull(ocMedicalCategory.deletedAt))),
+        db.select().from(ocDiscipline).where(and(inArray(ocDiscipline.ocId, ocIds), isNull(ocDiscipline.deletedAt))),
+        db.select().from(ocParentComms).where(and(inArray(ocParentComms.ocId, ocIds), isNull(ocParentComms.deletedAt))),
         db.select().from(ocDelegations).where(inArray(ocDelegations.ocId, ocIds)),
-        db.select().from(ocMotivationAwards).where(inArray(ocMotivationAwards.ocId, ocIds)),
-        db.select().from(ocSportsAndGames).where(inArray(ocSportsAndGames.ocId, ocIds)),
-        db.select().from(ocWeaponTraining).where(inArray(ocWeaponTraining.ocId, ocIds)),
-        db.select().from(ocSpecialAchievementInFiring).where(inArray(ocSpecialAchievementInFiring.ocId, ocIds)),
-        db.select().from(ocObstacleTraining).where(inArray(ocObstacleTraining.ocId, ocIds)),
-        db.select().from(ocSpeedMarch).where(inArray(ocSpeedMarch.ocId, ocIds)),
-        db.select().from(ocDrill).where(inArray(ocDrill.ocId, ocIds)),
-        db.select().from(ocCreditForExcellence).where(inArray(ocCreditForExcellence.ocId, ocIds)),
+        db.select().from(ocMotivationAwards).where(and(inArray(ocMotivationAwards.ocId, ocIds), isNull(ocMotivationAwards.deletedAt))),
+        db.select().from(ocSportsAndGames).where(and(inArray(ocSportsAndGames.ocId, ocIds), isNull(ocSportsAndGames.deletedAt))),
+        db.select().from(ocWeaponTraining).where(and(inArray(ocWeaponTraining.ocId, ocIds), isNull(ocWeaponTraining.deletedAt))),
+        db.select().from(ocSpecialAchievementInFiring).where(and(inArray(ocSpecialAchievementInFiring.ocId, ocIds), isNull(ocSpecialAchievementInFiring.deletedAt))),
+        db.select().from(ocObstacleTraining).where(and(inArray(ocObstacleTraining.ocId, ocIds), isNull(ocObstacleTraining.deletedAt))),
+        db.select().from(ocSpeedMarch).where(and(inArray(ocSpeedMarch.ocId, ocIds), isNull(ocSpeedMarch.deletedAt))),
+        db.select().from(ocDrill).where(and(inArray(ocDrill.ocId, ocIds), isNull(ocDrill.deletedAt))),
+        db.select().from(ocCreditForExcellence).where(and(inArray(ocCreditForExcellence.ocId, ocIds), isNull(ocCreditForExcellence.deletedAt))),
     ]);
 
     const reportIds = ssbReportRows.map((r) => r.id);
@@ -2247,6 +2497,17 @@ export async function recomputeOcCampTotal(ocCampId: string) {
 export async function getDossierFilling(ocId: string) {
     const [row] = await db.select().from(ocDossierFilling).where(eq(ocDossierFilling.ocId, ocId)).limit(1);
     return row ?? null;
+}
+export async function getDossierFillingView(ocId: string): Promise<DossierFillingViewRecord> {
+    const row = await getDossierFilling(ocId);
+    return {
+        initiatedBy: row?.initiatedBy ?? '',
+        openedOn: toIsoString(row?.openedOn),
+        initialInterview: row?.initialInterview ?? '',
+        closedBy: row?.closedBy ?? '',
+        closedOn: toIsoString(row?.closedOn),
+        finalInterview: row?.finalInterview ?? '',
+    };
 }
 export async function upsertDossierFilling(ocId: string, data: Partial<typeof ocDossierFilling.$inferInsert>) {
     const existing = await getDossierFilling(ocId);

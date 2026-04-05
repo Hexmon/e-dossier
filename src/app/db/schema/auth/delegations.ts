@@ -4,12 +4,16 @@ import { users } from './users';
 import { platoons } from './platoons';
 import { scopeTypeEnum } from './enums';
 import { positions } from './positions';
+import { appointments } from './appointments';
 
 export const delegations = pgTable('delegations', {
   id: uuid('id').primaryKey().defaultRandom(),
 
   grantorUserId: uuid('grantor_user_id').notNull()
     .references(() => users.id, { onDelete: 'restrict' }),
+
+  grantorAppointmentId: uuid('grantor_appointment_id')
+    .references(() => appointments.id, { onDelete: 'restrict' }),
 
   granteeUserId: uuid('grantee_user_id').notNull()
     .references(() => users.id, { onDelete: 'restrict' }),
@@ -23,7 +27,10 @@ export const delegations = pgTable('delegations', {
   endsAt: timestamp('ends_at', { withTimezone: true }),
 
   reason: text('reason'),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   terminatedBy: uuid('terminated_by').references(() => users.id, { onDelete: 'set null' }),
+  terminatedAt: timestamp('terminated_at', { withTimezone: true }),
+  terminationReason: text('termination_reason'),
 
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

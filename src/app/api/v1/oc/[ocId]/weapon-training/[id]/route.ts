@@ -46,6 +46,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     await assertOcSemesterWriteAllowed({
       ocId,
       requestedSemester: dto.semester ?? previous.semester,
+      request: req,
       authContext: authCtx,
       supportedSemesters: [3, 4, 5, 6],
     });
@@ -85,6 +86,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     await assertOcSemesterWriteAllowed({
       ocId,
       requestedSemester: previous.semester,
+      request: req,
       authContext: authCtx,
       supportedSemesters: [3, 4, 5, 6],
     });

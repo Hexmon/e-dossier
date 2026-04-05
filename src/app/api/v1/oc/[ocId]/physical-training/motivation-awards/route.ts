@@ -17,6 +17,7 @@ import {
 } from '@/app/db/queries/physicalTrainingOc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { readSemesterSearchParam } from '@/lib/dossier-semester';
 
 async function validateMotivationFields(semester: number, fieldIds: string[]) {
     const uniqueIds = Array.from(new Set(fieldIds));
@@ -52,7 +53,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
         const sp = new URL(req.url).searchParams;
         const qp = ptOcMotivationQuerySchema.parse({
-            semester: sp.get('semester') ?? undefined,
+            semester: readSemesterSearchParam(sp),
         });
 
         const items = await listOcPtMotivationValues(ocId, qp.semester);
@@ -85,7 +86,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await ensureOcExists(ocId);
 
         const dto = ptOcMotivationUpsertSchema.parse(await req.json());
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
         const fieldIds = dto.values.map((v) => v.fieldId);
         await validateMotivationFields(dto.semester, fieldIds);
 
@@ -119,7 +120,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         await ensureOcExists(ocId);
 
         const dto = ptOcMotivationUpdateSchema.parse(await req.json());
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
 
         if (dto.values?.length) {
             await validateMotivationFields(dto.semester, dto.values.map((v) => v.fieldId));
@@ -161,7 +162,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         await ensureOcExists(ocId);
 
         const dto = ptOcMotivationDeleteSchema.parse(await req.json());
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
 
         const deleted = dto.fieldIds?.length
             ? await deleteOcPtMotivationValuesByIds(ocId, dto.fieldIds)

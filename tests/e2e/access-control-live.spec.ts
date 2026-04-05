@@ -26,7 +26,7 @@ const SUPER_ADMIN_SESSION = {
 
 const ARJUN_SESSION = {
   userId: '8bf30fde-3cec-4b28-b2a8-1377da9d428a',
-  roles: ['arjunplcdr'],
+  roles: ['arjunplcdr', 'PLATOON_COMMANDER_EQUIVALENT'],
   apt: {
     id: 'c3e284e7-84f0-473f-9062-f4d67a393c14',
     position: 'arjunplcdr',

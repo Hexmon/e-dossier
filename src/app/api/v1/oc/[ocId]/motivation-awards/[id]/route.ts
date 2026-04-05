@@ -46,6 +46,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     await assertOcSemesterWriteAllowed({
       ocId,
       requestedSemester: dto.semester ?? previous.semester,
+      request: req,
       authContext: authCtx,
     });
     const row = await updateMotivationAward(ocId, id, dto);
@@ -81,7 +82,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     const hard = sp.get('hard') === 'true';
     const previous = await getMotivationAward(ocId, id);
     if (!previous) throw new ApiError(404, 'Motivation award not found', 'not_found');
-    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, authContext: authCtx });
+    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, request: req, authContext: authCtx });
     const row = await deleteMotivationAward(ocId, id, { hard });
     if (!row) throw new ApiError(404, 'Motivation award not found', 'not_found');
 

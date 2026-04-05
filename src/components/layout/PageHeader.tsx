@@ -54,6 +54,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   const {
     user = {},
     apt = {},
+    authority = {},
   } = data ?? {};
 
   const {
@@ -196,6 +197,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
         currentIdentity={{
           userId: id || null,
           appointmentId: appointmentId || null,
+          delegationId: (authority as any)?.delegationId ?? null,
           roleKey: position || null,
           username: username || null,
         }}

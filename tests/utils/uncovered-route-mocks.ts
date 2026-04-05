@@ -24,6 +24,7 @@ const ocChecksMock = {
   mustBeAuthed: vi.fn(),
   mustHaveOcAccess: vi.fn(),
   mustBeAdmin: vi.fn(),
+  mustBeMedicalWriter: vi.fn(),
   mustBeAcademicsEditor: vi.fn(),
   assertOcSemesterWriteAllowed: vi.fn(),
   ensureOcExists: vi.fn(),
@@ -233,6 +234,7 @@ export function resetCommonMocks() {
   ocChecksMock.mustBeAuthed.mockResolvedValue({ userId: 'user-1', roles: ['ADMIN'] });
   ocChecksMock.mustHaveOcAccess.mockResolvedValue({ userId: 'user-1', roles: ['ADMIN'] });
   ocChecksMock.mustBeAdmin.mockResolvedValue({ userId: 'admin-1', roles: ['ADMIN'] });
+  ocChecksMock.mustBeMedicalWriter.mockResolvedValue({ userId: 'user-1', roles: ['ADMIN'] });
   ocChecksMock.mustBeAcademicsEditor.mockResolvedValue({ userId: 'admin-1', roles: ['ADMIN'] });
   ocChecksMock.assertOcSemesterWriteAllowed.mockResolvedValue(undefined);
   ocChecksMock.ensureOcExists.mockResolvedValue(undefined);
@@ -256,6 +258,7 @@ export function forceAuthFailure(status = 401) {
   ocChecksMock.mustBeAuthed.mockRejectedValueOnce(error);
   ocChecksMock.mustHaveOcAccess.mockRejectedValueOnce(error);
   ocChecksMock.mustBeAdmin.mockRejectedValueOnce(error);
+  ocChecksMock.mustBeMedicalWriter.mockRejectedValueOnce(error);
   ocChecksMock.mustBeAcademicsEditor.mockRejectedValueOnce(error);
   authorizationMock.authorizeOcAccess.mockRejectedValueOnce(error);
 }

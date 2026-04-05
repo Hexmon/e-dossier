@@ -11,7 +11,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/academics/grading-policy/route.ts',
   'src/app/api/v1/admin/appointments/[id]/route.ts',
   'src/app/api/v1/admin/appointments/[id]/transfer/route.ts',
-  'src/app/api/v1/admin/appointments/route.ts',
   'src/app/api/v1/admin/audit-logs/route.ts',
   'src/app/api/v1/admin/courses/[courseId]/offerings/[offeringId]/route.ts',
   'src/app/api/v1/admin/courses/[courseId]/offerings/route.ts',
@@ -47,7 +46,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/platoons/[idOrKey]/commander-history/route.ts',
   'src/app/api/v1/admin/positions/[id]/route.ts',
   'src/app/api/v1/admin/positions/active-holder/route.ts',
-  'src/app/api/v1/admin/positions/route.ts',
   'src/app/api/v1/admin/positions/slots/route.ts',
   'src/app/api/v1/admin/punishments/[id]/route.ts',
   'src/app/api/v1/admin/punishments/route.ts',
@@ -143,13 +141,19 @@ export const REPORT_UNCOVERED_ROUTE_FILES = [
 ] as const;
 
 export const MISC_UNCOVERED_ROUTE_FILES = [
-  'src/app/api/v1/bootstrap/super-admin/route.ts',
   'src/app/api/v1/dashboard/data/appointments/route.ts',
   'src/app/api/v1/dashboard/data/course/route.ts',
   'src/app/api/v1/dashboard/data/platoon/route.ts',
 ] as const;
 
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
+  {
+    testFile: 'tests/api/admin.appointments-and-positions.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/appointments/route.ts',
+      'src/app/api/v1/admin/positions/route.ts',
+    ],
+  },
   {
     testFile: 'tests/api/admin.marks-review-workflow.test.ts',
     routeFiles: ['src/app/api/v1/admin/marks-review-workflow/route.ts'],
@@ -159,12 +163,42 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/admin/module-access/route.ts'],
   },
   {
+    testFile: 'tests/api/admin.hierarchy.nodes.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/hierarchy/nodes/route.ts',
+      'src/app/api/v1/admin/hierarchy/nodes/[id]/route.ts',
+    ],
+  },
+  {
+    testFile: 'tests/api/admin.hierarchy.functional-role-mappings.test.ts',
+    routeFiles: ['src/app/api/v1/admin/hierarchy/functional-role-mappings/route.ts'],
+  },
+  {
+    testFile: 'tests/api/admin.delegations.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/delegations/route.ts',
+      'src/app/api/v1/admin/delegations/[id]/terminate/route.ts',
+    ],
+  },
+  {
+    testFile: 'tests/api/bootstrap.super-admin.test.ts',
+    routeFiles: ['src/app/api/v1/bootstrap/super-admin/route.ts'],
+  },
+  {
     testFile: 'tests/api/me.workflow-notifications.test.ts',
     routeFiles: ['src/app/api/v1/me/workflow-notifications/route.ts'],
   },
   {
+    testFile: 'tests/api/me.switchable-identities.test.ts',
+    routeFiles: ['src/app/api/v1/me/switchable-identities/route.ts'],
+  },
+  {
     testFile: 'tests/api/reports.module-access.test.ts',
     routeFiles: ['src/app/api/v1/reports/metadata/course-semesters/route.ts'],
+  },
+  {
+    testFile: 'tests/api/setup.status.test.ts',
+    routeFiles: ['src/app/api/v1/setup/status/route.ts'],
   },
   {
     testFile: 'tests/api/oc.academics.workflow.test.ts',
@@ -175,8 +209,54 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/oc/physical-training/workflow/route.ts'],
   },
   {
+    testFile: 'tests/api/oc.autobiography.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/autobiography/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.dossier-filling.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/dossier-filling/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.dossier-inspection.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/dossier-inspection/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.dossier-snapshot.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/dossier-snapshot/route.ts'],
+  },
+  {
     testFile: 'tests/api/oc.physical-training.motivation-awards.test.ts',
     routeFiles: ['src/app/api/v1/oc/[ocId]/physical-training/motivation-awards/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.medical.test.ts',
+    routeFiles: [
+      'src/app/api/v1/oc/[ocId]/medical/route.ts',
+      'src/app/api/v1/oc/[ocId]/medical/[id]/route.ts',
+    ],
+  },
+  {
+    testFile: 'tests/api/oc.medical-category.test.ts',
+    routeFiles: [
+      'src/app/api/v1/oc/[ocId]/medical-category/route.ts',
+      'src/app/api/v1/oc/[ocId]/medical-category/[id]/route.ts',
+    ],
+  },
+  {
+    testFile: 'tests/api/oc.discipline.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/discipline/[id]/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.parent-comms.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/parent-comms/[id]/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.ssb.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/ssb/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.interviews.[interviewId].test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts'],
   },
   {
     testFile: 'tests/api/oc.semester-lock-derived.test.ts',

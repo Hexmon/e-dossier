@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SetupReturnBanner } from "@/components/setup/SetupReturnBanner";
 
 const courseMgmtTabs = [
   {
@@ -130,6 +131,11 @@ export default function CourseManagement() {
                 { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                 { label: "Course Management" },
               ]}
+            />
+
+            <SetupReturnBanner
+              title="Setup step: Courses"
+              description="Create the initial courses here, then return to the setup checklist."
             />
 
             <GlobalTabs tabs={courseMgmtTabs} defaultValue="course-mgmt">

@@ -1,20 +1,22 @@
 # Database Data Dictionary
 
-Generated at: `2026-02-22T21:08:53.877Z`
+Generated at: `2026-04-04T20:37:11.700Z`
 Database: `neondb`
-Server version: `PostgreSQL 17.8 (6108b59) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit`
+Server version: `PostgreSQL 17.8 (a48d9ca) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit`
 
 ## Table of Contents
 
 - [Schema `drizzle`](#schema-drizzle)
   - [`drizzle.__drizzle_migrations`](#table-drizzle-drizzle-migrations)
 - [Schema `public`](#schema-public)
+  - [`public.academic_grading_policy_settings`](#table-public-academic-grading-policy-settings)
   - [`public.account_lockouts`](#table-public-account-lockouts)
   - [`public.appointment_transfers`](#table-public-appointment-transfers)
   - [`public.appointments`](#table-public-appointments)
   - [`public.audit_events`](#table-public-audit-events)
   - [`public.audit_logs`](#table-public-audit-logs)
   - [`public.authz_policy_state`](#table-public-authz-policy-state)
+  - [`public.cadet_appointments`](#table-public-cadet-appointments)
   - [`public.course_offering_instructors`](#table-public-course-offering-instructors)
   - [`public.course_offerings`](#table-public-course-offerings)
   - [`public.courses`](#table-public-courses)
@@ -22,7 +24,10 @@ Server version: `PostgreSQL 17.8 (6108b59) on aarch64-unknown-linux-gnu, compile
   - [`public.delegations`](#table-public-delegations)
   - [`public.device_site_settings`](#table-public-device-site-settings)
   - [`public.dossier_inspections`](#table-public-dossier-inspections)
+  - [`public.footer`](#table-public-footer)
+  - [`public.functional_role_mappings`](#table-public-functional-role-mappings)
   - [`public.instructors`](#table-public-instructors)
+  - [`public.interview_pending_ticker_settings`](#table-public-interview-pending-ticker-settings)
   - [`public.interview_template_field_options`](#table-public-interview-template-field-options)
   - [`public.interview_template_fields`](#table-public-interview-template-fields)
   - [`public.interview_template_groups`](#table-public-interview-template-groups)
@@ -30,6 +35,11 @@ Server version: `PostgreSQL 17.8 (6108b59) on aarch64-unknown-linux-gnu, compile
   - [`public.interview_template_semesters`](#table-public-interview-template-semesters)
   - [`public.interview_templates`](#table-public-interview-templates)
   - [`public.login_attempts`](#table-public-login-attempts)
+  - [`public.marks_workflow_events`](#table-public-marks-workflow-events)
+  - [`public.marks_workflow_notifications`](#table-public-marks-workflow-notifications)
+  - [`public.marks_workflow_settings`](#table-public-marks-workflow-settings)
+  - [`public.marks_workflow_tickets`](#table-public-marks-workflow-tickets)
+  - [`public.module_access_settings`](#table-public-module-access-settings)
   - [`public.oc_achievements`](#table-public-oc-achievements)
   - [`public.oc_autobiography`](#table-public-oc-autobiography)
   - [`public.oc_cadets`](#table-public-oc-cadets)
@@ -76,6 +86,7 @@ Server version: `PostgreSQL 17.8 (6108b59) on aarch64-unknown-linux-gnu, compile
   - [`public.oc_ssb_points`](#table-public-oc-ssb-points)
   - [`public.oc_ssb_reports`](#table-public-oc-ssb-reports)
   - [`public.oc_weapon_training`](#table-public-oc-weapon-training)
+  - [`public.org_hierarchy_nodes`](#table-public-org-hierarchy-nodes)
   - [`public.permission_field_rules`](#table-public-permission-field-rules)
   - [`public.permissions`](#table-public-permissions)
   - [`public.platoons`](#table-public-platoons)
@@ -88,15 +99,18 @@ Server version: `PostgreSQL 17.8 (6108b59) on aarch64-unknown-linux-gnu, compile
   - [`public.pt_type_attempts`](#table-public-pt-type-attempts)
   - [`public.pt_types`](#table-public-pt-types)
   - [`public.punishments`](#table-public-punishments)
+  - [`public.report_download_versions`](#table-public-report-download-versions)
   - [`public.role_permissions`](#table-public-role-permissions)
   - [`public.roles`](#table-public-roles)
   - [`public.signup_requests`](#table-public-signup-requests)
   - [`public.site_awards`](#table-public-site-awards)
   - [`public.site_commanders`](#table-public-site-commanders)
+  - [`public.site_events_news`](#table-public-site-events-news)
   - [`public.site_history`](#table-public-site-history)
   - [`public.site_settings`](#table-public-site-settings)
   - [`public.subjects`](#table-public-subjects)
   - [`public.training_camp_activities`](#table-public-training-camp-activities)
+  - [`public.training_camp_settings`](#table-public-training-camp-settings)
   - [`public.training_camps`](#table-public-training-camps)
   - [`public.users`](#table-public-users)
 
@@ -145,6 +159,52 @@ _None_
 
 ## Schema: `public`
 <a id="schema-public"></a>
+
+### Table: `public.academic_grading_policy_settings`
+<a id="table-public-academic-grading-policy-settings"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| singleton_key | text | NO | 'default'::text | NO | - |
+| letter_grade_bands | jsonb | NO | - | NO | - |
+| grade_point_bands | jsonb | NO | - | NO | - |
+| sgpa_formula_template | text | NO | 'CREDIT_WEIGHTED'::text | NO | - |
+| cgpa_formula_template | text | NO | 'CREDIT_WEIGHTED'::text | NO | - |
+| rounding_scale | integer | NO | 2 | NO | - |
+| updated_by | uuid | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `academic_grading_policy_settings_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+- `academic_grading_policy_cgpa_formula_check`: `CHECK (cgpa_formula_template = ANY (ARRAY['CREDIT_WEIGHTED'::text, 'SEMESTER_AVG'::text]))`
+- `academic_grading_policy_rounding_scale_check`: `CHECK (rounding_scale >= 0 AND rounding_scale <= 6)`
+- `academic_grading_policy_sgpa_formula_check`: `CHECK (sgpa_formula_template = ANY (ARRAY['CREDIT_WEIGHTED'::text, 'SEMESTER_AVG'::text]))`
+
+#### Foreign Keys
+
+- `academic_grading_policy_settings_updated_by_users_id_fk`: (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+
+#### Indexes
+
+- `academic_grading_policy_settings_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `uq_academic_grading_policy_settings_singleton` (UNIQUE) using `btree` on `singleton_key`
 
 ### Table: `public.account_lockouts`
 <a id="table-public-account-lockouts"></a>
@@ -436,6 +496,57 @@ _None_
 
 - `authz_policy_state_pkey` (UNIQUE, PRIMARY) using `btree` on `key`
 
+### Table: `public.cadet_appointments`
+<a id="table-public-cadet-appointments"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| cadet_id | uuid | NO | - | NO | - |
+| platoon_id | uuid | NO | - | NO | - |
+| appointment_name | character varying(128) | NO | - | NO | - |
+| starts_at | timestamp with time zone | NO | - | NO | - |
+| ends_at | timestamp with time zone | YES | - | NO | - |
+| appointed_by | uuid | YES | - | NO | - |
+| ended_by | uuid | YES | - | NO | - |
+| reason | text | YES | - | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `cadet_appointments_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `cadet_appointments_appointed_by_users_id_fk`: (`appointed_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `cadet_appointments_cadet_id_oc_cadets_id_fk`: (`cadet_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `cadet_appointments_ended_by_users_id_fk`: (`ended_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `cadet_appointments_platoon_id_platoons_id_fk`: (`platoon_id`) -> `public.platoons` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+
+#### Indexes
+
+- `cadet_appointments_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `idx_cadet_appointments_cadet` using `btree` on `cadet_id`, `starts_at`
+- `idx_cadet_appointments_platoon` using `btree` on `platoon_id`, `starts_at`
+- `uq_cadet_appointments_active_name_per_platoon` (UNIQUE) using `btree` on `platoon_id` where `deleted_at IS NULL AND ends_at IS NULL`
+
 ### Table: `public.course_offering_instructors`
 <a id="table-public-course-offering-instructors"></a>
 
@@ -624,6 +735,10 @@ Comment: _None_
 | deleted_at | timestamp with time zone | YES | - | NO | - |
 | created_at | timestamp with time zone | NO | now() | NO | - |
 | updated_at | timestamp with time zone | NO | now() | NO | - |
+| grantor_appointment_id | uuid | YES | - | NO | - |
+| created_by | uuid | YES | - | NO | - |
+| terminated_at | timestamp with time zone | YES | - | NO | - |
+| termination_reason | text | YES | - | NO | - |
 
 #### Primary Key
 
@@ -641,7 +756,9 @@ _None_
 #### Foreign Keys
 
 - `delegations_act_as_position_id_positions_id_fk`: (`act_as_position_id`) -> `public.positions` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `delegations_created_by_users_id_fk`: (`created_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `delegations_grantee_user_id_users_id_fk`: (`grantee_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `delegations_grantor_appointment_id_appointments_id_fk`: (`grantor_appointment_id`) -> `public.appointments` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `delegations_grantor_user_id_users_id_fk`: (`grantor_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `delegations_scope_id_platoons_id_fk`: (`scope_id`) -> `public.platoons` (`id`) [on update: NO ACTION, on delete: NO ACTION]
 - `delegations_terminated_by_users_id_fk`: (`terminated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
@@ -714,6 +831,7 @@ Comment: _None_
 | remarks | text | YES | - | NO | - |
 | created_at | timestamp with time zone | NO | now() | NO | - |
 | updated_at | timestamp with time zone | YES | - | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
 
 #### Primary Key
 
@@ -731,11 +849,85 @@ _None_
 #### Foreign Keys
 
 - `dossier_inspections_inspector_user_id_users_id_fk`: (`inspector_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `dossier_inspections_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `dossier_inspections_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
 - `dossier_inspections_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+
+### Table: `public.footer`
+<a id="table-public-footer"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| footer | text | NO | - | NO | - |
+
+#### Primary Key
+
+_None_
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+_None_
+
+#### Indexes
+
+_None_
+
+### Table: `public.functional_role_mappings`
+<a id="table-public-functional-role-mappings"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| capability_key | text | NO | - | NO | - |
+| position_id | uuid | YES | - | NO | - |
+| updated_by | uuid | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `functional_role_mappings_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `functional_role_mappings_position_id_positions_id_fk`: (`position_id`) -> `public.positions` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `functional_role_mappings_updated_by_users_id_fk`: (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+
+#### Indexes
+
+- `functional_role_mappings_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `uq_functional_role_mappings_capability_key` (UNIQUE) using `btree` on `capability_key`
 
 ### Table: `public.instructors`
 <a id="table-public-instructors"></a>
@@ -758,6 +950,9 @@ Comment: _None_
 | created_at | timestamp with time zone | NO | now() | NO | - |
 | updated_at | timestamp with time zone | NO | now() | NO | - |
 | deleted_at | timestamp with time zone | YES | - | NO | - |
+| experience | text | YES | - | NO | - |
+| qualification | text | YES | - | NO | - |
+| subject_ids | uuid[] | NO | '{}'::uuid[] | NO | - |
 
 #### Primary Key
 
@@ -779,6 +974,47 @@ _None_
 #### Indexes
 
 - `instructors_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+
+### Table: `public.interview_pending_ticker_settings`
+<a id="table-public-interview-pending-ticker-settings"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| start_date | date | NO | - | NO | - |
+| end_date | date | NO | - | NO | - |
+| days | integer | NO | - | NO | - |
+| created_by | uuid | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `interview_pending_ticker_settings_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `interview_pending_ticker_settings_created_by_users_id_fk`: (`created_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+
+#### Indexes
+
+- `interview_pending_ticker_settings_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `ix_interview_pending_ticker_settings_created_at` using `btree` on `created_at`
+- `ix_interview_pending_ticker_settings_created_by` using `btree` on `created_by`
 
 ### Table: `public.interview_template_field_options`
 <a id="table-public-interview-template-field-options"></a>
@@ -1023,6 +1259,7 @@ Comment: _None_
 | created_at | timestamp with time zone | NO | now() | NO | - |
 | updated_at | timestamp with time zone | NO | now() | NO | - |
 | deleted_at | timestamp with time zone | YES | - | NO | - |
+| course_id | uuid | YES | - | NO | - |
 
 #### Primary Key
 
@@ -1039,12 +1276,13 @@ _None_
 
 #### Foreign Keys
 
-_None_
+- `interview_templates_course_id_courses_id_fk`: (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
+- `idx_interview_template_course_sort` using `btree` on `course_id`, `sort_order`
 - `interview_templates_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
-- `uq_interview_template_code` (UNIQUE) using `btree` on `code`
+- `uq_interview_template_course_code` (UNIQUE) using `btree` on `course_id`, `code`
 
 ### Table: `public.login_attempts`
 <a id="table-public-login-attempts"></a>
@@ -1087,6 +1325,240 @@ _None_
 
 - `login_attempts_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
 
+### Table: `public.marks_workflow_events`
+<a id="table-public-marks-workflow-events"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| ticket_id | uuid | NO | - | NO | - |
+| event_type | marks_workflow_event_type | NO | - | NO | - |
+| actor_user_id | uuid | YES | - | NO | - |
+| from_status | marks_workflow_status | YES | - | NO | - |
+| to_status | marks_workflow_status | YES | - | NO | - |
+| message | text | YES | - | NO | - |
+| payload | jsonb | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `marks_workflow_events_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `marks_workflow_events_actor_user_id_users_id_fk`: (`actor_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `marks_workflow_events_ticket_id_marks_workflow_tickets_id_fk`: (`ticket_id`) -> `public.marks_workflow_tickets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+
+#### Indexes
+
+- `ix_marks_workflow_events_ticket_created_at` using `btree` on `ticket_id`, `created_at`
+- `marks_workflow_events_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+
+### Table: `public.marks_workflow_notifications`
+<a id="table-public-marks-workflow-notifications"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| user_id | uuid | NO | - | NO | - |
+| ticket_id | uuid | NO | - | NO | - |
+| module | marks_workflow_module | NO | - | NO | - |
+| actor_user_id | uuid | YES | - | NO | - |
+| workflow_status | marks_workflow_status | NO | - | NO | - |
+| selection_label | text | NO | - | NO | - |
+| message | text | YES | - | NO | - |
+| deep_link | text | NO | - | NO | - |
+| read_at | timestamp with time zone | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `marks_workflow_notifications_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `marks_workflow_notifications_actor_user_id_users_id_fk`: (`actor_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `marks_workflow_notifications_ticket_id_marks_workflow_tickets_i`: (`ticket_id`) -> `public.marks_workflow_tickets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `marks_workflow_notifications_user_id_users_id_fk`: (`user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: CASCADE]
+
+#### Indexes
+
+- `ix_marks_workflow_notifications_user_read_created_at` using `btree` on `user_id`, `read_at`, `created_at`
+- `marks_workflow_notifications_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+
+### Table: `public.marks_workflow_settings`
+<a id="table-public-marks-workflow-settings"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| module | marks_workflow_module | NO | - | NO | - |
+| data_entry_user_ids | jsonb | NO | '[]'::jsonb | NO | - |
+| verification_user_ids | jsonb | NO | '[]'::jsonb | NO | - |
+| post_verification_override_mode | marks_workflow_override_mode | NO | 'SUPER_ADMIN_ONLY'::marks_workflow_override_mode | NO | - |
+| updated_by | uuid | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `marks_workflow_settings_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `marks_workflow_settings_updated_by_users_id_fk`: (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+
+#### Indexes
+
+- `marks_workflow_settings_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `uq_marks_workflow_settings_module` (UNIQUE) using `btree` on `module`
+
+### Table: `public.marks_workflow_tickets`
+<a id="table-public-marks-workflow-tickets"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| module | marks_workflow_module | NO | - | NO | - |
+| workflow_key | text | NO | - | NO | - |
+| course_id | uuid | NO | - | NO | - |
+| semester | integer | NO | - | NO | - |
+| subject_id | uuid | YES | - | NO | - |
+| subject_label | text | YES | - | NO | - |
+| course_label | text | YES | - | NO | - |
+| selection_label | text | YES | - | NO | - |
+| status | marks_workflow_status | NO | 'DRAFT'::marks_workflow_status | NO | - |
+| draft_payload | jsonb | NO | - | NO | - |
+| current_revision | integer | NO | 1 | NO | - |
+| submitted_by_user_id | uuid | YES | - | NO | - |
+| submitted_at | timestamp with time zone | YES | - | NO | - |
+| verified_by_user_id | uuid | YES | - | NO | - |
+| verified_at | timestamp with time zone | YES | - | NO | - |
+| last_actor_user_id | uuid | YES | - | NO | - |
+| last_actor_message | text | YES | - | NO | - |
+| draft_updated_at | timestamp with time zone | NO | now() | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `marks_workflow_tickets_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `marks_workflow_tickets_last_actor_user_id_users_id_fk`: (`last_actor_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `marks_workflow_tickets_submitted_by_user_id_users_id_fk`: (`submitted_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `marks_workflow_tickets_verified_by_user_id_users_id_fk`: (`verified_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+
+#### Indexes
+
+- `ix_marks_workflow_tickets_module_course_semester` using `btree` on `module`, `course_id`, `semester`
+- `marks_workflow_tickets_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `uq_marks_workflow_tickets_module_key` (UNIQUE) using `btree` on `module`, `workflow_key`
+
+### Table: `public.module_access_settings`
+<a id="table-public-module-access-settings"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| singleton_key | text | NO | 'default'::text | NO | - |
+| admin_can_access_dossier | boolean | NO | false | NO | - |
+| admin_can_access_bulk_upload | boolean | NO | false | NO | - |
+| admin_can_access_reports | boolean | NO | false | NO | - |
+| updated_by | uuid | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `module_access_settings_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `module_access_settings_updated_by_users_id_fk`: (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+
+#### Indexes
+
+- `module_access_settings_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `uq_module_access_settings_singleton_key` (UNIQUE) using `btree` on `singleton_key`
+
 ### Table: `public.oc_achievements`
 <a id="table-public-oc-achievements"></a>
 
@@ -1120,7 +1592,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_achievements_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_achievements_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1161,7 +1633,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_autobiography_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_autobiography_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1193,6 +1665,8 @@ Comment: _None_
 | withdrawn_on | timestamp with time zone | YES | - | NO | - |
 | created_at | timestamp with time zone | NO | now() | NO | - |
 | updated_at | timestamp with time zone | NO | now() | NO | - |
+| jnu_enrollment_no | character varying(64) | YES | - | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
 
 #### Primary Key
 
@@ -1216,6 +1690,7 @@ _None_
 
 #### Indexes
 
+- `idx_oc_cadets_active_course_platoon_created` using `btree` on `course_id`, `platoon_id`, `created_at` where `deleted_at IS NULL`
 - `oc_cadets_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
 
 ### Table: `public.oc_camp_activity_scores`
@@ -1339,7 +1814,7 @@ _None_
 #### Foreign Keys
 
 - `oc_camps_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_camps_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_camps_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_camps_training_camp_id_training_camps_id_fk`: (`training_camp_id`) -> `public.training_camps` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
@@ -1383,7 +1858,7 @@ _None_
 #### Foreign Keys
 
 - `oc_clubs_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_clubs_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_clubs_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1422,7 +1897,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_commissioning_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_commissioning_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1465,7 +1940,7 @@ _None_
 #### Foreign Keys
 
 - `oc_counselling_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_counselling_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_counselling_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1514,7 +1989,7 @@ _None_
 - `oc_course_enrollments_closed_by_user_id_users_id_fk`: (`closed_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `oc_course_enrollments_course_id_courses_id_fk`: (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_course_enrollments_created_by_user_id_users_id_fk`: (`created_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_course_enrollments_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_course_enrollments_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1559,7 +2034,7 @@ _None_
 #### Foreign Keys
 
 - `oc_credit_for_excellence_enrollment_id_oc_course_enrollments_id`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_credit_for_excellence_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_credit_for_excellence_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1603,7 +2078,7 @@ _None_
 
 - `oc_delegations_decided_by_user_id_users_id_fk`: (`decided_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `oc_delegations_from_course_id_courses_id_fk`: (`from_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
-- `oc_delegations_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_delegations_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_delegations_to_course_id_courses_id_fk`: (`to_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
@@ -1633,6 +2108,7 @@ Comment: _None_
 | points_cumulative | integer | YES | - | NO | - |
 | number_of_punishments | integer | YES | - | NO | - |
 | enrollment_id | uuid | YES | - | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
 
 #### Primary Key
 
@@ -1650,7 +2126,7 @@ _None_
 #### Foreign Keys
 
 - `oc_discipline_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_discipline_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_discipline_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1692,7 +2168,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_dossier_filling_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_dossier_filling_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1737,7 +2213,7 @@ _None_
 #### Foreign Keys
 
 - `oc_drill_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_drill_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_drill_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1779,7 +2255,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_education_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_education_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1820,7 +2296,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_family_members_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_family_members_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -1865,7 +2341,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_images_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_images_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2030,6 +2506,7 @@ Comment: _None_
 | created_at | timestamp with time zone | NO | now() | NO | - |
 | updated_at | timestamp with time zone | NO | now() | NO | - |
 | enrollment_id | uuid | YES | - | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
 
 #### Primary Key
 
@@ -2047,7 +2524,7 @@ _None_
 #### Foreign Keys
 
 - `oc_interviews_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_interviews_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_interviews_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_interviews_template_id_interview_templates_id_fk`: (`template_id`) -> `public.interview_templates` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
@@ -2076,6 +2553,7 @@ Comment: _None_
 | mh_to | timestamp with time zone | YES | - | NO | - |
 | absence | text | YES | - | NO | - |
 | platoon_commander_name | character varying(160) | YES | - | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
 
 #### Primary Key
 
@@ -2092,7 +2570,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_medical_category_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_medical_category_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2123,6 +2601,7 @@ Comment: _None_
 | medical_history | text | YES | - | NO | - |
 | hereditary_issues | text | YES | - | NO | - |
 | allergies | text | YES | - | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
 
 #### Primary Key
 
@@ -2139,7 +2618,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_medicals_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_medicals_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2182,7 +2661,7 @@ _None_
 #### Foreign Keys
 
 - `oc_motivation_awards_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_motivation_awards_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_motivation_awards_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2224,7 +2703,7 @@ _None_
 #### Foreign Keys
 
 - `oc_obstacle_training_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_obstacle_training_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_obstacle_training_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2266,7 +2745,7 @@ _None_
 #### Foreign Keys
 
 - `oc_olq_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_olq_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_olq_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2419,6 +2898,7 @@ Comment: _None_
 | brief | text | NO | - | NO | - |
 | platoon_commander_name | character varying(160) | YES | - | NO | - |
 | subject | text | YES | - | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
 
 #### Primary Key
 
@@ -2435,7 +2915,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_parent_comms_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_parent_comms_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2521,7 +3001,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_personal_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_personal_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2562,7 +3042,7 @@ _None_
 #### Foreign Keys
 
 - `oc_pre_commission_course_id_courses_id_fk`: (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
-- `oc_pre_commission_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_pre_commission_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_pre_commission_platoon_id_platoons_id_fk`: (`platoon_id`) -> `public.platoons` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `oc_pre_commission_relegated_to_course_id_courses_id_fk`: (`relegated_to_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: SET NULL]
 
@@ -2606,7 +3086,7 @@ _None_
 #### Foreign Keys
 
 - `oc_pt_motivation_awards_enrollment_id_oc_course_enrollments_id_`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_pt_motivation_awards_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_pt_motivation_awards_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_pt_motivation_awards_pt_motivation_field_id_pt_motivation_aw`: (`pt_motivation_field_id`) -> `public.pt_motivation_award_fields` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
@@ -2651,7 +3131,7 @@ _None_
 #### Foreign Keys
 
 - `oc_pt_task_scores_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_pt_task_scores_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_pt_task_scores_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_pt_task_scores_pt_task_score_id_pt_task_scores_id_fk`: (`pt_task_score_id`) -> `public.pt_task_scores` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
@@ -2697,7 +3177,7 @@ _None_
 #### Foreign Keys
 
 - `oc_recording_leave_hike_detention_enrollment_id_oc_course_enrol`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_recording_leave_hike_detention_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_recording_leave_hike_detention_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2750,7 +3230,7 @@ _None_
 
 - `oc_relegations_from_course_id_courses_id_fk`: (`from_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_relegations_from_enrollment_id_oc_course_enrollments_id_fk`: (`from_enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_relegations_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_relegations_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_relegations_performed_by_user_id_users_id_fk`: (`performed_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_relegations_to_course_id_courses_id_fk`: (`to_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `oc_relegations_to_enrollment_id_oc_course_enrollments_id_fk`: (`to_enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
@@ -2805,7 +3285,7 @@ _None_
 #### Foreign Keys
 
 - `oc_semester_marks_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_semester_marks_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_semester_marks_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2846,7 +3326,7 @@ _None_
 #### Foreign Keys
 
 - `oc_special_achievement_in_clubs_enrollment_id_oc_course_enrollm`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_special_achievement_in_clubs_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_special_achievement_in_clubs_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2883,7 +3363,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_special_achievement_in_firing_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_special_achievement_in_firing_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2926,7 +3406,7 @@ _None_
 #### Foreign Keys
 
 - `oc_speed_march_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_speed_march_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_speed_march_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -2970,7 +3450,7 @@ _None_
 #### Foreign Keys
 
 - `oc_sports_and_games_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_sports_and_games_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_sports_and_games_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -3015,7 +3495,7 @@ _None_
 #### Foreign Keys
 
 - `oc_spr_records_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_spr_records_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_spr_records_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -3077,6 +3557,7 @@ Comment: _None_
 | oc_id | uuid | NO | - | NO | - |
 | overall_predictive_rating | integer | YES | - | NO | - |
 | scope_of_improvement | text | YES | - | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
 
 #### Primary Key
 
@@ -3093,7 +3574,7 @@ _None_
 
 #### Foreign Keys
 
-- `oc_ssb_reports_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_ssb_reports_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
@@ -3135,11 +3616,62 @@ _None_
 #### Foreign Keys
 
 - `oc_weapon_training_enrollment_id_oc_course_enrollments_id_fk`: (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `oc_weapon_training_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `oc_weapon_training_oc_id_oc_cadets_id_fk`: (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
 - `oc_weapon_training_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+
+### Table: `public.org_hierarchy_nodes`
+<a id="table-public-org-hierarchy-nodes"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| key | character varying(128) | NO | - | NO | - |
+| name | character varying(256) | NO | - | NO | - |
+| node_type | org_hierarchy_node_type | NO | - | NO | - |
+| parent_id | uuid | YES | - | NO | - |
+| platoon_id | uuid | YES | - | NO | - |
+| sort_order | integer | NO | 0 | NO | - |
+| created_by | uuid | YES | - | NO | - |
+| updated_by | uuid | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
+
+#### Primary Key
+
+- Name: `org_hierarchy_nodes_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `org_hierarchy_nodes_created_by_users_id_fk`: (`created_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `org_hierarchy_nodes_parent_id_org_hierarchy_nodes_id_fk`: (`parent_id`) -> `public.org_hierarchy_nodes` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `org_hierarchy_nodes_platoon_id_platoons_id_fk`: (`platoon_id`) -> `public.platoons` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `org_hierarchy_nodes_updated_by_users_id_fk`: (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+
+#### Indexes
+
+- `org_hierarchy_nodes_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `uq_org_hierarchy_nodes_key` (UNIQUE) using `btree` on `key`
+- `uq_org_hierarchy_nodes_platoon_id` (UNIQUE) using `btree` on `platoon_id` where `platoon_id IS NOT NULL`
+- `uq_org_hierarchy_nodes_single_root` (UNIQUE) using `btree` on `node_type` where `node_type = 'ROOT'::org_hierarchy_node_type AND deleted_at IS NULL`
 
 ### Table: `public.permission_field_rules`
 <a id="table-public-permission-field-rules"></a>
@@ -3405,6 +3937,7 @@ Comment: _None_
 | created_at | timestamp with time zone | NO | now() | NO | - |
 | updated_at | timestamp with time zone | NO | now() | NO | - |
 | deleted_at | timestamp with time zone | YES | - | NO | - |
+| course_id | uuid | YES | - | NO | - |
 
 #### Primary Key
 
@@ -3421,12 +3954,13 @@ _None_
 
 #### Foreign Keys
 
-_None_
+- `pt_motivation_award_fields_course_id_courses_id_fk`: (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
+- `idx_pt_motivation_field_course_semester_sort` using `btree` on `course_id`, `semester`, `sort_order`
 - `pt_motivation_award_fields_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
-- `uq_pt_motivation_field_semester` (UNIQUE) using `btree` on `semester`, `label`
+- `uq_pt_motivation_field_course_semester` (UNIQUE) using `btree` on `course_id`, `semester`, `label`
 
 ### Table: `public.pt_task_scores`
 <a id="table-public-pt-task-scores"></a>
@@ -3578,6 +4112,7 @@ Comment: _None_
 | created_at | timestamp with time zone | NO | now() | NO | - |
 | updated_at | timestamp with time zone | NO | now() | NO | - |
 | deleted_at | timestamp with time zone | YES | - | NO | - |
+| course_id | uuid | YES | - | NO | - |
 
 #### Primary Key
 
@@ -3594,12 +4129,13 @@ _None_
 
 #### Foreign Keys
 
-_None_
+- `pt_types_course_id_courses_id_fk`: (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 
 #### Indexes
 
+- `idx_pt_type_course_semester_sort` using `btree` on `course_id`, `semester`, `sort_order`
 - `pt_types_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
-- `uq_pt_type_semester_code` (UNIQUE) using `btree` on `semester`, `code`
+- `uq_pt_type_course_semester_code` (UNIQUE) using `btree` on `course_id`, `semester`, `code`
 
 ### Table: `public.punishments`
 <a id="table-public-punishments"></a>
@@ -3639,6 +4175,56 @@ _None_
 #### Indexes
 
 - `punishments_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+
+### Table: `public.report_download_versions`
+<a id="table-public-report-download-versions"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| version_id | character varying(32) | NO | - | NO | - |
+| report_type | character varying(80) | NO | - | NO | - |
+| requested_by_user_id | uuid | YES | - | NO | - |
+| generated_at | timestamp with time zone | NO | now() | NO | - |
+| filters | jsonb | NO | - | NO | - |
+| prepared_by | character varying(160) | NO | - | NO | - |
+| checked_by | character varying(160) | NO | - | NO | - |
+| file_name | character varying(255) | NO | - | NO | - |
+| encrypted | boolean | NO | true | NO | - |
+| checksum_sha256 | character varying(64) | YES | - | NO | - |
+| batch_id | uuid | YES | - | NO | - |
+
+#### Primary Key
+
+- Name: `report_download_versions_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+- `report_download_versions_version_id_unique` (`version_id`)
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `report_download_versions_requested_by_user_id_users_id_fk`: (`requested_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+
+#### Indexes
+
+- `idx_report_download_versions_batch` using `btree` on `batch_id`
+- `idx_report_download_versions_generated_at` using `btree` on `generated_at`
+- `idx_report_download_versions_report_type` using `btree` on `report_type`
+- `idx_report_download_versions_requested_by` using `btree` on `requested_by_user_id`
+- `report_download_versions_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `report_download_versions_version_id_unique` (UNIQUE) using `btree` on `version_id`
 
 ### Table: `public.role_permissions`
 <a id="table-public-role-permissions"></a>
@@ -3848,6 +4434,50 @@ _None_
 - `ix_site_commanders_active_sort` using `btree` on `is_deleted`, `sort_order`
 - `site_commanders_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
 
+### Table: `public.site_events_news`
+<a id="table-public-site-events-news"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| date | date | NO | - | NO | - |
+| title | text | NO | - | NO | - |
+| description | text | NO | - | NO | - |
+| location | text | NO | - | NO | - |
+| type | text | NO | - | NO | - |
+| is_deleted | boolean | NO | false | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+
+#### Primary Key
+
+- Name: `site_events_news_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+_None_
+
+#### Indexes
+
+- `ix_site_events_news_active_date` using `btree` on `is_deleted`, `date`, `created_at`
+- `site_events_news_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+
 ### Table: `public.site_history`
 <a id="table-public-site-history"></a>
 
@@ -3961,6 +4591,7 @@ Comment: _None_
 | updated_at | timestamp with time zone | NO | now() | NO | - |
 | deleted_at | timestamp with time zone | YES | - | NO | - |
 | no_of_periods | integer | NO | 0 | NO | - |
+| no_of_phase_tests | integer | NO | 2 | NO | - |
 
 #### Primary Key
 
@@ -4025,8 +4656,8 @@ _None_
 
 - `training_camp_activities_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
 
-### Table: `public.training_camps`
-<a id="table-public-training-camps"></a>
+### Table: `public.training_camp_settings`
+<a id="table-public-training-camp-settings"></a>
 
 Type: `BASE TABLE`
 
@@ -4037,16 +4668,14 @@ Comment: _None_
 | Column | Type | Nullable | Default | Identity | Comment |
 |---|---|---|---|---|---|
 | id | uuid | NO | gen_random_uuid() | NO | - |
-| name | character varying(120) | NO | - | NO | - |
-| semester | camp_semester_kind | NO | - | NO | - |
-| max_total_marks | integer | NO | - | NO | - |
+| singleton_key | character varying(32) | NO | 'default'::character varying | NO | - |
+| max_camps_per_semester | integer | NO | 2 | NO | - |
 | created_at | timestamp with time zone | NO | now() | NO | - |
 | updated_at | timestamp with time zone | NO | now() | NO | - |
-| deleted_at | timestamp with time zone | YES | - | NO | - |
 
 #### Primary Key
 
-- Name: `training_camps_pkey`
+- Name: `training_camp_settings_pkey`
 - Columns: `id`
 
 #### Unique Constraints
@@ -4063,8 +4692,59 @@ _None_
 
 #### Indexes
 
+- `training_camp_settings_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
+- `uq_training_camp_settings_singleton` (UNIQUE) using `btree` on `singleton_key`
+
+### Table: `public.training_camps`
+<a id="table-public-training-camps"></a>
+
+Type: `BASE TABLE`
+
+Comment: _None_
+
+#### Columns
+
+| Column | Type | Nullable | Default | Identity | Comment |
+|---|---|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() | NO | - |
+| name | character varying(120) | NO | - | NO | - |
+| semester | integer | NO | - | NO | - |
+| max_total_marks | integer | NO | - | NO | - |
+| created_at | timestamp with time zone | NO | now() | NO | - |
+| updated_at | timestamp with time zone | NO | now() | NO | - |
+| deleted_at | timestamp with time zone | YES | - | NO | - |
+| sort_order | integer | NO | 1 | NO | - |
+| performance_title | text | YES | - | NO | - |
+| performance_guidance | text | YES | - | NO | - |
+| signature_primary_label | character varying(120) | YES | - | NO | - |
+| signature_secondary_label | character varying(120) | YES | - | NO | - |
+| note_line_1 | text | YES | - | NO | - |
+| note_line_2 | text | YES | - | NO | - |
+| show_aggregate_summary | boolean | NO | false | NO | - |
+| course_id | uuid | YES | - | NO | - |
+
+#### Primary Key
+
+- Name: `training_camps_pkey`
+- Columns: `id`
+
+#### Unique Constraints
+
+_None_
+
+#### Check Constraints
+
+_None_
+
+#### Foreign Keys
+
+- `training_camps_course_id_courses_id_fk`: (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+
+#### Indexes
+
+- `idx_training_camp_course_semester_sort_name` using `btree` on `course_id`, `semester`, `sort_order`, `name`
 - `training_camps_pkey` (UNIQUE, PRIMARY) using `btree` on `id`
-- `uq_training_camp_name_semester` (UNIQUE) using `btree` on `name`, `semester`
+- `uq_training_camp_name_course_semester` (UNIQUE) using `btree` on `course_id`, `name`, `semester`
 
 ### Table: `public.users`
 <a id="table-public-users"></a>
@@ -4116,17 +4796,21 @@ _None_
 - `public.assignment_kind`: `OFFICIATING`, `PRIMARY`
 - `public.branch_kind`: `E`, `M`, `O`
 - `public.camp_review_role_kind`: `HOAT`, `OIC`, `PLATOON_COMMANDER`
-- `public.camp_semester_kind`: `SEM5`, `SEM6A`, `SEM6B`
 - `public.comm_mode_kind`: `EMAIL`, `IN_PERSON`, `LETTER`, `OTHER`, `PHONE`
 - `public.counselling_warning_kind`: `OTHER`, `RELEGATION`, `WITHDRAWAL`
 - `public.delegation_kind`: `ACADEMIC`, `ADMIN`, `DISCIPLINARY`, `MEDICAL`, `OTHER`
 - `public.field_rule_mode`: `ALLOW`, `DENY`, `MASK`, `OMIT`
 - `public.leave_record_kind`: `DETENTION`, `HIKE`, `LEAVE`
+- `public.marks_workflow_event_type`: `OVERRIDE_PUBLISH`, `REQUEST_CHANGES`, `SAVE_DRAFT`, `SUBMIT_FOR_VERIFICATION`, `VERIFY_AND_PUBLISH`
+- `public.marks_workflow_module`: `ACADEMICS_BULK`, `PT_BULK`
+- `public.marks_workflow_override_mode`: `ADMIN_AND_SUPER_ADMIN`, `SUPER_ADMIN_ONLY`
+- `public.marks_workflow_status`: `CHANGES_REQUESTED`, `DRAFT`, `PENDING_VERIFICATION`, `VERIFIED`
 - `public.oc_enrollment_origin`: `BASELINE`, `MANUAL`, `PROMOTION`, `TRANSFER`
 - `public.oc_enrollment_status`: `ACTIVE`, `ARCHIVED`, `VOIDED`
 - `public.oc_image_kind`: `CIVIL_DRESS`, `UNIFORM`
 - `public.oc_movement_kind`: `PROMOTION_BATCH`, `PROMOTION_EXCEPTION`, `TRANSFER`, `VOID_PROMOTION`
 - `public.oc_status_kind`: `ACTIVE`, `DELEGATED`, `INACTIVE`, `PASSED_OUT`, `WITHDRAWN`
+- `public.org_hierarchy_node_type`: `GROUP`, `PLATOON`, `ROOT`
 - `public.position_type`: `ADMIN`, `CCO`, `COMMANDANT`, `DEPUTY_COMMANDANT`, `DEPUTY_SECRETARY`, `HOAT`, `PLATOON_COMMANDER`, `SUPER_ADMIN`
 - `public.scope_type`: `GLOBAL`, `PLATOON`
 - `public.ssb_point_kind`: `NEGATIVE`, `POSITIVE`
@@ -4134,6 +4818,7 @@ _None_
 
 ## Relationships Summary
 
+- `public.academic_grading_policy_settings` (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.account_lockouts` (`unlocked_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.account_lockouts` (`user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.appointment_transfers` (`from_appointment_id`) -> `public.appointments` (`id`) [on update: NO ACTION, on delete: CASCADE]
@@ -4147,20 +4832,29 @@ _None_
 - `public.appointments` (`position_id`) -> `public.positions` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.appointments` (`user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.audit_logs` (`actor_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.cadet_appointments` (`appointed_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.cadet_appointments` (`cadet_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.cadet_appointments` (`ended_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.cadet_appointments` (`platoon_id`) -> `public.platoons` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.course_offering_instructors` (`instructor_id`) -> `public.instructors` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.course_offering_instructors` (`offering_id`) -> `public.course_offerings` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.course_offerings` (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.course_offerings` (`subject_id`) -> `public.subjects` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.credentials_local` (`user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.delegations` (`act_as_position_id`) -> `public.positions` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.delegations` (`created_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.delegations` (`grantee_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.delegations` (`grantor_appointment_id`) -> `public.appointments` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.delegations` (`grantor_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.delegations` (`scope_id`) -> `public.platoons` (`id`) [on update: NO ACTION, on delete: NO ACTION]
 - `public.delegations` (`terminated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.device_site_settings` (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.dossier_inspections` (`inspector_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.dossier_inspections` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.dossier_inspections` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.functional_role_mappings` (`position_id`) -> `public.positions` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.functional_role_mappings` (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.instructors` (`user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.interview_pending_ticker_settings` (`created_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.interview_template_field_options` (`field_id`) -> `public.interview_template_fields` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.interview_template_fields` (`group_id`) -> `public.interview_template_groups` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.interview_template_fields` (`section_id`) -> `public.interview_template_sections` (`id`) [on update: NO ACTION, on delete: CASCADE]
@@ -4169,9 +4863,20 @@ _None_
 - `public.interview_template_groups` (`template_id`) -> `public.interview_templates` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.interview_template_sections` (`template_id`) -> `public.interview_templates` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.interview_template_semesters` (`template_id`) -> `public.interview_templates` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.interview_templates` (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.login_attempts` (`user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_achievements` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_autobiography` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.marks_workflow_events` (`actor_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.marks_workflow_events` (`ticket_id`) -> `public.marks_workflow_tickets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.marks_workflow_notifications` (`actor_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.marks_workflow_notifications` (`ticket_id`) -> `public.marks_workflow_tickets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.marks_workflow_notifications` (`user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.marks_workflow_settings` (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.marks_workflow_tickets` (`last_actor_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.marks_workflow_tickets` (`submitted_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.marks_workflow_tickets` (`verified_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.module_access_settings` (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.oc_achievements` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.oc_autobiography` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_cadets` (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_cadets` (`manager_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.oc_cadets` (`platoon_id`) -> `public.platoons` (`id`) [on update: NO ACTION, on delete: SET NULL]
@@ -4180,31 +4885,31 @@ _None_
 - `public.oc_camp_activity_scores` (`training_camp_activity_id`) -> `public.training_camp_activities` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_camp_reviews` (`oc_camp_id`) -> `public.oc_camps` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.oc_camps` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_camps` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_camps` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_camps` (`training_camp_id`) -> `public.training_camps` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_clubs` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_clubs` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_commissioning` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_clubs` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.oc_commissioning` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_counselling` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_counselling` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_counselling` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_course_enrollments` (`closed_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.oc_course_enrollments` (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_course_enrollments` (`created_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_course_enrollments` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_course_enrollments` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_credit_for_excellence` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_credit_for_excellence` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_credit_for_excellence` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_delegations` (`decided_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.oc_delegations` (`from_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
-- `public.oc_delegations` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_delegations` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_delegations` (`to_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_discipline` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_discipline` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_dossier_filling` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_discipline` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.oc_dossier_filling` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_drill` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_drill` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_education` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_family_members` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_images` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_drill` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.oc_education` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.oc_family_members` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.oc_images` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_interview_field_values` (`field_id`) -> `public.interview_template_fields` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_interview_field_values` (`interview_id`) -> `public.oc_interviews` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.oc_interview_group_rows` (`group_id`) -> `public.interview_template_groups` (`id`) [on update: NO ACTION, on delete: RESTRICT]
@@ -4212,71 +4917,79 @@ _None_
 - `public.oc_interview_group_values` (`field_id`) -> `public.interview_template_fields` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_interview_group_values` (`row_id`) -> `public.oc_interview_group_rows` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.oc_interviews` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_interviews` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_interviews` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_interviews` (`template_id`) -> `public.interview_templates` (`id`) [on update: NO ACTION, on delete: RESTRICT]
-- `public.oc_medical_category` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_medicals` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_medical_category` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.oc_medicals` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_motivation_awards` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_motivation_awards` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_motivation_awards` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_obstacle_training` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_obstacle_training` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_obstacle_training` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_olq` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_olq` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_olq` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_olq_category` (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_olq_score` (`oc_olq_id`) -> `public.oc_olq` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.oc_olq_score` (`subtitle_id`) -> `public.oc_olq_subtitle` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_olq_subtitle` (`category_id`) -> `public.oc_olq_category` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_parent_comms` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_personal` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_parent_comms` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.oc_personal` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_pre_commission` (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
-- `public.oc_pre_commission` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_pre_commission` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_pre_commission` (`platoon_id`) -> `public.platoons` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.oc_pre_commission` (`relegated_to_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.oc_pt_motivation_awards` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_pt_motivation_awards` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_pt_motivation_awards` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_pt_motivation_awards` (`pt_motivation_field_id`) -> `public.pt_motivation_award_fields` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_pt_task_scores` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_pt_task_scores` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_pt_task_scores` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_pt_task_scores` (`pt_task_score_id`) -> `public.pt_task_scores` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_recording_leave_hike_detention` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_recording_leave_hike_detention` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_recording_leave_hike_detention` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_relegations` (`from_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_relegations` (`from_enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_relegations` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_relegations` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_relegations` (`performed_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_relegations` (`to_course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_relegations` (`to_enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.oc_semester_marks` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_semester_marks` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_semester_marks` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_special_achievement_in_clubs` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_special_achievement_in_clubs` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_special_achievement_in_firing` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_special_achievement_in_clubs` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.oc_special_achievement_in_firing` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_speed_march` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_speed_march` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_speed_march` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_sports_and_games` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_sports_and_games` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_sports_and_games` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_spr_records` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_spr_records` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_spr_records` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_ssb_points` (`author_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.oc_ssb_points` (`report_id`) -> `public.oc_ssb_reports` (`id`) [on update: NO ACTION, on delete: CASCADE]
-- `public.oc_ssb_reports` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_ssb_reports` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.oc_weapon_training` (`enrollment_id`) -> `public.oc_course_enrollments` (`id`) [on update: NO ACTION, on delete: SET NULL]
-- `public.oc_weapon_training` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.oc_weapon_training` (`oc_id`) -> `public.oc_cadets` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.org_hierarchy_nodes` (`created_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
+- `public.org_hierarchy_nodes` (`parent_id`) -> `public.org_hierarchy_nodes` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.org_hierarchy_nodes` (`platoon_id`) -> `public.platoons` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.org_hierarchy_nodes` (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.permission_field_rules` (`permission_id`) -> `public.permissions` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.permission_field_rules` (`position_id`) -> `public.positions` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.permission_field_rules` (`role_id`) -> `public.roles` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.position_permissions` (`permission_id`) -> `public.permissions` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.position_permissions` (`position_id`) -> `public.positions` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.pt_attempt_grades` (`pt_attempt_id`) -> `public.pt_type_attempts` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.pt_motivation_award_fields` (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.pt_task_scores` (`pt_attempt_grade_id`) -> `public.pt_attempt_grades` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.pt_task_scores` (`pt_attempt_id`) -> `public.pt_type_attempts` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.pt_task_scores` (`pt_task_id`) -> `public.pt_tasks` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.pt_tasks` (`pt_type_id`) -> `public.pt_types` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.pt_type_attempts` (`pt_type_id`) -> `public.pt_types` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.pt_types` (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
+- `public.report_download_versions` (`requested_by_user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.role_permissions` (`permission_id`) -> `public.permissions` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.role_permissions` (`role_id`) -> `public.roles` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.signup_requests` (`resolved_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.signup_requests` (`user_id`) -> `public.users` (`id`) [on update: NO ACTION, on delete: CASCADE]
 - `public.site_settings` (`updated_by`) -> `public.users` (`id`) [on update: NO ACTION, on delete: SET NULL]
 - `public.training_camp_activities` (`training_camp_id`) -> `public.training_camps` (`id`) [on update: NO ACTION, on delete: CASCADE]
+- `public.training_camps` (`course_id`) -> `public.courses` (`id`) [on update: NO ACTION, on delete: RESTRICT]
 - `public.users` (`appoint_id`) -> `public.positions` (`id`) [on update: NO ACTION, on delete: SET NULL]

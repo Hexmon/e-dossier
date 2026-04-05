@@ -71,7 +71,25 @@ Optional DB docs export:
 pnpm db:docs
 ```
 
-## 5. RBAC Seeding Flow {#rbac-seeding-flow}
+## 5. First-Run UI Setup {#first-run-ui-setup}
+
+The recommended setup path is now UI-first:
+
+1. Run the database migrations.
+2. Start the app with `pnpm dev`.
+3. Open [`/setup`](/setup) in the browser.
+4. Create the initial `SUPER_ADMIN`.
+5. Continue through the guided checklist for platoons, hierarchy, courses, offerings/semesters, and OCs.
+
+This setup flow reuses the existing admin management pages. Scripts and seed commands remain useful for local/dev fallback, but they are no longer the primary recommended path for a fresh install.
+
+Important behavior:
+
+- `POST /api/v1/bootstrap/super-admin` is only available until the first active `SUPER_ADMIN` exists.
+- After initial bootstrap, the setup page auto-signs the new `SUPER_ADMIN` in and continues the guided checklist.
+- If setup is incomplete later, admins will see a “Resume Setup” prompt from the dashboard and general management screens.
+
+## 6. RBAC Seeding Flow {#rbac-seeding-flow}
 
 Run in this exact sequence:
 
@@ -105,7 +123,7 @@ flowchart TD
   E --> F
 ```
 
-## 6. Admin Seed {#admin-seed}
+## 7. Admin Seed {#admin-seed}
 
 Create initial admin user after RBAC seed:
 
@@ -119,7 +137,7 @@ If you need baseline permissions from spreadsheet import flow, use:
 pnpm seed:permissions
 ```
 
-## 7. Run and Verify {#run-and-verify}
+## 8. Run and Verify {#run-and-verify}
 
 Start app:
 
@@ -146,14 +164,15 @@ Fresh setup sequence:
 flowchart LR
   A[pnpm install] --> B[docker compose up data]
   B --> C[pnpm db:migrate]
-  C --> D[pnpm seed:rbac]
-  D --> E[pnpm seed:permissions]
-  E --> F[pnpm seed:admins]
-  F --> G[pnpm dev]
-  G --> H[lint + typecheck + build]
+  C --> D[pnpm dev]
+  D --> E[Open /setup]
+  E --> F[Create first SUPER_ADMIN]
+  F --> G[Configure platoons, hierarchy, courses, offerings, OCs]
+  G --> H[Optional seed scripts for local/dev fallback]
+  H --> I[lint + typecheck + build]
 ```
 
-## 8. Common Failures & Fixes {#common-failures}
+## 9. Common Failures & Fixes {#common-failures}
 
 ### 8.1 Missing parsed permission matrix
 

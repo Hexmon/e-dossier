@@ -1,5 +1,11 @@
 export const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
 export const endpoints = {
+    setup: {
+        status: "/api/v1/setup/status",
+    },
+    bootstrap: {
+        superAdmin: "/api/v1/bootstrap/super-admin",
+    },
     auth: {
         login: "/api/v1/auth/login",
         signup: "/api/v1/auth/signup",
@@ -16,6 +22,15 @@ export const endpoints = {
             `/api/v1/admin/appointments/${appointmentId}/transfer`,
         bootstrapTemplateApply: "/api/v1/admin/bootstrap/templates/apply",
         moduleAccess: "/api/v1/admin/module-access",
+        hierarchy: {
+            nodes: "/api/v1/admin/hierarchy/nodes",
+            nodeById: (id: string) => `/api/v1/admin/hierarchy/nodes/${id}`,
+            functionalRoleMappings: "/api/v1/admin/hierarchy/functional-role-mappings",
+        },
+        delegations: {
+            list: "/api/v1/admin/delegations",
+            terminate: (id: string) => `/api/v1/admin/delegations/${id}/terminate`,
+        },
         academics: {
             gradingPolicy: "/api/v1/admin/academics/grading-policy",
             gradingPolicyRecalculate: "/api/v1/admin/academics/grading-policy/recalculate",
@@ -76,6 +91,7 @@ export const endpoints = {
         },
     },
     me: {
+        switchableIdentities: "/api/v1/me/switchable-identities",
         workflowNotifications: "/api/v1/me/workflow-notifications",
     },
     oc: {

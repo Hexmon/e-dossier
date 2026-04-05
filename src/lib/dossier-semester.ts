@@ -12,6 +12,8 @@ type BuildSemesterSearchParams = {
   legacyQueryKeys?: readonly string[];
 };
 
+type SemesterSearchInput = string | URLSearchParams;
+
 export function normalizeSemesterValue(value: number | string | null | undefined): number | null {
   const parsed = Number(value);
   if (!Number.isInteger(parsed)) return null;
@@ -90,6 +92,25 @@ export function buildSemesterSearchParams(
   return params;
 }
 
+export function readSemesterSearchParam(
+  search: SemesterSearchInput,
+  queryKey = "semester",
+  legacyQueryKeys: readonly string[] = ["sem", "semister"]
+): string | undefined {
+  const params =
+    typeof search === "string" ? new URLSearchParams(search) : new URLSearchParams(search.toString());
+
+  const direct = params.get(queryKey);
+  if (direct !== null) return direct;
+
+  for (const legacyKey of legacyQueryKeys) {
+    const legacyValue = params.get(legacyKey);
+    if (legacyValue !== null) return legacyValue;
+  }
+
+  return undefined;
+}
+
 export function isDossierSemesterLocked(params: {
   semester: number;
   currentSemester?: number | null;
@@ -99,4 +120,3 @@ export function isDossierSemesterLocked(params: {
   const normalizedCurrentSemester = normalizeCurrentSemester(params.currentSemester);
   return normalizeSemesterValue(params.semester) !== normalizedCurrentSemester;
 }
-

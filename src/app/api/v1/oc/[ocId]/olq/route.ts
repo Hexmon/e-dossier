@@ -20,6 +20,7 @@ import {
 import { getOcCourseInfo } from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { readSemesterSearchParam } from '@/lib/dossier-semester';
 
 async function ensureCourseTemplateConfigured(ocId: string) {
     const courseInfo = await getOcCourseInfo(ocId);
@@ -51,7 +52,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
         const sp = new URL(req.url).searchParams;
         const qp = olqQuerySchema.parse({
             ocId,
-            semester: sp.get('semester') ?? undefined,
+            semester: readSemesterSearchParam(sp),
             includeCategories: sp.get('includeCategories') ?? undefined,
             categoryId: sp.get('categoryId') ?? undefined,
             subtitleId: sp.get('subtitleId') ?? undefined,
@@ -118,7 +119,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 
         const raw = await req.json();
         const dto = olqUpsertSchema.parse({ ...raw, ocId });
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
 
         await upsertOlqWithScores({
             ocId,
@@ -161,7 +162,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
         const raw = await req.json();
         const dto = olqUpdateSchema.parse(raw);
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
 
         await updateOlqWithScores({
             ocId,
@@ -205,7 +206,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         await ensureOcExists(ocId);
 
         const dto = olqDeleteSchema.parse(await req.json());
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
 
         const sheet = await getOlqSheet({
             ocId,

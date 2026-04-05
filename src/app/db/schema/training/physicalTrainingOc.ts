@@ -8,7 +8,7 @@ import { ptTaskScores, ptMotivationAwardFields } from './physicalTraining';
 // ---------------------------------------------------------------------------
 export const ocPtTaskScores = pgTable('oc_pt_task_scores', {
     id: uuid('id').primaryKey().defaultRandom(),
-    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
     enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     ptTaskScoreId: uuid('pt_task_score_id')
@@ -29,7 +29,7 @@ export const ocPtTaskScores = pgTable('oc_pt_task_scores', {
 // ---------------------------------------------------------------------------
 export const ocPtMotivationAwards = pgTable('oc_pt_motivation_awards', {
     id: uuid('id').primaryKey().defaultRandom(),
-    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
     enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     ptMotivationFieldId: uuid('pt_motivation_field_id')

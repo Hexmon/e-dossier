@@ -330,13 +330,12 @@ function InnerOLQPage({
         >
             <TabsContent value="olq-assessment">
                 <Card className="shadow-lg rounded-xl p-6">
-                    {isActiveSemesterLocked ? (
-                        <SemesterLockNotice
+                    <SemesterLockNotice
                             activeSemester={activeSemester}
                             currentSemester={currentSemester ?? 1}
                             supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                         />
-                    ) : null}
                     <div className="flex justify-center mb-6 space-x-2">
                         {TERMS.map((t, idx) => {
                             return (

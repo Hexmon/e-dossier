@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '@/app/db/client';
 import {
     interviewTemplates,
@@ -69,7 +69,13 @@ export async function createOcInterview(data: typeof ocInterviews.$inferInsert) 
     const activeEnrollment = await getOrCreateActiveEnrollment(data.ocId);
     const [row] = await db
         .insert(ocInterviews)
-        .values({ ...data, enrollmentId: data.enrollmentId ?? activeEnrollment.id, createdAt: now, updatedAt: now })
+        .values({
+            ...data,
+            enrollmentId: data.enrollmentId ?? activeEnrollment.id,
+            deletedAt: null,
+            createdAt: now,
+            updatedAt: now,
+        })
         .returning();
     return row;
 }
@@ -78,24 +84,32 @@ export async function updateOcInterview(id: string, data: Partial<typeof ocInter
     const [row] = await db
         .update(ocInterviews)
         .set({ ...data, updatedAt: new Date() })
-        .where(eq(ocInterviews.id, id))
+        .where(and(eq(ocInterviews.id, id), isNull(ocInterviews.deletedAt)))
         .returning();
     return row ?? null;
 }
 
 export async function deleteOcInterview(id: string) {
-    const [row] = await db.delete(ocInterviews).where(eq(ocInterviews.id, id)).returning();
+    const [row] = await db
+        .update(ocInterviews)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(ocInterviews.id, id), isNull(ocInterviews.deletedAt)))
+        .returning();
     return row ?? null;
 }
 
 export async function getOcInterview(id: string) {
-    const [row] = await db.select().from(ocInterviews).where(eq(ocInterviews.id, id)).limit(1);
+    const [row] = await db
+        .select()
+        .from(ocInterviews)
+        .where(and(eq(ocInterviews.id, id), isNull(ocInterviews.deletedAt)))
+        .limit(1);
     return row ?? null;
 }
 
 export async function listOcInterviews(ocId: string, opts: { templateId?: string; semester?: number } = {}) {
     const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
-    const wh: any[] = [eq(ocInterviews.ocId, ocId), eq(ocInterviews.enrollmentId, activeEnrollment.id)];
+    const wh: any[] = [eq(ocInterviews.ocId, ocId), eq(ocInterviews.enrollmentId, activeEnrollment.id), isNull(ocInterviews.deletedAt)];
     if (opts.templateId) wh.push(eq(ocInterviews.templateId, opts.templateId));
     if (opts.semester !== undefined) wh.push(eq(ocInterviews.semester, opts.semester));
     return db

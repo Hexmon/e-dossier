@@ -6,6 +6,7 @@ import { getOcAcademics } from '@/app/services/oc-academics';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { z } from 'zod';
+import { readSemesterSearchParam } from '@/lib/dossier-semester';
 
 const academicsListQuerySchema = z.object({
     semester: Semester.optional(),
@@ -18,7 +19,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
         const authCtx = await authorizeOcAccess(req, ocId);
         const sp = new URL(req.url).searchParams;
         const { semester } = academicsListQuerySchema.parse({
-            semester: sp.get('semester') ?? undefined,
+            semester: readSemesterSearchParam(sp),
         });
         const semesters = await getOcAcademics(ocId, { semester });
 

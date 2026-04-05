@@ -10,17 +10,37 @@ import { and, eq, sql, isNull } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
+import { requireAdmin } from '@/app/lib/authz';
+import { assertCanAssignAppointment } from '@/app/lib/admin-boundaries';
+import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
 
 export const runtime = 'nodejs';
+
+async function getAppointmentReadMode(req: AuditNextRequest): Promise<'admin' | 'public'> {
+    try {
+        const authCtx = await requireAuth(req);
+        const roleGroup = deriveSidebarRoleGroup({
+            roles: authCtx.roles,
+            position: authCtx.claims?.apt?.position ?? null,
+        });
+        return roleGroup === 'ADMIN' || roleGroup === 'SUPER_ADMIN' ? 'admin' : 'public';
+    } catch {
+        return 'public';
+    }
+}
 
 async function GETHandler(req: AuditNextRequest) {
     try {
         const url = new URL(req.url);
+        const readMode = await getAppointmentReadMode(req);
         const qp = appointmentListQuerySchema.parse({
-            active: url.searchParams.get('active') ?? undefined,   // 'true' | 'false' | undefined
+            active:
+                readMode === 'admin'
+                    ? url.searchParams.get('active') ?? undefined
+                    : 'true',
             positionKey: url.searchParams.get('positionKey') ?? undefined,
             platoonKey: url.searchParams.get('platoonKey') ?? undefined,
-            userId: url.searchParams.get('userId') ?? undefined,
+            userId: readMode === 'admin' ? url.searchParams.get('userId') ?? undefined : undefined,
             limit: url.searchParams.get('limit') ?? undefined,
             offset: url.searchParams.get('offset') ?? undefined,
         });
@@ -30,7 +50,7 @@ async function GETHandler(req: AuditNextRequest) {
         // ACTIVE FILTER:
         // - active=true  => ends_at IS NULL AND deleted_at IS NULL
         // - active=false => ends_at IS NOT NULL AND deleted_at IS NULL
-        if (qp.active === 'true') {
+        if (readMode === 'public' || qp.active === 'true') {
             where.push(isNull(appointments.endsAt));
             where.push(isNull(appointments.deletedAt));
         } else if (qp.active === 'false') {
@@ -38,36 +58,63 @@ async function GETHandler(req: AuditNextRequest) {
             where.push(isNull(appointments.deletedAt));
         }
 
-        if (qp.userId) where.push(eq(appointments.userId, qp.userId));
+        if (readMode === 'admin' && qp.userId) where.push(eq(appointments.userId, qp.userId));
         if (qp.positionKey) where.push(eq(positions.key, qp.positionKey));
         if (qp.platoonKey) where.push(eq(platoons.key, qp.platoonKey));
 
-        const rows = await db
-            .select({
-                id: appointments.id,
-                userId: appointments.userId,
-                username: users.username,
-                positionId: appointments.positionId,
-                positionKey: positions.key,
-                positionName: positions.displayName,
-                scopeType: appointments.scopeType,
-                scopeId: appointments.scopeId,
-                platoonKey: platoons.key,
-                platoonName: platoons.name,
-                startsAt: appointments.startsAt,
-                endsAt: appointments.endsAt,
-                reason: appointments.reason,
-                deletedAt: appointments.deletedAt,
-                createdAt: appointments.createdAt,
-                updatedAt: appointments.updatedAt,
-            })
-            .from(appointments)
-            .innerJoin(users, eq(users.id, appointments.userId))
-            .innerJoin(positions, eq(positions.id, appointments.positionId))
-            .leftJoin(platoons, eq(platoons.id, appointments.scopeId))
-            .where(where.length ? and(...where) : undefined)
-            .limit(qp.limit ?? 100)
-            .offset(qp.offset ?? 0);
+        const queryOptions = {
+            whereClause: where.length ? and(...where) : undefined,
+            limit: qp.limit ?? 100,
+            offset: qp.offset ?? 0,
+        };
+
+        const rows =
+            readMode === 'admin'
+                ? await db
+                    .select({
+                        id: appointments.id,
+                        userId: appointments.userId,
+                        username: users.username,
+                        positionId: appointments.positionId,
+                        positionKey: positions.key,
+                        positionName: positions.displayName,
+                        scopeType: appointments.scopeType,
+                        scopeId: appointments.scopeId,
+                        platoonKey: platoons.key,
+                        platoonName: platoons.name,
+                        startsAt: appointments.startsAt,
+                        endsAt: appointments.endsAt,
+                        reason: appointments.reason,
+                        deletedAt: appointments.deletedAt,
+                        createdAt: appointments.createdAt,
+                        updatedAt: appointments.updatedAt,
+                    })
+                    .from(appointments)
+                    .innerJoin(users, eq(users.id, appointments.userId))
+                    .innerJoin(positions, eq(positions.id, appointments.positionId))
+                    .leftJoin(platoons, eq(platoons.id, appointments.scopeId))
+                    .where(queryOptions.whereClause)
+                    .limit(queryOptions.limit)
+                    .offset(queryOptions.offset)
+                : await db
+                    .select({
+                        id: appointments.id,
+                        username: users.username,
+                        positionId: appointments.positionId,
+                        positionKey: positions.key,
+                        positionName: positions.displayName,
+                        scopeType: appointments.scopeType,
+                        scopeId: appointments.scopeId,
+                        platoonKey: platoons.key,
+                        platoonName: platoons.name,
+                    })
+                    .from(appointments)
+                    .innerJoin(users, eq(users.id, appointments.userId))
+                    .innerJoin(positions, eq(positions.id, appointments.positionId))
+                    .leftJoin(platoons, eq(platoons.id, appointments.scopeId))
+                    .where(queryOptions.whereClause)
+                    .limit(queryOptions.limit)
+                    .offset(queryOptions.offset);
 
         return json.ok({ message: 'Appointments retrieved successfully.', data: rows });
     } catch (err) {
@@ -78,7 +125,7 @@ async function GETHandler(req: AuditNextRequest) {
 
 async function POSTHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await requireAuth(req);
+        const adminCtx = await requireAdmin(req);
 
         const body = await req.json();
         const parsed = appointmentCreateSchema.safeParse(body);
@@ -93,6 +140,7 @@ async function POSTHandler(req: AuditNextRequest) {
             positionId = pos.id;
         }
         if (!positionId) throw new ApiError(400, 'positionId or positionKey is required');
+        await assertCanAssignAppointment(adminCtx, { positionId, userId: p.userId });
 
         // scope rules
         if (p.scopeType === 'PLATOON') {

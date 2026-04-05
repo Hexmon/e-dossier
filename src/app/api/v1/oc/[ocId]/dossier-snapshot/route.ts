@@ -2,14 +2,12 @@ import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists, mustHaveOcAccess } from '../../_checks';
-import { ocCadets, ocCommissioning, ocImages } from '@/app/db/schema/training/oc';
-import { courses } from '@/app/db/schema/training/courses';
-import { platoons } from '@/app/db/schema/auth/platoons';
+import { ocCommissioning, ocImages } from '@/app/db/schema/training/oc';
 import { eq } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { buildImageKey, createPresignedUploadUrl, headObject, createPresignedGetUrl } from '@/app/lib/storage';
-import { getOcImage, upsertOcImage } from '@/app/db/queries/oc';
+import { getDossierSnapshotView, getOcImage, upsertOcImage } from '@/app/db/queries/oc';
 
 const OcIdParam = z.object({ ocId: z.string().uuid() });
 
@@ -30,33 +28,8 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
     await ensureOcExists(ocId);
     const authCtx = await mustHaveOcAccess(req, ocId);
 
-    // Fetch OC data
-    const [ocRow] = await db
-      .select({
-        id: ocCadets.id,
-        name: ocCadets.name,
-        arrivalAtUniversity: ocCadets.arrivalAtUniversity,
-        relegatedToCourseId: ocCadets.relegatedToCourseId,
-        relegatedOn: ocCadets.relegatedOn,
-        withdrawnOn: ocCadets.withdrawnOn,
-        courseId: ocCadets.courseId,
-        platoonId: ocCadets.platoonId,
-        courseCode: courses.code,
-        courseTitle: courses.title,
-      })
-      .from(ocCadets)
-      .leftJoin(courses, eq(courses.id, ocCadets.courseId))
-      .where(eq(ocCadets.id, ocId))
-      .limit(1);
-
-    if (!ocRow) throw new ApiError(404, 'OC not found', 'not_found');
-
-    // Fetch commissioning data
-    const [commissioning] = await db
-      .select()
-      .from(ocCommissioning)
-      .where(eq(ocCommissioning.ocId, ocId))
-      .limit(1);
+    const data = await getDossierSnapshotView(ocId);
+    if (!data) throw new ApiError(404, 'OC not found', 'not_found');
 
     // Fetch images
     const imagesRows = await db
@@ -75,45 +48,6 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
       }
     }
 
-    // Fetch platoon name
-    let platoonName = null;
-    if (ocRow.platoonId) {
-      const [platoon] = await db
-        .select({ name: platoons.name })
-        .from(platoons)
-        .where(eq(platoons.id, ocRow.platoonId))
-        .limit(1);
-      platoonName = platoon?.name || null;
-    }
-
-    // Fetch relegated course title
-    let relegatedStr = null;
-    if (ocRow.relegatedToCourseId && ocRow.relegatedOn) {
-      const [relCourse] = await db
-        .select({ title: courses.title })
-        .from(courses)
-        .where(eq(courses.id, ocRow.relegatedToCourseId))
-        .limit(1);
-      relegatedStr = `Relegated to ${relCourse?.title || 'Unknown'} on ${ocRow.relegatedOn.toISOString().split('T')[0]}`;
-    }
-
-    const data = {
-      arrivalPhoto: images.CIVIL_DRESS,
-      departurePhoto: images.UNIFORM,
-      tesNo: ocRow.courseCode,
-      name: ocRow.name,
-      course: ocRow.courseTitle,
-      pi: platoonName,
-      dtOfArr: ocRow.arrivalAtUniversity.toISOString().split('T')[0],
-      relegated: relegatedStr,
-      withdrawnOn: ocRow.withdrawnOn ? ocRow.withdrawnOn.toISOString().split('T')[0] : null,
-      dtOfPassingOut: commissioning?.passOutDate ? commissioning.passOutDate.toISOString().split('T')[0] : null,
-      icNo: commissioning?.icNo || null,
-      orderOfMerit: commissioning?.orderOfMerit ? commissioning.orderOfMerit.toString() : null,
-      regtArm: commissioning?.regimentOrArm || null,
-      postedAtt: commissioning?.postedUnit || null,
-    };
-
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
       outcome: 'SUCCESS',
@@ -126,7 +60,14 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
       },
     });
 
-    return json.ok({ message: 'Dossier snapshot retrieved successfully.', data });
+    return json.ok({
+      message: 'Dossier snapshot retrieved successfully.',
+      data: {
+        ...data,
+        arrivalPhoto: images.CIVIL_DRESS,
+        departurePhoto: images.UNIFORM,
+      },
+    });
   } catch (err) {
     return handleApiError(err);
   }

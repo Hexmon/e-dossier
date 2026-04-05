@@ -46,7 +46,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const dto = motivationAwardCreateSchema.parse(await req.json());
-    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
     const row = await createMotivationAward(ocId, dto);
 
     await req.audit.log({

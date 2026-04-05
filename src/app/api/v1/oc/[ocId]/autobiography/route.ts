@@ -1,7 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists, mustHaveOcAccess } from '../../_checks';
 import { OcIdParam, autobiographyUpsertSchema } from '@/app/lib/oc-validators';
-import { getAutobio, upsertAutobio, deleteAutobio } from '@/app/db/queries/oc';
+import { getAutobio, getAutobiographyView, upsertAutobio, deleteAutobio } from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -24,7 +24,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             },
         });
 
-        return json.ok({ message: 'Autobiography retrieved successfully.', data: await getAutobio(ocId) });
+        return json.ok({ message: 'Autobiography retrieved successfully.', data: await getAutobiographyView(ocId) });
     } catch (err) { return handleApiError(err); }
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSemesterSearchParams,
   isDossierSemesterLocked,
+  readSemesterSearchParam,
   resolveDossierSemester,
 } from "@/lib/dossier-semester";
 
@@ -68,5 +69,16 @@ describe("buildSemesterSearchParams", () => {
     expect(params.get("sem")).toBeNull();
     expect(params.get("semister")).toBeNull();
     expect(params.get("tab")).toBe("mil-trg");
+  });
+});
+
+describe("readSemesterSearchParam", () => {
+  it("prefers the canonical semester key", () => {
+    expect(readSemesterSearchParam("semester=4&sem=2&semister=1")).toBe("4");
+  });
+
+  it("falls back to legacy semester keys", () => {
+    expect(readSemesterSearchParam("tab=mil-trg&semister=5")).toBe("5");
+    expect(readSemesterSearchParam("tab=mil-trg&sem=6")).toBe("6");
   });
 });

@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -21,7 +22,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Shield, ChevronDown, Link } from "lucide-react";
+import { Shield, ChevronDown } from "lucide-react";
 
 import { semesters as SEMESTERS_CONST } from "@/constants/app.constants";
 
@@ -30,7 +31,7 @@ import { useDisciplineRecords } from "@/hooks/useDisciplineRecords";
 import DisciplineTable from "@/components/discipline/DisciplineTable";
 import DisciplineForm from "@/components/discipline/DisciplineForm";
 import { useOcDetails } from "@/hooks/useOcDetails";
-import { getAppointments } from "@/app/lib/api/appointmentApi";
+import { getDashboardAppointmentHolders } from "@/app/lib/api/appointmentApi";
 
 import type { RootState } from "@/store";
 import { clearDisciplineForm } from "@/store/slices/disciplineRecordsSlice";
@@ -105,25 +106,24 @@ export default function DisciplineRecordsPage() {
         queryKey: ["discipline-awarded-by-options"],
         queryFn: async () => {
             try {
-                const appointments = await getAppointments();
-                const uniqueByUser = new Map<string, string>();
+                const appointments = await getDashboardAppointmentHolders();
+                const uniqueByOfficer = new Map<string, string>();
 
                 for (const appt of appointments) {
-                    const username = (appt.username || "").trim();
-                    if (!username) continue;
+                    const officerName = (appt.officerName || "").trim();
+                    if (!officerName) continue;
 
-                    if (!uniqueByUser.has(username)) {
+                    if (!uniqueByOfficer.has(officerName)) {
                         const position = (appt.positionName || "").trim();
-                        const platoon = (appt.platoonName || "").trim();
-                        const label = [username, position ? `- ${position}` : "", platoon ? `(${platoon})` : ""]
+                        const label = [officerName, position ? `- ${position}` : ""]
                             .filter(Boolean)
                             .join(" ")
                             .trim();
-                        uniqueByUser.set(username, label || username);
+                        uniqueByOfficer.set(officerName, label || officerName);
                     }
                 }
 
-                return Array.from(uniqueByUser.entries())
+                return Array.from(uniqueByOfficer.entries())
                     .map(([value, label]) => ({ value, label }))
                     .sort((a, b) => a.label.localeCompare(b.label));
             } catch {
@@ -296,13 +296,12 @@ export default function DisciplineRecordsPage() {
                                 <div className="flex justify-center items-center mb-4">
                                     <h2 className="text-xl font-semibold text-primary">DISCIPLINE RECORDS</h2>
                                 </div>
-                                {isActiveSemesterLocked ? (
-                                    <SemesterLockNotice
+                                <SemesterLockNotice
                                         activeSemester={activeSemester}
                                         currentSemester={currentSemester ?? 1}
                                         supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                                     />
-                                ) : null}
 
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {semesters.map((sem, index) => {

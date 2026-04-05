@@ -143,8 +143,11 @@ export default function SubjectWiseStudentsTable({
     const inputsDisabled = workflowEnabled ? !canEditWorkflow : !legacyEditMode;
 
     useEffect(() => {
-        const loadRecords = async () => {
+        let cancelled = false;
+
+        const loadWorkflowState = async () => {
             if (!courseId || !semester || !subjectId) {
+                if (cancelled) return;
                 setRows([]);
                 setWorkflowState(null);
                 setLegacyEditMode(false);
@@ -163,69 +166,115 @@ export default function SubjectWiseStudentsTable({
                     subjectId,
                 });
 
+                if (cancelled) return;
+
                 setWorkflowState(workflow);
-                setRows(buildRowsFromWorkflowPayload(workflow.draftPayload));
                 setLegacyEditMode(false);
                 setIsDirty(false);
                 setActionMessage("");
 
-                if (!workflow.settings.isActive) {
-                    if (loadingOCs) {
-                        setLoading(true);
-                        return;
-                    }
-
-                    const filteredOCs = getFilteredOCsByBranch(courseId, subjectBranch);
-                    const ocIds = filteredOCs.map((oc) => oc.id);
-                    const academicRecords = ocIds.length ? await fetchBulkAcademics(ocIds) : [];
-
-                    const legacyRows: StudentRow[] = filteredOCs.map((oc) => {
-                        const record = academicRecords.find(
-                            (item) =>
-                                item.ocId === oc.id &&
-                                item.semester === semester &&
-                                item.subjectId === subjectId,
-                        );
-
-                        const phase1 = record?.theory?.phaseTest1Marks?.toString() ?? "";
-                        const phase2 = record?.theory?.phaseTest2Marks?.toString() ?? "";
-                        const tutorial = record?.theory?.tutorial ?? "";
-                        const final = record?.theory?.finalMarks?.toString() ?? "";
-                        const practical = record?.practical?.finalMarks?.toString() ?? "";
-                        const sessional = toNum(phase1) + toNum(phase2) + toNum(tutorial);
-                        const total = sessional + toNum(final) + toNum(practical);
-
-                        return {
-                            id: oc.id,
-                            ocNo: oc.ocNo,
-                            name: oc.name,
-                            phase1,
-                            phase2,
-                            tutorial,
-                            sessional,
-                            final,
-                            practical,
-                            total,
-                        };
-                    });
-
-                    setRows(legacyRows);
+                if (workflow.settings.isActive) {
+                    setRows(buildRowsFromWorkflowPayload(workflow.draftPayload));
+                } else {
+                    setRows([]);
                 }
             } catch (err) {
+                if (cancelled) return;
                 const message = err instanceof Error ? err.message : "Failed to load academic workflow state.";
                 setLoadError(message);
             } finally {
-                setLoading(false);
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         };
 
-        loadRecords();
+        loadWorkflowState();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [courseId, semester, subjectId]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadLegacyRecords = async () => {
+            if (!courseId || !semester || !subjectId) {
+                return;
+            }
+
+            if (!workflowState || workflowState.settings.isActive) {
+                return;
+            }
+
+            if (loadingOCs) {
+                setLoading(true);
+                return;
+            }
+
+            setLoading(true);
+            setLoadError(null);
+
+            try {
+                const filteredOCs = getFilteredOCsByBranch(courseId, subjectBranch);
+                const ocIds = filteredOCs.map((oc) => oc.id);
+                const academicRecords = ocIds.length ? await fetchBulkAcademics(ocIds) : [];
+
+                const legacyRows: StudentRow[] = filteredOCs.map((oc) => {
+                    const record = academicRecords.find(
+                        (item) =>
+                            item.ocId === oc.id &&
+                            item.semester === semester &&
+                            item.subjectId === subjectId,
+                    );
+
+                    const phase1 = record?.theory?.phaseTest1Marks?.toString() ?? "";
+                    const phase2 = record?.theory?.phaseTest2Marks?.toString() ?? "";
+                    const tutorial = record?.theory?.tutorial ?? "";
+                    const final = record?.theory?.finalMarks?.toString() ?? "";
+                    const practical = record?.practical?.finalMarks?.toString() ?? "";
+                    const sessional = toNum(phase1) + toNum(phase2) + toNum(tutorial);
+                    const total = sessional + toNum(final) + toNum(practical);
+
+                    return {
+                        id: oc.id,
+                        ocNo: oc.ocNo,
+                        name: oc.name,
+                        phase1,
+                        phase2,
+                        tutorial,
+                        sessional,
+                        final,
+                        practical,
+                        total,
+                    };
+                });
+
+                if (cancelled) return;
+                setRows(legacyRows);
+            } catch (err) {
+                if (cancelled) return;
+                const message = err instanceof Error ? err.message : "Failed to load academic records.";
+                setLoadError(message);
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadLegacyRecords();
+
+        return () => {
+            cancelled = true;
+        };
     }, [
         courseId,
         semester,
         subjectId,
         subjectBranch,
-        allOCs,
+        workflowState,
         loadingOCs,
         getFilteredOCsByBranch,
         fetchBulkAcademics,

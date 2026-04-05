@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,6 +24,11 @@ import { Appointment } from "@/app/lib/api/appointmentApi";
 import { CreateAppointment } from "@/components/appointments/createappointment";
 import { applyOrgTemplate } from "@/app/lib/api/orgTemplateApi";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { delegationAdminApi } from "@/app/lib/api/delegationAdminApi";
 
 export default function AppointmentManagement() {
   const router = useRouter();
@@ -42,7 +47,20 @@ export default function AppointmentManagement() {
   } = useAppointments();
 
   const [handoverDialog, setHandoverDialog] = useState(false);
+  const [delegationDialog, setDelegationDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [delegationDraft, setDelegationDraft] = useState({
+    grantorAppointmentId: "",
+    granteeUserId: "",
+    startsAt: "",
+    endsAt: "",
+    reason: "",
+  });
+
+  const delegationsQuery = useQuery({
+    queryKey: ["delegations"],
+    queryFn: () => delegationAdminApi.list(true),
+  });
 
   const applyDefaultTemplateMutation = useMutation({
     mutationFn: (dryRun: boolean) =>
@@ -86,6 +104,47 @@ export default function AppointmentManagement() {
     reset();
   };
 
+  const createDelegationMutation = useMutation({
+    mutationFn: async () => {
+      return delegationAdminApi.create({
+        grantorAppointmentId: delegationDraft.grantorAppointmentId,
+        granteeUserId: delegationDraft.granteeUserId,
+        startsAt: new Date(`${delegationDraft.startsAt}T00:00:00Z`).toISOString(),
+        endsAt: delegationDraft.endsAt
+          ? new Date(`${delegationDraft.endsAt}T00:00:00Z`).toISOString()
+          : null,
+        reason: delegationDraft.reason,
+      });
+    },
+    onSuccess: async () => {
+      toast.success("Delegation created successfully.");
+      setDelegationDialog(false);
+      setDelegationDraft({
+        grantorAppointmentId: "",
+        granteeUserId: "",
+        startsAt: "",
+        endsAt: "",
+        reason: "",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["delegations"] });
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Failed to create delegation.");
+    },
+  });
+
+  const terminateDelegationMutation = useMutation({
+    mutationFn: async (delegationId: string) =>
+      delegationAdminApi.terminate(delegationId, "Delegation terminated from appointment management."),
+    onSuccess: async () => {
+      toast.success("Delegation terminated.");
+      await queryClient.invalidateQueries({ queryKey: ["delegations"] });
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Failed to terminate delegation.");
+    },
+  });
+
   const submitHandover = async (data: any) => {
     if (!selectedAppointment) return;
     try {
@@ -119,7 +178,7 @@ export default function AppointmentManagement() {
             <GlobalTabs tabs={ocTabs} defaultValue="appointment-mgmt">
               <TabsContent value="appointment-mgmt" className="space-y-8">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold">Current Appointments</h2>
+                  <h2 className="text-2xl font-bold">Transfer / Delegate</h2>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
                       variant="outline"
@@ -149,6 +208,12 @@ export default function AppointmentManagement() {
                         "Apply Default Appointment Template"
                       )}
                     </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setDelegationDialog(true)}
+                    >
+                      Create Delegation
+                    </Button>
                     <CreateAppointment />
                   </div>
                 </div>
@@ -160,6 +225,50 @@ export default function AppointmentManagement() {
                   onDelete={handleDeleteAppointment}
                   users={users}
                 />
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Active Delegations</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {delegationsQuery.isLoading ? (
+                      <p className="text-sm text-muted-foreground">Loading delegations...</p>
+                    ) : (delegationsQuery.data?.items ?? []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No active delegations found.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {(delegationsQuery.data?.items ?? []).map((delegation) => (
+                          <div
+                            key={delegation.id}
+                            className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
+                          >
+                            <div className="space-y-1">
+                              <div className="font-medium">
+                                {delegation.positionName ?? delegation.positionKey ?? "Delegation"}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {delegation.grantorUsername} → {delegation.granteeUsername}
+                                {delegation.platoonName ? ` • ${delegation.platoonName}` : ""}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(delegation.startsAt).toLocaleDateString()} to{" "}
+                                {delegation.endsAt ? new Date(delegation.endsAt).toLocaleDateString() : "Open-ended"}
+                              </div>
+                            </div>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => terminateDelegationMutation.mutate(delegation.id)}
+                              disabled={terminateDelegationMutation.isPending}
+                            >
+                              Terminate
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
                 <ServedHistoryTable servedList={servedList} />
               </TabsContent>
@@ -185,6 +294,116 @@ export default function AppointmentManagement() {
             onSubmit={submitHandover}
             submitting={isSubmitting}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={delegationDialog} onOpenChange={setDelegationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Delegation</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="delegation-grantor">Grantor Appointment</Label>
+              <select
+                id="delegation-grantor"
+                value={delegationDraft.grantorAppointmentId}
+                onChange={(event) =>
+                  setDelegationDraft((current) => ({
+                    ...current,
+                    grantorAppointmentId: event.target.value,
+                  }))
+                }
+                className="w-full rounded-md border bg-background p-2 text-sm"
+              >
+                <option value="">Select appointment</option>
+                {appointments.map((appointment) => (
+                  <option key={appointment.id} value={appointment.id}>
+                    {appointment.positionName} • {appointment.username}
+                    {appointment.platoonName ? ` • ${appointment.platoonName}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delegation-grantee">Delegate To</Label>
+              <select
+                id="delegation-grantee"
+                value={delegationDraft.granteeUserId}
+                onChange={(event) =>
+                  setDelegationDraft((current) => ({
+                    ...current,
+                    granteeUserId: event.target.value,
+                  }))
+                }
+                className="w-full rounded-md border bg-background p-2 text-sm"
+              >
+                <option value="">Select user</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.username})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="delegation-starts-at">Start Date</Label>
+                <Input
+                  id="delegation-starts-at"
+                  type="date"
+                  value={delegationDraft.startsAt}
+                  onChange={(event) =>
+                    setDelegationDraft((current) => ({
+                      ...current,
+                      startsAt: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="delegation-ends-at">End Date</Label>
+                <Input
+                  id="delegation-ends-at"
+                  type="date"
+                  value={delegationDraft.endsAt}
+                  onChange={(event) =>
+                    setDelegationDraft((current) => ({
+                      ...current,
+                      endsAt: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delegation-reason">Reason</Label>
+              <Textarea
+                id="delegation-reason"
+                value={delegationDraft.reason}
+                onChange={(event) =>
+                  setDelegationDraft((current) => ({
+                    ...current,
+                    reason: event.target.value,
+                  }))
+                }
+                placeholder="Reason for temporary acting delegation"
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={() => createDelegationMutation.mutate()}
+                disabled={createDelegationMutation.isPending}
+              >
+                {createDelegationMutation.isPending ? "Creating..." : "Create Delegation"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </SidebarProvider>

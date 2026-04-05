@@ -146,13 +146,12 @@ export default function InterviewsPage() {
             </button>
           </div>
 
-          {isActiveSemesterLocked ? (
-            <SemesterLockNotice
+          <SemesterLockNotice
               activeSemester={activeSemester}
               currentSemester={currentSemester}
               supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
             />
-          ) : null}
 
           {activeModule === "terms" ? (
             <InterviewTermTabs readOnly={isActiveSemesterLocked} currentSemester={currentSemester} canEditLockedSemesters={canEditLockedSemesters} />
