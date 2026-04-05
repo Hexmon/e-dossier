@@ -7,6 +7,8 @@ import { IdSchema } from '@/app/lib/apiClient';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
+import { requireAdmin } from '@/app/lib/authz';
+import { assertCanManageAppointmentRecord, assertCanManageUser } from '@/app/lib/admin-boundaries';
 
 export const runtime = 'nodejs';
 
@@ -15,10 +17,12 @@ async function POSTHandler(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { userId: adminId } = await requireAuth(req);
+        const adminCtx = await requireAdmin(req);
+        const adminId = adminCtx.userId;
 
         const { id: raw } = await params;
         const { id } = IdSchema.parse({ id: decodeURIComponent((raw ?? '')).trim() });
+        await assertCanManageAppointmentRecord(adminCtx, id);
 
         // Parse body safely
         let body: unknown;
@@ -35,6 +39,7 @@ async function POSTHandler(
             throw new ApiError(400, 'Validation failed', 'bad_request', parsed.error.flatten());
         }
         const dto = parsed.data;
+        await assertCanManageUser(adminCtx, dto.newUserId);
 
         const result = await transferAppointment({
             appointmentId: id,

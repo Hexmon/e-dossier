@@ -226,13 +226,12 @@ export default function CFEFormPage() {
                             </CardHeader>
 
                             <CardContent>
-                                {isActiveSemesterLocked ? (
-                                    <SemesterLockNotice
+                                <SemesterLockNotice
                                         activeSemester={activeSemester}
                                         currentSemester={currentSemester ?? 1}
                                         supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                                     />
-                                ) : null}
                                 <div className="flex justify-center mb-6 space-x-2">
                                     {semesters.map((s, idx) => {
                                         return (

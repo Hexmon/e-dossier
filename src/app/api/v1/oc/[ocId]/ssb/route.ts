@@ -1,7 +1,13 @@
 import { json, handleApiError } from '@/app/lib/http';
-import { mustBeAuthed, mustBeAdmin, parseParam, ensureOcExists } from '../../_checks';
+import { mustBeAuthed, parseParam, ensureOcExists } from '../../_checks';
 import { OcIdParam, ssbReportFullSchema } from '@/app/lib/oc-validators';
-import { getSsbReport, deleteSsbReport, listSsbPoints, upsertSsbReportWithPoints } from '@/app/db/queries/oc';
+import {
+    getSsbReport,
+    getSsbReportView,
+    deleteSsbReport,
+    listSsbPoints,
+    upsertSsbReportWithPoints,
+} from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -55,10 +61,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
         const { ocId } = await parseParam({params}, OcIdParam);
         await ensureOcExists(ocId);
 
-        const report = (await getSsbReport(ocId)) as SsbReportRow;
-        const points = report ? ((await listSsbPoints(report.id)) as SsbPointRow[]) : [];
-
-        const body = mapSsbDbToResponse(report, points);
+        const body = await getSsbReportView(ocId);
 
         await req.audit.log({
             action: AuditEventType.API_REQUEST,
@@ -69,8 +72,8 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
                 description: `SSB report retrieved successfully for OC ${ocId}`,
                 ocId,
                 module: 'ssb',
-                hasReport: Boolean(report),
-                pointsCount: points.length,
+                hasReport: body.predictiveRating > 0 || body.scopeForImprovement.length > 0 || body.positives.length > 0 || body.negatives.length > 0,
+                pointsCount: body.positives.length + body.negatives.length,
             },
         });
 
@@ -174,6 +177,9 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         const authCtx = await mustBeAuthed(req);
         const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
         const deleted = await deleteSsbReport(ocId);
+        if (!deleted) {
+            return json.notFound('SSB report not found.');
+        }
 
         await req.audit.log({
             action: AuditEventType.OC_RECORD_DELETED,
@@ -184,8 +190,8 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
                 description: `Deleted SSB report for OC ${ocId}`,
                 ocId,
                 module: 'ssb',
-                recordId: deleted?.id ?? null,
-                hardDeleted: true,
+                recordId: deleted.id,
+                hardDeleted: false,
             },
         });
         return json.ok({ message: 'SSB report deleted successfully.', deleted });

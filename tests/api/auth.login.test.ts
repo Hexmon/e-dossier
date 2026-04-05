@@ -3,10 +3,9 @@ import { POST as postLogin } from '@/app/api/v1/auth/login/route';
 import { makeJsonRequest, createRouteContext } from '../utils/next';
 import * as ratelimit from '@/lib/ratelimit';
 import * as accountLockout from '@/app/db/queries/account-lockout';
-import * as appointmentsQueries from '@/app/db/queries/appointments';
+import * as effectiveAuthority from '@/app/lib/effective-authority';
 import * as jwt from '@/app/lib/jwt';
 import * as cookies from '@/app/lib/cookies';
-import argon2 from 'argon2';
 
 vi.mock('@/lib/ratelimit', () => {
   const now = Date.now();
@@ -46,18 +45,31 @@ vi.mock('@/app/db/client', () => {
 });
 
 const appointmentId = '11111111-1111-4111-8111-111111111111';
+const delegationId = '22222222-2222-4222-8222-222222222222';
 
-vi.mock('@/app/db/queries/appointments', () => ({
-  getActiveAppointmentWithHolder: vi.fn(async () => ({
-    id: appointmentId,
+vi.mock('@/app/lib/effective-authority', () => ({
+  getAuthorityForLogin: vi.fn(async () => ({
+    authorityKind: 'APPOINTMENT',
+    authorityId: appointmentId,
+    appointmentId,
+    delegationId: null,
     userId: 'user-1',
     username: 'testuser',
+    positionId: 'position-1',
     positionKey: 'ADMIN',
+    positionName: 'Admin',
+    defaultScope: 'GLOBAL',
     scopeType: 'GLOBAL',
     scopeId: null,
-    startsAt: new Date().toISOString(),
+    platoonKey: null,
+    platoonName: null,
+    startsAt: new Date('2026-04-04T00:00:00.000Z'),
     endsAt: null,
+    grantorUserId: null,
+    grantorUsername: null,
+    grantorAppointmentId: null,
   })),
+  buildAuthorityRoleKeys: vi.fn(async () => ['ADMIN']),
 }));
 
 vi.mock('@/app/db/queries/account-lockout', () => ({
@@ -124,7 +136,7 @@ describe('POST /api/v1/auth/login', () => {
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.error).toBe('missing_fields');
-    expect(body.missing).toContain('appointmentId');
+    expect(body.missing).toContain('appointmentId|delegationId');
     expect(body.missing).toContain('username');
     expect(body.missing).toContain('password');
   });
@@ -147,17 +159,6 @@ describe('POST /api/v1/auth/login', () => {
   });
 
   it('logs in successfully with valid credentials and active appointment', async () => {
-    (appointmentsQueries.getActiveAppointmentWithHolder as any).mockResolvedValueOnce({
-      id: appointmentId,
-      userId: 'user-1',
-      username: 'testuser',
-      positionKey: 'ADMIN',
-      scopeType: 'GLOBAL',
-      scopeId: null,
-      startsAt: new Date().toISOString(),
-      endsAt: null,
-    });
-
     const req = makeJsonRequest({
       method: 'POST',
       path: '/api/v1/auth/login',
@@ -176,5 +177,53 @@ describe('POST /api/v1/auth/login', () => {
     expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', success: true }),
     );
+  });
+
+  it('logs in successfully with an active delegation identity', async () => {
+    (effectiveAuthority.getAuthorityForLogin as any).mockResolvedValueOnce({
+      authorityKind: 'DELEGATION',
+      authorityId: delegationId,
+      appointmentId,
+      delegationId,
+      userId: 'user-2',
+      username: 'delegateuser',
+      positionId: 'position-2',
+      positionKey: 'TRAINING_OFFICER',
+      positionName: 'Training Officer',
+      defaultScope: 'PLATOON',
+      scopeType: 'PLATOON',
+      scopeId: '33333333-3333-4333-8333-333333333333',
+      platoonKey: 'alpha',
+      platoonName: 'Alpha Platoon',
+      startsAt: new Date('2026-04-04T00:00:00.000Z'),
+      endsAt: null,
+      grantorUserId: 'user-1',
+      grantorUsername: 'grantoruser',
+      grantorAppointmentId: appointmentId,
+    });
+    (effectiveAuthority.buildAuthorityRoleKeys as any).mockResolvedValueOnce([
+      'TRAINING_OFFICER',
+      'PLATOON_COMMANDER_EQUIVALENT',
+    ]);
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: {
+        delegationId,
+        platoonId: '33333333-3333-4333-8333-333333333333',
+        username: 'delegateuser',
+        password: 'password123',
+      },
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.active_appointment.kind).toBe('DELEGATION');
+    expect(body.active_appointment.delegationId).toBe(delegationId);
+    expect(body.roles).toContain('PLATOON_COMMANDER_EQUIVALENT');
   });
 });

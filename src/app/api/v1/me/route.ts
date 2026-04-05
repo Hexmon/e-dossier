@@ -89,6 +89,12 @@ async function GETHandler(req: AuditNextRequest) {
       user: u,
       roles: principal.roles,
       apt: principal.apt ?? null,
+      authority: {
+        kind: (principal.apt as any)?.auth_kind ?? 'APPOINTMENT',
+        delegationId: (principal.apt as any)?.delegation_id ?? null,
+        grantorUserId: (principal.apt as any)?.grantor_user_id ?? null,
+        grantorUsername: (principal.apt as any)?.grantor_username ?? null,
+      },
       workflowAssignments,
       workflowModules: {
         ACADEMICS_BULK: { isActive: academicsWorkflow.isActive },

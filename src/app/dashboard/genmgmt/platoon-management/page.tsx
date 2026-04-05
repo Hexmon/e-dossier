@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { getToastMsg } from "@/lib/error-toast";
 import { logoutAndRedirect } from "@/lib/auth/logout";
 import { applyOrgTemplate } from "@/app/lib/api/orgTemplateApi";
+import { SetupReturnBanner } from "@/components/setup/SetupReturnBanner";
 
 export default function PlatoonManagementPage() {
     const router = useRouter();
@@ -176,6 +177,11 @@ export default function PlatoonManagementPage() {
                                 { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                                 { label: "Platoon Management" },
                             ]}
+                        />
+
+                        <SetupReturnBanner
+                            title="Setup step: Platoons"
+                            description="Add the required platoons here, then return to the setup checklist."
                         />
 
                         <GlobalTabs tabs={ocTabs} defaultValue="platoon-management">

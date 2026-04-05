@@ -5,6 +5,19 @@ erDiagram
     text hash
     bigint created_at
   }
+  %% public.academic_grading_policy_settings
+  public__academic_grading_policy_settings {
+    uuid id PK
+    text singleton_key
+    jsonb letter_grade_bands
+    jsonb grade_point_bands
+    text sgpa_formula_template
+    text cgpa_formula_template
+    integer rounding_scale
+    uuid updated_by
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
   %% public.account_lockouts
   public__account_lockouts {
     uuid id PK
@@ -106,6 +119,21 @@ erDiagram
     integer version
     timestamp_with_time_zone updated_at
   }
+  %% public.cadet_appointments
+  public__cadet_appointments {
+    uuid id PK
+    uuid cadet_id
+    uuid platoon_id
+    character_varying_128 appointment_name
+    timestamp_with_time_zone starts_at
+    timestamp_with_time_zone ends_at
+    uuid appointed_by
+    uuid ended_by
+    text reason
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
   %% public.course_offering_instructors
   public__course_offering_instructors {
     uuid id PK
@@ -160,6 +188,10 @@ erDiagram
     timestamp_with_time_zone deleted_at
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
+    uuid grantor_appointment_id
+    uuid created_by
+    timestamp_with_time_zone terminated_at
+    text termination_reason
   }
   %% public.device_site_settings
   public__device_site_settings {
@@ -185,6 +217,20 @@ erDiagram
     text remarks
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
+  }
+  %% public.footer
+  public__footer {
+    text footer
+  }
+  %% public.functional_role_mappings
+  public__functional_role_mappings {
+    uuid id PK
+    text capability_key
+    uuid position_id
+    uuid updated_by
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
   }
   %% public.instructors
   public__instructors {
@@ -198,6 +244,18 @@ erDiagram
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
     timestamp_with_time_zone deleted_at
+    text experience
+    text qualification
+    uuid subject_ids
+  }
+  %% public.interview_pending_ticker_settings
+  public__interview_pending_ticker_settings {
+    uuid id PK
+    date start_date
+    date end_date
+    integer days
+    uuid created_by
+    timestamp_with_time_zone created_at
   }
   %% public.interview_template_field_options
   public__interview_template_field_options {
@@ -277,6 +335,7 @@ erDiagram
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
     timestamp_with_time_zone deleted_at
+    uuid course_id
   }
   %% public.login_attempts
   public__login_attempts {
@@ -288,6 +347,79 @@ erDiagram
     boolean success
     character_varying_255 failure_reason
     timestamp_with_time_zone attempted_at
+  }
+  %% public.marks_workflow_events
+  public__marks_workflow_events {
+    uuid id PK
+    uuid ticket_id
+    marks_workflow_event_type event_type
+    uuid actor_user_id
+    marks_workflow_status from_status
+    marks_workflow_status to_status
+    text message
+    jsonb payload
+    timestamp_with_time_zone created_at
+  }
+  %% public.marks_workflow_notifications
+  public__marks_workflow_notifications {
+    uuid id PK
+    uuid user_id
+    uuid ticket_id
+    marks_workflow_module module
+    uuid actor_user_id
+    marks_workflow_status workflow_status
+    text selection_label
+    text message
+    text deep_link
+    timestamp_with_time_zone read_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.marks_workflow_settings
+  public__marks_workflow_settings {
+    uuid id PK
+    marks_workflow_module module
+    jsonb data_entry_user_ids
+    jsonb verification_user_ids
+    marks_workflow_override_mode post_verification_override_mode
+    uuid updated_by
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.marks_workflow_tickets
+  public__marks_workflow_tickets {
+    uuid id PK
+    marks_workflow_module module
+    text workflow_key
+    uuid course_id
+    integer semester
+    uuid subject_id
+    text subject_label
+    text course_label
+    text selection_label
+    marks_workflow_status status
+    jsonb draft_payload
+    integer current_revision
+    uuid submitted_by_user_id
+    timestamp_with_time_zone submitted_at
+    uuid verified_by_user_id
+    timestamp_with_time_zone verified_at
+    uuid last_actor_user_id
+    text last_actor_message
+    timestamp_with_time_zone draft_updated_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  %% public.module_access_settings
+  public__module_access_settings {
+    uuid id PK
+    text singleton_key
+    boolean admin_can_access_dossier
+    boolean admin_can_access_bulk_upload
+    boolean admin_can_access_reports
+    uuid updated_by
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
   }
   %% public.oc_achievements
   public__oc_achievements {
@@ -326,6 +458,8 @@ erDiagram
     timestamp_with_time_zone withdrawn_on
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
+    character_varying_64 jnu_enrollment_no
+    timestamp_with_time_zone deleted_at
   }
   %% public.oc_camp_activity_scores
   public__oc_camp_activity_scores {
@@ -444,6 +578,7 @@ erDiagram
     integer points_cumulative
     integer number_of_punishments
     uuid enrollment_id
+    timestamp_with_time_zone deleted_at
   }
   %% public.oc_dossier_filling
   public__oc_dossier_filling {
@@ -562,6 +697,7 @@ erDiagram
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
     uuid enrollment_id
+    timestamp_with_time_zone deleted_at
   }
   %% public.oc_medical_category
   public__oc_medical_category {
@@ -576,6 +712,7 @@ erDiagram
     timestamp_with_time_zone mh_to
     text absence
     character_varying_160 platoon_commander_name
+    timestamp_with_time_zone deleted_at
   }
   %% public.oc_medicals
   public__oc_medicals {
@@ -593,6 +730,7 @@ erDiagram
     text medical_history
     text hereditary_issues
     text allergies
+    timestamp_with_time_zone deleted_at
   }
   %% public.oc_motivation_awards
   public__oc_motivation_awards {
@@ -669,6 +807,7 @@ erDiagram
     text brief
     character_varying_160 platoon_commander_name
     text subject
+    timestamp_with_time_zone deleted_at
   }
   %% public.oc_personal
   public__oc_personal {
@@ -877,6 +1016,7 @@ erDiagram
     uuid oc_id
     integer overall_predictive_rating
     text scope_of_improvement
+    timestamp_with_time_zone deleted_at
   }
   %% public.oc_weapon_training
   public__oc_weapon_training {
@@ -888,6 +1028,21 @@ erDiagram
     numeric marks_obtained
     timestamp_with_time_zone deleted_at
     uuid enrollment_id
+  }
+  %% public.org_hierarchy_nodes
+  public__org_hierarchy_nodes {
+    uuid id PK
+    character_varying_128 key
+    character_varying_256 name
+    org_hierarchy_node_type node_type
+    uuid parent_id
+    uuid platoon_id
+    integer sort_order
+    uuid created_by
+    uuid updated_by
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    timestamp_with_time_zone deleted_at
   }
   %% public.permission_field_rules
   public__permission_field_rules {
@@ -957,6 +1112,7 @@ erDiagram
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
     timestamp_with_time_zone deleted_at
+    uuid course_id
   }
   %% public.pt_task_scores
   public__pt_task_scores {
@@ -1005,6 +1161,7 @@ erDiagram
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
     timestamp_with_time_zone deleted_at
+    uuid course_id
   }
   %% public.punishments
   public__punishments {
@@ -1014,6 +1171,21 @@ erDiagram
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
     timestamp_with_time_zone deleted_at
+  }
+  %% public.report_download_versions
+  public__report_download_versions {
+    uuid id PK
+    character_varying_32 version_id
+    character_varying_80 report_type
+    uuid requested_by_user_id
+    timestamp_with_time_zone generated_at
+    jsonb filters
+    character_varying_160 prepared_by
+    character_varying_160 checked_by
+    character_varying_255 file_name
+    boolean encrypted
+    character_varying_64 checksum_sha256
+    uuid batch_id
   }
   %% public.role_permissions
   public__role_permissions {
@@ -1067,6 +1239,19 @@ erDiagram
     timestamp_with_time_zone updated_at
     text designation
   }
+  %% public.site_events_news
+  public__site_events_news {
+    uuid id PK
+    date date
+    text title
+    text description
+    text location
+    text type
+    boolean is_deleted
+    timestamp_with_time_zone deleted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
   %% public.site_history
   public__site_history {
     uuid id PK
@@ -1109,6 +1294,7 @@ erDiagram
     timestamp_with_time_zone updated_at
     timestamp_with_time_zone deleted_at
     integer no_of_periods
+    integer no_of_phase_tests
   }
   %% public.training_camp_activities
   public__training_camp_activities {
@@ -1121,15 +1307,32 @@ erDiagram
     timestamp_with_time_zone updated_at
     timestamp_with_time_zone deleted_at
   }
+  %% public.training_camp_settings
+  public__training_camp_settings {
+    uuid id PK
+    character_varying_32 singleton_key
+    integer max_camps_per_semester
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
   %% public.training_camps
   public__training_camps {
     uuid id PK
     character_varying_120 name
-    camp_semester_kind semester
+    integer semester
     integer max_total_marks
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
     timestamp_with_time_zone deleted_at
+    integer sort_order
+    text performance_title
+    text performance_guidance
+    character_varying_120 signature_primary_label
+    character_varying_120 signature_secondary_label
+    text note_line_1
+    text note_line_2
+    boolean show_aggregate_summary
+    uuid course_id
   }
   %% public.users
   public__users {
@@ -1147,6 +1350,7 @@ erDiagram
     timestamp_with_time_zone updated_at
   }
 
+  public__academic_grading_policy_settings }o--|| public__users : "academic_grading_policy_settings_updated_by_users_id_fk"
   public__account_lockouts }o--|| public__users : "account_lockouts_unlocked_by_users_id_fk"
   public__account_lockouts }|--|| public__users : "account_lockouts_user_id_users_id_fk"
   public__appointment_transfers }|--|| public__appointments : "appointment_transfers_from_appointment_id_appointments_id_fk"
@@ -1160,20 +1364,29 @@ erDiagram
   public__appointments }|--|| public__positions : "appointments_position_id_positions_id_fk"
   public__appointments }|--|| public__users : "appointments_user_id_users_id_fk"
   public__audit_logs }o--|| public__users : "audit_logs_actor_user_id_users_id_fk"
+  public__cadet_appointments }o--|| public__users : "cadet_appointments_appointed_by_users_id_fk"
+  public__cadet_appointments }|--|| public__oc_cadets : "cadet_appointments_cadet_id_oc_cadets_id_fk"
+  public__cadet_appointments }o--|| public__users : "cadet_appointments_ended_by_users_id_fk"
+  public__cadet_appointments }|--|| public__platoons : "cadet_appointments_platoon_id_platoons_id_fk"
   public__course_offering_instructors }|--|| public__instructors : "course_offering_instructors_instructor_id_instructors_id_fk"
   public__course_offering_instructors }|--|| public__course_offerings : "course_offering_instructors_offering_id_course_offerings_id_fk"
   public__course_offerings }|--|| public__courses : "course_offerings_course_id_courses_id_fk"
   public__course_offerings }|--|| public__subjects : "course_offerings_subject_id_subjects_id_fk"
   public__credentials_local }|--|| public__users : "credentials_local_user_id_users_id_fk"
   public__delegations }o--|| public__positions : "delegations_act_as_position_id_positions_id_fk"
+  public__delegations }o--|| public__users : "delegations_created_by_users_id_fk"
   public__delegations }|--|| public__users : "delegations_grantee_user_id_users_id_fk"
+  public__delegations }o--|| public__appointments : "delegations_grantor_appointment_id_appointments_id_fk"
   public__delegations }|--|| public__users : "delegations_grantor_user_id_users_id_fk"
   public__delegations }o--|| public__platoons : "delegations_scope_id_platoons_id_fk"
   public__delegations }o--|| public__users : "delegations_terminated_by_users_id_fk"
   public__device_site_settings }o--|| public__users : "device_site_settings_updated_by_users_id_fk"
   public__dossier_inspections }|--|| public__users : "dossier_inspections_inspector_user_id_users_id_fk"
   public__dossier_inspections }|--|| public__oc_cadets : "dossier_inspections_oc_id_oc_cadets_id_fk"
+  public__functional_role_mappings }o--|| public__positions : "functional_role_mappings_position_id_positions_id_fk"
+  public__functional_role_mappings }o--|| public__users : "functional_role_mappings_updated_by_users_id_fk"
   public__instructors }o--|| public__users : "instructors_user_id_users_id_fk"
+  public__interview_pending_ticker_settings }o--|| public__users : "interview_pending_ticker_settings_created_by_users_id_fk"
   public__interview_template_field_options }|--|| public__interview_template_fields : "interview_template_field_options_field_id_interview_template_fi"
   public__interview_template_fields }o--|| public__interview_template_groups : "interview_template_fields_group_id_interview_template_groups_id"
   public__interview_template_fields }o--|| public__interview_template_sections : "interview_template_fields_section_id_interview_template_section"
@@ -1182,7 +1395,18 @@ erDiagram
   public__interview_template_groups }|--|| public__interview_templates : "interview_template_groups_template_id_interview_templates_id_fk"
   public__interview_template_sections }|--|| public__interview_templates : "interview_template_sections_template_id_interview_templates_id_"
   public__interview_template_semesters }|--|| public__interview_templates : "interview_template_semesters_template_id_interview_templates_id"
+  public__interview_templates }o--|| public__courses : "interview_templates_course_id_courses_id_fk"
   public__login_attempts }o--|| public__users : "login_attempts_user_id_users_id_fk"
+  public__marks_workflow_events }o--|| public__users : "marks_workflow_events_actor_user_id_users_id_fk"
+  public__marks_workflow_events }|--|| public__marks_workflow_tickets : "marks_workflow_events_ticket_id_marks_workflow_tickets_id_fk"
+  public__marks_workflow_notifications }o--|| public__users : "marks_workflow_notifications_actor_user_id_users_id_fk"
+  public__marks_workflow_notifications }|--|| public__marks_workflow_tickets : "marks_workflow_notifications_ticket_id_marks_workflow_tickets_i"
+  public__marks_workflow_notifications }|--|| public__users : "marks_workflow_notifications_user_id_users_id_fk"
+  public__marks_workflow_settings }o--|| public__users : "marks_workflow_settings_updated_by_users_id_fk"
+  public__marks_workflow_tickets }o--|| public__users : "marks_workflow_tickets_last_actor_user_id_users_id_fk"
+  public__marks_workflow_tickets }o--|| public__users : "marks_workflow_tickets_submitted_by_user_id_users_id_fk"
+  public__marks_workflow_tickets }o--|| public__users : "marks_workflow_tickets_verified_by_user_id_users_id_fk"
+  public__module_access_settings }o--|| public__users : "module_access_settings_updated_by_users_id_fk"
   public__oc_achievements }|--|| public__oc_cadets : "oc_achievements_oc_id_oc_cadets_id_fk"
   public__oc_autobiography }|--|| public__oc_cadets : "oc_autobiography_oc_id_oc_cadets_id_fk"
   public__oc_cadets }|--|| public__courses : "oc_cadets_course_id_courses_id_fk"
@@ -1275,21 +1499,29 @@ erDiagram
   public__oc_ssb_reports }|--|| public__oc_cadets : "oc_ssb_reports_oc_id_oc_cadets_id_fk"
   public__oc_weapon_training }o--|| public__oc_course_enrollments : "oc_weapon_training_enrollment_id_oc_course_enrollments_id_fk"
   public__oc_weapon_training }|--|| public__oc_cadets : "oc_weapon_training_oc_id_oc_cadets_id_fk"
+  public__org_hierarchy_nodes }o--|| public__users : "org_hierarchy_nodes_created_by_users_id_fk"
+  public__org_hierarchy_nodes }o--|| public__org_hierarchy_nodes : "org_hierarchy_nodes_parent_id_org_hierarchy_nodes_id_fk"
+  public__org_hierarchy_nodes }o--|| public__platoons : "org_hierarchy_nodes_platoon_id_platoons_id_fk"
+  public__org_hierarchy_nodes }o--|| public__users : "org_hierarchy_nodes_updated_by_users_id_fk"
   public__permission_field_rules }|--|| public__permissions : "permission_field_rules_permission_id_permissions_id_fk"
   public__permission_field_rules }o--|| public__positions : "permission_field_rules_position_id_positions_id_fk"
   public__permission_field_rules }o--|| public__roles : "permission_field_rules_role_id_roles_id_fk"
   public__position_permissions }|--|| public__permissions : "position_permissions_permission_id_permissions_id_fk"
   public__position_permissions }|--|| public__positions : "position_permissions_position_id_positions_id_fk"
   public__pt_attempt_grades }|--|| public__pt_type_attempts : "pt_attempt_grades_pt_attempt_id_pt_type_attempts_id_fk"
+  public__pt_motivation_award_fields }o--|| public__courses : "pt_motivation_award_fields_course_id_courses_id_fk"
   public__pt_task_scores }|--|| public__pt_attempt_grades : "pt_task_scores_pt_attempt_grade_id_pt_attempt_grades_id_fk"
   public__pt_task_scores }|--|| public__pt_type_attempts : "pt_task_scores_pt_attempt_id_pt_type_attempts_id_fk"
   public__pt_task_scores }|--|| public__pt_tasks : "pt_task_scores_pt_task_id_pt_tasks_id_fk"
   public__pt_tasks }|--|| public__pt_types : "pt_tasks_pt_type_id_pt_types_id_fk"
   public__pt_type_attempts }|--|| public__pt_types : "pt_type_attempts_pt_type_id_pt_types_id_fk"
+  public__pt_types }o--|| public__courses : "pt_types_course_id_courses_id_fk"
+  public__report_download_versions }o--|| public__users : "report_download_versions_requested_by_user_id_users_id_fk"
   public__role_permissions }|--|| public__permissions : "role_permissions_permission_id_permissions_id_fk"
   public__role_permissions }|--|| public__roles : "role_permissions_role_id_roles_id_fk"
   public__signup_requests }o--|| public__users : "signup_requests_resolved_by_users_id_fk"
   public__signup_requests }|--|| public__users : "signup_requests_user_id_users_id_fk"
   public__site_settings }o--|| public__users : "site_settings_updated_by_users_id_fk"
   public__training_camp_activities }|--|| public__training_camps : "training_camp_activities_training_camp_id_training_camps_id_fk"
+  public__training_camps }o--|| public__courses : "training_camps_course_id_courses_id_fk"
   public__users }o--|| public__positions : "users_appoint_id_positions_id_fk"

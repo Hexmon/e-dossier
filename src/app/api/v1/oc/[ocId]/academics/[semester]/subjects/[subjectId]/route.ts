@@ -19,7 +19,7 @@ async function PATCHHandler(
         const { subjectId } = await parseParam({ params }, SubjectIdParam);
         await ensureOcExists(ocId);
         await authorizeOcAccess(req, ocId);
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: semester, request: req, authContext: authCtx });
         const dto = academicSubjectPatchSchema.parse(await req.json());
         const data = await updateOcAcademicSubject(ocId, semester, subjectId, {
             theory: dto.theory,
@@ -65,7 +65,7 @@ async function DELETEHandler(
         const { subjectId } = await parseParam({ params }, SubjectIdParam);
         await ensureOcExists(ocId);
         await authorizeOcAccess(req, ocId);
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: semester, request: req, authContext: authCtx });
         const hard = new URL(req.url).searchParams.get('hard') === 'true';
         const data = await deleteOcAcademicSubject(ocId, semester, subjectId, { hard }, {
             actorUserId: authCtx?.userId,

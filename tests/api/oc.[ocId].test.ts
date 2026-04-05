@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET as getOcById, PATCH as patchOcById } from "@/app/api/v1/oc/[ocId]/route";
+import { DELETE as deleteOcById, GET as getOcById, PATCH as patchOcById } from "@/app/api/v1/oc/[ocId]/route";
 import { ApiError } from "@/app/lib/http";
 import * as authz from "@/app/lib/authz";
 import * as ocChecks from "@/app/api/v1/oc/_checks";
@@ -150,5 +150,36 @@ describe("PATCH /api/v1/oc/[ocId]", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.oc.jnuEnrollmentNo).toBe("001");
+  });
+});
+
+describe("DELETE /api/v1/oc/[ocId]", () => {
+  it("archives an OC instead of hard deleting it", async () => {
+    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: "admin-1", roles: ["ADMIN"] });
+    (db.update as any).mockImplementationOnce(() => ({
+      set: (payload: any) => ({
+        where: () => ({
+          returning: async () => [
+            {
+              id: ocId,
+              status: payload.status,
+              deletedAt: payload.deletedAt,
+            },
+          ],
+        }),
+      }),
+    }));
+
+    const req = makeJsonRequest({
+      method: "DELETE",
+      path: `${path}/${ocId}`,
+    });
+    const ctx = { params: Promise.resolve({ ocId }) } as any;
+    const res = await deleteOcById(req as any, ctx);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.archived).toBe(true);
+    expect(body.message).toBe("OC archived successfully.");
   });
 });

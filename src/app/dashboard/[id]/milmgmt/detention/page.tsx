@@ -336,13 +336,12 @@ function InnerDetentionPage({
                     </CardHeader>
 
                     <CardContent>
-                        {isActiveSemesterLocked ? (
-                            <SemesterLockNotice
+                        <SemesterLockNotice
                                 activeSemester={activeSemester}
                                 currentSemester={currentSemester ?? 1}
                                 supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                             />
-                        ) : null}
                         {/* Term Tabs */}
                         <div className="flex justify-center mb-6 space-x-2">
                             {semesters.map((term, idx) => (

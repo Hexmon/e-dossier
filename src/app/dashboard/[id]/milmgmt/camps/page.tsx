@@ -147,13 +147,12 @@ export default function OcCampsPage() {
               }
             >
               <TabsContent value="camps">
-                {isActiveSemesterLocked ? (
-                  <SemesterLockNotice
+                <SemesterLockNotice
                     activeSemester={activeSemester}
                     currentSemester={currentSemester}
                     supportedSemesters={supportedSemesters}
+                                    canOverrideLockedSemester={canEditLockedSemesters}
                   />
-                ) : null}
                 <CampContent
                   ocId={ocId}
                   activeSemester={activeSemester}

@@ -1,7 +1,7 @@
 import { json, handleApiError } from '@/app/lib/http';
 import { OcIdParam, listQuerySchema, medicalCreateSchema } from '@/app/lib/oc-validators';
 import { listMedicals, createMedical } from '@/app/db/queries/oc';
-import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../_checks';
+import { mustBeAuthed, mustBeMedicalWriter, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../_checks';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -33,10 +33,11 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
-        const authCtx = await mustBeAuthed(req);
-        const { ocId } = await parseParam({params}, OcIdParam); await ensureOcExists(ocId);
+        const { ocId } = await parseParam({params}, OcIdParam);
+        const authCtx = await mustBeMedicalWriter(req, ocId);
+        await ensureOcExists(ocId);
         const dto = medicalCreateSchema.parse(await req.json());
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
         const row = await createMedical(ocId, dto);
 
         await req.audit.log({

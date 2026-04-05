@@ -29,6 +29,12 @@ export interface MeResponse {
         canAccessAcademicsBulk: boolean;
         canAccessPtBulk: boolean;
     };
+    authority?: {
+        kind: "APPOINTMENT" | "DELEGATION";
+        delegationId: string | null;
+        grantorUserId: string | null;
+        grantorUsername: string | null;
+    };
     permissions?: string[];
     deniedPermissions?: string[];
     policyVersion?: number | null;
@@ -41,6 +47,11 @@ export interface MeResponse {
         };
         valid_from: string;
         valid_to: string | null;
+        auth_kind?: "APPOINTMENT" | "DELEGATION";
+        delegation_id?: string | null;
+        source_appointment_id?: string | null;
+        grantor_user_id?: string | null;
+        grantor_username?: string | null;
     };
 }
 

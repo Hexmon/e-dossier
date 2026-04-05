@@ -46,6 +46,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     await assertOcSemesterWriteAllowed({
       ocId,
       requestedSemester: dto.semester ?? previous.semester,
+      request: req,
       authContext: authCtx,
     });
     const row = await updateDiscipline(ocId, id, dto);
@@ -79,7 +80,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     const { id } = await parseParam({ params }, IdSchema);
     const previous = await getDiscipline(ocId, id);
     if (!previous) throw new ApiError(404, 'Discipline record not found', 'not_found');
-    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, authContext: authCtx });
+    await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, request: req, authContext: authCtx });
     const row = await deleteDiscipline(ocId, id);
     if (!row) throw new ApiError(404, 'Discipline record not found', 'not_found');
 

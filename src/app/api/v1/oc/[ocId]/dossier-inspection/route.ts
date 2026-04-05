@@ -6,7 +6,7 @@ import { dossierInspections } from '@/app/db/schema/training/dossierInspections'
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { ocCadets } from '@/app/db/schema/training/oc';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, isNull, sql } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -26,7 +26,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
     const [oc] = await db
       .select({ id: ocCadets.id })
       .from(ocCadets)
-      .where(eq(ocCadets.id, ocId))
+      .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
       .limit(1);
 
     if (!oc) {
@@ -52,7 +52,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
       .from(dossierInspections)
       .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
       .leftJoin(positions, eq(users.appointId, positions.id))
-      .where(eq(dossierInspections.ocId, ocId))
+      .where(and(eq(dossierInspections.ocId, ocId), isNull(dossierInspections.deletedAt)))
       .orderBy(desc(dossierInspections.createdAt));
 
     await req.audit.log({
@@ -87,7 +87,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     const [oc] = await db
       .select({ id: ocCadets.id })
       .from(ocCadets)
-      .where(eq(ocCadets.id, ocId))
+      .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
       .limit(1);
 
     if (!oc) {
@@ -112,6 +112,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         inspectorUserId: body.inspectorUserId,
         date: body.date,
         remarks: body.remarks,
+        deletedAt: null,
       })
       .returning({
         id: dossierInspections.id,
@@ -180,7 +181,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     const [existing] = await db
       .select({ id: dossierInspections.id })
       .from(dossierInspections)
-      .where(and(eq(dossierInspections.id, inspectionId), eq(dossierInspections.ocId, ocId)))
+      .where(and(eq(dossierInspections.id, inspectionId), eq(dossierInspections.ocId, ocId), isNull(dossierInspections.deletedAt)))
       .limit(1);
 
     if (!existing) {
@@ -271,7 +272,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         remarks: dossierInspections.remarks,
       })
       .from(dossierInspections)
-      .where(and(eq(dossierInspections.id, inspectionId), eq(dossierInspections.ocId, ocId)))
+      .where(and(eq(dossierInspections.id, inspectionId), eq(dossierInspections.ocId, ocId), isNull(dossierInspections.deletedAt)))
       .limit(1);
 
     if (!existing) {
@@ -279,8 +280,12 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     }
 
     await db
-      .delete(dossierInspections)
-      .where(eq(dossierInspections.id, inspectionId));
+      .update(dossierInspections)
+      .set({
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(dossierInspections.id, inspectionId), isNull(dossierInspections.deletedAt)));
 
     await req.audit.log({
       action: AuditEventType.OC_RECORD_DELETED,
@@ -292,6 +297,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         inspectionId,
         ocId,
         deletedInspection: existing,
+        hardDeleted: false,
       },
     });
 

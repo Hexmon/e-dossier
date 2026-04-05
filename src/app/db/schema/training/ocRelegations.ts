@@ -16,7 +16,7 @@ export const ocRelegations = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     ocId: uuid("oc_id")
       .notNull()
-      .references(() => ocCadets.id, { onDelete: "cascade" }),
+      .references(() => ocCadets.id, { onDelete: "restrict" }),
     fromCourseId: uuid("from_course_id")
       .notNull()
       .references(() => courses.id, { onDelete: "restrict" }),

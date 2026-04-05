@@ -4,7 +4,7 @@ import { ApiError } from '@/app/lib/http';
 import { requireAuth, requireAdmin } from '@/app/lib/authz';
 import { db } from '@/app/db/client';
 import { ocCadets } from '@/app/db/schema/training/oc';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { canEditAcademics } from '@/lib/academics-access';
 import { authorizeOcAccess } from '@/lib/authorization';
 import { getCurrentSemesterForCourse, getOcCourseInfo } from '@/app/db/queries/oc';
@@ -14,6 +14,12 @@ import {
     normalizeSemesterValue,
     normalizeSupportedSemesters,
 } from '@/lib/dossier-semester';
+import {
+    auditOcSemesterOverrideIfUsed,
+    getSemesterOverrideReason,
+    type SemesterWriteDecision,
+} from '@/app/lib/oc-semester-write';
+import { canWriteMedicalRecords } from '@/lib/medical-access';
 
 export const Param = (name: string) => z.object({ [name]: z.string() });
 
@@ -68,11 +74,16 @@ export async function parseParam<T extends z.ZodTypeAny>(
 }
 
 export async function ensureOcExists(ocId: string) {
-    const [row] = await db.select({ id: ocCadets.id }).from(ocCadets).where(eq(ocCadets.id, ocId)).limit(1);
+    const [row] = await db
+        .select({ id: ocCadets.id })
+        .from(ocCadets)
+        .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
+        .limit(1);
     if (!row) throw new ApiError(404, 'OC not found', 'not_found');
 }
 
 type SemesterWriteAuthContext = {
+    userId?: string | null;
     roles?: string[] | null;
     claims?: Record<string, any> | null;
 };
@@ -90,9 +101,10 @@ export async function assertOcSemesterWriteAllowed(params: {
     ocId: string;
     requestedSemester: number | string | null | undefined;
     authContext: SemesterWriteAuthContext;
+    request?: NextRequest;
     supportedSemesters?: readonly number[];
     currentSemester?: number | null;
-}) {
+}): Promise<SemesterWriteDecision> {
     const supportedSemesters = normalizeSupportedSemesters(params.supportedSemesters);
     const currentSemester = normalizeCurrentSemester(
         params.currentSemester ?? (await getOcCurrentSemester(params.ocId))
@@ -112,6 +124,9 @@ export async function assertOcSemesterWriteAllowed(params: {
         position: params.authContext.claims?.apt?.position ?? null,
     });
 
+    const overrideReason = getSemesterOverrideReason(params.request);
+    const overrideApplied = requestedSemester !== currentSemester && canBypass;
+
     if (!canBypass && requestedSemester !== currentSemester) {
         throw new ApiError(403, 'Only the current semester can be modified.', 'semester_locked', {
             currentSemester,
@@ -120,9 +135,58 @@ export async function assertOcSemesterWriteAllowed(params: {
         });
     }
 
-    return {
+    if (overrideApplied && !overrideReason) {
+        throw new ApiError(
+            400,
+            'A semester override reason is required for super admin edits outside the current semester.',
+            'override_reason_required',
+            {
+                currentSemester,
+                requestedSemester,
+                supportedSemesters,
+            }
+        );
+    }
+
+    const decision: SemesterWriteDecision = {
         currentSemester,
         requestedSemester,
         supportedSemesters,
+        overrideApplied,
+        overrideReason,
     };
+
+    if (params.request) {
+        await auditOcSemesterOverrideIfUsed({
+            request: params.request,
+            authContext: params.authContext,
+            ocId: params.ocId,
+            decision,
+        });
+    }
+
+    return decision;
+}
+
+export async function mustBeMedicalWriter(req: NextRequest, ocId?: string) {
+    const auth = ocId ? await authorizeOcAccess(req, ocId) : await mustBeAuthed(req);
+    const authAny = auth as any;
+    const scopeType = authAny?.apt?.scope?.type ?? authAny?.claims?.apt?.scope?.type ?? null;
+    const position = authAny?.apt?.position ?? authAny?.claims?.apt?.position ?? null;
+
+    if (
+        canWriteMedicalRecords({
+            roles: auth.roles,
+            position,
+            scopeType,
+        })
+    ) {
+        return auth;
+    }
+
+    throw new ApiError(
+        403,
+        'Medical updates are restricted to the commander-equivalent role for this platoon.',
+        'forbidden'
+    );
 }

@@ -370,7 +370,13 @@ async function saveModuleSettings(page: Page) {
     saveButton.click(),
   ]);
 
-  await expect(page.getByText("Module access settings saved.")).toBeVisible();
+  await expect(
+    page
+      .locator("main")
+      .getByRole("status")
+      .filter({ hasText: "Module access settings saved." })
+      .first()
+  ).toBeVisible();
 }
 
 async function readNavigationSections(context: BrowserContext) {

@@ -3449,6 +3449,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "method": "GET",
+    "path": "/api/v1/setup/status",
+    "action": "setup:status:read",
+    "resourceType": "setup:status",
+    "category": "setup",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
     "method": "POST",
     "path": "/api/v1/bootstrap/super-admin",
     "action": "bootstrap:super-admin:create",
@@ -4032,6 +4041,96 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "category": "settings",
     "fieldLevelCandidate": true,
     "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/hierarchy/nodes",
+    "action": "admin:hierarchy:nodes:read",
+    "resourceType": "admin:hierarchy:nodes",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/hierarchy/nodes",
+    "action": "admin:hierarchy:nodes:create",
+    "resourceType": "admin:hierarchy:nodes",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/hierarchy/nodes/:id",
+    "action": "admin:hierarchy:nodes:update",
+    "resourceType": "admin:hierarchy:nodes",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/hierarchy/nodes/:id",
+    "action": "admin:hierarchy:nodes:delete",
+    "resourceType": "admin:hierarchy:nodes",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/hierarchy/functional-role-mappings",
+    "action": "admin:hierarchy:functional-role-mappings:read",
+    "resourceType": "admin:hierarchy:functional-role-mappings",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/hierarchy/functional-role-mappings",
+    "action": "admin:hierarchy:functional-role-mappings:update",
+    "resourceType": "admin:hierarchy:functional-role-mappings",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/delegations",
+    "action": "admin:delegations:read",
+    "resourceType": "admin:delegations",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/delegations",
+    "action": "admin:delegations:create",
+    "resourceType": "admin:delegations",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/delegations/:id/terminate",
+    "action": "admin:delegations:terminate",
+    "resourceType": "admin:delegations",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/me/switchable-identities",
+    "action": "me:switchable-identities:read",
+    "resourceType": "me:switchable-identities",
+    "category": "auth",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
   }
 ];
 
@@ -4560,6 +4659,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "resourceType": "page:dashboard:settings:ticker",
     "category": "settings",
     "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/genmgmt/hierarchy",
+    "action": "page:dashboard:genmgmt:hierarchy:view",
+    "resourceType": "page:dashboard:genmgmt:hierarchy",
+    "category": "admin",
+    "adminBaseline": true
   }
 ];
 

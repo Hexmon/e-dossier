@@ -52,4 +52,12 @@ describe('authz-permissions helpers', () => {
     expect(permissionSet.has('oc:academics:bulk:create')).toBe(true);
     expect(permissionSet.has('oc:physical-training:bulk:create')).toBe(true);
   });
+
+  it('does not grant commander marks permissions to legacy commander aliases', () => {
+    const permissionSet = new Set<string>();
+    const result = applyPlatoonCommanderMarksEntryOverrides(['PL_CDR'], permissionSet);
+
+    expect(result.isPlatoonCommander).toBe(false);
+    expect(permissionSet.size).toBe(0);
+  });
 });

@@ -36,6 +36,7 @@ import { useOCs } from "@/hooks/useOCs";
 import OCFilters from "@/components/genmgmt/OCFilters";
 import { OCForm } from "@/components/genmgmt/OCForm";
 import { useQuery } from "@tanstack/react-query";
+import { SetupReturnBanner } from "@/components/setup/SetupReturnBanner";
 
 type CourseLike = { id: string; code?: string; title?: string };
 type PlatoonLike = { id: string; key?: string; name?: string };
@@ -269,6 +270,11 @@ export default function OCManagementPage() {
                 ]}
               />
             </nav>
+
+            <SetupReturnBanner
+              title="Setup step: Officer Cadets"
+              description="Create the initial OC records here, then return to the setup checklist."
+            />
 
             <GlobalTabs tabs={ocTabs} defaultValue="oc-mgmt">
               <TabsContent value="oc-mgmt" className="space-y-6">

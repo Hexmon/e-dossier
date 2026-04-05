@@ -274,6 +274,13 @@ export const managementCard: ManagementCardConfig[] = [
     color: "info"
   },
   {
+    title: "Hierarchy Management",
+    description: "Manage the organization tree, functional commander mapping, and reporting structure",
+    icon: Boxes,
+    to: "/dashboard/genmgmt/hierarchy",
+    color: "muted"
+  },
+  {
     title: "Report Verification",
     description: "Verify downloaded report PDFs using version code and optional checksum match",
     icon: FileCheck2,

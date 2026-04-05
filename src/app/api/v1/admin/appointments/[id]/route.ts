@@ -10,6 +10,11 @@ import { and, eq, sql } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
+import { requireAdmin } from '@/app/lib/authz';
+import {
+    assertCanManageAppointmentRecord,
+    assertCanManageUser,
+} from '@/app/lib/admin-boundaries';
 
 export const runtime = 'nodejs';
 
@@ -58,8 +63,9 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const adminCtx = await requireAdmin(req);
         const { id } = await params;
+        await assertCanManageAppointmentRecord(adminCtx, id);
         const body = await req.json();
         const parsed = appointmentUpdateSchema.safeParse(body);
         if (!parsed.success) throw new ApiError(400, 'Validation failed', 'bad_request', parsed.error.flatten());
@@ -87,6 +93,9 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
         const normalizedUsername = username?.trim();
         const normalizedPositionName = positionName?.trim();
+        if (updates.userId) {
+            await assertCanManageUser(adminCtx, updates.userId);
+        }
 
         const txResult = await db.transaction(async (tx) => {
             const [previous] = await tx.select().from(appointments).where(eq(appointments.id, id)).limit(1);
@@ -202,8 +211,9 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const adminCtx = await requireAuth(req);
+        const adminCtx = await requireAdmin(req);
         const { id } = await params;
+        await assertCanManageAppointmentRecord(adminCtx, id);
         // Soft delete by setting deleted_at = now()
         const [previous] = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);
         if (!previous) throw new ApiError(404, 'Appointment not found');

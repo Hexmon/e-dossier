@@ -1,23 +1,21 @@
 import { db } from '@/app/db/client';
 import { positions } from '@/app/db/schema/auth/positions';
-import { json, handleApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { positionCreateSchema } from '@/app/lib/validators';
 import { asc, eq, isNull } from 'drizzle-orm';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
+import { requireAdmin } from '@/app/lib/authz';
+import { isProtectedSystemPositionKeyValue } from '@/app/lib/admin-boundaries';
 
 export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest) {
     try {
-        let actor: { type: 'user' | 'anonymous'; id: string } = { type: 'anonymous', id: 'unknown' };
-        try {
-            const authCtx = await requireAuth(req);
-            actor = { type: 'user', id: authCtx.userId };
-        } catch {}
+        const adminCtx = await requireAdmin(req);
+        const actor = { type: 'user' as const, id: adminCtx.userId };
 
         const url = new URL(req.url);
         const includePlatoons =
@@ -97,7 +95,7 @@ async function GETHandler(req: AuditNextRequest) {
 
 async function POSTHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await requireAuth(req);
+        const adminCtx = await requireAdmin(req);
 
         const body = await req.json();
         const parsed = positionCreateSchema.safeParse(body);
@@ -107,6 +105,10 @@ async function POSTHandler(req: AuditNextRequest) {
 
         const key = parsed.data.key.trim();
         const displayName = parsed.data.displayName?.trim() ?? null;
+
+        if (isProtectedSystemPositionKeyValue(key) && !adminCtx.roles.includes('SUPER_ADMIN')) {
+            throw new ApiError(403, 'Only SUPER_ADMIN can create protected system positions.', 'protected_position_forbidden');
+        }
 
         // Uniqueness pre-checks: key and displayName (if provided)
         // 1) key

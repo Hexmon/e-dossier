@@ -217,7 +217,7 @@ async function PATCHHandler(
                     ? null
                     : Number(interview.semester)
                 : Number(dto.semester);
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: effectiveSemester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: effectiveSemester, request: req, authContext: authCtx });
         await validateTemplateAndPayload({
             templateId: interview.templateId,
             semester: effectiveSemester,
@@ -323,6 +323,7 @@ async function DELETEHandler(
         await assertOcSemesterWriteAllowed({
             ocId,
             requestedSemester: interview.semester == null ? null : Number(interview.semester),
+            request: req,
             authContext: authCtx,
         });
 
@@ -339,7 +340,7 @@ async function DELETEHandler(
                 module: 'interview',
                 templateId: interview.templateId,
                 interviewId,
-                hardDeleted: true,
+                hardDeleted: false,
             },
         });
         return json.ok({ message: 'Interview record deleted successfully.', deleted: interviewId });

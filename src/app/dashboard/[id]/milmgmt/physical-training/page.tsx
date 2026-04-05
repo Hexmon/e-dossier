@@ -114,11 +114,12 @@ export default function PhysicalTrainingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {!ptWorkflowActive && isActiveSemesterLocked ? (
+                {!ptWorkflowActive ? (
                   <SemesterLockNotice
                     activeSemester={activeSemester}
                     currentSemester={currentSemester}
                     supportedSemesters={supportedSemesters}
+                    canOverrideLockedSemester={canEditLockedSemesters}
                   />
                 ) : null}
                 {ptWorkflowActive ? (

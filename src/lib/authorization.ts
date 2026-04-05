@@ -10,6 +10,7 @@ import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq, and, isNull } from 'drizzle-orm';
 import { SCOPE } from '@/constants/app.constants';
 import { setRequestTenant } from '@/lib/audit-log';
+import { hasPlatoonCommanderRole } from '@/lib/platoon-commander-access';
 
 /**
  * Authorization context from JWT
@@ -137,20 +138,20 @@ export async function authorizeOcAccess(
   const context = normalizeAuthContext(await requireAuth(req));
   setRequestTenant(req, ocId);
   
-  // Admin can access any OC record
-  if (isAdmin(context)) {
-    return context;
-  }
-  
   // Get OC record to check platoon
   const [oc] = await db
     .select({ platoonId: ocCadets.platoonId })
     .from(ocCadets)
-    .where(eq(ocCadets.id, ocId))
+    .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
     .limit(1);
   
   if (!oc) {
     throw new ApiError(404, 'OC record not found', 'not_found');
+  }
+
+  // Admin can access any active OC record
+  if (isAdmin(context)) {
+    return context;
   }
   
   // Check if user has scope access to this OC's platoon
@@ -158,8 +159,14 @@ export async function authorizeOcAccess(
     return context;
   }
   
-  // Check if user is platoon commander for this OC's platoon
-  if (oc.platoonId && hasPosition(context, 'PLATOON_COMMANDER')) {
+  // Check if user holds commander-equivalent authority for this platoon.
+  if (
+    oc.platoonId &&
+    hasPlatoonCommanderRole({
+      roles: context.roles,
+      position: context.apt?.position ?? null,
+    })
+  ) {
     if (context.apt?.scope.type === SCOPE.PLATOON && context.apt?.scope.id === oc.platoonId) {
       return context;
     }

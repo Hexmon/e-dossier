@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-02-22T21:08:53.877Z",
+  "generatedAt": "2026-04-04T20:37:11.700Z",
   "database": "neondb",
-  "serverVersion": "PostgreSQL 17.8 (6108b59) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit",
+  "serverVersion": "PostgreSQL 17.8 (a48d9ca) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit",
   "schemas": [
     {
       "name": "drizzle",
@@ -78,6 +78,197 @@
     {
       "name": "public",
       "tables": [
+        {
+          "schema": "public",
+          "name": "academic_grading_policy_settings",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "singleton_key",
+              "ordinal": 2,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": "'default'::text",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "letter_grade_bands",
+              "ordinal": 3,
+              "dataType": "jsonb",
+              "udtName": "jsonb",
+              "formattedType": "jsonb",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "grade_point_bands",
+              "ordinal": 4,
+              "dataType": "jsonb",
+              "udtName": "jsonb",
+              "formattedType": "jsonb",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "sgpa_formula_template",
+              "ordinal": 5,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": "'CREDIT_WEIGHTED'::text",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "cgpa_formula_template",
+              "ordinal": 6,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": "'CREDIT_WEIGHTED'::text",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "rounding_scale",
+              "ordinal": 7,
+              "dataType": "integer",
+              "udtName": "int4",
+              "formattedType": "integer",
+              "nullable": false,
+              "default": "2",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_by",
+              "ordinal": 8,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 9,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 10,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "academic_grading_policy_settings_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [
+            {
+              "name": "academic_grading_policy_cgpa_formula_check",
+              "definition": "CHECK (cgpa_formula_template = ANY (ARRAY['CREDIT_WEIGHTED'::text, 'SEMESTER_AVG'::text]))"
+            },
+            {
+              "name": "academic_grading_policy_rounding_scale_check",
+              "definition": "CHECK (rounding_scale >= 0 AND rounding_scale <= 6)"
+            },
+            {
+              "name": "academic_grading_policy_sgpa_formula_check",
+              "definition": "CHECK (sgpa_formula_template = ANY (ARRAY['CREDIT_WEIGHTED'::text, 'SEMESTER_AVG'::text]))"
+            }
+          ],
+          "foreignKeys": [
+            {
+              "name": "academic_grading_policy_settings_updated_by_users_id_fk",
+              "columns": [
+                "updated_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "academic_grading_policy_settings_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX academic_grading_policy_settings_pkey ON academic_grading_policy_settings USING btree (id)"
+            },
+            {
+              "name": "uq_academic_grading_policy_settings_singleton",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "singleton_key"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX uq_academic_grading_policy_settings_singleton ON academic_grading_policy_settings USING btree (singleton_key)"
+            }
+          ]
+        },
         {
           "schema": "public",
           "name": "account_lockouts",
@@ -1468,6 +1659,280 @@
         },
         {
           "schema": "public",
+          "name": "cadet_appointments",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "cadet_id",
+              "ordinal": 2,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "platoon_id",
+              "ordinal": 3,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "appointment_name",
+              "ordinal": 4,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(128)",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "starts_at",
+              "ordinal": 5,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "ends_at",
+              "ordinal": 6,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "appointed_by",
+              "ordinal": 7,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "ended_by",
+              "ordinal": 8,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "reason",
+              "ordinal": 9,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 10,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 11,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 12,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "cadet_appointments_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "cadet_appointments_appointed_by_users_id_fk",
+              "columns": [
+                "appointed_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "cadet_appointments_cadet_id_oc_cadets_id_fk",
+              "columns": [
+                "cadet_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "oc_cadets",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "cadet_appointments_ended_by_users_id_fk",
+              "columns": [
+                "ended_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "cadet_appointments_platoon_id_platoons_id_fk",
+              "columns": [
+                "platoon_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "platoons",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "cadet_appointments_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX cadet_appointments_pkey ON cadet_appointments USING btree (id)"
+            },
+            {
+              "name": "idx_cadet_appointments_cadet",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "cadet_id",
+                "starts_at"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_cadet_appointments_cadet ON cadet_appointments USING btree (cadet_id, starts_at)"
+            },
+            {
+              "name": "idx_cadet_appointments_platoon",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "platoon_id",
+                "starts_at"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_cadet_appointments_platoon ON cadet_appointments USING btree (platoon_id, starts_at)"
+            },
+            {
+              "name": "uq_cadet_appointments_active_name_per_platoon",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "platoon_id"
+              ],
+              "predicate": "deleted_at IS NULL AND ends_at IS NULL",
+              "definition": "CREATE UNIQUE INDEX uq_cadet_appointments_active_name_per_platoon ON cadet_appointments USING btree (lower(appointment_name::text), platoon_id) WHERE deleted_at IS NULL AND ends_at IS NULL"
+            }
+          ]
+        },
+        {
+          "schema": "public",
           "name": "course_offering_instructors",
           "type": "BASE TABLE",
           "comment": null,
@@ -2190,6 +2655,54 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "grantor_appointment_id",
+              "ordinal": 15,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_by",
+              "ordinal": 16,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "terminated_at",
+              "ordinal": 17,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "termination_reason",
+              "ordinal": 18,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -2218,12 +2731,44 @@
               "initiallyDeferred": false
             },
             {
+              "name": "delegations_created_by_users_id_fk",
+              "columns": [
+                "created_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
               "name": "delegations_grantee_user_id_users_id_fk",
               "columns": [
                 "grantee_user_id"
               ],
               "referencedSchema": "public",
               "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "delegations_grantor_appointment_id_appointments_id_fk",
+              "columns": [
+                "grantor_appointment_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "appointments",
               "referencedColumns": [
                 "id"
               ],
@@ -2587,6 +3132,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 8,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -2625,7 +3182,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -2642,6 +3199,177 @@
               ],
               "predicate": null,
               "definition": "CREATE UNIQUE INDEX dossier_inspections_pkey ON dossier_inspections USING btree (id)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "footer",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "footer",
+              "ordinal": 1,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": null,
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [],
+          "indexes": []
+        },
+        {
+          "schema": "public",
+          "name": "functional_role_mappings",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "capability_key",
+              "ordinal": 2,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "position_id",
+              "ordinal": 3,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_by",
+              "ordinal": 4,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 5,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 6,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "functional_role_mappings_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "functional_role_mappings_position_id_positions_id_fk",
+              "columns": [
+                "position_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "positions",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "functional_role_mappings_updated_by_users_id_fk",
+              "columns": [
+                "updated_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "functional_role_mappings_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX functional_role_mappings_pkey ON functional_role_mappings USING btree (id)"
+            },
+            {
+              "name": "uq_functional_role_mappings_capability_key",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "capability_key"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX uq_functional_role_mappings_capability_key ON functional_role_mappings USING btree (capability_key)"
             }
           ]
         },
@@ -2770,6 +3498,42 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "experience",
+              "ordinal": 11,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "qualification",
+              "ordinal": 12,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "subject_ids",
+              "ordinal": 13,
+              "dataType": "ARRAY",
+              "udtName": "_uuid",
+              "formattedType": "uuid[]",
+              "nullable": false,
+              "default": "'{}'::uuid[]",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -2809,6 +3573,147 @@
               ],
               "predicate": null,
               "definition": "CREATE UNIQUE INDEX instructors_pkey ON instructors USING btree (id)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "interview_pending_ticker_settings",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "start_date",
+              "ordinal": 2,
+              "dataType": "date",
+              "udtName": "date",
+              "formattedType": "date",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "end_date",
+              "ordinal": 3,
+              "dataType": "date",
+              "udtName": "date",
+              "formattedType": "date",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "days",
+              "ordinal": 4,
+              "dataType": "integer",
+              "udtName": "int4",
+              "formattedType": "integer",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_by",
+              "ordinal": 5,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 6,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "interview_pending_ticker_settings_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "interview_pending_ticker_settings_created_by_users_id_fk",
+              "columns": [
+                "created_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "interview_pending_ticker_settings_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX interview_pending_ticker_settings_pkey ON interview_pending_ticker_settings USING btree (id)"
+            },
+            {
+              "name": "ix_interview_pending_ticker_settings_created_at",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "created_at"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX ix_interview_pending_ticker_settings_created_at ON interview_pending_ticker_settings USING btree (created_at)"
+            },
+            {
+              "name": "ix_interview_pending_ticker_settings_created_by",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "created_by"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX ix_interview_pending_ticker_settings_created_by ON interview_pending_ticker_settings USING btree (created_by)"
             }
           ]
         },
@@ -3868,6 +4773,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "course_id",
+              "ordinal": 11,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -3878,8 +4795,37 @@
           },
           "uniqueConstraints": [],
           "checkConstraints": [],
-          "foreignKeys": [],
+          "foreignKeys": [
+            {
+              "name": "interview_templates_course_id_courses_id_fk",
+              "columns": [
+                "course_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "courses",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
           "indexes": [
+            {
+              "name": "idx_interview_template_course_sort",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "course_id",
+                "sort_order"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_interview_template_course_sort ON interview_templates USING btree (course_id, sort_order)"
+            },
             {
               "name": "interview_templates_pkey",
               "unique": true,
@@ -3892,15 +4838,16 @@
               "definition": "CREATE UNIQUE INDEX interview_templates_pkey ON interview_templates USING btree (id)"
             },
             {
-              "name": "uq_interview_template_code",
+              "name": "uq_interview_template_course_code",
               "unique": true,
               "primary": false,
               "method": "btree",
               "columns": [
+                "course_id",
                 "code"
               ],
               "predicate": null,
-              "definition": "CREATE UNIQUE INDEX uq_interview_template_code ON interview_templates USING btree (code)"
+              "definition": "CREATE UNIQUE INDEX uq_interview_template_course_code ON interview_templates USING btree (course_id, code)"
             }
           ]
         },
@@ -4049,6 +4996,1089 @@
         },
         {
           "schema": "public",
+          "name": "marks_workflow_events",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "ticket_id",
+              "ordinal": 2,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "event_type",
+              "ordinal": 3,
+              "dataType": "USER-DEFINED",
+              "udtName": "marks_workflow_event_type",
+              "formattedType": "marks_workflow_event_type",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "actor_user_id",
+              "ordinal": 4,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "from_status",
+              "ordinal": 5,
+              "dataType": "USER-DEFINED",
+              "udtName": "marks_workflow_status",
+              "formattedType": "marks_workflow_status",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "to_status",
+              "ordinal": 6,
+              "dataType": "USER-DEFINED",
+              "udtName": "marks_workflow_status",
+              "formattedType": "marks_workflow_status",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "message",
+              "ordinal": 7,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "payload",
+              "ordinal": 8,
+              "dataType": "jsonb",
+              "udtName": "jsonb",
+              "formattedType": "jsonb",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 9,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "marks_workflow_events_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "marks_workflow_events_actor_user_id_users_id_fk",
+              "columns": [
+                "actor_user_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "marks_workflow_events_ticket_id_marks_workflow_tickets_id_fk",
+              "columns": [
+                "ticket_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "marks_workflow_tickets",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "CASCADE",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "ix_marks_workflow_events_ticket_created_at",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "ticket_id",
+                "created_at"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX ix_marks_workflow_events_ticket_created_at ON marks_workflow_events USING btree (ticket_id, created_at)"
+            },
+            {
+              "name": "marks_workflow_events_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX marks_workflow_events_pkey ON marks_workflow_events USING btree (id)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "marks_workflow_notifications",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "user_id",
+              "ordinal": 2,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "ticket_id",
+              "ordinal": 3,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "module",
+              "ordinal": 4,
+              "dataType": "USER-DEFINED",
+              "udtName": "marks_workflow_module",
+              "formattedType": "marks_workflow_module",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "actor_user_id",
+              "ordinal": 5,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "workflow_status",
+              "ordinal": 6,
+              "dataType": "USER-DEFINED",
+              "udtName": "marks_workflow_status",
+              "formattedType": "marks_workflow_status",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "selection_label",
+              "ordinal": 7,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "message",
+              "ordinal": 8,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "deep_link",
+              "ordinal": 9,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "read_at",
+              "ordinal": 10,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 11,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 12,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "marks_workflow_notifications_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "marks_workflow_notifications_actor_user_id_users_id_fk",
+              "columns": [
+                "actor_user_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "marks_workflow_notifications_ticket_id_marks_workflow_tickets_i",
+              "columns": [
+                "ticket_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "marks_workflow_tickets",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "CASCADE",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "marks_workflow_notifications_user_id_users_id_fk",
+              "columns": [
+                "user_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "CASCADE",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "ix_marks_workflow_notifications_user_read_created_at",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "user_id",
+                "read_at",
+                "created_at"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX ix_marks_workflow_notifications_user_read_created_at ON marks_workflow_notifications USING btree (user_id, read_at, created_at)"
+            },
+            {
+              "name": "marks_workflow_notifications_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX marks_workflow_notifications_pkey ON marks_workflow_notifications USING btree (id)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "marks_workflow_settings",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "module",
+              "ordinal": 2,
+              "dataType": "USER-DEFINED",
+              "udtName": "marks_workflow_module",
+              "formattedType": "marks_workflow_module",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "data_entry_user_ids",
+              "ordinal": 3,
+              "dataType": "jsonb",
+              "udtName": "jsonb",
+              "formattedType": "jsonb",
+              "nullable": false,
+              "default": "'[]'::jsonb",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "verification_user_ids",
+              "ordinal": 4,
+              "dataType": "jsonb",
+              "udtName": "jsonb",
+              "formattedType": "jsonb",
+              "nullable": false,
+              "default": "'[]'::jsonb",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "post_verification_override_mode",
+              "ordinal": 5,
+              "dataType": "USER-DEFINED",
+              "udtName": "marks_workflow_override_mode",
+              "formattedType": "marks_workflow_override_mode",
+              "nullable": false,
+              "default": "'SUPER_ADMIN_ONLY'::marks_workflow_override_mode",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_by",
+              "ordinal": 6,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 7,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 8,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "marks_workflow_settings_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "marks_workflow_settings_updated_by_users_id_fk",
+              "columns": [
+                "updated_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "marks_workflow_settings_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX marks_workflow_settings_pkey ON marks_workflow_settings USING btree (id)"
+            },
+            {
+              "name": "uq_marks_workflow_settings_module",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "module"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX uq_marks_workflow_settings_module ON marks_workflow_settings USING btree (module)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "marks_workflow_tickets",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "module",
+              "ordinal": 2,
+              "dataType": "USER-DEFINED",
+              "udtName": "marks_workflow_module",
+              "formattedType": "marks_workflow_module",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "workflow_key",
+              "ordinal": 3,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "course_id",
+              "ordinal": 4,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "semester",
+              "ordinal": 5,
+              "dataType": "integer",
+              "udtName": "int4",
+              "formattedType": "integer",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "subject_id",
+              "ordinal": 6,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "subject_label",
+              "ordinal": 7,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "course_label",
+              "ordinal": 8,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "selection_label",
+              "ordinal": 9,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "status",
+              "ordinal": 10,
+              "dataType": "USER-DEFINED",
+              "udtName": "marks_workflow_status",
+              "formattedType": "marks_workflow_status",
+              "nullable": false,
+              "default": "'DRAFT'::marks_workflow_status",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "draft_payload",
+              "ordinal": 11,
+              "dataType": "jsonb",
+              "udtName": "jsonb",
+              "formattedType": "jsonb",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "current_revision",
+              "ordinal": 12,
+              "dataType": "integer",
+              "udtName": "int4",
+              "formattedType": "integer",
+              "nullable": false,
+              "default": "1",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "submitted_by_user_id",
+              "ordinal": 13,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "submitted_at",
+              "ordinal": 14,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "verified_by_user_id",
+              "ordinal": 15,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "verified_at",
+              "ordinal": 16,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "last_actor_user_id",
+              "ordinal": 17,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "last_actor_message",
+              "ordinal": 18,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "draft_updated_at",
+              "ordinal": 19,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 20,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 21,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "marks_workflow_tickets_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "marks_workflow_tickets_last_actor_user_id_users_id_fk",
+              "columns": [
+                "last_actor_user_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "marks_workflow_tickets_submitted_by_user_id_users_id_fk",
+              "columns": [
+                "submitted_by_user_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "marks_workflow_tickets_verified_by_user_id_users_id_fk",
+              "columns": [
+                "verified_by_user_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "ix_marks_workflow_tickets_module_course_semester",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "module",
+                "course_id",
+                "semester"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX ix_marks_workflow_tickets_module_course_semester ON marks_workflow_tickets USING btree (module, course_id, semester)"
+            },
+            {
+              "name": "marks_workflow_tickets_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX marks_workflow_tickets_pkey ON marks_workflow_tickets USING btree (id)"
+            },
+            {
+              "name": "uq_marks_workflow_tickets_module_key",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "module",
+                "workflow_key"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX uq_marks_workflow_tickets_module_key ON marks_workflow_tickets USING btree (module, workflow_key)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "module_access_settings",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "singleton_key",
+              "ordinal": 2,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": "'default'::text",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "admin_can_access_dossier",
+              "ordinal": 3,
+              "dataType": "boolean",
+              "udtName": "bool",
+              "formattedType": "boolean",
+              "nullable": false,
+              "default": "false",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "admin_can_access_bulk_upload",
+              "ordinal": 4,
+              "dataType": "boolean",
+              "udtName": "bool",
+              "formattedType": "boolean",
+              "nullable": false,
+              "default": "false",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "admin_can_access_reports",
+              "ordinal": 5,
+              "dataType": "boolean",
+              "udtName": "bool",
+              "formattedType": "boolean",
+              "nullable": false,
+              "default": "false",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_by",
+              "ordinal": 6,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 7,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 8,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "module_access_settings_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "module_access_settings_updated_by_users_id_fk",
+              "columns": [
+                "updated_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "module_access_settings_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX module_access_settings_pkey ON module_access_settings USING btree (id)"
+            },
+            {
+              "name": "uq_module_access_settings_singleton_key",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "singleton_key"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX uq_module_access_settings_singleton_key ON module_access_settings USING btree (singleton_key)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
           "name": "oc_achievements",
           "type": "BASE TABLE",
           "comment": null,
@@ -4146,7 +6176,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -4289,7 +6319,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -4494,6 +6524,30 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "jnu_enrollment_no",
+              "ordinal": 17,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(64)",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 18,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -4571,6 +6625,19 @@
             }
           ],
           "indexes": [
+            {
+              "name": "idx_oc_cadets_active_course_platoon_created",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "course_id",
+                "platoon_id",
+                "created_at"
+              ],
+              "predicate": "deleted_at IS NULL",
+              "definition": "CREATE INDEX idx_oc_cadets_active_course_platoon_created ON oc_cadets USING btree (course_id, platoon_id, created_at) WHERE deleted_at IS NULL"
+            },
             {
               "name": "oc_cadets_pkey",
               "unique": true,
@@ -5049,7 +7116,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -5236,7 +7303,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -5355,7 +7422,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -5526,7 +7593,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -5777,7 +7844,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -5973,7 +8040,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -6160,7 +8227,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -6345,6 +8412,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 13,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -6383,7 +8462,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -6538,7 +8617,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -6733,7 +8812,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -6888,7 +8967,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -7031,7 +9110,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -7222,7 +9301,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -7989,6 +10068,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 9,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -8027,7 +10118,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -8200,6 +10291,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 12,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -8222,7 +10325,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -8415,6 +10518,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 15,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -8437,7 +10552,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -8608,7 +10723,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -8767,7 +10882,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -8926,7 +11041,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -9541,6 +11656,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 10,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -9563,7 +11690,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -10246,7 +12373,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -10393,7 +12520,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -10584,7 +12711,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -10783,7 +12910,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -10994,7 +13121,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -11289,7 +13416,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -11612,7 +13739,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -11759,7 +13886,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -11854,7 +13981,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -12025,7 +14152,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -12208,7 +14335,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -12403,7 +14530,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -12623,6 +14750,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 5,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -12645,7 +14784,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -12804,7 +14943,7 @@
                 "id"
               ],
               "onUpdate": "NO ACTION",
-              "onDelete": "CASCADE",
+              "onDelete": "RESTRICT",
               "matchType": "SIMPLE",
               "deferrable": false,
               "initiallyDeferred": false
@@ -12821,6 +14960,278 @@
               ],
               "predicate": null,
               "definition": "CREATE UNIQUE INDEX oc_weapon_training_pkey ON oc_weapon_training USING btree (id)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "org_hierarchy_nodes",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "key",
+              "ordinal": 2,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(128)",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "name",
+              "ordinal": 3,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(256)",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "node_type",
+              "ordinal": 4,
+              "dataType": "USER-DEFINED",
+              "udtName": "org_hierarchy_node_type",
+              "formattedType": "org_hierarchy_node_type",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "parent_id",
+              "ordinal": 5,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "platoon_id",
+              "ordinal": 6,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "sort_order",
+              "ordinal": 7,
+              "dataType": "integer",
+              "udtName": "int4",
+              "formattedType": "integer",
+              "nullable": false,
+              "default": "0",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_by",
+              "ordinal": 8,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_by",
+              "ordinal": 9,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 10,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 11,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 12,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "org_hierarchy_nodes_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "org_hierarchy_nodes_created_by_users_id_fk",
+              "columns": [
+                "created_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "org_hierarchy_nodes_parent_id_org_hierarchy_nodes_id_fk",
+              "columns": [
+                "parent_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "org_hierarchy_nodes",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "org_hierarchy_nodes_platoon_id_platoons_id_fk",
+              "columns": [
+                "platoon_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "platoons",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            },
+            {
+              "name": "org_hierarchy_nodes_updated_by_users_id_fk",
+              "columns": [
+                "updated_by"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "org_hierarchy_nodes_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX org_hierarchy_nodes_pkey ON org_hierarchy_nodes USING btree (id)"
+            },
+            {
+              "name": "uq_org_hierarchy_nodes_key",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "key"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX uq_org_hierarchy_nodes_key ON org_hierarchy_nodes USING btree (key)"
+            },
+            {
+              "name": "uq_org_hierarchy_nodes_platoon_id",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "platoon_id"
+              ],
+              "predicate": "platoon_id IS NOT NULL",
+              "definition": "CREATE UNIQUE INDEX uq_org_hierarchy_nodes_platoon_id ON org_hierarchy_nodes USING btree (platoon_id) WHERE platoon_id IS NOT NULL"
+            },
+            {
+              "name": "uq_org_hierarchy_nodes_single_root",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "node_type"
+              ],
+              "predicate": "node_type = 'ROOT'::org_hierarchy_node_type AND deleted_at IS NULL",
+              "definition": "CREATE UNIQUE INDEX uq_org_hierarchy_nodes_single_root ON org_hierarchy_nodes USING btree (node_type) WHERE node_type = 'ROOT'::org_hierarchy_node_type AND deleted_at IS NULL"
             }
           ]
         },
@@ -13747,6 +16158,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "course_id",
+              "ordinal": 9,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -13757,8 +16180,38 @@
           },
           "uniqueConstraints": [],
           "checkConstraints": [],
-          "foreignKeys": [],
+          "foreignKeys": [
+            {
+              "name": "pt_motivation_award_fields_course_id_courses_id_fk",
+              "columns": [
+                "course_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "courses",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
           "indexes": [
+            {
+              "name": "idx_pt_motivation_field_course_semester_sort",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "course_id",
+                "semester",
+                "sort_order"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_pt_motivation_field_course_semester_sort ON pt_motivation_award_fields USING btree (course_id, semester, sort_order)"
+            },
             {
               "name": "pt_motivation_award_fields_pkey",
               "unique": true,
@@ -13771,16 +16224,17 @@
               "definition": "CREATE UNIQUE INDEX pt_motivation_award_fields_pkey ON pt_motivation_award_fields USING btree (id)"
             },
             {
-              "name": "uq_pt_motivation_field_semester",
+              "name": "uq_pt_motivation_field_course_semester",
               "unique": true,
               "primary": false,
               "method": "btree",
               "columns": [
+                "course_id",
                 "semester",
                 "label"
               ],
               "predicate": null,
-              "definition": "CREATE UNIQUE INDEX uq_pt_motivation_field_semester ON pt_motivation_award_fields USING btree (semester, label)"
+              "definition": "CREATE UNIQUE INDEX uq_pt_motivation_field_course_semester ON pt_motivation_award_fields USING btree (course_id, semester, label)"
             }
           ]
         },
@@ -14419,6 +16873,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "course_id",
+              "ordinal": 12,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -14429,8 +16895,38 @@
           },
           "uniqueConstraints": [],
           "checkConstraints": [],
-          "foreignKeys": [],
+          "foreignKeys": [
+            {
+              "name": "pt_types_course_id_courses_id_fk",
+              "columns": [
+                "course_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "courses",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
           "indexes": [
+            {
+              "name": "idx_pt_type_course_semester_sort",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "course_id",
+                "semester",
+                "sort_order"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_pt_type_course_semester_sort ON pt_types USING btree (course_id, semester, sort_order)"
+            },
             {
               "name": "pt_types_pkey",
               "unique": true,
@@ -14443,16 +16939,17 @@
               "definition": "CREATE UNIQUE INDEX pt_types_pkey ON pt_types USING btree (id)"
             },
             {
-              "name": "uq_pt_type_semester_code",
+              "name": "uq_pt_type_course_semester_code",
               "unique": true,
               "primary": false,
               "method": "btree",
               "columns": [
+                "course_id",
                 "semester",
                 "code"
               ],
               "predicate": null,
-              "definition": "CREATE UNIQUE INDEX uq_pt_type_semester_code ON pt_types USING btree (semester, code)"
+              "definition": "CREATE UNIQUE INDEX uq_pt_type_course_semester_code ON pt_types USING btree (course_id, semester, code)"
             }
           ]
         },
@@ -14555,6 +17052,260 @@
               ],
               "predicate": null,
               "definition": "CREATE UNIQUE INDEX punishments_pkey ON punishments USING btree (id)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "report_download_versions",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "version_id",
+              "ordinal": 2,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(32)",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "report_type",
+              "ordinal": 3,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(80)",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "requested_by_user_id",
+              "ordinal": 4,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "generated_at",
+              "ordinal": 5,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "filters",
+              "ordinal": 6,
+              "dataType": "jsonb",
+              "udtName": "jsonb",
+              "formattedType": "jsonb",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "prepared_by",
+              "ordinal": 7,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(160)",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "checked_by",
+              "ordinal": 8,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(160)",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "file_name",
+              "ordinal": 9,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(255)",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "encrypted",
+              "ordinal": 10,
+              "dataType": "boolean",
+              "udtName": "bool",
+              "formattedType": "boolean",
+              "nullable": false,
+              "default": "true",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "checksum_sha256",
+              "ordinal": 11,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(64)",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "batch_id",
+              "ordinal": 12,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "report_download_versions_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [
+            {
+              "name": "report_download_versions_version_id_unique",
+              "columns": [
+                "version_id"
+              ],
+              "definition": "UNIQUE (version_id)"
+            }
+          ],
+          "checkConstraints": [],
+          "foreignKeys": [
+            {
+              "name": "report_download_versions_requested_by_user_id_users_id_fk",
+              "columns": [
+                "requested_by_user_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "users",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "SET NULL",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
+          "indexes": [
+            {
+              "name": "idx_report_download_versions_batch",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "batch_id"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_report_download_versions_batch ON report_download_versions USING btree (batch_id)"
+            },
+            {
+              "name": "idx_report_download_versions_generated_at",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "generated_at"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_report_download_versions_generated_at ON report_download_versions USING btree (generated_at)"
+            },
+            {
+              "name": "idx_report_download_versions_report_type",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "report_type"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_report_download_versions_report_type ON report_download_versions USING btree (report_type)"
+            },
+            {
+              "name": "idx_report_download_versions_requested_by",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "requested_by_user_id"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_report_download_versions_requested_by ON report_download_versions USING btree (requested_by_user_id)"
+            },
+            {
+              "name": "report_download_versions_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX report_download_versions_pkey ON report_download_versions USING btree (id)"
+            },
+            {
+              "name": "report_download_versions_version_id_unique",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "version_id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX report_download_versions_version_id_unique ON report_download_versions USING btree (version_id)"
             }
           ]
         },
@@ -15268,6 +18019,169 @@
         },
         {
           "schema": "public",
+          "name": "site_events_news",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "date",
+              "ordinal": 2,
+              "dataType": "date",
+              "udtName": "date",
+              "formattedType": "date",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "title",
+              "ordinal": 3,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "description",
+              "ordinal": 4,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "location",
+              "ordinal": 5,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "type",
+              "ordinal": 6,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": false,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "is_deleted",
+              "ordinal": 7,
+              "dataType": "boolean",
+              "udtName": "bool",
+              "formattedType": "boolean",
+              "nullable": false,
+              "default": "false",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "deleted_at",
+              "ordinal": 8,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 9,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 10,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "site_events_news_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [],
+          "indexes": [
+            {
+              "name": "ix_site_events_news_active_date",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "is_deleted",
+                "date",
+                "created_at"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX ix_site_events_news_active_date ON site_events_news USING btree (is_deleted, date, created_at)"
+            },
+            {
+              "name": "site_events_news_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX site_events_news_pkey ON site_events_news USING btree (id)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
           "name": "site_history",
           "type": "BASE TABLE",
           "comment": null,
@@ -15779,6 +18693,18 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "no_of_phase_tests",
+              "ordinal": 14,
+              "dataType": "integer",
+              "udtName": "int4",
+              "formattedType": "integer",
+              "nullable": false,
+              "default": "2",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -15960,6 +18886,107 @@
         },
         {
           "schema": "public",
+          "name": "training_camp_settings",
+          "type": "BASE TABLE",
+          "comment": null,
+          "columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": false,
+              "default": "gen_random_uuid()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "singleton_key",
+              "ordinal": 2,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(32)",
+              "nullable": false,
+              "default": "'default'::character varying",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "max_camps_per_semester",
+              "ordinal": 3,
+              "dataType": "integer",
+              "udtName": "int4",
+              "formattedType": "integer",
+              "nullable": false,
+              "default": "2",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "created_at",
+              "ordinal": 4,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "updated_at",
+              "ordinal": 5,
+              "dataType": "timestamp with time zone",
+              "udtName": "timestamptz",
+              "formattedType": "timestamp with time zone",
+              "nullable": false,
+              "default": "now()",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            }
+          ],
+          "primaryKey": {
+            "name": "training_camp_settings_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [],
+          "checkConstraints": [],
+          "foreignKeys": [],
+          "indexes": [
+            {
+              "name": "training_camp_settings_pkey",
+              "unique": true,
+              "primary": true,
+              "method": "btree",
+              "columns": [
+                "id"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX training_camp_settings_pkey ON training_camp_settings USING btree (id)"
+            },
+            {
+              "name": "uq_training_camp_settings_singleton",
+              "unique": true,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "singleton_key"
+              ],
+              "predicate": null,
+              "definition": "CREATE UNIQUE INDEX uq_training_camp_settings_singleton ON training_camp_settings USING btree (singleton_key)"
+            }
+          ]
+        },
+        {
+          "schema": "public",
           "name": "training_camps",
           "type": "BASE TABLE",
           "comment": null,
@@ -15991,9 +19018,9 @@
             {
               "name": "semester",
               "ordinal": 3,
-              "dataType": "USER-DEFINED",
-              "udtName": "camp_semester_kind",
-              "formattedType": "camp_semester_kind",
+              "dataType": "integer",
+              "udtName": "int4",
+              "formattedType": "integer",
               "nullable": false,
               "default": null,
               "isIdentity": false,
@@ -16047,6 +19074,114 @@
               "isIdentity": false,
               "identityGeneration": null,
               "comment": null
+            },
+            {
+              "name": "sort_order",
+              "ordinal": 12,
+              "dataType": "integer",
+              "udtName": "int4",
+              "formattedType": "integer",
+              "nullable": false,
+              "default": "1",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "performance_title",
+              "ordinal": 13,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "performance_guidance",
+              "ordinal": 14,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "signature_primary_label",
+              "ordinal": 15,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(120)",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "signature_secondary_label",
+              "ordinal": 16,
+              "dataType": "character varying",
+              "udtName": "varchar",
+              "formattedType": "character varying(120)",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "note_line_1",
+              "ordinal": 17,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "note_line_2",
+              "ordinal": 18,
+              "dataType": "text",
+              "udtName": "text",
+              "formattedType": "text",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "show_aggregate_summary",
+              "ordinal": 19,
+              "dataType": "boolean",
+              "udtName": "bool",
+              "formattedType": "boolean",
+              "nullable": false,
+              "default": "false",
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
+            },
+            {
+              "name": "course_id",
+              "ordinal": 20,
+              "dataType": "uuid",
+              "udtName": "uuid",
+              "formattedType": "uuid",
+              "nullable": true,
+              "default": null,
+              "isIdentity": false,
+              "identityGeneration": null,
+              "comment": null
             }
           ],
           "primaryKey": {
@@ -16057,8 +19192,39 @@
           },
           "uniqueConstraints": [],
           "checkConstraints": [],
-          "foreignKeys": [],
+          "foreignKeys": [
+            {
+              "name": "training_camps_course_id_courses_id_fk",
+              "columns": [
+                "course_id"
+              ],
+              "referencedSchema": "public",
+              "referencedTable": "courses",
+              "referencedColumns": [
+                "id"
+              ],
+              "onUpdate": "NO ACTION",
+              "onDelete": "RESTRICT",
+              "matchType": "SIMPLE",
+              "deferrable": false,
+              "initiallyDeferred": false
+            }
+          ],
           "indexes": [
+            {
+              "name": "idx_training_camp_course_semester_sort_name",
+              "unique": false,
+              "primary": false,
+              "method": "btree",
+              "columns": [
+                "course_id",
+                "semester",
+                "sort_order",
+                "name"
+              ],
+              "predicate": null,
+              "definition": "CREATE INDEX idx_training_camp_course_semester_sort_name ON training_camps USING btree (course_id, semester, sort_order, name)"
+            },
             {
               "name": "training_camps_pkey",
               "unique": true,
@@ -16071,16 +19237,17 @@
               "definition": "CREATE UNIQUE INDEX training_camps_pkey ON training_camps USING btree (id)"
             },
             {
-              "name": "uq_training_camp_name_semester",
+              "name": "uq_training_camp_name_course_semester",
               "unique": true,
               "primary": false,
               "method": "btree",
               "columns": [
+                "course_id",
                 "name",
                 "semester"
               ],
               "predicate": null,
-              "definition": "CREATE UNIQUE INDEX uq_training_camp_name_semester ON training_camps USING btree (name, semester)"
+              "definition": "CREATE UNIQUE INDEX uq_training_camp_name_course_semester ON training_camps USING btree (course_id, name, semester)"
             }
           ]
         },
@@ -16305,15 +19472,6 @@
         },
         {
           "schema": "public",
-          "name": "camp_semester_kind",
-          "values": [
-            "SEM5",
-            "SEM6A",
-            "SEM6B"
-          ]
-        },
-        {
-          "schema": "public",
           "name": "comm_mode_kind",
           "values": [
             "EMAIL",
@@ -16360,6 +19518,43 @@
             "DETENTION",
             "HIKE",
             "LEAVE"
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "marks_workflow_event_type",
+          "values": [
+            "OVERRIDE_PUBLISH",
+            "REQUEST_CHANGES",
+            "SAVE_DRAFT",
+            "SUBMIT_FOR_VERIFICATION",
+            "VERIFY_AND_PUBLISH"
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "marks_workflow_module",
+          "values": [
+            "ACADEMICS_BULK",
+            "PT_BULK"
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "marks_workflow_override_mode",
+          "values": [
+            "ADMIN_AND_SUPER_ADMIN",
+            "SUPER_ADMIN_ONLY"
+          ]
+        },
+        {
+          "schema": "public",
+          "name": "marks_workflow_status",
+          "values": [
+            "CHANGES_REQUESTED",
+            "DRAFT",
+            "PENDING_VERIFICATION",
+            "VERIFIED"
           ]
         },
         {
@@ -16412,6 +19607,15 @@
         },
         {
           "schema": "public",
+          "name": "org_hierarchy_node_type",
+          "values": [
+            "GROUP",
+            "PLATOON",
+            "ROOT"
+          ]
+        },
+        {
+          "schema": "public",
           "name": "position_type",
           "values": [
             "ADMIN",
@@ -16452,6 +19656,23 @@
     }
   ],
   "relationships": [
+    {
+      "constraintName": "academic_grading_policy_settings_updated_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "academic_grading_policy_settings",
+      "fromColumns": [
+        "updated_by"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
     {
       "constraintName": "account_lockouts_unlocked_by_users_id_fk",
       "fromSchema": "public",
@@ -16674,6 +19895,74 @@
       "allColumnsNotNull": false
     },
     {
+      "constraintName": "cadet_appointments_appointed_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "cadet_appointments",
+      "fromColumns": [
+        "appointed_by"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "cadet_appointments_cadet_id_oc_cadets_id_fk",
+      "fromSchema": "public",
+      "fromTable": "cadet_appointments",
+      "fromColumns": [
+        "cadet_id"
+      ],
+      "toSchema": "public",
+      "toTable": "oc_cadets",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": true
+    },
+    {
+      "constraintName": "cadet_appointments_ended_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "cadet_appointments",
+      "fromColumns": [
+        "ended_by"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "cadet_appointments_platoon_id_platoons_id_fk",
+      "fromSchema": "public",
+      "fromTable": "cadet_appointments",
+      "fromColumns": [
+        "platoon_id"
+      ],
+      "toSchema": "public",
+      "toTable": "platoons",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": true
+    },
+    {
       "constraintName": "course_offering_instructors_instructor_id_instructors_id_fk",
       "fromSchema": "public",
       "fromTable": "course_offering_instructors",
@@ -16776,6 +20065,23 @@
       "allColumnsNotNull": false
     },
     {
+      "constraintName": "delegations_created_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "delegations",
+      "fromColumns": [
+        "created_by"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
       "constraintName": "delegations_grantee_user_id_users_id_fk",
       "fromSchema": "public",
       "fromTable": "delegations",
@@ -16791,6 +20097,23 @@
       "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
+    },
+    {
+      "constraintName": "delegations_grantor_appointment_id_appointments_id_fk",
+      "fromSchema": "public",
+      "fromTable": "delegations",
+      "fromColumns": [
+        "grantor_appointment_id"
+      ],
+      "toSchema": "public",
+      "toTable": "appointments",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
     },
     {
       "constraintName": "delegations_grantor_user_id_users_id_fk",
@@ -16890,9 +20213,43 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
+    },
+    {
+      "constraintName": "functional_role_mappings_position_id_positions_id_fk",
+      "fromSchema": "public",
+      "fromTable": "functional_role_mappings",
+      "fromColumns": [
+        "position_id"
+      ],
+      "toSchema": "public",
+      "toTable": "positions",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "functional_role_mappings_updated_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "functional_role_mappings",
+      "fromColumns": [
+        "updated_by"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
     },
     {
       "constraintName": "instructors_user_id_users_id_fk",
@@ -16900,6 +20257,23 @@
       "fromTable": "instructors",
       "fromColumns": [
         "user_id"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "interview_pending_ticker_settings_created_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "interview_pending_ticker_settings",
+      "fromColumns": [
+        "created_by"
       ],
       "toSchema": "public",
       "toTable": "users",
@@ -17048,6 +20422,23 @@
       "allColumnsNotNull": true
     },
     {
+      "constraintName": "interview_templates_course_id_courses_id_fk",
+      "fromSchema": "public",
+      "fromTable": "interview_templates",
+      "fromColumns": [
+        "course_id"
+      ],
+      "toSchema": "public",
+      "toTable": "courses",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
       "constraintName": "login_attempts_user_id_users_id_fk",
       "fromSchema": "public",
       "fromTable": "login_attempts",
@@ -17065,6 +20456,176 @@
       "allColumnsNotNull": false
     },
     {
+      "constraintName": "marks_workflow_events_actor_user_id_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "marks_workflow_events",
+      "fromColumns": [
+        "actor_user_id"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "marks_workflow_events_ticket_id_marks_workflow_tickets_id_fk",
+      "fromSchema": "public",
+      "fromTable": "marks_workflow_events",
+      "fromColumns": [
+        "ticket_id"
+      ],
+      "toSchema": "public",
+      "toTable": "marks_workflow_tickets",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": true
+    },
+    {
+      "constraintName": "marks_workflow_notifications_actor_user_id_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "marks_workflow_notifications",
+      "fromColumns": [
+        "actor_user_id"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "marks_workflow_notifications_ticket_id_marks_workflow_tickets_i",
+      "fromSchema": "public",
+      "fromTable": "marks_workflow_notifications",
+      "fromColumns": [
+        "ticket_id"
+      ],
+      "toSchema": "public",
+      "toTable": "marks_workflow_tickets",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": true
+    },
+    {
+      "constraintName": "marks_workflow_notifications_user_id_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "marks_workflow_notifications",
+      "fromColumns": [
+        "user_id"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": true
+    },
+    {
+      "constraintName": "marks_workflow_settings_updated_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "marks_workflow_settings",
+      "fromColumns": [
+        "updated_by"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "marks_workflow_tickets_last_actor_user_id_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "marks_workflow_tickets",
+      "fromColumns": [
+        "last_actor_user_id"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "marks_workflow_tickets_submitted_by_user_id_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "marks_workflow_tickets",
+      "fromColumns": [
+        "submitted_by_user_id"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "marks_workflow_tickets_verified_by_user_id_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "marks_workflow_tickets",
+      "fromColumns": [
+        "verified_by_user_id"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "module_access_settings_updated_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "module_access_settings",
+      "fromColumns": [
+        "updated_by"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
       "constraintName": "oc_achievements_oc_id_oc_cadets_id_fk",
       "fromSchema": "public",
       "fromTable": "oc_achievements",
@@ -17077,7 +20638,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17094,7 +20655,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17247,7 +20808,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17298,7 +20859,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17315,7 +20876,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17349,7 +20910,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17417,7 +20978,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17451,7 +21012,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17502,7 +21063,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17553,7 +21114,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17570,7 +21131,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17604,7 +21165,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17621,7 +21182,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17638,7 +21199,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17655,7 +21216,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17791,7 +21352,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17825,7 +21386,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17842,7 +21403,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17876,7 +21437,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17910,7 +21471,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -17944,7 +21505,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18029,7 +21590,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18046,7 +21607,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18080,7 +21641,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18148,7 +21709,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18199,7 +21760,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18250,7 +21811,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18301,7 +21862,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18386,7 +21947,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18420,7 +21981,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18437,7 +21998,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18471,7 +22032,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18505,7 +22066,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18539,7 +22100,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18590,7 +22151,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
     },
@@ -18624,9 +22185,77 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
+    },
+    {
+      "constraintName": "org_hierarchy_nodes_created_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "org_hierarchy_nodes",
+      "fromColumns": [
+        "created_by"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "org_hierarchy_nodes_parent_id_org_hierarchy_nodes_id_fk",
+      "fromSchema": "public",
+      "fromTable": "org_hierarchy_nodes",
+      "fromColumns": [
+        "parent_id"
+      ],
+      "toSchema": "public",
+      "toTable": "org_hierarchy_nodes",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "org_hierarchy_nodes_platoon_id_platoons_id_fk",
+      "fromSchema": "public",
+      "fromTable": "org_hierarchy_nodes",
+      "fromColumns": [
+        "platoon_id"
+      ],
+      "toSchema": "public",
+      "toTable": "platoons",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "org_hierarchy_nodes_updated_by_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "org_hierarchy_nodes",
+      "fromColumns": [
+        "updated_by"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
     },
     {
       "constraintName": "permission_field_rules_permission_id_permissions_id_fk",
@@ -18731,6 +22360,23 @@
       "allColumnsNotNull": true
     },
     {
+      "constraintName": "pt_motivation_award_fields_course_id_courses_id_fk",
+      "fromSchema": "public",
+      "fromTable": "pt_motivation_award_fields",
+      "fromColumns": [
+        "course_id"
+      ],
+      "toSchema": "public",
+      "toTable": "courses",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
       "constraintName": "pt_task_scores_pt_attempt_grade_id_pt_attempt_grades_id_fk",
       "fromSchema": "public",
       "fromTable": "pt_task_scores",
@@ -18814,6 +22460,40 @@
       "onDelete": "CASCADE",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
+    },
+    {
+      "constraintName": "pt_types_course_id_courses_id_fk",
+      "fromSchema": "public",
+      "fromTable": "pt_types",
+      "fromColumns": [
+        "course_id"
+      ],
+      "toSchema": "public",
+      "toTable": "courses",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
+    },
+    {
+      "constraintName": "report_download_versions_requested_by_user_id_users_id_fk",
+      "fromSchema": "public",
+      "fromTable": "report_download_versions",
+      "fromColumns": [
+        "requested_by_user_id"
+      ],
+      "toSchema": "public",
+      "toTable": "users",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
     },
     {
       "constraintName": "role_permissions_permission_id_permissions_id_fk",
@@ -18916,6 +22596,23 @@
       "onDelete": "CASCADE",
       "matchType": "SIMPLE",
       "allColumnsNotNull": true
+    },
+    {
+      "constraintName": "training_camps_course_id_courses_id_fk",
+      "fromSchema": "public",
+      "fromTable": "training_camps",
+      "fromColumns": [
+        "course_id"
+      ],
+      "toSchema": "public",
+      "toTable": "courses",
+      "toColumns": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "matchType": "SIMPLE",
+      "allColumnsNotNull": false
     },
     {
       "constraintName": "users_appoint_id_positions_id_fk",

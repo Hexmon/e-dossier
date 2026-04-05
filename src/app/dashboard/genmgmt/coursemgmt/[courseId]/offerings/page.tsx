@@ -35,6 +35,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { logoutAndRedirect } from "@/lib/auth/logout";
+import { SetupReturnBanner } from "@/components/setup/SetupReturnBanner";
 
 export default function OfferingManagementPage() {
     const router = useRouter();
@@ -169,6 +170,11 @@ export default function OfferingManagementPage() {
                                 { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                                 { label: "Offerings" },
                             ]}
+                        />
+
+                        <SetupReturnBanner
+                            title="Setup step: Offerings / Semesters"
+                            description="Create offerings with semester numbers here, then return to the setup checklist."
                         />
 
                         <GlobalTabs tabs={academicsTabs} defaultValue="offerings">

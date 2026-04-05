@@ -7,16 +7,22 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { getAppointments, type Appointment } from "@/app/lib/api/appointmentApi";
+import {
+  getSwitchableIdentities,
+  type SwitchableIdentityResponseItem,
+} from "@/app/lib/api/switchableIdentityApi";
+import { getLoginAppointments } from "@/app/lib/api/appointmentApi";
 import { loginUser } from "@/app/lib/api/authApi";
 import { ApiClientError } from "@/app/lib/apiClient";
 import { fetchMe } from "@/app/lib/api/me";
 import { clearReturnUrl } from "@/lib/auth-return-url";
 import { beginSwitchSession, endSwitchSession } from "@/lib/auth/switch-session";
 import {
+  buildSwitchableAppointmentLabel,
   type CurrentIdentity,
   filterSwitchableAppointments,
   isSameIdentity,
+  mergeSwitchableAppointments,
 } from "@/lib/switch-user";
 import { type LoginForm } from "@/types/login";
 import { appLogoutReset, persistor, store } from "@/store";
@@ -52,7 +58,7 @@ export default function SwitchUserModal({
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<SwitchableIdentityResponseItem[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [appointmentsFetchError, setAppointmentsFetchError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -128,10 +134,30 @@ export default function SwitchUserModal({
 
     setLoadingAppointments(true);
 
-    getAppointments()
-      .then((data) => {
+    Promise.allSettled([getLoginAppointments(), getSwitchableIdentities()])
+      .then(([loginAppointmentsResult, switchableIdentitiesResult]) => {
+        const loginAppointments =
+          loginAppointmentsResult.status === "fulfilled"
+            ? loginAppointmentsResult.value
+            : [];
+        const switchableIdentities =
+          switchableIdentitiesResult.status === "fulfilled"
+            ? switchableIdentitiesResult.value
+            : [];
+        const mergedAppointments = mergeSwitchableAppointments(
+          loginAppointments,
+          switchableIdentities
+        ) as SwitchableIdentityResponseItem[];
+
+        if (
+          loginAppointmentsResult.status === "rejected" &&
+          switchableIdentitiesResult.status === "rejected"
+        ) {
+          throw new Error("Unable to load switchable accounts.");
+        }
+
         hasFetchedRef.current = true;
-        setAppointments(data);
+        setAppointments(mergedAppointments);
         setAppointmentsFetchError(false);
       })
       .catch(() => {
@@ -188,7 +214,8 @@ export default function SwitchUserModal({
 
     const targetIdentity: CurrentIdentity = {
       userId: selectedAppointment.userId ?? null,
-      appointmentId: selectedAppointment.id,
+      appointmentId: selectedAppointment.appointmentId ?? null,
+      delegationId: selectedAppointment.delegationId ?? null,
       roleKey: selectedAppointment.positionKey,
       username: loginUsername,
     };
@@ -198,25 +225,21 @@ export default function SwitchUserModal({
       return;
     }
 
-    const isPlatoonCommander = selectedAppointment.positionKey === "PLATOON_COMMANDER";
-    const platoonId = isPlatoonCommander ? selectedAppointment.scopeId ?? null : null;
-    if (isPlatoonCommander && !platoonId) {
-      toast.error("Selected platoon appointment has no platoon scope.");
+    const isPlatoonScopedIdentity = selectedAppointment.scopeType === "PLATOON";
+    const platoonId = isPlatoonScopedIdentity ? selectedAppointment.scopeId ?? null : null;
+    if (isPlatoonScopedIdentity && !platoonId) {
+      toast.error("Selected platoon-scoped identity has no platoon scope.");
       return;
     }
 
-    const payload = platoonId
-      ? {
-          appointmentId: selectedAppointment.id,
-          platoonId,
-          username: loginUsername,
-          password: formData.password,
-        }
-      : {
-          appointmentId: selectedAppointment.id,
-          username: loginUsername,
-          password: formData.password,
-        };
+    const payload = {
+      ...(selectedAppointment.kind === "DELEGATION"
+        ? { delegationId: selectedAppointment.delegationId ?? selectedAppointment.id }
+        : { appointmentId: selectedAppointment.appointmentId ?? selectedAppointment.id }),
+      ...(platoonId ? { platoonId } : {}),
+      username: loginUsername,
+      password: formData.password,
+    };
 
     beginSwitchSession();
     let loginSucceeded = false;
@@ -229,6 +252,7 @@ export default function SwitchUserModal({
       const nextIdentity: CurrentIdentity = {
         userId: nextMe.user?.id ?? null,
         appointmentId: nextMe.apt?.id ?? null,
+        delegationId: nextMe.authority?.delegationId ?? nextMe.apt?.delegation_id ?? null,
         roleKey: nextMe.apt?.position ?? null,
         username: nextMe.user?.username ?? null,
       };
@@ -321,9 +345,7 @@ export default function SwitchUserModal({
               <SelectContent>
                 {switchableAppointments.map((apt) => (
                   <SelectItem key={apt.id} value={apt.id}>
-                    {`${apt.positionName ?? apt.positionKey ?? "Appointment"}${
-                      apt.platoonName ? ` - ${apt.platoonName}` : ""
-                    } (${apt.username ?? "unknown"})`}
+                    {`${buildSwitchableAppointmentLabel(apt)} (${apt.username ?? "unknown"})`}
                   </SelectItem>
                 ))}
               </SelectContent>

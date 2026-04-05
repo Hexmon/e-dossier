@@ -4,10 +4,11 @@ import { users } from '../auth/users';
 
 export const dossierInspections = pgTable('dossier_inspections', {
   id: uuid('id').primaryKey().defaultRandom(),
-  ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'cascade' }),
+  ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
   inspectorUserId: uuid('inspector_user_id').notNull().references(() => users.id, { onDelete: 'set null' }),
   date: timestamp('date', { withTimezone: true }).notNull(),
   remarks: text('remarks'),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
 });

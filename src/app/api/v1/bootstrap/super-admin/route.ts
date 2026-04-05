@@ -8,6 +8,7 @@ import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError } from '@/app/lib/http';
 import { passwordSchema } from '@/app/lib/validators';
 import { and, eq, ilike, isNull, or } from 'drizzle-orm';
+import { getSetupStatus } from '@/app/lib/setup-status';
 import {
   withAuditRoute,
   AuditEventType,
@@ -28,6 +29,13 @@ const bodySchema = z.object({
 
 async function POSTHandler(req: AuditNextRequest) {
   try {
+    const setupStatus = await getSetupStatus();
+    if (!setupStatus.bootstrapRequired) {
+      return json.conflict('Bootstrap is disabled after initial SUPER_ADMIN setup.', {
+        error: 'bootstrap_disabled',
+      });
+    }
+
     const parsed = bodySchema.safeParse(await req.json());
     if (!parsed.success) {
       return json.badRequest('Validation failed.', { issues: parsed.error.flatten() });
@@ -130,8 +138,10 @@ async function POSTHandler(req: AuditNextRequest) {
       )
       .limit(1);
 
+    let appointmentId = activeApt[0]?.id ?? null;
+
     if (!activeApt.length) {
-      await db.insert(appointments).values({
+      const [createdAppointment] = await db.insert(appointments).values({
         userId,
         positionId: pos.id,
         assignment: 'PRIMARY',
@@ -141,7 +151,8 @@ async function POSTHandler(req: AuditNextRequest) {
         endsAt: null,
         appointedBy: userId,
         reason: 'bootstrap super admin',
-      });
+      }).returning({ id: appointments.id });
+      appointmentId = createdAppointment.id;
     }
 
     await req.audit.log({
@@ -155,6 +166,7 @@ async function POSTHandler(req: AuditNextRequest) {
     return json.created({
       message: 'SUPER_ADMIN bootstrap complete.',
       user: { id: userId, username, email },
+      appointmentId,
     });
   } catch (err) {
     return handleApiError(err);

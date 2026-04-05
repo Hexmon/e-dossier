@@ -170,7 +170,7 @@ export async function listRelegationOcOptions(opts: {
   activeOnly?: boolean;
   scopePlatoonId?: string | null;
 } = {}): Promise<RelegationOcOption[]> {
-  const wh: any[] = [isNull(courses.deletedAt)];
+  const wh: any[] = [isNull(courses.deletedAt), isNull(ocCadets.deletedAt)];
 
   if (opts.courseId) wh.push(eq(ocCadets.courseId, opts.courseId));
   if (opts.activeOnly) wh.push(and(eq(ocCadets.status, "ACTIVE"), isNull(ocCadets.withdrawnOn)));
@@ -258,7 +258,7 @@ async function getScopedOcForMove(
     })
     .from(ocCadets)
     .innerJoin(courses, eq(courses.id, ocCadets.courseId))
-    .where(and(eq(ocCadets.id, ocId), isNull(courses.deletedAt)))
+    .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt), isNull(courses.deletedAt)))
     .limit(1);
 
   if (!ocRow) {
@@ -282,7 +282,7 @@ async function getScopedOcForMove(
       })
       .from(ocCadets)
       .innerJoin(courses, eq(courses.id, ocCadets.courseId))
-      .where(and(eq(ocCadets.id, ocId), isNull(courses.deletedAt)))
+      .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt), isNull(courses.deletedAt)))
       .limit(1);
 
     if (!synced) {
@@ -519,6 +519,7 @@ export async function promoteCourseBatch(input: PromoteCourseBatchInput, actorUs
       .where(
         and(
           eq(ocCadets.courseId, fromCourse.id),
+          isNull(ocCadets.deletedAt),
           eq(ocCadets.status, "ACTIVE"),
           isNull(ocCadets.withdrawnOn)
         )
@@ -847,7 +848,7 @@ export async function listRelegationHistory(opts: {
         performedAt: ocRelegations.performedAt,
       })
       .from(ocRelegations)
-      .innerJoin(ocCadets, eq(ocCadets.id, ocRelegations.ocId))
+      .innerJoin(ocCadets, and(eq(ocCadets.id, ocRelegations.ocId), isNull(ocCadets.deletedAt)))
       .leftJoin(platoons, eq(platoons.id, ocCadets.platoonId))
       .leftJoin(courses, eq(courses.id, ocRelegations.fromCourseId))
       .leftJoin(toCourses, eq(toCourses.id, ocRelegations.toCourseId))
@@ -858,7 +859,7 @@ export async function listRelegationHistory(opts: {
     db
       .select({ total: sql<number>`count(*)::int` })
       .from(ocRelegations)
-      .innerJoin(ocCadets, eq(ocCadets.id, ocRelegations.ocId))
+      .innerJoin(ocCadets, and(eq(ocCadets.id, ocRelegations.ocId), isNull(ocCadets.deletedAt)))
       .where(whereClause),
   ]);
 
@@ -901,7 +902,7 @@ async function assertOcScopeAndExistence(ocId: string, scopePlatoonId?: string |
       platoonId: ocCadets.platoonId,
     })
     .from(ocCadets)
-    .where(eq(ocCadets.id, ocId))
+    .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
     .limit(1);
 
   if (!ocRow) {
@@ -1009,6 +1010,7 @@ export async function getEnrollmentModuleDataset(opts: {
           and(
             eq(ocSemesterMarks.ocId, opts.ocId),
             eq(ocSemesterMarks.enrollmentId, opts.enrollmentId),
+            isNull(ocSemesterMarks.deletedAt),
             semester !== undefined ? eq(ocSemesterMarks.semester, semester) : undefined
           )
         )
@@ -1033,6 +1035,7 @@ export async function getEnrollmentModuleDataset(opts: {
           and(
             eq(ocInterviews.ocId, opts.ocId),
             eq(ocInterviews.enrollmentId, opts.enrollmentId),
+            isNull(ocInterviews.deletedAt),
             semester !== undefined ? eq(ocInterviews.semester, semester) : undefined
           )
         )
@@ -1225,7 +1228,7 @@ export async function getRelegationMediaReference(historyId: string, scopePlatoo
       ocPlatoonId: ocCadets.platoonId,
     })
     .from(ocRelegations)
-    .innerJoin(ocCadets, eq(ocCadets.id, ocRelegations.ocId))
+    .innerJoin(ocCadets, and(eq(ocCadets.id, ocRelegations.ocId), isNull(ocCadets.deletedAt)))
     .where(eq(ocRelegations.id, historyId))
     .limit(1);
 

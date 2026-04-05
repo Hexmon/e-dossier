@@ -18,6 +18,7 @@ import {
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { isFreeEntryPtAttemptCode } from '@/app/lib/physical-training-attempts';
+import { readSemesterSearchParam } from '@/lib/dossier-semester';
 
 async function validateScores(semester: number, scores: Array<{ ptTaskScoreId: string; marksScored: number }>) {
     const uniqueIds = Array.from(new Set(scores.map((s) => s.ptTaskScoreId)));
@@ -71,7 +72,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
         const sp = new URL(req.url).searchParams;
         const qp = ptOcScoresQuerySchema.parse({
-            semester: sp.get('semester') ?? undefined,
+            semester: readSemesterSearchParam(sp),
         });
 
         const items = await listOcPtScores(ocId, qp.semester);
@@ -104,7 +105,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         await ensureOcExists(ocId);
 
         const dto = ptOcScoresUpsertSchema.parse(await req.json());
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
         await validateScores(dto.semester, dto.scores);
 
         await upsertOcPtScores(ocId, dto.semester, dto.scores);
@@ -137,7 +138,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         await ensureOcExists(ocId);
 
         const dto = ptOcScoresUpdateSchema.parse(await req.json());
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
 
         if (dto.scores?.length) {
             await validateScores(dto.semester, dto.scores);
@@ -179,7 +180,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         await ensureOcExists(ocId);
 
         const dto = ptOcScoresDeleteSchema.parse(await req.json());
-        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, authContext: authCtx });
+        await assertOcSemesterWriteAllowed({ ocId, requestedSemester: dto.semester, request: req, authContext: authCtx });
 
         const deleted = dto.scoreIds?.length
             ? await deleteOcPtScoresByIds(ocId, dto.scoreIds)

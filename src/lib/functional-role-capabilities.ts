@@ -1,0 +1,3 @@
+export const COMMANDER_EQUIVALENT_CAPABILITY = "PLATOON_COMMANDER_EQUIVALENT" as const;
+
+export type FunctionalRoleCapability = typeof COMMANDER_EQUIVALENT_CAPABILITY;

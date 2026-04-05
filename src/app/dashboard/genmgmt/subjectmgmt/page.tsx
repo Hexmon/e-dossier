@@ -28,6 +28,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { logoutAndRedirect } from "@/lib/auth/logout";
+import { SetupReturnBanner } from "@/components/setup/SetupReturnBanner";
 
 export default function SubjectManagementPage() {
     const router = useRouter();
@@ -164,6 +165,11 @@ export default function SubjectManagementPage() {
                                 { label: "Admin Mgmt", href: "/dashboard/genmgmt" },
                                 { label: "Subject Management" },
                             ]}
+                        />
+
+                        <SetupReturnBanner
+                            title="Setup support: Subjects"
+                            description="Create at least one subject here before configuring offerings, then return to the setup checklist."
                         />
 
                         <GlobalTabs tabs={academicsTabs} defaultValue="subject-mgmt">

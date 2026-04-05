@@ -5,6 +5,7 @@ import { olqBySemesterQuerySchema } from '@/app/lib/olq-validators';
 import { listOlqBySemester } from '@/app/db/queries/olq';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { readSemesterSearchParam } from '@/lib/dossier-semester';
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
     try {
@@ -14,7 +15,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
         const sp = new URL(req.url).searchParams;
         const qp = olqBySemesterQuerySchema.parse({
-            semester: sp.get('semester') ?? undefined,
+            semester: readSemesterSearchParam(sp),
             ocId,
             categoryId: sp.get('categoryId') ?? undefined,
             subtitleId: sp.get('subtitleId') ?? undefined,

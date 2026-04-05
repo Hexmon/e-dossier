@@ -14,6 +14,7 @@ import argon2 from 'argon2';
 import { IdSchema } from '@/app/lib/apiClient';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { assertCanManageUser } from '@/app/lib/admin-boundaries';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
@@ -81,11 +82,12 @@ async function GETHandler(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin(req);
+    const adminCtx = await requireAdmin(req);
 
     const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
     const { id } = IdSchema.parse({ id: rawId });
+    await assertCanManageUser(adminCtx, id);
 
     const row = await selectEnrichedUserById(id);
     if (!row) throw new ApiError(404, 'User not found', 'not_found');
@@ -108,6 +110,7 @@ async function PATCHHandler(
     const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
     const { id } = IdSchema.parse({ id: rawId });
+    await assertCanManageUser(adminCtx, id);
 
     const body = await req.json();
     const parsed = userUpdateSchema.safeParse(body);

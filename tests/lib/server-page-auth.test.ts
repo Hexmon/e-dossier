@@ -8,28 +8,64 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn((path: string) => {
     throw new Error(`REDIRECT:${path}`);
   }),
+  notFound: vi.fn(() => {
+    throw new Error("NOT_FOUND");
+  }),
 }));
 
 vi.mock("@/app/lib/jwt", () => ({
   verifyAccessJWT: vi.fn(),
 }));
 
-vi.mock("@/app/lib/module-access", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/app/lib/module-access")>();
+vi.mock("@/app/lib/active-authority", () => ({
+  assertActiveAuthorityFromPayload: vi.fn(),
+}));
+
+vi.mock("@/app/lib/module-access", () => {
+  const resolveModuleAccessForUser = vi.fn();
+
   return {
-    ...actual,
-    resolveModuleAccessForUser: vi.fn(),
+    resolveModuleAccessForUser,
+    hasResolvedSectionAccess: vi.fn((moduleAccess: any, sectionKey: string) => {
+      return Boolean(moduleAccess?.sections?.[sectionKey]);
+    }),
+    canAccessModule: vi.fn((moduleAccess: any, moduleKey: string) => {
+      if (moduleKey === "DOSSIER") return Boolean(moduleAccess?.canAccessDossier);
+      if (moduleKey === "BULK_UPLOAD") return Boolean(moduleAccess?.canAccessBulkUpload);
+      if (moduleKey === "REPORTS") return Boolean(moduleAccess?.canAccessReports);
+      return false;
+    }),
+    canAccessBulkWorkflowModule: vi.fn((moduleAccess: any, workflowModule: string) => {
+      if (workflowModule === "ACADEMICS_BULK") return Boolean(moduleAccess?.canAccessAcademicsBulk);
+      if (workflowModule === "PT_BULK") return Boolean(moduleAccess?.canAccessPtBulk);
+      return false;
+    }),
   };
 });
 
+vi.mock("@/app/db/client", () => ({
+  db: {
+    select: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/authorization", () => ({
+  hasScopeAccess: vi.fn(() => true),
+}));
+
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { verifyAccessJWT } from "@/app/lib/jwt";
+import { assertActiveAuthorityFromPayload } from "@/app/lib/active-authority";
 import { resolveModuleAccessForUser } from "@/app/lib/module-access";
+import { db } from "@/app/db/client";
+import { hasScopeAccess } from "@/lib/authorization";
 import {
+  requireDashboardAccess,
   requireDashboardBulkHubAccess,
   requireDashboardBulkWorkflowAccess,
   requireDashboardModuleAccess,
+  requireDashboardOcModuleAccess,
   requireSuperAdminDashboardAccess,
 } from "@/app/lib/server-page-auth";
 
@@ -50,8 +86,13 @@ describe("server page auth", () => {
       roles: ["ADMIN"],
       apt: {
         position: "ADMIN",
+        scope: {
+          type: "PLATOON",
+          id: "platoon-1",
+        },
       },
     });
+    (assertActiveAuthorityFromPayload as any).mockResolvedValue(undefined);
     (resolveModuleAccessForUser as any).mockResolvedValue({
       roleGroup: "ADMIN",
       isAdmin: true,
@@ -77,6 +118,14 @@ describe("server page auth", () => {
         help: true,
       },
     });
+    (db.select as any).mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve([{ id: "oc-1", platoonId: "platoon-1" }]),
+        }),
+      }),
+    });
+    (hasScopeAccess as any).mockReturnValue(true);
   });
 
   it("redirects ADMIN away from a disabled reports page", async () => {
@@ -155,6 +204,130 @@ describe("server page auth", () => {
 
   it("redirects non-super-admin users away from super-admin-only pages", async () => {
     await expect(requireSuperAdminDashboardAccess()).rejects.toThrow("REDIRECT:/dashboard");
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("redirects to login when the selected appointment is no longer active", async () => {
+    (assertActiveAuthorityFromPayload as any).mockRejectedValueOnce(
+      new Error("appointment inactive")
+    );
+
+    await expect(requireDashboardModuleAccess("REPORTS")).rejects.toThrow("REDIRECT:/login");
+    expect(redirect).toHaveBeenCalledWith("/login");
+  });
+
+  it("redirects to login when delegated authority is terminated", async () => {
+    (verifyAccessJWT as any).mockResolvedValueOnce({
+      sub: "delegate-1",
+      roles: ["PLATOON_COMMANDER_EQUIVALENT"],
+      apt: {
+        id: "appointment-1",
+        auth_kind: "DELEGATION",
+        delegation_id: "delegation-1",
+        position: "ARJUNPLCDR",
+        scope: {
+          type: "PLATOON",
+          id: "platoon-1",
+        },
+      },
+    });
+    (assertActiveAuthorityFromPayload as any).mockRejectedValueOnce(
+      new Error("delegation inactive")
+    );
+
+    await expect(requireDashboardAccess()).rejects.toThrow("REDIRECT:/login");
+    expect(redirect).toHaveBeenCalledWith("/login");
+  });
+
+  it("returns not found when the dossier page OC is archived or missing", async () => {
+    (resolveModuleAccessForUser as any).mockResolvedValueOnce({
+      roleGroup: "ADMIN",
+      isAdmin: true,
+      isSuperAdmin: false,
+      settings: {
+        adminCanAccessDossier: true,
+        adminCanAccessBulkUpload: false,
+        adminCanAccessReports: false,
+      },
+      workflowAssignments: [],
+      canAccessDossier: true,
+      canAccessReports: false,
+      canAccessBulkUpload: false,
+      canAccessAcademicsBulk: false,
+      canAccessPtBulk: false,
+      sections: {
+        dashboard: true,
+        admin: true,
+        settings: true,
+        dossier: true,
+        bulk_upload: false,
+        reports: false,
+        help: true,
+      },
+    });
+    (db.select as any).mockReturnValueOnce({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve([]),
+        }),
+      }),
+    });
+
+    await expect(requireDashboardOcModuleAccess("oc-archived", "DOSSIER")).rejects.toThrow(
+      "NOT_FOUND"
+    );
+    expect(notFound).toHaveBeenCalled();
+  });
+
+  it("redirects non-admin users away from foreign active OC pages", async () => {
+    (verifyAccessJWT as any).mockResolvedValueOnce({
+      sub: "user-1",
+      roles: ["PLATOON_COMMANDER_EQUIVALENT"],
+      apt: {
+        position: "ARJUNPLCDR",
+        scope: {
+          type: "PLATOON",
+          id: "platoon-1",
+        },
+      },
+    });
+    (resolveModuleAccessForUser as any).mockResolvedValueOnce({
+      roleGroup: "OTHER_USERS",
+      isAdmin: false,
+      isSuperAdmin: false,
+      settings: {
+        adminCanAccessDossier: false,
+        adminCanAccessBulkUpload: false,
+        adminCanAccessReports: false,
+      },
+      workflowAssignments: [],
+      canAccessDossier: true,
+      canAccessReports: false,
+      canAccessBulkUpload: false,
+      canAccessAcademicsBulk: false,
+      canAccessPtBulk: false,
+      sections: {
+        dashboard: true,
+        admin: false,
+        settings: false,
+        dossier: true,
+        bulk_upload: false,
+        reports: false,
+        help: true,
+      },
+    });
+    (hasScopeAccess as any).mockReturnValueOnce(false);
+    (db.select as any).mockReturnValueOnce({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve([{ id: "oc-1", platoonId: "platoon-2" }]),
+        }),
+      }),
+    });
+
+    await expect(requireDashboardOcModuleAccess("oc-1", "DOSSIER")).rejects.toThrow(
+      "REDIRECT:/dashboard"
+    );
     expect(redirect).toHaveBeenCalledWith("/dashboard");
   });
 });
