@@ -4,6 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { Client } from "pg";
+import { normalizeDatabaseUrl } from "../../src/app/db/connectionString";
 
 import {
   decodeConstraintAction,
@@ -340,7 +341,7 @@ async function writeSchemaSql(
 
 async function main() {
   const startTimeMs = Date.now();
-  const databaseUrl = process.env.DATABASE_URL?.trim();
+  const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL);
 
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is not set.");

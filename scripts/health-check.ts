@@ -5,6 +5,7 @@
  */
 import 'dotenv/config';
 import { Client } from 'pg';
+import { normalizeDatabaseUrl } from '../src/app/db/connectionString';
 
 function maskConnectionString(value: string) {
     return value.replace(/:[^:@]+@/, ':****@');
@@ -27,7 +28,7 @@ function resolveMinioBaseUrl() {
 async function checkPostgres() {
     console.log('🔍 Checking PostgreSQL connection...');
 
-    const connectionString = process.env.DATABASE_URL || '';
+    const connectionString = normalizeDatabaseUrl(process.env.DATABASE_URL) || '';
     if (!connectionString) {
         console.error('❌ DATABASE_URL is not set');
         return false;
