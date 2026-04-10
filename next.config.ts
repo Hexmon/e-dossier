@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
+const useStandaloneOutput = process.env.NEXT_BUILD_STANDALONE === "true";
 
 const minioOrigin = process.env.MINIO_USE_SSL === 'true'
   ? `https://${process.env.MINIO_ENDPOINT ?? '127.0.0.1'}:${process.env.MINIO_PORT ?? '443'}`
@@ -48,7 +49,7 @@ const securityHeaders = isProd
   : sharedHeaders;
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: useStandaloneOutput ? 'standalone' : undefined,
   poweredByHeader: false,
   outputFileTracingIncludes: {
     '/*': [
