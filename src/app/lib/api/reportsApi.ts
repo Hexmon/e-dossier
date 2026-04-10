@@ -76,11 +76,16 @@ export const reportsApi = {
   getFinalResultCompilationPreview(params: {
     courseId: string;
     semester: number;
+    branches?: ReportBranch[];
   }) {
     return api.get<FinalResultCompilationPreviewResponse>(
       endpoints.reports.academics.finalResultCompilation.preview,
       {
-        query: params,
+        query: {
+          courseId: params.courseId,
+          semester: params.semester,
+          branches: (params.branches ?? []).join(','),
+        },
       }
     );
   },

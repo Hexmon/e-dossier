@@ -107,11 +107,20 @@ const finalResultIdentityRowSchema = z.object({
 export const finalResultCompilationPreviewQuerySchema = z.object({
   courseId: z.string().uuid(),
   semester: reportSemesterSchema,
+  branches: z
+    .preprocess((value) => {
+      if (typeof value !== 'string') return [] as string[];
+      return value
+        .split(',')
+        .map((v) => v.trim().toUpperCase())
+        .filter(Boolean);
+    }, z.array(branchSchema).optional().default([])),
 });
 
 export const finalResultCompilationDownloadBodySchema = z.object({
   courseId: z.string().uuid(),
   semester: reportSemesterSchema,
+  branches: z.array(branchSchema).optional().default([]),
   password: z.string().min(1).max(128),
   identityRows: z.array(finalResultIdentityRowSchema).optional(),
   preparedBy: optionalMetaString,

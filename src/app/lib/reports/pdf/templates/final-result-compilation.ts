@@ -42,10 +42,13 @@ function semesterWord(semester: number): string {
   return map[semester] ?? String(semester);
 }
 
-function resolveReportBranchTag(data: FinalResultCompilationPreview): 'C' | 'E' | 'M' {
+function resolveReportBranchTag(data: FinalResultCompilationPreview): string {
   const unique = Array.from(new Set(data.rows.map((row) => row.branchTag).filter(Boolean)));
   if (unique.length === 1 && (unique[0] === 'C' || unique[0] === 'E' || unique[0] === 'M')) {
     return unique[0];
+  }
+  if (unique.length > 1) {
+    return unique.sort().join('/');
   }
   return data.rows[0]?.branchTag ?? 'C';
 }

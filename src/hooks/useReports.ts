@@ -43,16 +43,18 @@ export function useConsolidatedSessionalPreview(filters: {
 export function useFinalResultCompilationPreview(filters: {
   courseId: string;
   semester: number | null;
+  branches: ReportBranch[];
   enabled?: boolean;
 }) {
   const isEnabled = (filters.enabled ?? true) && Boolean(filters.courseId && filters.semester);
 
   return useQuery({
-    queryKey: ['reports', 'final-result-compilation', filters.courseId, filters.semester],
+    queryKey: ['reports', 'final-result-compilation', filters.courseId, filters.semester, filters.branches],
     queryFn: () =>
       reportsApi.getFinalResultCompilationPreview({
         courseId: filters.courseId,
         semester: filters.semester as number,
+        branches: filters.branches,
       }),
     enabled: isEnabled,
   });

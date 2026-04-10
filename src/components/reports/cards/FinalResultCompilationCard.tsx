@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { academicsApi } from '@/app/lib/api/academicsMarksApi';
 import { useCourseSemesters, useFinalResultCompilationPreview, useReportsDownloads } from '@/hooks/useReports';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -19,10 +20,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PasswordField } from '@/components/reports/common/PasswordField';
+import type { ReportBranch } from '@/types/reports';
+
+const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M', 'O'];
 
 export function FinalResultCompilationCard() {
   const [courseId, setCourseId] = useState('');
   const [semester, setSemester] = useState<number | null>(null);
+  const [branches, setBranches] = useState<ReportBranch[]>([]);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewRequested, setViewRequested] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
@@ -33,10 +38,17 @@ export function FinalResultCompilationCard() {
 
   const courseSemesters = useCourseSemesters(courseId || null);
   const downloads = useReportsDownloads();
+  const branchFilterRequired = useMemo(() => Boolean(semester && semester >= 3), [semester]);
+  const effectiveBranches = useMemo(
+    () => (branchFilterRequired ? branches : []),
+    [branchFilterRequired, branches]
+  );
+  const effectiveBranchKey = effectiveBranches.join(',');
   const previewQuery = useFinalResultCompilationPreview({
     courseId,
     semester,
-    enabled: Boolean(courseId && semester),
+    branches: effectiveBranches,
+    enabled: Boolean(courseId && semester && (!branchFilterRequired || branches.length)),
   });
 
   const coursesQuery = useQuery({
@@ -47,7 +59,13 @@ export function FinalResultCompilationCard() {
   useEffect(() => {
     setViewRequested(false);
     setViewModalOpen(false);
-  }, [courseId, semester]);
+  }, [courseId, semester, effectiveBranchKey]);
+
+  useEffect(() => {
+    if (!branchFilterRequired && branches.length) {
+      setBranches([]);
+    }
+  }, [branchFilterRequired, branches.length]);
 
   useEffect(() => {
     if (downloadOpen) return;
@@ -57,11 +75,19 @@ export function FinalResultCompilationCard() {
   }, [downloadOpen]);
 
   const topDownloadDisabled =
-    !courseId || !semester || isPreparingDownload || downloads.finalResultCompilationDownload.isPending;
+    !courseId ||
+    !semester ||
+    (branchFilterRequired && !branches.length) ||
+    isPreparingDownload ||
+    downloads.finalResultCompilationDownload.isPending;
 
   const handleTopDownloadClick = async () => {
     if (!courseId || !semester) {
       toast.error('Select course and semester first.');
+      return;
+    }
+    if (branchFilterRequired && !branches.length) {
+      toast.error('Select at least one branch for semester 3 onwards.');
       return;
     }
     setIsPreparingDownload(true);
@@ -88,6 +114,10 @@ export function FinalResultCompilationCard() {
       toast.error('Select course and semester first.');
       return;
     }
+    if (branchFilterRequired && !branches.length) {
+      toast.error('Select at least one branch for semester 3 onwards.');
+      return;
+    }
     if (!password.trim()) {
       toast.error('Enter a file password.');
       return;
@@ -102,6 +132,7 @@ export function FinalResultCompilationCard() {
       await downloads.finalResultCompilationDownload.mutateAsync({
         courseId,
         semester,
+        branches: effectiveBranches,
         password: password.trim(),
         preparedBy: preparedBy.trim() || undefined,
         checkedBy: checkedBy.trim() || undefined,
@@ -133,6 +164,7 @@ export function FinalResultCompilationCard() {
               onValueChange={(value) => {
                 setCourseId(value);
                 setSemester(null);
+                setBranches([]);
               }}
             >
               <SelectTrigger>
@@ -152,7 +184,10 @@ export function FinalResultCompilationCard() {
             <Label>Semester</Label>
             <Select
               value={semester ? String(semester) : ''}
-              onValueChange={(value) => setSemester(Number(value))}
+              onValueChange={(value) => {
+                setSemester(Number(value));
+                setBranches([]);
+              }}
               disabled={!courseId}
             >
               <SelectTrigger>
@@ -169,12 +204,50 @@ export function FinalResultCompilationCard() {
           </div>
         </div>
 
+        {branchFilterRequired ? (
+          <div className="flex flex-wrap items-center gap-3 rounded border p-3">
+            <Label>Branch Filter</Label>
+            {BRANCH_OPTIONS.map((branch) => (
+              <label key={branch} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={branches.includes(branch)}
+                  onCheckedChange={(checked) => {
+                    setBranches((prev) =>
+                      checked
+                        ? Array.from(new Set([...prev, branch]))
+                        : prev.filter((item) => item !== branch)
+                    );
+                  }}
+                />
+                {branch}
+              </label>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setBranches([])}
+              disabled={!branches.length}
+            >
+              Clear Branches
+            </Button>
+          </div>
+        ) : semester ? (
+          <div className="rounded border bg-muted/20 p-3 text-sm text-muted-foreground">
+            Semester 1 and 2 reports remain common for all branches.
+          </div>
+        ) : null}
+
         <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
-            disabled={!courseId || !semester || previewQuery.isFetching}
+            disabled={!courseId || !semester || (branchFilterRequired && !branches.length) || previewQuery.isFetching}
             onClick={() => {
+              if (branchFilterRequired && !branches.length) {
+                toast.error('Select at least one branch for semester 3 onwards.');
+                return;
+              }
               if (!viewRequested) setViewRequested(true);
               setViewModalOpen(true);
               void previewQuery.refetch();
@@ -215,6 +288,7 @@ export function FinalResultCompilationCard() {
               <div className="max-h-[70vh] space-y-3 overflow-auto">
                 <div className="rounded border bg-muted/20 p-2 text-sm">
                   Rows: {previewQuery.data.data.rows.length} | Subject groups: {previewQuery.data.data.subjectColumns.length} | Ready for download
+                  {previewQuery.data.data.branches.length ? ` | Branches: ${previewQuery.data.data.branches.join(', ')}` : ''}
                 </div>
 
                 <div className="overflow-auto rounded border">

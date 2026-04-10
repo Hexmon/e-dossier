@@ -285,6 +285,7 @@ export type FinalResultCompilationPreview = {
   reportType: 'ACADEMICS_FINAL_RESULT_COMPILATION';
   course: { id: string; code: string; title: string };
   semester: number;
+  branches: ReportBranch[];
   subjectColumns: FinalResultSubjectColumn[];
   rows: FinalResultOcRow[];
   gradeBands: FinalResultGradeBand[];
@@ -302,6 +303,7 @@ export type FinalResultIdentityRow = {
 export type FinalResultDownloadRequest = {
   courseId: string;
   semester: number;
+  branches?: ReportBranch[];
   password: string;
   preparedBy?: string;
   checkedBy?: string;

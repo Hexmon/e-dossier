@@ -26,6 +26,7 @@ async function POSTHandler(req: AuditNextRequest) {
     const preview = await buildFinalResultCompilationPreview({
       courseId: body.courseId,
       semester: body.semester,
+      branches: body.branches,
     });
 
     const identityHash = createHash('sha256')
@@ -74,6 +75,8 @@ async function POSTHandler(req: AuditNextRequest) {
       filters: {
         courseId: body.courseId,
         semester: body.semester,
+        branches: body.branches,
+        branchCount: body.branches.length,
         ocCount: preview.rows.length,
         subjectColumnCount: preview.subjectColumns.length,
         identityHash,
@@ -97,6 +100,7 @@ async function POSTHandler(req: AuditNextRequest) {
         reportType: REPORT_TYPES.ACADEMICS_FINAL_RESULT_COMPILATION,
         courseId: body.courseId,
         semester: body.semester,
+        branchCount: body.branches.length,
         versionId,
         ocCount: preview.rows.length,
       },
