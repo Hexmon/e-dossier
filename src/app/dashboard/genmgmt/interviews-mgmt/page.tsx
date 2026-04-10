@@ -1,12 +1,12 @@
-// app/dashboard/genmgmt/interviews-mgmt/page.tsx
+﻿// app/dashboard/genmgmt/interviews-mgmt/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
-import { Plus, Settings, FileText } from "lucide-react";
+import { Plus, Settings, FileText, Copy } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
@@ -35,28 +35,63 @@ import {
 } from "@/components/ui/select";
 import { moduleManagementTabs, ocTabs } from "@/config/app.config";
 import { logoutAndRedirect } from "@/lib/auth/logout";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useQuery } from "@tanstack/react-query";
+import { getAllCourses, type CourseResponse } from "@/app/lib/api/courseApi";
 
 export default function InterviewTemplateManagementPage() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCourseId, setSelectedCourseId] = useState("");
     const [semesterFilter, setSemesterFilter] = useState<string>("all");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<InterviewTemplate | undefined>(undefined);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
+    const [copySourceCourseId, setCopySourceCourseId] = useState("");
+    const [copyTargetCourseId, setCopyTargetCourseId] = useState("");
+
+    const { data: courseItems = [] } = useQuery({
+        queryKey: ["courses", "interview-mgmt"],
+        queryFn: async () => {
+            const response = await getAllCourses();
+            return (response.items ?? []).filter((course) => !course.deleted_at);
+        },
+        staleTime: 60_000,
+    });
+
+    useEffect(() => {
+        if (!selectedCourseId && courseItems.length > 0) {
+            const firstCourseId = courseItems[0].id;
+            setSelectedCourseId(firstCourseId);
+            setCopyTargetCourseId(firstCourseId);
+        }
+    }, [courseItems, selectedCourseId]);
+
+    useEffect(() => {
+        if (selectedCourseId) {
+            setCopyTargetCourseId(selectedCourseId);
+        }
+    }, [selectedCourseId]);
 
     // Build listParams from the semester filter — React Query re-fetches
     // automatically whenever this object changes via the query key.
-    const listParams = semesterFilter !== "all"
-        ? { semester: parseInt(semesterFilter) }
-        : undefined;
+    const listParams = !selectedCourseId
+        ? undefined
+        : semesterFilter !== "all"
+            ? { courseId: selectedCourseId, semester: parseInt(semesterFilter) }
+            : { courseId: selectedCourseId };
 
     const {
         loading,
         templates,
         addTemplate,
+        cloneTemplate,
         editTemplate,
         removeTemplate,
+        isCopyingTemplate,
     } = useInterviewTemplates({ listParams });
 
     // No useEffect needed — useQuery fetches on mount and whenever listParams changes.
@@ -78,7 +113,7 @@ export default function InterviewTemplateManagementPage() {
                 await editTemplate(editingId, newTemplate);
                 setEditingTemplate(undefined);
             } else {
-                await addTemplate(newTemplate);
+                await addTemplate({ ...newTemplate, courseId: selectedCourseId });
             }
             setIsDialogOpen(false);
         } catch {
@@ -104,6 +139,29 @@ export default function InterviewTemplateManagementPage() {
     const handleDeleteTemplate = (id: string) => {
         setTemplateToDelete(id);
         setDeleteConfirmOpen(true);
+    };
+
+    const resetCopyState = () => {
+        setCopySourceCourseId("");
+        setCopyTargetCourseId(selectedCourseId);
+    };
+
+    const handleCopyTemplate = async () => {
+        if (!copySourceCourseId || !copyTargetCourseId || copySourceCourseId === copyTargetCourseId) {
+            return;
+        }
+
+        try {
+            await cloneTemplate({
+                sourceCourseId: copySourceCourseId,
+                targetCourseId: copyTargetCourseId,
+                mode: "replace",
+            });
+            setIsCopyDialogOpen(false);
+            resetCopyState();
+        } catch {
+            // Toast already handled by the mutation.
+        }
     };
 
     const confirmDelete = async () => {
@@ -198,6 +256,26 @@ export default function InterviewTemplateManagementPage() {
                                             <Plus className="h-4 w-4" />
                                             Create Template
                                         </Button>
+                                        <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                                            <SelectTrigger className="w-64">
+                                                <SelectValue placeholder="Select course" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {courseItems.map((course: CourseResponse) => (
+                                                    <SelectItem key={course.id} value={course.id}>
+                                                        {course.code} - {course.title}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsCopyDialogOpen(true)}
+                                            className="flex items-center gap-2"
+                                        >
+                                            <Copy className="h-4 w-4" />
+                                            Copy Template
+                                        </Button>
                                     </div>
                                 </div>
 
@@ -237,6 +315,76 @@ export default function InterviewTemplateManagementPage() {
                 isLoading={loading}
             />
 
+            <Dialog
+                open={isCopyDialogOpen}
+                onOpenChange={(open) => {
+                    setIsCopyDialogOpen(open);
+                    if (!open) resetCopyState();
+                }}
+            >
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Copy Interview Template</DialogTitle>
+                        <DialogDescription>
+                            Replace the selected course interview templates with another course&apos;s interview template set.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="copy-source-course">Source Course</Label>
+                            <Select value={copySourceCourseId} onValueChange={setCopySourceCourseId}>
+                                <SelectTrigger id="copy-source-course">
+                                    <SelectValue placeholder="Select source course" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {courseItems.map((course: CourseResponse) => (
+                                        <SelectItem key={course.id} value={course.id}>
+                                            {course.code} - {course.title}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="copy-target-course">Target Course</Label>
+                            <Select value={copyTargetCourseId} onValueChange={setCopyTargetCourseId}>
+                                <SelectTrigger id="copy-target-course">
+                                    <SelectValue placeholder="Select target course" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {courseItems.map((course: CourseResponse) => (
+                                        <SelectItem key={`target-${course.id}`} value={course.id}>
+                                            {course.code} - {course.title}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsCopyDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => void handleCopyTemplate()}
+                            disabled={
+                                loading ||
+                                isCopyingTemplate ||
+                                !copySourceCourseId ||
+                                !copyTargetCourseId ||
+                                copySourceCourseId === copyTargetCourseId
+                            }
+                        >
+                            {isCopyingTemplate ? "Copying..." : "Copy Template"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -262,4 +410,3 @@ export default function InterviewTemplateManagementPage() {
         </SidebarProvider>
     );
 }
-

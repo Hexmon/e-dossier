@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 
 const BoolString = z.enum(['true', 'false']).transform((v) => v === 'true');
 
@@ -15,6 +15,7 @@ const nonEmptyPartial = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>
 export const Semester = z.coerce.number().int().min(1).max(6);
 
 export const ptTypeCreateSchema = z.object({
+    courseId: z.string().uuid(),
     semester: Semester,
     code: z.string().trim().min(1).max(32),
     title: z.string().trim().min(1).max(160),
@@ -26,6 +27,7 @@ export const ptTypeCreateSchema = z.object({
 export const ptTypeUpdateSchema = nonEmptyPartial(ptTypeCreateSchema);
 
 export const ptTypeQuerySchema = z.object({
+    courseId: z.string().uuid().optional(),
     semester: Semester.optional(),
     includeDeleted: BoolString.optional(),
 });
@@ -91,6 +93,7 @@ export const ptTaskScoreParam = z.object({
 });
 
 export const ptMotivationFieldCreateSchema = z.object({
+    courseId: z.string().uuid(),
     semester: Semester,
     label: z.string().trim().min(1).max(160),
     sortOrder: z.coerce.number().int().min(1).optional(),
@@ -98,12 +101,21 @@ export const ptMotivationFieldCreateSchema = z.object({
 });
 export const ptMotivationFieldUpdateSchema = nonEmptyPartial(ptMotivationFieldCreateSchema);
 export const ptMotivationFieldQuerySchema = z.object({
+    courseId: z.string().uuid().optional(),
     semester: Semester.optional(),
     includeDeleted: BoolString.optional(),
 });
 export const ptMotivationFieldParam = z.object({ id: z.string().uuid() });
 
 export const ptTemplateQuerySchema = z.object({
+    courseId: z.string().uuid(),
     semester: Semester,
     includeDeleted: BoolString.optional(),
+});
+
+export const ptTemplateCopySchema = z.object({
+    sourceCourseId: z.string().uuid(),
+    targetCourseId: z.string().uuid(),
+    semester: Semester,
+    mode: z.literal('replace').default('replace'),
 });

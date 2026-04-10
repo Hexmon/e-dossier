@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -29,6 +29,8 @@ import {
     deleteTrainingCamp,
     updateTrainingCampSettings,
     TrainingCamp,
+    TrainingCampUpdate,
+    copyTrainingCampTemplate,
 } from "@/app/lib/api/trainingCampsApi";
 import {
     createTrainingCampActivity,
@@ -38,6 +40,26 @@ import {
 } from "@/app/lib/api/trainingCampActivitiesApi";
 import { toast } from "sonner";
 import { applyOrgTemplate } from "@/app/lib/api/orgTemplateApi";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { getAllCourses, type CourseResponse } from "@/app/lib/api/courseApi";
 
 export default function CampsManagement() {
     const router = useRouter();
@@ -54,14 +76,42 @@ export default function CampsManagement() {
     const [deletingActivity, setDeletingActivity] = useState<TrainingCampActivity | null>(null);
     const [isDeleteActivityDialogOpen, setIsDeleteActivityDialogOpen] = useState(false);
     const [maxCampsPerSemester, setMaxCampsPerSemester] = useState<number>(2);
+    const [selectedCourseId, setSelectedCourseId] = useState("");
+    const [copySourceCourseId, setCopySourceCourseId] = useState("");
+    const [copyTargetCourseId, setCopyTargetCourseId] = useState("");
+    const [copySemester, setCopySemester] = useState("");
+
+    const { data: courseItems = [] } = useQuery({
+        queryKey: ["courses", "camps-mgmt"],
+        queryFn: async () => {
+            const response = await getAllCourses();
+            return (response.items ?? []).filter((course) => !course.deleted_at);
+        },
+        staleTime: 60_000,
+    });
+
+    React.useEffect(() => {
+        if (!selectedCourseId && courseItems.length > 0) {
+            const firstCourseId = courseItems[0].id;
+            setSelectedCourseId(firstCourseId);
+            setCopyTargetCourseId(firstCourseId);
+        }
+    }, [courseItems, selectedCourseId]);
+
+    React.useEffect(() => {
+        if (selectedCourseId) {
+            setCopyTargetCourseId(selectedCourseId);
+        }
+    }, [selectedCourseId]);
 
     const { data: camps = [], isLoading: isFetchingCamps } = useQuery({
-        queryKey: ["trainingCamps"],
+        queryKey: ["trainingCamps", selectedCourseId],
         queryFn: async () => {
-            const data = await fetchTrainingCamps({ includeActivities: true });
+            const data = await fetchTrainingCamps({ courseId: selectedCourseId, includeActivities: true });
             return data;
         },
         staleTime: 5 * 60 * 1000,
+        enabled: Boolean(selectedCourseId),
     });
 
     const { data: campSettings, isLoading: isFetchingSettings } = useQuery({
@@ -114,8 +164,36 @@ export default function CampsManagement() {
         },
     });
 
+    const copyTemplateMutation = useMutation({
+        mutationFn: ({
+            sourceCourseId,
+            targetCourseId,
+            semester,
+        }: {
+            sourceCourseId: string;
+            targetCourseId: string;
+            semester: 1 | 2 | 3 | 4 | 5 | 6;
+        }) =>
+            copyTrainingCampTemplate({
+                sourceCourseId,
+                targetCourseId,
+                semester,
+                mode: "replace",
+            }),
+        onSuccess: (result) => {
+            queryClient.invalidateQueries({ queryKey: ["trainingCamps"] });
+            toast.success(
+                result.message ||
+                    `Camp template copied. Created: ${result.createdCount}, Updated: ${result.updatedCount}`
+            );
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to copy camp template");
+        },
+    });
+
     const updateCampMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: CampFormData }) =>
+        mutationFn: ({ id, data }: { id: string; data: TrainingCampUpdate }) =>
             updateTrainingCamp(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["trainingCamps"] });
@@ -201,7 +279,7 @@ export default function CampsManagement() {
     };
 
     const handleCreateCamp = async (formData: CampFormData) => {
-        await createCampMutation.mutateAsync(formData);
+        await createCampMutation.mutateAsync({ ...formData, courseId: selectedCourseId });
     };
 
     const handleEditCamp = (camp: TrainingCamp) => {
@@ -211,7 +289,7 @@ export default function CampsManagement() {
 
     const handleUpdateCamp = async (formData: CampFormData) => {
         if (!editingCamp) return;
-        await updateCampMutation.mutateAsync({ id: editingCamp.id, data: formData });
+        await updateCampMutation.mutateAsync({ id: editingCamp.id, data: { ...formData, courseId: selectedCourseId } });
     };
 
     const handleDeleteClick = (camp: TrainingCamp) => {
@@ -290,7 +368,14 @@ export default function CampsManagement() {
         updateActivityMutation.isPending ||
         deleteActivityMutation.isPending ||
         updateSettingsMutation.isPending ||
-        applyDefaultTemplateMutation.isPending;
+        applyDefaultTemplateMutation.isPending ||
+        copyTemplateMutation.isPending;
+
+    const canCopyTemplate =
+        copySourceCourseId.length > 0 &&
+        copyTargetCourseId.length > 0 &&
+        copySemester.length > 0 &&
+        copySourceCourseId !== copyTargetCourseId;
 
     return (
         <SidebarProvider>
@@ -318,6 +403,18 @@ export default function CampsManagement() {
                                 <div className="flex justify-between items-center">
                                     <h2 className="text-2xl font-bold">Manage Camps</h2>
                                     <div className="flex flex-wrap items-center gap-2">
+                                        <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                                            <SelectTrigger className="w-64">
+                                                <SelectValue placeholder="Select course" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {courseItems.map((course: CourseResponse) => (
+                                                    <SelectItem key={course.id} value={course.id}>
+                                                        {course.code} - {course.title}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <Button
                                             variant="outline"
                                             onClick={() => applyDefaultTemplateMutation.mutate(true)}
@@ -339,6 +436,106 @@ export default function CampsManagement() {
                                             <Plus className="h-4 w-4 mr-2" />
                                             Create Camp
                                         </Button>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-lg border bg-card p-4 space-y-4">
+                                    <div>
+                                        <h3 className="text-sm font-semibold">Copy Existing Camp Template</h3>
+                                        <p className="text-xs text-muted-foreground">
+                                            Replace the selected course camp setup for a semester with another course&apos;s configured camps and activities.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid gap-4 md:grid-cols-3">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="camp-copy-source">Source Course</Label>
+                                            <Select value={copySourceCourseId} onValueChange={setCopySourceCourseId}>
+                                                <SelectTrigger id="camp-copy-source">
+                                                    <SelectValue placeholder="Select source course" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {courseItems.map((course: CourseResponse) => (
+                                                        <SelectItem key={`camp-source-${course.id}`} value={course.id}>
+                                                            {course.code} - {course.title}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="camp-copy-target">Target Course</Label>
+                                            <Select value={copyTargetCourseId} onValueChange={setCopyTargetCourseId}>
+                                                <SelectTrigger id="camp-copy-target">
+                                                    <SelectValue placeholder="Select target course" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {courseItems.map((course: CourseResponse) => (
+                                                        <SelectItem key={`camp-target-${course.id}`} value={course.id}>
+                                                            {course.code} - {course.title}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="camp-copy-semester">Semester</Label>
+                                            <Select value={copySemester} onValueChange={setCopySemester}>
+                                                <SelectTrigger id="camp-copy-semester">
+                                                    <SelectValue placeholder="Select semester" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {[1, 2, 3, 4, 5, 6].map((semester) => (
+                                                        <SelectItem key={`camp-sem-${semester}`} value={String(semester)}>
+                                                            Semester {semester}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    {copySourceCourseId &&
+                                    copyTargetCourseId &&
+                                    copySourceCourseId === copyTargetCourseId ? (
+                                        <p className="text-xs text-destructive">
+                                            Source and target courses must be different.
+                                        </p>
+                                    ) : null}
+
+                                    <div className="flex justify-end">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="outline" disabled={!canCopyTemplate || isLoading}>
+                                                    Copy Camp Template
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>Copy camp template in replace mode?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                        This replaces the target course camp template for the selected semester with the source course configuration.
+                                                </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        disabled={isLoading}
+                                                        onClick={() =>
+                                                            copyTemplateMutation.mutate({
+                                                                sourceCourseId: copySourceCourseId,
+                                                                targetCourseId: copyTargetCourseId,
+                                                                semester: Number(copySemester) as 1 | 2 | 3 | 4 | 5 | 6,
+                                                            })
+                                                        }
+                                                    >
+                                                        {copyTemplateMutation.isPending ? "Copying..." : "Copy Now"}
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </div>
                                 </div>
 
