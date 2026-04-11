@@ -148,6 +148,29 @@ describe("middleware access-control hardening", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
+  it.each([
+    "/api/v1/admin/interview/templates",
+    "/api/v1/admin/training-camps",
+    "/api/v1/admin/training-camps/settings",
+    "/api/v1/admin/physical-training/templates",
+  ])(
+    "allows authenticated non-admin callers to reach shared read-only admin endpoint %s",
+    async (path) => {
+      vi.mocked(verifyAccessJWT).mockResolvedValueOnce({
+        sub: "pc-1",
+        roles: ["PLATOON_COMMANDER"],
+        apt: {
+          position: "PLATOON_COMMANDER",
+        },
+      } as any);
+
+      const res = await middleware(makeRequest(path, { token: "pc-token" }));
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("location")).toBeNull();
+    }
+  );
+
   it("keeps write methods on shared admin metadata endpoints admin-protected", async () => {
     vi.mocked(verifyAccessJWT).mockResolvedValueOnce({
       sub: "pc-1",
@@ -165,4 +188,28 @@ describe("middleware access-control hardening", () => {
     const body = await res.json();
     expect(body.error).toBe("forbidden");
   });
+
+  it.each([
+    { path: "/api/v1/admin/interview/templates", method: "POST" },
+    { path: "/api/v1/admin/training-camps", method: "POST" },
+    { path: "/api/v1/admin/training-camps/settings", method: "PATCH" },
+    { path: "/api/v1/admin/physical-training/types", method: "POST" },
+  ])(
+    "keeps shared admin endpoint $path with method $method admin-protected",
+    async ({ path, method }) => {
+      vi.mocked(verifyAccessJWT).mockResolvedValueOnce({
+        sub: "pc-1",
+        roles: ["PLATOON_COMMANDER"],
+        apt: {
+          position: "PLATOON_COMMANDER",
+        },
+      } as any);
+
+      const res = await middleware(makeRequest(path, { method, token: "pc-token" }));
+
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body.error).toBe("forbidden");
+    }
+  );
 });
