@@ -140,8 +140,8 @@ function drawIdentityTables(doc: PDFKit.PDFDocument, data: SemesterGradePreview)
   const half = tableWidth / 2;
 
   const cadetRows = [
-    ['NAME OF CADET', 'JNU ENROLMENT NO'],
-    [data.oc.name, data.oc.jnuEnrollmentNo ?? ''],
+    ['NAME OF CADET', 'ENROLLMENT NO'],
+    [data.oc.name, data.oc.enrolmentNumber || data.oc.jnuEnrollmentNo || ''],
   ];
   drawSimpleTable(doc, PAGE_MARGIN, 262, [half, half], cadetRows, {
     rowHeight: 32,

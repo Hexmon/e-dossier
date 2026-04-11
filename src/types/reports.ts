@@ -107,6 +107,7 @@ export type SemesterGradePreview = {
     name: string;
     branch: string | null;
     jnuEnrollmentNo: string | null;
+    enrolmentNumber: string;
   };
   course: {
     id: string;

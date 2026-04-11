@@ -811,10 +811,11 @@ export async function buildSemesterGradePreview(params: {
   semester: number;
   ocId: string;
 }): Promise<SemesterGradePreview> {
-  const [course, candidates, policy] = await Promise.all([
+  const [course, candidates, policy, siteSettings] = await Promise.all([
     resolveCourse(params.courseId),
     listOCsBasic({ courseId: params.courseId, active: true, limit: 5000 }),
     getAcademicGradingPolicy(),
+    getSiteSettingsOrDefault(),
   ]);
 
   const oc = candidates.find((item) => item.id === params.ocId);
@@ -888,7 +889,8 @@ export async function buildSemesterGradePreview(params: {
       ocNo: oc.ocNo,
       name: oc.name,
       branch: oc.branch,
-      jnuEnrollmentNo: null,
+      jnuEnrollmentNo: oc.jnuEnrollmentNo ?? null,
+      enrolmentNumber: buildFinalResultEnrollmentNumber(siteSettings.heroTitle, course.code, oc.jnuEnrollmentNo),
     },
     course,
     semester: params.semester,

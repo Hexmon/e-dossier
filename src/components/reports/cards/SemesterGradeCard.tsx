@@ -370,6 +370,7 @@ export function SemesterGradeCard() {
                                   {previewQuery.data.data.oc.name} ({previewQuery.data.data.oc.ocNo})
                                 </div>
                                 <div>Branch: {previewQuery.data.data.oc.branch ?? '-'}</div>
+                                <div>Enrollment No: {previewQuery.data.data.oc.enrolmentNumber || '-'}</div>
                                 <div>
                                   Current Semester SGPA:{' '}
                                   {previewQuery.data.data.currentSemester.sgpa?.toFixed(2) ?? '-'} | Cumulative CGPA:{' '}
