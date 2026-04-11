@@ -125,7 +125,7 @@ describe('Consolidated sessional report routes', () => {
   it('preview returns report data for a valid request', async () => {
     const req = makeJsonRequest({
       method: 'GET',
-      path: `/api/v1/reports/academics/consolidated-sessional/preview?courseId=${courseId}&semester=1&subjectId=${subjectId}`,
+      path: `/api/v1/reports/academics/consolidated-sessional/preview?courseId=${courseId}&semester=1&subjectId=${subjectId}&branches=E`,
     });
 
     const res = await previewConsolidatedSessional(req as any, createRouteContext());
@@ -135,6 +135,12 @@ describe('Consolidated sessional report routes', () => {
     expect(body.message).toBe('Consolidated sessional preview fetched successfully.');
     expect(body.data).toEqual(previewData);
     expect(semesterResolution.assertSemesterAllowed).toHaveBeenCalledWith(1, [1, 2, 3, 4]);
+    expect(reportData.buildConsolidatedSessionalPreview).toHaveBeenCalledWith({
+      courseId,
+      semester: 1,
+      subjectId,
+      branches: ['E'],
+    });
     expect(auditLogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         outcome: 'SUCCESS',
@@ -142,6 +148,7 @@ describe('Consolidated sessional report routes', () => {
           courseId,
           semester: 1,
           subjectId,
+          branchCount: 1,
           theoryCount: 1,
           practicalCount: 1,
         }),
@@ -180,6 +187,7 @@ describe('Consolidated sessional report routes', () => {
         courseId,
         semester: 1,
         subjectId,
+        branches: ['E'],
         instructorName: 'Instructor One',
         password: 'password123',
         preparedBy: 'Prepared By',
@@ -192,12 +200,26 @@ describe('Consolidated sessional report routes', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/pdf');
     expect(res.headers.get('Content-Disposition')).toContain('consolidated-sessional-TES-50-sem-1-MATH-RPT-0001.pdf');
+    expect(reportData.buildConsolidatedSessionalPreview).toHaveBeenCalledWith({
+      courseId,
+      semester: 1,
+      subjectId,
+      branches: ['E'],
+      password: 'password123',
+      preparedBy: 'Prepared By',
+      checkedBy: 'Checked By',
+      instructorName: 'Instructor One',
+    });
     expect(reportDownloadVersions.createReportDownloadVersion).toHaveBeenCalledWith(
       expect.objectContaining({
         versionId: 'RPT-0001',
         requestedByUserId: 'user-1',
         fileName: 'consolidated-sessional-TES-50-sem-1-MATH-RPT-0001.pdf',
         encrypted: true,
+        filters: expect.objectContaining({
+          branches: ['E'],
+          branchCount: 1,
+        }),
       }),
     );
     expect(auditLogMock).toHaveBeenCalledWith(
@@ -206,6 +228,7 @@ describe('Consolidated sessional report routes', () => {
         metadata: expect.objectContaining({
           reportType: 'ACADEMICS_CONSOLIDATED_SESSIONAL',
           versionId: 'RPT-0001',
+          branchCount: 1,
         }),
       }),
     );

@@ -64,6 +64,10 @@ export const academicWorkflowDraftItemSchema = z.object({
     .optional(),
   practical: z
     .object({
+      contentOfExpMarks: z.coerce.number().nullable().optional(),
+      maintOfExpMarks: z.coerce.number().nullable().optional(),
+      practicalMarks: z.coerce.number().nullable().optional(),
+      vivaMarks: z.coerce.number().nullable().optional(),
       finalMarks: z.coerce.number().nullable().optional(),
       tutorial: z.string().nullable().optional(),
       grade: z.string().trim().nullable().optional(),

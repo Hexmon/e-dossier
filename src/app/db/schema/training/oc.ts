@@ -114,6 +114,10 @@ export type TheoryMarksRecord = {
 };
 
 export type PracticalMarksRecord = {
+    contentOfExpMarks?: number | null;
+    maintOfExpMarks?: number | null;
+    practicalMarks?: number | null;
+    vivaMarks?: number | null;
     finalMarks?: number | null;
     grade?: string | null;
     tutorial?: string | null;
@@ -490,6 +494,7 @@ export const ocSpecialAchievementInFiring = pgTable('oc_special_achievement_in_f
 // === OC Camps (training) ====================================================
 export const trainingCamps = pgTable('training_camps', {
     id: uuid('id').primaryKey().defaultRandom(),
+    courseId: uuid('course_id').references(() => courses.id, { onDelete: 'restrict' }),
     name: varchar('name', { length: 120 }).notNull(),
     semester: integer('semester').notNull(),
     sortOrder: integer('sort_order').notNull().default(1),
@@ -505,8 +510,8 @@ export const trainingCamps = pgTable('training_camps', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
-    uqNameSemester: uniqueIndex('uq_training_camp_name_semester').on(t.name, t.semester),
-    idxSemesterSortName: index('idx_training_camp_semester_sort_name').on(t.semester, t.sortOrder, t.name),
+    uqNameCourseSemester: uniqueIndex('uq_training_camp_name_course_semester').on(t.courseId, t.name, t.semester),
+    idxCourseSemesterSortName: index('idx_training_camp_course_semester_sort_name').on(t.courseId, t.semester, t.sortOrder, t.name),
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
 }));
 

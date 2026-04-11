@@ -64,7 +64,7 @@ async function main() {
 
   await requirePath(
     standaloneDir,
-    'Run `pnpm build` first. The build must use `output: "standalone"`.'
+    'Run `pnpm run build:standalone` first. The build must use `output: "standalone"`.'
   );
   await requirePath(staticDir, 'Run `pnpm build` first so Next.js static assets are generated.');
   await requirePath(envExamplePath, 'The runtime bundle expects a production env template.');

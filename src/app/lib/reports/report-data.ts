@@ -42,6 +42,7 @@ import type {
   SemesterGradeCandidate,
   SemesterGradePreview,
   PtAssessmentPreview,
+  ReportBranch,
 } from '@/types/reports';
 
 function normalizeValue(value: number | null | undefined): number | null {
@@ -191,6 +192,29 @@ function buildFinalResultCertSerialNo(courseCode: string, semester: number, bran
   return `${courseCode}/Sem-${semesterToRoman(semester)}(${branchTag})/${String(serial).padStart(2, '0')}`;
 }
 
+function toFinalResultBranchTag(branch: string | null | undefined): 'C' | 'E' | 'M' {
+  const normalized = String(branch ?? '').trim().toUpperCase();
+  if (normalized === 'E') return 'E';
+  if (normalized === 'M') return 'M';
+  return 'C';
+}
+
+function toFinalResultBranchFilter(branches: ReportBranch[] | undefined, semester: number) {
+  if (semester <= 2) return new Set<'C' | 'E' | 'M'>();
+  return new Set(branches?.map((branch) => toFinalResultBranchTag(branch)) ?? []);
+}
+
+function toOcBranchTag(branch: string | null | undefined): ReportBranch {
+  const normalized = String(branch ?? '').trim().toUpperCase();
+  if (normalized === 'E') return 'E';
+  if (normalized === 'M') return 'M';
+  return 'O';
+}
+
+function toConsolidatedSessionalBranchFilter(branches: ReportBranch[] | undefined) {
+  return new Set((branches ?? []).map((branch) => toOcBranchTag(branch)));
+}
+
 function computeSemesterSummary(
   view: Awaited<ReturnType<typeof getOcAcademicSemester>>,
   policy: AcademicGradingPolicy
@@ -221,6 +245,7 @@ export async function buildConsolidatedSessionalPreview(params: {
   courseId: string;
   semester: number;
   subjectId: string;
+  branches?: ReportBranch[];
 }): Promise<ConsolidatedSessionalPreview> {
   const [course, offerings, ocRows, policy] = await Promise.all([
     resolveCourse(params.courseId),
@@ -244,10 +269,15 @@ export async function buildConsolidatedSessionalPreview(params: {
   }
 
   const subjectBranch = String(selectedOffering.subject.branch ?? 'C').toUpperCase();
-  const filteredOCs =
+  const subjectScopedOCs =
     params.semester <= 2 || subjectBranch === 'C'
       ? ocRows
       : ocRows.filter((oc) => String(oc.branch ?? '').toUpperCase() === subjectBranch);
+  const selectedBranchFilter = toConsolidatedSessionalBranchFilter(params.branches);
+  const filteredOCs = subjectScopedOCs.filter((oc) => {
+    if (!selectedBranchFilter.size) return true;
+    return selectedBranchFilter.has(toOcBranchTag(oc.branch));
+  });
 
   const semesterViews = await Promise.all(
     filteredOCs.map(async (oc) => {
@@ -320,17 +350,31 @@ export async function buildConsolidatedSessionalPreview(params: {
     }
 
     if (selectedOffering.includePractical) {
+      const contentOfExp = normalizeNonNegativeValue(subject?.practical?.contentOfExpMarks ?? null);
+      const maintOfExp = normalizeNonNegativeValue(subject?.practical?.maintOfExpMarks ?? null);
+      const practicalObtained = normalizeNonNegativeValue(subject?.practical?.practicalMarks ?? null);
+      const vivaObtained = normalizeNonNegativeValue(subject?.practical?.vivaMarks ?? null);
+      const totalObtained = normalizeNonNegativeValue(resolvePracticalTotalMarks(subject?.practical));
+
       practicalRows.push({
         ocId: item.oc.id,
         sNo: index + 1,
         ocNo: item.oc.ocNo,
         ocName: item.oc.name,
         branch: item.oc.branch,
-        practicalObtained: normalizeNonNegativeValue(subject?.practical?.finalMarks ?? null),
-        practicalMax: Number(selectedOffering.practicalCredits ?? selectedOffering.subject.defaultPracticalCredits ?? 0),
+        contentOfExpObtained: contentOfExp,
+        contentOfExpMax: FIXED_MARKS.practicalContentMax,
+        maintOfExpObtained: maintOfExp,
+        maintOfExpMax: FIXED_MARKS.practicalMaintenanceMax,
+        practicalObtained,
+        practicalMax: FIXED_MARKS.practicalExamMax,
+        vivaObtained,
+        vivaMax: FIXED_MARKS.practicalVivaMax,
+        totalObtained,
+        totalMax: FIXED_MARKS.practicalTotalMax,
         letterGrade: resolveStoredOrDerivedAcademicLetterGrade(
           subject?.practical?.grade ?? null,
-          subject?.practical?.finalMarks ?? null,
+          totalObtained,
           policy
         ),
       });
@@ -365,6 +409,7 @@ export async function buildConsolidatedSessionalPreview(params: {
 export async function buildFinalResultCompilationPreview(params: {
   courseId: string;
   semester: number;
+  branches?: ReportBranch[];
 }): Promise<FinalResultCompilationPreview> {
   const [course, offerings, ocRows, policy, siteSettings] = await Promise.all([
     resolveCourse(params.courseId),
@@ -379,10 +424,24 @@ export async function buildFinalResultCompilationPreview(params: {
     getSiteSettingsOrDefault(),
   ]);
 
-  const subjectColumns = normalizeSubjectColumns(offerings);
+  const selectedBranchFilter = toFinalResultBranchFilter(params.branches, params.semester);
+  const filteredOfferings =
+    !selectedBranchFilter.size
+      ? offerings
+      : offerings.filter((offering) => {
+          const subjectBranch = toFinalResultBranchTag(offering.subject.branch);
+          return subjectBranch === 'C' || selectedBranchFilter.has(subjectBranch);
+        });
+
+  const filteredOcRows =
+    !selectedBranchFilter.size
+      ? ocRows
+      : ocRows.filter((oc) => selectedBranchFilter.has(toFinalResultBranchTag(oc.branch)));
+
+  const subjectColumns = normalizeSubjectColumns(filteredOfferings);
 
   const ocViews = await Promise.all(
-    ocRows.map(async (oc) => ({
+    filteredOcRows.map(async (oc) => ({
       oc,
       views: await getOcAcademics(oc.id),
     }))
@@ -397,7 +456,7 @@ export async function buildFinalResultCompilationPreview(params: {
     const previousView = [...views]
       .filter((view) => view.semester < params.semester)
       .sort((left, right) => right.semester - left.semester)[0] ?? null;
-    const branchTag = selectedView?.branchTag ?? (params.semester <= 2 ? 'C' : oc.branch === 'M' ? 'M' : oc.branch === 'E' ? 'E' : 'C');
+    const branchTag = selectedView?.branchTag ?? (params.semester <= 2 ? 'C' : toFinalResultBranchTag(oc.branch));
     const nextBranchSerial = (branchSerials.get(branchTag) ?? 0) + 1;
     branchSerials.set(branchTag, nextBranchSerial);
 
@@ -481,6 +540,7 @@ export async function buildFinalResultCompilationPreview(params: {
     reportType: REPORT_TYPES.ACADEMICS_FINAL_RESULT_COMPILATION,
     course,
     semester: params.semester,
+    branches: params.semester <= 2 ? [] : params.branches ?? [],
     subjectColumns,
     rows,
     gradeBands: FINAL_RESULT_GRADE_BANDS,

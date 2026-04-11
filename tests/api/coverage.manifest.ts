@@ -148,6 +148,14 @@ export const MISC_UNCOVERED_ROUTE_FILES = [
 
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
+    testFile: 'tests/api/admin.template-copy.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/interview/templates/copy/route.ts',
+      'src/app/api/v1/admin/physical-training/templates/copy/route.ts',
+      'src/app/api/v1/admin/training-camps/copy/route.ts',
+    ],
+  },
+  {
     testFile: 'tests/api/admin.appointments-and-positions.test.ts',
     routeFiles: [
       'src/app/api/v1/admin/appointments/route.ts',

@@ -16,6 +16,7 @@ async function GETHandler(req: AuditNextRequest) {
     const query = finalResultCompilationPreviewQuerySchema.parse({
       courseId: sp.get('courseId') ?? undefined,
       semester: sp.get('semester') ?? undefined,
+      branches: sp.get('branches') ?? undefined,
     });
 
     const courseMeta = await resolveCourseWithSemesters(query.courseId);
@@ -34,6 +35,7 @@ async function GETHandler(req: AuditNextRequest) {
         reportType: 'academics_final_result_compilation',
         courseId: query.courseId,
         semester: query.semester,
+        branchCount: query.branches.length,
         rowCount: preview.rows.length,
         subjectColumnCount: preview.subjectColumns.length,
       },

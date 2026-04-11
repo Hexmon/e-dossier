@@ -11,6 +11,10 @@ export interface TheoryMarks {
 }
 
 export interface PracticalMarks {
+    contentOfExpMarks?: number;
+    maintOfExpMarks?: number;
+    practicalMarks?: number;
+    vivaMarks?: number;
     grade?: string;
     tutorial?: string;
     finalMarks?: number;
@@ -66,6 +70,10 @@ export interface SubjectMarks {
         grade?: string;
     };
     practical?: {
+        contentOfExpMarks?: number;
+        maintOfExpMarks?: number;
+        practicalMarks?: number;
+        vivaMarks?: number;
         finalMarks?: number;
         grade?: string;
         tutorial?: string;

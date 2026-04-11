@@ -1,9 +1,10 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 
 const BoolString = z.enum(['true', 'false']).transform((v) => v === 'true');
 const CampSemester = z.coerce.number().int().min(1).max(6);
 
 export const trainingCampCreateSchema = z.object({
+    courseId: z.string().uuid(),
     name: z.string().trim().min(1).max(120),
     semester: CampSemester,
     sortOrder: z.coerce.number().int().min(1).max(10).optional(),
@@ -23,6 +24,7 @@ export const trainingCampUpdateSchema = trainingCampCreateSchema.partial().refin
 );
 
 export const trainingCampQuerySchema = z.object({
+    courseId: z.string().uuid().optional(),
     semester: CampSemester.optional(),
     includeActivities: BoolString.optional(),
     includeDeleted: BoolString.optional(),
@@ -52,4 +54,11 @@ export const trainingCampActivityQuerySchema = z.object({
 export const trainingCampActivityParam = z.object({
     campId: z.string().uuid(),
     activityId: z.string().uuid(),
+});
+
+export const trainingCampCopySchema = z.object({
+    sourceCourseId: z.string().uuid(),
+    targetCourseId: z.string().uuid(),
+    semester: CampSemester,
+    mode: z.literal('replace').default('replace'),
 });

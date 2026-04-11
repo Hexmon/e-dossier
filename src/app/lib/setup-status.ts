@@ -139,6 +139,69 @@ async function readCount(query: Promise<Array<{ count: number }>>): Promise<numb
   return Number(rows[0]?.count ?? 0);
 }
 
+function isMissingSetupSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const visited = new Set<unknown>();
+  const queue: Array<Record<string, unknown>> = [error as Record<string, unknown>];
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) {
+      continue;
+    }
+    visited.add(current);
+
+    const code = current.code;
+    if (code === "42P01" || code === "42703") {
+      return true;
+    }
+
+    const message = typeof current.message === "string" ? current.message.toLowerCase() : "";
+    if (
+      message.includes("relation") && message.includes("does not exist") ||
+      message.includes("column") && message.includes("does not exist") ||
+      message.includes("table") && message.includes("does not exist")
+    ) {
+      return true;
+    }
+
+    const cause = current.cause;
+    if (cause && typeof cause === "object") {
+      queue.push(cause as Record<string, unknown>);
+    }
+  }
+
+  return false;
+}
+
+async function readCountOrZero(query: Promise<Array<{ count: number }>>): Promise<number> {
+  try {
+    return await readCount(query);
+  } catch (error) {
+    // First-run and legacy environments should keep rendering even if setup/auth schema is incomplete.
+    if (isMissingSetupSchemaError(error)) {
+      return 0;
+    }
+
+    throw error;
+  }
+}
+
+async function readRowsOrEmpty<T>(query: Promise<T[]>): Promise<T[]> {
+  try {
+    return await query;
+  } catch (error) {
+    if (isMissingSetupSchemaError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
 export async function getSetupStatus(): Promise<SetupStatus> {
   const [
     activeSuperAdmins,
@@ -151,7 +214,7 @@ export async function getSetupStatus(): Promise<SetupStatus> {
     activePlatoonRows,
     activePlatoonNodeRows,
   ] = await Promise.all([
-    readCount(
+    readCountOrZero(
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(appointments)
@@ -167,37 +230,37 @@ export async function getSetupStatus(): Promise<SetupStatus> {
           )
         )
     ),
-    readCount(
+    readCountOrZero(
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(platoons)
         .where(isNull(platoons.deletedAt))
     ),
-    readCount(
+    readCountOrZero(
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(courses)
         .where(isNull(courses.deletedAt))
     ),
-    readCount(
+    readCountOrZero(
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(courseOfferings)
         .where(isNull(courseOfferings.deletedAt))
     ),
-    readCount(
+    readCountOrZero(
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(ocCadets)
         .where(isNull(ocCadets.deletedAt))
     ),
-    readCount(
+    readCountOrZero(
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(orgHierarchyNodes)
         .where(isNull(orgHierarchyNodes.deletedAt))
     ),
-    readCount(
+    readCountOrZero(
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(orgHierarchyNodes)
@@ -205,16 +268,20 @@ export async function getSetupStatus(): Promise<SetupStatus> {
           and(eq(orgHierarchyNodes.nodeType, "ROOT"), isNull(orgHierarchyNodes.deletedAt))
         )
     ),
-    db
-      .select({ id: platoons.id })
-      .from(platoons)
-      .where(isNull(platoons.deletedAt)),
-    db
-      .select({ platoonId: orgHierarchyNodes.platoonId })
-      .from(orgHierarchyNodes)
-      .where(
-        and(eq(orgHierarchyNodes.nodeType, "PLATOON"), isNull(orgHierarchyNodes.deletedAt))
-      ),
+    readRowsOrEmpty(
+      db
+        .select({ id: platoons.id })
+        .from(platoons)
+        .where(isNull(platoons.deletedAt))
+    ),
+    readRowsOrEmpty(
+      db
+        .select({ platoonId: orgHierarchyNodes.platoonId })
+        .from(orgHierarchyNodes)
+        .where(
+          and(eq(orgHierarchyNodes.nodeType, "PLATOON"), isNull(orgHierarchyNodes.deletedAt))
+        )
+    ),
   ]);
 
   const activePlatoonIds = new Set(activePlatoonRows.map((row) => row.id));
