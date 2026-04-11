@@ -29,9 +29,16 @@ async function POSTHandler(req: AuditNextRequest) {
     const preparedBy = body.preparedBy?.trim() || '-';
     const checkedBy = body.checkedBy?.trim() || '-';
     const instructorName = body.instructorName?.trim() || preview.subject.instructorName?.trim() || '-';
+    const sectionToken =
+      body.subjectType ??
+      (preview.subject.hasTheory && preview.subject.hasPractical
+        ? 'all'
+        : preview.subject.hasTheory
+          ? 'theory'
+          : 'practical');
 
     const fileName = sanitizePdfFileName(
-      `consolidated-sessional-${preview.course.code}-sem-${body.semester}-${preview.subject.code}-${versionId}.pdf`
+      `consolidated-sessional-${sectionToken}-${preview.course.code}-sem-${body.semester}-${preview.subject.code}-${versionId}.pdf`
     );
 
     const pdf = await renderEncryptedPdf(
@@ -61,6 +68,7 @@ async function POSTHandler(req: AuditNextRequest) {
         courseId: body.courseId,
         semester: body.semester,
         subjectId: body.subjectId,
+        subjectType: body.subjectType ?? null,
         branches: body.branches,
         branchCount: body.branches.length,
         instructorName,
@@ -85,6 +93,7 @@ async function POSTHandler(req: AuditNextRequest) {
         courseId: body.courseId,
         semester: body.semester,
         subjectId: body.subjectId,
+        subjectType: body.subjectType ?? 'all',
         branchCount: body.branches.length,
         format: 'pdf',
         versionId,

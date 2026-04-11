@@ -37,15 +37,21 @@ function textInBox(
   y: number,
   width: number,
   height: number,
-  opts: { align?: 'left' | 'center' | 'right'; bold?: boolean; size?: number } = {}
+  opts: {
+    align?: 'left' | 'center' | 'right';
+    bold?: boolean;
+    size?: number;
+    ellipsis?: boolean;
+    lineBreak?: boolean;
+  } = {}
 ) {
   doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(opts.size ?? 8.5);
   doc.text(text, x + 2, y + 3, {
     width: Math.max(0, width - 4),
     height: Math.max(0, height - 4),
     align: opts.align ?? 'center',
-    ellipsis: true,
-    lineBreak: false,
+    ellipsis: opts.ellipsis ?? true,
+    lineBreak: opts.lineBreak ?? false,
   });
 }
 
@@ -366,10 +372,10 @@ function drawPracticalTableOnPage(
   tableW: number,
   rows: ConsolidatedPracticalRow[]
 ) {
-  const widths = distributeWidths(tableW, [7, 10, 29, 11, 11, 11, 10, 11, 12]);
+  const widths = distributeWidths(tableW, [7, 10, 27, 12, 12, 11, 9, 10, 12]);
   const xs = boundaryXs(tableX, widths);
 
-  const header1H = 20;
+  const header1H = 28;
   const header2H = 16;
   const rowH = 18;
 
@@ -395,12 +401,27 @@ function drawPracticalTableOnPage(
   textInBox(doc, 'S.No', xs[0]!, startY, widths[0]!, rowspanH, { bold: true });
   textInBox(doc, 'GC No', xs[1]!, startY, widths[1]!, rowspanH, { bold: true });
   textInBox(doc, 'Name', xs[2]!, startY, widths[2]!, rowspanH, { bold: true });
-  textInBox(doc, 'Content\nof Exp', xs[3]!, startY, widths[3]!, header1H, { bold: true });
-  textInBox(doc, 'Maint\nof Exp', xs[4]!, startY, widths[4]!, header1H, { bold: true });
-  textInBox(doc, 'Practical', xs[5]!, startY, widths[5]!, header1H, { bold: true });
-  textInBox(doc, 'Viva', xs[6]!, startY, widths[6]!, header1H, { bold: true });
-  textInBox(doc, 'Total', xs[7]!, startY, widths[7]!, header1H, { bold: true });
-  textInBox(doc, 'Letter\nGrade', xs[8]!, startY, widths[8]!, rowspanH, { bold: true });
+  textInBox(doc, 'Content\nof Exp', xs[3]!, startY, widths[3]!, header1H, {
+    bold: true,
+    size: 7.5,
+    ellipsis: false,
+    lineBreak: true,
+  });
+  textInBox(doc, 'Maint\nof Exp', xs[4]!, startY, widths[4]!, header1H, {
+    bold: true,
+    size: 7.5,
+    ellipsis: false,
+    lineBreak: true,
+  });
+  textInBox(doc, 'Practical', xs[5]!, startY, widths[5]!, header1H, { bold: true, size: 7.5 });
+  textInBox(doc, 'Viva', xs[6]!, startY, widths[6]!, header1H, { bold: true, size: 7.5 });
+  textInBox(doc, 'Total', xs[7]!, startY, widths[7]!, header1H, { bold: true, size: 7.5 });
+  textInBox(doc, 'Letter\nGrade', xs[8]!, startY, widths[8]!, rowspanH, {
+    bold: true,
+    size: 7.5,
+    ellipsis: false,
+    lineBreak: true,
+  });
   textInBox(doc, `(${first?.contentOfExpMax ?? 0})`, xs[3]!, startY + header1H, widths[3]!, header2H, { bold: true });
   textInBox(doc, `(${first?.maintOfExpMax ?? 0})`, xs[4]!, startY + header1H, widths[4]!, header2H, { bold: true });
   textInBox(doc, `(${first?.practicalMax ?? 0})`, xs[5]!, startY + header1H, widths[5]!, header2H, { bold: true });
@@ -550,7 +571,7 @@ function paginatePractical(
         ? drawHeader(doc, data, 'Practical', data.subject.practicalCredits, meta)
         : drawContinuationHeader(doc, data, 'Practical', meta);
 
-      const headerHeight = 20 + 16;
+      const headerHeight = 28 + 16;
       const rowHeight = 18;
       const nonFinalReserve = 20;
       const finalReserve = 95;
@@ -578,7 +599,7 @@ function paginatePractical(
     }
   }
 
-  const summaryY = finalStartY + (20 + 16) + 18;
+  const summaryY = finalStartY + (28 + 16) + 18;
   const summaryBottom = drawSummaryTable(doc, summaryX, summaryY, summaryItems);
   let footerY = Math.max(finalTableBottom + 14, summaryBottom + 10);
 

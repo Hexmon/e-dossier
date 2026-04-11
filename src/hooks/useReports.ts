@@ -3,6 +3,7 @@ import { reportsApi } from '@/app/lib/api/reportsApi';
 import { reportsDownloadApi } from '@/app/lib/api/reportsDownloadApi';
 import type {
   ConsolidatedDownloadRequest,
+  ConsolidatedSessionalSection,
   CourseWiseFinalPerformanceDownloadRequest,
   CourseWisePerformanceDownloadRequest,
   FinalResultDownloadRequest,
@@ -23,19 +24,30 @@ export function useConsolidatedSessionalPreview(filters: {
   courseId: string;
   semester: number | null;
   subjectId: string;
+  subjectType: ConsolidatedSessionalSection | null;
   branches: ReportBranch[];
   enabled?: boolean;
 }) {
   const isEnabled =
-    (filters.enabled ?? true) && Boolean(filters.courseId && filters.semester && filters.subjectId);
+    (filters.enabled ?? true) &&
+    Boolean(filters.courseId && filters.semester && filters.subjectId && filters.subjectType);
 
   return useQuery({
-    queryKey: ['reports', 'consolidated-sessional', filters.courseId, filters.semester, filters.subjectId, filters.branches],
+    queryKey: [
+      'reports',
+      'consolidated-sessional',
+      filters.courseId,
+      filters.semester,
+      filters.subjectId,
+      filters.subjectType,
+      filters.branches,
+    ],
     queryFn: () =>
       reportsApi.getConsolidatedSessionalPreview({
         courseId: filters.courseId,
         semester: filters.semester as number,
         subjectId: filters.subjectId,
+        subjectType: filters.subjectType as ConsolidatedSessionalSection,
         branches: filters.branches,
       }),
     enabled: isEnabled,

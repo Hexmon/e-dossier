@@ -1,4 +1,5 @@
 export type ReportBranch = 'E' | 'M' | 'O';
+export type ConsolidatedSessionalSection = 'theory' | 'practical';
 
 export type CourseSemesterMetadata = {
   courseId: string;
@@ -187,6 +188,7 @@ export type ConsolidatedDownloadRequest = {
   courseId: string;
   semester: number;
   subjectId: string;
+  subjectType?: ConsolidatedSessionalSection;
   branches?: ReportBranch[];
   password: string;
   preparedBy?: string;
