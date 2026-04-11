@@ -114,6 +114,10 @@ export type TheoryMarksRecord = {
 };
 
 export type PracticalMarksRecord = {
+    contentOfExpMarks?: number | null;
+    maintOfExpMarks?: number | null;
+    practicalMarks?: number | null;
+    vivaMarks?: number | null;
     finalMarks?: number | null;
     grade?: string | null;
     tutorial?: string | null;

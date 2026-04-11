@@ -17,6 +17,11 @@ export const FIXED_MARKS = {
   sessionalMax: 50,
   finalMax: 50,
   totalMax: 100,
+  practicalContentMax: 20,
+  practicalMaintenanceMax: 20,
+  practicalExamMax: 45,
+  practicalVivaMax: 15,
+  practicalTotalMax: 100,
 } as const;
 
 export function normalizeBranch(value: string | null | undefined): 'E' | 'M' | 'O' {

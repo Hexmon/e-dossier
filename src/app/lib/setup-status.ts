@@ -144,10 +144,37 @@ function isMissingSetupSchemaError(error: unknown): boolean {
     return false;
   }
 
-  const code = (error as { code?: string }).code;
-  const causeCode = (error as { cause?: { code?: string } }).cause?.code;
+  const visited = new Set<unknown>();
+  const queue: Array<Record<string, unknown>> = [error as Record<string, unknown>];
 
-  return code === "42P01" || code === "42703" || causeCode === "42P01" || causeCode === "42703";
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) {
+      continue;
+    }
+    visited.add(current);
+
+    const code = current.code;
+    if (code === "42P01" || code === "42703") {
+      return true;
+    }
+
+    const message = typeof current.message === "string" ? current.message.toLowerCase() : "";
+    if (
+      message.includes("relation") && message.includes("does not exist") ||
+      message.includes("column") && message.includes("does not exist") ||
+      message.includes("table") && message.includes("does not exist")
+    ) {
+      return true;
+    }
+
+    const cause = current.cause;
+    if (cause && typeof cause === "object") {
+      queue.push(cause as Record<string, unknown>);
+    }
+  }
+
+  return false;
 }
 
 async function readCountOrZero(query: Promise<Array<{ count: number }>>): Promise<number> {

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -17,24 +18,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { academicsApi } from '@/app/lib/api/academicsMarksApi';
 import { DownloadDialog } from '@/components/reports/common/DownloadDialog';
 import { useConsolidatedSessionalPreview, useCourseSemesters, useReportsDownloads } from '@/hooks/useReports';
+import type { ReportBranch } from '@/types/reports';
+
+const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M', 'O'];
 
 export function ConsolidatedSessionalCard() {
   const [courseId, setCourseId] = useState('');
   const [semester, setSemester] = useState<number | null>(null);
   const [subjectId, setSubjectId] = useState('');
+  const [branches, setBranches] = useState<ReportBranch[]>([]);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewRequested, setViewRequested] = useState(false);
 
   const courseSemesters = useCourseSemesters(courseId || null);
-  const previewQuery = useConsolidatedSessionalPreview({
-    courseId,
-    semester,
-    subjectId,
-    enabled: viewRequested,
-  });
-  const downloads = useReportsDownloads();
-
   const coursesQuery = useQuery({
     queryKey: ['reports', 'courses'],
     queryFn: () => academicsApi.getCourses().then((res) => res.items ?? []),
@@ -45,6 +42,16 @@ export function ConsolidatedSessionalCard() {
     queryFn: () => academicsApi.getCourseOfferings(courseId, semester as number).then((res) => res.items ?? []),
     enabled: Boolean(courseId && semester),
   });
+  const branchKey = branches.join(',');
+
+  const previewQuery = useConsolidatedSessionalPreview({
+    courseId,
+    semester,
+    subjectId,
+    branches,
+    enabled: viewRequested,
+  });
+  const downloads = useReportsDownloads();
 
   const subjectOptions = useMemo(() => {
     const map = new Map<string, { id: string; label: string }>();
@@ -58,7 +65,7 @@ export function ConsolidatedSessionalCard() {
   useEffect(() => {
     setViewRequested(false);
     setViewModalOpen(false);
-  }, [courseId, semester, subjectId]);
+  }, [courseId, semester, subjectId, branchKey]);
 
   const onDownload = async (meta: {
     password: string;
@@ -76,6 +83,7 @@ export function ConsolidatedSessionalCard() {
         courseId,
         semester,
         subjectId,
+        branches,
         password: meta.password,
         preparedBy: meta.preparedBy.trim() || undefined,
         checkedBy: meta.checkedBy.trim() || undefined,
@@ -161,6 +169,34 @@ export function ConsolidatedSessionalCard() {
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center gap-3 rounded border p-3">
+          <Label>Branch Filter</Label>
+          {BRANCH_OPTIONS.map((branch) => (
+            <label key={branch} className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={branches.includes(branch)}
+                onCheckedChange={(checked) => {
+                  setBranches((prev) =>
+                    checked
+                      ? Array.from(new Set([...prev, branch]))
+                      : prev.filter((item) => item !== branch)
+                  );
+                }}
+              />
+              {branch}
+            </label>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setBranches([])}
+            disabled={!branches.length}
+          >
+            Clear Branches
+          </Button>
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={() => {
@@ -207,7 +243,8 @@ export function ConsolidatedSessionalCard() {
               <div className="max-h-[70vh] space-y-4 overflow-auto">
                 <div className="rounded border bg-muted/20 p-3 text-sm">
                   Preview loaded: Theory rows {previewQuery.data.data.theoryRows.length}, Practical rows{' '}
-                  {previewQuery.data.data.practicalRows.length}.
+                  {previewQuery.data.data.practicalRows.length}
+                  {branches.length ? `, Branches ${branches.join(', ')}.` : '.'}
                 </div>
 
                 {previewQuery.data.data.theoryRows.length ? (
@@ -287,8 +324,11 @@ export function ConsolidatedSessionalCard() {
                             <th className="p-2 text-left">S.No</th>
                             <th className="p-2 text-left">OC No</th>
                             <th className="p-2 text-left">Name</th>
-                            <th className="p-2 text-left">Branch</th>
+                            <th className="p-2 text-left">Content of Exp</th>
+                            <th className="p-2 text-left">Maint of Exp</th>
                             <th className="p-2 text-left">Practical</th>
+                            <th className="p-2 text-left">Viva</th>
+                            <th className="p-2 text-left">Total</th>
                             <th className="p-2 text-left">Grade</th>
                           </tr>
                         </thead>
@@ -298,8 +338,11 @@ export function ConsolidatedSessionalCard() {
                               <td className="p-2">{row.sNo}</td>
                               <td className="p-2">{row.ocNo}</td>
                               <td className="p-2">{row.ocName}</td>
-                              <td className="p-2">{row.branch ?? '-'}</td>
+                              <td className="p-2">{row.contentOfExpObtained ?? ''}</td>
+                              <td className="p-2">{row.maintOfExpObtained ?? ''}</td>
                               <td className="p-2">{row.practicalObtained ?? ''}</td>
+                              <td className="p-2">{row.vivaObtained ?? ''}</td>
+                              <td className="p-2">{row.totalObtained ?? ''}</td>
                               <td className="p-2">{row.letterGrade ?? ''}</td>
                             </tr>
                           ))}

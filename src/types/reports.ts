@@ -40,8 +40,16 @@ export type ConsolidatedPracticalRow = {
   ocNo: string;
   ocName: string;
   branch: string | null;
+  contentOfExpObtained: number | null;
+  contentOfExpMax: number;
+  maintOfExpObtained: number | null;
+  maintOfExpMax: number;
   practicalObtained: number | null;
   practicalMax: number;
+  vivaObtained: number | null;
+  vivaMax: number;
+  totalObtained: number | null;
+  totalMax: number;
   letterGrade: string | null;
 };
 
@@ -178,6 +186,7 @@ export type ConsolidatedDownloadRequest = {
   courseId: string;
   semester: number;
   subjectId: string;
+  branches?: ReportBranch[];
   password: string;
   preparedBy?: string;
   checkedBy?: string;

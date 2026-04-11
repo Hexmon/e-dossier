@@ -26,11 +26,11 @@ vi.mock('@/app/lib/acx/principal', () => ({
 }));
 
 import { mustBeAuthed } from '@/app/api/v1/oc/_checks';
-import { getOcAcademicSemester } from '@/app/services/oc-academics';
+import { getOcAcademicSemester, updateOcAcademicSubject } from '@/app/services/oc-academics';
 import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import { getAuthzEngine } from '@/app/lib/acx/engine';
 import { buildPrincipalFromRequest } from '@/app/lib/acx/principal';
-import { GET } from '@/app/api/v1/oc/academics/bulk/route';
+import { GET, POST } from '@/app/api/v1/oc/academics/bulk/route';
 
 function attachAudit(req: any) {
   req.audit = { log: vi.fn(async () => undefined) };
@@ -67,6 +67,10 @@ describe('OC academics bulk API', () => {
           practical: { finalMarks: 15 },
         },
       ],
+    });
+    (updateOcAcademicSubject as any).mockResolvedValue({
+      semester: 1,
+      subjects: [],
     });
     (buildPrincipalFromRequest as any).mockResolvedValue({
       id: 'u-1',
@@ -144,7 +148,6 @@ describe('OC academics bulk API', () => {
   });
 
   it('returns workflow_required for POST when workflow is active', async () => {
-    const { POST } = await import('@/app/api/v1/oc/academics/bulk/route');
     (assertWorkflowDirectWriteAllowed as any).mockRejectedValueOnce(
       new ApiError(409, 'Workflow required', 'workflow_required'),
     );
@@ -172,6 +175,55 @@ describe('OC academics bulk API', () => {
 
     expect(res.status).toBe(409);
     expect(body.error).toBe('workflow_required');
+  });
+
+  it('accepts practical breakdown fields for POST bulk upserts', async () => {
+    const req = attachAudit(
+      makeJsonRequest({
+        method: 'POST',
+        path: '/api/v1/oc/academics/bulk',
+        body: {
+          items: [
+            {
+              op: 'upsert',
+              ocId: '11111111-1111-4111-8111-111111111111',
+              semester: 1,
+              subjectId: '22222222-2222-4222-8222-222222222222',
+              practical: {
+                contentOfExpMarks: 18,
+                maintOfExpMarks: 17,
+                practicalMarks: 33,
+                vivaMarks: 12,
+                finalMarks: 80,
+              },
+            },
+          ],
+          failFast: true,
+        },
+      }),
+    );
+
+    const res = await POST(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(updateOcAcademicSubject).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+      1,
+      '22222222-2222-4222-8222-222222222222',
+      {
+        theory: undefined,
+        practical: {
+          contentOfExpMarks: 18,
+          maintOfExpMarks: 17,
+          practicalMarks: 33,
+          vivaMarks: 12,
+          finalMarks: 80,
+        },
+      },
+      expect.anything(),
+    );
   });
 
   it('returns 403 when admin bulk access is disabled by module access settings', async () => {

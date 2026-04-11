@@ -366,7 +366,7 @@ function drawPracticalTableOnPage(
   tableW: number,
   rows: ConsolidatedPracticalRow[]
 ) {
-  const widths = distributeWidths(tableW, [7, 10, 40, 9, 14, 14]);
+  const widths = distributeWidths(tableW, [7, 10, 29, 11, 11, 11, 10, 11, 12]);
   const xs = boundaryXs(tableX, widths);
 
   const header1H = 20;
@@ -382,7 +382,7 @@ function drawPracticalTableOnPage(
     drawLine(doc, xs[i]!, startY, xs[i]!, tableBottom);
   }
 
-  drawLine(doc, xs[4]!, startY + header1H, xs[5]!, startY + header1H);
+  drawLine(doc, xs[3]!, startY + header1H, xs[8]!, startY + header1H);
   drawLine(doc, tableX, startY + header1H + header2H, tableX + tableW, startY + header1H + header2H);
 
   for (let i = 1; i < dataCount; i += 1) {
@@ -395,10 +395,17 @@ function drawPracticalTableOnPage(
   textInBox(doc, 'S.No', xs[0]!, startY, widths[0]!, rowspanH, { bold: true });
   textInBox(doc, 'GC No', xs[1]!, startY, widths[1]!, rowspanH, { bold: true });
   textInBox(doc, 'Name', xs[2]!, startY, widths[2]!, rowspanH, { bold: true });
-  textInBox(doc, 'Branch', xs[3]!, startY, widths[3]!, rowspanH, { bold: true });
-  textInBox(doc, 'Practical', xs[4]!, startY, widths[4]!, header1H, { bold: true });
-  textInBox(doc, 'Letter\nGrade', xs[5]!, startY, widths[5]!, rowspanH, { bold: true });
-  textInBox(doc, `(${first?.practicalMax ?? 0})`, xs[4]!, startY + header1H, widths[4]!, header2H, { bold: true });
+  textInBox(doc, 'Content\nof Exp', xs[3]!, startY, widths[3]!, header1H, { bold: true });
+  textInBox(doc, 'Maint\nof Exp', xs[4]!, startY, widths[4]!, header1H, { bold: true });
+  textInBox(doc, 'Practical', xs[5]!, startY, widths[5]!, header1H, { bold: true });
+  textInBox(doc, 'Viva', xs[6]!, startY, widths[6]!, header1H, { bold: true });
+  textInBox(doc, 'Total', xs[7]!, startY, widths[7]!, header1H, { bold: true });
+  textInBox(doc, 'Letter\nGrade', xs[8]!, startY, widths[8]!, rowspanH, { bold: true });
+  textInBox(doc, `(${first?.contentOfExpMax ?? 0})`, xs[3]!, startY + header1H, widths[3]!, header2H, { bold: true });
+  textInBox(doc, `(${first?.maintOfExpMax ?? 0})`, xs[4]!, startY + header1H, widths[4]!, header2H, { bold: true });
+  textInBox(doc, `(${first?.practicalMax ?? 0})`, xs[5]!, startY + header1H, widths[5]!, header2H, { bold: true });
+  textInBox(doc, `(${first?.vivaMax ?? 0})`, xs[6]!, startY + header1H, widths[6]!, header2H, { bold: true });
+  textInBox(doc, `(${first?.totalMax ?? 0})`, xs[7]!, startY + header1H, widths[7]!, header2H, { bold: true });
 
   const dataRows = rows.length
     ? rows
@@ -408,9 +415,17 @@ function drawPracticalTableOnPage(
           sNo: 1,
           ocNo: '-',
           ocName: 'No records found',
-          branch: '-',
+          branch: null,
+          contentOfExpObtained: null,
+          contentOfExpMax: 0,
+          maintOfExpObtained: null,
+          maintOfExpMax: 0,
           practicalObtained: null,
           practicalMax: 0,
+          vivaObtained: null,
+          vivaMax: 0,
+          totalObtained: null,
+          totalMax: 0,
           letterGrade: null,
         },
       ];
@@ -421,9 +436,12 @@ function drawPracticalTableOnPage(
     textInBox(doc, safe(row.sNo), xs[0]!, y, widths[0]!, rowH, { align: 'center' });
     textInBox(doc, safe(row.ocNo), xs[1]!, y, widths[1]!, rowH, { align: 'center' });
     textInBox(doc, safe(row.ocName), xs[2]!, y, widths[2]!, rowH, { align: 'left' });
-    textInBox(doc, safe(row.branch), xs[3]!, y, widths[3]!, rowH, { align: 'center' });
-    textInBox(doc, safe(row.practicalObtained), xs[4]!, y, widths[4]!, rowH, { align: 'center' });
-    textInBox(doc, safe(row.letterGrade), xs[5]!, y, widths[5]!, rowH, { align: 'center' });
+    textInBox(doc, safe(row.contentOfExpObtained), xs[3]!, y, widths[3]!, rowH, { align: 'center' });
+    textInBox(doc, safe(row.maintOfExpObtained), xs[4]!, y, widths[4]!, rowH, { align: 'center' });
+    textInBox(doc, safe(row.practicalObtained), xs[5]!, y, widths[5]!, rowH, { align: 'center' });
+    textInBox(doc, safe(row.vivaObtained), xs[6]!, y, widths[6]!, rowH, { align: 'center' });
+    textInBox(doc, safe(row.totalObtained), xs[7]!, y, widths[7]!, rowH, { align: 'center' });
+    textInBox(doc, safe(row.letterGrade), xs[8]!, y, widths[8]!, rowH, { align: 'center' });
   });
 
   return {

@@ -51,6 +51,29 @@ describe("getSetupStatus runtime fallback", () => {
     expect(status.counts.activeSuperAdmins).toBe(0);
   });
 
+  it("treats wrapped drizzle missing-schema errors as an incomplete setup instead of crashing", async () => {
+    queryQueue.push(
+      Object.assign(new Error("Failed query: select count(*)::int from appointments"), {
+        cause: new Error('column "users"."is_active" does not exist'),
+      }),
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [],
+      []
+    );
+
+    const { getSetupStatus } = await import("@/app/lib/setup-status");
+    const status = await getSetupStatus();
+
+    expect(status.bootstrapRequired).toBe(true);
+    expect(status.nextStep).toBe("superAdmin");
+    expect(status.counts.activeSuperAdmins).toBe(0);
+  });
+
   it("still rethrows unexpected database failures", async () => {
     queryQueue.push(
       Object.assign(new Error("connection lost"), { code: "57P01" }),

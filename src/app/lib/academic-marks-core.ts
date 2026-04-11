@@ -15,6 +15,10 @@ export type TheoryMarksLike = {
 
 export type PracticalMarksLike = {
   totalMarks?: number | null;
+  contentOfExpMarks?: unknown;
+  maintOfExpMarks?: unknown;
+  practicalMarks?: unknown;
+  vivaMarks?: unknown;
   finalMarks?: unknown;
 };
 
@@ -100,6 +104,23 @@ export function computeTheoryTotalMarks(theory?: TheoryMarksLike | null): number
 
 export function computePracticalTotalMarks(practical?: PracticalMarksLike | null): number {
   if (!practical) return 0;
+
+  const contentOfExpMarks = toPositiveAcademicNumber(practical.contentOfExpMarks);
+  const maintOfExpMarks = toPositiveAcademicNumber(practical.maintOfExpMarks);
+  const practicalMarks = toPositiveAcademicNumber(practical.practicalMarks);
+  const vivaMarks = toPositiveAcademicNumber(practical.vivaMarks);
+
+  const hasBreakdown = [
+    practical.contentOfExpMarks,
+    practical.maintOfExpMarks,
+    practical.practicalMarks,
+    practical.vivaMarks,
+  ].some((value) => value !== null && value !== undefined);
+
+  if (hasBreakdown) {
+    return contentOfExpMarks + maintOfExpMarks + practicalMarks + vivaMarks;
+  }
+
   return toPositiveAcademicNumber(practical.finalMarks);
 }
 

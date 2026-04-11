@@ -60,6 +60,10 @@ export interface TheoryMarks {
 }
 
 export interface PracticalMarks {
+    contentOfExpMarks?: number;
+    maintOfExpMarks?: number;
+    practicalMarks?: number;
+    vivaMarks?: number;
     finalMarks?: number;
     totalMarks?: number;
 }

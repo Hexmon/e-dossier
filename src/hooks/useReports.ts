@@ -23,18 +23,20 @@ export function useConsolidatedSessionalPreview(filters: {
   courseId: string;
   semester: number | null;
   subjectId: string;
+  branches: ReportBranch[];
   enabled?: boolean;
 }) {
   const isEnabled =
     (filters.enabled ?? true) && Boolean(filters.courseId && filters.semester && filters.subjectId);
 
   return useQuery({
-    queryKey: ['reports', 'consolidated-sessional', filters.courseId, filters.semester, filters.subjectId],
+    queryKey: ['reports', 'consolidated-sessional', filters.courseId, filters.semester, filters.subjectId, filters.branches],
     queryFn: () =>
       reportsApi.getConsolidatedSessionalPreview({
         courseId: filters.courseId,
         semester: filters.semester as number,
         subjectId: filters.subjectId,
+        branches: filters.branches,
       }),
     enabled: isEnabled,
   });

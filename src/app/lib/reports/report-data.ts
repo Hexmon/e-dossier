@@ -204,6 +204,17 @@ function toFinalResultBranchFilter(branches: ReportBranch[] | undefined, semeste
   return new Set(branches?.map((branch) => toFinalResultBranchTag(branch)) ?? []);
 }
 
+function toOcBranchTag(branch: string | null | undefined): ReportBranch {
+  const normalized = String(branch ?? '').trim().toUpperCase();
+  if (normalized === 'E') return 'E';
+  if (normalized === 'M') return 'M';
+  return 'O';
+}
+
+function toConsolidatedSessionalBranchFilter(branches: ReportBranch[] | undefined) {
+  return new Set((branches ?? []).map((branch) => toOcBranchTag(branch)));
+}
+
 function computeSemesterSummary(
   view: Awaited<ReturnType<typeof getOcAcademicSemester>>,
   policy: AcademicGradingPolicy
@@ -234,6 +245,7 @@ export async function buildConsolidatedSessionalPreview(params: {
   courseId: string;
   semester: number;
   subjectId: string;
+  branches?: ReportBranch[];
 }): Promise<ConsolidatedSessionalPreview> {
   const [course, offerings, ocRows, policy] = await Promise.all([
     resolveCourse(params.courseId),
@@ -257,10 +269,15 @@ export async function buildConsolidatedSessionalPreview(params: {
   }
 
   const subjectBranch = String(selectedOffering.subject.branch ?? 'C').toUpperCase();
-  const filteredOCs =
+  const subjectScopedOCs =
     params.semester <= 2 || subjectBranch === 'C'
       ? ocRows
       : ocRows.filter((oc) => String(oc.branch ?? '').toUpperCase() === subjectBranch);
+  const selectedBranchFilter = toConsolidatedSessionalBranchFilter(params.branches);
+  const filteredOCs = subjectScopedOCs.filter((oc) => {
+    if (!selectedBranchFilter.size) return true;
+    return selectedBranchFilter.has(toOcBranchTag(oc.branch));
+  });
 
   const semesterViews = await Promise.all(
     filteredOCs.map(async (oc) => {
@@ -333,17 +350,31 @@ export async function buildConsolidatedSessionalPreview(params: {
     }
 
     if (selectedOffering.includePractical) {
+      const contentOfExp = normalizeNonNegativeValue(subject?.practical?.contentOfExpMarks ?? null);
+      const maintOfExp = normalizeNonNegativeValue(subject?.practical?.maintOfExpMarks ?? null);
+      const practicalObtained = normalizeNonNegativeValue(subject?.practical?.practicalMarks ?? null);
+      const vivaObtained = normalizeNonNegativeValue(subject?.practical?.vivaMarks ?? null);
+      const totalObtained = normalizeNonNegativeValue(resolvePracticalTotalMarks(subject?.practical));
+
       practicalRows.push({
         ocId: item.oc.id,
         sNo: index + 1,
         ocNo: item.oc.ocNo,
         ocName: item.oc.name,
         branch: item.oc.branch,
-        practicalObtained: normalizeNonNegativeValue(subject?.practical?.finalMarks ?? null),
-        practicalMax: Number(selectedOffering.practicalCredits ?? selectedOffering.subject.defaultPracticalCredits ?? 0),
+        contentOfExpObtained: contentOfExp,
+        contentOfExpMax: FIXED_MARKS.practicalContentMax,
+        maintOfExpObtained: maintOfExp,
+        maintOfExpMax: FIXED_MARKS.practicalMaintenanceMax,
+        practicalObtained,
+        practicalMax: FIXED_MARKS.practicalExamMax,
+        vivaObtained,
+        vivaMax: FIXED_MARKS.practicalVivaMax,
+        totalObtained,
+        totalMax: FIXED_MARKS.practicalTotalMax,
         letterGrade: resolveStoredOrDerivedAcademicLetterGrade(
           subject?.practical?.grade ?? null,
-          subject?.practical?.finalMarks ?? null,
+          totalObtained,
           policy
         ),
       });
