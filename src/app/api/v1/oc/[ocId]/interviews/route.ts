@@ -163,10 +163,11 @@ async function assertInterviewWriteAuthorized(params: {
         deletedAt?: Date | null;
     }>;
 }) {
+    const authApt = 'claims' in params.authContext ? (params.authContext.claims as any)?.apt : params.authContext.apt;
     const bundle = await getEffectivePermissionBundleCached({
         userId: params.authContext.userId,
         roles: params.authContext.roles ?? [],
-        apt: (params.authContext.claims as any)?.apt,
+        apt: authApt,
     });
     const accessContext = resolveInterviewAccessContext({
         permissions: bundle.permissions,
