@@ -7,6 +7,7 @@ import { withAudit } from '@hexmon_tech/audit-next';
 import type { AuditNextRequest, NextAuditOptions } from '@hexmon_tech/audit-next';
 import { NextRequest } from 'next/server';
 import { ApiError } from '@/app/lib/http';
+import { normalizeDatabaseUrl } from '@/app/db/connectionString';
 
 // ── Re-export types ───────────────────────────────────────────────
 export type { AuditNextRequest, AuditEventInput, AuditLogger };
@@ -159,7 +160,7 @@ export const AuditResourceType = {
 
 // ── Postgres Sink ─────────────────────────────────────────────────
 const postgresSink = createPostgresAuditSink({
-  connectionString: process.env.DATABASE_URL!,
+  connectionString: normalizeDatabaseUrl(process.env.DATABASE_URL)!,
   tableName: 'audit_events',
 });
 

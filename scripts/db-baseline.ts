@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { Client } from "pg";
+import { normalizeDatabaseUrl } from "../src/app/db/connectionString";
 
 type JournalEntry = {
   tag: string;
@@ -329,7 +330,7 @@ async function main() {
     return;
   }
 
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL);
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is not set");
   }

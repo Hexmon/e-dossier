@@ -105,7 +105,13 @@ describe('marksReviewWorkflow core', () => {
           ocNo: 'OC-1',
           name: 'Cadet One',
           theory: { phaseTest1Marks: 11 },
-          practical: { finalMarks: 20 },
+          practical: {
+            contentOfExpMarks: 18,
+            maintOfExpMarks: 17,
+            practicalMarks: 33,
+            vivaMarks: 12,
+            finalMarks: 80,
+          },
         },
       ],
     } as any);
@@ -116,7 +122,13 @@ describe('marksReviewWorkflow core', () => {
         semester: 2,
         subjectId: 'subject-1',
         theory: { phaseTest1Marks: 11 },
-        practical: { finalMarks: 20 },
+        practical: {
+          contentOfExpMarks: 18,
+          maintOfExpMarks: 17,
+          practicalMarks: 33,
+          vivaMarks: 12,
+          finalMarks: 80,
+        },
       },
     ]);
   });

@@ -1,4 +1,4 @@
-import { json, handleApiError } from '@/app/lib/http';
+﻿import { json, handleApiError } from '@/app/lib/http';
 
 export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -13,10 +13,12 @@ async function GETHandler(req: AuditNextRequest) {
         await requireAuth(req);
         const sp = new URL(req.url).searchParams;
         const qp = interviewTemplateQuerySchema.parse({
+            courseId: sp.get('courseId') ?? undefined,
             semester: sp.get('semester') ?? undefined,
             includeDeleted: sp.get('includeDeleted') ?? undefined,
         });
         const items = await listInterviewTemplates({
+            courseId: qp.courseId,
             semester: qp.semester,
             includeDeleted: qp.includeDeleted ?? false,
         });
@@ -31,6 +33,7 @@ async function POSTHandler(req: AuditNextRequest) {
         const adminCtx = await requireAuth(req);
         const dto = interviewTemplateCreateSchema.parse(await req.json());
         const row = await createInterviewTemplate({
+            courseId: dto.courseId,
             code: dto.code.trim(),
             title: dto.title.trim(),
             description: dto.description ?? null,
@@ -47,6 +50,7 @@ async function POSTHandler(req: AuditNextRequest) {
             metadata: {
                 description: `Created interview template ${row.code}`,
                 templateId: row.id,
+                courseId: row.courseId,
                 code: row.code,
             },
         });

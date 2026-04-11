@@ -69,6 +69,7 @@ const previewData = {
     title: 'TES 50',
   },
   semester: 4,
+  branches: ['E'],
   subjectColumns: [
     {
       subjectId: '44444444-4444-4444-8444-444444444444',
@@ -161,7 +162,7 @@ describe('Final result compilation report routes', () => {
   it('preview returns grouped subject data with db-driven identity fields', async () => {
     const req = makeJsonRequest({
       method: 'GET',
-      path: `/api/v1/reports/academics/final-result-compilation/preview?courseId=${courseId}&semester=4`,
+      path: `/api/v1/reports/academics/final-result-compilation/preview?courseId=${courseId}&semester=4&branches=E`,
     });
 
     const res = await previewFinalResultCompilation(req as any, createRouteContext());
@@ -173,6 +174,7 @@ describe('Final result compilation report routes', () => {
     expect(reportData.buildFinalResultCompilationPreview).toHaveBeenCalledWith({
       courseId,
       semester: 4,
+      branches: ['E'],
     });
   });
 
@@ -183,6 +185,7 @@ describe('Final result compilation report routes', () => {
       body: {
         courseId,
         semester: 4,
+        branches: ['E'],
         password: 'password123',
         preparedBy: 'Prepared By',
         checkedBy: 'Checked By',
@@ -201,6 +204,11 @@ describe('Final result compilation report routes', () => {
       }),
       expect.any(Function),
     );
+    expect(reportData.buildFinalResultCompilationPreview).toHaveBeenCalledWith({
+      courseId,
+      semester: 4,
+      branches: ['E'],
+    });
     expect(reportDownloadVersions.createReportDownloadVersion).toHaveBeenCalledWith(
       expect.objectContaining({
         versionId: 'RPT-0001',
@@ -208,6 +216,8 @@ describe('Final result compilation report routes', () => {
         fileName: 'final-result-compilation-TES-50-sem-4-RPT-0001.pdf',
         encrypted: true,
         filters: expect.objectContaining({
+          branches: ['E'],
+          branchCount: 1,
           ocCount: 1,
           subjectColumnCount: 1,
           format: 'pdf',

@@ -198,6 +198,7 @@ describe('buildFinalResultCompilationPreview', () => {
       semester: 4,
     });
 
+    expect(preview.branches).toEqual([]);
     expect(preview.subjectColumns).toHaveLength(2);
     expect(preview.subjectColumns[0]).toMatchObject({
       subjectCode: 'EC401',
@@ -220,5 +221,143 @@ describe('buildFinalResultCompilationPreview', () => {
       enrolmentNumber: 'MCEME/TES-50/010',
       certSerialNo: 'TES-50/Sem-IV(M)/01',
     });
+  });
+
+  it('filters rows and subject columns branch-wise from third semester onwards', async () => {
+    const preview = await buildFinalResultCompilationPreview({
+      courseId: 'course-1',
+      semester: 4,
+      branches: ['E'],
+    });
+
+    expect(preview.branches).toEqual(['E']);
+    expect(preview.rows).toHaveLength(2);
+    expect(preview.rows.map((row) => row.branchTag)).toEqual(['E', 'E']);
+    expect(preview.subjectColumns).toHaveLength(2);
+    expect(preview.subjectColumns.map((column) => column.branch)).toEqual(['E', 'C']);
+    expect(preview.rows[0]?.certSerialNo).toBe('TES-50/Sem-IV(E)/01');
+    expect(preview.rows[1]?.certSerialNo).toBe('TES-50/Sem-IV(E)/02');
+  });
+
+  it('ignores branch filters for semesters one and two', async () => {
+    vi.mocked(listCourseOfferings).mockResolvedValueOnce([
+      {
+        id: 'off-1',
+        semester: 2,
+        includeTheory: true,
+        includePractical: false,
+        theoryCredits: 3,
+        practicalCredits: 0,
+        subject: {
+          id: 'subject-common-1',
+          code: 'MA201',
+          name: 'Military Art II',
+          branch: 'C',
+          hasTheory: true,
+          hasPractical: false,
+          defaultTheoryCredits: 3,
+          defaultPracticalCredits: 0,
+        },
+      },
+    ] as any);
+
+    vi.mocked(getOcAcademics).mockImplementationOnce(async () => ([
+      {
+        semester: 2,
+        branchTag: 'C',
+        sgpa: 7.25,
+        cgpa: 7.25,
+        marksScored: null,
+        subjects: [
+          {
+            includeTheory: true,
+            includePractical: false,
+            theoryCredits: 3,
+            practicalCredits: 0,
+            subject: {
+              id: 'subject-common-1',
+              code: 'MA201',
+              name: 'Military Art II',
+              branch: 'C',
+              hasTheory: true,
+              hasPractical: false,
+            },
+            theory: { finalMarks: 71, totalMarks: 71, grade: 'AO' },
+          },
+        ],
+        createdAt: new Date('2026-01-01T00:00:00Z').toISOString(),
+        updatedAt: new Date('2026-01-01T00:00:00Z').toISOString(),
+      },
+    ] as any));
+
+    vi.mocked(getOcAcademics).mockImplementationOnce(async () => ([
+      {
+        semester: 2,
+        branchTag: 'C',
+        sgpa: 7.1,
+        cgpa: 7.1,
+        marksScored: null,
+        subjects: [
+          {
+            includeTheory: true,
+            includePractical: false,
+            theoryCredits: 3,
+            practicalCredits: 0,
+            subject: {
+              id: 'subject-common-1',
+              code: 'MA201',
+              name: 'Military Art II',
+              branch: 'C',
+              hasTheory: true,
+              hasPractical: false,
+            },
+            theory: { finalMarks: 69, totalMarks: 69, grade: 'AP' },
+          },
+        ],
+        createdAt: new Date('2026-01-01T00:00:00Z').toISOString(),
+        updatedAt: new Date('2026-01-01T00:00:00Z').toISOString(),
+      },
+    ] as any));
+
+    vi.mocked(getOcAcademics).mockImplementationOnce(async () => ([
+      {
+        semester: 2,
+        branchTag: 'C',
+        sgpa: 7,
+        cgpa: 7,
+        marksScored: null,
+        subjects: [
+          {
+            includeTheory: true,
+            includePractical: false,
+            theoryCredits: 3,
+            practicalCredits: 0,
+            subject: {
+              id: 'subject-common-1',
+              code: 'MA201',
+              name: 'Military Art II',
+              branch: 'C',
+              hasTheory: true,
+              hasPractical: false,
+            },
+            theory: { finalMarks: 68, totalMarks: 68, grade: 'AP' },
+          },
+        ],
+        createdAt: new Date('2026-01-01T00:00:00Z').toISOString(),
+        updatedAt: new Date('2026-01-01T00:00:00Z').toISOString(),
+      },
+    ] as any));
+
+    const preview = await buildFinalResultCompilationPreview({
+      courseId: 'course-1',
+      semester: 2,
+      branches: ['E'],
+    });
+
+    expect(preview.branches).toEqual([]);
+    expect(preview.rows).toHaveLength(3);
+    expect(preview.rows.map((row) => row.branchTag)).toEqual(['C', 'C', 'C']);
+    expect(preview.subjectColumns).toHaveLength(1);
+    expect(preview.subjectColumns[0]).toMatchObject({ branch: 'C' });
   });
 });

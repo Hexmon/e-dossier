@@ -37,4 +37,9 @@ runUncoveredRouteFlowSuite('Report uncovered API route flows', REPORT_UNCOVERED_
       GET: '?courseId=33333333-3333-4333-8333-333333333333&semester=1&branches=E',
     },
   },
+  'src/app/api/v1/reports/academics/consolidated-sessional/preview/route.ts': {
+    query: {
+      GET: '?courseId=33333333-3333-4333-8333-333333333333&semester=1&subjectId=44444444-4444-4444-8444-444444444444&branches=E',
+    },
+  },
 });

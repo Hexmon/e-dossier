@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { TableColumn, TableConfig, UniversalTable } from "../layout/TableLayout";
 import { BulkAcademicItem } from "@/app/lib/api/academicsMarksApi";
 import { useAcademicsMarks } from "@/hooks/useAcademicsMarks";
+import { computePracticalTotalMarks } from "@/app/lib/academic-marks-core";
 import {
     marksWorkflowApi,
     type AcademicsWorkflowActionInput,
@@ -33,9 +34,50 @@ export type StudentRow = {
     tutorial: string;
     sessional: number;
     final: string;
+    contentOfExp: string;
+    maintOfExp: string;
+    practicalExam: string;
+    viva: string;
     practical: string;
     total: number;
 };
+
+const practicalComponentKeys = ["contentOfExp", "maintOfExp", "practicalExam", "viva"] as const;
+
+function formatMarksInput(value: number | null | undefined): string {
+    return value != null ? String(value) : "";
+}
+
+function hasPracticalBreakdown(row: Pick<StudentRow, typeof practicalComponentKeys[number]>): boolean {
+    return practicalComponentKeys.some((key) => row[key].trim() !== "");
+}
+
+function derivePracticalTotal(row: Pick<StudentRow, typeof practicalComponentKeys[number]>): string {
+    if (!hasPracticalBreakdown(row)) return "";
+    return String(
+        computePracticalTotalMarks({
+            contentOfExpMarks: row.contentOfExp,
+            maintOfExpMarks: row.maintOfExp,
+            practicalMarks: row.practicalExam,
+            vivaMarks: row.viva,
+        }),
+    );
+}
+
+function buildPracticalPayload(row: StudentRow) {
+    const contentOfExpMarks = toOptionalNumber(row.contentOfExp);
+    const maintOfExpMarks = toOptionalNumber(row.maintOfExp);
+    const practicalMarks = toOptionalNumber(row.practicalExam);
+    const vivaMarks = toOptionalNumber(row.viva);
+
+    return {
+        contentOfExpMarks,
+        maintOfExpMarks,
+        practicalMarks,
+        vivaMarks,
+        finalMarks: toOptionalNumber(row.practical),
+    };
+}
 
 function toNum(value: string): number {
     const num = Number(value);
@@ -49,13 +91,27 @@ function toNullableNumber(value: string): number | null | undefined {
     return Number.isFinite(num) ? num : null;
 }
 
+function toOptionalNumber(value: string): number | undefined {
+    return toNullableNumber(value) ?? undefined;
+}
+
 function buildRowsFromWorkflowPayload(payload: AcademicsWorkflowDraftPayload): StudentRow[] {
     return payload.items.map((item) => {
         const phase1 = item.theory?.phaseTest1Marks != null ? String(item.theory.phaseTest1Marks) : "";
         const phase2 = item.theory?.phaseTest2Marks != null ? String(item.theory.phaseTest2Marks) : "";
         const tutorial = item.theory?.tutorial ?? "";
         const final = item.theory?.finalMarks != null ? String(item.theory.finalMarks) : "";
-        const practical = item.practical?.finalMarks != null ? String(item.practical.finalMarks) : "";
+        const contentOfExp = formatMarksInput(item.practical?.contentOfExpMarks);
+        const maintOfExp = formatMarksInput(item.practical?.maintOfExpMarks);
+        const practicalExam = formatMarksInput(item.practical?.practicalMarks);
+        const viva = formatMarksInput(item.practical?.vivaMarks);
+        const practicalBreakdownTotal = derivePracticalTotal({
+            contentOfExp,
+            maintOfExp,
+            practicalExam,
+            viva,
+        });
+        const practical = practicalBreakdownTotal || formatMarksInput(item.practical?.finalMarks);
         const sessional = toNum(phase1) + toNum(phase2) + toNum(tutorial);
         const total = sessional + toNum(final) + toNum(practical);
 
@@ -68,6 +124,10 @@ function buildRowsFromWorkflowPayload(payload: AcademicsWorkflowDraftPayload): S
             tutorial,
             sessional,
             final,
+            contentOfExp,
+            maintOfExp,
+            practicalExam,
+            viva,
             practical,
             total,
         };
@@ -91,9 +151,7 @@ function buildWorkflowDraftPayload(
                 tutorial: row.tutorial.trim() || undefined,
                 finalMarks: toNullableNumber(row.final),
             },
-            practical: {
-                finalMarks: toNullableNumber(row.practical),
-            },
+            practical: buildPracticalPayload(row),
         })),
     };
 }
@@ -233,7 +291,17 @@ export default function SubjectWiseStudentsTable({
                     const phase2 = record?.theory?.phaseTest2Marks?.toString() ?? "";
                     const tutorial = record?.theory?.tutorial ?? "";
                     const final = record?.theory?.finalMarks?.toString() ?? "";
-                    const practical = record?.practical?.finalMarks?.toString() ?? "";
+                    const contentOfExp = formatMarksInput(record?.practical?.contentOfExpMarks);
+                    const maintOfExp = formatMarksInput(record?.practical?.maintOfExpMarks);
+                    const practicalExam = formatMarksInput(record?.practical?.practicalMarks);
+                    const viva = formatMarksInput(record?.practical?.vivaMarks);
+                    const practicalBreakdownTotal = derivePracticalTotal({
+                        contentOfExp,
+                        maintOfExp,
+                        practicalExam,
+                        viva,
+                    });
+                    const practical = practicalBreakdownTotal || (record?.practical?.finalMarks?.toString() ?? "");
                     const sessional = toNum(phase1) + toNum(phase2) + toNum(tutorial);
                     const total = sessional + toNum(final) + toNum(practical);
 
@@ -246,6 +314,10 @@ export default function SubjectWiseStudentsTable({
                         tutorial,
                         sessional,
                         final,
+                        contentOfExp,
+                        maintOfExp,
+                        practicalExam,
+                        viva,
                         practical,
                         total,
                     };
@@ -285,6 +357,10 @@ export default function SubjectWiseStudentsTable({
             const next = [...prev];
             const row = { ...next[index], [key]: value };
 
+            if ((practicalComponentKeys as readonly string[]).includes(key)) {
+                row.practical = derivePracticalTotal(row);
+            }
+
             const sessional = toNum(row.phase1) + toNum(row.phase2) + toNum(row.tutorial);
             const total = sessional + toNum(row.final) + toNum(row.practical);
 
@@ -310,9 +386,7 @@ export default function SubjectWiseStudentsTable({
                     phaseTest2Marks: toNum(row.phase2),
                     finalMarks: toNum(row.final),
                 },
-                practical: {
-                    finalMarks: toNum(row.practical),
-                },
+                practical: buildPracticalPayload(row),
             }));
 
             const success = await saveBulkAcademics({
@@ -517,16 +591,35 @@ export default function SubjectWiseStudentsTable({
                     />
                 ),
             },
+            ...([
+                { key: "contentOfExp", label: "Content of Exp" },
+                { key: "maintOfExp", label: "Maint of Exp" },
+                { key: "practicalExam", label: "Practical Exam" },
+                { key: "viva", label: "Viva" },
+            ] as const).map(({ key, label }) => ({
+                key,
+                label,
+                width: "110px",
+                render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
+                    <Input
+                        value={row[key]}
+                        disabled={inputsDisabled}
+                        onChange={(e) => updateRow(index, key, e.target.value)}
+                        className="h-7 text-xs text-center"
+                        type="text"
+                    />
+                ),
+            })),
             {
                 key: "practical",
                 label: "Practical",
                 width: "80px",
-                render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
+                render: (_: StudentRow[keyof StudentRow], row: StudentRow) => (
                     <Input
                         value={row.practical}
-                        disabled={inputsDisabled}
-                        onChange={(e) => updateRow(index, "practical", e.target.value)}
-                        className="h-7 text-xs text-center"
+                        disabled
+                        readOnly
+                        className="h-7 text-xs text-center bg-muted/50 font-semibold"
                         type="text"
                     />
                 ),

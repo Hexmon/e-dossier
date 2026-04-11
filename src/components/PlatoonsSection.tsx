@@ -55,9 +55,11 @@ const PlatoonsSection = ({
                       ),
                     }}
                   />
-                  <CardTitle className="flex min-w-0 items-center gap-3 text-xl">
-                    <Shield className="h-6 w-6 text-primary" />
-                    <span className="break-words">{platoon.name}</span>
+                  <CardTitle className="flex min-w-0 items-start gap-3 text-xl">
+                    <Shield className="h-6 w-6 shrink-0 text-primary" />
+                    <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                      {platoon.name}
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex min-w-0 flex-1 flex-col">
@@ -69,18 +71,20 @@ const PlatoonsSection = ({
                       className="h-[200px] w-full object-contain sm:h-[220px] lg:h-[240px] xl:h-[260px]"
                     />
                   </div>
-                  <p className="mb-4 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground leading-relaxed">
+                  <p className="mb-4 min-w-0 break-words leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
                     {platoon.about || "No platoon description available."}
                   </p>
 
-                  <div className="mt-auto flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>{platoon.key}</span>
+                  <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4 shrink-0" />
+                      <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                        {platoon.key}
+                      </span>
                     </div>
 
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/platoon/${platoon.key.toLowerCase()}`}>More -&gt;</Link>
+                    <Button variant="ghost" size="sm" asChild className="shrink-0">
+                      <Link href={`/platoon/${platoon.key.toLowerCase()}`}>More →</Link>
                     </Button>
                   </div>
                 </CardContent>

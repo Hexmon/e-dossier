@@ -1,4 +1,4 @@
-// hooks/useInterviewTemplates.ts
+﻿// hooks/useInterviewTemplates.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -19,6 +19,7 @@ import {
     listTemplates,
     getTemplateById,
     createTemplate,
+    copyTemplate,
     updateTemplate,
     deleteTemplate,
     listTemplateSemesters,
@@ -167,6 +168,18 @@ export function useInterviewTemplates(options?: {
         onError: (error) => {
             console.error("Error updating template:", error);
             toast.error("Failed to update template");
+        },
+    });
+
+    const copyTemplateMutation = useMutation({
+        mutationFn: copyTemplate,
+        onSuccess: () => {
+            invalidateInterviewTemplateCaches();
+            toast.success("Template copied successfully");
+        },
+        onError: (error) => {
+            console.error("Error copying template:", error);
+            toast.error("Failed to copy template");
         },
     });
 
@@ -508,6 +521,8 @@ export function useInterviewTemplates(options?: {
         // Template operations
         addTemplate: (template: InterviewTemplateCreate) =>
             createTemplateMutation.mutateAsync(template),
+        cloneTemplate: (template: Parameters<typeof copyTemplate>[0]) =>
+            copyTemplateMutation.mutateAsync(template),
         editTemplate: (id: string, updates: InterviewTemplateUpdate) =>
             updateTemplateMutation.mutateAsync({ id, updates }),
         removeTemplate: (id: string, hard = false) =>
@@ -591,6 +606,6 @@ export function useInterviewTemplates(options?: {
             updateFieldOptionMutation.mutateAsync({ tid, fieldId, optionId, updates }),
         removeFieldOption: (tid: string, fieldId: string, optionId: string, hard = false) =>
             deleteFieldOptionMutation.mutateAsync({ tid, fieldId, optionId, hard }),
+        isCopyingTemplate: copyTemplateMutation.isPending,
     };
 }
-

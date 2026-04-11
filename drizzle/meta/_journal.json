@@ -246,6 +246,13 @@
       "when": 1775390400000,
       "tag": "0034_oc_archive_and_delete_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1775779200000,
+      "tag": "0035_restore_course_scoped_training_templates",
+      "breakpoints": true
     }
   ]
 }

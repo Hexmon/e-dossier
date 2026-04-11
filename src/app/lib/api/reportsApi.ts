@@ -64,11 +64,17 @@ export const reportsApi = {
     courseId: string;
     semester: number;
     subjectId: string;
+    branches?: ReportBranch[];
   }) {
     return api.get<ConsolidatedPreviewResponse>(
       endpoints.reports.academics.consolidatedSessional.preview,
       {
-        query: params,
+        query: {
+          courseId: params.courseId,
+          semester: params.semester,
+          subjectId: params.subjectId,
+          branches: (params.branches ?? []).join(','),
+        },
       }
     );
   },
@@ -76,11 +82,16 @@ export const reportsApi = {
   getFinalResultCompilationPreview(params: {
     courseId: string;
     semester: number;
+    branches?: ReportBranch[];
   }) {
     return api.get<FinalResultCompilationPreviewResponse>(
       endpoints.reports.academics.finalResultCompilation.preview,
       {
-        query: params,
+        query: {
+          courseId: params.courseId,
+          semester: params.semester,
+          branches: (params.branches ?? []).join(','),
+        },
       }
     );
   },

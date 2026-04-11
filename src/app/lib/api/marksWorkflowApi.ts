@@ -61,6 +61,10 @@ export type AcademicsWorkflowDraftItem = {
     grade?: string | null;
   };
   practical?: {
+    contentOfExpMarks?: number | null;
+    maintOfExpMarks?: number | null;
+    practicalMarks?: number | null;
+    vivaMarks?: number | null;
     finalMarks?: number | null;
     tutorial?: string | null;
     grade?: string | null;

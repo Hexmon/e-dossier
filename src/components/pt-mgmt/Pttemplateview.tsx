@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
-import { PTTemplate } from "@/app/lib/api/Physicaltrainingapi";
+import { useEffect, useState } from "react";
+import { PTTemplate, PTTemplateCopyResponse } from "@/app/lib/api/Physicaltrainingapi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,12 +18,28 @@ import {
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import type { PtTemplateApplyResult } from "@/app/lib/bootstrap/types";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import type { CourseResponse } from "@/app/lib/api/courseApi";
 
 interface PTTemplateViewProps {
     template: PTTemplate | null;
     loading: boolean;
+    currentCourseId: string;
+    availableCourses: CourseResponse[];
     semester: number;
     onApplyDefaultTemplate?: (dryRun: boolean) => Promise<PtTemplateApplyResult>;
+    onCopyTemplate?: (
+        sourceCourseId: string,
+        targetCourseId: string,
+        semester: number,
+    ) => Promise<PTTemplateCopyResponse>;
 }
 
 function ApplyResultSummary({ result }: { result: PtTemplateApplyResult }) {
@@ -55,11 +71,20 @@ function ApplyResultSummary({ result }: { result: PtTemplateApplyResult }) {
 export default function PTTemplateView({
     template,
     loading,
+    currentCourseId,
+    availableCourses,
     semester,
     onApplyDefaultTemplate,
+    onCopyTemplate,
 }: PTTemplateViewProps) {
-    const [busyMode, setBusyMode] = useState<"dry-run" | "apply" | null>(null);
+    const [busyMode, setBusyMode] = useState<"dry-run" | "apply" | "copy" | null>(null);
     const [lastApplyResult, setLastApplyResult] = useState<PtTemplateApplyResult | null>(null);
+    const [copySourceCourseId, setCopySourceCourseId] = useState("");
+    const [copyTargetCourseId, setCopyTargetCourseId] = useState(currentCourseId);
+
+    useEffect(() => {
+        setCopyTargetCourseId(currentCourseId);
+    }, [currentCourseId]);
 
     const runApply = async (dryRun: boolean) => {
         if (!onApplyDefaultTemplate) return;
@@ -83,15 +108,48 @@ export default function PTTemplateView({
         }
     };
 
+    const runCopy = async () => {
+        if (!onCopyTemplate || !copySourceCourseId || !copyTargetCourseId) return;
+        setBusyMode("copy");
+        try {
+            const result = await onCopyTemplate(
+                copySourceCourseId,
+                copyTargetCourseId,
+                semester,
+            );
+            toast.success(
+                result.message ||
+                    `PT template copied. Created: ${result.createdCount}, Updated: ${result.updatedCount}`
+            );
+            if (result.warnings.length > 0) {
+                toast.warning(`Completed with ${result.warnings.length} warning(s).`);
+            }
+        } catch (error) {
+            toast.error(
+                error instanceof Error ? error.message : "Failed to copy PT template."
+            );
+        } finally {
+            setBusyMode(null);
+        }
+    };
+
     const renderTemplateApplyActions = () => {
-        if (!onApplyDefaultTemplate) return null;
+        if (!onApplyDefaultTemplate && !onCopyTemplate) return null;
 
         const loadingText =
             busyMode === "dry-run"
                 ? "Running preview..."
                 : busyMode === "apply"
                     ? "Applying template..."
+                    : busyMode === "copy"
+                        ? "Copying template..."
                     : null;
+
+        const canCopy =
+            Boolean(onCopyTemplate) &&
+            copySourceCourseId.length > 0 &&
+            copyTargetCourseId.length > 0 &&
+            copySourceCourseId !== copyTargetCourseId;
 
         return (
             <Card>
@@ -104,51 +162,138 @@ export default function PTTemplateView({
                         behavior. Existing custom rows are preserved.
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => void runApply(true)}
-                            disabled={busyMode !== null}
-                        >
-                            {busyMode === "dry-run" ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Running Dry Run
-                                </>
-                            ) : (
-                                "Preview Changes (Dry Run)"
-                            )}
-                        </Button>
-
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button type="button" disabled={busyMode !== null}>
-                                    Apply Default PT Template
+                        {onApplyDefaultTemplate ? (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => void runApply(true)}
+                                    disabled={busyMode !== null}
+                                >
+                                    {busyMode === "dry-run" ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Running Dry Run
+                                        </>
+                                    ) : (
+                                        "Preview Changes (Dry Run)"
+                                    )}
                                 </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                        Apply default PT template?
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This updates canonical PT template rows and creates missing
-                                        defaults. It does not delete organization-specific entries.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                        onClick={() => {
-                                            void runApply(false);
-                                        }}
-                                    >
-                                        Confirm Apply
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button type="button" disabled={busyMode !== null}>
+                                            Apply Default PT Template
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>
+                                                Apply default PT template?
+                                            </AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This updates canonical PT template rows and creates missing
+                                                defaults. It does not delete organization-specific entries.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                onClick={() => {
+                                                    void runApply(false);
+                                                }}
+                                            >
+                                                Confirm Apply
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </>
+                        ) : null}
                     </div>
+
+                    {onCopyTemplate ? (
+                        <div className="space-y-4 rounded-md border p-4">
+                            <div>
+                                <p className="text-sm font-medium">Copy Existing PT Template</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Replace the selected course PT configuration for semester {semester} with another course&apos;s template.
+                                </p>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="pt-copy-source">Source Course</Label>
+                                    <Select value={copySourceCourseId} onValueChange={setCopySourceCourseId}>
+                                        <SelectTrigger id="pt-copy-source">
+                                            <SelectValue placeholder="Select source course" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableCourses.map((course) => (
+                                                <SelectItem key={`source-${course.id}`} value={course.id}>
+                                                    {course.code} - {course.title}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="pt-copy-target">Target Course</Label>
+                                    <Select value={copyTargetCourseId} onValueChange={setCopyTargetCourseId}>
+                                        <SelectTrigger id="pt-copy-target">
+                                            <SelectValue placeholder="Select target course" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableCourses.map((course) => (
+                                                <SelectItem key={`target-${course.id}`} value={course.id}>
+                                                    {course.code} - {course.title}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {copySourceCourseId &&
+                            copyTargetCourseId &&
+                            copySourceCourseId === copyTargetCourseId ? (
+                                <p className="text-xs text-destructive">
+                                    Source and target courses must be different.
+                                </p>
+                            ) : null}
+
+                            <div className="flex justify-end">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button type="button" variant="outline" disabled={!canCopy || busyMode !== null}>
+                                            Copy PT Template
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Copy PT template in replace mode?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This replaces the target course PT template for semester {semester} with the selected
+                                                source course configuration.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel disabled={busyMode !== null}>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                disabled={busyMode !== null}
+                                                onClick={() => {
+                                                    void runCopy();
+                                                }}
+                                            >
+                                                {busyMode === "copy" ? "Copying..." : "Copy Now"}
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </div>
+                            ) : null}
 
                     {loadingText ? (
                         <p className="text-xs text-muted-foreground">{loadingText}</p>
@@ -272,7 +417,7 @@ export default function PTTemplateView({
                                                                         {taskGrade?.maxMarks !== null &&
                                                                             taskGrade?.maxMarks !== undefined
                                                                             ? taskGrade.maxMarks
-                                                                            : "—"}
+                                                                            : "-"}
                                                                     </td>
                                                                 );
                                                             });

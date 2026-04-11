@@ -1,4 +1,4 @@
-// app/lib/api/Interviewtemplateapi.ts
+﻿// app/lib/api/Interviewtemplateapi.ts
 import { api } from "@/app/lib/apiClient";
 
 // ============================================================================
@@ -7,6 +7,7 @@ import { api } from "@/app/lib/apiClient";
 
 export interface InterviewTemplate {
     id: string;
+    courseId: string | null;
     code: string;
     title: string;
     description: string | null;
@@ -22,6 +23,7 @@ export interface InterviewTemplate {
 }
 
 export interface InterviewTemplateCreate {
+    courseId?: string;
     code: string;
     title: string;
     description?: string;
@@ -32,6 +34,7 @@ export interface InterviewTemplateCreate {
 }
 
 export interface InterviewTemplateUpdate {
+    courseId?: string;
     code?: string;
     title?: string;
     description?: string;
@@ -173,6 +176,7 @@ export interface FieldOptionUpdate {
 }
 
 export interface ListParams {
+    courseId?: string;
     semester?: number;
     includeDeleted?: boolean;
     limit?: number;
@@ -182,6 +186,25 @@ export interface ListParams {
 
 export interface DeleteParams {
     hard: boolean;
+}
+
+export interface InterviewTemplateCopyPayload {
+    sourceCourseId: string;
+    targetCourseId: string;
+    mode?: "replace";
+}
+
+export interface InterviewTemplateCopyResponse {
+    message: string;
+    sourceCourseId: string;
+    targetCourseId: string;
+    mode: "replace";
+    templatesCopied: number;
+    semestersCopied: number;
+    sectionsCopied: number;
+    groupsCopied: number;
+    fieldsCopied: number;
+    optionsCopied: number;
 }
 
 // ============================================================================
@@ -215,6 +238,15 @@ export async function createTemplate(
         payload
     );
     return res.template;
+}
+
+export async function copyTemplate(
+    payload: InterviewTemplateCopyPayload
+): Promise<InterviewTemplateCopyResponse> {
+    return api.post<InterviewTemplateCopyResponse, InterviewTemplateCopyPayload>(
+        "/api/v1/admin/interview/templates/copy",
+        payload
+    );
 }
 
 export async function updateTemplate(

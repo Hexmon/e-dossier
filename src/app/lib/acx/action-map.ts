@@ -3045,6 +3045,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/interview/templates/copy",
+    "action": "admin:interview:templates:copy:create",
+    "resourceType": "admin:interview:templates:copy",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/interview/templates/:templateId/fields/:fieldId/options",
     "action": "admin:interview:templates:fields:options:create",
     "resourceType": "admin:interview:templates:fields:options",
@@ -3147,6 +3156,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/physical-training/types",
     "action": "admin:physical-training:types:create",
     "resourceType": "admin:physical-training:types",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/physical-training/templates/copy",
+    "action": "admin:physical-training:templates:copy:create",
+    "resourceType": "admin:physical-training:templates:copy",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -3381,6 +3399,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/training-camps",
     "action": "admin:training-camps:create",
     "resourceType": "admin:training-camps",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/training-camps/copy",
+    "action": "admin:training-camps:copy:create",
+    "resourceType": "admin:training-camps:copy",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true

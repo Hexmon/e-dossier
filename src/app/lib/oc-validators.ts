@@ -401,6 +401,10 @@ export const academicSubjectPatchSchema = z.object({
         grade: academicLetterGradeSchema,
     }).partial().optional(),
     practical: z.object({
+        contentOfExpMarks: z.coerce.number().optional(),
+        maintOfExpMarks: z.coerce.number().optional(),
+        practicalMarks: z.coerce.number().optional(),
+        vivaMarks: z.coerce.number().optional(),
         finalMarks: z.coerce.number().optional(),
         grade: academicLetterGradeSchema,
         tutorial: z.string().optional(),
