@@ -174,9 +174,16 @@ async function assertInterviewWriteAuthorized(params: {
         deniedPermissions: bundle.deniedPermissions,
     });
     const activeRequestedFields = params.requestedFields.filter((field) => field.isActive !== false && !field.deletedAt);
+    const permissionFields = (activeRequestedFields.length > 0 ? activeRequestedFields : params.templateFields).map(
+        (field) => ({
+            key: field.key,
+            label: field.label ?? '',
+            groupId: field.groupId ?? null,
+        }),
+    );
     const requiredPermissions = getRequiredPermissionsForInterviewMutation({
         template: params.template,
-        fields: activeRequestedFields.length > 0 ? activeRequestedFields : params.templateFields,
+        fields: permissionFields,
     });
 
     if (requiredPermissions.length === 0) {

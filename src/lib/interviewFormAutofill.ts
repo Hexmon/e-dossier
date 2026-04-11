@@ -108,7 +108,7 @@ export function applyInterviewActorAutofill<T extends Record<string, unknown>>(p
 
         const targetKey = params.resolveFieldKey ? params.resolveFieldKey(field) : field.key;
         if (isBlank(nextValues[targetKey])) {
-            nextValues[targetKey] = actorDisplayName as T[keyof T];
+            (nextValues as Record<string, unknown>)[targetKey] = actorDisplayName;
         }
     }
 

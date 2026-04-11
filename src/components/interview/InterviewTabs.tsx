@@ -6,6 +6,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { RootState } from "@/store";
 import { InterviewOfficer } from "@/types/interview";
+import type { TemplateField } from "@/types/interview-templates";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
 import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
 import { applyInterviewActorAutofill } from "@/lib/interviewFormAutofill";
@@ -27,7 +28,7 @@ const EMPTY_FORM_WRAPPER_FIELDS: FormWrapperFields = {};
 function buildInitialInterviewResetValues(params: {
     currentValues: FormWrapperFields;
     savedValues: FormWrapperFields;
-    templateFields?: Array<{ key: string; fieldType?: string | null; groupId?: string | null }>;
+    templateFields?: Array<Pick<TemplateField, "key" | "label" | "fieldType" | "groupId" | "captureSignature">>;
     actorDisplayName?: string;
 }): FormWrapperFields {
     const out: FormWrapperFields = {};
