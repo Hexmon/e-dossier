@@ -20,6 +20,7 @@ export async function getInterviewTemplateBase(id: string) {
         .select({
             id: interviewTemplates.id,
             code: interviewTemplates.code,
+            title: interviewTemplates.title,
             isActive: interviewTemplates.isActive,
             deletedAt: interviewTemplates.deletedAt,
         })
@@ -48,6 +49,23 @@ export async function listInterviewTemplateFieldsByIds(ids: string[]) {
         })
         .from(interviewTemplateFields)
         .where(inArray(interviewTemplateFields.id, ids));
+}
+
+export async function listInterviewTemplateFieldsByTemplate(templateId: string) {
+    return db
+        .select({
+            id: interviewTemplateFields.id,
+            templateId: interviewTemplateFields.templateId,
+            groupId: interviewTemplateFields.groupId,
+            key: interviewTemplateFields.key,
+            label: interviewTemplateFields.label,
+            fieldType: interviewTemplateFields.fieldType,
+            captureSignature: interviewTemplateFields.captureSignature,
+            isActive: interviewTemplateFields.isActive,
+            deletedAt: interviewTemplateFields.deletedAt,
+        })
+        .from(interviewTemplateFields)
+        .where(eq(interviewTemplateFields.templateId, templateId));
 }
 
 export async function listInterviewTemplateGroupsByIds(ids: string[]) {

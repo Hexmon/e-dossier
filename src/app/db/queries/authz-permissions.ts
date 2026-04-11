@@ -5,8 +5,13 @@ import { permissions, positionPermissions, rolePermissions, roles } from '../sch
 import { positions } from '../schema/auth/positions';
 import { authzPolicyState, permissionFieldRules } from '../schema/auth/rbac-extensions';
 import { API_ACTION_MAP, PAGE_ACTION_MAP } from '@/app/lib/acx/action-map';
-import { effectivePermissionsCache } from '@/app/lib/acx/cache';
+import { clearEffectivePermissionsCache, effectivePermissionsCache } from '@/app/lib/acx/cache';
 import { hasPlatoonCommanderRole } from '@/lib/platoon-commander-access';
+import {
+  INTERVIEW_DEFAULT_ROLE_PERMISSIONS,
+  INTERVIEW_WRITE_PERMISSION_KEYS,
+  resolveInterviewFallbackPermissionKeys,
+} from '@/lib/interview-access';
 
 type AptClaim = {
   id?: string;
@@ -94,6 +99,22 @@ const DEFAULT_PLATOON_COMMANDER_MARKS_ACTIONS = new Set<string>([
   'oc:physical-training:bulk:create',
 ]);
 
+const INTERVIEW_PERMISSION_DESCRIPTIONS: Record<string, string> = {
+  'oc:interviews:initial:plcdr:update': 'Allows editing PL CDR initial interview fields.',
+  'oc:interviews:initial:dscoord:update': 'Allows editing DS Coord initial interview fields.',
+  'oc:interviews:initial:dycdr:update': 'Allows editing DY CDR initial interview fields.',
+  'oc:interviews:initial:cdr:update': 'Allows editing CDR initial interview fields.',
+  'oc:interviews:term:beginning:shared:update': 'Allows editing shared beginning-of-term interview fields.',
+  'oc:interviews:term:beginning:plcdr:update': 'Allows editing PL CDR beginning-of-term interview fields.',
+  'oc:interviews:term:beginning:dscoord:update': 'Allows editing DS Coord beginning-of-term interview fields.',
+  'oc:interviews:term:beginning:dycdr:update': 'Allows editing DY CDR beginning-of-term interview fields.',
+  'oc:interviews:term:beginning:cdr:update': 'Allows editing CDR beginning-of-term interview fields.',
+  'oc:interviews:term:postmid:update': 'Allows editing post-mid-term interview fields.',
+  'oc:interviews:special:update': 'Allows editing special interview records.',
+};
+
+let ensureInterviewRbacDefaultsPromise: Promise<void> | null = null;
+
 function toUpperRole(role: string): string {
   return role.trim().replace(/[-\s]+/g, '_').toUpperCase();
 }
@@ -117,6 +138,120 @@ function mapPermissionRowsToSet(rows: Array<{ key: string }>): Set<string> {
     set.add(row.key);
   }
   return set;
+}
+
+async function bumpPolicyVersionAndInvalidate(): Promise<void> {
+  const [existing] = await db
+    .select({ version: authzPolicyState.version })
+    .from(authzPolicyState)
+    .where(eq(authzPolicyState.key, 'global'))
+    .limit(1);
+
+  if (!existing) {
+    await db.insert(authzPolicyState).values({ key: 'global', version: 1 });
+  } else {
+    await db
+      .update(authzPolicyState)
+      .set({
+        version: existing.version + 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(authzPolicyState.key, 'global'));
+  }
+
+  clearEffectivePermissionsCache();
+}
+
+async function ensureInterviewRbacDefaultsInner(): Promise<void> {
+  let changed = false;
+
+  for (const permissionKey of INTERVIEW_WRITE_PERMISSION_KEYS) {
+    const [existingPermission] = await db
+      .select({ id: permissions.id })
+      .from(permissions)
+      .where(eq(permissions.key, permissionKey))
+      .limit(1);
+
+    if (!existingPermission) {
+      await db
+        .insert(permissions)
+        .values({
+          key: permissionKey,
+          description: INTERVIEW_PERMISSION_DESCRIPTIONS[permissionKey] ?? permissionKey,
+        })
+        .onConflictDoNothing();
+      changed = true;
+    }
+  }
+
+  const permissionRows = await db
+    .select({ id: permissions.id, key: permissions.key })
+    .from(permissions)
+    .where(inArray(permissions.key, INTERVIEW_WRITE_PERMISSION_KEYS));
+  const permissionIdByKey = new Map(permissionRows.map((row) => [row.key, row.id]));
+
+  for (const roleKey of Object.keys(INTERVIEW_DEFAULT_ROLE_PERMISSIONS)) {
+    const [existingRole] = await db
+      .select({ id: roles.id })
+      .from(roles)
+      .where(eq(roles.key, roleKey))
+      .limit(1);
+
+    if (!existingRole) {
+      await db
+        .insert(roles)
+        .values({
+          key: roleKey,
+          description: roleKey.toUpperCase(),
+        })
+        .onConflictDoNothing();
+      changed = true;
+    }
+  }
+
+  const roleRows = await db
+    .select({ id: roles.id, key: roles.key })
+    .from(roles)
+    .where(inArray(roles.key, Object.keys(INTERVIEW_DEFAULT_ROLE_PERMISSIONS)));
+  const roleIdByKey = new Map(roleRows.map((row) => [row.key, row.id]));
+
+  for (const [roleKey, permissionKeys] of Object.entries(INTERVIEW_DEFAULT_ROLE_PERMISSIONS)) {
+    const roleId = roleIdByKey.get(roleKey);
+    if (!roleId) continue;
+
+    for (const permissionKey of permissionKeys) {
+      const permissionId = permissionIdByKey.get(permissionKey);
+      if (!permissionId) continue;
+
+      const [existingMapping] = await db
+        .select({ roleId: rolePermissions.roleId })
+        .from(rolePermissions)
+        .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.permissionId, permissionId)))
+        .limit(1);
+
+      if (!existingMapping) {
+        await db
+          .insert(rolePermissions)
+          .values({ roleId, permissionId })
+          .onConflictDoNothing();
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    await bumpPolicyVersionAndInvalidate();
+  }
+}
+
+export async function ensureInterviewRbacDefaults(): Promise<void> {
+  if (!ensureInterviewRbacDefaultsPromise) {
+    ensureInterviewRbacDefaultsPromise = ensureInterviewRbacDefaultsInner().finally(() => {
+      ensureInterviewRbacDefaultsPromise = null;
+    });
+  }
+
+  await ensureInterviewRbacDefaultsPromise;
 }
 
 function buildPermissionCacheKey(input: PermissionInput, policyVersion: number): string {
@@ -336,7 +471,29 @@ export function applyPlatoonCommanderMarksEntryOverrides(
   return { isPlatoonCommander };
 }
 
+export function applyInterviewPermissionFallbackOverrides(
+  input: {
+    roles?: string[];
+    position?: string | null;
+    scopeType?: string | null;
+  },
+  permissionSet: Set<string>
+) {
+  const fallbackPermissions = resolveInterviewFallbackPermissionKeys({
+    roles: input.roles ?? [],
+    position: input.position ?? null,
+    scopeType: input.scopeType ?? null,
+  });
+
+  for (const permission of fallbackPermissions) {
+    permissionSet.add(permission);
+  }
+
+  return { grantedPermissions: fallbackPermissions };
+}
+
 export async function getEffectivePermissionBundle(input: PermissionInput): Promise<EffectivePermissionBundle> {
+  await ensureInterviewRbacDefaults();
   const normalizedRoles = normalizeRoleSet(input.roles);
   const appointment = await resolveAppointmentContext(input.userId, input.apt);
 
@@ -354,6 +511,14 @@ export async function getEffectivePermissionBundle(input: PermissionInput): Prom
   const permissionSet = new Set<string>([...positionPerms, ...rolePerms]);
   const { isAdmin, isSuperAdmin } = applyAdminAndSuperAdminOverrides(uniqueRoles, permissionSet);
   applyPlatoonCommanderMarksEntryOverrides(uniqueRoles, permissionSet);
+  applyInterviewPermissionFallbackOverrides(
+    {
+      roles: uniqueRoles,
+      position: appointment.positionKey,
+      scopeType: appointment.scopeType,
+    },
+    permissionSet
+  );
 
   const sortedPermissions = Array.from(permissionSet).sort();
   const fieldRulesByAction = await loadFieldRules(

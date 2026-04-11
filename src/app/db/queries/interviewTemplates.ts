@@ -78,6 +78,175 @@ export async function listInterviewTemplates(
     }));
 }
 
+export async function listInterviewTemplatesHydrated(
+    opts: { courseId?: string | null; semester?: number; includeDeleted?: boolean } = {},
+) {
+    const templates = await listInterviewTemplates(opts);
+    if (!templates.length) return [];
+
+    const templateIds = templates.map((template) => template.id);
+    const includeDeleted = opts.includeDeleted ?? false;
+
+    const sectionWhere = [inArray(interviewTemplateSections.templateId, templateIds)];
+    const groupWhere = [inArray(interviewTemplateGroups.templateId, templateIds)];
+    const fieldWhere = [inArray(interviewTemplateFields.templateId, templateIds)];
+
+    if (!includeDeleted) {
+        sectionWhere.push(isNull(interviewTemplateSections.deletedAt));
+        groupWhere.push(isNull(interviewTemplateGroups.deletedAt));
+        fieldWhere.push(isNull(interviewTemplateFields.deletedAt));
+    }
+
+    const [sectionRows, groupRows, fieldRows] = await Promise.all([
+        db
+            .select({
+                id: interviewTemplateSections.id,
+                templateId: interviewTemplateSections.templateId,
+                title: interviewTemplateSections.title,
+                description: interviewTemplateSections.description,
+                sortOrder: interviewTemplateSections.sortOrder,
+                isActive: interviewTemplateSections.isActive,
+                createdAt: interviewTemplateSections.createdAt,
+                updatedAt: interviewTemplateSections.updatedAt,
+                deletedAt: interviewTemplateSections.deletedAt,
+            })
+            .from(interviewTemplateSections)
+            .where(and(...sectionWhere))
+            .orderBy(interviewTemplateSections.templateId, interviewTemplateSections.sortOrder, interviewTemplateSections.title),
+        db
+            .select({
+                id: interviewTemplateGroups.id,
+                templateId: interviewTemplateGroups.templateId,
+                sectionId: interviewTemplateGroups.sectionId,
+                title: interviewTemplateGroups.title,
+                minRows: interviewTemplateGroups.minRows,
+                maxRows: interviewTemplateGroups.maxRows,
+                sortOrder: interviewTemplateGroups.sortOrder,
+                isActive: interviewTemplateGroups.isActive,
+                createdAt: interviewTemplateGroups.createdAt,
+                updatedAt: interviewTemplateGroups.updatedAt,
+                deletedAt: interviewTemplateGroups.deletedAt,
+            })
+            .from(interviewTemplateGroups)
+            .where(and(...groupWhere))
+            .orderBy(interviewTemplateGroups.templateId, interviewTemplateGroups.sortOrder, interviewTemplateGroups.title),
+        db
+            .select({
+                id: interviewTemplateFields.id,
+                templateId: interviewTemplateFields.templateId,
+                sectionId: interviewTemplateFields.sectionId,
+                groupId: interviewTemplateFields.groupId,
+                key: interviewTemplateFields.key,
+                label: interviewTemplateFields.label,
+                fieldType: interviewTemplateFields.fieldType,
+                required: interviewTemplateFields.required,
+                helpText: interviewTemplateFields.helpText,
+                maxLength: interviewTemplateFields.maxLength,
+                sortOrder: interviewTemplateFields.sortOrder,
+                isActive: interviewTemplateFields.isActive,
+                captureFiledAt: interviewTemplateFields.captureFiledAt,
+                captureSignature: interviewTemplateFields.captureSignature,
+                createdAt: interviewTemplateFields.createdAt,
+                updatedAt: interviewTemplateFields.updatedAt,
+                deletedAt: interviewTemplateFields.deletedAt,
+            })
+            .from(interviewTemplateFields)
+            .where(and(...fieldWhere))
+            .orderBy(interviewTemplateFields.templateId, interviewTemplateFields.sortOrder, interviewTemplateFields.key),
+    ]);
+
+    const fieldIds = fieldRows.map((field) => field.id);
+    const optionRows = fieldIds.length
+        ? await db
+            .select({
+                id: interviewTemplateFieldOptions.id,
+                fieldId: interviewTemplateFieldOptions.fieldId,
+                code: interviewTemplateFieldOptions.code,
+                label: interviewTemplateFieldOptions.label,
+                sortOrder: interviewTemplateFieldOptions.sortOrder,
+                isActive: interviewTemplateFieldOptions.isActive,
+                createdAt: interviewTemplateFieldOptions.createdAt,
+                updatedAt: interviewTemplateFieldOptions.updatedAt,
+                deletedAt: interviewTemplateFieldOptions.deletedAt,
+            })
+            .from(interviewTemplateFieldOptions)
+            .where(
+                and(
+                    inArray(interviewTemplateFieldOptions.fieldId, fieldIds),
+                    ...(includeDeleted ? [] : [isNull(interviewTemplateFieldOptions.deletedAt)]),
+                ),
+            )
+            .orderBy(
+                interviewTemplateFieldOptions.fieldId,
+                interviewTemplateFieldOptions.sortOrder,
+                interviewTemplateFieldOptions.code,
+            )
+        : [];
+
+    const optionsByFieldId = new Map<string, typeof optionRows>();
+    for (const option of optionRows) {
+        const list = optionsByFieldId.get(option.fieldId) ?? [];
+        list.push(option);
+        optionsByFieldId.set(option.fieldId, list);
+    }
+
+    const fieldsWithOptions = fieldRows.map((field) => ({
+        ...field,
+        options: [...(optionsByFieldId.get(field.id) ?? [])].sort(
+            (left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0) || left.label.localeCompare(right.label),
+        ),
+    }));
+
+    const sectionFieldsBySectionId = new Map<string, Array<(typeof fieldsWithOptions)[number]>>();
+    const groupFieldsByGroupId = new Map<string, Array<(typeof fieldsWithOptions)[number]>>();
+    for (const field of fieldsWithOptions) {
+        if (field.sectionId) {
+            const list = sectionFieldsBySectionId.get(field.sectionId) ?? [];
+            list.push(field);
+            sectionFieldsBySectionId.set(field.sectionId, list);
+        }
+        if (field.groupId) {
+            const list = groupFieldsByGroupId.get(field.groupId) ?? [];
+            list.push(field);
+            groupFieldsByGroupId.set(field.groupId, list);
+        }
+    }
+
+    const sectionsByTemplateId = new Map<string, typeof sectionRows>();
+    for (const section of sectionRows) {
+        const list = sectionsByTemplateId.get(section.templateId) ?? [];
+        list.push(section);
+        sectionsByTemplateId.set(section.templateId, list);
+    }
+
+    const groupsByTemplateId = new Map<string, typeof groupRows>();
+    for (const group of groupRows) {
+        const list = groupsByTemplateId.get(group.templateId) ?? [];
+        list.push(group);
+        groupsByTemplateId.set(group.templateId, list);
+    }
+
+    return templates.map((template) => ({
+        ...template,
+        sections: [...(sectionsByTemplateId.get(template.id) ?? [])]
+            .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0) || left.title.localeCompare(right.title))
+            .map((section) => ({
+                ...section,
+                fields: [...(sectionFieldsBySectionId.get(section.id) ?? [])].sort(
+                    (left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0) || left.key.localeCompare(right.key),
+                ),
+            })),
+        groups: [...(groupsByTemplateId.get(template.id) ?? [])]
+            .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0) || left.title.localeCompare(right.title))
+            .map((group) => ({
+                ...group,
+                fields: [...(groupFieldsByGroupId.get(group.id) ?? [])].sort(
+                    (left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0) || left.key.localeCompare(right.key),
+                ),
+            })),
+    }));
+}
+
 export async function resolveInterviewTemplateCopySource(
     sourceCourseId: string,
     loadTemplates: typeof listInterviewTemplates = listInterviewTemplates,

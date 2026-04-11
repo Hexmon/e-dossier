@@ -8,6 +8,8 @@ import { RootState } from "@/store";
 import { InterviewOfficer } from "@/types/interview";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
 import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
+import { applyInterviewActorAutofill } from "@/lib/interviewFormAutofill";
+import { canEditInitialInterviewOfficer, type InterviewAccessContext } from "@/lib/interview-access";
 import { saveInterviewForm, clearInterviewForm, type InterviewFormData } from "@/store/slices/initialInterviewSlice";
 import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 
@@ -26,6 +28,7 @@ function buildInitialInterviewResetValues(params: {
     currentValues: FormWrapperFields;
     savedValues: FormWrapperFields;
     templateFields?: Array<{ key: string; fieldType?: string | null; groupId?: string | null }>;
+    actorDisplayName?: string;
 }): FormWrapperFields {
     const out: FormWrapperFields = {};
 
@@ -43,17 +46,25 @@ function buildInitialInterviewResetValues(params: {
         out[key] = value;
     }
 
-    return out;
+    return applyInterviewActorAutofill({
+        values: out,
+        templateFields: params.templateFields,
+        actorDisplayName: params.actorDisplayName,
+    });
 }
 
 export default function InterviewTabs({
     readOnly = false,
     currentSemester = 1,
     canEditLockedSemesters = false,
+    currentUserDisplayName,
+    accessContext,
 }: {
     readOnly?: boolean;
     currentSemester?: number | null;
     canEditLockedSemesters?: boolean;
+    currentUserDisplayName?: string;
+    accessContext: InterviewAccessContext;
 }) {
     const { id } = useParams();
     const searchParams = useSearchParams();
@@ -77,6 +88,7 @@ export default function InterviewTabs({
     const activeSemesters = activeTemplate?.semesters ?? [];
     const usesSemester = activeSemesters.length > 0;
     const semesterAllowed = !usesSemester || activeSemesters.includes(selectedTerm);
+    const canEditActiveOfficer = canEditInitialInterviewOfficer(accessContext, active);
     const activeSemesterKey = String(selectedTerm);
 
     // Get saved form data from Redux for current officer
@@ -154,6 +166,7 @@ export default function InterviewTabs({
             active,
             activeSemesterKey,
             activeTemplate?.id ?? "",
+            canEditActiveOfficer ? currentUserDisplayName ?? "" : "",
             templateFieldSeed,
             JSON.stringify(savedData),
         ].join("::");
@@ -168,12 +181,13 @@ export default function InterviewTabs({
             currentValues: (form.getValues() ?? {}) as FormWrapperFields,
             savedValues: savedData as FormWrapperFields,
             templateFields: Array.from(activeTemplate?.fieldsByKey?.values?.() ?? []),
+            actorDisplayName: canEditActiveOfficer ? currentUserDisplayName : undefined,
         });
         form.reset(resetValues);
         queueMicrotask(() => {
             isHydratingRef.current = false;
         });
-    }, [active, ocId, activeSemesterKey, activeTemplate, savedFormData]);
+    }, [active, ocId, activeSemesterKey, activeTemplate, savedFormData, currentUserDisplayName, canEditActiveOfficer]);
 
     // Auto-save unsaved changes to Redux
     useEffect(() => {
@@ -203,10 +217,23 @@ export default function InterviewTabs({
 
     async function handleSave(officer: InterviewOfficer, data: FormWrapperFields) {
         if (readOnly) return null;
+        if (!canEditInitialInterviewOfficer(accessContext, officer)) return null;
         if (usesSemester && !semesterAllowed) return null;
-        const resp = await saveInitial(officer, data, selectedTerm);
+        const currentValues = (form.getValues() ?? {}) as FormWrapperFields;
+        const payload =
+            Object.keys(currentValues).length > 0
+                ? currentValues
+                : data;
+        const resp = await saveInitial(officer, payload, selectedTerm);
         if (resp) {
-            dispatch(clearInterviewForm({ ocId, semesterKey: activeSemesterKey, officer }));
+            dispatch(
+                saveInterviewForm({
+                    ocId,
+                    semesterKey: activeSemesterKey,
+                    officer,
+                    data: payload,
+                })
+            );
         }
 
         return resp;
@@ -280,6 +307,7 @@ export default function InterviewTabs({
                                 key={`${ocId}:plcdr:${activeSemesterKey}`}
                                 form={form}
                                 template={getTemplateMatchForSemester(templateMappings, "plcdr", selectedTerm)?.template ?? null}
+                                allowEditing={canEditInitialInterviewOfficer(accessContext, "plcdr") && !readOnly}
                                 onClearForm={handleClearForm}
                                 onSave={(data) => handleSave("plcdr", data)}
                             />
@@ -290,6 +318,7 @@ export default function InterviewTabs({
                                 key={`${ocId}:dscoord:${activeSemesterKey}`}
                                 form={form as UseFormReturn<any>}
                                 template={getTemplateMatchForSemester(templateMappings, "dscoord", selectedTerm)?.template ?? null}
+                                allowEditing={canEditInitialInterviewOfficer(accessContext, "dscoord") && !readOnly}
                                 onClearForm={handleClearForm}
                                 onSave={(data) => handleSave("dscoord", data)}
                             />
@@ -300,6 +329,7 @@ export default function InterviewTabs({
                                 key={`${ocId}:dycdr:${activeSemesterKey}`}
                                 form={form as UseFormReturn<any>}
                                 template={getTemplateMatchForSemester(templateMappings, "dycdr", selectedTerm)?.template ?? null}
+                                allowEditing={canEditInitialInterviewOfficer(accessContext, "dycdr") && !readOnly}
                                 onClearForm={handleClearForm}
                                 onSave={(data) => handleSave("dycdr", data)}
                             />
@@ -310,6 +340,7 @@ export default function InterviewTabs({
                                 key={`${ocId}:cdr:${activeSemesterKey}`}
                                 form={form as UseFormReturn<any>}
                                 template={getTemplateMatchForSemester(templateMappings, "cdr", selectedTerm)?.template ?? null}
+                                allowEditing={canEditInitialInterviewOfficer(accessContext, "cdr") && !readOnly}
                                 onClearForm={handleClearForm}
                                 onSave={(data) => handleSave("cdr", data)}
                             />

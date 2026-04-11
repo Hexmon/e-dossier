@@ -12,6 +12,11 @@ import { Edit, Save, RotateCcw, X } from "lucide-react";
 import { saveTermInterviewForm, SpecialInterviewRecord } from "@/store/slices/termInterviewSlice";
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from "@/types/interview-templates";
 import { resolveSpecialGroupFieldMap } from "@/lib/interviewFieldUtils";
+import {
+    applySpecialInterviewActorAutofill,
+    createDefaultSpecialInterviewRecord,
+} from "@/lib/interviewFormAutofill";
+import { canEditTermField, type InterviewAccessContext } from "@/lib/interview-access";
 
 interface FormState {
     isEditing: boolean;
@@ -33,21 +38,23 @@ interface Props {
     specialGroup?: TemplateGroup | null;
     isEditing: boolean;
     isSaved: boolean;
+    canEditVariant: boolean;
     onSave: (payload: InterviewFormRecord) => Promise<InterviewFormRecord | null>;
     updateFormState: (updates: Partial<FormState>) => void;
     ocId: string;
     savedSpecialInterviews: SpecialInterviewRecord[];
-    onClearForm: () => void;
+    currentUserDisplayName?: string;
+    accessContext: InterviewAccessContext;
 }
 
-function normalizeSpecialInterviews(records?: SpecialInterviewRecord[]) {
-    return (records ?? []).map((record, index) => ({
+function normalizeSpecialInterviews(records?: SpecialInterviewRecord[], currentUserDisplayName?: string) {
+    return applySpecialInterviewActorAutofill((records ?? []).map((record, index) => ({
         date: record.date ?? "",
         summary: record.summary ?? "",
         interviewedBy: record.interviewedBy ?? "",
         rowIndex: record.rowIndex ?? index,
         rowId: record.rowId,
-    }));
+    })), currentUserDisplayName);
 }
 
 function normalizeText(value: string | null | undefined) {
@@ -155,11 +162,13 @@ export default function TermSubForm({
     specialGroup,
     isEditing,
     isSaved,
+    canEditVariant,
     onSave,
     updateFormState,
     ocId,
     savedSpecialInterviews,
-    onClearForm,
+    currentUserDisplayName,
+    accessContext,
 }: Props) {
     const dispatch = useDispatch();
     const { register, getValues, reset } = form;
@@ -177,10 +186,11 @@ export default function TermSubForm({
     const dateLabel = getSpecialLabel(specialGroup, "date") ?? "Date";
     const summaryLabel = getSpecialLabel(specialGroup, "summary") ?? "Interview Summary";
     const interviewedByLabel = getSpecialLabel(specialGroup, "interviewedBy") ?? "Interviewed by (Name & Appt)";
+    const canEditField = (field: TemplateField) => canEditTermField(accessContext, variant, field);
 
     const normalizedSavedSpecialInterviews = useMemo(
-        () => normalizeSpecialInterviews(savedSpecialInterviews),
-        [savedSpecialInterviews],
+        () => normalizeSpecialInterviews(savedSpecialInterviews, currentUserDisplayName),
+        [savedSpecialInterviews, currentUserDisplayName],
     );
     const [specialInterviews, setSpecialInterviews] = React.useState<SpecialInterviewRecord[]>(() =>
         normalizedSavedSpecialInterviews.map((record) => ({ ...record })),
@@ -260,13 +270,16 @@ export default function TermSubForm({
     };
 
     const handleEditClick = () => {
+        if (!canEditVariant) return;
         const currentValues = getValues();
         editBaselinesRef.current[stateKey] = {
             formFields: Object.entries(currentValues).reduce<Record<string, string>>((acc, [key, value]) => {
                 acc[key] = String(value ?? "");
                 return acc;
             }, {}),
-            specialInterviews: normalizeSpecialInterviews(specialInterviews).map((record) => ({ ...record })),
+            specialInterviews: normalizeSpecialInterviews(specialInterviews, currentUserDisplayName).map((record) => ({
+                ...record,
+            })),
         };
         updateFormState({ isEditing: true });
     };
@@ -277,7 +290,9 @@ export default function TermSubForm({
                 acc[key] = String(value ?? "");
                 return acc;
             }, {}),
-            specialInterviews: normalizeSpecialInterviews(savedSpecialInterviews).map((record) => ({ ...record })),
+            specialInterviews: normalizeSpecialInterviews(savedSpecialInterviews, currentUserDisplayName).map((record) => ({
+                ...record,
+            })),
         };
 
         reset(baseline.formFields);
@@ -302,12 +317,18 @@ export default function TermSubForm({
     };
 
     const handleResetClick = () => {
+        if (!canEditVariant) return;
         if (confirm("Are you sure you want to clear all unsaved changes?")) {
+            const currentValues = getValues();
             const resetValues = Object.fromEntries(
-                Object.entries(getValues()).map(([key, val]) => [
-                    key,
-                    key.startsWith(prefix) ? "" : val ?? "",
-                ])
+                Object.entries(currentValues).map(([key, val]) => {
+                    if (!key.startsWith(prefix)) {
+                        return [key, val ?? ""];
+                    }
+                    const templateKey = key.slice(prefix.length).trim().toLowerCase();
+                    const field = template?.fieldsByKey.get(templateKey) ?? null;
+                    return [key, field && canEditField(field) ? "" : val ?? ""];
+                })
             );
             reset(resetValues);
 
@@ -315,7 +336,6 @@ export default function TermSubForm({
                 setSpecialInterviews([]);
             }
 
-            onClearForm();
             toast.info("Form has been reset");
         }
     };
@@ -325,7 +345,7 @@ export default function TermSubForm({
             specialInterviews.reduce((max, record) => Math.max(max, record.rowIndex ?? -1), -1) + 1;
         setSpecialInterviews([
             ...specialInterviews,
-            { date: "", summary: "", interviewedBy: "", rowIndex: nextIndex },
+            createDefaultSpecialInterviewRecord(nextIndex, currentUserDisplayName),
         ]);
     };
 
@@ -348,7 +368,7 @@ export default function TermSubForm({
                     <Textarea
                         {...register(scopedKey)}
                         placeholder={label}
-                        disabled={!isEditing}
+                        disabled={!isEditing || !canEditField(field)}
                         className="w-full min-h-[100px] resize-y"
                     />
                     {field.helpText ? <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p> : null}
@@ -364,7 +384,11 @@ export default function TermSubForm({
                         {label}
                         {field.required ? " *" : ""}
                     </label>
-                    <select {...register(scopedKey)} disabled={!isEditing} className="w-full border rounded px-3 py-2">
+                    <select
+                        {...register(scopedKey)}
+                        disabled={!isEditing || !canEditField(field)}
+                        className="w-full border rounded px-3 py-2"
+                    >
                         <option value="">Select...</option>
                         {options.map((option) => (
                             <option key={option.id} value={option.code}>
@@ -380,7 +404,12 @@ export default function TermSubForm({
         if (type === "checkbox") {
             return (
                 <label key={scopedKey} className="flex items-center gap-2 text-sm font-medium mb-2">
-                    <input type="checkbox" {...register(scopedKey)} disabled={!isEditing} className="h-4 w-4" />
+                    <input
+                        type="checkbox"
+                        {...register(scopedKey)}
+                        disabled={!isEditing || !canEditField(field)}
+                        className="h-4 w-4"
+                    />
                     {label}
                 </label>
             );
@@ -397,7 +426,7 @@ export default function TermSubForm({
                     type={inputType}
                     {...register(scopedKey)}
                     placeholder={label}
-                    disabled={!isEditing}
+                    disabled={!isEditing || !canEditField(field)}
                 />
                 {field.helpText ? <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p> : null}
             </div>
@@ -489,7 +518,7 @@ export default function TermSubForm({
                                     )
                                 );
                             }}
-                            disabled={!isEditing}
+                            disabled={!isEditing || !canEditVariant}
                         />
                             </div>
 
@@ -505,7 +534,7 @@ export default function TermSubForm({
                                         );
                                     }}
                                     placeholder={summaryLabel}
-                                    disabled={!isEditing}
+                                    disabled={!isEditing || !canEditVariant}
                                     className="w-full min-h-[100px] resize-y"
                                 />
                             </div>
@@ -522,7 +551,7 @@ export default function TermSubForm({
                                         );
                                     }}
                                     placeholder={interviewedByLabel}
-                                    disabled={!isEditing}
+                                    disabled={!isEditing || !canEditVariant}
                                 />
                             </div>
                         </div>
@@ -532,15 +561,17 @@ export default function TermSubForm({
 
             <div className="flex items-center justify-center mt-6 gap-2">
                 {!isEditing ? (
-                    <Button
-                        type="button"
-                        onClick={handleEditClick}
-                        variant="outline"
-                        className="flex items-center gap-2 bg-primary text-primary-foreground"
-                    >
-                        <Edit className="h-4 w-4 text-primary-foreground" />
-                        Edit
-                    </Button>
+                    canEditVariant ? (
+                        <Button
+                            type="button"
+                            onClick={handleEditClick}
+                            variant="outline"
+                            className="flex items-center gap-2 bg-primary text-primary-foreground"
+                        >
+                            <Edit className="h-4 w-4 text-primary-foreground" />
+                            Edit
+                        </Button>
+                    ) : null
                 ) : (
                     <>
                         <Button type="button" onClick={handleSaveClick} className="flex items-center gap-2">

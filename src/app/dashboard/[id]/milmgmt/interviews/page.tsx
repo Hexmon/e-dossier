@@ -22,6 +22,8 @@ import { useMe } from "@/hooks/useMe";
 import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
 import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
+import { buildInterviewActorDisplayName } from "@/lib/interviewFormAutofill";
+import { resolveInterviewAccessContext } from "@/lib/interview-access";
 
 type InterviewModule = "initial" | "terms";
 
@@ -57,6 +59,17 @@ export default function InterviewsPage() {
   const canEditLockedSemesters = canBypassDossierSemesterLock({
     roles: meData?.roles,
     position: meData?.apt?.position ?? null,
+  });
+  const currentUserDisplayName = buildInterviewActorDisplayName({
+    rank: meData?.user?.rank,
+    name: meData?.user?.name,
+  });
+  const interviewAccess = resolveInterviewAccessContext({
+    permissions: meData?.permissions,
+    deniedPermissions: meData?.deniedPermissions,
+    roles: meData?.roles,
+    position: meData?.apt?.position ?? null,
+    scopeType: meData?.apt?.scope?.type ?? null,
   });
   const { activeSemester, isActiveSemesterLocked, supportedSemesters } = useDossierSemesterRouting({
     currentSemester,
@@ -150,13 +163,25 @@ export default function InterviewsPage() {
               activeSemester={activeSemester}
               currentSemester={currentSemester}
               supportedSemesters={supportedSemesters}
-                                    canOverrideLockedSemester={canEditLockedSemesters}
-            />
+              canOverrideLockedSemester={canEditLockedSemesters}
+          />
 
           {activeModule === "terms" ? (
-            <InterviewTermTabs readOnly={isActiveSemesterLocked} currentSemester={currentSemester} canEditLockedSemesters={canEditLockedSemesters} />
+            <InterviewTermTabs
+              readOnly={isActiveSemesterLocked}
+              currentSemester={currentSemester}
+              canEditLockedSemesters={canEditLockedSemesters}
+              currentUserDisplayName={currentUserDisplayName}
+              accessContext={interviewAccess}
+            />
           ) : (
-            <InterviewTabs readOnly={isActiveSemesterLocked} currentSemester={currentSemester} canEditLockedSemesters={canEditLockedSemesters} />
+            <InterviewTabs
+              readOnly={isActiveSemesterLocked}
+              currentSemester={currentSemester}
+              canEditLockedSemesters={canEditLockedSemesters}
+              currentUserDisplayName={currentUserDisplayName}
+              accessContext={interviewAccess}
+            />
           )}
         </DossierTab>
       </main>
