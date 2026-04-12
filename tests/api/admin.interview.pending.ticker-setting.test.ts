@@ -45,10 +45,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(authz.requireAuth).mockResolvedValue({
     userId: "6ee0ee1f-dca4-4e91-90cc-d067f9a00e42",
-    roles: ["PLATOON_COMMANDER"],
+    roles: ["arjunplcdr"],
     claims: {
       apt: {
-        position: "PLATOON_COMMANDER",
+        position: "arjunplcdr",
         scope: {
           type: "PLATOON",
           id: "f008719d-531f-465f-a90c-47743cfe5031",
@@ -101,6 +101,33 @@ describe("Admin interview pending ticker setting API", () => {
       limit: 10,
       offset: 0,
     });
+  });
+
+  it("returns 403 for non-admin users outside platoon scope", async () => {
+    vi.mocked(authz.requireAuth).mockResolvedValueOnce({
+      userId: "user-2",
+      roles: ["TRAINING_OFFICER"],
+      claims: {
+        apt: {
+          position: "TRAINING_OFFICER",
+          scope: {
+            type: "GLOBAL",
+            id: null,
+          },
+        },
+      },
+    } as Awaited<ReturnType<typeof authz.requireAuth>>);
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path: `${basePath}?includeLogs=false`,
+    });
+
+    const res = await GET(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.message).toBe("Forbidden: ticker setting access denied.");
   });
 
   it("POST validates start/end range", async () => {

@@ -11,6 +11,7 @@ interface Props {
     form: UseFormReturn<FieldValues>;
     tabName?: string;
     template?: TemplateInfo | null;
+    allowEditing?: boolean;
     onClearForm?: () => void;
     onSave?: (data: FieldValues) => Promise<any>;
 }
@@ -39,6 +40,7 @@ export default function PLCdrCombinedForm({
     form,
     tabName = "PL CDR",
     template,
+    allowEditing = true,
     onClearForm,
     onSave,
 }: Props) {
@@ -81,6 +83,7 @@ export default function PLCdrCombinedForm({
     };
 
     const handleEdit = () => {
+        if (!allowEditing) return;
         editBaselineRef.current = { ...(watch() ?? {}) };
         setIsEditing(true);
     };
@@ -90,6 +93,7 @@ export default function PLCdrCombinedForm({
     };
 
     const handleReset = () => {
+        if (!allowEditing) return;
         if (confirm("Are you sure you want to clear all unsaved changes?")) {
             reset();
             onClearForm?.();
@@ -196,7 +200,7 @@ export default function PLCdrCombinedForm({
 
             {hasTemplateContent ? (
                 <div className="flex justify-center items-center gap-2">
-                    {!isEditing ? (
+                    {!isEditing && allowEditing ? (
                         <Button
                             type="button"
                             onClick={handleEdit}
@@ -206,7 +210,7 @@ export default function PLCdrCombinedForm({
                             <Edit className="h-4 w-4 text-primary-foreground" />
                             Edit
                         </Button>
-                    ) : (
+                    ) : isEditing ? (
                         <>
                             <Button type="button" onClick={handleSave} className="flex items-center gap-2">
                                 <Save className="h-4 w-4" />
@@ -221,7 +225,7 @@ export default function PLCdrCombinedForm({
                                 Cancel
                             </Button>
                         </>
-                    )}
+                    ) : null}
                 </div>
             ) : null}
         </div>

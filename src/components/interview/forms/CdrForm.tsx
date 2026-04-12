@@ -11,6 +11,7 @@ interface Props {
     form: UseFormReturn<FieldValues>;
     tabName?: string;
     template?: TemplateInfo | null;
+    allowEditing?: boolean;
     onClearForm?: () => void;
     onSave?: (data: FieldValues) => Promise<any>;
 }
@@ -35,7 +36,7 @@ function getTemplateSections(template?: TemplateInfo | null): TemplateSection[] 
     ];
 }
 
-export default function CdrForm({ form, tabName = "CDR", template, onClearForm, onSave }: Props) {
+export default function CdrForm({ form, tabName = "CDR", template, allowEditing = true, onClearForm, onSave }: Props) {
     const { register, handleSubmit, reset, watch } = form;
     const editBaselineRef = useRef<Record<string, unknown> | null>(null);
 
@@ -75,6 +76,7 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
     };
 
     const handleEdit = () => {
+        if (!allowEditing) return;
         editBaselineRef.current = { ...(watch() ?? {}) };
         setIsEditing(true);
     };
@@ -84,6 +86,7 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
     };
 
     const handleReset = () => {
+        if (!allowEditing) return;
         if (confirm("Are you sure you want to clear all unsaved changes?")) {
             reset();
             onClearForm?.();
@@ -190,7 +193,7 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
 
             {hasTemplateContent ? (
                 <div className="flex items-center justify-center gap-2">
-                    {!isEditing ? (
+                    {!isEditing && allowEditing ? (
                         <Button
                             type="button"
                             onClick={handleEdit}
@@ -200,7 +203,7 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
                             <Edit className="h-4 w-4 text-primary-foreground" />
                             Edit
                         </Button>
-                    ) : (
+                    ) : isEditing ? (
                         <>
                             <Button type="button" onClick={handleSave} className="flex items-center gap-2">
                                 <Save className="h-4 w-4" />
@@ -215,7 +218,7 @@ export default function CdrForm({ form, tabName = "CDR", template, onClearForm, 
                                 Cancel
                             </Button>
                         </>
-                    )}
+                    ) : null}
                 </div>
             ) : null}
         </div>

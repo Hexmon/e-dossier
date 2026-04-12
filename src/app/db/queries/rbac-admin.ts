@@ -4,6 +4,7 @@ import { authzPolicyState, permissionFieldRules } from '../schema/auth/rbac-exte
 import { permissions, positionPermissions, rolePermissions, roles } from '../schema/auth/rbac';
 import { positions } from '../schema/auth/positions';
 import { clearEffectivePermissionsCache } from '@/app/lib/acx/cache';
+import { ensureInterviewRbacDefaults } from './authz-permissions';
 
 type Paging = {
   q?: string;
@@ -12,6 +13,7 @@ type Paging = {
 };
 
 export async function listRbacPermissions(input: Paging = {}) {
+  await ensureInterviewRbacDefaults();
   const limit = Math.min(Math.max(input.limit ?? 100, 1), 500);
   const offset = Math.max(input.offset ?? 0, 0);
   const q = input.q?.trim();
@@ -79,6 +81,7 @@ export async function deleteRbacPermission(permissionId: string) {
 }
 
 export async function listRbacRoles() {
+  await ensureInterviewRbacDefaults();
   return db
     .select({ id: roles.id, key: roles.key, description: roles.description })
     .from(roles)
@@ -146,6 +149,7 @@ export async function deleteRbacRole(roleId: string) {
 }
 
 export async function listRbacPositions() {
+  await ensureInterviewRbacDefaults();
   return db
     .select({ id: positions.id, key: positions.key, displayName: positions.displayName })
     .from(positions)
@@ -153,6 +157,7 @@ export async function listRbacPositions() {
 }
 
 export async function listRolePermissionMappings(roleId?: string) {
+  await ensureInterviewRbacDefaults();
   const rows = await db
     .select({
       roleId: rolePermissions.roleId,
@@ -169,6 +174,7 @@ export async function listRolePermissionMappings(roleId?: string) {
 }
 
 export async function listPositionPermissionMappings(positionId?: string) {
+  await ensureInterviewRbacDefaults();
   const rows = await db
     .select({
       positionId: positionPermissions.positionId,

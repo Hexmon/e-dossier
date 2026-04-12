@@ -31,6 +31,10 @@ export interface CourseOffering {
     id: string;
     subjectId: string;
     semester: number;
+    includeTheory: boolean;
+    includePractical: boolean;
+    theoryCredits?: number | null;
+    practicalCredits?: number | null;
     subject: Subject;
 }
 

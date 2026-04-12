@@ -2,6 +2,7 @@ import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { mustBeAuthed, parseParam, ensureOcExists, assertOcSemesterWriteAllowed } from '../../../_checks';
 import { OcIdParam } from '@/app/lib/oc-validators';
 import { InterviewIdParam, interviewOcUpdateSchema } from '@/app/lib/interview-oc-validators';
+import { getEffectivePermissionBundleCached } from '@/app/db/queries/authz-permissions';
 import {
     getOcInterview,
     updateOcInterview,
@@ -16,10 +17,15 @@ import {
     getInterviewTemplateBase,
     listInterviewTemplateSemestersByTemplate,
     listInterviewTemplateFieldsByIds,
+    listInterviewTemplateFieldsByTemplate,
     listInterviewTemplateGroupsByIds,
 } from '@/app/db/queries/interviewOc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import {
+    getRequiredPermissionsForInterviewMutation,
+    resolveInterviewAccessContext,
+} from '@/lib/interview-access';
 
 function cleanText(value?: string | null) {
     if (value === undefined) return undefined;
@@ -57,6 +63,7 @@ async function validateTemplateAndPayload(params: {
 
     const topLevelFields = params.fields ?? [];
     const groupPayloads = params.groups ?? [];
+    const templateFields = await listInterviewTemplateFieldsByTemplate(params.templateId);
 
     const fieldIds = new Set<string>();
     for (const item of topLevelFields) fieldIds.add(item.fieldId);
@@ -118,6 +125,82 @@ async function validateTemplateAndPayload(params: {
                 }
             }
         }
+    }
+
+    return {
+        template,
+        templateFields,
+        requestedFields: Array.from(fieldIds)
+            .map((fieldId) => {
+                const field = templateFields.find((item) => item.id === fieldId);
+                if (!field) return null;
+                return {
+                    key: field.key,
+                    label: field.label,
+                    groupId: field.groupId,
+                    isActive: field.isActive,
+                    deletedAt: field.deletedAt,
+                };
+            })
+            .filter((field): field is NonNullable<typeof field> => Boolean(field)),
+    };
+}
+
+async function assertInterviewWriteAuthorized(params: {
+    authContext: Awaited<ReturnType<typeof mustBeAuthed>>;
+    template: { id: string; code?: string | null; title?: string | null };
+    templateFields: Array<{
+        key: string;
+        label?: string | null;
+        groupId?: string | null;
+        isActive?: boolean | null;
+        deletedAt?: Date | null;
+    }>;
+    requestedFields: Array<{
+        key: string;
+        label?: string | null;
+        groupId?: string | null;
+        isActive?: boolean | null;
+        deletedAt?: Date | null;
+    }>;
+}) {
+    const authApt = 'claims' in params.authContext ? (params.authContext.claims as any)?.apt : params.authContext.apt;
+    const bundle = await getEffectivePermissionBundleCached({
+        userId: params.authContext.userId,
+        roles: params.authContext.roles ?? [],
+        apt: authApt,
+    });
+    const accessContext = resolveInterviewAccessContext({
+        permissions: bundle.permissions,
+        deniedPermissions: bundle.deniedPermissions,
+    });
+    const activeRequestedFields = params.requestedFields.filter((field) => field.isActive !== false && !field.deletedAt);
+    const permissionFields = (activeRequestedFields.length > 0 ? activeRequestedFields : params.templateFields).map(
+        (field) => ({
+            key: field.key,
+            label: field.label ?? '',
+            groupId: field.groupId ?? null,
+        }),
+    );
+    const requiredPermissions = getRequiredPermissionsForInterviewMutation({
+        template: params.template,
+        fields: permissionFields,
+    });
+
+    if (requiredPermissions.length === 0) {
+        throw new ApiError(403, 'Interview template RBAC mapping is not configured.', 'forbidden');
+    }
+
+    const missingPermissions = requiredPermissions.filter((permission) => {
+        if (accessContext.deniedPermissions.has(permission)) return true;
+        return !(accessContext.permissions.has('*') || accessContext.permissions.has(permission));
+    });
+
+    if (missingPermissions.length > 0) {
+        throw new ApiError(403, 'Interview write access denied for the requested fields.', 'forbidden', {
+            requiredPermissions,
+            missingPermissions,
+        });
     }
 }
 
@@ -218,11 +301,17 @@ async function PATCHHandler(
                     : Number(interview.semester)
                 : Number(dto.semester);
         await assertOcSemesterWriteAllowed({ ocId, requestedSemester: effectiveSemester, request: req, authContext: authCtx });
-        await validateTemplateAndPayload({
+        const templateValidation = await validateTemplateAndPayload({
             templateId: interview.templateId,
             semester: effectiveSemester,
             fields: dto.fields,
             groups: dto.groups,
+        });
+        await assertInterviewWriteAuthorized({
+            authContext: authCtx,
+            template: templateValidation.template,
+            templateFields: templateValidation.templateFields,
+            requestedFields: templateValidation.requestedFields,
         });
 
         if (dto.semester !== undefined || dto.course !== undefined) {

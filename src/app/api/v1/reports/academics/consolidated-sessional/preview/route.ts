@@ -17,6 +17,7 @@ async function GETHandler(req: AuditNextRequest) {
       courseId: sp.get('courseId') ?? undefined,
       semester: sp.get('semester') ?? undefined,
       subjectId: sp.get('subjectId') ?? undefined,
+      subjectType: sp.get('subjectType') ?? undefined,
       branches: sp.get('branches') ?? undefined,
     });
 
@@ -37,6 +38,7 @@ async function GETHandler(req: AuditNextRequest) {
         courseId: query.courseId,
         semester: query.semester,
         subjectId: query.subjectId,
+        subjectType: query.subjectType ?? 'all',
         branchCount: query.branches.length,
         theoryCount: preview.theoryRows.length,
         practicalCount: preview.practicalRows.length,

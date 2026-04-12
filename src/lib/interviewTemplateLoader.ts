@@ -47,6 +47,18 @@ function mapField(row: any): TemplateField {
     };
 }
 
+function mapFieldWithOptions(row: any): TemplateField {
+    return {
+        ...mapField(row),
+        options: (row.options ?? []).map((option: any) => ({
+            id: option.id,
+            code: option.code,
+            label: option.label,
+            sortOrder: option.sortOrder ?? 0,
+        })),
+    };
+}
+
 function sortFields(fields: TemplateField[]) {
     return [...fields].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 }
@@ -62,102 +74,54 @@ export async function loadInterviewTemplates(): Promise<TemplateInfo[]> {
     templateCache.promise = (async () => {
         const resp: any = await apiRequest<any>({
             method: "GET",
-            endpoint: "/api/v1/admin/interview/templates",
+            endpoint: "/api/v1/admin/interview/templates?hydrate=true",
         });
         const templates: any[] = resp?.items ?? [];
 
-        const detailed = await Promise.all(
-            templates.map(async (template) => {
-                const [sectionsResp, groupsResp] = await Promise.all([
-                    apiRequest<any>({
-                        method: "GET",
-                        endpoint: `/api/v1/admin/interview/templates/${template.id}/sections`,
-                    }),
-                    apiRequest<any>({
-                        method: "GET",
-                        endpoint: `/api/v1/admin/interview/templates/${template.id}/groups`,
-                    }),
-                ]);
-
-                const sections: any[] = sectionsResp?.items ?? [];
-                const groups: any[] = groupsResp?.items ?? [];
-
-                const sectionFieldResponses = await Promise.all(
-                    sections.map((section) =>
-                        apiRequest<any>({
-                            method: "GET",
-                            endpoint: `/api/v1/admin/interview/templates/${template.id}/sections/${section.id}/fields`,
-                        })
-                    )
-                );
-
-                const groupFieldResponses = await Promise.all(
-                    groups.map((group) =>
-                        apiRequest<any>({
-                            method: "GET",
-                            endpoint: `/api/v1/admin/interview/templates/${template.id}/groups/${group.id}/fields`,
-                        })
-                    )
-                );
-
-                const sectionFieldLists = sectionFieldResponses.map((res) => sortFields((res?.items ?? []).map(mapField)));
-                const sectionRows: TemplateSection[] = sortSections(
-                    sections.map((section, idx) => ({
+        const detailed = templates.map((template) => {
+            const sectionRows: TemplateSection[] = sortSections(
+                (template.sections ?? []).map((section: any) => {
+                    const sectionFields = sortFields((section.fields ?? []).map(mapFieldWithOptions));
+                    return {
                         id: section.id,
                         title: section.title,
                         description: section.description ?? null,
                         sortOrder: section.sortOrder ?? 0,
-                        fields: sectionFieldLists[idx] ?? [],
-                    }))
-                );
-
-                const groupsDetailed: TemplateGroup[] = groups.map((group, idx) => {
-                    const groupFields = sortFields((groupFieldResponses[idx]?.items ?? []).map(mapField));
-                    return {
-                        id: group.id,
-                        title: group.title,
-                        minRows: group.minRows,
-                        maxRows: group.maxRows ?? null,
-                        fields: groupFields,
-                        fieldsByKey: buildFieldsByKey(groupFields),
+                        fields: sectionFields,
                     };
-                });
+                })
+            );
 
-                const allFields = [
-                    ...sectionRows.flatMap((section) => section.fields),
-                    ...groupsDetailed.flatMap((group) => group.fields),
-                ];
-
-                const selectFields = allFields.filter((field) => field.fieldType === "select");
-                await Promise.all(
-                    selectFields.map(async (field) => {
-                        const optionsResp: any = await apiRequest<any>({
-                            method: "GET",
-                            endpoint: `/api/v1/admin/interview/templates/${template.id}/fields/${field.id}/options`,
-                        });
-                        field.options = (optionsResp?.items ?? []).map((opt: any) => ({
-                            id: opt.id,
-                            code: opt.code,
-                            label: opt.label,
-                            sortOrder: opt.sortOrder ?? 0,
-                        }));
-                    })
-                );
-
+            const groupsDetailed: TemplateGroup[] = (template.groups ?? []).map((group: any) => {
+                const groupFields = sortFields((group.fields ?? []).map(mapFieldWithOptions));
                 return {
-                    id: template.id,
-                    code: template.code,
-                    title: template.title,
-                    sortOrder: template.sortOrder ?? 0,
-                    semesters: template.semesters ?? [],
-                    allowMultiple: template.allowMultiple ?? true,
-                    sections: sectionRows,
-                    fieldsByKey: buildFieldsByKey(allFields),
-                    fieldsById: buildFieldsById(allFields),
-                    groups: groupsDetailed,
+                    id: group.id,
+                    title: group.title,
+                    minRows: group.minRows,
+                    maxRows: group.maxRows ?? null,
+                    fields: groupFields,
+                    fieldsByKey: buildFieldsByKey(groupFields),
                 };
-            })
-        );
+            });
+
+            const allFields = [
+                ...sectionRows.flatMap((section) => section.fields),
+                ...groupsDetailed.flatMap((group) => group.fields),
+            ];
+
+            return {
+                id: template.id,
+                code: template.code,
+                title: template.title,
+                sortOrder: template.sortOrder ?? 0,
+                semesters: template.semesters ?? [],
+                allowMultiple: template.allowMultiple ?? true,
+                sections: sectionRows,
+                fieldsByKey: buildFieldsByKey(allFields),
+                fieldsById: buildFieldsById(allFields),
+                groups: groupsDetailed,
+            };
+        });
 
         templateCache.data = detailed;
         return detailed;

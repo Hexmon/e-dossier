@@ -1,6 +1,7 @@
 import { api } from '@/app/lib/apiClient';
 import { endpoints } from '@/constants/endpoints';
 import type {
+  ConsolidatedSessionalSection,
   ConsolidatedSessionalPreview,
   CourseWiseFinalPerformancePreview,
   CourseWisePerformancePreview,
@@ -64,6 +65,7 @@ export const reportsApi = {
     courseId: string;
     semester: number;
     subjectId: string;
+    subjectType?: ConsolidatedSessionalSection;
     branches?: ReportBranch[];
   }) {
     return api.get<ConsolidatedPreviewResponse>(
@@ -73,6 +75,7 @@ export const reportsApi = {
           courseId: params.courseId,
           semester: params.semester,
           subjectId: params.subjectId,
+          subjectType: params.subjectType,
           branches: (params.branches ?? []).join(','),
         },
       }

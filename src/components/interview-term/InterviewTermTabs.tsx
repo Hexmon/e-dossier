@@ -1,14 +1,21 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { useSelector, useDispatch } from "react-redux";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { RootState } from "@/store";
 import TermSubForm from "./TermSubForm";
 import { useInterviewForms } from "@/hooks/useInterviewForms";
 import { getTemplateMatchForSemester } from "@/lib/interviewTemplateMatching";
-import { saveTermInterviewForm, clearTermInterviewForm } from "@/store/slices/termInterviewSlice";
+import { mapTemplateKeyToTermFormKey } from "@/lib/interviewFieldUtils";
+import { applyInterviewActorAutofill, resolveTermActorAutofillFields } from "@/lib/interviewFormAutofill";
+import {
+    canEditAnyTermFields,
+    canEditTermField,
+    type InterviewAccessContext,
+} from "@/lib/interview-access";
+import { saveTermInterviewForm } from "@/store/slices/termInterviewSlice";
 import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 
 type TermVariant = "beginning" | "postmid" | "special";
@@ -31,10 +38,14 @@ export default function InterviewTermTabs({
     readOnly = false,
     currentSemester = 1,
     canEditLockedSemesters = false,
+    currentUserDisplayName,
+    accessContext,
 }: {
     readOnly?: boolean;
     currentSemester?: number | null;
     canEditLockedSemesters?: boolean;
+    currentUserDisplayName?: string;
+    accessContext: InterviewAccessContext;
 }) {
     const { id } = useParams();
     const searchParams = useSearchParams();
@@ -135,16 +146,40 @@ export default function InterviewTermTabs({
     }, [ocId, fetchTerm, dispatch]);
 
     const currentVariant = subTab[selectedTerm] ?? "beginning";
+    const termMatch = getTemplateMatchForSemester(templateMappings, currentVariant, selectedTerm);
+    const termTemplate = termMatch?.template ?? null;
+    const specialGroup = currentVariant === "special" && termMatch?.groupId
+        ? termTemplate?.groups.find((group) => group.id === termMatch.groupId) ?? null
+        : null;
+    const allTermFields = useMemo(
+        () => Array.from(termTemplate?.fieldsById?.values?.() ?? []),
+        [termTemplate],
+    );
+    const editableTermFields = useMemo(
+        () => allTermFields.filter((field) => canEditTermField(accessContext, currentVariant, field)),
+        [allTermFields, accessContext, currentVariant],
+    );
+    const actorAutofillFields = useMemo(
+        () => (currentVariant === "special" ? [] : resolveTermActorAutofillFields(editableTermFields, currentVariant)),
+        [editableTermFields, currentVariant],
+    );
+    const canEditCurrentVariant = !readOnly && canEditAnyTermFields(accessContext, currentVariant, allTermFields);
 
     // Load saved data when switching terms or variants
     useEffect(() => {
         isHydratingRef.current = true;
         const savedData = savedFormData?.formFields || {};
-        form.reset(savedData);
+        const resetValues = applyInterviewActorAutofill({
+            values: savedData,
+            templateFields: actorAutofillFields,
+            actorDisplayName: currentUserDisplayName,
+            resolveFieldKey: (field) => mapTemplateKeyToTermFormKey(selectedTerm, currentVariant, field.key),
+        });
+        form.reset(resetValues);
         queueMicrotask(() => {
             isHydratingRef.current = false;
         });
-    }, [selectedTerm, currentVariant, ocId, form, savedFormData?.formFields]);
+    }, [selectedTerm, currentVariant, ocId, form, savedFormData?.formFields, actorAutofillFields, currentUserDisplayName]);
 
     // Auto-save to Redux on form changes
     useEffect(() => {
@@ -177,12 +212,6 @@ export default function InterviewTermTabs({
         : { isEditing: false, isSaved: false };
     const currentFormState = formStates[stateKey] ?? defaultStateFromData;
 
-    const termMatch = getTemplateMatchForSemester(templateMappings, currentVariant, selectedTerm);
-    const termTemplate = termMatch?.template ?? null;
-    const specialGroup = currentVariant === "special" && termMatch?.groupId
-        ? termTemplate?.groups.find((group) => group.id === termMatch.groupId) ?? null
-        : null;
-
     const templatesLoaded = Boolean(templateMappings);
     const missingTemplate = templatesLoaded && !termTemplate;
     const specialGroupMissing = templatesLoaded && currentVariant === "special" && termTemplate && !specialGroup;
@@ -193,18 +222,6 @@ export default function InterviewTermTabs({
             ...prev,
             [stateKey]: { ...currentFormState, ...updates },
         }));
-    };
-
-    const handleClearForm = () => {
-        if (readOnly) return;
-        if (confirm("Are you sure you want to clear all unsaved changes?")) {
-            dispatch(clearTermInterviewForm({
-                ocId,
-                termIndex: selectedTerm,
-                variant: currentVariant,
-            }));
-            form.reset({});
-        }
     };
 
     const termTabs = [1, 2, 3, 4, 5, 6];
@@ -285,23 +302,35 @@ export default function InterviewTermTabs({
                     variant={currentVariant}
                     template={termTemplate}
                     specialGroup={specialGroup}
+                    currentUserDisplayName={currentUserDisplayName}
+                    accessContext={accessContext}
                     isEditing={currentFormState.isEditing}
                     isSaved={currentFormState.isSaved}
                     onSave={async (payload) => {
                         const prefix = `term${selectedTerm}_${currentVariant}_`;
                         const formFields = Object.entries(payload).reduce<Record<string, string>>((acc, [key, value]) => {
-                            if (key.startsWith(prefix)) {
+                            if (!key.startsWith(prefix)) {
+                                return acc;
+                            }
+                            const templateKey = key.slice(prefix.length);
+                            const templateField = termTemplate?.fieldsByKey.get(templateKey.trim().toLowerCase());
+                            if (templateField && canEditTermField(accessContext, currentVariant, templateField)) {
                                 acc[key] = String(value ?? "");
                             }
                             return acc;
                         }, {});
 
-                        return saveTerm(selectedTerm, currentVariant, formFields, payload.specialInterviews);
+                        return saveTerm(
+                            selectedTerm,
+                            currentVariant,
+                            formFields,
+                            currentVariant === "special" ? payload.specialInterviews : undefined,
+                        );
                     }}
                     updateFormState={updateFormState}
                     ocId={ocId}
                     savedSpecialInterviews={savedSpecialInterviews}
-                    onClearForm={handleClearForm}
+                    canEditVariant={canEditCurrentVariant}
                 />
                 </div>
             ) : (

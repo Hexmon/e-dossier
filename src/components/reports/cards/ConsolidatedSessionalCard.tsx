@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { academicsApi } from '@/app/lib/api/academicsMarksApi';
 import { DownloadDialog } from '@/components/reports/common/DownloadDialog';
 import { useConsolidatedSessionalPreview, useCourseSemesters, useReportsDownloads } from '@/hooks/useReports';
-import type { ReportBranch } from '@/types/reports';
+import type { ConsolidatedSessionalSection, ReportBranch } from '@/types/reports';
 
 const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M', 'O'];
 
@@ -27,6 +27,8 @@ export function ConsolidatedSessionalCard() {
   const [semester, setSemester] = useState<number | null>(null);
   const [subjectId, setSubjectId] = useState('');
   const [branches, setBranches] = useState<ReportBranch[]>([]);
+  const [downloadSubjectType, setDownloadSubjectType] = useState<ConsolidatedSessionalSection | null>(null);
+  const [viewSubjectType, setViewSubjectType] = useState<ConsolidatedSessionalSection | null>(null);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewRequested, setViewRequested] = useState(false);
@@ -48,6 +50,7 @@ export function ConsolidatedSessionalCard() {
     courseId,
     semester,
     subjectId,
+    subjectType: viewSubjectType,
     branches,
     enabled: viewRequested,
   });
@@ -62,9 +65,36 @@ export function ConsolidatedSessionalCard() {
     return Array.from(map.values());
   }, [offeringsQuery.data]);
 
+  const selectedOffering = useMemo(
+    () => (offeringsQuery.data ?? []).find((offering) => offering.subject.id === subjectId) ?? null,
+    [offeringsQuery.data, subjectId]
+  );
+
+  const availableSections = useMemo(() => {
+    const sections: Array<{ key: ConsolidatedSessionalSection; title: string; description: string }> = [];
+    if (selectedOffering?.includeTheory) {
+      sections.push({
+        key: 'theory',
+        title: 'Theory',
+        description: 'View and download the theory sessional marksheet.',
+      });
+    }
+    if (selectedOffering?.includePractical) {
+      sections.push({
+        key: 'practical',
+        title: 'Practical',
+        description: 'View and download the practical sessional marksheet.',
+      });
+    }
+    return sections;
+  }, [selectedOffering]);
+
   useEffect(() => {
     setViewRequested(false);
     setViewModalOpen(false);
+    setViewSubjectType(null);
+    setDownloadSubjectType(null);
+    setDownloadOpen(false);
   }, [courseId, semester, subjectId, branchKey]);
 
   const onDownload = async (meta: {
@@ -73,8 +103,8 @@ export function ConsolidatedSessionalCard() {
     checkedBy: string;
     instructorName?: string;
   }) => {
-    if (!courseId || !semester || !subjectId) {
-      toast.error('Select course, semester and subject first.');
+    if (!courseId || !semester || !subjectId || !downloadSubjectType) {
+      toast.error('Select course, semester, subject and section first.');
       return;
     }
 
@@ -83,6 +113,7 @@ export function ConsolidatedSessionalCard() {
         courseId,
         semester,
         subjectId,
+        subjectType: downloadSubjectType,
         branches,
         password: meta.password,
         preparedBy: meta.preparedBy.trim() || undefined,
@@ -101,7 +132,7 @@ export function ConsolidatedSessionalCard() {
       <CardHeader>
         <CardTitle>Consolidated Sessional Mark Sheet (Subject Wise)</CardTitle>
         <CardDescription>
-          Generate theory/practical sessional sheet with grade-wise summary.
+          Generate separate theory and practical sessional sheets with grade-wise summary.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -197,35 +228,61 @@ export function ConsolidatedSessionalCard() {
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            onClick={() => {
-              setDownloadOpen(true);
-            }}
-            disabled={!courseId || !semester || !subjectId}
-          >
-            Download PDF
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              if (!viewRequested) setViewRequested(true);
-              setViewModalOpen(true);
-              void previewQuery.refetch();
-            }}
-            disabled={!courseId || !semester || !subjectId || previewQuery.isFetching}
-          >
-            {previewQuery.isFetching ? 'Loading...' : 'View'}
-          </Button>
+        <div className="space-y-3 rounded border p-3">
+          <div className="text-sm font-medium">Report Section</div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {availableSections.length ? (
+              availableSections.map((section) => {
+                const isLoadingThisSection = previewQuery.isFetching && viewSubjectType === section.key;
+
+                return (
+                  <div key={section.key} className="rounded border bg-muted/10 p-3">
+                    <div className="text-sm font-semibold">{section.title}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{section.description}</div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setViewSubjectType(section.key);
+                          setViewRequested(true);
+                          setViewModalOpen(true);
+                        }}
+                        disabled={!courseId || !semester || !subjectId || isLoadingThisSection}
+                      >
+                        {isLoadingThisSection ? 'Loading...' : `View ${section.title}`}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setDownloadSubjectType(section.key);
+                          setDownloadOpen(true);
+                        }}
+                        disabled={!courseId || !semester || !subjectId}
+                      >
+                        {`Download ${section.title}`}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded border border-dashed p-3 text-sm text-muted-foreground md:col-span-2">
+                Select a subject to see available theory/practical actions.
+              </div>
+            )}
+          </div>
         </div>
 
         <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
           <DialogContent className="w-[96vw] max-w-[96vw] md:w-[85vw] md:max-w-[85vw] lg:w-[88vw] lg:max-w-[88vw] xl:w-[90vw] xl:max-w-[90vw]">
             <DialogHeader>
-              <DialogTitle>Consolidated Sessional Preview</DialogTitle>
+              <DialogTitle>
+                Consolidated Sessional Preview
+                {viewSubjectType ? ` (${viewSubjectType === 'theory' ? 'Theory' : 'Practical'})` : ''}
+              </DialogTitle>
               <DialogDescription>
-                Theory and practical rows for selected course, semester, and subject.
+                Preview for the selected course, semester, subject, and section.
               </DialogDescription>
             </DialogHeader>
 
@@ -390,8 +447,8 @@ export function ConsolidatedSessionalCard() {
         <DownloadDialog
           open={downloadOpen}
           onOpenChange={setDownloadOpen}
-          title="Download Consolidated Sessional (PDF)"
-          description="File will be downloaded as password-protected PDF. Instructor / Prepared By / Checked By are optional."
+          title={`Download Consolidated Sessional${downloadSubjectType ? ` (${downloadSubjectType === 'theory' ? 'Theory' : 'Practical'})` : ''} (PDF)`}
+          description="File will be downloaded as a password-protected PDF for the selected subject section. Instructor / Prepared By / Checked By are optional."
           isPending={downloads.consolidatedDownload.isPending}
           includeInstructorField
           preparedByRequired={false}
