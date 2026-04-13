@@ -1,116 +1,168 @@
-# Air-Gapped Runtime Deployment
+# Air-Gapped App Runtime Deployment
 
-This project does not need to be deployed by cloning the full source repository onto the customer VM.
+This is the primary production deployment path for on-prem and air-gapped installs.
 
-The recommended on-prem deployment model is:
+The target topology is:
 
-1. Build the runtime bundle on a trusted internal build machine.
-2. Transfer the generated `.tar.gz` file to the air-gapped application VM.
-3. Run the compiled standalone server with the production `.env` file.
+- `VM1`: Next.js runtime + `systemd` + Nginx
+- `VM2`: PostgreSQL + MinIO
 
-## What The Runtime Bundle Contains
+The app VM no longer needs:
 
-- compiled Next.js standalone server
-- traced production `node_modules`
-- `.next/static`
-- `public/`
-- `docs/help/`
-- `.env.production.example`
-- this deployment guide
+- a full Git checkout
+- `pnpm install`
+- `pnpm build`
+- repo-local source code for normal releases
 
-It does **not** include the full repository source tree, tests, git history, or dev tooling.
+## Release Model
 
-## Build The Runtime Bundle
+1. Build a versioned app bundle on a trusted build machine.
+2. Transfer the `.tar.gz` and `.sha256` files to VM1 by your approved offline method.
+3. Deploy on VM1 with `edossier-deploy`.
+4. Keep the shared production env outside release folders.
+5. Roll back by switching the active release symlink instead of replacing the VM.
 
-Run this on your internal build machine:
+## Build The App Bundle
+
+Run this on the build machine:
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm build
-pnpm run package:runtime
+pnpm run release:airgap:app
 ```
 
 Artifacts are written to:
 
 ```bash
-.artifacts/runtime/e-dossier-runtime.tar.gz
-.artifacts/runtime/e-dossier-runtime.tar.gz.sha256
+.artifacts/airgap/app/e-dossier-app-<version>.tar.gz
+.artifacts/airgap/app/e-dossier-app-<version>.tar.gz.sha256
 ```
 
-## Transfer To The App VM
+## What The App Bundle Contains
 
-Copy the archive and checksum to the application VM over your approved internal transfer method.
+- compiled Next.js standalone server
+- traced production runtime dependencies
+- `.next/static`
+- `public/`
+- `docs/help/`
+- `.env.production.example`
+- `release-manifest.json`
+- `deploy-metadata.json`
+- this deployment guide
 
-Example:
+It does **not** include the full repo, tests, git history, or development tooling.
+
+## One-Time VM1 Bootstrap
+
+Before the first release, prepare VM1 once:
+
+1. Install `Node.js 20+`, `nginx`, and `psql` using your approved offline package process.
+2. Copy the bootstrap assets from `deploy/airgap/` to VM1.
+3. Run:
 
 ```bash
-scp .artifacts/runtime/e-dossier-runtime.tar.gz* ops@app-vm:/opt/edossier/
+sudo ./edossier-vm1-bootstrap.sh
 ```
 
-## Install On The App VM
+The bootstrap step:
 
-Install Node.js 20+ on the target VM, then:
+- installs `edossier-deploy` and `edossier-migrate` to `/usr/local/bin`
+- renders the `systemd` service
+- renders the Nginx site
+- creates:
+  - `/opt/edossier/releases`
+  - `/opt/edossier/shared`
+  - `/opt/edossier/shared/app.env`
+- configures the app to proxy MinIO through VM1
+
+Detailed bootstrap notes are in [AIRGAP_VM1_BOOTSTRAP.md](AIRGAP_VM1_BOOTSTRAP.md).
+
+## Shared Production Env
+
+The stable env file on VM1 is:
 
 ```bash
-sudo mkdir -p /srv/edossier-app
-cd /srv/edossier-app
-sudo tar -xzf /opt/edossier/e-dossier-runtime.tar.gz
-cd e-dossier-runtime
-sudo cp .env.production.example .env
-sudo chown -R "$USER":"$USER" /srv/edossier-app/e-dossier-runtime
+/opt/edossier/shared/app.env
 ```
 
-Edit `.env` and set at least:
+Set at least:
 
 - `DATABASE_URL`
-- `NEXT_PUBLIC_API_BASE_URL`
-- `MINIO_ENDPOINT`
-- `MINIO_PUBLIC_URL`
+- `NEXT_PUBLIC_API_BASE_URL=http://<VM1-IP>`
+- `MINIO_ENDPOINT=http://<VM1-IP>/media`
+- `MINIO_PUBLIC_URL=http://<VM1-IP>/media`
 - `MINIO_ACCESS_KEY`
 - `MINIO_SECRET_KEY`
 - `CSRF_SECRET`
 - admin/superadmin credentials
 
-## Start The App
+Using the VM1 `/media` proxy for both `MINIO_ENDPOINT` and `MINIO_PUBLIC_URL` keeps browser uploads and downloads on the same origin, which matches the production CSP.
 
-For a manual start:
+## Deploy On VM1
+
+Transfer the app bundle and checksum to VM1, then run:
 
 ```bash
-HOSTNAME=0.0.0.0 PORT=3000 NODE_ENV=production node server.js
+sudo edossier-deploy /path/to/e-dossier-app-<version>.tar.gz
 ```
 
-Or with `systemd`:
+The deploy command will:
 
-```ini
-[Unit]
-Description=E-Dossier Runtime
-After=network.target
+- verify `SHA256`
+- extract the bundle into a timestamped release directory
+- link the shared env into the release
+- update `/opt/edossier/current`
+- restart `edossier-app.service`
+- call the local health endpoint
+- keep the newest 3 releases
 
-[Service]
-Type=simple
-User=nextapp
-WorkingDirectory=/srv/edossier-app/e-dossier-runtime
-EnvironmentFile=/srv/edossier-app/e-dossier-runtime/.env
-Environment=HOSTNAME=0.0.0.0
-Environment=PORT=3000
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=5
+## Rollback
 
-[Install]
-WantedBy=multi-user.target
+List available releases:
+
+```bash
+sudo edossier-deploy list
 ```
 
-## Important Notes
+Rollback to the previous release:
 
-- This runtime bundle is for running the app, not for development.
-- `pnpm install`, `pnpm build`, and Git checkout are **not** required on the customer VM.
-- Database migrations should be executed as a controlled release step from your trusted environment. Do not rely on the customer VM having the full development toolchain.
-- If you regenerate the bundle, replace the extracted `e-dossier-runtime` directory atomically during deployment.
+```bash
+sudo edossier-deploy rollback
+```
 
-## Why This Works
+Rollback to a specific release:
 
-Next.js standalone output copies the production server and traced runtime dependencies into `.next/standalone`. Static assets still need to be copied alongside it. The runtime packaging script automates that step for this project.
+```bash
+sudo edossier-deploy rollback 20260413T123000Z-e-dossier-app-0.1.0
+```
 
-Reference:
-- Next.js self-hosting / standalone output: https://nextjs.org/docs/15/app/api-reference/config/next-config-js/output
+## Schema Releases
+
+Schema changes are handled separately from normal app tar deployment.
+
+Build the migration bundle on the trusted build machine:
+
+```bash
+pnpm run release:airgap:migrations
+```
+
+Then on VM1:
+
+```bash
+sudo edossier-migrate --backup-id <backup-reference> /path/to/e-dossier-migrations-<version>.tar.gz
+```
+
+The migration bundle runbook is documented in [AIRGAP_SCHEMA_RELEASE.md](AIRGAP_SCHEMA_RELEASE.md).
+
+## Operational Notes
+
+- `systemd` runs the app from `/opt/edossier/current`.
+- Nginx listens on port `80`.
+- Nginx proxies `/` to `127.0.0.1:3000`.
+- Nginx proxies `/media/` to MinIO on VM2.
+- App-to-DB traffic must be allowed from VM1 to VM2 on `5432/tcp`.
+- App-to-MinIO traffic must be allowed from VM1 to VM2 on `9000/tcp`.
+
+## Legacy Flow
+
+The older source-checkout deployment path remains documented only for reference. It is no longer the recommended production model for air-gapped installs.

@@ -212,19 +212,30 @@ VM-2 (Data: Postgres + MinIO)
 
 VM-1 (App)
 Recommended for air-gapped / customer-hosted installs:
-1. Build a runtime-only artifact on your trusted build machine:
+1. Bootstrap VM-1 once with the assets in `deploy/airgap/`:
+   - install `Node.js 20+`, `nginx`, and `psql` through your approved offline package process
+   - run `sudo ./deploy/airgap/edossier-vm1-bootstrap.sh`
+2. Build the offline app artifact on your trusted build machine:
    - `pnpm install --frozen-lockfile`
-   - `pnpm build`
-   - `pnpm run package:runtime`
-2. Transfer `.artifacts/runtime/e-dossier-runtime.tar.gz` to the App VM.
-3. Follow [AIRGAP_RUNTIME_DEPLOYMENT.md](docs/deploy/AIRGAP_RUNTIME_DEPLOYMENT.md).
+   - `pnpm run release:airgap:app`
+3. Transfer `.artifacts/airgap/app/e-dossier-app-<version>.tar.gz` and its `.sha256` file to VM-1.
+4. Deploy on VM-1:
+   - `sudo edossier-deploy /path/to/e-dossier-app-<version>.tar.gz`
+5. For schema releases only:
+   - `pnpm run release:airgap:migrations`
+   - transfer `.artifacts/airgap/migrations/e-dossier-migrations-<version>.tar.gz` and its `.sha256`
+   - `sudo edossier-migrate --backup-id <backup-reference> /path/to/e-dossier-migrations-<version>.tar.gz`
+6. Detailed runbooks:
+   - [AIRGAP_RUNTIME_DEPLOYMENT.md](docs/deploy/AIRGAP_RUNTIME_DEPLOYMENT.md)
+   - [AIRGAP_VM1_BOOTSTRAP.md](docs/deploy/AIRGAP_VM1_BOOTSTRAP.md)
+   - [AIRGAP_SCHEMA_RELEASE.md](docs/deploy/AIRGAP_SCHEMA_RELEASE.md)
 
 Legacy source-checkout flow:
 1. `pnpm install`.
 2. `cp .env.production.example .env` and set:
    - `DATABASE_URL=postgresql://...@<VM-2-IP>:5432/...`
-   - `MINIO_ENDPOINT=<VM-2-IP>`
-   - `MINIO_PUBLIC_URL=https://your-domain.example/media` (or CDN URL)
+   - `MINIO_ENDPOINT=http://<VM-1-IP>/media`
+   - `MINIO_PUBLIC_URL=http://<VM-1-IP>/media`
 3. `pnpm db:migrate`.
 4. Build and run:
    - `pnpm build`
@@ -232,6 +243,7 @@ Legacy source-checkout flow:
 
 ## Reverse Proxy / CDN
 - Proxy `/media/` on VM-1 to `http://<VM-2-IP>:9000/`.
+- For browser uploads in production, set both `MINIO_ENDPOINT` and `MINIO_PUBLIC_URL` to the VM-1 `/media` URL so uploads stay on the same origin.
 - If images are served from a different domain, add it to CSP `img-src` in `next.config.ts`.
 
 ## OC Image Uploads (2 images per OC)

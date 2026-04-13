@@ -35,7 +35,8 @@
 ## CDN/Proxy Recommendation
 Expose images through VM-1 (reverse proxy) instead of public MinIO:
 - Configure Nginx on VM-1 to proxy `/media/` to `http://<VM-2-IP>:9000`.
-- Set `MINIO_PUBLIC_URL=https://your-domain/media` in the app.
+- Set `MINIO_ENDPOINT=http://<VM-1-IP>/media` in the app so presigned upload URLs stay on the app origin.
+- Set `MINIO_PUBLIC_URL=http://<VM-1-IP>/media` in the app.
 - CDN can cache `https://your-domain/media/<bucket>/<key>`.
 
 ## CSP Note
