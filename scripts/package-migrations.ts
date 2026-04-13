@@ -29,7 +29,7 @@ async function main() {
   const archivePath = path.join(artifactRoot, `${artifactName}.tar.gz`);
   const journalPath = path.join(ROOT, 'drizzle', 'meta', '_journal.json');
   const runnerPath = path.join(ROOT, 'scripts', 'runtime', 'edossier-migrate-runner.js');
-  const guidePath = path.join(ROOT, 'docs', 'deploy', 'AIRGAP_SCHEMA_RELEASE.md');
+  const guidePath = path.join(ROOT, 'docs', 'operations', 'how-to', 'air-gapped-schema-release.md');
 
   await requirePath(journalPath, 'The migration bundle expects drizzle/meta/_journal.json to exist.');
   await requirePath(runnerPath, 'The migration bundle requires an offline migration runner.');
@@ -52,7 +52,7 @@ async function main() {
   }
 
   await cp(runnerPath, path.join(bundleDir, 'migrate.js'));
-  await cp(guidePath, path.join(bundleDir, 'MIGRATION_GUIDE.md'));
+  await cp(guidePath, path.join(bundleDir, 'air-gapped-schema-release.md'));
 
   const manifest = {
     artifactType: 'migrations',
@@ -71,7 +71,7 @@ async function main() {
       'drizzle/*.sql',
       'drizzle/meta/_journal.json',
       'migrate.js',
-      'MIGRATION_GUIDE.md',
+      'air-gapped-schema-release.md',
     ],
   };
 

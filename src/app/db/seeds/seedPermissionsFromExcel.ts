@@ -282,7 +282,7 @@ export async function seedPermissionsFromExcel(matrixPath?: string): Promise<{
   rolesProcessed: number;
   permissionsProcessed: number;
 }> {
-  const defaultMatrixPath = path.resolve(process.cwd(), 'docs/rbac/permission-matrix.parsed.json');
+  const defaultMatrixPath = path.resolve(process.cwd(), 'docs/reference/rbac/permission-matrix.parsed.json');
   const resolvedMatrixPath = matrixPath
     ? path.resolve(matrixPath)
     : defaultMatrixPath;

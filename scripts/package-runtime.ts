@@ -22,9 +22,9 @@ async function main() {
   const publicDir = path.join(ROOT, 'public');
   const helpDocsDir = path.join(ROOT, 'docs', 'help');
   const envExamplePath = path.join(ROOT, '.env.production.example');
-  const deployGuidePath = path.join(ROOT, 'docs', 'deploy', 'AIRGAP_RUNTIME_DEPLOYMENT.md');
-  const bootstrapGuidePath = path.join(ROOT, 'docs', 'deploy', 'AIRGAP_VM1_BOOTSTRAP.md');
-  const schemaGuidePath = path.join(ROOT, 'docs', 'deploy', 'AIRGAP_SCHEMA_RELEASE.md');
+  const deployGuidePath = path.join(ROOT, 'docs', 'operations', 'how-to', 'air-gapped-app-runtime-deployment.md');
+  const bootstrapGuidePath = path.join(ROOT, 'docs', 'operations', 'how-to', 'air-gapped-vm1-bootstrap.md');
+  const schemaGuidePath = path.join(ROOT, 'docs', 'operations', 'how-to', 'air-gapped-schema-release.md');
 
   await requirePath(
     standaloneDir,
@@ -55,9 +55,9 @@ async function main() {
   await copyIfPresent(publicDir, path.join(bundleDir, 'public'));
   await copyIfPresent(helpDocsDir, path.join(bundleDir, 'docs', 'help'));
   await cp(envExamplePath, path.join(bundleDir, '.env.production.example'));
-  await cp(deployGuidePath, path.join(bundleDir, 'DEPLOYMENT_GUIDE.md'));
-  await cp(bootstrapGuidePath, path.join(bundleDir, 'AIRGAP_VM1_BOOTSTRAP.md'));
-  await cp(schemaGuidePath, path.join(bundleDir, 'AIRGAP_SCHEMA_RELEASE.md'));
+  await cp(deployGuidePath, path.join(bundleDir, 'air-gapped-app-runtime-deployment.md'));
+  await cp(bootstrapGuidePath, path.join(bundleDir, 'air-gapped-vm1-bootstrap.md'));
+  await cp(schemaGuidePath, path.join(bundleDir, 'air-gapped-schema-release.md'));
 
   const manifest = {
     artifactType: 'app',
@@ -74,9 +74,9 @@ async function main() {
       'public',
       'docs/help',
       '.env.production.example',
-      'DEPLOYMENT_GUIDE.md',
-      'AIRGAP_VM1_BOOTSTRAP.md',
-      'AIRGAP_SCHEMA_RELEASE.md',
+      'air-gapped-app-runtime-deployment.md',
+      'air-gapped-vm1-bootstrap.md',
+      'air-gapped-schema-release.md',
     ],
   };
   const deployMetadata = {

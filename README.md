@@ -109,8 +109,8 @@ git config core.hooksPath .githooks
 git update-index --add --chmod=+x .githooks/pre-push .githooks/post-checkout
 ```
 
-For more details, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
-For token-based UI color rules, see [THEMING_GUIDE.md](docs/THEMING_GUIDE.md).
+For more details, see [contributing.md](docs/governance/how-to/contributing.md).
+For token-based UI color rules, see [theming-guide.md](docs/engineering/how-to/theming-guide.md).
 
 
 ## Code Quality & Git Hooks (Auto-Setup)
@@ -155,7 +155,7 @@ bash scripts/setup-git-hooks.sh
 powershell -ExecutionPolicy Bypass -File scripts/setup-git-hooks.ps1
 ```
 
-For detailed setup and troubleshooting, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
+For detailed setup and troubleshooting, see [contributing.md](docs/governance/how-to/contributing.md).
 
 ## Environment Files
 - App env:
@@ -226,9 +226,9 @@ Recommended for air-gapped / customer-hosted installs:
    - transfer `.artifacts/airgap/migrations/e-dossier-migrations-<version>.tar.gz` and its `.sha256`
    - `sudo edossier-migrate --backup-id <backup-reference> /path/to/e-dossier-migrations-<version>.tar.gz`
 6. Detailed runbooks:
-   - [AIRGAP_RUNTIME_DEPLOYMENT.md](docs/deploy/AIRGAP_RUNTIME_DEPLOYMENT.md)
-   - [AIRGAP_VM1_BOOTSTRAP.md](docs/deploy/AIRGAP_VM1_BOOTSTRAP.md)
-   - [AIRGAP_SCHEMA_RELEASE.md](docs/deploy/AIRGAP_SCHEMA_RELEASE.md)
+   - [air-gapped-app-runtime-deployment.md](docs/operations/how-to/air-gapped-app-runtime-deployment.md)
+   - [air-gapped-vm1-bootstrap.md](docs/operations/how-to/air-gapped-vm1-bootstrap.md)
+   - [air-gapped-schema-release.md](docs/operations/how-to/air-gapped-schema-release.md)
 
 Legacy source-checkout flow:
 1. `pnpm install`.
@@ -250,7 +250,7 @@ Legacy source-checkout flow:
 - Kinds: `CIVIL_DRESS`, `UNIFORM`
 - Flow: presign -> upload -> complete
 - Size limits: 20 KB to 200 KB
-- Detailed API notes: `docs/oc-images.md`
+- Detailed API notes: `docs/reference/api/oc-image-uploads.md`
 
 ## Operational Checks
 - `pnpm run check` verifies Postgres and MinIO connectivity.
@@ -278,7 +278,7 @@ Use this flow after RBAC/action-map changes and after `pnpm db:push`.
 2. Optional alternative import command (use if you want explicit parsed-matrix path control):
    - `pnpm import:permissions`
    - Example with explicit path:
-     - `pnpm import:permissions docs/rbac/permission-matrix.parsed.json`
+     - `pnpm import:permissions docs/reference/rbac/permission-matrix.parsed.json`
 3. Seed admins only if this environment needs admin bootstrap:
    - `pnpm seed:admins`
 4. Validate action-map coverage:
