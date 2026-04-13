@@ -4089,6 +4089,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PATCH",
+    "path": "/api/v1/admin/hierarchy/nodes/reorder",
+    "action": "admin:hierarchy:nodes:update",
+    "resourceType": "admin:hierarchy:nodes",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "PATCH",
     "path": "/api/v1/admin/hierarchy/nodes/:id",
     "action": "admin:hierarchy:nodes:update",
     "resourceType": "admin:hierarchy:nodes",
