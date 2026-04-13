@@ -5,6 +5,8 @@ import { SetupPageClient } from "@/components/setup/SetupPageClient";
 import { getOptionalDashboardAccess } from "@/app/lib/server-page-auth";
 import { getSetupStatus } from "@/app/lib/setup-status";
 
+export const dynamic = "force-dynamic";
+
 export default async function SetupPage() {
   const [setupStatus, authContext] = await Promise.all([
     getSetupStatus(),

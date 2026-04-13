@@ -8,6 +8,7 @@ import {
 import type { AuditNextRequest } from "@/lib/audit";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 async function GETHandler(req: AuditNextRequest) {
   try {

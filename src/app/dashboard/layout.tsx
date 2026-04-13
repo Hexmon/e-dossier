@@ -3,6 +3,8 @@ import DeviceSiteSettingsProvider from "@/components/providers/DeviceSiteSetting
 import DashboardSessionGuard from "@/components/auth/DashboardSessionGuard";
 import { requireDashboardAccess } from "@/app/lib/server-page-auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
