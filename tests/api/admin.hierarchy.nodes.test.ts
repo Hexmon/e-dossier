@@ -5,6 +5,7 @@ import {
   PATCH as updateNode,
   DELETE as deleteNode,
 } from "@/app/api/v1/admin/hierarchy/nodes/[id]/route";
+import { PATCH as reorderNodes } from "@/app/api/v1/admin/hierarchy/nodes/reorder/route";
 import { ApiError } from "@/app/lib/http";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
@@ -32,6 +33,7 @@ vi.mock("@/app/db/queries/hierarchy", () => ({
   createHierarchyNode: vi.fn(),
   updateHierarchyNode: vi.fn(),
   deleteHierarchyNode: vi.fn(),
+  reorderHierarchyNodes: vi.fn(),
 }));
 
 import { requireAdmin } from "@/app/lib/authz";
@@ -39,6 +41,7 @@ import {
   createHierarchyNode,
   deleteHierarchyNode,
   listHierarchyNodes,
+  reorderHierarchyNodes,
   updateHierarchyNode,
 } from "@/app/db/queries/hierarchy";
 
@@ -179,6 +182,112 @@ describe("admin hierarchy node routes", () => {
     expect(res.status).toBe(200);
     expect(body.item.id).toBe(nodeId);
     expect(deleteHierarchyNode).toHaveBeenCalledWith(nodeId, "admin-1");
+  });
+
+  it("PATCH reorder validates input before updating hierarchy", async () => {
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: "/api/v1/admin/hierarchy/nodes/reorder",
+      body: {
+        items: [
+          { id: nodeId, parentId: null, sortOrder: 0 },
+          { id: nodeId, parentId: null, sortOrder: 1 },
+        ],
+      },
+    });
+
+    const res = await reorderNodes(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.message).toBe("Validation failed.");
+    expect(reorderHierarchyNodes).not.toHaveBeenCalled();
+  });
+
+  it("PATCH reorder updates hierarchy nodes", async () => {
+    (reorderHierarchyNodes as any).mockResolvedValueOnce([
+      {
+        id: nodeId,
+        key: "GROUP_ALPHA",
+        name: "Group Alpha",
+        nodeType: "GROUP",
+        parentId: null,
+        platoonId: null,
+        sortOrder: 0,
+      },
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        key: "GROUP_BRAVO",
+        name: "Group Bravo",
+        nodeType: "GROUP",
+        parentId: nodeId,
+        platoonId: null,
+        sortOrder: 0,
+      },
+    ]);
+
+    const payload = {
+      items: [
+        { id: nodeId, parentId: null, sortOrder: 0 },
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          parentId: nodeId,
+          sortOrder: 0,
+        },
+      ],
+    };
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: "/api/v1/admin/hierarchy/nodes/reorder",
+      body: payload,
+    });
+
+    const res = await reorderNodes(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.items).toHaveLength(2);
+    expect(reorderHierarchyNodes).toHaveBeenCalledWith(payload.items, "admin-1");
+  });
+
+  it("PATCH reorder surfaces hierarchy cycle conflicts", async () => {
+    (reorderHierarchyNodes as any).mockRejectedValueOnce(
+      new ApiError(409, "Hierarchy cycles are not allowed.", "hierarchy_cycle")
+    );
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: "/api/v1/admin/hierarchy/nodes/reorder",
+      body: {
+        items: [{ id: nodeId, parentId: "22222222-2222-4222-8222-222222222222", sortOrder: 0 }],
+      },
+    });
+
+    const res = await reorderNodes(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("hierarchy_cycle");
+  });
+
+  it("PATCH reorder surfaces invalid root moves", async () => {
+    (reorderHierarchyNodes as any).mockRejectedValueOnce(
+      new ApiError(400, "The ROOT node cannot be moved under another node.", "invalid_root")
+    );
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: "/api/v1/admin/hierarchy/nodes/reorder",
+      body: {
+        items: [{ id: nodeId, parentId: "22222222-2222-4222-8222-222222222222", sortOrder: 0 }],
+      },
+    });
+
+    const res = await reorderNodes(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_root");
   });
 
   it("returns 403 when admin auth fails", async () => {

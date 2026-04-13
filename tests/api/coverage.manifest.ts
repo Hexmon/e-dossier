@@ -181,6 +181,7 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: [
       'src/app/api/v1/admin/hierarchy/nodes/route.ts',
       'src/app/api/v1/admin/hierarchy/nodes/[id]/route.ts',
+      'src/app/api/v1/admin/hierarchy/nodes/reorder/route.ts',
     ],
   },
   {
