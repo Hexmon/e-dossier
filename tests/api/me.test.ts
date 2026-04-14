@@ -4,6 +4,7 @@ import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
 import * as guard from '@/app/lib/guard';
 import { db } from '@/app/db/client';
+import { getEffectivePermissionBundleCached } from '@/app/db/queries/authz-permissions';
 
 vi.mock('@/lib/audit-log', () => ({
   createAuditLog: vi.fn(async () => {}),
@@ -41,6 +42,26 @@ vi.mock('@/app/lib/module-access', () => ({
     canAccessReports: false,
     canAccessAcademicsBulk: false,
     canAccessPtBulk: false,
+  })),
+}));
+
+vi.mock('@/app/db/queries/authz-permissions', () => ({
+  getEffectivePermissionBundleCached: vi.fn(async () => ({
+    userId: 'user-1',
+    roles: ['ADMIN'],
+    appointment: {
+      appointmentId: 'apt-1',
+      positionId: 'pos-1',
+      positionKey: 'ADMIN',
+      scopeType: 'GLOBAL',
+      scopeId: null,
+    },
+    isAdmin: true,
+    isSuperAdmin: false,
+    permissions: ['oc:interviews:initial:plcdr:update'],
+    deniedPermissions: [],
+    fieldRulesByAction: {},
+    policyVersion: 7,
   })),
 }));
 
@@ -119,5 +140,8 @@ describe('GET /api/v1/me', () => {
       canAccessAcademicsBulk: false,
       canAccessPtBulk: false,
     });
+    expect(getEffectivePermissionBundleCached).toHaveBeenCalled();
+    expect(body.permissions).toContain('oc:interviews:initial:plcdr:update');
+    expect(body.policyVersion).toBe(7);
   });
 });

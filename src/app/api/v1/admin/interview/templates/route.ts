@@ -4,7 +4,11 @@ export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAuth } from '@/app/lib/authz';
 import { interviewTemplateCreateSchema, interviewTemplateQuerySchema } from '@/app/lib/interview-template-validators';
-import { listInterviewTemplates, createInterviewTemplate } from '@/app/db/queries/interviewTemplates';
+import {
+    listInterviewTemplates,
+    listInterviewTemplatesHydrated,
+    createInterviewTemplate,
+} from '@/app/db/queries/interviewTemplates';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -16,12 +20,16 @@ async function GETHandler(req: AuditNextRequest) {
             courseId: sp.get('courseId') ?? undefined,
             semester: sp.get('semester') ?? undefined,
             includeDeleted: sp.get('includeDeleted') ?? undefined,
+            hydrate: sp.get('hydrate') ?? undefined,
         });
-        const items = await listInterviewTemplates({
+        const query = {
             courseId: qp.courseId,
             semester: qp.semester,
             includeDeleted: qp.includeDeleted ?? false,
-        });
+        };
+        const items = qp.hydrate
+            ? await listInterviewTemplatesHydrated(query)
+            : await listInterviewTemplates(query);
         return json.ok({ message: 'Interview templates retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);

@@ -1,6 +1,6 @@
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { getTrainingCampSettings, updateTrainingCampSettings } from '@/app/db/queries/trainingCamps';
-import { requireAdmin } from '@/app/lib/authz';
+import { requireAdmin, requireAuth } from '@/app/lib/authz';
 import { handleApiError, json } from '@/app/lib/http';
 import { trainingCampSettingsSchema } from '@/app/lib/training-camp-validators';
 import { AuditEventType, AuditResourceType, withAuditRoute } from '@/lib/audit';
@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAdmin(req);
+    const authCtx = await requireAuth(req);
     const settings = await getTrainingCampSettings();
 
     await req.audit.log({

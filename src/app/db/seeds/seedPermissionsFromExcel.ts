@@ -7,6 +7,7 @@ import { positions } from '../schema/auth/positions';
 import { authzPolicyState } from '../schema/auth/rbac-extensions';
 import { permissions, positionPermissions, rolePermissions, roles } from '../schema/auth/rbac';
 import { API_ACTION_MAP, PAGE_ACTION_MAP } from '@/app/lib/acx/action-map';
+import { INTERVIEW_DEFAULT_ROLE_PERMISSIONS, INTERVIEW_WRITE_PERMISSION_KEYS } from '@/lib/interview-access';
 
 type ParsedPermissionMatrix = {
   roles: Array<{
@@ -46,6 +47,7 @@ const EXTRA_RBAC_ACTIONS = [
   'admin:rbac:roles:update',
   'admin:rbac:roles:delete',
   'page:dashboard:genmgmt:rbac:view',
+  ...INTERVIEW_WRITE_PERMISSION_KEYS,
 ];
 
 const MANAGE_MARKS_ACTION_ALLOWLIST = new Set(
@@ -316,7 +318,19 @@ export async function seedPermissionsFromExcel(matrixPath?: string): Promise<{
   );
 
   const roleMatrix = buildRoleActionMatrix(parsed, allActionKeys);
+  for (const [roleKey, permissionKeys] of Object.entries(INTERVIEW_DEFAULT_ROLE_PERMISSIONS)) {
+    const normalizedRoleKey = normalizeRoleKey(roleKey);
+    if (!roleMatrix[normalizedRoleKey]) {
+      roleMatrix[normalizedRoleKey] = new Set<string>();
+    }
+    for (const permissionKey of permissionKeys) {
+      roleMatrix[normalizedRoleKey].add(permissionKey);
+    }
+  }
   roleMatrix.ADMIN = new Set([...ADMIN_BASELINE_ACTIONS]);
+  for (const permissionKey of INTERVIEW_WRITE_PERMISSION_KEYS) {
+    roleMatrix.ADMIN.add(permissionKey);
+  }
   roleMatrix.SUPER_ADMIN = new Set([...allActionKeys, '*']);
 
   const allPermissionKeys = Array.from(
@@ -329,7 +343,7 @@ export async function seedPermissionsFromExcel(matrixPath?: string): Promise<{
 
   const permissionIdMap = await upsertPermissions(allPermissionKeys);
 
-  const managedRoleKeys = Array.from(new Set([...roleKeys, 'ADMIN', 'SUPER_ADMIN']));
+  const managedRoleKeys = Array.from(new Set([...roleKeys, ...Object.keys(roleMatrix), 'ADMIN', 'SUPER_ADMIN']));
   for (const roleKey of managedRoleKeys) {
     const role = await upsertRole(roleKey);
     const position = await upsertPosition(roleKey);

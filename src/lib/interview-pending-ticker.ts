@@ -17,8 +17,12 @@ function collectTokens(input: InterviewTickerAccessInput): string[] {
   return out;
 }
 
+function isPlatoonScopedUser(input: InterviewTickerAccessInput): boolean {
+  return normalizeAccessToken(input.scopeType) === "PLATOON";
+}
+
 export function isPlatoonCommanderDashboardUser(input: InterviewTickerAccessInput): boolean {
-  return isScopedPlatoonCommander(input);
+  return isScopedPlatoonCommander(input) || isPlatoonScopedUser(input);
 }
 
 export function isAdminDashboardUser(input: InterviewTickerAccessInput): boolean {

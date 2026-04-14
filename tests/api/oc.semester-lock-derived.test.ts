@@ -60,6 +60,7 @@ vi.mock("@/app/db/queries/interviewOc", () => ({
   getInterviewTemplateBase: vi.fn(),
   listInterviewTemplateSemestersByTemplate: vi.fn(),
   listInterviewTemplateFieldsByIds: vi.fn(),
+  listInterviewTemplateFieldsByTemplate: vi.fn(),
   listInterviewTemplateGroupsByIds: vi.fn(),
 }));
 

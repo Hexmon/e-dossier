@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 const branchSchema = z.enum(['E', 'M', 'O']);
+const consolidatedSessionalSubjectTypeSchema = z.enum(['theory', 'practical']);
 
 export const reportSemesterSchema = z.coerce.number().int().min(1).max(6);
 
@@ -26,6 +27,12 @@ export const consolidatedSessionalPreviewQuerySchema = z.object({
   courseId: z.string().uuid(),
   semester: reportSemesterSchema,
   subjectId: z.string().uuid(),
+  subjectType: z
+    .preprocess((value) => {
+      if (typeof value !== 'string') return undefined;
+      const normalized = value.trim().toLowerCase();
+      return normalized || undefined;
+    }, consolidatedSessionalSubjectTypeSchema.optional()),
   branches: z
     .preprocess((value) => {
       if (typeof value !== 'string') return [] as string[];
@@ -38,6 +45,7 @@ export const consolidatedSessionalPreviewQuerySchema = z.object({
 
 export const consolidatedSessionalDownloadBodySchema = consolidatedSessionalPreviewQuerySchema.merge(
   z.object({
+    subjectType: consolidatedSessionalSubjectTypeSchema.optional(),
     branches: z.array(branchSchema).optional().default([]),
     password: z.string().min(1).max(128),
     preparedBy: optionalMetaString,

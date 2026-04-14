@@ -4,7 +4,6 @@ import { db } from '@/app/db/client';
 import { users } from '@/app/db/schema/auth/users';
 import { eq } from 'drizzle-orm';
 import { getEffectivePermissionBundleCached } from '@/app/db/queries/authz-permissions';
-import { isAuthzV2Enabled } from '@/app/lib/acx/feature-flag';
 import {
   listMarksWorkflowAssignmentsForUser,
   getWorkflowModuleSettings,
@@ -28,17 +27,15 @@ async function GETHandler(req: AuditNextRequest) {
       : [];
 
     const principal = await requireAuth(req);
-    const authzBundle = isAuthzV2Enabled()
-      ? await getEffectivePermissionBundleCached({
-          userId: principal.userId,
-          roles: principal.roles ?? [],
-          apt: (principal.apt ?? undefined) as {
-            id?: string;
-            position?: string;
-            scope?: { type?: string; id?: string | null };
-          },
-        })
-      : null;
+    const authzBundle = await getEffectivePermissionBundleCached({
+      userId: principal.userId,
+      roles: principal.roles ?? [],
+      apt: (principal.apt ?? undefined) as {
+        id?: string;
+        position?: string;
+        scope?: { type?: string; id?: string | null };
+      },
+    });
 
     const [u] = await db
       .select({

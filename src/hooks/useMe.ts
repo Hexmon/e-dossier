@@ -9,9 +9,10 @@ export function useMe() {
     return useQuery({
         queryKey: ["me"],
         queryFn: fetchMe,
-        staleTime: 10 * 60 * 1000,
+        staleTime: 0,
         gcTime: 30 * 60 * 1000,
         retry: 1,
+        refetchOnMount: "always",
         refetchOnWindowFocus: true,
         refetchOnReconnect: true,
         refetchInterval: refreshIntervalMs || false,

@@ -30,6 +30,7 @@ export const interviewTemplateQuerySchema = z.object({
     courseId: z.string().uuid().optional(),
     semester: Semester.optional(),
     includeDeleted: BoolString.optional(),
+    hydrate: BoolString.optional(),
 });
 
 export const interviewTemplateParam = z.object({ templateId: z.string().uuid() });

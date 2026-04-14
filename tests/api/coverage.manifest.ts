@@ -29,7 +29,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/interview/templates/[templateId]/sections/route.ts',
   'src/app/api/v1/admin/interview/templates/[templateId]/semesters/[semester]/route.ts',
   'src/app/api/v1/admin/interview/templates/[templateId]/semesters/route.ts',
-  'src/app/api/v1/admin/interview/templates/route.ts',
   'src/app/api/v1/admin/physical-training/motivation-fields/[id]/route.ts',
   'src/app/api/v1/admin/physical-training/motivation-fields/route.ts',
   'src/app/api/v1/admin/physical-training/templates/route.ts',
@@ -67,7 +66,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/training-camps/[campId]/activities/route.ts',
   'src/app/api/v1/admin/training-camps/[campId]/route.ts',
   'src/app/api/v1/admin/training-camps/route.ts',
-  'src/app/api/v1/admin/training-camps/settings/route.ts',
   'src/app/api/v1/admin/users/[id]/route.ts',
   'src/app/api/v1/admin/users/check-username/route.ts',
   'src/app/api/v1/admin/users/route.ts',
@@ -156,6 +154,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     ],
   },
   {
+    testFile: 'tests/api/admin.interview.templates.test.ts',
+    routeFiles: ['src/app/api/v1/admin/interview/templates/route.ts'],
+  },
+  {
     testFile: 'tests/api/admin.appointments-and-positions.test.ts',
     routeFiles: [
       'src/app/api/v1/admin/appointments/route.ts',
@@ -165,6 +167,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/admin.marks-review-workflow.test.ts',
     routeFiles: ['src/app/api/v1/admin/marks-review-workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/admin.training-camps.settings.test.ts',
+    routeFiles: ['src/app/api/v1/admin/training-camps/settings/route.ts'],
   },
   {
     testFile: 'tests/api/admin.module-access.test.ts',
@@ -265,6 +271,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/oc.interviews.[interviewId].test.ts',
     routeFiles: ['src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.interviews.test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/interviews/route.ts'],
   },
   {
     testFile: 'tests/api/oc.semester-lock-derived.test.ts',

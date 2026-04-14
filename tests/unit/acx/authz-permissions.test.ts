@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   applyPlatoonCommanderMarksEntryOverrides,
   applyAdminAndSuperAdminOverrides,
+  applyInterviewPermissionFallbackOverrides,
   getAdminBaselineActions,
   normalizeRoleSet,
 } from '@/app/db/queries/authz-permissions';
+import { INTERVIEW_WRITE_PERMISSIONS } from '@/lib/interview-access';
 
 describe('authz-permissions helpers', () => {
   it('normalizes role names to UPPER_SNAKE_CASE', () => {
@@ -59,5 +61,29 @@ describe('authz-permissions helpers', () => {
 
     expect(result.isPlatoonCommander).toBe(false);
     expect(permissionSet.size).toBe(0);
+  });
+
+  it('grants interview fallback permissions for platoon-specific PL CDR positions', () => {
+    const permissionSet = new Set<string>();
+
+    const result = applyInterviewPermissionFallbackOverrides(
+      {
+        roles: ['ARJUNPLCDR'],
+        position: 'ARJUNPLCDR',
+        scopeType: 'PLATOON',
+      },
+      permissionSet
+    );
+
+    expect(result.grantedPermissions).toEqual(
+      expect.arrayContaining([
+        INTERVIEW_WRITE_PERMISSIONS.initial.plcdr,
+        INTERVIEW_WRITE_PERMISSIONS.term.beginning.shared,
+        INTERVIEW_WRITE_PERMISSIONS.term.beginning.plcdr,
+        INTERVIEW_WRITE_PERMISSIONS.term.postmid,
+        INTERVIEW_WRITE_PERMISSIONS.term.special,
+      ])
+    );
+    expect(permissionSet.has(INTERVIEW_WRITE_PERMISSIONS.initial.plcdr)).toBe(true);
   });
 });

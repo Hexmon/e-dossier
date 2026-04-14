@@ -31,6 +31,7 @@ import {
   summarizeAcademicSubjects,
 } from '@/app/lib/academic-marks-core';
 import type {
+  ConsolidatedSessionalSection,
   ConsolidatedSessionalPreview,
   CourseWiseFinalPerformancePreview,
   CourseWisePerformanceColumn,
@@ -245,6 +246,7 @@ export async function buildConsolidatedSessionalPreview(params: {
   courseId: string;
   semester: number;
   subjectId: string;
+  subjectType?: ConsolidatedSessionalSection;
   branches?: ReportBranch[];
 }): Promise<ConsolidatedSessionalPreview> {
   const [course, offerings, ocRows, policy] = await Promise.all([
@@ -267,6 +269,27 @@ export async function buildConsolidatedSessionalPreview(params: {
       subjectId: params.subjectId,
     });
   }
+
+  if (params.subjectType === 'theory' && !selectedOffering.includeTheory) {
+    throw new ApiError(400, 'Theory marksheet is not available for the selected subject.', 'invalid_subject_type', {
+      courseId: params.courseId,
+      semester: params.semester,
+      subjectId: params.subjectId,
+      subjectType: params.subjectType,
+    });
+  }
+
+  if (params.subjectType === 'practical' && !selectedOffering.includePractical) {
+    throw new ApiError(400, 'Practical marksheet is not available for the selected subject.', 'invalid_subject_type', {
+      courseId: params.courseId,
+      semester: params.semester,
+      subjectId: params.subjectId,
+      subjectType: params.subjectType,
+    });
+  }
+
+  const includeTheory = selectedOffering.includeTheory && params.subjectType !== 'practical';
+  const includePractical = selectedOffering.includePractical && params.subjectType !== 'theory';
 
   const subjectBranch = String(selectedOffering.subject.branch ?? 'C').toUpperCase();
   const subjectScopedOCs =
@@ -311,7 +334,7 @@ export async function buildConsolidatedSessionalPreview(params: {
       (entry) => entry.subject.id === params.subjectId || entry.subject.code === selectedOffering.subject.code
     );
 
-    if (selectedOffering.includeTheory) {
+    if (includeTheory) {
       const phaseTest1 = normalizeNonNegativeValue(subject?.theory?.phaseTest1Marks ?? null);
       const phaseTest2 = normalizeNonNegativeValue(subject?.theory?.phaseTest2Marks ?? null);
       const tutorial = normalizeNonNegativeValue(subject?.theory?.tutorial ? Number(subject.theory.tutorial) : null);
@@ -349,7 +372,7 @@ export async function buildConsolidatedSessionalPreview(params: {
       });
     }
 
-    if (selectedOffering.includePractical) {
+    if (includePractical) {
       const contentOfExp = normalizeNonNegativeValue(subject?.practical?.contentOfExpMarks ?? null);
       const maintOfExp = normalizeNonNegativeValue(subject?.practical?.maintOfExpMarks ?? null);
       const practicalObtained = normalizeNonNegativeValue(subject?.practical?.practicalMarks ?? null);
@@ -392,11 +415,14 @@ export async function buildConsolidatedSessionalPreview(params: {
       branch: (['C', 'E', 'M'].includes(selectedOffering.subject.branch)
         ? selectedOffering.subject.branch
         : 'C') as 'C' | 'E' | 'M',
-      hasTheory: selectedOffering.includeTheory,
-      hasPractical: selectedOffering.includePractical,
-      theoryCredits: selectedOffering.theoryCredits ?? selectedOffering.subject.defaultTheoryCredits ?? null,
-      practicalCredits:
-        selectedOffering.practicalCredits ?? selectedOffering.subject.defaultPracticalCredits ?? null,
+      hasTheory: includeTheory,
+      hasPractical: includePractical,
+      theoryCredits: includeTheory
+        ? selectedOffering.theoryCredits ?? selectedOffering.subject.defaultTheoryCredits ?? null
+        : null,
+      practicalCredits: includePractical
+        ? selectedOffering.practicalCredits ?? selectedOffering.subject.defaultPracticalCredits ?? null
+        : null,
       instructorName: primaryInstructor?.name ?? null,
     },
     theoryRows,
@@ -811,10 +837,11 @@ export async function buildSemesterGradePreview(params: {
   semester: number;
   ocId: string;
 }): Promise<SemesterGradePreview> {
-  const [course, candidates, policy] = await Promise.all([
+  const [course, candidates, policy, siteSettings] = await Promise.all([
     resolveCourse(params.courseId),
     listOCsBasic({ courseId: params.courseId, active: true, limit: 5000 }),
     getAcademicGradingPolicy(),
+    getSiteSettingsOrDefault(),
   ]);
 
   const oc = candidates.find((item) => item.id === params.ocId);
@@ -888,7 +915,8 @@ export async function buildSemesterGradePreview(params: {
       ocNo: oc.ocNo,
       name: oc.name,
       branch: oc.branch,
-      jnuEnrollmentNo: null,
+      jnuEnrollmentNo: oc.jnuEnrollmentNo ?? null,
+      enrolmentNumber: buildFinalResultEnrollmentNumber(siteSettings.heroTitle, course.code, oc.jnuEnrollmentNo),
     },
     course,
     semester: params.semester,
