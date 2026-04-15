@@ -6,7 +6,7 @@ async function main() {
   const matrixPathArg = process.argv[2];
   const parsedPath = matrixPathArg
     ? path.resolve(matrixPathArg)
-    : path.resolve(process.cwd(), 'docs/rbac/permission-matrix.parsed.json');
+    : path.resolve(process.cwd(), 'docs/reference/rbac/permission-matrix.parsed.json');
 
   const result = await seedPermissionsFromExcel(parsedPath);
   console.log(
@@ -26,4 +26,3 @@ main().catch((error) => {
   console.error('Permission import failed:', error);
   process.exit(1);
 });
-

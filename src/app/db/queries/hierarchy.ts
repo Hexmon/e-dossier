@@ -16,6 +16,12 @@ export type HierarchyNodePayload = {
   sortOrder?: number;
 };
 
+export type HierarchyNodeReorderItem = {
+  id: string;
+  parentId: string | null;
+  sortOrder: number;
+};
+
 const HIERARCHY_NODE_SELECT = {
   id: orgHierarchyNodes.id,
   key: orgHierarchyNodes.key,
@@ -33,13 +39,17 @@ const HIERARCHY_NODE_SELECT = {
   platoonName: platoons.name,
 } as const;
 
-export async function listHierarchyNodes() {
-  return db
+function listHierarchyNodesQuery(executor: any) {
+  return executor
     .select(HIERARCHY_NODE_SELECT)
     .from(orgHierarchyNodes)
     .leftJoin(platoons, eq(platoons.id, orgHierarchyNodes.platoonId))
     .where(isNull(orgHierarchyNodes.deletedAt))
     .orderBy(orgHierarchyNodes.sortOrder, orgHierarchyNodes.createdAt);
+}
+
+export async function listHierarchyNodes() {
+  return listHierarchyNodesQuery(db);
 }
 
 async function getNodeById(id: string) {
@@ -294,4 +304,72 @@ export async function deleteHierarchyNode(id: string, actorUserId: string) {
     .returning();
 
   return deleted;
+}
+
+export async function reorderHierarchyNodes(items: HierarchyNodeReorderItem[], actorUserId: string) {
+  return db.transaction(async (tx) => {
+    const activeNodes = await tx
+      .select()
+      .from(orgHierarchyNodes)
+      .where(isNull(orgHierarchyNodes.deletedAt));
+
+    const activeNodeMap = new Map(activeNodes.map((node) => [node.id, node]));
+    const workingParentById = new Map(activeNodes.map((node) => [node.id, node.parentId ?? null]));
+    const usedSortOrdersByParent = new Map<string, Set<number>>();
+
+    for (const item of items) {
+      const node = activeNodeMap.get(item.id);
+      if (!node) {
+        throw new ApiError(404, "Hierarchy node not found.", "not_found");
+      }
+
+      if (node.nodeType === "ROOT" && item.parentId !== null) {
+        throw new ApiError(400, "The ROOT node cannot be moved under another node.", "invalid_root");
+      }
+
+      if (item.parentId) {
+        const parent = activeNodeMap.get(item.parentId);
+        if (!parent) {
+          throw new ApiError(400, "Parent hierarchy node does not exist.", "invalid_parent");
+        }
+      }
+
+      const sortKey = item.parentId ?? "__root__";
+      const usedSortOrders = usedSortOrdersByParent.get(sortKey) ?? new Set<number>();
+      if (usedSortOrders.has(item.sortOrder)) {
+        throw new ApiError(400, "Sort order must be unique within the same parent.", "invalid_reorder");
+      }
+      usedSortOrders.add(item.sortOrder);
+      usedSortOrdersByParent.set(sortKey, usedSortOrders);
+
+      workingParentById.set(item.id, item.parentId);
+    }
+
+    for (const item of items) {
+      let currentParentId = workingParentById.get(item.id) ?? null;
+      const seen = new Set<string>([item.id]);
+
+      while (currentParentId) {
+        if (seen.has(currentParentId)) {
+          throw new ApiError(409, "Hierarchy cycles are not allowed.", "hierarchy_cycle");
+        }
+        seen.add(currentParentId);
+        currentParentId = workingParentById.get(currentParentId) ?? null;
+      }
+    }
+
+    for (const item of items) {
+      await tx
+        .update(orgHierarchyNodes)
+        .set({
+          parentId: item.parentId,
+          sortOrder: item.sortOrder,
+          updatedBy: actorUserId,
+          updatedAt: new Date(),
+        })
+        .where(eq(orgHierarchyNodes.id, item.id));
+    }
+
+    return listHierarchyNodesQuery(tx);
+  });
 }

@@ -27,6 +27,12 @@ export type HierarchyNodeInput = {
   sortOrder?: number;
 };
 
+export type HierarchyNodeReorderItem = {
+  id: string;
+  parentId: string | null;
+  sortOrder: number;
+};
+
 type HierarchyNodesResponse = {
   message: string;
   items: HierarchyNodeRecord[];
@@ -77,6 +83,13 @@ export const hierarchyAdminApi = {
   },
   updateNode: async (id: string, body: Partial<HierarchyNodeInput>) => {
     return api.patch<HierarchyNodeResponse>(endpoints.admin.hierarchy.nodeById(id), body, { baseURL });
+  },
+  reorderNodes: async (items: HierarchyNodeReorderItem[]) => {
+    return api.patch<HierarchyNodesResponse, { items: HierarchyNodeReorderItem[] }>(
+      `${endpoints.admin.hierarchy.nodes}/reorder`,
+      { items },
+      { baseURL }
+    );
   },
   deleteNode: async (id: string) => {
     return api.delete<HierarchyNodeResponse>(endpoints.admin.hierarchy.nodeById(id), { baseURL });
