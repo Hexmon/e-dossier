@@ -12,8 +12,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/appointments/[id]/route.ts',
   'src/app/api/v1/admin/appointments/[id]/transfer/route.ts',
   'src/app/api/v1/admin/audit-logs/route.ts',
-  'src/app/api/v1/admin/courses/[courseId]/offerings/[offeringId]/route.ts',
-  'src/app/api/v1/admin/courses/[courseId]/offerings/route.ts',
   'src/app/api/v1/admin/discipline/[id]/route.ts',
   'src/app/api/v1/admin/discipline/route.ts',
   'src/app/api/v1/admin/interview/pending/route.ts',
