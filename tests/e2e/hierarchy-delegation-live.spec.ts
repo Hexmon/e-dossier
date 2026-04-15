@@ -259,17 +259,14 @@ test("super admin can manage hierarchy, remap commander authority, delegate acti
     });
     expect(createNodeResponse.ok()).toBeTruthy();
     await hierarchyPage.reload();
-    const nodeCard = hierarchyPage.locator("div.rounded-lg.border.p-4").filter({
-      hasText: nodeKey,
-    }).first();
+    const nodeCard = hierarchyPage.locator(`[data-hierarchy-node-key="${nodeKey}"]`).first();
     await expect(nodeCard).toBeVisible();
     await nodeCard.getByRole("button", { name: "Edit" }).click();
     await hierarchyPage.getByLabel(`Name`).last().fill(updatedNodeName);
     await hierarchyPage.getByRole("button", { name: "Save Changes" }).click();
-    const updatedNodeCard = hierarchyPage.locator("div.rounded-lg.border.p-4").filter({
-      hasText: nodeKey,
-    }).first();
+    const updatedNodeCard = hierarchyPage.locator(`[data-hierarchy-node-key="${nodeKey}"]`).first();
     await expect(updatedNodeCard).toBeVisible();
+    await expect(updatedNodeCard).toContainText(updatedNodeName);
 
     await selectRadixOptionByLabel(
       hierarchyPage,
@@ -392,14 +389,10 @@ test("super admin can manage hierarchy, remap commander authority, delegate acti
 
     const refreshedHierarchy = await hierarchyPage.goto("/dashboard/genmgmt/hierarchy");
     expect(refreshedHierarchy?.ok()).toBeTruthy();
-    const refreshedNodeCard = hierarchyPage
-      .locator("div.rounded-lg.border.p-4")
-      .filter({ hasText: updatedNodeName })
-      .first();
+    const refreshedNodeCard = hierarchyPage.locator(`[data-hierarchy-node-key="${nodeKey}"]`).first();
+    hierarchyPage.once("dialog", (dialog) => dialog.accept());
     await refreshedNodeCard.getByRole("button", { name: "Delete" }).click();
-    await expect(
-      hierarchyPage.locator("div.rounded-lg.border.p-4").filter({ hasText: updatedNodeName })
-    ).toHaveCount(0, {
+    await expect(hierarchyPage.locator(`[data-hierarchy-node-key="${nodeKey}"]`)).toHaveCount(0, {
       timeout: 15000,
     });
   } finally {

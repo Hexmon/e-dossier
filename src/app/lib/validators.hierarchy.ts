@@ -15,6 +15,21 @@ export const hierarchyNodeUpdateSchema = hierarchyNodeInputSchema
     message: "Provide at least one hierarchy field to update.",
   });
 
+export const hierarchyNodeReorderItemSchema = z.object({
+  id: z.string().uuid(),
+  parentId: z.string().uuid().nullable(),
+  sortOrder: z.coerce.number().int().min(0).max(10_000),
+});
+
+export const hierarchyNodeReorderSchema = z.object({
+  items: z
+    .array(hierarchyNodeReorderItemSchema)
+    .min(1, "items is required")
+    .refine((items) => new Set(items.map((item) => item.id)).size === items.length, {
+      message: "items contains duplicates",
+    }),
+});
+
 export const functionalRoleMappingUpdateSchema = z.object({
   commanderEquivalentPositionId: z.string().uuid().nullable(),
 });

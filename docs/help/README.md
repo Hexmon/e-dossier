@@ -2,6 +2,8 @@
 
 This folder stores repo-managed Help Center content rendered at `/dashboard/help/*`.
 
+It is runtime content, not the general repository documentation home. General repo docs belong under the audience-based sections rooted at `docs/README.md`.
+
 ## Rules
 
 - Keep one document per guide.

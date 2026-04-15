@@ -38,7 +38,7 @@ import type {
   UniqueConstraintDoc,
 } from "./types";
 
-const OUTPUT_DIR = path.join(process.cwd(), "docs", "db");
+const OUTPUT_DIR = path.join(process.cwd(), "docs", "reference", "database", "generated");
 
 type BuildContext = {
   schemas: string[];
@@ -308,7 +308,7 @@ async function writeSchemaSql(
     return {
       written: false,
       warning:
-        "pg_dump is not available on PATH. Skipping docs/db/schema.sql generation.",
+        "pg_dump is not available on PATH. Skipping docs/reference/database/generated/schema.sql generation.",
     };
   }
 

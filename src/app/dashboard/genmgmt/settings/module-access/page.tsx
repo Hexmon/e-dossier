@@ -1,6 +1,8 @@
 import ModuleAccessSettingsPageClient from "@/components/genmgmt/ModuleAccessSettingsPageClient";
 import { getModuleAccessSettingsOrDefault } from "@/app/db/queries/module-access-settings";
 
+export const dynamic = "force-dynamic";
+
 export default async function ModuleAccessSettingsPage() {
   const settings = await getModuleAccessSettingsOrDefault();
   const initialSettings = {
