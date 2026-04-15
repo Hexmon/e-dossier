@@ -43,6 +43,11 @@ export type StudentRow = {
 };
 
 const practicalComponentKeys = ["contentOfExp", "maintOfExp", "practicalExam", "viva"] as const;
+const standardMarksInputClassName =
+    "h-9 min-w-[7.5rem] px-3 text-sm text-center font-medium lg:h-10 lg:text-base";
+const wideMarksInputClassName =
+    "h-9 min-w-[9rem] px-3 text-sm text-center font-medium lg:h-10 lg:text-base";
+const readonlyMarksInputClassName = `${standardMarksInputClassName} bg-muted/50`;
 
 function formatMarksInput(value: number | null | undefined): string {
     return value != null ? String(value) : "";
@@ -548,25 +553,26 @@ export default function SubjectWiseStudentsTable({
             {
                 key: "ocNo",
                 label: "OC No",
-                width: "90px",
-                className: "text-xs",
+                width: "120px",
+                className: "min-w-[7.5rem] whitespace-nowrap text-sm font-medium",
             },
             {
                 key: "name",
                 label: "Name",
-                width: "220px",
-                className: "text-xs font-medium break-words",
+                width: "280px",
+                className: "min-w-[18rem] text-sm font-medium",
             },
             ...(["phase1", "phase2", "tutorial"] as const).map((key) => ({
                 key,
                 label: key === "phase1" ? "PH-I" : key === "phase2" ? "PH-II" : "Tutorial",
-                width: "80px",
+                width: "120px",
+                className: "min-w-[7.5rem] whitespace-nowrap",
                 render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
                     <Input
                         value={row[key]}
                         disabled={inputsDisabled}
                         onChange={(e) => updateRow(index, key, e.target.value)}
-                        className="h-7 text-xs text-center"
+                        className={standardMarksInputClassName}
                         type="text"
                     />
                 ),
@@ -574,19 +580,20 @@ export default function SubjectWiseStudentsTable({
             {
                 key: "sessional",
                 label: "Sessional",
-                width: "80px",
-                className: "text-xs font-semibold bg-muted/50 text-center",
+                width: "120px",
+                className: "min-w-[7.5rem] whitespace-nowrap text-sm font-semibold bg-muted/50 text-center",
             },
             {
                 key: "final",
                 label: "Final",
-                width: "80px",
+                width: "120px",
+                className: "min-w-[7.5rem] whitespace-nowrap",
                 render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
                     <Input
                         value={row.final}
                         disabled={inputsDisabled}
                         onChange={(e) => updateRow(index, "final", e.target.value)}
-                        className="h-7 text-xs text-center"
+                        className={standardMarksInputClassName}
                         type="text"
                     />
                 ),
@@ -599,13 +606,14 @@ export default function SubjectWiseStudentsTable({
             ] as const).map(({ key, label }) => ({
                 key,
                 label,
-                width: "110px",
+                width: "150px",
+                className: "min-w-[9rem] whitespace-nowrap",
                 render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
                     <Input
                         value={row[key]}
                         disabled={inputsDisabled}
                         onChange={(e) => updateRow(index, key, e.target.value)}
-                        className="h-7 text-xs text-center"
+                        className={wideMarksInputClassName}
                         type="text"
                     />
                 ),
@@ -613,13 +621,14 @@ export default function SubjectWiseStudentsTable({
             {
                 key: "practical",
                 label: "Practical",
-                width: "80px",
+                width: "120px",
+                className: "min-w-[7.5rem] whitespace-nowrap",
                 render: (_: StudentRow[keyof StudentRow], row: StudentRow) => (
                     <Input
                         value={row.practical}
                         disabled
                         readOnly
-                        className="h-7 text-xs text-center bg-muted/50 font-semibold"
+                        className={readonlyMarksInputClassName}
                         type="text"
                     />
                 ),
@@ -627,8 +636,8 @@ export default function SubjectWiseStudentsTable({
             {
                 key: "total",
                 label: "Total",
-                width: "80px",
-                className: "text-xs font-bold bg-muted/50 text-center",
+                width: "120px",
+                className: "min-w-[7.5rem] whitespace-nowrap text-sm font-bold bg-muted/50 text-center",
             },
         ],
         [inputsDisabled],
@@ -642,7 +651,7 @@ export default function SubjectWiseStudentsTable({
             pagination: false,
         },
         styling: {
-            compact: true,
+            compact: false,
             bordered: true,
             striped: true,
             hover: true,
