@@ -586,6 +586,12 @@ export default function SubjectWiseStudentsTable({
             {
                 key: "final",
                 label: "Final",
+                headerRender: (
+                    <span className="inline-flex flex-col leading-tight">
+                        <span>Final</span>
+                        <span className="text-[11px] text-muted-foreground font-bold">(Theory)</span>
+                    </span>
+                ),
                 width: "120px",
                 className: "min-w-[7.5rem] whitespace-nowrap",
                 render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (

@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 export interface TableColumn<T = any> {
     key: keyof T | string;
     label: string;
+    headerRender?: React.ReactNode;
     type?: 'text' | 'number' | 'date' | 'status' | 'custom';
     width?: string;
     sortable?: boolean;
@@ -373,7 +374,7 @@ export function UniversalTable<T extends Record<string, any>>({
                                     onClick={() => column.sortable && handleSort(String(column.key))}
                                 >
                                     <div className="flex items-center gap-2">
-                                        {column.label}
+                                        {column.headerRender ?? column.label}
                                         {column.sortable && features.sorting && (
                                             <div className="flex flex-col">
                                                 <ChevronUp className={`h-3 w-3 ${sortKey === column.key && sortDirection === 'asc' ? 'text-primary' : 'text-muted-foreground'
