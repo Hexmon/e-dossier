@@ -593,7 +593,7 @@ function main(): void {
     throw new Error(`Excel file not found: ${workbookPath}`);
   }
 
-  const docsRbacDir = path.join(process.cwd(), 'docs/rbac');
+  const docsRbacDir = path.join(process.cwd(), 'docs/reference/rbac');
   ensureDir(docsRbacDir);
 
   const parsedMatrix = parsePermissionWorkbook(workbookPath);
