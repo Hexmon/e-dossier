@@ -137,12 +137,23 @@ export const REPORT_UNCOVERED_ROUTE_FILES = [
 ] as const;
 
 export const MISC_UNCOVERED_ROUTE_FILES = [
-  'src/app/api/v1/dashboard/data/appointments/route.ts',
   'src/app/api/v1/dashboard/data/course/route.ts',
   'src/app/api/v1/dashboard/data/platoon/route.ts',
 ] as const;
 
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
+  {
+    testFile: 'tests/api/dashboard.appointments.test.ts',
+    routeFiles: ['src/app/api/v1/dashboard/data/appointments/route.ts'],
+  },
+  {
+    testFile: 'tests/api/pl-cdr.cadet-appointments.test.ts',
+    routeFiles: [
+      'src/app/api/v1/pl-cdr/cadet-appointments/route.ts',
+      'src/app/api/v1/pl-cdr/cadet-appointments/[id]/route.ts',
+      'src/app/api/v1/pl-cdr/cadet-appointments/[id]/transfer/route.ts',
+    ],
+  },
   {
     testFile: 'tests/api/admin.template-copy.test.ts',
     routeFiles: [
