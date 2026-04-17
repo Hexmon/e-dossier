@@ -25,6 +25,19 @@ function clampNonNegative(value: number | null | undefined) {
   return Math.max(0, numeric);
 }
 
+export function scaleAcademicPerformanceSummary(
+  summary: Pick<AcademicPerformanceMarksSummary, 'weightedScored' | 'weightedMax'>,
+  targetMax: number,
+) {
+  const normalizedTargetMax = Number(targetMax);
+  if (!Number.isFinite(normalizedTargetMax) || normalizedTargetMax <= 0) return 0;
+
+  const scaledRaw =
+    summary.weightedMax > 0 ? (summary.weightedScored / summary.weightedMax) * normalizedTargetMax : 0;
+
+  return trunc1(Math.max(0, Math.min(normalizedTargetMax, scaledRaw)));
+}
+
 export function summarizeAcademicPerformanceMarks(
   subjects: AcademicSubjectView[] | null | undefined,
 ): AcademicPerformanceMarksSummary {
@@ -54,7 +67,6 @@ export function summarizeAcademicPerformanceMarks(
   }
 
   const weightedMax = totalCredits * 100;
-  const scaledRaw = weightedMax > 0 ? (weightedScored / weightedMax) * 1350 : 0;
 
   return {
     rawScored,
@@ -62,6 +74,12 @@ export function summarizeAcademicPerformanceMarks(
     weightedScored,
     weightedMax,
     totalCredits,
-    scaled: trunc1(Math.max(0, Math.min(1350, scaledRaw))),
+    scaled: scaleAcademicPerformanceSummary(
+      {
+        weightedScored,
+        weightedMax,
+      },
+      1350,
+    ),
   };
 }

@@ -654,7 +654,7 @@ export async function buildCourseWisePerformancePreview(params: {
         tesNo: oc.ocNo,
         rank: 'OC',
         name: oc.name,
-        academicsTotal: round2(Number(source.academicsRawScored ?? 0)),
+        academicsTotal: round2(Number(source.academicsScaled2500 ?? 0)),
         academicsScaled: round2(Number(source.academicsScaled ?? 0)),
         ptSwimming: round2(Number(source.ptSwimming ?? 0)),
         games: round2(Number(source.games ?? 0)),

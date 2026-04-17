@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { summarizeAcademicPerformanceMarks } from '@/app/lib/performance-record-academics';
+import {
+  scaleAcademicPerformanceSummary,
+  summarizeAcademicPerformanceMarks,
+} from '@/app/lib/performance-record-academics';
 import type { AcademicSubjectView } from '@/app/lib/semester-marks';
 
 function makeSubject(input: {
@@ -66,6 +69,26 @@ describe('performance record academics scaling', () => {
     expect(result.totalCredits).toBe(19);
     expect(result.weightedMax).toBe(1900);
     expect(result.scaled).toBe(298.4);
+  });
+
+  it('supports the same credit-weighted conversion with a 2500 target', () => {
+    const result = summarizeAcademicPerformanceMarks([
+      makeSubject({
+        includeTheory: true,
+        includePractical: true,
+        theoryCredits: 4,
+        practicalCredits: 2,
+        theoryTotal: 80,
+        practicalTotal: 50,
+      }),
+      makeSubject({
+        includeTheory: true,
+        theoryCredits: 13,
+        theoryTotal: 0,
+      }),
+    ]);
+
+    expect(scaleAcademicPerformanceSummary(result, 2500)).toBe(552.6);
   });
 
   it('ignores zero-credit components in the weighted denominator', () => {

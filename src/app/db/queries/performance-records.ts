@@ -1,6 +1,9 @@
 ﻿import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/app/db/client';
-import { summarizeAcademicPerformanceMarks } from '@/app/lib/performance-record-academics';
+import {
+    scaleAcademicPerformanceSummary,
+    summarizeAcademicPerformanceMarks,
+} from '@/app/lib/performance-record-academics';
 import {
     ocSprRecords,
     ocOlq,
@@ -27,6 +30,7 @@ export type SemesterSourceScores = {
 export type SemesterSourceScoresDetailed = SemesterSourceScores & {
     academicsRawScored: number;
     academicsRawMax: number;
+    academicsScaled2500: number;
     academicsScaled: number;
 };
 
@@ -102,6 +106,7 @@ export async function getSemesterSourceScoresDetailed(
     const academicScaledRaw = Math.min(1350, Math.max(0, academicRatio * 1350));
     const academicScaled = Math.trunc((academicScaledRaw + Number.EPSILON) * 10) / 10;
     */
+    const academicScaled2500 = scaleAcademicPerformanceSummary(academicSummary, 2500);
     const academicScaled = academicSummary.scaled;
 
     const [olq] = await db
@@ -195,6 +200,7 @@ export async function getSemesterSourceScoresDetailed(
     return {
         academicsRawScored: Number(academicScored ?? 0),
         academicsRawMax: Number(academicMax ?? 0),
+        academicsScaled2500: Number(academicScaled2500 ?? 0),
         academicsScaled: Number(academicScaled ?? 0),
         academics: Number(academicScaled ?? 0),
         olq: Number(olq?.scored ?? 0),
