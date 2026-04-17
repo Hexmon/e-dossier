@@ -237,8 +237,8 @@ export function resolveDisplayScaledMarks1350(data: RowState[], rows: AcademicRo
       return {
         includeTheory: row.includeTheory !== false,
         includePractical: row.includePractical === true,
-        theoryCredits: row.credit ?? null,
-        practicalCredits: row.practicalCredit ?? null,
+        theoryCredits: normalizeAcademicCredits(row.credit),
+        practicalCredits: normalizeAcademicCredits(row.practicalCredit),
         subject: {
           id: row.subjectId || null,
           code: row.subjectCode ?? "",
