@@ -1,5 +1,6 @@
 ﻿import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/app/db/client';
+import { summarizeAcademicPerformanceMarks } from '@/app/lib/performance-record-academics';
 import {
     ocSprRecords,
     ocOlq,
@@ -93,20 +94,15 @@ export async function getSemesterSourceScoresDetailed(
     const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const academicSemester = await getOcAcademicSemester(ocId, semester);
     const academicSubjects = Array.isArray(academicSemester?.subjects) ? academicSemester.subjects : [];
-    let academicScored = 0;
-    let academicMax = 0;
-    for (const subject of academicSubjects) {
-        const includeTheory = Boolean(subject.includeTheory);
-        const includePractical = Boolean(subject.includePractical);
-        const theoryTotal = Number(subject.theory?.totalMarks ?? 0);
-        const practicalTotal = Number(subject.practical?.totalMarks ?? 0);
-        if (!includeTheory && !includePractical) continue;
-        academicScored += (includeTheory ? theoryTotal : 0) + (includePractical ? practicalTotal : 0);
-        academicMax += (includeTheory ? 100 : 0) + (includePractical ? 100 : 0);
-    }
+    const academicSummary = summarizeAcademicPerformanceMarks(academicSubjects);
+    const academicScored = academicSummary.rawScored;
+    const academicMax = academicSummary.rawMax;
+    /*
     const academicRatio = academicMax > 0 ? academicScored / academicMax : 0;
     const academicScaledRaw = Math.min(1350, Math.max(0, academicRatio * 1350));
     const academicScaled = Math.trunc((academicScaledRaw + Number.EPSILON) * 10) / 10;
+    */
+    const academicScaled = academicSummary.scaled;
 
     const [olq] = await db
         .select({ scored: ocOlq.totalMarks })

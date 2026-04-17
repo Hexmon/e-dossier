@@ -13,6 +13,7 @@ import {
   normalizeAcademicCredits,
   toFiniteAcademicNumber,
 } from "@/app/lib/academic-marks-core";
+import { summarizeAcademicPerformanceMarks } from "@/app/lib/performance-record-academics";
 import { extractRequestId, extractValidationIssues, resolveApiMessage } from "@/lib/api-feedback";
 import type { SubjectWithMarks } from "@/app/lib/api/academics";
 
@@ -214,6 +215,62 @@ export function resolveDisplayGrandTotal(data: RowState[], rows: AcademicRow[]):
   }, 0);
 }
 
+export function resolveDisplayScaledMarks1350(data: RowState[], rows: AcademicRow[]): number {
+  const summary = summarizeAcademicPerformanceMarks(
+    rows.map((row, idx) => {
+      const state = data[idx];
+      const theoryTotal = state
+        ? computeTheoryTotalMarks({
+            phaseTest1Marks: state.phase1,
+            phaseTest2Marks: state.phase2,
+            tutorial: state.tutorial,
+            finalMarks: state.final,
+          })
+        : 0;
+      const practicalTotal =
+        state && row.includePractical === true
+          ? computePracticalTotalMarks({
+              finalMarks: state.practicalFinal,
+            })
+          : 0;
+
+      return {
+        includeTheory: row.includeTheory !== false,
+        includePractical: row.includePractical === true,
+        theoryCredits: row.credit ?? null,
+        practicalCredits: row.practicalCredit ?? null,
+        subject: {
+          id: row.subjectId || null,
+          code: row.subjectCode ?? "",
+          name: row.subject,
+          branch: "C" as const,
+          hasTheory: row.includeTheory !== false,
+          hasPractical: row.includePractical === true,
+          defaultTheoryCredits: null,
+          defaultPracticalCredits: null,
+        },
+        theory:
+          row.includeTheory !== false
+            ? {
+                totalMarks: theoryTotal,
+                sessionalMarks: 0,
+                finalMarks: theoryTotal,
+              }
+            : undefined,
+        practical:
+          row.includePractical === true
+            ? {
+                totalMarks: practicalTotal,
+                finalMarks: practicalTotal,
+              }
+            : undefined,
+      };
+    })
+  );
+
+  return summary.scaled;
+}
+
 export default function AcademicTable({
   ocId,
   semester,
@@ -373,7 +430,10 @@ export default function AcademicTable({
 
   const grandTotal = useMemo(() => resolveDisplayGrandTotal(data, displayRows), [data, displayRows]);
 
-  const autoMarksScored = useMemo(() => Math.round(grandTotal), [grandTotal]);
+  const autoMarksScored = useMemo(
+    () => resolveDisplayScaledMarks1350(data, displayRows),
+    [data, displayRows]
+  );
   const resolvedTotalCredits = useMemo(
     () => resolveDisplayTotalCredits(displayRows, totalCredits),
     [displayRows, totalCredits]
