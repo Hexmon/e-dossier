@@ -4167,6 +4167,60 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "category": "auth",
     "fieldLevelCandidate": false,
     "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/pl-cdr/cadet-appointments",
+    "action": "pl-cdr:cadet-appointments:read",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/pl-cdr/cadet-appointments",
+    "action": "pl-cdr:cadet-appointments:create",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/pl-cdr/cadet-appointments/:id",
+    "action": "pl-cdr:cadet-appointments:read",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/pl-cdr/cadet-appointments/:id",
+    "action": "pl-cdr:cadet-appointments:update",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/pl-cdr/cadet-appointments/:id",
+    "action": "pl-cdr:cadet-appointments:delete",
+    "resourceType": "pl-cdr:cadet-appointments",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/pl-cdr/cadet-appointments/:id/transfer",
+    "action": "pl-cdr:cadet-appointments:transfer:create",
+    "resourceType": "pl-cdr:cadet-appointments:transfer",
+    "category": "pl-cdr",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
   }
 ];
 
@@ -4686,6 +4740,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/settings/device",
     "action": "page:dashboard:settings:device:view",
     "resourceType": "page:dashboard:settings:device",
+    "category": "settings",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/settings/device/appointments",
+    "action": "page:dashboard:settings:device:appointments:view",
+    "resourceType": "page:dashboard:settings:device:appointments",
     "category": "settings",
     "adminBaseline": false
   },

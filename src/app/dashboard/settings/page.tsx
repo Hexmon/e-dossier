@@ -4,9 +4,13 @@ import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, Shield, Timer } from "lucide-react";
+import { CalendarDays, Settings, Shield, Timer } from "lucide-react";
+import { useMe } from "@/hooks/useMe";
 
 export default function SettingsLandingPage() {
+  const { data: meData } = useMe();
+  const canViewCadetAppointments = meData?.cadetAppointments?.canManage === true;
+
   return (
     <DashboardLayout title="Settings" description="Device and access-control configuration">
       <section className="space-y-6 p-6">
@@ -32,6 +36,30 @@ export default function SettingsLandingPage() {
               </Button>
             </CardFooter>
           </Card>
+
+          {canViewCadetAppointments && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5" />
+                  Cadet Appointments
+                </CardTitle>
+                <CardDescription>
+                  Create, transfer, and manage cadet appointments inside your assigned platoon.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  This settings area is available only for platoon commander logins.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Button asChild className="w-full">
+                  <Link href="/dashboard/settings/device/appointments">Open Cadet Appointments</Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

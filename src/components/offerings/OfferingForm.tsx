@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,15 @@ interface OfferingFormProps {
     onSubmit: (offering: OfferingCreate) => void;
     onCancel: () => void;
     isLoading?: boolean;
-    subjects?: Array<{ id: string; code: string; name: string }>;
+    subjects?: Array<{
+        id: string;
+        code: string;
+        name: string;
+        hasTheory: boolean;
+        hasPractical: boolean;
+        defaultTheoryCredits: number;
+        defaultPracticalCredits: number;
+    }>;
     instructors?: Array<{ id: string; name: string; email: string }>;
     defaultSemester?: number;
 }
@@ -34,17 +42,29 @@ export default function OfferingForm({
     instructors = [],
     defaultSemester,
 }: OfferingFormProps) {
+    const subjectLookup = useMemo(
+        () => new Map(subjects.map((subject) => [subject.id, subject] as const)),
+        [subjects]
+    );
+
     const getInitialFormData = (): OfferingCreate => {
         if (offering) {
             const subjectId = offering.subjectId || offering.subject?.id || "";
+            const selectedSubject = subjectLookup.get(subjectId);
+            const includeTheory = offering.includeTheory ?? selectedSubject?.hasTheory ?? true;
+            const includePractical = offering.includePractical ?? selectedSubject?.hasPractical ?? false;
 
             return {
-                subjectId: subjectId,
+                subjectId,
                 semester: offering.semester || 1,
-                includeTheory: offering.includeTheory ?? true,
-                includePractical: offering.includePractical ?? false,
-                theoryCredits: offering.theoryCredits || 0,
-                practicalCredits: offering.practicalCredits || null,
+                includeTheory,
+                includePractical,
+                theoryCredits: includeTheory
+                    ? (offering.theoryCredits ?? selectedSubject?.defaultTheoryCredits ?? 0)
+                    : 0,
+                practicalCredits: includePractical
+                    ? (offering.practicalCredits ?? selectedSubject?.defaultPracticalCredits ?? null)
+                    : null,
                 instructors: (offering.instructors || []).map(inst => ({
                     instructorId: inst.instructorId || "",
                     role: inst.role || "ASSISTANT",
@@ -67,12 +87,58 @@ export default function OfferingForm({
 
     useEffect(() => {
         setFormData(getInitialFormData());
-    }, [offering?.id]);
+    }, [offering, defaultSemester, subjectLookup]);
 
     const handleChange = (field: keyof OfferingCreate, value: string | number | boolean | null | OfferingInstructor[]) => {
         setFormData((prev) => ({
             ...prev,
             [field]: value,
+        }));
+    };
+
+    const applySubjectDefaults = (subjectId: string) => {
+        const selectedSubject = subjectLookup.get(subjectId);
+
+        setFormData((prev) => {
+            if (!selectedSubject) {
+                return {
+                    ...prev,
+                    subjectId,
+                };
+            }
+
+            return {
+                ...prev,
+                subjectId,
+                includeTheory: selectedSubject.hasTheory,
+                includePractical: selectedSubject.hasPractical,
+                theoryCredits: selectedSubject.hasTheory ? selectedSubject.defaultTheoryCredits ?? 0 : 0,
+                practicalCredits: selectedSubject.hasPractical
+                    ? selectedSubject.defaultPracticalCredits ?? null
+                    : null,
+            };
+        });
+    };
+
+    const handleIncludeTheoryChange = (checked: boolean) => {
+        const selectedSubject = subjectLookup.get(formData.subjectId);
+
+        setFormData((prev) => ({
+            ...prev,
+            includeTheory: checked,
+            theoryCredits: checked ? (selectedSubject?.defaultTheoryCredits ?? prev.theoryCredits ?? 0) : 0,
+        }));
+    };
+
+    const handleIncludePracticalChange = (checked: boolean) => {
+        const selectedSubject = subjectLookup.get(formData.subjectId);
+
+        setFormData((prev) => ({
+            ...prev,
+            includePractical: checked,
+            practicalCredits: checked
+                ? (selectedSubject?.defaultPracticalCredits ?? prev.practicalCredits ?? null)
+                : null,
         }));
     };
 
@@ -132,7 +198,8 @@ export default function OfferingForm({
                 <Label htmlFor="subject">Subject *</Label>
                 <Select
                     value={formData.subjectId}
-                    onValueChange={(value) => handleChange("subjectId", value)}
+                    onValueChange={applySubjectDefaults}
+                    disabled={Boolean(offering)}
                 >
                     <SelectTrigger>
                         <SelectValue placeholder="Select a subject" />
@@ -179,7 +246,7 @@ export default function OfferingForm({
                 <Checkbox
                     id="includeTheory"
                     checked={formData.includeTheory}
-                    onCheckedChange={(checked) => handleChange("includeTheory", !!checked)}
+                    onCheckedChange={(checked) => handleIncludeTheoryChange(!!checked)}
                 />
                 <Label htmlFor="includeTheory" className="cursor-pointer">Include Theory</Label>
             </div>
@@ -204,7 +271,7 @@ export default function OfferingForm({
                 <Checkbox
                     id="includePractical"
                     checked={formData.includePractical}
-                    onCheckedChange={(checked) => handleChange("includePractical", !!checked)}
+                    onCheckedChange={(checked) => handleIncludePracticalChange(!!checked)}
                 />
                 <Label htmlFor="includePractical" className="cursor-pointer">Include Practical</Label>
             </div>

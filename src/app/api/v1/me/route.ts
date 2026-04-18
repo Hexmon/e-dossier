@@ -15,6 +15,7 @@ import {
   AuditResourceType,
 } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { canManageCadetAppointments } from '@/lib/platoon-commander-access';
 
 async function GETHandler(req: AuditNextRequest) {
   try {
@@ -69,6 +70,18 @@ async function GETHandler(req: AuditNextRequest) {
           : null,
       workflowAssignments,
     });
+    const cadetAppointmentsScopeType =
+      typeof (principal.apt as any)?.scope?.type === 'string'
+        ? String((principal.apt as any).scope.type)
+        : null;
+    const canManageCadetAppointmentsFeature = canManageCadetAppointments({
+      roles: principal.roles ?? [],
+      position:
+        typeof (principal.apt as any)?.position === 'string'
+          ? String((principal.apt as any).position)
+          : null,
+      scopeType: cadetAppointmentsScopeType,
+    });
 
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
@@ -86,6 +99,9 @@ async function GETHandler(req: AuditNextRequest) {
       user: u,
       roles: principal.roles,
       apt: principal.apt ?? null,
+      cadetAppointments: {
+        canManage: canManageCadetAppointmentsFeature,
+      },
       authority: {
         kind: (principal.apt as any)?.auth_kind ?? 'APPOINTMENT',
         delegationId: (principal.apt as any)?.delegation_id ?? null,

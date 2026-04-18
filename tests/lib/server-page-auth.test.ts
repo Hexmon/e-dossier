@@ -66,6 +66,7 @@ import {
   requireDashboardBulkWorkflowAccess,
   requireDashboardModuleAccess,
   requireDashboardOcModuleAccess,
+  requirePlatoonCommanderDashboardAccess,
   requireSuperAdminDashboardAccess,
 } from "@/app/lib/server-page-auth";
 
@@ -205,6 +206,90 @@ describe("server page auth", () => {
   it("redirects non-super-admin users away from super-admin-only pages", async () => {
     await expect(requireSuperAdminDashboardAccess()).rejects.toThrow("REDIRECT:/dashboard");
     expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("allows scoped platoon commanders onto cadet appointment settings", async () => {
+    (verifyAccessJWT as any).mockResolvedValueOnce({
+      sub: "pl-cdr-1",
+      roles: ["PLATOON_COMMANDER_EQUIVALENT"],
+      apt: {
+        position: "ARJUNPLCDR",
+        scope: {
+          type: "PLATOON",
+          id: "platoon-1",
+        },
+      },
+    });
+    (resolveModuleAccessForUser as any).mockResolvedValueOnce({
+      roleGroup: "OTHER_USERS",
+      isAdmin: false,
+      isSuperAdmin: false,
+      settings: {
+        adminCanAccessDossier: false,
+        adminCanAccessBulkUpload: false,
+        adminCanAccessReports: false,
+      },
+      workflowAssignments: [],
+      canAccessDossier: true,
+      canAccessReports: true,
+      canAccessBulkUpload: true,
+      canAccessAcademicsBulk: true,
+      canAccessPtBulk: true,
+      sections: {
+        dashboard: true,
+        admin: false,
+        settings: true,
+        dossier: true,
+        bulk_upload: true,
+        reports: true,
+        help: true,
+      },
+    });
+
+    const ctx = await requirePlatoonCommanderDashboardAccess();
+    expect(ctx.scopeId).toBe("platoon-1");
+  });
+
+  it("allows scoped dynamic platoon-cdr identities onto cadet appointment settings", async () => {
+    (verifyAccessJWT as any).mockResolvedValueOnce({
+      sub: "pl-cdr-1",
+      roles: ["chandragupt-platoon-cdr"],
+      apt: {
+        position: "chandragupt-platoon-cdr",
+        scope: {
+          type: "PLATOON",
+          id: "platoon-1",
+        },
+      },
+    });
+    (resolveModuleAccessForUser as any).mockResolvedValueOnce({
+      roleGroup: "OTHER_USERS",
+      isAdmin: false,
+      isSuperAdmin: false,
+      settings: {
+        adminCanAccessDossier: false,
+        adminCanAccessBulkUpload: false,
+        adminCanAccessReports: false,
+      },
+      workflowAssignments: [],
+      canAccessDossier: true,
+      canAccessReports: true,
+      canAccessBulkUpload: true,
+      canAccessAcademicsBulk: true,
+      canAccessPtBulk: true,
+      sections: {
+        dashboard: true,
+        admin: false,
+        settings: true,
+        dossier: true,
+        bulk_upload: true,
+        reports: true,
+        help: true,
+      },
+    });
+
+    const ctx = await requirePlatoonCommanderDashboardAccess();
+    expect(ctx.scopeId).toBe("platoon-1");
   });
 
   it("redirects to login when the selected appointment is no longer active", async () => {

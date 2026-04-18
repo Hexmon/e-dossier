@@ -2,13 +2,10 @@ import { z } from 'zod';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { offeringCreateSchema } from '@/app/lib/validators.courses';
-import { listCourseOfferings } from '@/app/db/queries/courses';
-import { db } from '@/app/db/client';
-import { subjects } from '@/app/db/schema/training/subjects';
-import { and, eq, isNull } from 'drizzle-orm';
+import { getCourse, listCourseOfferings } from '@/app/db/queries/courses';
 import { createOffering, replaceOfferingInstructors } from '@/app/db/queries/offerings';
-import { courses } from '@/app/db/schema/training/courses';
 import { findMissingInstructorIds } from '@/app/db/queries/instructors';
+import { getSubject, getSubjectByCode } from '@/app/db/queries/subjects';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -16,6 +13,21 @@ import { withAuthz } from '@/app/lib/acx/withAuthz';
 export const runtime = 'nodejs';
 
 const Param = z.object({ courseId: z.string().uuid() });
+
+function resolveOfferingDefaults(
+    body: z.infer<typeof offeringCreateSchema>,
+    subject: NonNullable<Awaited<ReturnType<typeof getSubject>>>
+) {
+    const includeTheory = body.includeTheory ?? Boolean(subject.hasTheory);
+    const includePractical = body.includePractical ?? Boolean(subject.hasPractical);
+
+    return {
+        includeTheory,
+        includePractical,
+        theoryCredits: includeTheory ? (body.theoryCredits ?? subject.defaultTheoryCredits ?? null) : null,
+        practicalCredits: includePractical ? (body.practicalCredits ?? subject.defaultPracticalCredits ?? null) : null,
+    };
+}
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ courseId: string }> }) {
     try {
@@ -48,40 +60,25 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         const { courseId } = Param.parse(await params);
         const body = offeringCreateSchema.parse(await req.json());
 
-        // ❗ Ensure course exists and is NOT soft-deleted
-        const [course] = await db
-            .select({ id: courses.id })
-            .from(courses)
-            .where(and(eq(courses.id, courseId), isNull(courses.deletedAt)))
-            .limit(1);
-
-        if (!course) {
-            throw new ApiError(400, "Invalid courseId: course not found or has been deleted", "bad_request");
+        const course = await getCourse(courseId);
+        if (!course || course.deletedAt) {
+            throw new ApiError(400, 'Invalid courseId: course not found or has been deleted', 'bad_request');
         }
 
-        // resolve subjectId from subjectCode if needed (and ensure subject is active)
         let subjectId = body.subjectId ?? null;
         if (!subjectId && body.subjectCode) {
-            const [subj] = await db
-                .select({ id: subjects.id })
-                .from(subjects)
-                .where(and(eq(subjects.code, body.subjectCode), isNull(subjects.deletedAt)))
-                .limit(1);
-            if (!subj) throw new ApiError(400, "Unknown or deleted subjectCode", "bad_request");
-            subjectId = subj.id;
+            const subject = await getSubjectByCode(body.subjectCode);
+            if (!subject) throw new ApiError(400, 'Unknown or deleted subjectCode', 'bad_request');
+            subjectId = subject.id;
         }
 
-        // if subjectId was provided directly, still ensure it's active
-        if (subjectId) {
-            const [subj] = await db
-                .select({ id: subjects.id })
-                .from(subjects)
-                .where(and(eq(subjects.id, subjectId), isNull(subjects.deletedAt)))
-                .limit(1);
-            if (!subj) throw new ApiError(400, "subjectId refers to a deleted/nonexistent subject", "bad_request");
-        } else {
-            // schema refine should prevent this; keeping a defensive check
-            throw new ApiError(400, "Provide subjectId or subjectCode", "bad_request");
+        if (!subjectId) {
+            throw new ApiError(400, 'Provide subjectId or subjectCode', 'bad_request');
+        }
+
+        const subject = await getSubject(subjectId);
+        if (!subject || subject.deletedAt) {
+            throw new ApiError(400, 'subjectId refers to a deleted/nonexistent subject', 'bad_request');
         }
 
         if (body.instructors?.length) {
@@ -96,14 +93,15 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
             }
         }
 
+        const defaults = resolveOfferingDefaults(body, subject);
         const offering = await createOffering({
             courseId,
-            subjectId: subjectId!,
+            subjectId,
             semester: body.semester,
-            includeTheory: body.includeTheory,
-            includePractical: body.includePractical,
-            theoryCredits: body.theoryCredits ?? null,
-            practicalCredits: body.practicalCredits ?? null,
+            includeTheory: defaults.includeTheory,
+            includePractical: defaults.includePractical,
+            theoryCredits: defaults.theoryCredits,
+            practicalCredits: defaults.practicalCredits,
         });
 
         if (body.instructors?.length) {
@@ -123,13 +121,15 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
                 semester: body.semester,
                 includeTheory: offering.includeTheory,
                 includePractical: offering.includePractical,
+                theoryCredits: offering.theoryCredits,
+                practicalCredits: offering.practicalCredits,
             },
         });
         return json.created({ message: 'Course offering created successfully.', offeringId: offering.id });
     } catch (err: any) {
         const pgCode = err?.code ?? err?.cause?.code;
-        if (pgCode === "23505") {
-            return json.conflict("Subject already offered for this course/semester.", {
+        if (pgCode === '23505') {
+            return json.conflict('Subject already offered for this course/semester.', {
                 detail: err?.detail ?? err?.cause?.detail,
             });
         }

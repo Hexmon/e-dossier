@@ -15,6 +15,7 @@ import { TheoryMarksRecord, PracticalMarksRecord } from '@/app/db/schema/trainin
 import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
 import { listSubjectsByIdsOrCodes } from '@/app/db/queries/subjects';
 import type { AcademicGradingPolicy } from '@/app/lib/grading-policy';
+import { summarizeAcademicPerformanceMarks } from '@/app/lib/performance-record-academics';
 import {
     computeAcademicCgpa,
     summarizeAcademicSubjects,
@@ -155,7 +156,7 @@ function computeDerivedGpaBySemester(
     semestersWithRows?: Set<number>
 ) {
     const ordered = [...views].sort((a, b) => a.semester - b.semester);
-    const derived = new Map<number, { sgpa: number | null; cgpa: number | null }>();
+    const derived = new Map<number, { sgpa: number | null; cgpa: number | null; marksScored: number | null }>();
 
     const semesterComponents: AcademicCumulativeSemester[] = [];
 
@@ -167,10 +168,15 @@ function computeDerivedGpaBySemester(
         const { components, sgpa } = summarizeAcademicSubjects(view.subjects ?? [], policy);
         semesterComponents.push({ sgpa, components });
         const cgpa = computeAcademicCgpa(semesterComponents, semesterComponents.length - 1, policy);
+        const marksSummary = summarizeAcademicPerformanceMarks(view.subjects ?? []);
+        const hasAcademicComponents = (view.subjects ?? []).some(
+            (subject) => Boolean(subject.includeTheory || subject.includePractical)
+        );
 
         derived.set(view.semester, {
             sgpa,
             cgpa,
+            marksScored: hasAcademicComponents ? marksSummary.scaled : null,
         });
     }
 
@@ -193,6 +199,7 @@ function applyComputedGpaToViews(
             ...view,
             sgpa: next.sgpa,
             cgpa: next.cgpa,
+            marksScored: next.marksScored,
         };
     });
 }
@@ -206,11 +213,12 @@ async function recomputeAndPersistGpa(ocId: string) {
     const derived = computeDerivedGpaBySemester(views, policy, semestersWithRows);
 
     for (const view of [...views].sort((a, b) => a.semester - b.semester)) {
-        const next = derived.get(view.semester) ?? { sgpa: null, cgpa: null };
+        const next = derived.get(view.semester) ?? { sgpa: null, cgpa: null, marksScored: null };
         await upsertSemesterSummary(ocId, view.semester, {
             branchTag: view.branchTag,
             sgpa: next.sgpa,
             cgpa: next.cgpa,
+            marksScored: next.marksScored ?? undefined,
         });
     }
 }
