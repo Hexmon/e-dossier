@@ -13,6 +13,27 @@ export const runtime = 'nodejs';
 
 const Param = z.object({ courseId: z.string().uuid(), offeringId: z.string().uuid() });
 
+function buildOfferingPatch(
+    body: z.infer<typeof offeringUpdateSchema>,
+    current: NonNullable<Awaited<ReturnType<typeof getCourseOffering>>>
+) {
+    const patch: Record<string, unknown> = {};
+
+    for (const key of ['includeTheory', 'includePractical', 'theoryCredits', 'practicalCredits'] as const) {
+        if (key in body) patch[key] = body[key];
+    }
+
+    if (!('theoryCredits' in body) && body.includeTheory === true && current.theoryCredits == null) {
+        patch.theoryCredits = current.subject.defaultTheoryCredits ?? null;
+    }
+
+    if (!('practicalCredits' in body) && body.includePractical === true && current.practicalCredits == null) {
+        patch.practicalCredits = current.subject.defaultPracticalCredits ?? null;
+    }
+
+    return patch;
+}
+
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
         const authCtx = await requireAuth(req);
@@ -40,14 +61,12 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ courseId: string; offeringId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
-        const { offeringId } = Param.parse(await params);
+        const { courseId, offeringId } = Param.parse(await params);
         const body = offeringUpdateSchema.parse(await req.json());
+        const current = await getCourseOffering(courseId, offeringId);
+        if (!current) throw new ApiError(404, 'Offering not found', 'not_found');
 
-        const patch: any = {};
-        for (const k of ['includeTheory', 'includePractical', 'theoryCredits', 'practicalCredits'] as const) {
-            if (k in body) (patch as any)[k] = (body as any)[k];
-        }
-
+        const patch = buildOfferingPatch(body, current);
         const result = await updateOffering(offeringId, patch);
         if (!result) throw new ApiError(404, 'Offering not found', 'not_found');
         const updated = result.after;

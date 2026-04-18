@@ -77,7 +77,29 @@ export function AppSidebar() {
   const { position = "" } = apt as any;
   const userId = (meData?.user as any)?.id || "";
   const isDossierRouteActive = isDossierManagementRoute(pathname);
-  const visibleSections = navData?.sections ?? [];
+  const canViewCadetAppointmentsSettings = meData?.cadetAppointments?.canManage === true;
+  const visibleSections = (navData?.sections ?? []).map((section) => {
+    if (section.key !== "settings" || !canViewCadetAppointmentsSettings) {
+      return section;
+    }
+
+    if (section.items.some((item) => item.key === "cadet_appointments")) {
+      return section;
+    }
+
+    return {
+      ...section,
+      items: [
+        ...section.items,
+        {
+          key: "cadet_appointments",
+          label: "Cadet Appointments",
+          url: "/dashboard/settings/device/appointments",
+          icon: "CalendarDays",
+        },
+      ],
+    };
+  });
   const mainSections = visibleSections.filter((section) => section.key !== "help");
   const pinnedSections = visibleSections.filter((section) => section.key === "help");
 

@@ -4,6 +4,7 @@ import {
   buildDisplayAcademicRows,
   calculateAcademicRowState,
   resolveDisplayGrandTotal,
+  resolveDisplayScaledMarks1350,
   resolveDisplayTotalCredits,
   rowMatchesSemesterSubject,
 } from "@/components/academics/AcademicTable";
@@ -234,5 +235,103 @@ describe("academicTableRows", () => {
         ]
       )
     ).toBe(80);
+  });
+
+  it("derives the displayed Marks(1350) from credit-weighted totals", () => {
+    expect(
+      resolveDisplayScaledMarks1350(
+        [
+          {
+            phase1: "15",
+            phase2: "15",
+            tutorial: "10",
+            sessional: "",
+            final: "40",
+            practical: "",
+            total: "",
+            grade: "",
+            practicalPhase1: "",
+            practicalPhase2: "",
+            practicalTutorial: "",
+            practicalSessional: "",
+            practicalFinal: "50",
+            practicalPractical: "",
+            practicalTotal: "",
+            practicalRemarks: "",
+            practicalExam: "Practical",
+            practicalCredit: 2,
+            practicalGrade: "",
+          },
+          {
+            phase1: "",
+            phase2: "",
+            tutorial: "",
+            sessional: "",
+            final: "",
+            practical: "",
+            total: "",
+            grade: "",
+            practicalPhase1: "",
+            practicalPhase2: "",
+            practicalTutorial: "",
+            practicalSessional: "",
+            practicalFinal: "",
+            practicalPractical: "",
+            practicalTotal: "",
+            practicalRemarks: "",
+            practicalExam: "Practical",
+            practicalCredit: 2,
+            practicalGrade: "",
+          },
+          {
+            phase1: "",
+            phase2: "",
+            tutorial: "",
+            sessional: "",
+            final: "",
+            practical: "",
+            total: "",
+            grade: "",
+            practicalPhase1: "",
+            practicalPhase2: "",
+            practicalTutorial: "",
+            practicalSessional: "",
+            practicalFinal: "",
+            practicalPractical: "",
+            practicalTotal: "",
+            practicalRemarks: "",
+            practicalExam: "Practical",
+            practicalCredit: 4,
+            practicalGrade: "",
+          },
+        ] as any,
+        [
+          {
+            subjectId: "subject-1",
+            subject: "Computer",
+            credit: 4,
+            practicalCredit: 2,
+            includeTheory: true,
+            includePractical: true,
+          },
+          {
+            subjectId: "subject-2",
+            subject: "Computer Science & IT",
+            credit: 5,
+            practicalCredit: 2,
+            includeTheory: true,
+            includePractical: true,
+          },
+          {
+            subjectId: "subject-3",
+            subject: "German",
+            credit: 2,
+            practicalCredit: 4,
+            includeTheory: true,
+            includePractical: true,
+          },
+        ]
+      )
+    ).toBe(298.4);
   });
 });

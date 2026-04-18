@@ -108,8 +108,8 @@ export function CourseWisePerformanceCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="min-w-0 space-y-2">
             <Label>Course</Label>
             <Select
               value={courseId}
@@ -118,7 +118,7 @@ export function CourseWisePerformanceCard() {
                 setSemester(null);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full min-w-0">
                 <SelectValue placeholder="Select course" />
               </SelectTrigger>
               <SelectContent>
@@ -131,14 +131,14 @@ export function CourseWisePerformanceCard() {
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <Label>Semester</Label>
             <Select
               value={semester ? String(semester) : ''}
               onValueChange={(value) => setSemester(Number(value))}
               disabled={!courseId}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full min-w-0">
                 <SelectValue placeholder="Select semester" />
               </SelectTrigger>
               <SelectContent>
@@ -178,7 +178,7 @@ export function CourseWisePerformanceCard() {
         </div>
 
         <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-          <DialogContent className="w-[96vw] max-w-[96vw] md:w-[90vw] md:max-w-[90vw] lg:w-[92vw] lg:max-w-[92vw] xl:w-[94vw] xl:max-w-[94vw]">
+          <DialogContent className="min-w-0 overflow-hidden p-4 sm:p-6 w-[96vw] max-w-[96vw] md:w-[90vw] md:max-w-[90vw] lg:w-[92vw] lg:max-w-[92vw] xl:w-[94vw] xl:max-w-[94vw]">
             <DialogHeader>
               <DialogTitle>Course Wise Performance Preview</DialogTitle>
               <DialogDescription>
@@ -197,11 +197,12 @@ export function CourseWisePerformanceCard() {
             ) : null}
 
             {previewQuery.data?.data ? (
-              <div className="space-y-3">
+              <div className="min-w-0 space-y-3">
                 <div className="rounded border bg-muted/20 p-2 text-sm">
                   Rows: {previewQuery.data.data.rows.length} | Formula: {previewQuery.data.data.formulaLabel}
                 </div>
-                <div className="max-h-[70vh] overflow-auto rounded border">
+                <div className="w-full max-w-full overflow-auto rounded border">
+                  <div className="max-h-[70vh] overflow-auto">
                   <table className="min-w-max text-xs">
                     <thead className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
                       <tr>
@@ -230,6 +231,7 @@ export function CourseWisePerformanceCard() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
             ) : null}

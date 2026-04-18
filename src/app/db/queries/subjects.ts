@@ -57,6 +57,54 @@ export async function listSubjects(opts: {
         .offset(opts.offset ?? 0);
 }
 
+export async function getSubject(id: string) {
+    const [row] = await db
+        .select({
+            id: subjects.id,
+            code: subjects.code,
+            name: subjects.name,
+            branch: subjects.branch,
+            noOfPeriods: subjects.noOfPeriods,
+            hasTheory: subjects.hasTheory,
+            hasPractical: subjects.hasPractical,
+            defaultTheoryCredits: subjects.defaultTheoryCredits,
+            defaultPracticalCredits: subjects.defaultPracticalCredits,
+            description: subjects.description,
+            createdAt: subjects.createdAt,
+            updatedAt: subjects.updatedAt,
+            deletedAt: subjects.deletedAt,
+        })
+        .from(subjects)
+        .where(eq(subjects.id, id))
+        .limit(1);
+
+    return row ?? null;
+}
+
+export async function getSubjectByCode(code: string) {
+    const [row] = await db
+        .select({
+            id: subjects.id,
+            code: subjects.code,
+            name: subjects.name,
+            branch: subjects.branch,
+            noOfPeriods: subjects.noOfPeriods,
+            hasTheory: subjects.hasTheory,
+            hasPractical: subjects.hasPractical,
+            defaultTheoryCredits: subjects.defaultTheoryCredits,
+            defaultPracticalCredits: subjects.defaultPracticalCredits,
+            description: subjects.description,
+            createdAt: subjects.createdAt,
+            updatedAt: subjects.updatedAt,
+            deletedAt: subjects.deletedAt,
+        })
+        .from(subjects)
+        .where(eq(subjects.code, code))
+        .limit(1);
+
+    return row ?? null;
+}
+
 export async function softDeleteSubject(id: string) {
     return db.transaction(async (tx) => {
         const [before] = await tx

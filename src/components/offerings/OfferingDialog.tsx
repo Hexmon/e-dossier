@@ -16,7 +16,15 @@ interface OfferingDialogProps {
     onSubmit: (offering: OfferingCreate) => void;
     offering?: Offering;
     isLoading?: boolean;
-    subjects?: Array<{ id: string; code: string; name: string }>;
+    subjects?: Array<{
+        id: string;
+        code: string;
+        name: string;
+        hasTheory: boolean;
+        hasPractical: boolean;
+        defaultTheoryCredits: number;
+        defaultPracticalCredits: number;
+    }>;
     instructors?: Array<{ id: string; name: string; email: string }>;
     defaultSemester?: number;
 }

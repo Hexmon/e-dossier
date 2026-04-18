@@ -1,6 +1,10 @@
 ﻿import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/app/db/client';
 import {
+    scaleAcademicPerformanceSummary,
+    summarizeAcademicPerformanceMarks,
+} from '@/app/lib/performance-record-academics';
+import {
     ocSprRecords,
     ocOlq,
     ocSportsAndGames,
@@ -26,6 +30,7 @@ export type SemesterSourceScores = {
 export type SemesterSourceScoresDetailed = SemesterSourceScores & {
     academicsRawScored: number;
     academicsRawMax: number;
+    academicsScaled2500: number;
     academicsScaled: number;
 };
 
@@ -93,20 +98,16 @@ export async function getSemesterSourceScoresDetailed(
     const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
     const academicSemester = await getOcAcademicSemester(ocId, semester);
     const academicSubjects = Array.isArray(academicSemester?.subjects) ? academicSemester.subjects : [];
-    let academicScored = 0;
-    let academicMax = 0;
-    for (const subject of academicSubjects) {
-        const includeTheory = Boolean(subject.includeTheory);
-        const includePractical = Boolean(subject.includePractical);
-        const theoryTotal = Number(subject.theory?.totalMarks ?? 0);
-        const practicalTotal = Number(subject.practical?.totalMarks ?? 0);
-        if (!includeTheory && !includePractical) continue;
-        academicScored += (includeTheory ? theoryTotal : 0) + (includePractical ? practicalTotal : 0);
-        academicMax += (includeTheory ? 100 : 0) + (includePractical ? 100 : 0);
-    }
+    const academicSummary = summarizeAcademicPerformanceMarks(academicSubjects);
+    const academicScored = academicSummary.rawScored;
+    const academicMax = academicSummary.rawMax;
+    /*
     const academicRatio = academicMax > 0 ? academicScored / academicMax : 0;
     const academicScaledRaw = Math.min(1350, Math.max(0, academicRatio * 1350));
     const academicScaled = Math.trunc((academicScaledRaw + Number.EPSILON) * 10) / 10;
+    */
+    const academicScaled2500 = scaleAcademicPerformanceSummary(academicSummary, 2500);
+    const academicScaled = academicSummary.scaled;
 
     const [olq] = await db
         .select({ scored: ocOlq.totalMarks })
@@ -199,6 +200,7 @@ export async function getSemesterSourceScoresDetailed(
     return {
         academicsRawScored: Number(academicScored ?? 0),
         academicsRawMax: Number(academicMax ?? 0),
+        academicsScaled2500: Number(academicScaled2500 ?? 0),
         academicsScaled: Number(academicScaled ?? 0),
         academics: Number(academicScaled ?? 0),
         olq: Number(olq?.scored ?? 0),

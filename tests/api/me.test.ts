@@ -120,7 +120,14 @@ describe('GET /api/v1/me', () => {
     (guard.requireAuth as any).mockResolvedValueOnce({
       userId: 'user-1',
       roles: ['ADMIN'],
-      apt: { id: 'apt-1', position: 'ADMIN' },
+      apt: {
+        id: 'apt-1',
+        position: 'ADMIN',
+        scope: {
+          type: 'GLOBAL',
+          id: null,
+        },
+      },
     });
 
     const req = makeJsonRequest({ method: 'GET', path });
@@ -132,7 +139,17 @@ describe('GET /api/v1/me', () => {
     expect(body.user.id).toBe('user-1');
     expect(body.user.username).toBe('testuser');
     expect(body.roles).toContain('ADMIN');
-    expect(body.apt).toEqual({ id: 'apt-1', position: 'ADMIN' });
+    expect(body.apt).toEqual({
+      id: 'apt-1',
+      position: 'ADMIN',
+      scope: {
+        type: 'GLOBAL',
+        id: null,
+      },
+    });
+    expect(body.cadetAppointments).toEqual({
+      canManage: false,
+    });
     expect(body.moduleAccess).toEqual({
       canAccessDossier: false,
       canAccessBulkUpload: false,
@@ -143,5 +160,53 @@ describe('GET /api/v1/me', () => {
     expect(getEffectivePermissionBundleCached).toHaveBeenCalled();
     expect(body.permissions).toContain('oc:interviews:initial:plcdr:update');
     expect(body.policyVersion).toBe(7);
+  });
+
+  it('marks cadet appointments visible for platoon commander scoped identities', async () => {
+    (guard.requireAuth as any).mockResolvedValueOnce({
+      userId: 'user-1',
+      roles: ['ARJUNPLCDR'],
+      apt: {
+        id: 'apt-1',
+        position: 'ARJUNPLCDR',
+        scope: {
+          type: 'PLATOON',
+          id: 'platoon-1',
+        },
+      },
+    });
+
+    const req = makeJsonRequest({ method: 'GET', path });
+    const res = await getMe(req as any, createRouteContext());
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.cadetAppointments).toEqual({
+      canManage: true,
+    });
+  });
+
+  it('marks cadet appointments visible for dynamic platoon-cdr identities', async () => {
+    (guard.requireAuth as any).mockResolvedValueOnce({
+      userId: 'user-1',
+      roles: ['chandragupt-platoon-cdr'],
+      apt: {
+        id: 'apt-1',
+        position: 'chandragupt-platoon-cdr',
+        scope: {
+          type: 'PLATOON',
+          id: 'platoon-1',
+        },
+      },
+    });
+
+    const req = makeJsonRequest({ method: 'GET', path });
+    const res = await getMe(req as any, createRouteContext());
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.cadetAppointments).toEqual({
+      canManage: true,
+    });
   });
 });
