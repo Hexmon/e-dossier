@@ -592,8 +592,8 @@ export default function SubjectWiseStudentsTable({
                 ),
             },
             ...([
-                { key: "contentOfExp", label: "Content of Exp" },
-                { key: "maintOfExp", label: "Maint of Exp" },
+                { key: "contentOfExp", label: "Conduct of Exp" },
+                { key: "maintOfExp", label: "Maint of Records" },
                 { key: "practicalExam", label: "Practical Exam" },
                 { key: "viva", label: "Viva" },
             ] as const).map(({ key, label }) => ({
