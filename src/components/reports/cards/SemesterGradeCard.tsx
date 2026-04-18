@@ -1,7 +1,8 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Check, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,12 +30,14 @@ import type { ReportBranch } from '@/types/reports';
 const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M', 'O'];
 
 export function SemesterGradeCard() {
+  const ocSearchRef = useRef<HTMLDivElement | null>(null);
   const [courseId, setCourseId] = useState('');
   const [semester, setSemester] = useState<number | null>(null);
   const [branches, setBranches] = useState<ReportBranch[]>([]);
   const [q, setQ] = useState('');
   const [selectedOcIds, setSelectedOcIds] = useState<string[]>([]);
   const [previewOcId, setPreviewOcId] = useState<string | null>(null);
+  const [ocSearchOpen, setOcSearchOpen] = useState(false);
   const [ocListOpen, setOcListOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [isPreparingAllDownload, setIsPreparingAllDownload] = useState(false);
@@ -73,6 +76,21 @@ export function SemesterGradeCard() {
   }, [candidatesQuery.data?.items, selectedOcIds]);
 
   const filteredCount = candidatesQuery.data?.items.length ?? 0;
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (ocSearchRef.current && !ocSearchRef.current.contains(event.target as Node)) {
+        setOcSearchOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, []);
+
+  useEffect(() => {
+    setOcSearchOpen(false);
+  }, [courseId, semester, branches]);
 
   const onDownload = async (meta: { password: string; preparedBy: string; checkedBy: string }) => {
     if (!courseId || !semester) {
@@ -190,9 +208,57 @@ export function SemesterGradeCard() {
             </Select>
           </div>
 
-          <div className="space-y-2 md:col-span-2">
+          <div ref={ocSearchRef} className="space-y-2 md:col-span-2">
             <Label>Search OC</Label>
-            <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search by name or OC no" />
+            <div className="relative">
+              <Input
+                value={q}
+                onChange={(event) => {
+                  setQ(event.target.value);
+                  setOcSearchOpen(true);
+                }}
+                onFocus={() => setOcSearchOpen(true)}
+                placeholder="Search by name or OC no"
+                disabled={!courseId || !semester}
+                className="pr-10"
+              />
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+              {ocSearchOpen && courseId && semester ? (
+                <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-md border bg-popover shadow-md">
+                  {candidatesQuery.isFetching ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">Loading OCs...</div>
+                  ) : candidatesQuery.data?.items.length ? (
+                    candidatesQuery.data.items.map((item) => {
+                      const isSelected = selectedOcIds.includes(item.ocId);
+                      return (
+                        <button
+                          key={item.ocId}
+                          type="button"
+                          className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => {
+                            setQ(item.name);
+                            setSelectedOcIds([item.ocId]);
+                            setPreviewOcId(item.ocId);
+                            setOcSearchOpen(false);
+                          }}
+                        >
+                          <span className="flex-1">
+                            <span className="block font-medium">{item.name}</span>
+                            <span className="block text-xs text-muted-foreground">
+                              {item.ocNo} {item.branch ? `• ${item.branch}` : ''}
+                            </span>
+                          </span>
+                          {isSelected ? <Check className="mt-0.5 h-4 w-4 shrink-0" /> : null}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">No OCs found.</div>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 

@@ -38,3 +38,18 @@ export function isScopedPlatoonCommander(input: PlatoonCommanderAccessInput): bo
   if (scopeType !== "PLATOON") return false;
   return hasPlatoonCommanderRole(input);
 }
+
+export function canManageCadetAppointments(input: PlatoonCommanderAccessInput): boolean {
+  const scopeType = normalizeAccessToken(input.scopeType);
+  if (scopeType !== "PLATOON") return false;
+
+  const tokens = collectTokens(input);
+  return tokens.some((token) => {
+    if (isPlatoonCommanderToken(token)) return true;
+    if (token === "PLATOON_CDR" || token === "PL_CDR" || token === "PTN_CDR") return true;
+    if (token.endsWith("PLCDR")) return true;
+    if (token.endsWith("PLATOON_CDR")) return true;
+    if (token.endsWith("PL_CDR")) return true;
+    return token.endsWith("PTN_CDR");
+  });
+}

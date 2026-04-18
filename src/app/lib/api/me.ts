@@ -14,6 +14,9 @@ export interface MeResponse {
         currentAppointmentId: string | null;
     };
     roles: string[];
+    cadetAppointments?: {
+        canManage: boolean;
+    };
     workflowAssignments?: Array<{
         module: "ACADEMICS_BULK" | "PT_BULK";
         actorTypes: Array<"DATA_ENTRY" | "VERIFICATION">;

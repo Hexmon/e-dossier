@@ -128,11 +128,23 @@ export default function OfferingManagementPage() {
 
     // Transform subjects for the form
     const subjectsForForm = subjects.map((subject) => {
-        const { id = "", code = "", name = "" } = subject;
+        const {
+            id = "",
+            code = "",
+            name = "",
+            hasTheory = false,
+            hasPractical = false,
+            defaultTheoryCredits = 0,
+            defaultPracticalCredits = 0,
+        } = subject;
         return {
             id,
             code,
             name,
+            hasTheory,
+            hasPractical,
+            defaultTheoryCredits,
+            defaultPracticalCredits,
         };
     });
 

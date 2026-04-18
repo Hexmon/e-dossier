@@ -16,6 +16,7 @@ import { assertActiveAuthorityFromPayload } from "@/app/lib/active-authority";
 import { db } from "@/app/db/client";
 import { ocCadets } from "@/app/db/schema/training/oc";
 import { hasScopeAccess } from "@/lib/authorization";
+import { canManageCadetAppointments } from "@/lib/platoon-commander-access";
 import { and, eq, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -152,6 +153,23 @@ export async function requireDashboardBulkWorkflowAccess(
   const authContext = await requireDashboardAccess();
 
   if (!canAccessBulkWorkflowModule(authContext.moduleAccess, workflowModule)) {
+    redirect("/dashboard");
+  }
+
+  return authContext;
+}
+
+export async function requirePlatoonCommanderDashboardAccess(): Promise<AdminPageAuthContext> {
+  const authContext = await requireDashboardAccess();
+
+  if (
+    !canManageCadetAppointments({
+      roles: authContext.roles,
+      position: authContext.position,
+      scopeType: authContext.scopeType,
+    }) ||
+    !authContext.scopeId
+  ) {
     redirect("/dashboard");
   }
 
