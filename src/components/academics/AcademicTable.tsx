@@ -152,6 +152,18 @@ export function buildDisplayAcademicRows(
   return nextRows;
 }
 
+export function shouldShowTheoryDisplayRow(row: Pick<AcademicRow, "includeTheory" | "includePractical">): boolean {
+  return row.includeTheory !== false || row.includePractical !== true;
+}
+
+export function shouldShowPracticalDisplayRow(row: Pick<AcademicRow, "includePractical">): boolean {
+  return row.includePractical === true;
+}
+
+export function resolveAcademicDisplayRowSpan(row: Pick<AcademicRow, "includeTheory" | "includePractical">): number {
+  return Number(shouldShowTheoryDisplayRow(row)) + Number(shouldShowPracticalDisplayRow(row));
+}
+
 export function resolveDisplayTotalCredits(rows: AcademicRow[], fallbackTotal: string | number | undefined) {
   const fallbackNumber = Number(fallbackTotal ?? 0);
   if (rows.length === 0) {
@@ -653,59 +665,70 @@ export default function AcademicTable({
             const hasTheoryCredits = hasAcademicCredits(r.credit);
             const hasPracticalCredits = hasAcademicCredits(r.practicalCredit);
             const canEditRow = canEdit && !r.isLegacyRecord && Boolean(r.subjectId);
+            const showTheoryRow = shouldShowTheoryDisplayRow(r);
+            const showPracticalRow = shouldShowPracticalDisplayRow(r);
+            const displayRowSpan = resolveAcademicDisplayRowSpan(r);
+            const renderSubjectCells = () => (
+              <>
+                <td className="border px-2 py-1" rowSpan={displayRowSpan}>
+                  {idx + 1}
+                </td>
+                <td className="border px-2 py-1" rowSpan={displayRowSpan}>
+                  {r.subject}
+                </td>
+              </>
+            );
 
             return (
               <React.Fragment key={`${r.subjectId || r.subjectCode || r.subject}-${idx}`}>
-                <tr>
-                  <td className="border px-2 py-1" rowSpan={hasPracticalComponent ? 2 : 1}>
-                    {idx + 1}
-                  </td>
-                  <td className="border px-2 py-1" rowSpan={hasPracticalComponent ? 2 : 1}>
-                    {r.subject}
-                  </td>
-                  <td className="border px-2 py-1">{r.exam || (hasPracticalComponent ? "Practical" : "Theory")}</td>
-                  <td className="border px-2 py-1">{r.credit ?? ""}</td>
+                {showTheoryRow ? (
+                  <tr>
+                    {renderSubjectCells()}
+                    <td className="border px-2 py-1">{r.exam || (hasPracticalComponent ? "Practical" : "Theory")}</td>
+                    <td className="border px-2 py-1">{r.credit ?? ""}</td>
 
-                  {(["phase1", "phase2", "tutorial"] as const).map((key) => (
-                    <td key={key} className="border px-2 py-1">
+                    {(["phase1", "phase2", "tutorial"] as const).map((key) => (
+                      <td key={key} className="border px-2 py-1">
+                        <input
+                          value={hasTheoryComponent ? state[key] : ""}
+                          disabled={!canEditRow || !isEditing || isSaving || !hasTheoryComponent}
+                          onChange={(e) => handleChange(idx, key, e.target.value)}
+                          className="w-full border px-1 rounded bg-background"
+                        />
+                      </td>
+                    ))}
+
+                    <td className="border px-2 py-1">
+                      <input value={state.sessional} disabled className="w-full border px-1 bg-muted/70" />
+                    </td>
+
+                    <td className="border px-2 py-1">
                       <input
-                        value={hasTheoryComponent ? state[key] : ""}
+                        value={hasTheoryComponent ? state.final : ""}
                         disabled={!canEditRow || !isEditing || isSaving || !hasTheoryComponent}
-                        onChange={(e) => handleChange(idx, key, e.target.value)}
+                        onChange={(e) => handleChange(idx, "final", e.target.value)}
                         className="w-full border px-1 rounded bg-background"
                       />
                     </td>
-                  ))}
 
-                  <td className="border px-2 py-1">
-                    <input value={state.sessional} disabled className="w-full border px-1 bg-muted/70" />
-                  </td>
+                    <td className="border px-2 py-1">
+                      <input value={state.total} disabled className="w-full border px-1 bg-muted/70" />
+                    </td>
 
-                  <td className="border px-2 py-1">
-                    <input
-                      value={hasTheoryComponent ? state.final : ""}
-                      disabled={!canEditRow || !isEditing || isSaving || !hasTheoryComponent}
-                      onChange={(e) => handleChange(idx, "final", e.target.value)}
-                      className="w-full border px-1 rounded bg-background"
-                    />
-                  </td>
+                    <td className="border px-2 py-1">
+                      <input
+                        value={hasTheoryCredits ? state.grade : ""}
+                        disabled={!canEditRow || !isEditing || isSaving || !hasTheoryComponent || !hasTheoryCredits}
+                        onChange={(e) => handleChange(idx, "grade", e.target.value)}
+                        className="w-full border px-1 rounded bg-background"
+                      />
+                    </td>
+                  </tr>
+                ) : null}
 
-                  <td className="border px-2 py-1">
-                    <input value={state.total} disabled className="w-full border px-1 bg-muted/70" />
-                  </td>
-
-                  <td className="border px-2 py-1">
-                    <input
-                      value={hasTheoryCredits ? state.grade : ""}
-                      disabled={!canEditRow || !isEditing || isSaving || !hasTheoryComponent || !hasTheoryCredits}
-                      onChange={(e) => handleChange(idx, "grade", e.target.value)}
-                      className="w-full border px-1 rounded bg-background"
-                    />
-                  </td>
-                </tr>
-
-                {hasPracticalComponent ? (
+                {showPracticalRow ? (
                   <tr className="bg-muted/40">
+                    {!showTheoryRow ? renderSubjectCells() : null}
                     <td className="border px-2 py-1">{r.practicalExam ?? "Practical"}</td>
 
                     <td className="border px-2 py-1">{r.practicalCredit ?? ""}</td>
@@ -727,9 +750,9 @@ export default function AcademicTable({
                     <td className="border px-2 py-1">
                       <input
                         value={state.practicalTutorial}
-                        disabled={!canEditRow || !isEditing || isSaving}
-                        onChange={(e) => handleChange(idx, "practicalTutorial", e.target.value)}
-                        className="w-full border px-1 rounded bg-background"
+                        disabled
+                        readOnly
+                        className="w-full border px-1 rounded bg-muted/70"
                       />
                     </td>
                     <td className="border px-2 py-1">

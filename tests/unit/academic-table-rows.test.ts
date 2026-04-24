@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildDisplayAcademicRows,
   calculateAcademicRowState,
+  resolveAcademicDisplayRowSpan,
   resolveDisplayGrandTotal,
   resolveDisplayScaledMarks1350,
   resolveDisplayTotalCredits,
   rowMatchesSemesterSubject,
+  shouldShowPracticalDisplayRow,
+  shouldShowTheoryDisplayRow,
 } from "@/components/academics/AcademicTable";
 
 describe("academicTableRows", () => {
@@ -141,6 +144,24 @@ describe("academicTableRows", () => {
       includePractical: false,
       isLegacyRecord: true,
     });
+  });
+
+  it("resolves visible exam rows from subject theory/practical flags", () => {
+    const theoryOnly = { includeTheory: true, includePractical: false };
+    const practicalOnly = { includeTheory: false, includePractical: true };
+    const theoryAndPractical = { includeTheory: true, includePractical: true };
+
+    expect(shouldShowTheoryDisplayRow(theoryOnly)).toBe(true);
+    expect(shouldShowPracticalDisplayRow(theoryOnly)).toBe(false);
+    expect(resolveAcademicDisplayRowSpan(theoryOnly)).toBe(1);
+
+    expect(shouldShowTheoryDisplayRow(practicalOnly)).toBe(false);
+    expect(shouldShowPracticalDisplayRow(practicalOnly)).toBe(true);
+    expect(resolveAcademicDisplayRowSpan(practicalOnly)).toBe(1);
+
+    expect(shouldShowTheoryDisplayRow(theoryAndPractical)).toBe(true);
+    expect(shouldShowPracticalDisplayRow(theoryAndPractical)).toBe(true);
+    expect(resolveAcademicDisplayRowSpan(theoryAndPractical)).toBe(2);
   });
 
   it("derives total credits from merged display rows", () => {

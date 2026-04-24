@@ -23,6 +23,8 @@ interface Props {
     semester: number;
     subjectId: string;
     subjectBranch: string | null;
+    includeTheory: boolean;
+    includePractical: boolean;
 }
 
 export type StudentRow = {
@@ -84,6 +86,11 @@ function buildPracticalPayload(row: StudentRow) {
     };
 }
 
+type SubjectComponentFlags = {
+    includeTheory: boolean;
+    includePractical: boolean;
+};
+
 function toNum(value: string): number {
     const num = Number(value);
     return Number.isFinite(num) ? num : 0;
@@ -100,25 +107,33 @@ function toOptionalNumber(value: string): number | undefined {
     return toNullableNumber(value) ?? undefined;
 }
 
-function buildRowsFromWorkflowPayload(payload: AcademicsWorkflowDraftPayload): StudentRow[] {
+function buildRowsFromWorkflowPayload(
+    payload: AcademicsWorkflowDraftPayload,
+    components: SubjectComponentFlags,
+): StudentRow[] {
     return payload.items.map((item) => {
-        const phase1 = item.theory?.phaseTest1Marks != null ? String(item.theory.phaseTest1Marks) : "";
-        const phase2 = item.theory?.phaseTest2Marks != null ? String(item.theory.phaseTest2Marks) : "";
-        const tutorial = item.theory?.tutorial ?? "";
-        const final = item.theory?.finalMarks != null ? String(item.theory.finalMarks) : "";
-        const contentOfExp = formatMarksInput(item.practical?.contentOfExpMarks);
-        const maintOfExp = formatMarksInput(item.practical?.maintOfExpMarks);
-        const practicalExam = formatMarksInput(item.practical?.practicalMarks);
-        const viva = formatMarksInput(item.practical?.vivaMarks);
+        const phase1 = components.includeTheory && item.theory?.phaseTest1Marks != null ? String(item.theory.phaseTest1Marks) : "";
+        const phase2 = components.includeTheory && item.theory?.phaseTest2Marks != null ? String(item.theory.phaseTest2Marks) : "";
+        const tutorial = components.includeTheory ? item.theory?.tutorial ?? "" : "";
+        const final = components.includeTheory && item.theory?.finalMarks != null ? String(item.theory.finalMarks) : "";
+        const contentOfExp = components.includePractical ? formatMarksInput(item.practical?.contentOfExpMarks) : "";
+        const maintOfExp = components.includePractical ? formatMarksInput(item.practical?.maintOfExpMarks) : "";
+        const practicalExam = components.includePractical ? formatMarksInput(item.practical?.practicalMarks) : "";
+        const viva = components.includePractical ? formatMarksInput(item.practical?.vivaMarks) : "";
         const practicalBreakdownTotal = derivePracticalTotal({
             contentOfExp,
             maintOfExp,
             practicalExam,
             viva,
         });
-        const practical = practicalBreakdownTotal || formatMarksInput(item.practical?.finalMarks);
-        const sessional = toNum(phase1) + toNum(phase2) + toNum(tutorial);
-        const total = sessional + toNum(final) + toNum(practical);
+        const practical = components.includePractical
+            ? practicalBreakdownTotal || formatMarksInput(item.practical?.finalMarks)
+            : "";
+        const sessional = components.includeTheory ? toNum(phase1) + toNum(phase2) + toNum(tutorial) : 0;
+        const total =
+            sessional +
+            (components.includeTheory ? toNum(final) : 0) +
+            (components.includePractical ? toNum(practical) : 0);
 
         return {
             id: item.ocId,
@@ -142,6 +157,7 @@ function buildRowsFromWorkflowPayload(payload: AcademicsWorkflowDraftPayload): S
 function buildWorkflowDraftPayload(
     basePayload: AcademicsWorkflowDraftPayload,
     rows: StudentRow[],
+    components: SubjectComponentFlags,
 ): AcademicsWorkflowDraftPayload {
     return {
         ...basePayload,
@@ -150,13 +166,15 @@ function buildWorkflowDraftPayload(
             ocNo: row.ocNo,
             name: row.name,
             branch: basePayload.items.find((item) => item.ocId === row.id)?.branch ?? null,
-            theory: {
-                phaseTest1Marks: toNullableNumber(row.phase1),
-                phaseTest2Marks: toNullableNumber(row.phase2),
-                tutorial: row.tutorial.trim() || undefined,
-                finalMarks: toNullableNumber(row.final),
-            },
-            practical: buildPracticalPayload(row),
+            theory: components.includeTheory
+                ? {
+                    phaseTest1Marks: toNullableNumber(row.phase1),
+                    phaseTest2Marks: toNullableNumber(row.phase2),
+                    tutorial: row.tutorial.trim() || undefined,
+                    finalMarks: toNullableNumber(row.final),
+                }
+                : undefined,
+            practical: components.includePractical ? buildPracticalPayload(row) : undefined,
         })),
     };
 }
@@ -172,6 +190,8 @@ export default function SubjectWiseStudentsTable({
     semester,
     subjectId,
     subjectBranch,
+    includeTheory,
+    includePractical,
 }: Props) {
     const {
         allOCs,
@@ -193,6 +213,10 @@ export default function SubjectWiseStudentsTable({
 
     const workflowEnabled = workflowState?.settings.isActive ?? false;
     const workflowStatus = workflowState?.ticket.status ?? "DRAFT";
+    const subjectComponents = useMemo(
+        () => ({ includeTheory, includePractical }),
+        [includeTheory, includePractical],
+    );
     const allowedActions = useMemo(
         () => new Set(workflowState?.allowedActions ?? []),
         [workflowState?.allowedActions],
@@ -237,7 +261,7 @@ export default function SubjectWiseStudentsTable({
                 setActionMessage("");
 
                 if (workflow.settings.isActive) {
-                    setRows(buildRowsFromWorkflowPayload(workflow.draftPayload));
+                    setRows(buildRowsFromWorkflowPayload(workflow.draftPayload, subjectComponents));
                 } else {
                     setRows([]);
                 }
@@ -257,7 +281,7 @@ export default function SubjectWiseStudentsTable({
         return () => {
             cancelled = true;
         };
-    }, [courseId, semester, subjectId]);
+    }, [courseId, semester, subjectId, subjectComponents]);
 
     useEffect(() => {
         let cancelled = false;
@@ -292,23 +316,28 @@ export default function SubjectWiseStudentsTable({
                             item.subjectId === subjectId,
                     );
 
-                    const phase1 = record?.theory?.phaseTest1Marks?.toString() ?? "";
-                    const phase2 = record?.theory?.phaseTest2Marks?.toString() ?? "";
-                    const tutorial = record?.theory?.tutorial ?? "";
-                    const final = record?.theory?.finalMarks?.toString() ?? "";
-                    const contentOfExp = formatMarksInput(record?.practical?.contentOfExpMarks);
-                    const maintOfExp = formatMarksInput(record?.practical?.maintOfExpMarks);
-                    const practicalExam = formatMarksInput(record?.practical?.practicalMarks);
-                    const viva = formatMarksInput(record?.practical?.vivaMarks);
+                    const phase1 = includeTheory ? record?.theory?.phaseTest1Marks?.toString() ?? "" : "";
+                    const phase2 = includeTheory ? record?.theory?.phaseTest2Marks?.toString() ?? "" : "";
+                    const tutorial = includeTheory ? record?.theory?.tutorial ?? "" : "";
+                    const final = includeTheory ? record?.theory?.finalMarks?.toString() ?? "" : "";
+                    const contentOfExp = includePractical ? formatMarksInput(record?.practical?.contentOfExpMarks) : "";
+                    const maintOfExp = includePractical ? formatMarksInput(record?.practical?.maintOfExpMarks) : "";
+                    const practicalExam = includePractical ? formatMarksInput(record?.practical?.practicalMarks) : "";
+                    const viva = includePractical ? formatMarksInput(record?.practical?.vivaMarks) : "";
                     const practicalBreakdownTotal = derivePracticalTotal({
                         contentOfExp,
                         maintOfExp,
                         practicalExam,
                         viva,
                     });
-                    const practical = practicalBreakdownTotal || (record?.practical?.finalMarks?.toString() ?? "");
-                    const sessional = toNum(phase1) + toNum(phase2) + toNum(tutorial);
-                    const total = sessional + toNum(final) + toNum(practical);
+                    const practical = includePractical
+                        ? practicalBreakdownTotal || (record?.practical?.finalMarks?.toString() ?? "")
+                        : "";
+                    const sessional = includeTheory ? toNum(phase1) + toNum(phase2) + toNum(tutorial) : 0;
+                    const total =
+                        sessional +
+                        (includeTheory ? toNum(final) : 0) +
+                        (includePractical ? toNum(practical) : 0);
 
                     return {
                         id: oc.id,
@@ -351,6 +380,8 @@ export default function SubjectWiseStudentsTable({
         semester,
         subjectId,
         subjectBranch,
+        includeTheory,
+        includePractical,
         workflowState,
         loadingOCs,
         getFilteredOCsByBranch,
@@ -366,8 +397,11 @@ export default function SubjectWiseStudentsTable({
                 row.practical = derivePracticalTotal(row);
             }
 
-            const sessional = toNum(row.phase1) + toNum(row.phase2) + toNum(row.tutorial);
-            const total = sessional + toNum(row.final) + toNum(row.practical);
+            const sessional = includeTheory ? toNum(row.phase1) + toNum(row.phase2) + toNum(row.tutorial) : 0;
+            const total =
+                sessional +
+                (includeTheory ? toNum(row.final) : 0) +
+                (includePractical ? toNum(row.practical) : 0);
 
             row.sessional = sessional;
             row.total = total;
@@ -385,13 +419,15 @@ export default function SubjectWiseStudentsTable({
                 ocId: row.id,
                 semester,
                 subjectId,
-                theory: {
-                    tutorial: row.tutorial,
-                    phaseTest1Marks: toNum(row.phase1),
-                    phaseTest2Marks: toNum(row.phase2),
-                    finalMarks: toNum(row.final),
-                },
-                practical: buildPracticalPayload(row),
+                theory: includeTheory
+                    ? {
+                        tutorial: row.tutorial,
+                        phaseTest1Marks: toNum(row.phase1),
+                        phaseTest2Marks: toNum(row.phase2),
+                        finalMarks: toNum(row.final),
+                    }
+                    : undefined,
+                practical: includePractical ? buildPracticalPayload(row) : undefined,
             }));
 
             const success = await saveBulkAcademics({
@@ -415,7 +451,7 @@ export default function SubjectWiseStudentsTable({
 
     const saveWorkflowDraft = async (options?: { message?: string; silent?: boolean }) => {
         if (!workflowState) throw new Error("Workflow state not loaded.");
-        const payload = buildWorkflowDraftPayload(workflowState.draftPayload, rows);
+        const payload = buildWorkflowDraftPayload(workflowState.draftPayload, rows, subjectComponents);
         const result = await marksWorkflowApi.applyAcademicsWorkflowAction(
             { courseId, semester, subjectId },
             {
@@ -426,7 +462,7 @@ export default function SubjectWiseStudentsTable({
             },
         );
         setWorkflowState(result);
-        setRows(buildRowsFromWorkflowPayload(result.draftPayload));
+        setRows(buildRowsFromWorkflowPayload(result.draftPayload, subjectComponents));
         setIsDirty(false);
         if (!options?.silent) {
             toast.success("Draft saved successfully.");
@@ -449,7 +485,7 @@ export default function SubjectWiseStudentsTable({
                     throw new Error("A message is required for override publish.");
                 }
 
-                const payload = buildWorkflowDraftPayload(state.draftPayload, rows);
+                const payload = buildWorkflowDraftPayload(state.draftPayload, rows, subjectComponents);
                 state = await marksWorkflowApi.applyAcademicsWorkflowAction(
                     { courseId, semester, subjectId },
                     {
@@ -460,7 +496,7 @@ export default function SubjectWiseStudentsTable({
                     },
                 );
                 setWorkflowState(state);
-                setRows(buildRowsFromWorkflowPayload(state.draftPayload));
+                setRows(buildRowsFromWorkflowPayload(state.draftPayload, subjectComponents));
                 setIsDirty(false);
                 setActionMessage("");
                 toast.success("Verified data overridden successfully.");
@@ -516,7 +552,7 @@ export default function SubjectWiseStudentsTable({
 
             if (nextState) {
                 setWorkflowState(nextState);
-                setRows(buildRowsFromWorkflowPayload(nextState.draftPayload));
+                setRows(buildRowsFromWorkflowPayload(nextState.draftPayload, subjectComponents));
                 setIsDirty(false);
                 setActionMessage("");
             }
@@ -548,8 +584,95 @@ export default function SubjectWiseStudentsTable({
         await saveLegacy();
     };
 
-    const columns: TableColumn<StudentRow>[] = useMemo(
-        () => [
+    const columns: TableColumn<StudentRow>[] = useMemo(() => {
+        const theoryColumns: TableColumn<StudentRow>[] = includeTheory
+            ? [
+                ...(["phase1", "phase2", "tutorial"] as const).map((key) => ({
+                    key,
+                    label: key === "phase1" ? "PH-I" : key === "phase2" ? "PH-II" : "Tutorial",
+                    width: "120px",
+                    className: "min-w-[7.5rem] whitespace-nowrap",
+                    render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
+                        <Input
+                            value={row[key]}
+                            disabled={inputsDisabled}
+                            onChange={(e) => updateRow(index, key, e.target.value)}
+                            className={standardMarksInputClassName}
+                            type="text"
+                        />
+                    ),
+                })),
+                {
+                    key: "sessional",
+                    label: "Sessional",
+                    width: "120px",
+                    className: "min-w-[7.5rem] whitespace-nowrap text-sm font-semibold bg-muted/50 text-center",
+                },
+                {
+                    key: "final",
+                    label: "Final",
+                    headerRender: (
+                        <span className="inline-flex flex-col leading-tight">
+                            <span>Final</span>
+                            <span className="text-[11px] text-muted-foreground font-bold">(Theory)</span>
+                        </span>
+                    ),
+                    width: "120px",
+                    className: "min-w-[7.5rem] whitespace-nowrap",
+                    render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
+                        <Input
+                            value={row.final}
+                            disabled={inputsDisabled}
+                            onChange={(e) => updateRow(index, "final", e.target.value)}
+                            className={standardMarksInputClassName}
+                            type="text"
+                        />
+                    ),
+                },
+            ]
+            : [];
+
+        const practicalColumns: TableColumn<StudentRow>[] = includePractical
+            ? [
+                ...([
+                    { key: "contentOfExp", label: "Conduct of Exp" },
+                    { key: "maintOfExp", label: "Maint of Records" },
+                    { key: "practicalExam", label: "Practical Exam" },
+                    { key: "viva", label: "Viva" },
+                ] as const).map(({ key, label }) => ({
+                    key,
+                    label,
+                    width: "150px",
+                    className: "min-w-[9rem] whitespace-nowrap",
+                    render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
+                        <Input
+                            value={row[key]}
+                            disabled={inputsDisabled}
+                            onChange={(e) => updateRow(index, key, e.target.value)}
+                            className={wideMarksInputClassName}
+                            type="text"
+                        />
+                    ),
+                })),
+                {
+                    key: "practical",
+                    label: "Practical",
+                    width: "120px",
+                    className: "min-w-[7.5rem] whitespace-nowrap",
+                    render: (_: StudentRow[keyof StudentRow], row: StudentRow) => (
+                        <Input
+                            value={row.practical}
+                            disabled
+                            readOnly
+                            className={readonlyMarksInputClassName}
+                            type="text"
+                        />
+                    ),
+                },
+            ]
+            : [];
+
+        return [
             {
                 key: "ocNo",
                 label: "OC No",
@@ -562,92 +685,16 @@ export default function SubjectWiseStudentsTable({
                 width: "280px",
                 className: "min-w-[18rem] text-sm font-medium",
             },
-            ...(["phase1", "phase2", "tutorial"] as const).map((key) => ({
-                key,
-                label: key === "phase1" ? "PH-I" : key === "phase2" ? "PH-II" : "Tutorial",
-                width: "120px",
-                className: "min-w-[7.5rem] whitespace-nowrap",
-                render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
-                    <Input
-                        value={row[key]}
-                        disabled={inputsDisabled}
-                        onChange={(e) => updateRow(index, key, e.target.value)}
-                        className={standardMarksInputClassName}
-                        type="text"
-                    />
-                ),
-            })),
-            {
-                key: "sessional",
-                label: "Sessional",
-                width: "120px",
-                className: "min-w-[7.5rem] whitespace-nowrap text-sm font-semibold bg-muted/50 text-center",
-            },
-            {
-                key: "final",
-                label: "Final",
-                headerRender: (
-                    <span className="inline-flex flex-col leading-tight">
-                        <span>Final</span>
-                        <span className="text-[11px] text-muted-foreground font-bold">(Theory)</span>
-                    </span>
-                ),
-                width: "120px",
-                className: "min-w-[7.5rem] whitespace-nowrap",
-                render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
-                    <Input
-                        value={row.final}
-                        disabled={inputsDisabled}
-                        onChange={(e) => updateRow(index, "final", e.target.value)}
-                        className={standardMarksInputClassName}
-                        type="text"
-                    />
-                ),
-            },
-            ...([
-                { key: "contentOfExp", label: "Conduct of Exp" },
-                { key: "maintOfExp", label: "Maint of Records" },
-                { key: "practicalExam", label: "Practical Exam" },
-                { key: "viva", label: "Viva" },
-            ] as const).map(({ key, label }) => ({
-                key,
-                label,
-                width: "150px",
-                className: "min-w-[9rem] whitespace-nowrap",
-                render: (_: StudentRow[keyof StudentRow], row: StudentRow, index: number) => (
-                    <Input
-                        value={row[key]}
-                        disabled={inputsDisabled}
-                        onChange={(e) => updateRow(index, key, e.target.value)}
-                        className={wideMarksInputClassName}
-                        type="text"
-                    />
-                ),
-            })),
-            {
-                key: "practical",
-                label: "Practical",
-                width: "120px",
-                className: "min-w-[7.5rem] whitespace-nowrap",
-                render: (_: StudentRow[keyof StudentRow], row: StudentRow) => (
-                    <Input
-                        value={row.practical}
-                        disabled
-                        readOnly
-                        className={readonlyMarksInputClassName}
-                        type="text"
-                    />
-                ),
-            },
+            ...theoryColumns,
+            ...practicalColumns,
             {
                 key: "total",
                 label: "Total",
                 width: "120px",
                 className: "min-w-[7.5rem] whitespace-nowrap text-sm font-bold bg-muted/50 text-center",
             },
-        ],
-        [inputsDisabled],
-    );
+        ];
+    }, [includeTheory, includePractical, inputsDisabled]);
 
     const config: TableConfig<StudentRow> = {
         columns,
@@ -747,7 +794,7 @@ export default function SubjectWiseStudentsTable({
                             variant="ghost"
                             onClick={() => {
                                 if (workflowState) {
-                                    setRows(buildRowsFromWorkflowPayload(workflowState.draftPayload));
+                                    setRows(buildRowsFromWorkflowPayload(workflowState.draftPayload, subjectComponents));
                                     setIsDirty(false);
                                 }
                             }}
