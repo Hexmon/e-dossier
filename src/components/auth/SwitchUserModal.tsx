@@ -350,6 +350,9 @@ export default function SwitchUserModal({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Only appointments that are active right now can be switched into.
+            </p>
           </div>
 
           <div className="space-y-2">

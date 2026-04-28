@@ -260,6 +260,20 @@
       "when": 1776297600000,
       "tag": "0036_cadet_appointments",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1777098600000,
+      "tag": "0037_dossier_lock_and_enrollment_semester",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1777102200000,
+      "tag": "0038_reset_active_enrollment_semester_to_one",
+      "breakpoints": true
     }
   ]
 }

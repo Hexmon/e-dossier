@@ -103,7 +103,7 @@ describe("Admin interview pending ticker setting API", () => {
     });
   });
 
-  it("returns 403 for non-admin users outside platoon scope", async () => {
+  it("GET allows non-admin users outside platoon scope for dashboard marquee reads", async () => {
     vi.mocked(authz.requireAuth).mockResolvedValueOnce({
       userId: "user-2",
       roles: ["TRAINING_OFFICER"],
@@ -124,6 +124,37 @@ describe("Admin interview pending ticker setting API", () => {
     });
 
     const res = await GET(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.setting.days).toBe(9);
+  });
+
+  it("POST returns 403 for non-admin users outside platoon scope", async () => {
+    vi.mocked(authz.requireAuth).mockResolvedValueOnce({
+      userId: "user-2",
+      roles: ["TRAINING_OFFICER"],
+      claims: {
+        apt: {
+          position: "TRAINING_OFFICER",
+          scope: {
+            type: "GLOBAL",
+            id: null,
+          },
+        },
+      },
+    } as Awaited<ReturnType<typeof authz.requireAuth>>);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: basePath,
+      body: {
+        startDate: "2026-03-01",
+        endDate: "2026-03-10",
+      },
+    });
+
+    const res = await POST(req as any, createRouteContext());
     const body = await res.json();
 
     expect(res.status).toBe(403);

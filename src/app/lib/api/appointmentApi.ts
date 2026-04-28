@@ -1,4 +1,4 @@
-import { api } from "@/app/lib/apiClient";
+import { api, ApiClientError } from "@/app/lib/apiClient";
 import { baseURL, endpoints } from "@/constants/endpoints";
 
 export interface Appointment {
@@ -24,12 +24,24 @@ interface AppointmentResponse {
   data: Appointment[];
 }
 
-export async function getAppointments(): Promise<Appointment[]> {
+export async function getAppointments(options?: {
+  active?: boolean;
+  includeFuture?: boolean;
+}): Promise<Appointment[]> {
+  const active = options?.active ?? true;
+  const includeFuture =
+    options?.includeFuture ?? (active ? true : undefined);
+
   const response = await api.get<AppointmentResponse>(
     endpoints.admin.appointments,
     {
       baseURL,
-      query: { active: true },
+      query: {
+        active: String(active),
+        ...(includeFuture !== undefined
+          ? { includeFuture: String(includeFuture) }
+          : {}),
+      },
     }
   );
 
@@ -140,6 +152,19 @@ export interface CreateAppointmentResponse {
   data: Appointment;
 }
 
+export type CreateAppointmentConflict = {
+  positionId?: string;
+  scopeType?: string;
+  scopeId?: string | null;
+  conflictingAppointment?: {
+    id: string;
+    userId: string;
+    username: string;
+    startsAt: string;
+    endsAt: string | null;
+  };
+};
+
 export async function createAppointment(
   payload: CreateAppointmentPayload
 ): Promise<CreateAppointmentResponse> {
@@ -151,6 +176,9 @@ export async function createAppointment(
     );
     return response;
   } catch (error: any) {
+    if (error instanceof ApiClientError) {
+      throw error;
+    }
     throw new Error(
       error.response?.data?.message || 
       error.message || 

@@ -18,7 +18,7 @@ export default function PromoteCoursePage() {
         <div className="flex-1 flex flex-col">
           <PageHeader
             title="Promote Course"
-            description="Promote entire course with per-OC relegation exceptions"
+            description="Promote cadets semester-wise within a selected course"
           />
 
           <main className="flex-1 p-6">

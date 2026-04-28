@@ -300,7 +300,7 @@ export default function LoginPageClient({
                       </SelectContent>
                     </Select>
                     <p id={appointmentHelpId} className="text-sm text-muted-foreground">
-                      Choose the appointment you are signing in for.
+                      Choose the appointment you are signing in for. Only appointments active right now are listed here.
                     </p>
                     {appointmentsFetchError ? (
                       <p id={appointmentErrorId} className="text-sm text-destructive">

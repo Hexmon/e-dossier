@@ -8,7 +8,7 @@ import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAdmin } from '@/app/lib/authz';
 import { userUpdateSchema } from '@/app/lib/validators';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import argon2 from 'argon2';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -42,7 +42,8 @@ async function selectEnrichedUserById(id: string) {
           FROM appointments a
           WHERE a.user_id = "u"."id"
             AND a.deleted_at IS NULL
-            AND a.ends_at IS NULL
+            AND a.starts_at <= now()
+            AND (a.ends_at IS NULL OR a.ends_at > now())
         )
       `,
       activeAppointments: sql<any>`
@@ -64,7 +65,8 @@ async function selectEnrichedUserById(id: string) {
             JOIN positions p ON p.id = a.position_id
             WHERE a.user_id = "u"."id"
               AND a.deleted_at IS NULL
-              AND a.ends_at IS NULL
+              AND a.starts_at <= now()
+              AND (a.ends_at IS NULL OR a.ends_at > now())
           ),
           '[]'::json
         )
@@ -244,7 +246,8 @@ async function DELETEHandler(
         and(
           eq(appointments.userId, id),
           isNull(appointments.deletedAt),
-          isNull(appointments.endsAt) // active = no end date
+          lte(appointments.startsAt, new Date()),
+          or(isNull(appointments.endsAt), gt(appointments.endsAt, new Date()))
         )
       );
 

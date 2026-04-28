@@ -39,7 +39,7 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
-import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
+import { getOrCreateActiveEnrollment, listCurrentSemestersByOcIds } from '@/app/db/queries/oc-enrollments';
 import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
 import type { AcademicGradingPolicy } from '@/app/lib/grading-policy';
 import {
@@ -1696,13 +1696,13 @@ export async function listOCsBasic(opts: ListOpts = {}) {
         .limit(Math.min(limit, 1000))
         .offset(offset);
 
-    const semesterByCourseId = await listCurrentSemestersByCourseIds(
-        rows.map((row) => row.courseId).filter((value): value is string => Boolean(value)),
+    const semesterByOcId = await listCurrentSemestersByOcIds(
+        rows.map((row) => row.id).filter((value): value is string => Boolean(value)),
     );
 
     return rows.map((row) => ({
         ...row,
-        currentSemester: semesterByCourseId.get(row.courseId) ?? 1,
+        currentSemester: semesterByOcId.get(row.id) ?? 1,
     }));
 }
 

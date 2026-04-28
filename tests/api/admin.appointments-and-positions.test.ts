@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/app/lib/http";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
-const { auditLogMock, selectMock } = vi.hoisted(() => ({
+const { auditLogMock, selectMock, transactionMock } = vi.hoisted(() => ({
   auditLogMock: vi.fn(async () => undefined),
   selectMock: vi.fn(),
+  transactionMock: vi.fn(),
 }));
 
 vi.mock("@/lib/audit", () => ({
@@ -31,15 +32,24 @@ vi.mock("@/app/lib/authz", () => ({
   requireAdmin: vi.fn(),
 }));
 
+vi.mock("@/app/lib/admin-boundaries", () => ({
+  assertCanAssignAppointment: vi.fn(async () => undefined),
+  assertCanManageAppointmentRecord: vi.fn(async () => undefined),
+  assertCanManageUser: vi.fn(async () => undefined),
+}));
+
 vi.mock("@/app/db/client", () => ({
   db: {
     select: selectMock,
+    transaction: transactionMock,
   },
 }));
 
 import { requireAdmin, requireAuth } from "@/app/lib/authz";
 import { GET as getAppointmentsRoute } from "@/app/api/v1/admin/appointments/route";
 import { GET as getPositionsRoute } from "@/app/api/v1/admin/positions/route";
+import { PATCH as patchAppointmentRoute } from "@/app/api/v1/admin/appointments/[id]/route";
+import { POST as postAppointmentsRoute } from "@/app/api/v1/admin/appointments/route";
 
 function buildAppointmentsSelectResult(rows: any[]) {
   return {
@@ -131,7 +141,7 @@ describe("admin appointments and positions access", () => {
     expect(body.data[0]).not.toHaveProperty("reason");
   });
 
-  it("returns the full appointments shape for authenticated admins", async () => {
+  it("returns the full appointments shape for authenticated admins, including upcoming holders when requested", async () => {
     (requireAuth as any).mockResolvedValueOnce({
       userId: "admin-1",
       roles: ["ADMIN"],
@@ -169,7 +179,7 @@ describe("admin appointments and positions access", () => {
 
     const req = makeJsonRequest({
       method: "GET",
-      path: "/api/v1/admin/appointments?userId=11111111-1111-4111-8111-111111111111",
+      path: "/api/v1/admin/appointments?active=true&includeFuture=true&userId=11111111-1111-4111-8111-111111111111",
     });
     const res = await getAppointmentsRoute(req as any, createRouteContext());
     const body = await res.json();
@@ -225,5 +235,156 @@ describe("admin appointments and positions access", () => {
 
     expect(res.status).toBe(200);
     expect(body.data[0].key).toBe("ADMIN");
+  });
+
+  it("PATCH /api/v1/admin/appointments/[id] updates the appointment holder without mutating usernames", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      claims: { apt: { position: "ADMIN" } },
+    });
+
+    const updatedAppointment = {
+      id: "appointment-1",
+      userId: "user-new",
+      positionId: "position-1",
+      scopeType: "GLOBAL",
+      scopeId: null,
+      startsAt: "2026-04-04T00:00:00.000Z",
+      endsAt: null,
+      reason: "Reassigned",
+      deletedAt: null,
+    };
+
+    const txUpdateMock = vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => ({
+          returning: vi.fn(async () => [updatedAppointment]),
+        })),
+      })),
+    }));
+
+    transactionMock.mockImplementationOnce(async (callback: (tx: any) => Promise<any>) =>
+      callback({
+        select: vi.fn(() => ({
+          from: vi.fn(() => ({
+            where: vi.fn(() => ({
+              limit: vi.fn(async () => [
+                {
+                  id: "appointment-1",
+                  userId: "user-old",
+                  positionId: "position-1",
+                },
+              ]),
+            })),
+          })),
+        })),
+        update: txUpdateMock,
+      })
+    );
+
+    selectMock.mockImplementationOnce(() => ({
+      from: vi.fn(() => ({
+        innerJoin: vi.fn(() => ({
+          innerJoin: vi.fn(() => ({
+            leftJoin: vi.fn(() => ({
+              where: vi.fn(() => ({
+                limit: vi.fn(async () => [
+                  {
+                    id: "appointment-1",
+                    userId: "user-new",
+                    username: "new-holder",
+                    positionId: "position-1",
+                    positionKey: "ADMIN",
+                    positionName: "Admin",
+                    scopeType: "GLOBAL",
+                    scopeId: null,
+                    platoonKey: null,
+                    platoonName: null,
+                    startsAt: "2026-04-04T00:00:00.000Z",
+                    endsAt: null,
+                    reason: "Reassigned",
+                    deletedAt: null,
+                    createdAt: "2026-04-04T00:00:00.000Z",
+                    updatedAt: "2026-04-04T00:00:00.000Z",
+                    isActive: true,
+                  },
+                ]),
+              })),
+            })),
+          })),
+        })),
+      })),
+    }));
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: "/api/v1/admin/appointments/appointment-1",
+      body: {
+        userId: "11111111-1111-4111-8111-111111111111",
+        username: "new-holder",
+        startsAt: "2026-04-04T00:00:00.000Z",
+      },
+    });
+
+    const res = await patchAppointmentRoute(
+      req as any,
+      createRouteContext({ id: "appointment-1" }),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data.userId).toBe("user-new");
+    expect(txUpdateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("POST /api/v1/admin/appointments returns the conflicting holder in overlap responses", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      claims: { apt: { position: "ADMIN" } },
+    });
+
+    selectMock.mockImplementationOnce(() => ({
+      from: vi.fn(() => ({
+        innerJoin: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => [
+              {
+                id: "appointment-existing",
+                userId: "user-existing",
+                username: "holder-1",
+                startsAt: "2026-04-04T00:00:00.000Z",
+                endsAt: null,
+              },
+            ]),
+          })),
+        })),
+      })),
+    }));
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: "/api/v1/admin/appointments",
+      body: {
+        userId: "11111111-1111-4111-8111-111111111111",
+        positionId: "708892f8-a211-4ad6-90c1-fe219c7ab03b",
+        scopeType: "GLOBAL",
+        startsAt: "2026-04-04T00:00:00.000Z",
+      },
+    });
+
+    const res = await postAppointmentsRoute(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("conflict");
+    expect(body.conflictingAppointment).toEqual(
+      expect.objectContaining({
+        id: "appointment-existing",
+        userId: "user-existing",
+        username: "holder-1",
+      }),
+    );
   });
 });

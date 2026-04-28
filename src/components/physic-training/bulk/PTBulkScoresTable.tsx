@@ -7,7 +7,8 @@ import type { PTBulkGetItem } from '@/app/lib/api/physicalTrainingBulkApi';
 import {
     buildPTBulkInitialSelections,
     buildPTBulkTaskDefinitions,
-    createPTBulkTaskSelection,
+    createPTBulkTaskSelectionFromAttemptChange,
+    createPTBulkTaskSelectionFromGradeChange,
     getDefaultPTBulkTaskSelection,
     type PTBulkTaskSelection,
 } from '@/components/physic-training/bulk/ptBulkScoreHelpers';
@@ -132,19 +133,10 @@ export function PTBulkScoresTable({
                                                     value={selection?.selectedAttemptCode ?? ''}
                                                     disabled={disabled || isCleared || !selection}
                                                     onChange={(e) => {
-                                                        const nextAttempt = task.attempts.find(
-                                                            (attempt) => attempt.attemptCode === e.target.value,
-                                                        );
-                                                        const nextGrade = nextAttempt?.grades[0];
-                                                        if (!nextAttempt || !nextGrade) return;
-
-                                                        const nextSelection = createPTBulkTaskSelection(
+                                                        const nextSelection = createPTBulkTaskSelectionFromAttemptChange(
                                                             task,
-                                                            nextAttempt.attemptCode,
-                                                            nextGrade.gradeCode,
-                                                            initialSelection?.selectedScoreId === nextGrade.scoreId
-                                                                ? initialSelection.marks
-                                                                : undefined,
+                                                            e.target.value,
+                                                            selection,
                                                         );
                                                         if (!nextSelection) return;
                                                         onTaskSelectionChange(item.oc.id, task.taskId, nextSelection);
@@ -163,13 +155,11 @@ export function PTBulkScoresTable({
                                                     disabled={disabled || isCleared || !selection}
                                                     onChange={(e) => {
                                                         if (!selection) return;
-                                                        const nextSelection = createPTBulkTaskSelection(
+                                                        const nextSelection = createPTBulkTaskSelectionFromGradeChange(
                                                             task,
                                                             selection.selectedAttemptCode,
                                                             e.target.value,
-                                                            initialSelection?.selectedScoreId === selection.selectedScoreId
-                                                                ? initialSelection.marks
-                                                                : undefined,
+                                                            selection,
                                                         );
                                                         if (!nextSelection) return;
                                                         onTaskSelectionChange(item.oc.id, task.taskId, nextSelection);

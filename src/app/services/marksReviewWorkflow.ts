@@ -48,6 +48,7 @@ import {
   resolveWorkflowActorContext,
   getAllowedWorkflowActions,
   validateWorkflowUserAssignments,
+  retainKnownWorkflowUserIds,
   isMarksWorkflowModuleActive,
   ensureWorkflowActionAllowed,
   assertWorkflowRevision,
@@ -106,13 +107,24 @@ async function resolveSettingsResponse(
     listWorkflowActorUsersByIds(settings.dataEntryUserIds),
     listWorkflowActorUsersByIds(settings.verificationUserIds),
   ]);
+  const sanitizedSettings = {
+    dataEntryUserIds: retainKnownWorkflowUserIds(
+      settings.dataEntryUserIds,
+      dataEntryUsers.map((user: WorkflowActorUserRow) => user.id),
+    ),
+    verificationUserIds: retainKnownWorkflowUserIds(
+      settings.verificationUserIds,
+      verificationUsers.map((user: WorkflowActorUserRow) => user.id),
+    ),
+    postVerificationOverrideMode: settings.postVerificationOverrideMode,
+  };
 
   return {
     module,
-    dataEntryUserIds: settings.dataEntryUserIds,
-    verificationUserIds: settings.verificationUserIds,
-    postVerificationOverrideMode: settings.postVerificationOverrideMode,
-    isActive: isMarksWorkflowModuleActive(settings),
+    dataEntryUserIds: sanitizedSettings.dataEntryUserIds,
+    verificationUserIds: sanitizedSettings.verificationUserIds,
+    postVerificationOverrideMode: sanitizedSettings.postVerificationOverrideMode,
+    isActive: isMarksWorkflowModuleActive(sanitizedSettings),
     dataEntryUsers,
     verificationUsers,
   };

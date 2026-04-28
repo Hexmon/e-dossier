@@ -6,6 +6,7 @@ import {
   buildPtPublishItems,
   getAllowedWorkflowActions,
   isMarksWorkflowModuleActive,
+  retainKnownWorkflowUserIds,
   resolveWorkflowActorContext,
   validateWorkflowUserAssignments,
 } from '@/app/lib/marks-review-workflow';
@@ -83,6 +84,18 @@ describe('marksReviewWorkflow core', () => {
     );
 
     expect(isMarksWorkflowModuleActive(settings)).toBe(true);
+  });
+
+  it('drops stale workflow user ids that no longer resolve to existing accounts', () => {
+    expect(
+      retainKnownWorkflowUserIds(
+        [
+          '11111111-1111-4111-8111-111111111111',
+          '22222222-2222-4222-8222-222222222222',
+        ],
+        ['22222222-2222-4222-8222-222222222222'],
+      ),
+    ).toEqual(['22222222-2222-4222-8222-222222222222']);
   });
 
   it('throws stale revision conflicts', () => {
