@@ -71,6 +71,58 @@ require_command() {
   fi
 }
 
+node_major_version() {
+  "$1" -p "Number(process.versions.node.split('.')[0])" 2>/dev/null
+}
+
+is_usable_node() {
+  local candidate="$1"
+  local major
+
+  [[ -n "$candidate" && -x "$candidate" ]] || return 1
+  major="$(node_major_version "$candidate")" || return 1
+  [[ "$major" =~ ^[0-9]+$ && "$major" -ge 20 ]]
+}
+
+resolve_node_bin() {
+  local candidate user_home
+
+  if [[ -n "${NODE_BIN:-}" ]]; then
+    if is_usable_node "$NODE_BIN"; then
+      printf '%s' "$NODE_BIN"
+      return
+    fi
+    err "NODE_BIN is set to '${NODE_BIN}', but it is not executable Node.js 20+."
+  fi
+
+  candidate="$(command -v node 2>/dev/null || true)"
+  if is_usable_node "$candidate"; then
+    printf '%s' "$candidate"
+    return
+  fi
+
+  for candidate in /usr/local/bin/node /usr/bin/node /opt/node/bin/node; do
+    if is_usable_node "$candidate"; then
+      printf '%s' "$candidate"
+      return
+    fi
+  done
+
+  if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
+    user_home="$(getent passwd "$SUDO_USER" 2>/dev/null | cut -d: -f6 || true)"
+    if [[ -n "$user_home" && -d "${user_home}/.nvm/versions/node" ]]; then
+      while IFS= read -r candidate; do
+        if is_usable_node "$candidate"; then
+          printf '%s' "$candidate"
+          return
+        fi
+      done < <(find "${user_home}/.nvm/versions/node" -path '*/bin/node' -type f 2>/dev/null | sort -Vr)
+    fi
+  fi
+
+  err "Node.js 20+ is required but was not found in root's PATH. If Node is installed in a user-local toolchain, rerun with: sudo NODE_BIN=/absolute/path/to/node ./edossier-vm1-bootstrap.sh"
+}
+
 escape_sed() {
   printf '%s' "$1" | sed 's/[\/&]/\\&/g'
 }
@@ -113,17 +165,12 @@ prompt_default APP_ROOT "Application root directory" "/opt/edossier"
 prompt_required PUBLIC_APP_ORIGIN "Public app origin (example: http://172.22.128.57)"
 prompt_required MINIO_ORIGIN "Private MinIO origin on VM2 (example: http://172.22.128.56:9000)"
 
-require_command node "Install Node.js 20+ on VM1 before running bootstrap."
 require_command nginx "Install Nginx on VM1 before running bootstrap."
 require_command psql "Install the PostgreSQL client on VM1 before running bootstrap."
 require_command systemctl "systemd is required on VM1."
 
-NODE_MAJOR="$(node -p "Number(process.versions.node.split('.')[0])")"
-if [[ "$NODE_MAJOR" -lt 20 ]]; then
-  err "Node.js 20+ is required. Found Node major ${NODE_MAJOR}."
-fi
-
-NODE_BIN="$(command -v node)"
+NODE_BIN="$(resolve_node_bin)"
+log "Using Node.js $("${NODE_BIN}" -v) at ${NODE_BIN}"
 APP_PORT="3000"
 APP_RELEASES_DIR="${APP_ROOT}/releases"
 APP_SHARED_DIR="${APP_ROOT}/shared"
