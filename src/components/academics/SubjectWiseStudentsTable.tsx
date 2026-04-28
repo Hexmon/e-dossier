@@ -1,15 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TableColumn, TableConfig, UniversalTable } from "../layout/TableLayout";
 import { BulkAcademicItem } from "@/app/lib/api/academicsMarksApi";
 import { useAcademicsMarks } from "@/hooks/useAcademicsMarks";
 import { computePracticalTotalMarks } from "@/app/lib/academic-marks-core";
+import { Download, FileSpreadsheet, Upload } from "lucide-react";
+import {
+    buildBulkAcademicMarksTemplateRows,
+    getBulkAcademicMarksTemplateColumns,
+    importBulkAcademicMarksRows,
+    type BulkAcademicMarksImportRow,
+    type SheetRow,
+} from "./bulkAcademicMarksImport";
 import {
     marksWorkflowApi,
     type AcademicsWorkflowActionInput,
@@ -27,22 +38,7 @@ interface Props {
     includePractical: boolean;
 }
 
-export type StudentRow = {
-    id: string;
-    ocNo: string;
-    name: string;
-    phase1: string;
-    phase2: string;
-    tutorial: string;
-    sessional: number;
-    final: string;
-    contentOfExp: string;
-    maintOfExp: string;
-    practicalExam: string;
-    viva: string;
-    practical: string;
-    total: number;
-};
+export type StudentRow = BulkAcademicMarksImportRow;
 
 const practicalComponentKeys = ["contentOfExp", "maintOfExp", "practicalExam", "viva"] as const;
 const standardMarksInputClassName =
@@ -210,6 +206,9 @@ export default function SubjectWiseStudentsTable({
     const [workflowState, setWorkflowState] = useState<AcademicsWorkflowStateResponse | null>(null);
     const [actionMessage, setActionMessage] = useState("");
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [templateOpen, setTemplateOpen] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const importInputRef = useRef<HTMLInputElement | null>(null);
 
     const workflowEnabled = workflowState?.settings.isActive ?? false;
     const workflowStatus = workflowState?.ticket.status ?? "DRAFT";
@@ -228,6 +227,16 @@ export default function SubjectWiseStudentsTable({
     const canOverride = allowedActions.has("OVERRIDE_PUBLISH");
     const canEditWorkflow = canSaveDraft || canOverride;
     const inputsDisabled = workflowEnabled ? !canEditWorkflow : !legacyEditMode;
+    const importDisabled = importing || loading || loadingOCs || rows.length === 0 || (workflowEnabled && !canEditWorkflow);
+    const templateColumns = useMemo(
+        () => getBulkAcademicMarksTemplateColumns(subjectComponents),
+        [subjectComponents],
+    );
+    const templateRows = useMemo(
+        () => buildBulkAcademicMarksTemplateRows(rows, subjectComponents),
+        [rows, subjectComponents],
+    );
+    const templatePreviewRows = useMemo(() => templateRows.slice(0, 50), [templateRows]);
 
     useEffect(() => {
         let cancelled = false;
@@ -584,6 +593,115 @@ export default function SubjectWiseStudentsTable({
         await saveLegacy();
     };
 
+    const downloadTemplate = () => {
+        const emptyTemplateRow = Object.fromEntries(templateColumns.map((column) => [column.label, ""]));
+        const worksheet = XLSX.utils.json_to_sheet(templateRows.length ? templateRows : [emptyTemplateRow]);
+        worksheet["!cols"] = templateColumns.map((column) => ({
+            wch: column.key === "name" ? 28 : Math.max(12, column.label.length + 2),
+        }));
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Bulk Academics");
+        XLSX.writeFile(workbook, `bulk-academics-sem${semester}-template.xlsx`);
+    };
+
+    const applyImportedRows = (sheetRows: SheetRow[]) => {
+        const result = importBulkAcademicMarksRows(rows, sheetRows, subjectComponents);
+
+        if (result.updatedRows === 0) {
+            toast.error("No marks were imported. Check OC No, Name, and column headers in the selected sheet.");
+        } else {
+            setRows(result.rows);
+            setIsDirty(true);
+            if (!workflowEnabled) {
+                setLegacyEditMode(true);
+            }
+            toast.success(
+                `Imported ${result.updatedCells} mark${result.updatedCells === 1 ? "" : "s"} for ${result.updatedRows} cadet${result.updatedRows === 1 ? "" : "s"}.`,
+            );
+        }
+
+        const warnings: string[] = [];
+        if (result.unmatchedRows > 0) warnings.push(`${result.unmatchedRows} unmatched row${result.unmatchedRows === 1 ? "" : "s"}`);
+        if (result.duplicateRows > 0) warnings.push(`${result.duplicateRows} duplicate row${result.duplicateRows === 1 ? "" : "s"}`);
+        if (result.invalidCells.length > 0) {
+            const firstInvalid = result.invalidCells[0];
+            warnings.push(
+                `${result.invalidCells.length} invalid mark cell${result.invalidCells.length === 1 ? "" : "s"}${firstInvalid ? `, first at row ${firstInvalid.row} (${firstInvalid.field})` : ""}`,
+            );
+        }
+        if (warnings.length > 0) {
+            toast.warning(`Import skipped ${warnings.join(", ")}.`);
+        }
+    };
+
+    const parseExcelFile = (file: File): Promise<SheetRow[]> =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = new Uint8Array(event.target?.result as ArrayBuffer);
+                    const workbook = XLSX.read(data, { type: "array", cellDates: true });
+                    const sheetName = workbook.SheetNames[0];
+                    if (!sheetName) {
+                        resolve([]);
+                        return;
+                    }
+                    const worksheet = workbook.Sheets[sheetName];
+                    if (!worksheet) {
+                        resolve([]);
+                        return;
+                    }
+                    resolve(XLSX.utils.sheet_to_json<SheetRow>(worksheet, { raw: true, defval: "" }));
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.onerror = () => reject(new Error("Failed to read the selected file."));
+            reader.readAsArrayBuffer(file);
+        });
+
+    const parseCsvFile = (file: File): Promise<SheetRow[]> =>
+        new Promise((resolve, reject) => {
+            Papa.parse<SheetRow>(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => resolve(results.data),
+                error: (err) => reject(err),
+            });
+        });
+
+    const handleMarksFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const input = event.currentTarget;
+        const file = input.files?.[0];
+        if (!file) return;
+
+        const fileName = file.name.toLowerCase();
+        setImporting(true);
+
+        try {
+            const sheetRows = fileName.endsWith(".csv")
+                ? await parseCsvFile(file)
+                : fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
+                    ? await parseExcelFile(file)
+                    : null;
+
+            if (!sheetRows) {
+                throw new Error("Unsupported file type. Allowed files: .xlsx, .xls, .csv.");
+            }
+
+            if (sheetRows.length === 0) {
+                throw new Error("The selected sheet has no data rows.");
+            }
+
+            applyImportedRows(sheetRows);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed to import marks from the selected file.");
+        } finally {
+            setImporting(false);
+            input.value = "";
+        }
+    };
+
     const columns: TableColumn<StudentRow>[] = useMemo(() => {
         const theoryColumns: TableColumn<StudentRow>[] = includeTheory
             ? [
@@ -759,6 +877,30 @@ export default function SubjectWiseStudentsTable({
                 </div>
             )}
 
+            <input
+                ref={importInputRef}
+                type="file"
+                accept=".xlsx, .xls, .csv"
+                className="hidden"
+                onChange={handleMarksFileChange}
+            />
+
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/20 px-4 py-3">
+                <div className="text-sm text-muted-foreground">
+                    {rows.length} cadet{rows.length === 1 ? "" : "s"} in the current bulk academics layout
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" variant="outline" onClick={() => setTemplateOpen(true)} disabled={rows.length === 0}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        Sample Template
+                    </Button>
+                    <Button type="button" onClick={() => importInputRef.current?.click()} disabled={importDisabled}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        {importing ? "Importing..." : "Upload Excel"}
+                    </Button>
+                </div>
+            </div>
+
             <UniversalTable data={rows} config={config} />
 
             <div className="flex flex-wrap justify-center gap-3">
@@ -844,6 +986,65 @@ export default function SubjectWiseStudentsTable({
                     </div>
                 </div>
             ) : null}
+
+            <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
+                <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[90vw] max-h-[90vh] overflow-hidden p-0 flex flex-col">
+                    <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+                        <DialogTitle>Bulk Academics Sample Template</DialogTitle>
+                        <DialogDescription>
+                            Current course, semester, and subject layout. Computed columns are shown for reference.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="overflow-auto px-6 pb-4 min-h-0 flex-1">
+                        <table className="min-w-max text-xs border">
+                            <thead className="bg-muted sticky top-0">
+                                <tr>
+                                    {templateColumns.map((column) => (
+                                        <th key={String(column.key)} className="px-3 py-2 text-left border-b whitespace-nowrap">
+                                            <span className="inline-flex items-center gap-2">
+                                                {column.label}
+                                                {column.computed ? (
+                                                    <Badge variant="outline" className="text-[10px]">Computed</Badge>
+                                                ) : null}
+                                            </span>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {templatePreviewRows.length > 0 ? (
+                                    templatePreviewRows.map((row, index) => (
+                                        <tr key={`${row["OC No"] ?? "row"}-${index}`}>
+                                            {templateColumns.map((column) => (
+                                                <td key={column.label} className="px-3 py-2 border-b whitespace-nowrap">
+                                                    {String(row[column.label] ?? "")}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td className="px-3 py-4 text-muted-foreground" colSpan={templateColumns.length}>
+                                            No cadets loaded for the selected filters.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                        {templateRows.length > templatePreviewRows.length ? (
+                            <p className="mt-3 text-xs text-muted-foreground">
+                                Showing first {templatePreviewRows.length} rows. Download includes all {templateRows.length} rows.
+                            </p>
+                        ) : null}
+                    </div>
+                    <DialogFooter className="px-6 py-4 border-t shrink-0 bg-background">
+                        <Button type="button" variant="outline" onClick={downloadTemplate}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Template XLSX
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
