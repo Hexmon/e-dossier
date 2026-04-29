@@ -19,6 +19,21 @@ It avoids:
 - running `pnpm install` and `pnpm build` on VM1
 - replacing the whole app VM for each release
 
+## Docker-Based VM1 Alternative
+
+If the app VM should not install host Nginx, host Node.js, or the PostgreSQL
+client, use the Docker VM1 runbook instead:
+
+- [air-gapped-vm1-docker-bootstrap.md](../how-to/air-gapped-vm1-docker-bootstrap.md)
+
+That model still uses the same VM split:
+
+- `VM1`: Docker Engine + Compose, app container, Nginx container
+- `VM2`: Postgres + MinIO
+
+VM1 still needs Docker installed on the host. The application runtime, Nginx,
+and migration tooling run inside containers.
+
 ## Legacy Source-Checkout Automation
 
 The older helper scripts below are still present for reference and internet-connected environments, but they are no longer the primary production path for air-gapped installs:
