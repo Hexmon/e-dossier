@@ -9,6 +9,7 @@ import {
   getWorkflowModuleSettings,
 } from '@/app/services/marksReviewWorkflow';
 import { resolveModuleAccessForUser } from '@/app/lib/module-access';
+import { getDossierLockSettingsOrDefault } from '@/app/db/queries/dossier-lock-settings';
 import {
   withAuditRoute,
   AuditEventType,
@@ -61,6 +62,7 @@ async function GETHandler(req: AuditNextRequest) {
       getWorkflowModuleSettings('ACADEMICS_BULK'),
       getWorkflowModuleSettings('PT_BULK'),
     ]);
+    const dossierLockSettings = await getDossierLockSettingsOrDefault();
     const moduleAccess = await resolveModuleAccessForUser({
       userId: principal.userId,
       roles: principal.roles ?? [],
@@ -112,6 +114,9 @@ async function GETHandler(req: AuditNextRequest) {
       workflowModules: {
         ACADEMICS_BULK: { isActive: academicsWorkflow.isActive },
         PT_BULK: { isActive: ptWorkflow.isActive },
+      },
+      dossierForms: {
+        lockPolicy: dossierLockSettings.lockPolicy,
       },
       moduleAccess: {
         canAccessDossier: moduleAccess.canAccessDossier,

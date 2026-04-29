@@ -8,11 +8,9 @@ import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { eq } from 'drizzle-orm';
 import argon2 from 'argon2';
 import { getAuthorityForLogin, buildAuthorityRoleKeys } from '@/app/lib/effective-authority';
-import { getClientIp, checkLoginRateLimit, getRateLimitHeaders } from '@/lib/ratelimit';
+import { getClientIp } from '@/lib/ratelimit';
 import {
   recordLoginAttempt,
-  isAccountLocked,
-  checkAndLockAccount,
 } from '@/app/db/queries/account-lockout';
 import {
   withAuditRoute,
@@ -24,33 +22,37 @@ import { generateCsrfToken, setCsrfCookie } from '@/lib/csrf';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.EXPOSE_TOKENS_IN_DEV === 'true';
 
+/*
+Restorable login protection imports. Left commented so current behavior stays unchanged.
+
+import { checkLoginRateLimit } from '@/lib/ratelimit';
+import {
+  recordLoginAttempt,
+  isAccountLocked,
+  checkAndLockAccount,
+  clearFailedAttempts,
+} from '@/app/db/queries/account-lockout';
+*/
+
 async function POSTHandler(req: AuditNextRequest) {
   try {
-    // SECURITY FIX: Rate limiting for login attempts (5 per 15 minutes)
     const clientIp = getClientIp(req);
 
-    const rateLimitResult = await checkLoginRateLimit(clientIp);
+    /*
+    Restorable login rate-limit block. Uncomment to enforce per-login throttling again.
 
+    const rateLimitResult = await checkLoginRateLimit(clientIp);
     if (!rateLimitResult.success) {
-      const headers = getRateLimitHeaders(rateLimitResult);
-      return new Response(
-        JSON.stringify({
-          status: 429,
-          ok: false,
-          error: 'too_many_requests',
-          message: 'Too many login attempts. Please try again later.',
-          retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
-        }),
+      throw new ApiError(
+        429,
+        'Too many login attempts. Please try again later.',
+        'rate_limited',
         {
-          status: 429,
-          headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-            'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
-          },
+          retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
         }
       );
     }
+    */
 
     // 0) Parse JSON safely
     let body: unknown;
@@ -100,36 +102,22 @@ async function POSTHandler(req: AuditNextRequest) {
 
     const authority = await getAuthorityForLogin({ appointmentId, delegationId });
 
-    // SECURITY FIX: Check if account is locked before proceeding
-    if (authority && authority.userId) {
-      const lockout = await isAccountLocked(authority.userId);
-      if (lockout) {
-        const minutesRemaining = Math.ceil((new Date(lockout.lockedUntil).getTime() - Date.now()) / 60000);
+    /*
+    Restorable account-lockout pre-check. Uncomment to block login for locked accounts again.
 
-        await recordLoginAttempt({
-          userId: authority.userId,
-          username: username.toLowerCase(),
-          ipAddress: clientIp,
-          userAgent: req.headers.get('user-agent') ?? undefined,
-          success: false,
-          failureReason: 'Account locked',
-        });
-
-        await req.audit.log({
-          action: AuditEventType.LOGIN_FAILURE,
-          outcome: 'DENIED',
-          actor: { type: 'user', id: authority.userId },
-          target: { type: AuditResourceType.USER, id: authority.userId },
-          metadata: { username: username.toLowerCase(), reason: 'Account locked' },
-        });
-
-        throw new ApiError(
-          403,
-          `Account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minutes.`,
-          'ACCOUNT_LOCKED'
-        );
-      }
+    const activeLockout = await isAccountLocked(authority.userId);
+    if (activeLockout) {
+      throw new ApiError(
+        423,
+        'Account is temporarily locked due to multiple failed login attempts.',
+        'ACCOUNT_LOCKED',
+        {
+          lockedUntil: activeLockout.lockedUntil,
+          failedAttempts: activeLockout.failedAttempts,
+        }
+      );
     }
+    */
 
     // 3) Domain checks & auth
     if (authority.scopeType === 'PLATOON') {
@@ -156,8 +144,6 @@ async function POSTHandler(req: AuditNextRequest) {
         failureReason: 'No credentials found',
       });
 
-      await checkAndLockAccount(username.toLowerCase(), authority.userId, clientIp);
-
       await req.audit.log({
         action: AuditEventType.LOGIN_FAILURE,
         outcome: 'FAILURE',
@@ -180,29 +166,6 @@ async function POSTHandler(req: AuditNextRequest) {
         failureReason: 'Invalid password',
       });
 
-      const lockout = await checkAndLockAccount(username.toLowerCase(), authority.userId, clientIp);
-
-      if (lockout) {
-        await req.audit.log({
-          action: AuditEventType.ACCOUNT_LOCKED,
-          outcome: 'DENIED',
-          actor: { type: 'system', id: 'system' },
-          target: { type: AuditResourceType.USER, id: authority.userId },
-          metadata: {
-            username: username.toLowerCase(),
-            failedAttempts: lockout.failedAttempts,
-            lockedUntil: new Date(lockout.lockedUntil).toISOString(),
-          },
-        });
-
-        const minutesRemaining = Math.ceil((new Date(lockout.lockedUntil).getTime() - Date.now()) / 60000);
-        throw new ApiError(
-          403,
-          `Account has been locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minutes.`,
-          'ACCOUNT_LOCKED'
-        );
-      }
-
       await req.audit.log({
         action: AuditEventType.LOGIN_FAILURE,
         outcome: 'FAILURE',
@@ -210,6 +173,28 @@ async function POSTHandler(req: AuditNextRequest) {
         target: { type: AuditResourceType.USER, id: authority.userId },
         metadata: { username: username.toLowerCase(), reason: 'Invalid password' },
       });
+
+      /*
+      Restorable failed-attempt escalation. Uncomment to re-enable account lockout creation.
+
+      const lockout = await checkAndLockAccount(
+        username.toLowerCase(),
+        authority.userId,
+        clientIp
+      );
+
+      if (lockout) {
+        throw new ApiError(
+          423,
+          'Account is temporarily locked due to multiple failed login attempts.',
+          'ACCOUNT_LOCKED',
+          {
+            lockedUntil: lockout.lockedUntil,
+            failedAttempts: lockout.failedAttempts,
+          }
+        );
+      }
+      */
 
       throw new ApiError(401, 'invalid_credentials', 'BAD_PASSWORD');
     }
@@ -222,6 +207,11 @@ async function POSTHandler(req: AuditNextRequest) {
       userAgent: req.headers.get('user-agent') ?? undefined,
       success: true,
     });
+
+    /*
+    Restorable successful-login cleanup hook. Uncomment if lockout logic is re-enabled.
+    await clearFailedAttempts(username.toLowerCase());
+    */
 
     // Audit log - successful login
     await req.audit.log({

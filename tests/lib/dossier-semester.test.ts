@@ -59,6 +59,15 @@ describe("isDossierSemesterLocked", () => {
       isDossierSemesterLocked({ semester: 1, currentSemester: 3, canBypassLock: true })
     ).toBe(false);
   });
+
+  it("respects the global freeze and unfreeze policies", () => {
+    expect(
+      isDossierSemesterLocked({ semester: 3, currentSemester: 3, lockPolicy: "FREEZE_ALL" })
+    ).toBe(true);
+    expect(
+      isDossierSemesterLocked({ semester: 1, currentSemester: 3, lockPolicy: "UNFREEZE_ALL" })
+    ).toBe(false);
+  });
 });
 
 describe("buildSemesterSearchParams", () => {

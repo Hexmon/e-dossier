@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ratingMap, reverseRatingMap } from "@/config/app.config";
 import { SsbReport } from "@/app/lib/api/ssbReportApi";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 
 export interface SSBFormData {
@@ -16,6 +16,113 @@ export interface SSBFormData {
     negativeBy: string;
     rating: string;
     improvement: string;
+}
+
+const DEFAULT_ASSESSOR_OPTIONS = ["IO", "GTO", "Psy", "TO", "Staff"] as const;
+
+function createEmptyFormData(): SSBFormData {
+    return {
+        positiveTraits: [{ trait: "" }],
+        negativeTraits: [{ trait: "" }],
+        positiveBy: "",
+        negativeBy: "",
+        rating: "",
+        improvement: "",
+    };
+}
+
+function cloneTraitRows(traits: { trait: string }[] | undefined) {
+    return (traits ?? []).map((item) => ({ trait: item?.trait ?? "" }));
+}
+
+function ensureTraitRows(traits: { trait: string }[] | undefined) {
+    const rows = cloneTraitRows(traits);
+    return rows.length > 0 ? rows : [{ trait: "" }];
+}
+
+export function cloneSsbFormData(data: SSBFormData): SSBFormData {
+    return {
+        positiveTraits: ensureTraitRows(data.positiveTraits),
+        negativeTraits: ensureTraitRows(data.negativeTraits),
+        positiveBy: data.positiveBy ?? "",
+        negativeBy: data.negativeBy ?? "",
+        rating: data.rating ?? "",
+        improvement: data.improvement ?? "",
+    };
+}
+
+function serializeSsbFormData(data: SSBFormData): string {
+    return JSON.stringify(cloneSsbFormData(data));
+}
+
+function buildFormDataFromSources(
+    report: SsbReport | null,
+    savedFormData?: SSBFormData
+): SSBFormData {
+    if (!report) {
+        if (!savedFormData) {
+            return createEmptyFormData();
+        }
+
+        return {
+            positiveTraits: ensureTraitRows(savedFormData.positiveTraits),
+            negativeTraits: ensureTraitRows(savedFormData.negativeTraits),
+            positiveBy: savedFormData.positiveBy ?? "",
+            negativeBy: savedFormData.negativeBy ?? "",
+            rating: savedFormData.rating ?? "",
+            improvement: savedFormData.improvement ?? "",
+        };
+    }
+
+    const transformedApiData: SSBFormData = {
+        positiveTraits: report.positives.map((p) => ({ trait: p.note ?? "" })),
+        negativeTraits: report.negatives.map((n) => ({ trait: n.note ?? "" })),
+        positiveBy: report.positives[0]?.by ?? "",
+        negativeBy: report.negatives[0]?.by ?? "",
+        rating: ratingMap[report.predictiveRating] ?? "",
+        improvement: report.scopeForImprovement ?? "",
+    };
+
+    if (!savedFormData) {
+        return {
+            ...transformedApiData,
+            positiveTraits: ensureTraitRows(transformedApiData.positiveTraits),
+            negativeTraits: ensureTraitRows(transformedApiData.negativeTraits),
+        };
+    }
+
+    const mergedData: Partial<SSBFormData> = { ...transformedApiData };
+
+    const stringFields: (keyof SSBFormData)[] = ["positiveBy", "negativeBy", "rating", "improvement"];
+    stringFields.forEach((key) => {
+        const apiValue = transformedApiData[key] as string;
+        const reduxValue = savedFormData[key] as string;
+        const isApiEmpty = !apiValue || apiValue === "";
+        const hasReduxValue = reduxValue && reduxValue !== "";
+
+        (mergedData as Record<string, unknown>)[key] = isApiEmpty && hasReduxValue ? reduxValue : apiValue;
+    });
+
+    mergedData.positiveTraits =
+        transformedApiData.positiveTraits.length === 0 ||
+            transformedApiData.positiveTraits.every((t) => !t.trait)
+            ? ensureTraitRows(savedFormData.positiveTraits)
+            : transformedApiData.positiveTraits;
+
+    mergedData.negativeTraits =
+        transformedApiData.negativeTraits.length === 0 ||
+            transformedApiData.negativeTraits.every((t) => !t.trait)
+            ? ensureTraitRows(savedFormData.negativeTraits)
+            : transformedApiData.negativeTraits;
+
+    return {
+        positiveTraits: ensureTraitRows(mergedData.positiveTraits),
+        negativeTraits: ensureTraitRows(mergedData.negativeTraits),
+        positiveBy: (mergedData.positiveBy as string) ?? "",
+        negativeBy: (mergedData.negativeBy as string) ?? "",
+        rating: (mergedData.rating as string) ?? "",
+        improvement: (mergedData.improvement as string) ?? "",
+    };
 }
 
 export function SSBReportForm({
@@ -34,7 +141,7 @@ export function SSBReportForm({
     onClear?: () => void;
 }) {
     const [isEditing, setIsEditing] = useState(false);
-    const [isInitialized, setIsInitialized] = useState(false);
+    const lastAutoSaveRef = useRef<string | null>(null);
 
     const {
         register,
@@ -43,14 +150,7 @@ export function SSBReportForm({
         reset,
         watch
     } = useForm<SSBFormData>({
-        defaultValues: {
-            positiveTraits: [{ trait: "" }],
-            negativeTraits: [{ trait: "" }],
-            positiveBy: "",
-            negativeBy: "",
-            rating: "",
-            improvement: "",
-        }
+        defaultValues: createEmptyFormData()
     });
 
     const { fields: positiveFields, append: addPositive, remove: removePositive } =
@@ -69,75 +169,18 @@ export function SSBReportForm({
     // PRELOAD FORM DATA - SMART MERGE
     // ---------------------------
     useEffect(() => {
-        if (!report || isInitialized) return;
+        if (isEditing) return;
 
-        // Transform API data
-        const transformedApiData: SSBFormData = {
-            positiveTraits: report.positives.map(p => ({ trait: p.note ?? "" })),
-            negativeTraits: report.negatives.map(n => ({ trait: n.note ?? "" })),
-            positiveBy: report.positives[0]?.by ?? "",
-            negativeBy: report.negatives[0]?.by ?? "",
-            rating: ratingMap[report.predictiveRating] ?? "",
-            improvement: report.scopeForImprovement ?? "",
-        };
-
-        // Smart merge: Prioritize API data, but use Redux data for empty API fields
-        if (savedFormData) {
-            console.log("Merging API data with Redux fallback");
-
-            const mergedData: Partial<SSBFormData> = { ...transformedApiData };
-
-            // Merge simple string fields
-            const stringFields: (keyof SSBFormData)[] = ['positiveBy', 'negativeBy', 'rating', 'improvement'];
-            stringFields.forEach((key) => {
-                const apiValue = transformedApiData[key] as string;
-                const reduxValue = savedFormData[key] as string;
-
-                const isApiEmpty = !apiValue || apiValue === "";
-                const hasReduxValue = reduxValue && reduxValue !== "";
-
-                if (isApiEmpty && hasReduxValue) {
-                    (mergedData as Record<string, unknown>)[key] = reduxValue;
-                } else {
-                    (mergedData as Record<string, unknown>)[key] = apiValue;
-                }
-            });
-
-            // Merge array fields (positiveTraits)
-            if (transformedApiData.positiveTraits.length === 0 ||
-                transformedApiData.positiveTraits.every(t => !t.trait)) {
-                if (savedFormData.positiveTraits && savedFormData.positiveTraits.length > 0) {
-                    mergedData.positiveTraits = savedFormData.positiveTraits;
-                }
-            } else {
-                mergedData.positiveTraits = transformedApiData.positiveTraits;
-            }
-
-            // Merge array fields (negativeTraits)
-            if (transformedApiData.negativeTraits.length === 0 ||
-                transformedApiData.negativeTraits.every(t => !t.trait)) {
-                if (savedFormData.negativeTraits && savedFormData.negativeTraits.length > 0) {
-                    mergedData.negativeTraits = savedFormData.negativeTraits;
-                }
-            } else {
-                mergedData.negativeTraits = transformedApiData.negativeTraits;
-            }
-
-            console.log("Merged data:", mergedData);
-            reset(mergedData as SSBFormData);
-        } else {
-            console.log("Loading from API:", transformedApiData);
-            reset(transformedApiData);
-        }
-
-        setIsInitialized(true);
-    }, [report, savedFormData, reset, isInitialized]);
+        const nextData = buildFormDataFromSources(report, savedFormData);
+        console.log("Hydrating SSB form:", nextData);
+        reset(nextData);
+    }, [report, savedFormData, reset, isEditing]);
 
     // ---------------------------
     // AUTO-SAVE TO REDUX (DEBOUNCED)
     // ---------------------------
     useEffect(() => {
-        if (!isInitialized || !isEditing || !onAutoSave) return;
+        if (!isEditing || !onAutoSave) return;
 
         if (debouncedFormValues && Object.keys(debouncedFormValues).length > 0) {
             const hasAnyData =
@@ -149,11 +192,16 @@ export function SSBReportForm({
                 debouncedFormValues.improvement;
 
             if (hasAnyData) {
-                console.log("Auto-saving to Redux:", debouncedFormValues);
-                onAutoSave(debouncedFormValues as SSBFormData);
+                const autosaveData = cloneSsbFormData(debouncedFormValues as SSBFormData);
+                const serialized = serializeSsbFormData(autosaveData);
+                if (serialized === lastAutoSaveRef.current) return;
+
+                lastAutoSaveRef.current = serialized;
+                console.log("Auto-saving to Redux:", autosaveData);
+                onAutoSave(autosaveData);
             }
         }
-    }, [debouncedFormValues, isEditing, isInitialized, onAutoSave]);
+    }, [debouncedFormValues, isEditing, onAutoSave]);
 
     // ---------------------------
     // HANDLE SUBMIT - PASS DATA DIRECTLY TO PARENT
@@ -161,6 +209,7 @@ export function SSBReportForm({
     const handleFormSubmit = async (data: SSBFormData) => {
         console.log("Form submitted with data:", data);
         await onSave(data);
+        lastAutoSaveRef.current = null;
         setIsEditing(false);
     };
 
@@ -169,17 +218,17 @@ export function SSBReportForm({
     // ---------------------------
     const handleCancel = () => {
         setIsEditing(false);
-        if (report) {
-            reset({
-                positiveTraits: report.positives.map(p => ({ trait: p.note ?? "" })),
-                negativeTraits: report.negatives.map(n => ({ trait: n.note ?? "" })),
-                positiveBy: report.positives[0]?.by ?? "",
-                negativeBy: report.negatives[0]?.by ?? "",
-                rating: ratingMap[report.predictiveRating] ?? "",
-                improvement: report.scopeForImprovement ?? "",
-            });
-        }
+        lastAutoSaveRef.current = null;
+        reset(buildFormDataFromSources(report, savedFormData));
     };
+
+    const positiveByOptions = formValues.positiveBy && !DEFAULT_ASSESSOR_OPTIONS.includes(formValues.positiveBy as typeof DEFAULT_ASSESSOR_OPTIONS[number])
+        ? [...DEFAULT_ASSESSOR_OPTIONS, formValues.positiveBy]
+        : DEFAULT_ASSESSOR_OPTIONS;
+
+    const negativeByOptions = formValues.negativeBy && !DEFAULT_ASSESSOR_OPTIONS.includes(formValues.negativeBy as typeof DEFAULT_ASSESSOR_OPTIONS[number])
+        ? [...DEFAULT_ASSESSOR_OPTIONS, formValues.negativeBy]
+        : DEFAULT_ASSESSOR_OPTIONS;
 
     return (
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -239,10 +288,9 @@ export function SSBReportForm({
                             className="w-full rounded-md border p-2 mt-1"
                         >
                             <option value="">Select</option>
-                            <option value="IO">IO</option>
-                            <option value="GTO">GTO</option>
-                            <option value="Psy">Psy</option>
-                            <option value="TO">TO</option>
+                            {positiveByOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -295,10 +343,9 @@ export function SSBReportForm({
                             className="w-full rounded-md border p-2 mt-1"
                         >
                             <option value="">Select</option>
-                            <option value="IO">IO</option>
-                            <option value="GTO">GTO</option>
-                            <option value="Psy">Psy</option>
-                            <option value="TO">TO</option>
+                            {negativeByOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
                         </select>
                     </div>
                 </div>

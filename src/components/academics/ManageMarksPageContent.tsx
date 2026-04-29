@@ -19,11 +19,13 @@ export default function ManageMarksPageContent() {
         isLoading: loadingOfferings,
     } = useCourseOfferings(courseId, semester);
 
+    const selectedOffering = useMemo(
+        () => courseOfferings.find((co) => co.subject.id === subjectId),
+        [courseOfferings, subjectId],
+    );
+
     // Get the selected subject's branch
-    const selectedSubjectBranch = useMemo(() => {
-        const offering = courseOfferings.find((co) => co.subject.id === subjectId);
-        return offering?.subject.branch || null;
-    }, [courseOfferings, subjectId]);
+    const selectedSubjectBranch = selectedOffering?.subject.branch || null;
 
     useEffect(() => {
         const nextCourseId = searchParams.get("courseId") ?? "";
@@ -61,12 +63,14 @@ export default function ManageMarksPageContent() {
                 onSemesterChange={handleSemesterChange}
                 onSubjectChange={setSubjectId}
             />
-            {courseId && semester && subjectId && (
+            {courseId && semester && subjectId && selectedOffering && (
                 <SubjectWiseStudentsTable
                     courseId={courseId}
                     semester={semester}
                     subjectId={subjectId}
                     subjectBranch={selectedSubjectBranch}
+                    includeTheory={selectedOffering.includeTheory}
+                    includePractical={selectedOffering.includePractical}
                 />
             )}
         </div>

@@ -5,6 +5,8 @@ import {
   buildPTBulkInitialSelections,
   buildPTBulkTaskDefinitions,
   createPTBulkTaskSelection,
+  createPTBulkTaskSelectionFromAttemptChange,
+  createPTBulkTaskSelectionFromGradeChange,
   getDefaultPTBulkTaskSelection,
 } from '@/components/physic-training/bulk/ptBulkScoreHelpers';
 import { buildBulkPTSaveRequest } from '@/hooks/usePhysicalTrainingBulk';
@@ -116,6 +118,26 @@ describe('ptBulkScoreHelpers', () => {
   it('updates max marks when the selected status changes', () => {
     const task = buildPTBulkTaskDefinitions(ptType)[0];
     const selection = createPTBulkTaskSelection(task, 'CAT-B', 'G1');
+
+    expect(selection?.selectedScoreId).toBe('score-b1');
+    expect(selection?.maxMarks).toBe(20);
+    expect(selection?.marks).toBe('20');
+  });
+
+  it('resets marks to the selected status max marks when status changes', () => {
+    const task = buildPTBulkTaskDefinitions(ptType)[0];
+    const currentSelection = createPTBulkTaskSelection(task, 'CAT-A', 'G2', '19');
+    const selection = createPTBulkTaskSelectionFromGradeChange(task, 'CAT-A', 'G1', currentSelection);
+
+    expect(selection?.selectedScoreId).toBe('score-a1');
+    expect(selection?.maxMarks).toBe(30);
+    expect(selection?.marks).toBe('30');
+  });
+
+  it('resets marks to the selected category max marks when category changes', () => {
+    const task = buildPTBulkTaskDefinitions(ptType)[0];
+    const currentSelection = createPTBulkTaskSelection(task, 'CAT-A', 'G2', '19');
+    const selection = createPTBulkTaskSelectionFromAttemptChange(task, 'CAT-B', currentSelection);
 
     expect(selection?.selectedScoreId).toBe('score-b1');
     expect(selection?.maxMarks).toBe(20);

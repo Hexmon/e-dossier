@@ -29,11 +29,11 @@ type WorkflowSettingsDraft = Record<ModuleKey, WorkflowModuleDraft>;
 const MODULE_COPY: Record<ModuleKey, { title: string; description: string }> = {
     ACADEMICS_BULK: {
         title: "Academics Bulk Workflow",
-        description: "Maker-verifier flow for /dashboard/manage-marks. Platoon commanders are implicit data-entry users.",
+        description: "Maker-verifier flow for Bulk Academics",
     },
     PT_BULK: {
         title: "PT Bulk Workflow",
-        description: "Maker-verifier flow for /dashboard/manage-pt-marks. Platoon commanders are implicit data-entry users.",
+        description: "Maker-verifier flow for Bulk PT Marks",
     },
 };
 
@@ -95,14 +95,14 @@ export default function MarksReviewWorkflowSettingsPage() {
         if (!settingsQuery.data?.settings) return;
         setDraft({
             ACADEMICS_BULK: {
-                dataEntryUserIds: settingsQuery.data.settings.ACADEMICS_BULK.dataEntryUserIds,
-                verificationUserIds: settingsQuery.data.settings.ACADEMICS_BULK.verificationUserIds,
+                dataEntryUserIds: settingsQuery.data.settings.ACADEMICS_BULK.dataEntryUsers.map((user) => user.id),
+                verificationUserIds: settingsQuery.data.settings.ACADEMICS_BULK.verificationUsers.map((user) => user.id),
                 postVerificationOverrideMode:
                     settingsQuery.data.settings.ACADEMICS_BULK.postVerificationOverrideMode,
             },
             PT_BULK: {
-                dataEntryUserIds: settingsQuery.data.settings.PT_BULK.dataEntryUserIds,
-                verificationUserIds: settingsQuery.data.settings.PT_BULK.verificationUserIds,
+                dataEntryUserIds: settingsQuery.data.settings.PT_BULK.dataEntryUsers.map((user) => user.id),
+                verificationUserIds: settingsQuery.data.settings.PT_BULK.verificationUsers.map((user) => user.id),
                 postVerificationOverrideMode: settingsQuery.data.settings.PT_BULK.postVerificationOverrideMode,
             },
         });
@@ -174,7 +174,7 @@ export default function MarksReviewWorkflowSettingsPage() {
                     <div>
                         <h2 className="text-2xl font-bold text-primary">Marks Review Workflow</h2>
                         <p className="text-muted-foreground">
-                            Configure additional data-entry users and verification users. Platoon commanders can draft and submit by default, and workflow becomes active once verification users are set.
+                            Configure data-entry users and verification users.
                         </p>
                     </div>
                     <Button onClick={handleSave} disabled={saving || settingsQuery.isLoading || usersQuery.isLoading}>
@@ -234,7 +234,7 @@ export default function MarksReviewWorkflowSettingsPage() {
                                     <div className="space-y-3">
                                         <div>
                                             <h3 className="font-semibold">Data Entry Users</h3>
-                                            <p className="text-sm text-muted-foreground">These are additional maker users. Platoon commanders can already save drafts and submit for verification by default.</p>
+                                            <p className="text-sm text-muted-foreground">Configure data-entry users and verification users.</p>
                                         </div>
                                         <div className="max-h-80 space-y-2 overflow-auto rounded-md border p-3">
                                             {filteredUsers.length === 0 ? (

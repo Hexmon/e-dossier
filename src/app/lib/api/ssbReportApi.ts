@@ -29,12 +29,12 @@ export interface SsbPayload {
 export async function saveSsbReport(
   ocId: string,
   report: SsbReport
-): Promise<ApiResponse<SsbReport>> {
+): Promise<SsbReport> {
   try {
     const response = (await api.post(
       endpoints.oc.ssbreport(ocId),
       report
-    )) as ApiResponse<SsbReport>;
+    )) as SsbReport;
 
     console.log("SSB Report POST:", response);
     return response;
@@ -65,12 +65,12 @@ export async function getSsbReport(
 export async function updateSsbReport(
   ocId: string,
   payload: Partial<SsbReport>
-): Promise<ApiResponse<SsbReport>> {
+): Promise<SsbReport> {
   try {
     const response = (await api.patch(
       endpoints.oc.ssbreport(ocId),
       payload
-    )) as ApiResponse<SsbReport>;
+    )) as SsbReport;
 
     console.log("SSB Report PATCH:", response);
     return response;

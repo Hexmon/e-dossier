@@ -74,6 +74,29 @@ describe("getSetupStatus runtime fallback", () => {
     expect(status.counts.activeSuperAdmins).toBe(0);
   });
 
+  it("treats generic failed auth bootstrap count queries as an incomplete setup instead of crashing", async () => {
+    queryQueue.push(
+      new Error(
+        'Failed query: select count(*)::int from "appointments" inner join "users" on "users"."id" = "appointments"."user_id" inner join "positions" on "positions"."id" = "appointments"."position_id" where ("positions"."key" = $1 and "users"."is_active" = $2 and "users"."deleted_at" is null and "appointments"."deleted_at" is null and "appointments"."ends_at" is null)'
+      ),
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
+      [],
+      []
+    );
+
+    const { getSetupStatus } = await import("@/app/lib/setup-status");
+    const status = await getSetupStatus();
+
+    expect(status.bootstrapRequired).toBe(true);
+    expect(status.nextStep).toBe("superAdmin");
+    expect(status.counts.activeSuperAdmins).toBe(0);
+  });
+
   it("still rethrows unexpected database failures", async () => {
     queryQueue.push(
       Object.assign(new Error("connection lost"), { code: "57P01" }),

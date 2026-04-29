@@ -189,6 +189,11 @@ export function dedupeWorkflowUserIds(userIds: string[]): string[] {
   return Array.from(new Set(userIds.map((value) => value.trim()).filter(Boolean)));
 }
 
+export function retainKnownWorkflowUserIds(userIds: string[], knownUserIds: string[]): string[] {
+  const known = new Set(knownUserIds);
+  return userIds.filter((userId) => known.has(userId));
+}
+
 export function isMarksWorkflowModuleActive(
   settings: Pick<MarksWorkflowSettingsInput, 'dataEntryUserIds' | 'verificationUserIds'> | null | undefined,
 ): boolean {

@@ -1,7 +1,8 @@
-import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/app/db/client";
 import { ocCadets, ocCourseEnrollments, ocPreCommission } from "@/app/db/schema/training/oc";
 import { ApiError } from "@/app/lib/http";
+import { normalizeCurrentSemester } from "@/lib/dossier-semester";
 
 type DbLike = Pick<typeof db, "select" | "insert" | "update">;
 
@@ -51,6 +52,7 @@ export async function createBaselineEnrollmentForOc(
       courseId: ocRow.courseId,
       status: "ACTIVE",
       origin: "BASELINE",
+      currentSemester: 1,
       startedOn: ocRow.createdAt ?? now,
       createdByUserId: actorUserId ?? null,
       createdAt: now,
@@ -131,6 +133,7 @@ export async function createEnrollment(
     courseId: string;
     status?: OcEnrollmentStatus;
     origin: OcEnrollmentOrigin;
+    currentSemester?: number | null;
     startedOn?: Date | null;
     reason?: string | null;
     note?: string | null;
@@ -146,6 +149,7 @@ export async function createEnrollment(
       courseId: input.courseId,
       status: input.status ?? "ACTIVE",
       origin: input.origin,
+      currentSemester: normalizeCurrentSemester(input.currentSemester),
       startedOn: input.startedOn ?? now,
       reason: input.reason ?? null,
       note: input.note ?? null,
@@ -195,6 +199,46 @@ export async function getActiveEnrollmentCourse(ocId: string, tx: DbLike = db) {
     enrollmentId: active.id,
     courseId: active.courseId,
   };
+}
+
+export async function getCurrentSemesterForOc(ocId: string, tx: DbLike = db) {
+  const active = await getOrCreateActiveEnrollment(ocId, tx);
+  return normalizeCurrentSemester(active.currentSemester);
+}
+
+export async function listCurrentSemestersByOcIds(ocIds: string[], tx: DbLike = db) {
+  const normalizedOcIds = Array.from(new Set(ocIds.map((value) => value.trim()).filter(Boolean)));
+  if (!normalizedOcIds.length) {
+    return new Map<string, number>();
+  }
+
+  const rows = await tx
+    .select({
+      ocId: ocCourseEnrollments.ocId,
+      currentSemester: ocCourseEnrollments.currentSemester,
+    })
+    .from(ocCourseEnrollments)
+    .where(and(inArray(ocCourseEnrollments.ocId, normalizedOcIds), eq(ocCourseEnrollments.status, "ACTIVE")));
+
+  return new Map(rows.map((row) => [row.ocId, normalizeCurrentSemester(row.currentSemester)]));
+}
+
+export async function updateEnrollmentCurrentSemester(
+  enrollmentId: string,
+  semester: number,
+  tx: DbLike = db,
+) {
+  const normalizedSemester = normalizeCurrentSemester(semester);
+  const [row] = await tx
+    .update(ocCourseEnrollments)
+    .set({
+      currentSemester: normalizedSemester,
+      updatedAt: new Date(),
+    })
+    .where(eq(ocCourseEnrollments.id, enrollmentId))
+    .returning();
+
+  return row ?? null;
 }
 
 export async function ensureEnrollmentVisibleToOc(

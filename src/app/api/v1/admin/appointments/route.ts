@@ -6,7 +6,7 @@ import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { appointmentCreateSchema, appointmentListQuerySchema } from '@/app/lib/validators';
-import { and, eq, sql, isNull } from 'drizzle-orm';
+import { and, eq, sql, isNull, lte, or, gt } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -38,6 +38,10 @@ async function GETHandler(req: AuditNextRequest) {
                 readMode === 'admin'
                     ? url.searchParams.get('active') ?? undefined
                     : 'true',
+            includeFuture:
+                readMode === 'admin'
+                    ? url.searchParams.get('includeFuture') ?? undefined
+                    : undefined,
             positionKey: url.searchParams.get('positionKey') ?? undefined,
             platoonKey: url.searchParams.get('platoonKey') ?? undefined,
             userId: readMode === 'admin' ? url.searchParams.get('userId') ?? undefined : undefined,
@@ -46,13 +50,28 @@ async function GETHandler(req: AuditNextRequest) {
         });
 
         const where: any[] = [];
+        const now = new Date();
 
         // ACTIVE FILTER:
-        // - active=true  => ends_at IS NULL AND deleted_at IS NULL
-        // - active=false => ends_at IS NOT NULL AND deleted_at IS NULL
+        // - active=true  => current time is within the appointment window
+        // - active=false => ended rows (historical) only
         if (readMode === 'public' || qp.active === 'true') {
-            where.push(isNull(appointments.endsAt));
             where.push(isNull(appointments.deletedAt));
+            where.push(isNull(users.deletedAt));
+            if (readMode === 'admin' && qp.includeFuture === 'true') {
+                where.push(
+                    or(
+                        and(
+                            lte(appointments.startsAt, now),
+                            or(isNull(appointments.endsAt), gt(appointments.endsAt, now)),
+                        ),
+                        gt(appointments.startsAt, now),
+                    ),
+                );
+            } else {
+                where.push(lte(appointments.startsAt, now));
+                where.push(or(isNull(appointments.endsAt), gt(appointments.endsAt, now)));
+            }
         } else if (qp.active === 'false') {
             where.push(sql`${appointments.endsAt} IS NOT NULL`);
             where.push(isNull(appointments.deletedAt));
@@ -163,14 +182,22 @@ async function POSTHandler(req: AuditNextRequest) {
         //   AND existing.deleted_at IS NULL
         //   AND existing.assignment = 'PRIMARY'
         const overlap = await db
-            .select({ id: appointments.id })
+            .select({
+                id: appointments.id,
+                userId: appointments.userId,
+                username: users.username,
+                startsAt: appointments.startsAt,
+                endsAt: appointments.endsAt,
+            })
             .from(appointments)
+            .innerJoin(users, eq(users.id, appointments.userId))
             .where(and(
                 eq(appointments.positionId, positionId),
                 eq(appointments.scopeType, p.scopeType),
                 (p.scopeType === 'PLATOON' && p.scopeId)
                     ? eq(appointments.scopeId, p.scopeId)
                     : sql`${appointments.scopeId} IS NULL`,
+                isNull(users.deletedAt),
                 eq(appointments.assignment, 'PRIMARY'),
                 sql`${appointments.deletedAt} IS NULL`,
                 // starts_at <= COALESCE(newEnd, 'infinity')
@@ -181,11 +208,23 @@ async function POSTHandler(req: AuditNextRequest) {
             .limit(1);
 
         if (overlap.length) {
+            const conflicting = overlap[0];
             throw new ApiError(
                 409,
                 'Another active/overlapping appointment already exists for this position & scope',
                 'conflict',
-                { positionId, scopeType: p.scopeType, scopeId: p.scopeId ?? null }
+                {
+                    positionId,
+                    scopeType: p.scopeType,
+                    scopeId: p.scopeId ?? null,
+                    conflictingAppointment: {
+                        id: conflicting.id,
+                        userId: conflicting.userId,
+                        username: conflicting.username,
+                        startsAt: conflicting.startsAt,
+                        endsAt: conflicting.endsAt,
+                    },
+                }
             );
         }
 

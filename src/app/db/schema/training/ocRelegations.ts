@@ -1,4 +1,4 @@
-import { index, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, integer, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { ocCadets, ocCourseEnrollments } from "./oc";
 import { courses } from "./courses";
 import { users } from "@/app/db/schema/auth/users";
@@ -24,6 +24,7 @@ export const ocRelegations = pgTable(
       onDelete: "set null",
     }),
     fromCourseCode: varchar("from_course_code", { length: 32 }).notNull(),
+    fromSemester: integer("from_semester"),
     toCourseId: uuid("to_course_id")
       .notNull()
       .references(() => courses.id, { onDelete: "restrict" }),
@@ -31,6 +32,7 @@ export const ocRelegations = pgTable(
       onDelete: "set null",
     }),
     toCourseCode: varchar("to_course_code", { length: 32 }).notNull(),
+    toSemester: integer("to_semester"),
     reason: text("reason").notNull(),
     remark: text("remark"),
     pdfObjectKey: varchar("pdf_object_key", { length: 512 }),

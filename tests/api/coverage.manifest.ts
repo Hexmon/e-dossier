@@ -9,7 +9,6 @@ import {
 export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/academics/grading-policy/recalculate/route.ts',
   'src/app/api/v1/admin/academics/grading-policy/route.ts',
-  'src/app/api/v1/admin/appointments/[id]/route.ts',
   'src/app/api/v1/admin/appointments/[id]/transfer/route.ts',
   'src/app/api/v1/admin/audit-logs/route.ts',
   'src/app/api/v1/admin/discipline/[id]/route.ts',
@@ -52,7 +51,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/relegation/exception/route.ts',
   'src/app/api/v1/admin/relegation/history/route.ts',
   'src/app/api/v1/admin/relegation/media/[historyId]/signed-url/route.ts',
-  'src/app/api/v1/admin/relegation/promote-course/route.ts',
   'src/app/api/v1/admin/relegation/void-promotion/route.ts',
   'src/app/api/v1/admin/signup-requests/[id]/approve/route.ts',
   'src/app/api/v1/admin/signup-requests/[id]/reject/route.ts',
@@ -64,7 +62,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/training-camps/[campId]/activities/route.ts',
   'src/app/api/v1/admin/training-camps/[campId]/route.ts',
   'src/app/api/v1/admin/training-camps/route.ts',
-  'src/app/api/v1/admin/users/[id]/route.ts',
   'src/app/api/v1/admin/users/check-username/route.ts',
   'src/app/api/v1/admin/users/route.ts',
 ] as const;
@@ -170,6 +167,7 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     testFile: 'tests/api/admin.appointments-and-positions.test.ts',
     routeFiles: [
       'src/app/api/v1/admin/appointments/route.ts',
+      'src/app/api/v1/admin/appointments/[id]/route.ts',
       'src/app/api/v1/admin/positions/route.ts',
     ],
   },
@@ -184,6 +182,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/admin.module-access.test.ts',
     routeFiles: ['src/app/api/v1/admin/module-access/route.ts'],
+  },
+  {
+    testFile: 'tests/api/admin.dossier-lock.test.ts',
+    routeFiles: ['src/app/api/v1/admin/dossier-lock/route.ts'],
   },
   {
     testFile: 'tests/api/admin.hierarchy.nodes.test.ts',
@@ -215,6 +217,24 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/me.switchable-identities.test.ts',
     routeFiles: ['src/app/api/v1/me/switchable-identities/route.ts'],
+  },
+  {
+    testFile: 'tests/api/me.test.ts',
+    routeFiles: ['src/app/api/v1/me/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.[ocId].test.ts',
+    routeFiles: ['src/app/api/v1/oc/[ocId]/route.ts'],
+  },
+  {
+    testFile: 'tests/api/relegation.admin.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/relegation/courses/route.ts',
+      'src/app/api/v1/admin/relegation/ocs/route.ts',
+      'src/app/api/v1/admin/relegation/presign/route.ts',
+      'src/app/api/v1/admin/relegation/promote-course/route.ts',
+      'src/app/api/v1/admin/relegation/transfer/route.ts',
+    ],
   },
   {
     testFile: 'tests/api/reports.module-access.test.ts',

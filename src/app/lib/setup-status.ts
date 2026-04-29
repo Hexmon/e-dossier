@@ -168,6 +168,19 @@ function isMissingSetupSchemaError(error: unknown): boolean {
       return true;
     }
 
+    // Drizzle can surface partially migrated auth/setup schema problems as a generic
+    // "Failed query: ..." wrapper without preserving a useful SQLSTATE at the top level.
+    // When that happens during bootstrap status checks, treat it as incomplete setup
+    // instead of crashing the login page.
+    if (
+      message.startsWith("failed query:") &&
+      message.includes(`from "appointments"`) &&
+      message.includes(`inner join "users"`) &&
+      message.includes(`inner join "positions"`)
+    ) {
+      return true;
+    }
+
     const cause = current.cause;
     if (cause && typeof cause === "object") {
       queue.push(cause as Record<string, unknown>);

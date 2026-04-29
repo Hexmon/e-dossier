@@ -29,8 +29,23 @@ export function isPlatoonCommanderToken(token: string): boolean {
   return token === COMMANDER_EQUIVALENT_CAPABILITY || token === "PLATOON_COMMANDER";
 }
 
+export function isPlatoonCommanderAliasToken(token: string): boolean {
+  if (!token) return false;
+  if (token === "PLATOON_CDR" || token === "PL_CDR" || token === "PTN_CDR") return true;
+  if (token.endsWith("PLCDR")) return true;
+  if (token.endsWith("PLATOON_CDR")) return true;
+  if (token.endsWith("PL_CDR")) return true;
+  return token.endsWith("PTN_CDR");
+}
+
 export function hasPlatoonCommanderRole(input: PlatoonCommanderAccessInput): boolean {
   return collectTokens(input).some((token) => isPlatoonCommanderToken(token));
+}
+
+export function hasBroadPlatoonCommanderRole(input: PlatoonCommanderAccessInput): boolean {
+  return collectTokens(input).some(
+    (token) => isPlatoonCommanderToken(token) || isPlatoonCommanderAliasToken(token)
+  );
 }
 
 export function isScopedPlatoonCommander(input: PlatoonCommanderAccessInput): boolean {
@@ -39,17 +54,12 @@ export function isScopedPlatoonCommander(input: PlatoonCommanderAccessInput): bo
   return hasPlatoonCommanderRole(input);
 }
 
-export function canManageCadetAppointments(input: PlatoonCommanderAccessInput): boolean {
+export function isBroadScopedPlatoonCommander(input: PlatoonCommanderAccessInput): boolean {
   const scopeType = normalizeAccessToken(input.scopeType);
   if (scopeType !== "PLATOON") return false;
+  return hasBroadPlatoonCommanderRole(input);
+}
 
-  const tokens = collectTokens(input);
-  return tokens.some((token) => {
-    if (isPlatoonCommanderToken(token)) return true;
-    if (token === "PLATOON_CDR" || token === "PL_CDR" || token === "PTN_CDR") return true;
-    if (token.endsWith("PLCDR")) return true;
-    if (token.endsWith("PLATOON_CDR")) return true;
-    if (token.endsWith("PL_CDR")) return true;
-    return token.endsWith("PTN_CDR");
-  });
+export function canManageCadetAppointments(input: PlatoonCommanderAccessInput): boolean {
+  return isBroadScopedPlatoonCommander(input);
 }

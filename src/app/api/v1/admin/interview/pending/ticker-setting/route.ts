@@ -18,6 +18,7 @@ import {
 } from "@/lib/audit";
 import {
   canAccessInterviewPendingTickerSetting,
+  canManageInterviewPendingTickerSetting,
   getDaysBetweenDates,
 } from "@/lib/interview-pending-ticker";
 
@@ -26,12 +27,16 @@ export const runtime = "nodejs";
 function assertTickerSettingAccess(authCtx: {
   roles?: string[];
   claims?: { apt?: { position?: string | null; scope?: { type?: string | null } } };
-}) {
-  const canAccess = canAccessInterviewPendingTickerSetting({
+}, mode: "read" | "manage" = "read") {
+  const input = {
     roles: authCtx.roles,
     position: authCtx.claims?.apt?.position ?? null,
     scopeType: authCtx.claims?.apt?.scope?.type ?? null,
-  });
+  };
+  const canAccess =
+    mode === "read"
+      ? canAccessInterviewPendingTickerSetting(input)
+      : canManageInterviewPendingTickerSetting(input);
 
   if (!canAccess) {
     throw new ApiError(403, "Forbidden: ticker setting access denied.", "forbidden");
@@ -88,7 +93,7 @@ async function GETHandler(req: AuditNextRequest) {
 async function POSTHandler(req: AuditNextRequest) {
   try {
     const authCtx = await requireAuth(req);
-    assertTickerSettingAccess(authCtx);
+    assertTickerSettingAccess(authCtx, "manage");
 
     const parsed = interviewPendingTickerSettingsCreateSchema.safeParse(await req.json());
     if (!parsed.success) {

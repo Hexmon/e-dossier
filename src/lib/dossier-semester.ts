@@ -1,3 +1,9 @@
+import {
+  isDossierGloballyFrozen,
+  isDossierGloballyUnlocked,
+  type DossierLockPolicy,
+} from "@/lib/dossier-lock-policy";
+
 export const DOSSIER_SEMESTERS = [1, 2, 3, 4, 5, 6] as const;
 
 type ResolveDossierSemesterParams = {
@@ -115,7 +121,11 @@ export function isDossierSemesterLocked(params: {
   semester: number;
   currentSemester?: number | null;
   canBypassLock?: boolean;
+  lockPolicy?: DossierLockPolicy;
 }) {
+  const lockPolicy = params.lockPolicy ?? "DEFAULT";
+  if (isDossierGloballyFrozen(lockPolicy)) return true;
+  if (isDossierGloballyUnlocked(lockPolicy)) return false;
   if (params.canBypassLock) return false;
   const normalizedCurrentSemester = normalizeCurrentSemester(params.currentSemester);
   return normalizeSemesterValue(params.semester) !== normalizedCurrentSemester;

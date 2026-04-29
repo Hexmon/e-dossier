@@ -89,6 +89,7 @@ export const ocCourseEnrollments = pgTable('oc_course_enrollments', {
         .references(() => courses.id, { onDelete: 'restrict' }),
     status: ocEnrollmentStatus('status').notNull().default('ACTIVE'),
     origin: ocEnrollmentOrigin('origin').notNull().default('BASELINE'),
+    currentSemester: integer('current_semester').notNull().default(1),
     startedOn: timestamp('started_on', { withTimezone: true }).notNull().defaultNow(),
     endedOn: timestamp('ended_on', { withTimezone: true }),
     reason: text('reason'),
@@ -103,6 +104,12 @@ export const ocCourseEnrollments = pgTable('oc_course_enrollments', {
         .where(sql`${t.status} = 'ACTIVE'`),
     idxOcStatusStarted: index('idx_oc_course_enrollment_oc_status_started').on(t.ocId, t.status, t.startedOn),
     idxCourseStatusStarted: index('idx_oc_course_enrollment_course_status_started').on(t.courseId, t.status, t.startedOn),
+    idxCourseStatusSemester: index('idx_oc_course_enrollment_course_status_semester').on(
+        t.courseId,
+        t.status,
+        t.currentSemester
+    ),
+    currentSemesterCheck: { check: sql`CHECK (${t.currentSemester.name} BETWEEN 1 AND 6)` },
 }));
 
 export type TheoryMarksRecord = {

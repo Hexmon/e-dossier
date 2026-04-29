@@ -67,7 +67,7 @@ export const relegationExceptionSchema = relegationTransferSchema;
 
 export const relegationPromoteCourseSchema = z.object({
   fromCourseId: z.string().uuid("fromCourseId must be a valid uuid"),
-  toCourseId: z.string().uuid("toCourseId must be a valid uuid"),
+  fromSemester: z.coerce.number().int().min(1).max(5),
   excludeOcIds: z.array(z.string().uuid("excludeOcIds must contain valid uuids")).default([]),
   note: z.string().trim().max(2000).optional().nullable(),
 });

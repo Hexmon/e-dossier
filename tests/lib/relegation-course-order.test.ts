@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isImmediateNextCourseCode, parseCourseSequence } from "@/app/db/queries/relegation";
+import {
+  isImmediateNextCourseCode,
+  parseCourseSequence,
+  selectNearestNextCourses,
+} from "@/app/db/queries/relegation";
 
 describe("relegation course sequence helpers", () => {
   it("parses valid course codes", () => {
@@ -17,5 +21,15 @@ describe("relegation course sequence helpers", () => {
     expect(isImmediateNextCourseCode("TES-50", "TES-51")).toBe(true);
     expect(isImmediateNextCourseCode("TES-50", "TES-52")).toBe(false);
     expect(isImmediateNextCourseCode("TES-50", "EES-51")).toBe(false);
+  });
+
+  it("selects the nearest higher available course when numbers are skipped", () => {
+    expect(
+      selectNearestNextCourses("TES-50", [
+        { courseId: "c1", courseCode: "TES-54", courseName: "TES 54" },
+        { courseId: "c2", courseCode: "TES-52", courseName: "TES 52" },
+        { courseId: "c3", courseCode: "TES-53", courseName: "TES 53" },
+      ])
+    ).toEqual([{ courseId: "c2", courseCode: "TES-52", courseName: "TES 52" }]);
   });
 });

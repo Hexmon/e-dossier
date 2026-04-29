@@ -30,6 +30,10 @@ export function isAdminDashboardUser(input: InterviewTickerAccessInput): boolean
 }
 
 export function canAccessInterviewPendingTickerSetting(input: InterviewTickerAccessInput): boolean {
+  return true;
+}
+
+export function canManageInterviewPendingTickerSetting(input: InterviewTickerAccessInput): boolean {
   return isAdminDashboardUser(input) || isPlatoonCommanderDashboardUser(input);
 }
 

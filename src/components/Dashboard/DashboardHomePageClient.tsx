@@ -13,7 +13,6 @@ import Appointments from "@/components/Dashboard/Appointments";
 import WorkflowNotifications from "@/components/Dashboard/WorkflowNotifications";
 import { SetupResumeBanner } from "@/components/setup/SetupResumeBanner";
 import { api } from "@/app/lib/apiClient";
-import { resolveApiAction } from "@/app/lib/acx/action-map";
 import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
 import {
   buildInterviewPendingByDaysText,
@@ -61,8 +60,6 @@ type MeDashboardResponse = {
   } | null;
 };
 
-const interviewPendingApiAction = resolveApiAction("GET", "/api/v1/admin/interview/pending");
-
 function buildPendingCountsMarqueeData(items: InterviewPendingMarqueeRow[]): string[] {
   const pendingByPlatoon = new Map<string, number>();
 
@@ -89,26 +86,7 @@ function canViewInterviewPending(
   const { authzV2Enabled, meResolved } = options;
   if (!authzV2Enabled) return true;
   if (!meResolved) return null;
-
-  const mappedAction = interviewPendingApiAction;
-  if (!mappedAction) return true;
-
-  const roles = (me?.roles ?? []).map((role) => String(role).trim().toUpperCase());
-  const permissions = new Set<string>((me?.permissions ?? []).map((perm) => String(perm)));
-
-  if (roles.includes("SUPER_ADMIN")) return true;
-  if (roles.includes("ADMIN") && mappedAction.adminBaseline) return true;
-  if (
-    isPlatoonCommanderDashboardUser({
-      roles: me?.roles ?? [],
-      position: me?.apt?.position ?? null,
-      scopeType: me?.apt?.scope?.type ?? null,
-    })
-  ) {
-    return true;
-  }
-  if (permissions.has("*")) return true;
-  return permissions.has(mappedAction.action);
+  return Boolean(me);
 }
 
 export default function DashboardHomePageClient({

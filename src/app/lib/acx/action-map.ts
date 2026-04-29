@@ -1371,6 +1371,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/dossier-lock",
+    "action": "admin:dossier-lock:read",
+    "resourceType": "admin:dossier-lock",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/subjects",
     "action": "admin:subjects:read",
     "resourceType": "admin:subjects",
@@ -4008,6 +4017,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "PUT",
+    "path": "/api/v1/admin/dossier-lock",
+    "action": "admin:dossier-lock:update",
+    "resourceType": "admin:dossier-lock",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": false
+  },
+  {
+    "method": "PUT",
     "path": "/api/v1/admin/site-settings/awards/:id",
     "action": "admin:site-settings:awards:update",
     "resourceType": "admin:site-settings:awards",
@@ -4642,6 +4660,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/genmgmt/settings/module-access",
     "action": "page:dashboard:genmgmt:settings:module-access:view",
     "resourceType": "page:dashboard:genmgmt:settings:module-access",
+    "category": "genmgmt",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/genmgmt/settings/dossier-lock",
+    "action": "page:dashboard:genmgmt:settings:dossier-lock:view",
+    "resourceType": "page:dashboard:genmgmt:settings:dossier-lock",
     "category": "genmgmt",
     "adminBaseline": false
   },

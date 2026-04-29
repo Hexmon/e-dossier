@@ -16,7 +16,7 @@ export default function PromotionRelegationCards() {
 
       <DashboardCard
         title="Promote Course"
-        description="Promote entire course with per-OC relegation exceptions"
+        description="Promote cadets semester-wise within a selected course"
         icon={TrendingUp}
         color="success"
         to="/dashboard/genmgmt/promotion-relegation/promote-course"

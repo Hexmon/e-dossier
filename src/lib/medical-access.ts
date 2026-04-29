@@ -1,7 +1,7 @@
 import {
   hasSuperAdminAuthority,
 } from "@/lib/dossier-semester-access";
-import { isScopedPlatoonCommander } from "@/lib/platoon-commander-access";
+import { isBroadScopedPlatoonCommander } from "@/lib/platoon-commander-access";
 
 type MedicalWriteAccessInput = {
   roles?: Array<string | null | undefined> | null;
@@ -19,7 +19,7 @@ export function canWriteMedicalRecords(input: MedicalWriteAccessInput): boolean 
     return true;
   }
 
-  return isScopedPlatoonCommander({
+  return isBroadScopedPlatoonCommander({
     roles: input.roles,
     position: input.position,
     scopeType: input.scopeType,
