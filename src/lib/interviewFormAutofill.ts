@@ -40,13 +40,15 @@ function isTextareaField(field: TemplateFieldLike) {
     return normalizeText(field.fieldType) === "textarea";
 }
 
-function shouldAutofillInterviewActor(field: TemplateFieldLike) {
-    if (!isTextLikeField(field)) return false;
-    if (field.captureSignature) return true;
-    if (normalizeText(field.fieldType) === "signature") return true;
-
+function hasInterviewActorAlias(field: TemplateFieldLike) {
     const haystack = `${normalizeText(field.key)} ${normalizeText(field.label)}`.trim();
     return INTERVIEW_ACTOR_ALIASES.some((alias) => haystack.includes(alias));
+}
+
+function shouldAutofillInterviewActor(field: TemplateFieldLike) {
+    if (!isTextLikeField(field)) return false;
+    if (normalizeText(field.fieldType) === "signature") return true;
+    return hasInterviewActorAlias(field);
 }
 
 function findOfficerTextareaField(fields: TemplateFieldLike[], aliases: readonly string[]) {
@@ -75,7 +77,7 @@ export function resolveTermActorAutofillFields(
     if (variant === "postmid") {
         const plcdrField = findOfficerTextareaField(topLevelFields, TERM_OFFICER_TEXTAREA_ALIASES.plcdr);
         if (plcdrField) {
-            return [{ ...plcdrField, captureSignature: true }];
+            return [{ ...plcdrField, fieldType: "signature", captureSignature: true }];
         }
     }
 
