@@ -99,7 +99,15 @@ export const isPgUniqueViolation = (e: unknown) =>
   e !== null &&
   (((e as any).code === '23505') || ((e as any).cause?.code === '23505'));
 
-const isZod = (e: unknown): e is ZodError => e instanceof ZodError;
+const isZod = (e: unknown): e is ZodError =>
+  e instanceof ZodError ||
+  (
+    typeof e === 'object' &&
+    e !== null &&
+    (e as { name?: unknown }).name === 'ZodError' &&
+    Array.isArray((e as { issues?: unknown }).issues) &&
+    typeof (e as { flatten?: unknown }).flatten === 'function'
+  );
 
 /** Centralized error -> response mapper (use in catch blocks) */
 export function handleApiError(err: unknown) {
