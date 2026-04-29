@@ -21,6 +21,7 @@ describe("interview form autofill", () => {
         signatureBlock: undefined,
         existingSignature: "Maj Existing",
         remarks: "",
+        misconfiguredRemarks: "",
       },
       actorDisplayName: "Capt A Kumar",
       templateFields: [
@@ -28,6 +29,7 @@ describe("interview form autofill", () => {
         { key: "signatureBlock", label: "Signature", fieldType: "signature", groupId: null, captureSignature: false },
         { key: "existingSignature", label: "Signed By", fieldType: "text", groupId: null, captureSignature: true },
         { key: "remarks", label: "Remarks", fieldType: "textarea", groupId: null, captureSignature: false },
+        { key: "misconfiguredRemarks", label: "Remarks", fieldType: "textarea", groupId: null, captureSignature: true },
       ],
     });
 
@@ -35,6 +37,7 @@ describe("interview form autofill", () => {
     expect(values.signatureBlock).toBe("Capt A Kumar");
     expect(values.existingSignature).toBe("Maj Existing");
     expect(values.remarks).toBe("");
+    expect(values.misconfiguredRemarks).toBe("");
   });
 
   it("supports mapped field keys for term-prefixed forms", () => {
