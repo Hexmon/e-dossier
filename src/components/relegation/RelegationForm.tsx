@@ -95,6 +95,7 @@ export default function RelegationForm({
 
   const selectedOcId = watch("ocId");
   const currentCourseId = watch("currentCourseId");
+  const selectedTransferToCourseId = watch("transferTo");
 
   const { ocOptionsQuery, nextCoursesQuery, presignMutation, transferMutation } =
     useRelegationModule(currentCourseId || null);
@@ -113,6 +114,11 @@ export default function RelegationForm({
     () => ocOptions.find((item) => item.ocId === selectedOcId) ?? null,
     [ocOptions, selectedOcId]
   );
+  const selectedTargetCourse = useMemo(
+    () => transferOptions.find((item) => item.courseId === selectedTransferToCourseId) ?? null,
+    [transferOptions, selectedTransferToCourseId]
+  );
+  const selectedCurrentSemester = selectedOc?.currentSemester ?? null;
 
   useEffect(() => {
     setOcNameSearch(selectedOc?.ocName ?? "");
@@ -334,51 +340,75 @@ export default function RelegationForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="courseNo">Current Course</Label>
-        <Input id="courseNo" {...register("courseNo")} disabled />
-      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="courseNo">Current Course</Label>
+          <Input id="courseNo" {...register("courseNo")} disabled />
+        </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="transferTo">Transfer To</Label>
-        <Controller
-          name="transferTo"
-          control={control}
-          rules={{ required: "Transfer target is required" }}
-          render={({ field }) => (
-            <Select
-              value={field.value || undefined}
-              onValueChange={field.onChange}
-              disabled={
-                !selectedOc || nextCoursesQuery.isLoading || isBusy || lockTransferTo || !currentCourseId
-              }
-            >
-              <SelectTrigger id="transferTo">
-                <SelectValue placeholder="Select target course" />
-              </SelectTrigger>
-              <SelectContent>
-                {transferOptions.map((course) => (
-                  <SelectItem key={course.courseId} value={course.courseId}>
-                    {`${course.courseCode} | ${course.courseName}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {errors.transferTo ? (
-          <p className="text-sm text-destructive">{errors.transferTo.message}</p>
-        ) : null}
-        {selectedOc && !nextCoursesQuery.isLoading && transferOptions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No immediate next course available for current course.
-          </p>
-        ) : null}
-        {nextCoursesQuery.isError ? (
-          <p className="text-sm text-destructive">
-            {parseApiError(nextCoursesQuery.error, "Failed to load transfer options.")}
-          </p>
-        ) : null}
+        <div className="space-y-2">
+          <Label htmlFor="currentSemester">Current Semester</Label>
+          <Input
+            id="currentSemester"
+            value={selectedCurrentSemester ? `Semester ${selectedCurrentSemester}` : ""}
+            placeholder="Select an OC"
+            disabled
+            readOnly
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="transferTo">Targeted Course</Label>
+          <Controller
+            name="transferTo"
+            control={control}
+            rules={{ required: "Transfer target is required" }}
+            render={({ field }) => (
+              <Select
+                value={field.value || undefined}
+                onValueChange={field.onChange}
+                disabled={
+                  !selectedOc || nextCoursesQuery.isLoading || isBusy || lockTransferTo || !currentCourseId
+                }
+              >
+                <SelectTrigger id="transferTo">
+                  <SelectValue placeholder="Select target course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {transferOptions.map((course) => (
+                    <SelectItem key={course.courseId} value={course.courseId}>
+                      {`${course.courseCode} | ${course.courseName}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.transferTo ? (
+            <p className="text-sm text-destructive">{errors.transferTo.message}</p>
+          ) : null}
+          {selectedOc && !nextCoursesQuery.isLoading && transferOptions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No immediate next course available for current course.
+            </p>
+          ) : null}
+          {nextCoursesQuery.isError ? (
+            <p className="text-sm text-destructive">
+              {parseApiError(nextCoursesQuery.error, "Failed to load transfer options.")}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="targetSemester">Targeted Semester</Label>
+          <Input
+            id="targetSemester"
+            value={selectedCurrentSemester ? `Semester ${selectedCurrentSemester}` : ""}
+            placeholder={selectedTargetCourse ? "Target semester resolved" : "Select target course"}
+            disabled
+            readOnly
+          />
+        </div>
       </div>
 
       <div className="space-y-2">

@@ -5,6 +5,7 @@ import { createRouteContext, makeJsonRequest } from "../utils/next";
 import { GET as getOcOptions } from "@/app/api/v1/admin/relegation/ocs/route";
 import { GET as getNextCourses } from "@/app/api/v1/admin/relegation/courses/route";
 import { POST as postPresign } from "@/app/api/v1/admin/relegation/presign/route";
+import { POST as postPromoteCourse } from "@/app/api/v1/admin/relegation/promote-course/route";
 import { POST as postTransfer } from "@/app/api/v1/admin/relegation/transfer/route";
 
 import * as relegationQueries from "@/app/db/queries/relegation";
@@ -35,6 +36,30 @@ vi.mock("@/app/db/queries/relegation", () => ({
       performedAt: new Date().toISOString(),
     },
   })),
+  promoteCourseBatch: vi.fn(async () => ({
+    fromCourse: {
+      courseId: "22222222-2222-4222-8222-222222222222",
+      courseCode: "TES-50",
+      courseName: "TES 50",
+    },
+    toCourse: {
+      courseId: "22222222-2222-4222-8222-222222222222",
+      courseCode: "TES-50",
+      courseName: "TES 50",
+    },
+    fromSemester: 1,
+    toSemester: 2,
+    summary: {
+      totalEligible: 3,
+      excludedByRequest: 1,
+      excludedByException: 0,
+      promoted: 2,
+    },
+    promotedOcIds: [
+      "11111111-1111-4111-8111-111111111111",
+      "55555555-5555-4555-8555-555555555555",
+    ],
+  })),
   parseCourseSequence: vi.fn(),
   isImmediateNextCourseCode: vi.fn(),
 }));
@@ -53,6 +78,7 @@ vi.mock("@/app/lib/storage", () => ({
 const ocOptionsPath = "/api/v1/admin/relegation/ocs";
 const nextCoursesPath = "/api/v1/admin/relegation/courses";
 const presignPath = "/api/v1/admin/relegation/presign";
+const promoteCoursePath = "/api/v1/admin/relegation/promote-course";
 const transferPath = "/api/v1/admin/relegation/transfer";
 
 beforeEach(() => {
@@ -100,6 +126,7 @@ describe("Admin relegation APIs", () => {
         ocNo: "OC-001",
         ocName: "Cadet One",
         isActive: true,
+        currentSemester: 1,
         currentCourseId: "22222222-2222-4222-8222-222222222222",
         currentCourseCode: "TES-50",
       },
@@ -188,6 +215,49 @@ describe("Admin relegation APIs", () => {
 
     const res = await postTransfer(req as any, createRouteContext());
     expect(res.status).toBe(400);
+  });
+
+  it("POST /promote-course validates payload", async () => {
+    const req = makeJsonRequest({
+      method: "POST",
+      path: promoteCoursePath,
+      body: {
+        fromCourseId: "22222222-2222-4222-8222-222222222222",
+        excludeOcIds: [],
+      },
+    });
+
+    const res = await postPromoteCourse(req as any, createRouteContext());
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /promote-course promotes semester-wise within a course", async () => {
+    const req = makeJsonRequest({
+      method: "POST",
+      path: promoteCoursePath,
+      body: {
+        fromCourseId: "22222222-2222-4222-8222-222222222222",
+        fromSemester: 1,
+        excludeOcIds: ["66666666-6666-4666-8666-666666666666"],
+        note: "Semester progression",
+      },
+    });
+
+    const res = await postPromoteCourse(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.result.fromSemester).toBe(1);
+    expect(body.result.toSemester).toBe(2);
+    expect(relegationQueries.promoteCourseBatch).toHaveBeenCalledWith(
+      {
+        fromCourseId: "22222222-2222-4222-8222-222222222222",
+        fromSemester: 1,
+        excludeOcIds: ["66666666-6666-4666-8666-666666666666"],
+        note: "Semester progression",
+      },
+      "admin-1"
+    );
   });
 
   it("POST /transfer returns 400 when target is not immediate next", async () => {

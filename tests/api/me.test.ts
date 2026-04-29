@@ -45,6 +45,17 @@ vi.mock('@/app/lib/module-access', () => ({
   })),
 }));
 
+vi.mock('@/app/db/queries/dossier-lock-settings', () => ({
+  getDossierLockSettingsOrDefault: vi.fn(async () => ({
+    id: 'settings-1',
+    singletonKey: 'default',
+    lockPolicy: 'DEFAULT',
+    updatedBy: null,
+    createdAt: null,
+    updatedAt: null,
+  })),
+}));
+
 vi.mock('@/app/db/queries/authz-permissions', () => ({
   getEffectivePermissionBundleCached: vi.fn(async () => ({
     userId: 'user-1',
@@ -156,6 +167,9 @@ describe('GET /api/v1/me', () => {
       canAccessReports: false,
       canAccessAcademicsBulk: false,
       canAccessPtBulk: false,
+    });
+    expect(body.dossierForms).toEqual({
+      lockPolicy: 'DEFAULT',
     });
     expect(getEffectivePermissionBundleCached).toHaveBeenCalled();
     expect(body.permissions).toContain('oc:interviews:initial:plcdr:update');

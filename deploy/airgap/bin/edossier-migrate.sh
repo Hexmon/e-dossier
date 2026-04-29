@@ -14,6 +14,58 @@ err() {
   exit 1
 }
 
+node_major_version() {
+  "$1" -p "Number(process.versions.node.split('.')[0])" 2>/dev/null
+}
+
+is_usable_node() {
+  local candidate="$1"
+  local major
+
+  [[ -n "$candidate" && -x "$candidate" ]] || return 1
+  major="$(node_major_version "$candidate")" || return 1
+  [[ "$major" =~ ^[0-9]+$ && "$major" -ge 20 ]]
+}
+
+resolve_node_bin() {
+  local candidate user_home
+
+  if [[ -n "${NODE_BIN:-}" ]]; then
+    if is_usable_node "$NODE_BIN"; then
+      printf '%s' "$NODE_BIN"
+      return
+    fi
+    err "NODE_BIN is set to '${NODE_BIN}', but it is not executable Node.js 20+."
+  fi
+
+  candidate="$(command -v node 2>/dev/null || true)"
+  if is_usable_node "$candidate"; then
+    printf '%s' "$candidate"
+    return
+  fi
+
+  for candidate in /usr/local/bin/node /usr/bin/node /opt/node/bin/node; do
+    if is_usable_node "$candidate"; then
+      printf '%s' "$candidate"
+      return
+    fi
+  done
+
+  if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
+    user_home="$(getent passwd "$SUDO_USER" 2>/dev/null | cut -d: -f6 || true)"
+    if [[ -n "$user_home" && -d "${user_home}/.nvm/versions/node" ]]; then
+      while IFS= read -r candidate; do
+        if is_usable_node "$candidate"; then
+          printf '%s' "$candidate"
+          return
+        fi
+      done < <(find "${user_home}/.nvm/versions/node" -path '*/bin/node' -type f 2>/dev/null | sort -Vr)
+    fi
+  fi
+
+  err "Node.js 20+ is required but was not found in root's PATH. Set NODE_BIN to an absolute Node.js 20+ binary path."
+}
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -46,7 +98,7 @@ verify_checksum() {
 }
 
 json_value() {
-  node -e '
+  "$NODE_BIN_RESOLVED" -e '
     const fs = require("node:fs");
     const filePath = process.argv[1];
     const keyPath = process.argv[2].split(".");
@@ -60,6 +112,7 @@ json_value() {
 
 main() {
   require_root
+  NODE_BIN_RESOLVED="$(resolve_node_bin)"
 
   local backup_id=""
   local env_file="$ENV_FILE_DEFAULT"
@@ -124,7 +177,7 @@ main() {
 
   [[ -n "${DATABASE_URL:-}" ]] || err "DATABASE_URL is missing from ${env_file}"
 
-  node "${bundle_dir}/migrate.js" --bundle-dir "$bundle_dir"
+  "$NODE_BIN_RESOLVED" "${bundle_dir}/migrate.js" --bundle-dir "$bundle_dir"
   log "Migration bundle completed successfully."
 }
 

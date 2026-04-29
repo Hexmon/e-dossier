@@ -1,4 +1,7 @@
+"use client";
+
 import React from "react";
+import { useMe } from "@/hooks/useMe";
 
 interface SemesterLockNoticeProps {
   id?: string;
@@ -17,6 +20,24 @@ export default function SemesterLockNotice({
   canOverrideLockedSemester = false,
   className = "",
 }: SemesterLockNoticeProps) {
+  const { data: meData } = useMe();
+  const lockPolicy = meData?.dossierForms?.lockPolicy ?? "DEFAULT";
+
+  if (lockPolicy === "UNFREEZE_ALL") {
+    return null;
+  }
+
+  if (lockPolicy === "FREEZE_ALL") {
+    return (
+      <div
+        id={id}
+        className={`mb-4 rounded-md border border-warning/30 bg-warning/20 px-4 py-3 text-sm text-warning-foreground ${className}`.trim()}
+      >
+        All dossier forms are currently read-only because super admin has enabled a global freeze.
+      </div>
+    );
+  }
+
   if (activeSemester === currentSemester) {
     return null;
   }

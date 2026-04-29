@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { shouldSkipRateLimit } from '@/middleware';
 
 describe('shouldSkipRateLimit', () => {
+  it('skips rate limit for login POST', () => {
+    expect(shouldSkipRateLimit('/api/v1/auth/login', 'POST')).toBe(true);
+  });
+
+  it('skips rate limit for login OPTIONS', () => {
+    expect(shouldSkipRateLimit('/api/v1/auth/login', 'OPTIONS')).toBe(true);
+  });
+
   it('skips rate limit for logout POST', () => {
     expect(shouldSkipRateLimit('/api/v1/auth/logout', 'POST')).toBe(true);
   });

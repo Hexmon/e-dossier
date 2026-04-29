@@ -7,6 +7,7 @@ import {
   isDossierSemesterLocked,
   resolveDossierSemester,
 } from "@/lib/dossier-semester";
+import { useMe } from "@/hooks/useMe";
 
 type UseDossierSemesterRoutingParams = {
   currentSemester?: number | null;
@@ -26,6 +27,8 @@ export function useDossierSemesterRouting({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { data: meData } = useMe();
+  const lockPolicy = meData?.dossierForms?.lockPolicy ?? "DEFAULT";
 
   const resolution = useMemo(() => {
     const requestedSemester =
@@ -72,14 +75,16 @@ export function useDossierSemesterRouting({
         semester,
         currentSemester: resolution.currentSemester,
         canBypassLock: canEditLockedSemesters,
+        lockPolicy,
       }),
-    [canEditLockedSemesters, resolution.currentSemester]
+    [canEditLockedSemesters, lockPolicy, resolution.currentSemester]
   );
 
   return {
     activeSemester: resolution.activeSemester,
     currentSemester: resolution.currentSemester,
     supportedSemesters: resolution.supportedSemesters,
+    lockPolicy,
     setActiveSemester,
     isLockedSemester,
     isActiveSemesterLocked: isLockedSemester(resolution.activeSemester),

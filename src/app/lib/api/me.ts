@@ -25,6 +25,9 @@ export interface MeResponse {
         ACADEMICS_BULK: { isActive: boolean };
         PT_BULK: { isActive: boolean };
     };
+    dossierForms?: {
+        lockPolicy: "DEFAULT" | "FREEZE_ALL" | "UNFREEZE_ALL";
+    };
     moduleAccess?: {
         canAccessDossier: boolean;
         canAccessBulkUpload: boolean;

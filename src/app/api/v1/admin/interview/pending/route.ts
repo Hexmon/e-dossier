@@ -21,7 +21,6 @@ import { buildTemplateMappings, getTemplateMatchForSemester } from '@/lib/interv
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from '@/types/interview-templates';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
-import { withAuthz } from '@/app/lib/acx/withAuthz';
 
 export const runtime = 'nodejs';
 
@@ -632,4 +631,4 @@ async function GETHandler(req: AuditNextRequest) {
     }
 }
 
-export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const GET = withAuditRoute('GET', GETHandler);

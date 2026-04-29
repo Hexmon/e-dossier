@@ -202,7 +202,7 @@ export default function ModuleAccessSettingsPageClient({
                 <Switch
                   id={toggle.key}
                   checked={draft[toggle.key]}
-                  onCheckedChange={(checked) => handleToggle(toggle.key, checked)}
+                  onCheckedChange={(checked: boolean) => handleToggle(toggle.key, checked)}
                   disabled={settingsQuery.isLoading || saving}
                   aria-labelledby={`${toggle.key}-title ${toggle.key}-label`}
                   aria-describedby={`${toggle.key}-description`}

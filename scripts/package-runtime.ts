@@ -38,7 +38,7 @@ async function main() {
 
   await prepareCleanDir(bundleDir);
 
-  await cp(standaloneDir, bundleDir, { recursive: true });
+  await cp(standaloneDir, bundleDir, { recursive: true, verbatimSymlinks: true });
   for (const envFileName of [
     '.env',
     '.env.local',

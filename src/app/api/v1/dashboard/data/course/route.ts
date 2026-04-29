@@ -1,7 +1,7 @@
 import { db } from '@/app/db/client';
 import { courses } from '@/app/db/schema/training/courses';
 import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
-import { ocCadets } from '@/app/db/schema/training/oc';
+import { ocCadets, ocCourseEnrollments } from '@/app/db/schema/training/oc';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { and, eq, isNull, sql } from 'drizzle-orm';
@@ -23,7 +23,7 @@ async function GETHandler(req: AuditNextRequest) {
                 courseId: courses.id,
                 courseCode: courses.code,
                 strength: sql<number>`COALESCE(COUNT(DISTINCT ${ocCadets.id}), 0)::int`,
-                currentSemester: sql<number | null>`MAX(${courseOfferings.semester})`,
+                currentSemester: sql<number>`COALESCE(MAX(${ocCourseEnrollments.currentSemester}), 1)::int`,
             })
             .from(courses)
             .leftJoin(
@@ -36,10 +36,11 @@ async function GETHandler(req: AuditNextRequest) {
                 )
             )
             .leftJoin(
-                courseOfferings,
+                ocCourseEnrollments,
                 and(
-                    eq(courseOfferings.courseId, courses.id),
-                    isNull(courseOfferings.deletedAt)
+                    eq(ocCourseEnrollments.ocId, ocCadets.id),
+                    eq(ocCourseEnrollments.courseId, courses.id),
+                    eq(ocCourseEnrollments.status, 'ACTIVE')
                 )
             )
             .where(

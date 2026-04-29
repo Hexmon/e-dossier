@@ -3,6 +3,15 @@ import { ApiError } from "@/app/lib/http";
 import { makeJsonRequest } from "../utils/next";
 import { SEMESTER_OVERRIDE_REASON_HEADER } from "@/lib/semester-override";
 
+vi.mock("@/app/lib/authz", () => ({
+  requireAuth: vi.fn(),
+  requireAdmin: vi.fn(),
+}));
+
+vi.mock("@/lib/authorization", () => ({
+  authorizeOcAccess: vi.fn(),
+}));
+
 vi.mock("@/app/db/client", () => ({
   db: {
     select: vi.fn(() => ({
@@ -15,23 +24,30 @@ vi.mock("@/app/db/client", () => ({
   },
 }));
 
-vi.mock("@/app/db/queries/oc", () => ({
-  getOcCourseInfo: vi.fn(),
-  getCurrentSemesterForCourse: vi.fn(),
+vi.mock("@/app/db/queries/oc-enrollments", () => ({
+  getCurrentSemesterForOc: vi.fn(),
 }));
 
-const ocQueries = await import("@/app/db/queries/oc");
+vi.mock("@/app/db/queries/dossier-lock-settings", () => ({
+  getDossierLockSettingsOrDefault: vi.fn(),
+}));
+
+const ocEnrollmentQueries = await import("@/app/db/queries/oc-enrollments");
+const dossierLockQueries = await import("@/app/db/queries/dossier-lock-settings");
 const ocChecks = await import("@/app/api/v1/oc/_checks");
 
 describe("assertOcSemesterWriteAllowed", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(ocQueries.getOcCourseInfo).mockResolvedValue({
-      id: "oc-1",
-      branch: "C",
-      courseId: "course-1",
+    vi.mocked(ocEnrollmentQueries.getCurrentSemesterForOc).mockResolvedValue(3);
+    vi.mocked(dossierLockQueries.getDossierLockSettingsOrDefault).mockResolvedValue({
+      id: "settings-1",
+      singletonKey: "default",
+      lockPolicy: "DEFAULT",
+      updatedBy: null,
+      createdAt: null,
+      updatedAt: null,
     } as any);
-    vi.mocked(ocQueries.getCurrentSemesterForCourse).mockResolvedValue(3);
   });
 
   it("allows the current semester for normal users", async () => {
@@ -62,6 +78,7 @@ describe("assertOcSemesterWriteAllowed", () => {
         currentSemester: 3,
         requestedSemester: 1,
         supportedSemesters: [1, 2, 3, 4, 5, 6],
+        lockPolicy: "DEFAULT",
       },
     } satisfies Partial<ApiError>);
   });
@@ -79,6 +96,7 @@ describe("assertOcSemesterWriteAllowed", () => {
       extras: {
         currentSemester: 3,
         requestedSemester: 1,
+        lockPolicy: "DEFAULT",
       },
     } satisfies Partial<ApiError>);
   });
@@ -100,6 +118,7 @@ describe("assertOcSemesterWriteAllowed", () => {
       extras: {
         currentSemester: 3,
         requestedSemester: 1,
+        lockPolicy: "DEFAULT",
       },
     } satisfies Partial<ApiError>);
   });
@@ -134,6 +153,7 @@ describe("assertOcSemesterWriteAllowed", () => {
         metadata: expect.objectContaining({
           requestedSemester: 1,
           currentSemester: 3,
+          lockPolicy: "DEFAULT",
           overrideReason: "Historical correction",
         }),
       })
@@ -155,7 +175,59 @@ describe("assertOcSemesterWriteAllowed", () => {
         currentSemester: 1,
         requestedSemester: 4,
         supportedSemesters: [4, 5, 6],
+        lockPolicy: "DEFAULT",
       },
     } satisfies Partial<ApiError>);
+  });
+
+  it("rejects all writes when the global freeze policy is enabled", async () => {
+    vi.mocked(dossierLockQueries.getDossierLockSettingsOrDefault).mockResolvedValueOnce({
+      id: "settings-1",
+      singletonKey: "default",
+      lockPolicy: "FREEZE_ALL",
+      updatedBy: "super-1",
+      createdAt: null,
+      updatedAt: null,
+    } as any);
+
+    await expect(
+      ocChecks.assertOcSemesterWriteAllowed({
+        ocId: "oc-1",
+        requestedSemester: 3,
+        authContext: { roles: ["USER"], claims: {} },
+      })
+    ).rejects.toMatchObject({
+      status: 403,
+      code: "semester_locked",
+      extras: expect.objectContaining({
+        currentSemester: 3,
+        requestedSemester: 3,
+        lockPolicy: "FREEZE_ALL",
+      }),
+    } satisfies Partial<ApiError>);
+  });
+
+  it("allows non-current semester writes when the global unlock policy is enabled", async () => {
+    vi.mocked(dossierLockQueries.getDossierLockSettingsOrDefault).mockResolvedValueOnce({
+      id: "settings-1",
+      singletonKey: "default",
+      lockPolicy: "UNFREEZE_ALL",
+      updatedBy: "super-1",
+      createdAt: null,
+      updatedAt: null,
+    } as any);
+
+    await expect(
+      ocChecks.assertOcSemesterWriteAllowed({
+        ocId: "oc-1",
+        requestedSemester: 1,
+        authContext: { roles: ["USER"], claims: {} },
+      })
+    ).resolves.toMatchObject({
+      currentSemester: 3,
+      requestedSemester: 1,
+      lockPolicy: "UNFREEZE_ALL",
+      overrideApplied: false,
+    });
   });
 });

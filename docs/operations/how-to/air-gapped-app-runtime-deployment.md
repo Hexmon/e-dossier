@@ -77,6 +77,9 @@ The bootstrap step:
 
 Detailed bootstrap notes are in [air-gapped-vm1-bootstrap.md](air-gapped-vm1-bootstrap.md).
 
+If VM1 should run the app and reverse proxy through Docker instead of host
+Nginx/systemd, use [air-gapped-vm1-docker-bootstrap.md](air-gapped-vm1-docker-bootstrap.md).
+
 ## Shared Production Env
 
 The stable env file on VM1 is:

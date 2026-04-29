@@ -266,6 +266,15 @@ export default function GeneralManagementPageClient({
                       color="info"
                     />
                   ) : null}
+                  {isSuperAdmin ? (
+                    <DashboardCard
+                      title="Dossier Lock Settings"
+                      description="Freeze all forms, unfreeze all forms, or restore the default semester-based dossier lock."
+                      to="/dashboard/genmgmt/settings/dossier-lock"
+                      icon={Settings}
+                      color="warning"
+                    />
+                  ) : null}
                 </div>
               </TabsContent>
             </GlobalTabs>

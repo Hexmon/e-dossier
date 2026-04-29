@@ -29,15 +29,16 @@ async function POSTHandler(req: AuditNextRequest) {
       actor: { type: "user", id: access.userId },
       target: { type: AuditResourceType.API, id: "admin:relegation:promote-course:create" },
       metadata: {
-        description: `Promotion batch executed from ${result.fromCourse.courseCode} to ${result.toCourse.courseCode}`,
+        description: `Semester promotion batch executed for ${result.fromCourse.courseCode} from semester ${result.fromSemester} to ${result.toSemester}`,
         fromCourseId: parsed.data.fromCourseId,
-        toCourseId: parsed.data.toCourseId,
+        fromSemester: parsed.data.fromSemester,
+        toSemester: result.toSemester,
         ...result.summary,
       },
     });
 
     return json.ok({
-      message: "Course promotion completed successfully.",
+      message: "Semester promotion completed successfully.",
       result,
     });
   } catch (error) {

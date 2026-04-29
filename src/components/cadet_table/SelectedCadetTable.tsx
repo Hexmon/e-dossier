@@ -18,25 +18,27 @@ export default function SelectedCadetTable({
 }: CadetTableProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [resolvedSemester, setResolvedSemester] = useState<number | null>(selectedCadet?.currentSemester ?? null);
+  const selectedOcId = selectedCadet?.ocId ?? "";
+  const selectedCurrentSemester = selectedCadet?.currentSemester ?? null;
 
   useEffect(() => {
     let cancelled = false;
-    if (!selectedCadet) {
+    if (!selectedOcId) {
       setResolvedSemester(null);
       return () => {
         cancelled = true;
       };
     }
 
-    setResolvedSemester(selectedCadet.currentSemester ?? null);
+    setResolvedSemester(selectedCurrentSemester);
 
-    if (selectedCadet.currentSemester != null || !selectedCadet.ocId) {
+    if (selectedCurrentSemester != null || !selectedOcId) {
       return () => {
         cancelled = true;
       };
     }
 
-    void fetchOCById(selectedCadet.ocId).then((oc) => {
+    void fetchOCById(selectedOcId).then((oc) => {
       if (cancelled) return;
       setResolvedSemester(oc?.currentSemester ?? null);
     });
@@ -44,7 +46,7 @@ export default function SelectedCadetTable({
     return () => {
       cancelled = true;
     };
-  }, [selectedCadet]);
+  }, [selectedCurrentSemester, selectedOcId]);
 
   if (!selectedCadet) return null;
 

@@ -136,6 +136,9 @@ export const appointmentListQuerySchema = z.object({
   active: z
     .union([z.literal('true'), z.literal('false')])
     .optional(), // active=true filters valid_during @> now()
+  includeFuture: z
+    .union([z.literal('true'), z.literal('false')])
+    .optional(),
   positionKey: z.string().trim().optional(),
   platoonKey: z.string().trim().optional(),
   userId: z.string().uuid().optional(),

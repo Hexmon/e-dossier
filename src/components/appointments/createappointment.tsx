@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAppointments } from "@/hooks/useAppointments";
+import { AlertTriangle, ArrowRightLeft, PencilLine, UserRound } from "lucide-react";
 
 interface FormData {
   userId: string;
@@ -44,12 +46,21 @@ export const CreateAppointment = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { users, platoons, loading, fetchUsersAndPositions, createNewAppointment } =
+  const {
+    users,
+    platoons,
+    loading,
+    fetchUsersAndPositions,
+    createNewAppointment,
+    createAppointmentConflict,
+    clearCreateAppointmentConflict,
+  } =
     useAppointments();
 
   const handleOpenDialog = () => {
     setIsDialogOpen(true);
     setErrors({});
+    clearCreateAppointmentConflict();
     fetchUsersAndPositions();
   };
 
@@ -64,6 +75,7 @@ export const CreateAppointment = () => {
       scopeType: "GLOBAL",
     });
     setErrors({});
+    clearCreateAppointmentConflict();
   };
 
   const validateForm = (): boolean => {
@@ -135,6 +147,7 @@ export const CreateAppointment = () => {
                   onValueChange={(value) => {
                     setFormData({ ...formData, userId: value });
                     setErrors({ ...errors, userId: "" });
+                    clearCreateAppointmentConflict();
                   }}
                 >
                   <SelectTrigger id="user-select">
@@ -170,8 +183,12 @@ export const CreateAppointment = () => {
                   onChange={(e) => {
                     setFormData({ ...formData, appointmentName: e.target.value });
                     setErrors({ ...errors, appointmentName: "" });
+                    clearCreateAppointmentConflict();
                   }}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Existing appointment roles are reused automatically. If this role already has an active holder, use transfer or edit instead of creating a duplicate.
+                </p>
                 {errors.appointmentName && (
                   <p className="text-sm text-destructive">{errors.appointmentName}</p>
                 )}
@@ -190,6 +207,7 @@ export const CreateAppointment = () => {
                       scopeType: checked ? "PLATOON" : "GLOBAL",
                     });
                     setErrors({ ...errors, platoonId: "" });
+                    clearCreateAppointmentConflict();
                   }}
                 />
                 <Label htmlFor="platoon-commander" className="cursor-pointer">
@@ -206,6 +224,7 @@ export const CreateAppointment = () => {
                     onValueChange={(value) => {
                       setFormData({ ...formData, platoonId: value });
                       setErrors({ ...errors, platoonId: "" });
+                      clearCreateAppointmentConflict();
                     }}
                   >
                     <SelectTrigger id="platoon-select">
@@ -241,12 +260,68 @@ export const CreateAppointment = () => {
                   onChange={(e) => {
                     setFormData({ ...formData, startsAt: e.target.value });
                     setErrors({ ...errors, startsAt: "" });
+                    clearCreateAppointmentConflict();
                   }}
                 />
                 {errors.startsAt && (
                   <p className="text-sm text-destructive">{errors.startsAt}</p>
                 )}
               </div>
+
+              {createAppointmentConflict ? (
+                <Alert className="border-warning/30 bg-warning/20 text-warning-foreground shadow-sm">
+                  <AlertTriangle className="text-warning-foreground" />
+                  <AlertTitle>Appointment slot already occupied</AlertTitle>
+                  <AlertDescription className="gap-3">
+                    <p>
+                      <span className="font-medium">{createAppointmentConflict.appointmentName}</span>{" "}
+                      already has an overlapping {createAppointmentConflict.scopeType.toLowerCase()} holder.
+                    </p>
+                    <div className="grid gap-3 rounded-lg border border-warning/25 bg-card p-3 sm:grid-cols-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-warning-foreground/80">
+                          <UserRound className="h-3.5 w-3.5" />
+                          Current Holder
+                        </div>
+                        <div className="font-medium text-foreground">
+                          {createAppointmentConflict.currentHolder?.username ?? "Unknown user"}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium uppercase tracking-[0.12em] text-warning-foreground/80">
+                          Active From
+                        </div>
+                        <div className="font-medium text-foreground">
+                          {createAppointmentConflict.currentHolder?.startsAt
+                            ? new Date(createAppointmentConflict.currentHolder.startsAt).toLocaleDateString()
+                            : "Unknown"}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium uppercase tracking-[0.12em] text-warning-foreground/80">
+                          Recommended Action
+                        </div>
+                        <div className="font-medium text-foreground">
+                          Use Handing Over or edit the existing appointment
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-warning-foreground/90">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-warning/35 px-2.5 py-1">
+                        <ArrowRightLeft className="h-3.5 w-3.5" />
+                        Transfer to replace the holder cleanly
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-warning/35 px-2.5 py-1">
+                        <PencilLine className="h-3.5 w-3.5" />
+                        Edit if the current row was assigned to the wrong user
+                      </span>
+                    </div>
+                    <p className="text-xs leading-5 text-warning-foreground/80">
+                      Scheduled holders appear in Appointment Management immediately, but they only show up in login and switch account once their start date is reached.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
 
               <DialogFooter>
                 <Button

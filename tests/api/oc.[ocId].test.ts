@@ -4,14 +4,12 @@ import { DELETE as deleteOcById, GET as getOcById, PATCH as patchOcById } from "
 import { ApiError } from "@/app/lib/http";
 import * as authz from "@/app/lib/authz";
 import * as ocChecks from "@/app/api/v1/oc/_checks";
-import * as ocQueries from "@/app/db/queries/oc";
+import * as ocEnrollmentQueries from "@/app/db/queries/oc-enrollments";
 import { db } from "@/app/db/client";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
 vi.mock("@/app/lib/authz", async () => {
-  const actual = await vi.importActual<typeof import("@/app/lib/authz")>("@/app/lib/authz");
   return {
-    ...actual,
     requireAuth: vi.fn(),
     requireAdmin: vi.fn(),
   };
@@ -28,8 +26,8 @@ vi.mock("@/app/db/client", () => ({
   },
 }));
 
-vi.mock("@/app/db/queries/oc", () => ({
-  getCurrentSemesterForCourse: vi.fn(),
+vi.mock("@/app/db/queries/oc-enrollments", () => ({
+  getCurrentSemesterForOc: vi.fn(),
 }));
 
 const path = "/api/v1/oc";
@@ -68,7 +66,7 @@ describe("GET /api/v1/oc/[ocId]", () => {
 
   it("returns the OC including jnu enrollment number", async () => {
     (ocChecks.mustHaveOcAccess as any).mockResolvedValueOnce({ userId: "pc-1", roles: ["PLATOON_COMMANDER"] });
-    (ocQueries.getCurrentSemesterForCourse as any).mockResolvedValueOnce(4);
+    (ocEnrollmentQueries.getCurrentSemesterForOc as any).mockResolvedValueOnce(4);
     (db.select as any).mockImplementationOnce(() => ({
       from: () => ({
         leftJoin: () => ({
