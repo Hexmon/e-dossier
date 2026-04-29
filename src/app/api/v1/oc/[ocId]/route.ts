@@ -8,7 +8,7 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
-import { getCurrentSemesterForCourse } from '@/app/db/queries/oc';
+import { getCurrentSemesterForOc } from '@/app/db/queries/oc-enrollments';
 import { mustHaveOcAccess } from '../_checks';
 
 const OcParam = z.object({ ocId: z.string().uuid() });
@@ -93,7 +93,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             updatedAt: row.platoonUpdatedAt,
             deletedAt: row.platoonDeletedAt,
         } : null;
-        const currentSemester = course ? await getCurrentSemesterForCourse(course.id) : null;
+        const currentSemester = await getCurrentSemesterForOc(ocId);
 
         const oc = {
             id: row.id,

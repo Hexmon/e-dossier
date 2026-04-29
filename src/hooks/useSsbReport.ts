@@ -30,6 +30,7 @@ export function useSsbReport(ocId: string) {
                 toast.error("Failed to save SSB Report");
                 return null;
             }
+            setReport(res);
             toast.success("SSB Report saved");
             return res;
         } catch {
@@ -45,6 +46,7 @@ export function useSsbReport(ocId: string) {
                 toast.error("Failed to update");
                 return null;
             }
+            setReport(res);
             toast.success("SSB Report updated");
             return res;
         } catch {

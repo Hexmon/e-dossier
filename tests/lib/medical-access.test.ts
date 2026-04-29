@@ -40,13 +40,23 @@ describe("canWriteMedicalRecords", () => {
     ).toBe(false);
   });
 
-  it("rejects legacy commander aliases that are no longer authorization tokens", () => {
+  it("allows platoon-scoped PL CDR aliases for local platoon commander logins", () => {
     expect(
       canWriteMedicalRecords({
         roles: ["PL_CDR"],
         position: "PL_CDR",
         scopeType: "PLATOON",
       })
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  it("allows platoon-scoped dynamic PL CDR identities", () => {
+    expect(
+      canWriteMedicalRecords({
+        roles: ["ARJUNPLCDR"],
+        position: "ARJUNPLCDR",
+        scopeType: "PLATOON",
+      })
+    ).toBe(true);
   });
 });

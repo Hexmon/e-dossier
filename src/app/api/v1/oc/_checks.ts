@@ -7,13 +7,15 @@ import { ocCadets } from '@/app/db/schema/training/oc';
 import { and, eq, isNull } from 'drizzle-orm';
 import { canEditAcademics } from '@/lib/academics-access';
 import { authorizeOcAccess } from '@/lib/authorization';
-import { getCurrentSemesterForCourse, getOcCourseInfo } from '@/app/db/queries/oc';
+import { getCurrentSemesterForOc } from '@/app/db/queries/oc-enrollments';
 import { canBypassDossierSemesterLock } from '@/lib/dossier-semester-access';
 import {
     normalizeCurrentSemester,
     normalizeSemesterValue,
     normalizeSupportedSemesters,
 } from '@/lib/dossier-semester';
+import { getDossierLockSettingsOrDefault } from '@/app/db/queries/dossier-lock-settings';
+import { isDossierGloballyFrozen, isDossierGloballyUnlocked } from '@/lib/dossier-lock-policy';
 import {
     auditOcSemesterOverrideIfUsed,
     getSemesterOverrideReason,
@@ -89,12 +91,7 @@ type SemesterWriteAuthContext = {
 };
 
 export async function getOcCurrentSemester(ocId: string) {
-    const courseInfo = await getOcCourseInfo(ocId);
-    if (!courseInfo?.courseId) {
-        return 1;
-    }
-
-    return normalizeCurrentSemester(await getCurrentSemesterForCourse(courseInfo.courseId));
+    return normalizeCurrentSemester(await getCurrentSemesterForOc(ocId));
 }
 
 export async function assertOcSemesterWriteAllowed(params: {
@@ -109,6 +106,8 @@ export async function assertOcSemesterWriteAllowed(params: {
     const currentSemester = normalizeCurrentSemester(
         params.currentSemester ?? (await getOcCurrentSemester(params.ocId))
     );
+    const dossierLockSettings = await getDossierLockSettingsOrDefault();
+    const lockPolicy = dossierLockSettings.lockPolicy;
     const requestedSemester = normalizeSemesterValue(params.requestedSemester);
 
     if (requestedSemester === null) {
@@ -124,14 +123,25 @@ export async function assertOcSemesterWriteAllowed(params: {
         position: params.authContext.claims?.apt?.position ?? null,
     });
 
-    const overrideReason = getSemesterOverrideReason(params.request);
-    const overrideApplied = requestedSemester !== currentSemester && canBypass;
+    if (isDossierGloballyFrozen(lockPolicy)) {
+        throw new ApiError(403, 'Dossier forms are globally frozen by super admin settings.', 'semester_locked', {
+            currentSemester,
+            requestedSemester,
+            supportedSemesters,
+            lockPolicy,
+        });
+    }
 
-    if (!canBypass && requestedSemester !== currentSemester) {
+    const overrideReason = getSemesterOverrideReason(params.request);
+    const overrideApplied =
+        lockPolicy !== 'UNFREEZE_ALL' && requestedSemester !== currentSemester && canBypass;
+
+    if (!isDossierGloballyUnlocked(lockPolicy) && !canBypass && requestedSemester !== currentSemester) {
         throw new ApiError(403, 'Only the current semester can be modified.', 'semester_locked', {
             currentSemester,
             requestedSemester,
             supportedSemesters,
+            lockPolicy,
         });
     }
 
@@ -144,6 +154,7 @@ export async function assertOcSemesterWriteAllowed(params: {
                 currentSemester,
                 requestedSemester,
                 supportedSemesters,
+                lockPolicy,
             }
         );
     }
@@ -152,6 +163,7 @@ export async function assertOcSemesterWriteAllowed(params: {
         currentSemester,
         requestedSemester,
         supportedSemesters,
+        lockPolicy,
         overrideApplied,
         overrideReason,
     };

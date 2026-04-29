@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -12,14 +12,15 @@ import {
   createAppointment,
   createPosition,
   CreateAppointmentPayload,
+  CreateAppointmentConflict,
   getPositions,
   Position,
   updateAppointment,
   UpdateAppointmentPayload,
   deleteAppointment,
   updatePosition,
-  deletePosition,
 } from "@/app/lib/api/appointmentApi";
+import { ApiClientError } from "@/app/lib/apiClient";
 
 import { getAllUsers, User } from "@/app/lib/api/userApi";
 import { getPlatoons, Platoon } from "@/app/lib/api/platoonApi";
@@ -27,16 +28,46 @@ import {
   fallbackAppointments,
   fallbackUsers,
 } from "@/config/app.config";
+import {
+  findReusablePosition,
+  normalizePositionKey,
+} from "@/lib/appointments/position-reuse";
+import {
+  buildServedHistory,
+  type ServedHistoryEntry,
+} from "@/lib/appointments/served-history";
 
-export interface ServedUser {
-  user: string;
-  appointment: string;
-  fromDate: string;
-  toDate: string;
+export type ServedUser = ServedHistoryEntry;
+
+function mergeServedHistoryEntries(
+  entries: ServedUser[],
+  incoming: ServedUser,
+): ServedUser[] {
+  return [incoming, ...entries.filter((entry) => entry.id !== incoming.id)].sort(
+    (left, right) => new Date(right.toDate).getTime() - new Date(left.toDate).getTime(),
+  );
 }
+
+const APPOINTMENT_SCOPE_CONFLICT_MESSAGE =
+  "Another active/overlapping appointment already exists for this position & scope";
+
+export type CreateAppointmentConflictState = {
+  appointmentName: string;
+  scopeType: "GLOBAL" | "PLATOON";
+  scopeId: string | null;
+  currentHolder: {
+    id: string;
+    userId: string;
+    username: string;
+    startsAt: string;
+    endsAt: string | null;
+  } | null;
+};
 
 export function useAppointments() {
   const queryClient = useQueryClient();
+  const [createAppointmentConflict, setCreateAppointmentConflict] =
+    useState<CreateAppointmentConflictState | null>(null);
 
   const { data: appointments = [], isLoading: loadingAppointments } = useQuery({
     queryKey: ["appointments"],
@@ -82,8 +113,11 @@ export function useAppointments() {
 
   const { data: servedList = [] } = useQuery<ServedUser[]>({
     queryKey: ["servedList"],
-    queryFn: () => [],
-    staleTime: Infinity,
+    queryFn: async () => {
+      const data = await getAppointments({ active: false });
+      return buildServedHistory(data);
+    },
+    staleTime: 5 * 60 * 1000,
   });
 
   const handoverMutation = useMutation({
@@ -103,8 +137,8 @@ export function useAppointments() {
       if (handover <= start) {
         throw new Error("Handover must be after the appointment start date.");
       }
-      if (handover >= takeover) {
-        throw new Error("Handover must be before takeover date.");
+      if (handover > takeover) {
+        throw new Error("Handover must be on or before takeover date.");
       }
 
       const selectedUser = users.find((u) => u.id === form.toUser);
@@ -123,10 +157,11 @@ export function useAppointments() {
 
       return {
         servedEntry: {
+          id,
           user: username || "Unknown",
           appointment: positionName || "N/A",
           fromDate: startsAt,
-          toDate: form.handoverDate,
+          toDate: handover.toISOString(),
         },
         updatedAppointment: {
           id,
@@ -136,11 +171,11 @@ export function useAppointments() {
       };
     },
     onSuccess: ({ servedEntry }) => {
-      queryClient.setQueryData<ServedUser[]>(["servedList"], (old = []) => [
-        ...old,
-        servedEntry,
-      ]);
+      queryClient.setQueryData<ServedUser[]>(["servedList"], (old = []) =>
+        mergeServedHistoryEntries(old, servedEntry),
+      );
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["servedList"] });
       toast.success("Appointment handed over successfully");
     },
     onError: (error: any) => {
@@ -157,32 +192,55 @@ export function useAppointments() {
       platoonId?: string;
       scopeType?: "GLOBAL" | "PLATOON";
     }) => {
-      const positionKey = formData.appointmentName
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-]/g, "");
-
+      const appointmentName = formData.appointmentName.trim();
+      const positionKey = normalizePositionKey(appointmentName);
       const defaultScope = formData.scopeType === "PLATOON" ? "PLATOON" : "GLOBAL";
+      const ensureCompatibleScope = (position: Position) => {
+        if (position.defaultScope !== defaultScope) {
+          throw new Error(
+            `Position "${position.displayName ?? appointmentName}" already exists with ${position.defaultScope} scope.`,
+          );
+        }
+        return position;
+      };
 
-      const positionResponse = await createPosition({
-        key: positionKey,
-        displayName: formData.appointmentName,
-        defaultScope: defaultScope,
-        singleton: true,
-      });
+      const resolvePosition = async (): Promise<Position> => {
+        const existing = findReusablePosition(positions, appointmentName);
+        if (existing) {
+          return ensureCompatibleScope(existing);
+        }
 
-      if (!positionResponse || !positionResponse.data) {
-        throw new Error("Failed to create position: Invalid response");
-      }
+        try {
+          const positionResponse = await createPosition({
+            key: positionKey,
+            displayName: appointmentName,
+            defaultScope,
+            singleton: true,
+          });
 
-      const newPosition = positionResponse.data;
+          if (!positionResponse || !positionResponse.data) {
+            throw new Error("Failed to create position: Invalid response");
+          }
+
+          return positionResponse.data;
+        } catch (error) {
+          const latestPositions = await getPositions();
+          const reused = findReusablePosition(latestPositions, appointmentName);
+          if (reused) {
+            return ensureCompatibleScope(reused);
+          }
+          throw error;
+        }
+      };
+
+      const position = await resolvePosition();
 
       const payload: CreateAppointmentPayload = {
         userId: formData.userId,
-        positionId: newPosition.id,
+        positionId: position.id,
         startsAt: new Date(formData.startsAt).toISOString(),
         endsAt: null,
-        reason: formData.appointmentName,
+        reason: appointmentName,
         assignment: "PRIMARY",
         scopeType: defaultScope,
         scopeId: defaultScope === "PLATOON" ? formData.platoonId || null : null,
@@ -191,11 +249,39 @@ export function useAppointments() {
       return await createAppointment(payload);
     },
     onSuccess: () => {
+      setCreateAppointmentConflict(null);
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       toast.success("Appointment created successfully!");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to create appointment");
+      if (
+        error instanceof ApiClientError &&
+        error.status === 409 &&
+        error.message.includes(APPOINTMENT_SCOPE_CONFLICT_MESSAGE)
+      ) {
+        const extras = (error.extras ?? {}) as CreateAppointmentConflict;
+        const conflicting = extras.conflictingAppointment;
+        const position = positions.find((candidate) => candidate.id === extras.positionId);
+        setCreateAppointmentConflict({
+          appointmentName: position?.displayName ?? "Selected appointment",
+          scopeType: (extras.scopeType as "GLOBAL" | "PLATOON" | undefined) ?? "GLOBAL",
+          scopeId: (extras.scopeId as string | null | undefined) ?? null,
+          currentHolder: conflicting
+            ? {
+                id: conflicting.id,
+                userId: conflicting.userId,
+                username: conflicting.username,
+                startsAt: conflicting.startsAt,
+                endsAt: conflicting.endsAt,
+              }
+            : null,
+        });
+        return;
+      }
+
+      setCreateAppointmentConflict(null);
+      const message = error?.message || "Failed to create appointment";
+      toast.error(message);
     },
   });
 
@@ -207,16 +293,9 @@ export function useAppointments() {
       appointmentId: string;
       payload: UpdateAppointmentPayload & { positionId?: string; positionName?: string };
     }) => {
-      let newUsername: string | undefined;
-      if (payload.userId) {
-        const selectedUser = users.find((u) => u.id === payload.userId);
-        newUsername = selectedUser?.username;
-      }
-
       const appointmentPayload: UpdateAppointmentPayload = {
         startsAt: payload.startsAt,
         userId: payload.userId,
-        ...(newUsername && { username: newUsername }),
       };
 
       const appointmentPromise = updateAppointment(appointmentId, appointmentPayload);
@@ -251,17 +330,7 @@ export function useAppointments() {
         throw new Error("Appointment not found");
       }
 
-      const response = await deleteAppointment(appointmentId);
-
-      if (response && response.data && appointment.positionId) {
-        try {
-          await deletePosition(appointment.positionId);
-        } catch (positionError: any) {
-          console.error(positionError);
-        }
-      }
-
-      return response;
+      return await deleteAppointment(appointmentId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
@@ -283,10 +352,13 @@ export function useAppointments() {
     fetchAppointments: useCallback(() => queryClient.invalidateQueries({ queryKey: ["appointments"] }), [queryClient]),
     fetchUsers: useCallback(() => queryClient.invalidateQueries({ queryKey: ["users"] }), [queryClient]),
     fetchUsersAndPositions: () => {
+      setCreateAppointmentConflict(null);
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["positions"] });
       queryClient.invalidateQueries({ queryKey: ["platoons"] });
     },
+    createAppointmentConflict,
+    clearCreateAppointmentConflict: () => setCreateAppointmentConflict(null),
     handleHandover: (
       appointment: Appointment,
       form: { toUser: string; handoverDate: string; takeoverDate: string }

@@ -43,7 +43,18 @@ function applyNoStoreHeaders(response: NextResponse) {
 
 export function shouldSkipRateLimit(pathname: string, method: string) {
   if (method !== 'POST' && method !== 'OPTIONS') return false;
+  return (
+    matchPrefix(pathname, '/api/v1/auth/login') ||
+    matchPrefix(pathname, '/api/v1/auth/logout')
+  );
+
+  /*
+  Restorable login rate-limiting behavior.
+  Uncomment this return and remove the active login bypass above
+  if you want middleware rate limiting to apply to /api/v1/auth/login again.
+
   return matchPrefix(pathname, '/api/v1/auth/logout');
+  */
 }
 
 export async function middleware(req: NextRequest) {

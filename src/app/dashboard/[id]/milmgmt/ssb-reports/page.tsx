@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -8,30 +8,68 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import SelectedCadetTable from "@/components/cadet_table/SelectedCadetTable";
 
-import { useOcPersonal } from "@/hooks/useOcPersonal";
 import { useSsbReport } from "@/hooks/useSsbReport";
 
-import { SSBReportForm, SSBFormData } from "@/components/ssb/SSBReportForm";
+import { cloneSsbFormData, SSBReportForm, SSBFormData } from "@/components/ssb/SSBReportForm";
 import { reverseRatingMap } from "@/config/app.config";
 import { toast } from "sonner";
 import type { RootState } from "@/store";
 import { saveSsbForm, clearSsbForm } from "@/store/slices/ssbReportSlice";
+import { fetchOCById } from "@/app/lib/api/ocApi";
+import { fetchCourseById } from "@/app/lib/api/courseApi";
+import type { Cadet } from "@/types/cadet";
 
 export default function SsbReportsPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
+    const [cadet, setCadet] = useState<Cadet | null>(null);
 
     const dispatch = useDispatch();
     const savedFormData = useSelector((state: RootState) =>
         state.ssbReport.forms[ocId]
     );
 
-    const { cadet } = useOcPersonal(ocId);
     const { report, fetch, save } = useSsbReport(ocId);
 
     useEffect(() => {
         fetch();
-    }, [fetch]);
+    }, [ocId, fetch]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadCadet = async () => {
+            if (!ocId) return;
+
+            try {
+                const oc = await fetchOCById(ocId);
+                if (!oc || cancelled) return;
+
+                const courseRes = await fetchCourseById(oc.course?.id || "");
+                if (cancelled) return;
+
+                setCadet({
+                    name: oc.name ?? "",
+                    course: oc.course?.id ?? "",
+                    courseName: courseRes?.course?.code ?? "",
+                    ocNumber: oc.ocNo ?? "",
+                    ocId: oc.id ?? "",
+                    currentSemester: oc.currentSemester ?? null,
+                });
+            } catch (err) {
+                console.error("loadCadet error", err);
+                if (!cancelled) {
+                    toast.error("Failed to load cadet data");
+                }
+            }
+        };
+
+        void loadCadet();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [ocId]);
 
     const handleSave = async (data: SSBFormData) => {
         console.log("Received form data:", data);
@@ -77,7 +115,6 @@ export default function SsbReportsPage() {
         if (saved) {
             dispatch(clearSsbForm(ocId));
             toast.success("SSB Report Saved Successfully");
-            fetch();
         }
     };
 
@@ -88,10 +125,11 @@ export default function SsbReportsPage() {
         }
     };
 
-    const handleAutoSave = (data: SSBFormData) => {
-        console.log("Auto-saving to Redux:", data);
-        dispatch(saveSsbForm({ ocId, data }));
-    };
+    const handleAutoSave = useCallback((data: SSBFormData) => {
+        const snapshot = cloneSsbFormData(data);
+        console.log("Auto-saving to Redux:", snapshot);
+        dispatch(saveSsbForm({ ocId, data: snapshot }));
+    }, [dispatch, ocId]);
 
     return (
         <DashboardLayout

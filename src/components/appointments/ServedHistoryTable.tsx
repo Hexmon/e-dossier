@@ -7,6 +7,8 @@ interface ServedHistoryTableProps {
 }
 
 export function ServedHistoryTable({ servedList }: ServedHistoryTableProps) {
+  const formatDate = (value: string) => new Date(value).toLocaleDateString();
+
   return (
     <section className="overflow-x-auto border rounded-md">
       <table className="w-full text-sm text-left">
@@ -26,13 +28,13 @@ export function ServedHistoryTable({ servedList }: ServedHistoryTableProps) {
               </td>
             </tr>
           ) : (
-            servedList.map(({ user, appointment, fromDate, toDate }, i) => (
-              <tr key={i} className="border-t">
+            servedList.map(({ id, user, appointment, fromDate, toDate }) => (
+              <tr key={id} className="border-t">
                 <td className="px-4 py-2 font-medium">
                   {user} ({appointment})
                 </td>
-                <td className="px-4 py-2">{fromDate}</td>
-                <td className="px-4 py-2">{toDate}</td>
+                <td className="px-4 py-2">{formatDate(fromDate)}</td>
+                <td className="px-4 py-2">{formatDate(toDate)}</td>
               </tr>
             ))
           )}

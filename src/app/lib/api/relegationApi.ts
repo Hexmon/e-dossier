@@ -7,6 +7,7 @@ export type RelegationOcOption = {
   ocName: string;
   status: string;
   isActive: boolean;
+  currentSemester: number;
   platoonId: string | null;
   platoonKey: string | null;
   platoonName: string | null;
@@ -101,7 +102,7 @@ export type RelegationHistoryResponse = {
 
 export type RelegationPromoteCourseRequest = {
   fromCourseId: string;
-  toCourseId: string;
+  fromSemester: number;
   excludeOcIds: string[];
   note?: string | null;
 };
@@ -118,6 +119,8 @@ export type RelegationPromoteCourseResponse = {
   result: {
     fromCourse: RelegationCourseOption;
     toCourse: RelegationCourseOption;
+    fromSemester: number;
+    toSemester: number;
     summary: {
       totalEligible: number;
       excludedByRequest: number;
@@ -143,6 +146,7 @@ export type RelegationEnrollmentTimelineItem = {
   courseId: string;
   courseCode: string;
   courseName: string;
+  currentSemester: number;
   status: RelegationEnrollmentStatus;
   origin: RelegationEnrollmentOrigin;
   startedOn: string;

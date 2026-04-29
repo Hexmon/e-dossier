@@ -1,6 +1,7 @@
 import { ApiError } from "@/app/lib/http";
 import { db } from "@/app/db/client";
 import { courses } from "@/app/db/schema/training/courses";
+import { courseOfferings } from "@/app/db/schema/training/courseOfferings";
 import {
   ocCadets,
   ocCourseEnrollments,
@@ -30,6 +31,7 @@ import {
   getPreviousArchivedEnrollment,
   setEnrollmentStatus,
   syncOcCourseFromEnrollment,
+  updateEnrollmentCurrentSemester,
 } from "@/app/db/queries/oc-enrollments";
 import { ocPtMotivationAwards, ocPtTaskScores } from "@/app/db/schema/training/physicalTrainingOc";
 import { ocInterviews } from "@/app/db/schema/training/interviewOc";
@@ -40,6 +42,7 @@ export type RelegationOcOption = {
   ocName: string;
   status: string;
   isActive: boolean;
+  currentSemester: number;
   platoonId: string | null;
   platoonKey: string | null;
   platoonName: string | null;
@@ -66,7 +69,7 @@ export type ApplyOcRelegationTransferInput = {
 
 export type PromoteCourseBatchInput = {
   fromCourseId: string;
-  toCourseId: string;
+  fromSemester: number;
   excludeOcIds: string[];
   note?: string | null;
 };
@@ -110,6 +113,45 @@ export function isImmediateNextCourseCode(currentCode: string, nextCode: string)
 
   if (!current || !next) return false;
   return current.prefix === next.prefix && next.number === current.number + 1;
+}
+
+export function selectNearestNextCourses(
+  currentCode: string,
+  candidates: RelegationCourseOption[]
+): RelegationCourseOption[] {
+  const current = assertParsableCourseCode(currentCode);
+
+  const sequencedCandidates = candidates
+    .map((course) => ({
+      course,
+      parsed: parseCourseSequence(course.courseCode),
+    }))
+    .filter(
+      (
+        entry
+      ): entry is {
+        course: RelegationCourseOption;
+        parsed: ParsedCourseSequence;
+      } =>
+        entry.parsed !== null &&
+        entry.parsed.prefix === current.prefix &&
+        entry.parsed.number > current.number
+    )
+    .sort((left, right) => {
+      if (left.parsed.number !== right.parsed.number) {
+        return left.parsed.number - right.parsed.number;
+      }
+      return left.course.courseCode.localeCompare(right.course.courseCode);
+    });
+
+  const nearestNumber = sequencedCandidates[0]?.parsed.number;
+  if (nearestNumber === undefined) {
+    return [];
+  }
+
+  return sequencedCandidates
+    .filter((entry) => entry.parsed.number === nearestNumber)
+    .map((entry) => entry.course);
 }
 
 type CourseLookupClient = Pick<typeof db, "select">;
@@ -187,6 +229,7 @@ export async function listRelegationOcOptions(opts: {
       ocName: ocCadets.name,
       status: ocCadets.status,
       withdrawnOn: ocCadets.withdrawnOn,
+      currentSemester: ocCourseEnrollments.currentSemester,
       platoonId: ocCadets.platoonId,
       platoonKey: platoons.key,
       platoonName: platoons.name,
@@ -195,6 +238,10 @@ export async function listRelegationOcOptions(opts: {
     })
     .from(ocCadets)
     .innerJoin(courses, eq(courses.id, ocCadets.courseId))
+    .leftJoin(
+      ocCourseEnrollments,
+      and(eq(ocCourseEnrollments.ocId, ocCadets.id), eq(ocCourseEnrollments.status, "ACTIVE"))
+    )
     .leftJoin(platoons, eq(platoons.id, ocCadets.platoonId))
     .where(and(...wh))
     .orderBy(asc(ocCadets.ocNo));
@@ -205,6 +252,7 @@ export async function listRelegationOcOptions(opts: {
     ocName: row.ocName,
     status: row.status,
     isActive: row.status === "ACTIVE" && row.withdrawnOn === null,
+    currentSemester: Number(row.currentSemester ?? 1),
     platoonId: row.platoonId,
     platoonKey: row.platoonKey,
     platoonName: row.platoonName,
@@ -213,11 +261,13 @@ export async function listRelegationOcOptions(opts: {
   }));
 }
 
-export async function listImmediateNextCourses(currentCourseId: string): Promise<RelegationCourseOption[]> {
-  const currentCourse = await getActiveCourseById(currentCourseId);
-  const currentSequence = assertParsableCourseCode(currentCourse.code);
+export async function listImmediateNextCourses(
+  currentCourseId: string,
+  tx: CourseLookupClient = db
+): Promise<RelegationCourseOption[]> {
+  const currentCourse = await getActiveCourseById(currentCourseId, tx);
 
-  const candidateCourses = await db
+  const candidateCourses = await tx
     .select({
       id: courses.id,
       code: courses.code,
@@ -226,19 +276,10 @@ export async function listImmediateNextCourses(currentCourseId: string): Promise
     .from(courses)
     .where(isNull(courses.deletedAt));
 
-  const immediateNext = candidateCourses
-    .filter((course) => {
-      const parsed = parseCourseSequence(course.code);
-      return (
-        parsed !== null &&
-        parsed.prefix === currentSequence.prefix &&
-        parsed.number === currentSequence.number + 1
-      );
-    })
-    .map(toCourseOption)
-    .sort((a, b) => a.courseCode.localeCompare(b.courseCode));
-
-  return immediateNext;
+  return selectNearestNextCourses(
+    currentCourse.code,
+    candidateCourses.map(toCourseOption)
+  );
 }
 
 async function getScopedOcForMove(
@@ -301,18 +342,19 @@ async function getScopedOcForMove(
   };
 }
 
-function ensureImmediateNext(fromCode: string, toCode: string) {
-  const fromSequence = assertParsableCourseCode(fromCode);
-  const toSequence = assertParsableCourseCode(toCode);
+async function ensureAllowedNextCourse(
+  currentCourseId: string,
+  targetCourseId: string,
+  fromCode: string,
+  tx: CourseLookupClient = db
+) {
+  const allowedNextCourses = await listImmediateNextCourses(currentCourseId, tx);
+  const isAllowed = allowedNextCourses.some((course) => course.courseId === targetCourseId);
 
-  const isImmediateNext =
-    fromSequence.prefix === toSequence.prefix &&
-    toSequence.number === fromSequence.number + 1;
-
-  if (!isImmediateNext) {
+  if (!isAllowed) {
     throw new ApiError(
       400,
-      `Invalid transfer target. Only immediate next course is allowed from ${fromCode}.`,
+      `Invalid transfer target. Only the next available course is allowed from ${fromCode}.`,
       "bad_request"
     );
   }
@@ -327,7 +369,7 @@ export async function applyOcRelegationTransfer(
     const ocRow = await getScopedOcForMove(tx, input.ocId, scope.scopePlatoonId ?? null);
     const targetCourse = await getActiveCourseById(input.toCourseId, tx);
 
-    ensureImmediateNext(ocRow.fromCourseCode, targetCourse.code);
+    await ensureAllowedNextCourse(ocRow.fromCourseId, targetCourse.id, ocRow.fromCourseCode, tx);
 
     const now = new Date();
     const archivedEnrollment = await setEnrollmentStatus(ocRow.activeEnrollment.id, "ARCHIVED", tx, {
@@ -422,7 +464,7 @@ export async function recordPromotionException(
     const ocRow = await getScopedOcForMove(tx, input.ocId, scope.scopePlatoonId ?? null);
     const targetCourse = await getActiveCourseById(input.toCourseId, tx);
 
-    ensureImmediateNext(ocRow.fromCourseCode, targetCourse.code);
+    await ensureAllowedNextCourse(ocRow.fromCourseId, targetCourse.id, ocRow.fromCourseCode, tx);
 
     const [existing] = await tx
       .select({ id: ocRelegations.id })
@@ -506,19 +548,49 @@ export async function recordPromotionException(
 export async function promoteCourseBatch(input: PromoteCourseBatchInput, actorUserId: string) {
   return db.transaction(async (tx) => {
     const fromCourse = await getActiveCourseById(input.fromCourseId, tx);
-    const toCourse = await getActiveCourseById(input.toCourseId, tx);
+    const fromSemester = Math.max(1, Math.min(Number(input.fromSemester ?? 1), 6));
+    const toSemester = fromSemester + 1;
 
-    ensureImmediateNext(fromCourse.code, toCourse.code);
+    if (toSemester > 6) {
+      throw new ApiError(400, "Semester promotion is only supported up to semester 6.", "bad_request");
+    }
+
+    const [targetSemesterOffering] = await tx
+      .select({ id: courseOfferings.id })
+      .from(courseOfferings)
+      .where(
+        and(
+          eq(courseOfferings.courseId, fromCourse.id),
+          eq(courseOfferings.semester, toSemester),
+          isNull(courseOfferings.deletedAt)
+        )
+      )
+      .limit(1);
+
+    if (!targetSemesterOffering) {
+      throw new ApiError(
+        400,
+        `Semester ${toSemester} is not configured in course offerings for ${fromCourse.code}.`,
+        "bad_request"
+      );
+    }
 
     const candidates = await tx
       .select({
         ocId: ocCadets.id,
         ocNo: ocCadets.ocNo,
+        enrollmentId: ocCourseEnrollments.id,
       })
       .from(ocCadets)
+      .innerJoin(
+        ocCourseEnrollments,
+        and(eq(ocCourseEnrollments.ocId, ocCadets.id), eq(ocCourseEnrollments.status, "ACTIVE"))
+      )
       .where(
         and(
           eq(ocCadets.courseId, fromCourse.id),
+          eq(ocCourseEnrollments.courseId, fromCourse.id),
+          eq(ocCourseEnrollments.currentSemester, fromSemester),
           isNull(ocCadets.deletedAt),
           eq(ocCadets.status, "ACTIVE"),
           isNull(ocCadets.withdrawnOn)
@@ -530,7 +602,9 @@ export async function promoteCourseBatch(input: PromoteCourseBatchInput, actorUs
     if (ocIds.length === 0) {
       return {
         fromCourse: toCourseOption(fromCourse),
-        toCourse: toCourseOption(toCourse),
+        toCourse: toCourseOption(fromCourse),
+        fromSemester,
+        toSemester,
         summary: {
           totalEligible: 0,
           excludedByRequest: 0,
@@ -541,86 +615,28 @@ export async function promoteCourseBatch(input: PromoteCourseBatchInput, actorUs
       };
     }
 
-    const [exceptionRows, excludeSet] = await Promise.all([
-      tx
-        .select({ ocId: ocRelegations.ocId })
-        .from(ocRelegations)
-        .where(
-          and(
-            inArray(ocRelegations.ocId, ocIds),
-            eq(ocRelegations.fromCourseId, fromCourse.id),
-            eq(ocRelegations.toCourseId, toCourse.id),
-            eq(ocRelegations.movementKind, "PROMOTION_EXCEPTION")
-          )
-        ),
-      new Set(input.excludeOcIds ?? []),
-    ]);
-
-    const exceptionSet = new Set(exceptionRows.map((row) => row.ocId));
-
-    const promotableOcIds = ocIds.filter((ocId) => !excludeSet.has(ocId) && !exceptionSet.has(ocId));
+    const excludeSet = new Set(input.excludeOcIds ?? []);
+    const promotableCandidates = candidates.filter((candidate) => !excludeSet.has(candidate.ocId));
 
     const now = new Date();
     const historyRows: Array<typeof ocRelegations.$inferInsert> = [];
 
-    if (promotableOcIds.length > 0) {
-      const activeEnrollments = await tx
-        .select({
-          id: ocCourseEnrollments.id,
-          ocId: ocCourseEnrollments.ocId,
-          courseId: ocCourseEnrollments.courseId,
-        })
-        .from(ocCourseEnrollments)
-        .where(
-          and(
-            inArray(ocCourseEnrollments.ocId, promotableOcIds),
-            eq(ocCourseEnrollments.status, "ACTIVE")
-          )
-        );
-
-      const activeEnrollmentByOc = new Map(activeEnrollments.map((row) => [row.ocId, row]));
-
-      for (const ocId of promotableOcIds) {
-        const activeEnrollment =
-          activeEnrollmentByOc.get(ocId) ?? (await getOrCreateActiveEnrollment(ocId, tx, actorUserId));
-
-        if (activeEnrollment.courseId !== fromCourse.id) {
-          continue;
-        }
-
-        const archivedEnrollment = await setEnrollmentStatus(activeEnrollment.id, "ARCHIVED", tx, {
-          endedOn: now,
-          reason: `Promoted from ${fromCourse.code} to ${toCourse.code}`,
-          note: input.note?.trim() ? input.note.trim() : null,
-          closedByUserId: actorUserId,
-        });
-
-        if (!archivedEnrollment) continue;
-
-        const promotedEnrollment = await createEnrollment(
-          {
-            ocId,
-            courseId: toCourse.id,
-            origin: "PROMOTION",
-            startedOn: now,
-            reason: `Promoted from ${fromCourse.code} to ${toCourse.code}`,
-            note: input.note?.trim() ? input.note.trim() : null,
-            createdByUserId: actorUserId,
-          },
-          tx
-        );
-
-        await syncOcCourseFromEnrollment(ocId, toCourse.id, tx, { relegatedOn: now });
+    if (promotableCandidates.length > 0) {
+      for (const candidate of promotableCandidates) {
+        const updatedEnrollment = await updateEnrollmentCurrentSemester(candidate.enrollmentId, toSemester, tx);
+        if (!updatedEnrollment) continue;
 
         historyRows.push({
-          ocId,
+          ocId: candidate.ocId,
           fromCourseId: fromCourse.id,
-          fromEnrollmentId: archivedEnrollment.id,
+          fromEnrollmentId: candidate.enrollmentId,
           fromCourseCode: fromCourse.code,
-          toCourseId: toCourse.id,
-          toEnrollmentId: promotedEnrollment.id,
-          toCourseCode: toCourse.code,
-          reason: `Promoted via course batch from ${fromCourse.code} to ${toCourse.code}`,
+          toCourseId: fromCourse.id,
+          toEnrollmentId: candidate.enrollmentId,
+          toCourseCode: fromCourse.code,
+          fromSemester,
+          toSemester,
+          reason: `Promoted via semester batch in ${fromCourse.code} from semester ${fromSemester} to semester ${toSemester}`,
           remark: input.note?.trim() ? input.note.trim() : null,
           movementKind: "PROMOTION_BATCH",
           performedByUserId: actorUserId,
@@ -637,14 +653,16 @@ export async function promoteCourseBatch(input: PromoteCourseBatchInput, actorUs
 
     return {
       fromCourse: toCourseOption(fromCourse),
-      toCourse: toCourseOption(toCourse),
+      toCourse: toCourseOption(fromCourse),
+      fromSemester,
+      toSemester,
       summary: {
         totalEligible: ocIds.length,
         excludedByRequest: ocIds.filter((id) => excludeSet.has(id)).length,
-        excludedByException: ocIds.filter((id) => exceptionSet.has(id)).length,
+        excludedByException: 0,
         promoted: historyRows.length,
       },
-      promotedOcIds: promotableOcIds,
+      promotedOcIds: historyRows.map((row) => row.ocId),
     };
   });
 }
@@ -919,6 +937,7 @@ export type RelegationEnrollmentTimelineRow = {
   courseId: string;
   courseCode: string;
   courseName: string;
+  currentSemester: number;
   status: "ACTIVE" | "ARCHIVED" | "VOIDED";
   origin: "PROMOTION" | "TRANSFER" | "MANUAL" | "BASELINE";
   startedOn: Date;
@@ -941,6 +960,7 @@ export async function listOcEnrollmentTimeline(ocId: string, scopePlatoonId?: st
       courseId: ocCourseEnrollments.courseId,
       courseCode: courses.code,
       courseName: courses.title,
+      currentSemester: ocCourseEnrollments.currentSemester,
       status: ocCourseEnrollments.status,
       origin: ocCourseEnrollments.origin,
       startedOn: ocCourseEnrollments.startedOn,

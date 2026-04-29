@@ -135,6 +135,42 @@ export function createPTBulkTaskSelection(
   };
 }
 
+export function createPTBulkTaskSelectionFromAttemptChange(
+  task: PTBulkTaskDefinition,
+  attemptCode: string,
+  currentSelection?: PTBulkTaskSelection | null,
+): PTBulkTaskSelection | null {
+  const nextAttempt = task.attempts.find((item) => item.attemptCode === attemptCode);
+  const nextGrade = nextAttempt?.grades[0];
+  if (!nextAttempt || !nextGrade) return null;
+
+  const shouldPreserveMarks = currentSelection?.selectedScoreId === nextGrade.scoreId;
+  return createPTBulkTaskSelection(
+    task,
+    nextAttempt.attemptCode,
+    nextGrade.gradeCode,
+    shouldPreserveMarks ? currentSelection.marks : undefined,
+  );
+}
+
+export function createPTBulkTaskSelectionFromGradeChange(
+  task: PTBulkTaskDefinition,
+  attemptCode: string,
+  gradeCode: string,
+  currentSelection?: PTBulkTaskSelection | null,
+): PTBulkTaskSelection | null {
+  const nextGrade = findPTBulkGradeOption(task, attemptCode, gradeCode);
+  if (!nextGrade) return null;
+
+  const shouldPreserveMarks = currentSelection?.selectedScoreId === nextGrade.scoreId;
+  return createPTBulkTaskSelection(
+    task,
+    attemptCode,
+    gradeCode,
+    shouldPreserveMarks ? currentSelection.marks : undefined,
+  );
+}
+
 export function buildPTBulkInitialSelections(
   items: PTBulkGetItem[],
   taskDefinitions: PTBulkTaskDefinition[],

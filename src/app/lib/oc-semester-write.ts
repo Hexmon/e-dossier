@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import type { AuditNextRequest } from "@/lib/audit";
 import { AuditEventType, AuditResourceType } from "@/lib/audit";
+import type { DossierLockPolicy } from "@/lib/dossier-lock-policy";
 import {
   SEMESTER_OVERRIDE_REASON_HEADER,
   normalizeSemesterOverrideReason,
@@ -11,6 +12,7 @@ export type SemesterWriteDecision = {
   currentSemester: number;
   requestedSemester: number;
   supportedSemesters: number[];
+  lockPolicy: DossierLockPolicy;
   overrideApplied: boolean;
   overrideReason: string | null;
 };
@@ -87,6 +89,7 @@ export async function auditOcSemesterOverrideIfUsed(params: {
       currentSemester: params.decision.currentSemester,
       requestedSemester: params.decision.requestedSemester,
       supportedSemesters: params.decision.supportedSemesters,
+      lockPolicy: params.decision.lockPolicy,
       overrideReason: params.decision.overrideReason,
       overrideHeader: SEMESTER_OVERRIDE_REASON_HEADER,
     },

@@ -102,6 +102,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
             if (!previous) throw new ApiError(404, 'Appointment not found');
 
             const appointmentPatch = {
+                ...(appointmentFieldUpdates.userId !== undefined ? { userId: appointmentFieldUpdates.userId } : {}),
                 ...(appointmentFieldUpdates.assignment !== undefined ? { assignment: appointmentFieldUpdates.assignment } : {}),
                 ...(appointmentFieldUpdates.scopeType !== undefined ? { scopeType: appointmentFieldUpdates.scopeType } : {}),
                 ...(appointmentFieldUpdates.scopeId !== undefined ? { scopeId: appointmentFieldUpdates.scopeId } : {}),
@@ -122,7 +123,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
                 updatedAppointment = row;
             }
 
-            if (normalizedUsername !== undefined) {
+            if (normalizedUsername !== undefined && appointmentFieldUpdates.userId === undefined) {
                 const [userRow] = await tx
                     .update(users)
                     .set({ username: normalizedUsername })

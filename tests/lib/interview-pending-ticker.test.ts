@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canAccessInterviewPendingTickerSetting,
+  canManageInterviewPendingTickerSetting,
   isPlatoonCommanderDashboardUser,
 } from "@/lib/interview-pending-ticker";
 
@@ -26,9 +27,19 @@ describe("interview pending ticker access", () => {
     ).toBe(true);
   });
 
-  it("keeps global non-admin users blocked", () => {
+  it("allows global non-admin users to read dashboard ticker settings", () => {
     expect(
       canAccessInterviewPendingTickerSetting({
+        roles: ["TRAINING_OFFICER"],
+        position: "TRAINING_OFFICER",
+        scopeType: "GLOBAL",
+      })
+    ).toBe(true);
+  });
+
+  it("keeps global non-admin users blocked from managing ticker settings", () => {
+    expect(
+      canManageInterviewPendingTickerSetting({
         roles: ["TRAINING_OFFICER"],
         position: "TRAINING_OFFICER",
         scopeType: "GLOBAL",

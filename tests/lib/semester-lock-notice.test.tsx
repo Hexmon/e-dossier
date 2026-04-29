@@ -1,10 +1,25 @@
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
+import { useMe } from "@/hooks/useMe";
+
+vi.mock("@/hooks/useMe", () => ({
+  useMe: vi.fn(),
+}));
 
 describe("SemesterLockNotice", () => {
+  beforeEach(() => {
+    vi.mocked(useMe).mockReturnValue({
+      data: {
+        dossierForms: {
+          lockPolicy: "DEFAULT",
+        },
+      },
+    } as any);
+  });
+
   it("renders nothing for the current semester", () => {
     expect(
       renderToStaticMarkup(
@@ -32,5 +47,37 @@ describe("SemesterLockNotice", () => {
 
     expect(html).toContain("override reason");
     expect(html).toContain("audited");
+  });
+
+  it("renders a global freeze message when freeze-all is enabled", () => {
+    vi.mocked(useMe).mockReturnValue({
+      data: {
+        dossierForms: {
+          lockPolicy: "FREEZE_ALL",
+        },
+      },
+    } as any);
+
+    const html = renderToStaticMarkup(
+      <SemesterLockNotice activeSemester={3} currentSemester={3} />
+    );
+
+    expect(html).toContain("global freeze");
+  });
+
+  it("renders nothing when unfreeze-all is enabled", () => {
+    vi.mocked(useMe).mockReturnValue({
+      data: {
+        dossierForms: {
+          lockPolicy: "UNFREEZE_ALL",
+        },
+      },
+    } as any);
+
+    expect(
+      renderToStaticMarkup(
+        <SemesterLockNotice activeSemester={1} currentSemester={3} />
+      )
+    ).toBe("");
   });
 });

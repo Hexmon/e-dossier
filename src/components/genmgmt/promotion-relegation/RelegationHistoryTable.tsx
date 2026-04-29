@@ -197,7 +197,7 @@ export default function RelegationHistoryTable({
                       >
                         Enrollments
                       </Button>
-                      {row.movementKind === "PROMOTION_BATCH" ? (
+                      {row.movementKind === "PROMOTION_BATCH" && row.fromCourseId !== row.toCourseId ? (
                         <Button
                           size="sm"
                           variant="destructive"

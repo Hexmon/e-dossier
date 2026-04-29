@@ -1,29 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST as postLogin } from '@/app/api/v1/auth/login/route';
 import { makeJsonRequest, createRouteContext } from '../utils/next';
-import * as ratelimit from '@/lib/ratelimit';
 import * as accountLockout from '@/app/db/queries/account-lockout';
 import * as effectiveAuthority from '@/app/lib/effective-authority';
 import * as jwt from '@/app/lib/jwt';
 import * as cookies from '@/app/lib/cookies';
 
 vi.mock('@/lib/ratelimit', () => {
-  const now = Date.now();
   return {
     getClientIp: vi.fn(() => '127.0.0.1'),
-    checkLoginRateLimit: vi.fn(async () => ({
-      success: true,
-      limit: 5,
-      remaining: 5,
-      reset: now + 60_000,
-    })),
-    checkSignupRateLimit: vi.fn(async () => ({
-      success: true,
-      limit: 3,
-      remaining: 3,
-      reset: now + 3_600_000,
-    })),
-    getRateLimitHeaders: vi.fn(() => ({})),
   };
 });
 
@@ -103,14 +88,10 @@ beforeEach(() => {
 });
 
 describe('POST /api/v1/auth/login', () => {
-  it('returns 429 when rate limit is exceeded', async () => {
-    (ratelimit.checkLoginRateLimit as any).mockResolvedValueOnce({
-      success: false,
-      limit: 5,
-      remaining: 0,
-      reset: Date.now() + 60_000,
+  it('ignores prior account lockout state and allows valid credentials', async () => {
+    (accountLockout.isAccountLocked as any).mockResolvedValueOnce({
+      lockedUntil: new Date(Date.now() + 30 * 60_000),
     });
-
     const req = makeJsonRequest({
       method: 'POST',
       path: '/api/v1/auth/login',
@@ -118,10 +99,10 @@ describe('POST /api/v1/auth/login', () => {
     });
 
     const res = await postLogin(req as any, createRouteContext());
-    expect(res.status).toBe(429);
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.ok).toBe(false);
-    expect(body.error).toBe('too_many_requests');
+    expect(body.ok).toBe(true);
+    expect(accountLockout.isAccountLocked).not.toHaveBeenCalled();
   });
 
   it('returns 400 when required fields are missing', async () => {
@@ -177,6 +158,28 @@ describe('POST /api/v1/auth/login', () => {
     expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', success: true }),
     );
+  });
+
+  it('returns 401 for an invalid password without triggering account lockout', async () => {
+    const argon2 = await import('argon2');
+    vi.mocked(argon2.default.verify).mockResolvedValueOnce(false);
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: loginBody,
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('BAD_PASSWORD');
+    expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'user-1', success: false, failureReason: 'Invalid password' }),
+    );
+    expect(accountLockout.checkAndLockAccount).not.toHaveBeenCalled();
   });
 
   it('logs in successfully with an active delegation identity', async () => {
