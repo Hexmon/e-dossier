@@ -1,4 +1,6 @@
-export const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
+const configuredBaseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
+export const baseURL = typeof window === "undefined" ? configuredBaseURL : "";
 export const endpoints = {
     setup: {
         status: "/api/v1/setup/status",

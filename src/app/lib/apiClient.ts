@@ -8,7 +8,6 @@
  * - Works client & server (uses fetch; cookies are sent automatically on same-origin).
  */
 
-import z from "zod";
 import { isSwitchSessionInProgress } from "@/lib/auth/switch-session";
 import {
     SEMESTER_OVERRIDE_REASON_HEADER,
@@ -17,7 +16,8 @@ import {
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+const DEFAULT_API_BASE =
+    typeof window === "undefined" ? process.env.NEXT_PUBLIC_API_BASE_URL || "" : "";
 
 type Primitive = string | number | boolean | null | undefined;
 type QueryValue = Primitive | Primitive[];
@@ -28,7 +28,57 @@ export type ApiOk<T = unknown> = {
     ok: true;
 } & T;
 
-export const IdSchema = z.object({ id: z.string().uuid() });
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type ZodLikeIssue = {
+    code: string;
+    validation: string;
+    path: string[];
+    message: string;
+};
+
+function createZodLikeError(path: string[], message: string) {
+    const issue: ZodLikeIssue = {
+        code: "invalid_string",
+        validation: "uuid",
+        path,
+        message,
+    };
+    const error = new Error(message) as Error & {
+        issues: ZodLikeIssue[];
+        flatten: () => { formErrors: string[]; fieldErrors: Record<string, string[]> };
+    };
+
+    error.name = "ZodError";
+    error.issues = [issue];
+    error.flatten = () => ({
+        formErrors: [],
+        fieldErrors: { [path[0] ?? "id"]: [message] },
+    });
+
+    return error;
+}
+
+export const IdSchema = {
+    parse(input: unknown): { id: string } {
+        const id = input && typeof input === "object" ? (input as { id?: unknown }).id : undefined;
+
+        if (typeof id !== "string" || !UUID_PATTERN.test(id)) {
+            throw createZodLikeError(["id"], "Invalid UUID");
+        }
+
+        return { id };
+    },
+    safeParse(input: unknown):
+        | { success: true; data: { id: string } }
+        | { success: false; error: ReturnType<typeof createZodLikeError> } {
+        try {
+            return { success: true, data: this.parse(input) };
+        } catch (error) {
+            return { success: false, error: error as ReturnType<typeof createZodLikeError> };
+        }
+    },
+} as any;
 
 export type ApiErrorEnvelope = {
     status: number;
@@ -216,7 +266,7 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
     // Build URL
     const replaced = applyPathParams(endpoint, path);
     const qs = toQueryString(query);
-    const finalBase = baseURL || DEFAULT_API_BASE;
+    const finalBase = baseURL ?? DEFAULT_API_BASE;
     const url = finalBase ? new URL(replaced + qs, finalBase).toString() : `${replaced}${qs}`;
 
     // Build init
