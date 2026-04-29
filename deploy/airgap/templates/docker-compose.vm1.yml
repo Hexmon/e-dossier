@@ -1,0 +1,48 @@
+name: edossier-vm1
+
+services:
+  edossier-app:
+    image: ${EDOSSIER_NODE_IMAGE:-node:20-bookworm-slim}
+    container_name: edossier-app
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - ./shared/app.env
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+    command: ["node", "server.js"]
+    volumes:
+      - ./current:/app:ro
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/api/v1/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - edossier
+
+  nginx:
+    image: ${EDOSSIER_NGINX_IMAGE:-nginx:1.27-alpine}
+    container_name: edossier-nginx
+    restart: unless-stopped
+    depends_on:
+      edossier-app:
+        condition: service_started
+    ports:
+      - "${EDOSSIER_HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/edossier.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - edossier
+
+networks:
+  edossier:
+    name: edossier-vm1
