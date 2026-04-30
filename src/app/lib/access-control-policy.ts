@@ -27,9 +27,12 @@ const SHARED_AUTHENTICATED_ADMIN_METHOD_RULES: Readonly<Record<string, readonly 
     // current runtime. These read-only course lookups must stay reachable to authenticated
     // users even though they live under /api/v1/admin/*.
     { path: "/api/v1/admin/courses" },
+    { path: "/api/v1/admin/positions", exact: true },
+    { path: "/api/v1/admin/users", exact: true },
     // PL CDR flows read shared admin-owned configuration and template data from these modules.
     // Keep only GET shared; write methods remain admin-protected.
     { path: "/api/v1/admin/interview" },
+    { path: "/api/v1/admin/punishments", exact: true },
     { path: "/api/v1/admin/physical-training" },
     { path: "/api/v1/admin/training-camps" },
   ],

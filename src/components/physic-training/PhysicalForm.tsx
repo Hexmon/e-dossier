@@ -24,6 +24,7 @@ import { isFreeEntryPtAttemptCode, resolvePtDraftMarks } from "@/app/lib/physica
 
 interface PhysicalFormProps {
   ocId: string;
+  courseId?: string | null;
   readOnly?: boolean;
   activeSemester?: number;
   onSemesterChange?: (semester: number) => void;
@@ -50,6 +51,7 @@ const isVirtualId = (id?: string) => !!id && id.startsWith("virtual:");
 
 export default function PhysicalForm({
   ocId,
+  courseId,
   readOnly = false,
   activeSemester: controlledSemester,
   onSemesterChange,
@@ -66,7 +68,7 @@ export default function PhysicalForm({
     motivationFields,
     fetchScores,
     updateScores,
-  } = usePhysicalTraining(ocId);
+  } = usePhysicalTraining(ocId, courseId);
 
   const scoreById = useMemo(() => {
     const map = new Map<string, PhysicalTrainingScore>();
@@ -477,10 +479,10 @@ export default function PhysicalForm({
               <button
                 key={sem}
                 onClick={() => handleSemesterSelect(sem)}
-                disabled={isEditing || readOnly}
+                disabled={isEditing}
                 className={`px-4 py-2 rounded-t-lg font-medium ${
                   activeSemester === sem ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                } ${isEditing || readOnly ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {sem}
               </button>

@@ -20,7 +20,7 @@ vi.mock('@/app/db/queries/oc', () => ({
 }));
 
 vi.mock('@/app/db/queries/physicalTraining', () => ({
-    getPtTemplateBySemester: vi.fn(),
+    getPtTemplateByCourseSemester: vi.fn(),
 }));
 
 vi.mock('@/app/db/queries/physicalTrainingOc', () => ({
@@ -37,7 +37,7 @@ vi.mock('@/app/db/queries/physicalTrainingOc', () => ({
 import { mustBeAuthed } from '@/app/api/v1/oc/_checks';
 import { assertWorkflowDirectWriteAllowed } from '@/app/services/marksReviewWorkflow';
 import { listOCsBasic } from '@/app/db/queries/oc';
-import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
+import { getPtTemplateByCourseSemester } from '@/app/db/queries/physicalTraining';
 import {
     listTemplateScoresByIds,
     listMotivationFieldsByIds,
@@ -62,7 +62,7 @@ describe('PT bulk API', () => {
     });
 
     it('GET returns template and per-oc items', async () => {
-        (getPtTemplateBySemester as any).mockResolvedValue({
+        (getPtTemplateByCourseSemester as any).mockResolvedValue({
             semester: 1,
             types: [],
             motivationFields: [],
@@ -95,6 +95,11 @@ describe('PT bulk API', () => {
         expect(body.items).toHaveLength(1);
         expect(body.successCount).toBe(1);
         expect(body.errorCount).toBe(0);
+        expect(getPtTemplateByCourseSemester).toHaveBeenCalledWith(
+            '22222222-2222-4222-8222-222222222222',
+            1,
+            { includeDeleted: false, fallbackToLegacyGlobal: true },
+        );
     });
 
     it('GET returns 400 on invalid query', async () => {

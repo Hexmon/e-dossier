@@ -12,6 +12,8 @@ import type { InspFormData } from "@/types/dossierInsp";
 import { useDossierInspections, CreateInspectionData } from "@/hooks/useDossierInspections";
 import { useUsers } from "@/hooks/useUsers";
 import { useAppointments } from "@/hooks/useAppointments";
+import type { Appointment } from "@/app/lib/api/appointmentApi";
+import type { User } from "@/app/lib/api/userApi";
 import { Card, CardTitle } from "../ui/card";
 
 interface Props {
@@ -38,6 +40,14 @@ function areInspectionRowsEqual(a: InspFormData[], b: InspFormData[]) {
       row.initials === next.initials
     );
   });
+}
+
+function getUserAppointmentName(user: User | undefined, appointments: Appointment[]) {
+  return (
+    user?.activeAppointments?.[0]?.positionName ||
+    appointments.find((appointment) => appointment.userId === user?.id)?.positionName ||
+    ""
+  );
 }
 
 export default function InspFormComponent({ ocId, onSubmit, disabled = false, defaultValues }: Props) {
@@ -68,17 +78,18 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
   });
 
   const savedData = watch("savedData");
+  const draftInspections = watch("inspections");
 
   // Map API inspections to InspFormData for display and avoid writing identical form state.
   useEffect(() => {
     const mapped = inspections.map((insp) => {
-      const app = appointments.find((a) => a.userId === insp.inspector.id);
+      const user = users.find((item) => item.id === insp.inspector.id);
       return {
         id: insp.id,
         date: insp.date,
         rk: insp.inspector.rank,
         name: insp.inspector.name,
-        appointment: app?.positionName || insp.inspector.appointment || "",
+        appointment: getUserAppointmentName(user, appointments) || insp.inspector.appointment || "",
         remarks: insp.remarks || "",
         initials: insp.initials,
       };
@@ -92,7 +103,7 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
       shouldTouch: false,
       shouldValidate: false,
     });
-  }, [inspections, appointments, getValues, setValue]);
+  }, [inspections, users, appointments, getValues, setValue]);
 
   //Reset form whenever defaultValues change
   useEffect(() => {
@@ -100,6 +111,28 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
       reset(defaultValues);
     }
   }, [defaultValues, reset]);
+
+  useEffect(() => {
+    draftInspections.forEach((row, index) => {
+      if (!row.name) return;
+      const user = users.find((item) => item.name === row.name);
+      if (!user) return;
+
+      const rank = user.rank || "";
+      const initials = `${user.rank || ""} ${user.name}`.trim();
+      const appointment = getUserAppointmentName(user, appointments);
+
+      if (row.rk !== rank) {
+        setValue(`inspections.${index}.rk`, rank, { shouldDirty: false });
+      }
+      if (row.initials !== initials) {
+        setValue(`inspections.${index}.initials`, initials, { shouldDirty: false });
+      }
+      if (row.appointment !== appointment) {
+        setValue(`inspections.${index}.appointment`, appointment, { shouldDirty: false });
+      }
+    });
+  }, [draftInspections, users, appointments, setValue]);
 
   const handleDeleteFromTable = async (index: number) => {
     const currentSavedData = getValues("savedData");
@@ -265,8 +298,7 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
                             if (user) {
                               setValue(`inspections.${idx}.rk`, user.rank || '');
                               setValue(`inspections.${idx}.initials`, `${user.rank} ${user.name}` || '');
-                              const app = appointments.find(a => a.userId === user.id);
-                              setValue(`inspections.${idx}.appointment`, app?.positionName || '');
+                              setValue(`inspections.${idx}.appointment`, getUserAppointmentName(user, appointments));
                             }
                           }} value={field.value || undefined}>
                             <SelectTrigger>

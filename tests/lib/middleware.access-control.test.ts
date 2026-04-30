@@ -126,7 +126,7 @@ describe("middleware access-control hardening", () => {
       },
     } as any);
 
-    const res = await middleware(makeRequest("/api/v1/admin/users", { token: "pc-token" }));
+    const res = await middleware(makeRequest("/api/v1/admin/users/user-1", { token: "pc-token" }));
 
     expect(res.status).toBe(403);
     const body = await res.json();
@@ -150,9 +150,12 @@ describe("middleware access-control hardening", () => {
 
   it.each([
     "/api/v1/admin/interview/templates",
+    "/api/v1/admin/positions",
+    "/api/v1/admin/punishments",
     "/api/v1/admin/training-camps",
     "/api/v1/admin/training-camps/settings",
     "/api/v1/admin/physical-training/templates",
+    "/api/v1/admin/users",
   ])(
     "allows authenticated non-admin callers to reach shared read-only admin endpoint %s",
     async (path) => {
@@ -191,9 +194,12 @@ describe("middleware access-control hardening", () => {
 
   it.each([
     { path: "/api/v1/admin/interview/templates", method: "POST" },
+    { path: "/api/v1/admin/positions", method: "POST" },
+    { path: "/api/v1/admin/punishments", method: "POST" },
     { path: "/api/v1/admin/training-camps", method: "POST" },
     { path: "/api/v1/admin/training-camps/settings", method: "PATCH" },
     { path: "/api/v1/admin/physical-training/types", method: "POST" },
+    { path: "/api/v1/admin/users", method: "POST" },
   ])(
     "keeps shared admin endpoint $path with method $method admin-protected",
     async ({ path, method }) => {

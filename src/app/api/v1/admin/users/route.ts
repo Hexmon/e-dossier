@@ -4,21 +4,36 @@ export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { users } from '@/app/db/schema/auth/users';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
-import { json, handleApiError } from '@/app/lib/http';
-import { requireAdmin } from '@/app/lib/authz';
+import { json, handleApiError, ApiError } from '@/app/lib/http';
+import { hasAdminRole, requireAdmin, requireAuth } from '@/app/lib/authz';
 import { userQuerySchema, userCreateSchema } from '@/app/lib/validators';
 import argon2 from 'argon2';
 import { listUsersWithActiveAppointments, UserListQuery } from '@/app/db/queries/users';
 import { eq, isNull, or, and } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
+import { isBroadScopedPlatoonCommander } from '@/lib/platoon-commander-access';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
 // GET /api/v1/admin/users (ADMIN)
 async function GETHandler(req: AuditNextRequest) {
     try {
-        await requireAdmin(req);
+        const authCtx = await requireAuth(req);
+        const position =
+            typeof (authCtx.claims as any)?.apt?.position === 'string'
+                ? String((authCtx.claims as any).apt.position)
+                : null;
+        const scopeType =
+            typeof (authCtx.claims as any)?.apt?.scope?.type === 'string'
+                ? String((authCtx.claims as any).apt.scope.type)
+                : null;
+        if (
+            !hasAdminRole(authCtx.roles) &&
+            !isBroadScopedPlatoonCommander({ roles: authCtx.roles, position, scopeType })
+        ) {
+            throw new ApiError(403, 'Admin or platoon commander privileges required', 'forbidden');
+        }
 
         const { searchParams } = new URL(req.url);
         const qp = userQuerySchema.parse({
@@ -184,6 +199,6 @@ async function POSTHandler(req: AuditNextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const GET = withAuditRoute('GET', GETHandler);
 
 export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

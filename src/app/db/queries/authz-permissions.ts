@@ -87,6 +87,7 @@ const DEFAULT_PLATOON_COMMANDER_MARKS_ACTIONS = new Set<string>([
   'page:dashboard:milmgmt:physical-training:view',
   'admin:courses:read',
   'admin:courses:offerings:read',
+  'admin:punishments:read',
   'admin:physical-training:templates:read',
   'oc:read',
   'platoons:read',

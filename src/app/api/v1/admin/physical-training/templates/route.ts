@@ -16,10 +16,12 @@ async function GETHandler(req: AuditNextRequest) {
             courseId: sp.get('courseId') ?? undefined,
             semester: sp.get('semester') ?? undefined,
             includeDeleted: sp.get('includeDeleted') ?? undefined,
+            fallbackToLegacyGlobal: sp.get('fallbackToLegacyGlobal') ?? undefined,
         });
 
         const data = await getPtTemplateByCourseSemester(qp.courseId, qp.semester, {
             includeDeleted: qp.includeDeleted ?? false,
+            fallbackToLegacyGlobal: qp.fallbackToLegacyGlobal ?? false,
         });
         return json.ok({ message: 'PT template retrieved successfully.', data });
     } catch (err) {

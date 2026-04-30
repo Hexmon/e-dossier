@@ -28,7 +28,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/interview/templates/[templateId]/semesters/route.ts',
   'src/app/api/v1/admin/physical-training/motivation-fields/[id]/route.ts',
   'src/app/api/v1/admin/physical-training/motivation-fields/route.ts',
-  'src/app/api/v1/admin/physical-training/templates/route.ts',
   'src/app/api/v1/admin/physical-training/types/[typeId]/attempts/[attemptId]/grades/[gradeId]/route.ts',
   'src/app/api/v1/admin/physical-training/types/[typeId]/attempts/[attemptId]/grades/route.ts',
   'src/app/api/v1/admin/physical-training/types/[typeId]/attempts/[attemptId]/route.ts',
@@ -160,6 +159,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     ],
   },
   {
+    testFile: 'tests/api/admin.physical-training.templates.test.ts',
+    routeFiles: ['src/app/api/v1/admin/physical-training/templates/route.ts'],
+  },
+  {
     testFile: 'tests/api/admin.interview.templates.test.ts',
     routeFiles: ['src/app/api/v1/admin/interview/templates/route.ts'],
   },
@@ -251,6 +254,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/oc.physical-training.workflow.test.ts',
     routeFiles: ['src/app/api/v1/oc/physical-training/workflow/route.ts'],
+  },
+  {
+    testFile: 'tests/api/oc.physical-training.bulk.test.ts',
+    routeFiles: ['src/app/api/v1/oc/physical-training/bulk/route.ts'],
   },
   {
     testFile: 'tests/api/oc.autobiography.test.ts',

@@ -4,6 +4,7 @@ import { json, handleApiError } from '@/app/lib/http';
 import { mustHaveOcAccess } from '../../_checks';
 import { dossierInspections } from '@/app/db/schema/training/dossierInspections';
 import { users } from '@/app/db/schema/auth/users';
+import { appointments } from '@/app/db/schema/auth/appointments';
 import { positions } from '@/app/db/schema/auth/positions';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq, desc, and, isNull, sql } from 'drizzle-orm';
@@ -16,6 +17,13 @@ const inspectionSchema = z.object({
   date: z.coerce.date(),
   remarks: z.string().optional(),
 });
+
+const activeAppointmentJoin = and(
+  eq(appointments.userId, users.id),
+  isNull(appointments.deletedAt),
+  sql`${appointments.startsAt} <= now()`,
+  sql`(${appointments.endsAt} IS NULL OR ${appointments.endsAt} > now())`
+);
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
@@ -51,7 +59,8 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
       })
       .from(dossierInspections)
       .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
-      .leftJoin(positions, eq(users.appointId, positions.id))
+      .leftJoin(appointments, activeAppointmentJoin)
+      .leftJoin(positions, eq(appointments.positionId, positions.id))
       .where(and(eq(dossierInspections.ocId, ocId), isNull(dossierInspections.deletedAt)))
       .orderBy(desc(dossierInspections.createdAt));
 
@@ -136,7 +145,8 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
       })
       .from(dossierInspections)
       .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
-      .leftJoin(positions, eq(users.appointId, positions.id))
+      .leftJoin(appointments, activeAppointmentJoin)
+      .leftJoin(positions, eq(appointments.positionId, positions.id))
       .where(eq(dossierInspections.id, inspection.id))
       .limit(1);
 
@@ -226,7 +236,8 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
       })
       .from(dossierInspections)
       .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
-      .leftJoin(positions, eq(users.appointId, positions.id))
+      .leftJoin(appointments, activeAppointmentJoin)
+      .leftJoin(positions, eq(appointments.positionId, positions.id))
       .where(eq(dossierInspections.id, inspectionId))
       .limit(1);
 
