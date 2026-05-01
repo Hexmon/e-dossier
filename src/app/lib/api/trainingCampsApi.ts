@@ -123,12 +123,14 @@ export async function fetchTrainingCamps(params?: {
     semester?: 1 | 2 | 3 | 4 | 5 | 6;
     includeActivities?: boolean;
     includeDeleted?: boolean;
+    fallbackToLegacyGlobal?: boolean;
 }): Promise<TrainingCamp[]> {
     const query: Record<string, string> = {};
     if (params?.courseId) query.courseId = params.courseId;
     if (params?.semester) query.semester = String(params.semester);
     if (params?.includeActivities) query.includeActivities = "true";
     if (params?.includeDeleted) query.includeDeleted = "true";
+    if (params?.fallbackToLegacyGlobal) query.fallbackToLegacyGlobal = "true";
 
     const data = await apiRequest<TrainingCampListResponse>({
         method: "GET",

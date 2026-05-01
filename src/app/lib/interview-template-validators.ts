@@ -31,6 +31,7 @@ export const interviewTemplateQuerySchema = z.object({
     semester: Semester.optional(),
     includeDeleted: BoolString.optional(),
     hydrate: BoolString.optional(),
+    fallbackToLegacyGlobal: BoolString.optional(),
 });
 
 export const interviewTemplateParam = z.object({ templateId: z.string().uuid() });

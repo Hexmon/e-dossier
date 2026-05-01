@@ -30,14 +30,14 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             courseId: courseInfo.courseId,
             categoryId: qp.categoryId,
             isActive: qp.isActive,
-            fallbackToLegacyGlobal: false,
+            fallbackToLegacyGlobal: true,
         });
         const activeCategories = (qp.isActive ?? true)
             ? await getCourseTemplateCategories({
                 courseId: courseInfo.courseId,
                 includeSubtitles: false,
                 isActive: true,
-                fallbackToLegacyGlobal: false,
+                fallbackToLegacyGlobal: true,
             })
             : [];
         const templateMissing = (qp.isActive ?? true) && activeCategories.length === 0;

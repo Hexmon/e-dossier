@@ -179,6 +179,7 @@ export interface ListParams {
     courseId?: string;
     semester?: number;
     includeDeleted?: boolean;
+    fallbackToLegacyGlobal?: boolean;
     limit?: number;
     offset?: number;
     [key: string]: string | number | boolean | undefined;

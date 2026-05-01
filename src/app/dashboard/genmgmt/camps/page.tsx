@@ -107,7 +107,11 @@ export default function CampsManagement() {
     const { data: camps = [], isLoading: isFetchingCamps } = useQuery({
         queryKey: ["trainingCamps", selectedCourseId],
         queryFn: async () => {
-            const data = await fetchTrainingCamps({ courseId: selectedCourseId, includeActivities: true });
+            const data = await fetchTrainingCamps({
+                courseId: selectedCourseId,
+                includeActivities: true,
+                fallbackToLegacyGlobal: true,
+            });
             return data;
         },
         staleTime: 5 * 60 * 1000,

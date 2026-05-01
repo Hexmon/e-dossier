@@ -7,8 +7,6 @@ import {
     FormProvider,
     useFormContext
 } from "react-hook-form";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -127,8 +125,16 @@ function InnerClubDrillPage({
     } = useFormContext<FormValues>();
 
     /* Field arrays */
-    const { fields: clubFields } = useFieldArray({ control, name: "clubRows" });
-    const { fields: drillFields } = useFieldArray({ control, name: "drillRows" });
+    const { fields: clubFields, replace: replaceClubRows } = useFieldArray({
+        control,
+        name: "clubRows",
+        keyName: "fieldId",
+    });
+    const { fields: drillFields, replace: replaceDrillRows } = useFieldArray({
+        control,
+        name: "drillRows",
+        keyName: "fieldId",
+    });
     const { fields: achievementFields, append, remove } = useFieldArray({
         control,
         name: "achievements"
@@ -140,14 +146,15 @@ function InnerClubDrillPage({
     const { submitAchievements, fetchAchievements, deleteAchievement } = useAchievementActions(selectedCadet);
 
     useEffect(() => {
-        if (!selectedCadet) return;
+        if (!selectedCadet?.ocId) return;
+        let cancelled = false;
 
         // --- CLUB ---
         fetchClub().then((items) => {
-            if (!items) return;
+            if (cancelled || !items) return;
 
             const mapped = defaultClubRows.map(row => {
-                const found = items.find((x: any) => x.semester === romanToNumber[row.semester]);
+                const found = items.find((x: any) => Number(x.semester) === romanToNumber[row.semester]);
                 const { clubName, specialAchievement, remark, id } = found || {};
                 return {
                     id: id ?? null,
@@ -158,15 +165,15 @@ function InnerClubDrillPage({
                 };
             });
 
-            setValue("clubRows", mapped);
+            replaceClubRows(mapped);
         });
 
         fetchDrill().then((items) => {
-            if (!items) return;
+            if (cancelled || !items) return;
 
             const mapped = defaultDrillRows.map(row => {
                 const numSemester = romanToNumber[row.semester];
-                const api = items.find((x: any) => x.semester === numSemester);
+                const api = items.find((x: any) => Number(x.semester) === numSemester);
 
                 const {
                     id,
@@ -192,14 +199,18 @@ function InnerClubDrillPage({
                 };
             });
 
-            setValue("drillRows", mapped);
+            replaceDrillRows(mapped);
         });
 
         fetchAchievements().then((rows) => {
+            if (cancelled) return;
             setValue("achievements", rows.length ? rows : [{ id: null, achievement: "" }]);
         });
 
-    }, [selectedCadet]);
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedCadet?.ocId, fetchClub, fetchDrill, fetchAchievements, replaceClubRows, replaceDrillRows, setValue]);
 
     return (
         <DossierTab

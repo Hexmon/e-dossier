@@ -60,7 +60,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/training-camps/[campId]/activities/[activityId]/route.ts',
   'src/app/api/v1/admin/training-camps/[campId]/activities/route.ts',
   'src/app/api/v1/admin/training-camps/[campId]/route.ts',
-  'src/app/api/v1/admin/training-camps/route.ts',
   'src/app/api/v1/admin/users/check-username/route.ts',
   'src/app/api/v1/admin/users/route.ts',
 ] as const;
@@ -165,6 +164,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/admin.interview.templates.test.ts',
     routeFiles: ['src/app/api/v1/admin/interview/templates/route.ts'],
+  },
+  {
+    testFile: 'tests/api/admin.training-camps.test.ts',
+    routeFiles: ['src/app/api/v1/admin/training-camps/route.ts'],
   },
   {
     testFile: 'tests/api/admin.appointments-and-positions.test.ts',
