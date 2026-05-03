@@ -73,6 +73,17 @@ export interface OCPersonalRecord {
     updatedAt?: string;
 }
 
+type PersonalApiResponse =
+    | { data: OCPersonalRecord }
+    | { personal: OCPersonalRecord }
+    | OCPersonalRecord;
+
+function unwrapPersonalResponse(response: PersonalApiResponse): OCPersonalRecord {
+    if ("data" in response) return response.data;
+    if ("personal" in response) return response.personal;
+    return response;
+}
+
 
 // Fetch personal particulars for one OC
 export async function getOCPersonal(ocId: string) {
@@ -88,14 +99,13 @@ export async function createOCPersonal(
     ocId: string,
     body: Omit<OCPersonalRecord, "id" | "ocId" | "createdAt" | "updatedAt">
 ): Promise<OCPersonalRecord> {
-    const response = await api.post<{ personal: OCPersonalRecord }>(
+    const response = await api.post<PersonalApiResponse>(
         endpoints.oc.personal(ocId),
         body,
         { baseURL }
     );
 
-    if ("personal" in response) return response.personal;
-    return response as unknown as OCPersonalRecord;
+    return unwrapPersonalResponse(response);
 }
 
 // Update (PATCH) personal particulars for one OC
@@ -103,11 +113,10 @@ export async function updateOCPersonal(
     ocId: string,
     body: Partial<OCPersonalRecord> // Only include fields you want to update
 ): Promise<OCPersonalRecord> {
-    const response = await api.patch<{ personal: OCPersonalRecord }>(
+    const response = await api.patch<PersonalApiResponse>(
         `${baseURL}/api/v1/oc/${ocId}/personal`,
         body
     );
 
-    if ("personal" in response) return response.personal;
-    return response as unknown as OCPersonalRecord;
+    return unwrapPersonalResponse(response);
 }
