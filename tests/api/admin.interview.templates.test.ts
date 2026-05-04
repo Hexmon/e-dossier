@@ -140,6 +140,44 @@ describe("admin interview templates API", () => {
     expect(listInterviewTemplatesHydrated).not.toHaveBeenCalled();
   });
 
+  it("falls back to legacy global interview templates when requested", async () => {
+    vi.mocked(listInterviewTemplates)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "template-global",
+          courseId: null,
+          code: "PLCDR_INIT",
+          title: "PL CDR Initial Interview",
+          allowMultiple: false,
+          sortOrder: 1,
+          semesters: [1],
+        },
+      ] as any);
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path: "/api/v1/admin/interview/templates?courseId=11111111-1111-4111-8111-111111111111&semester=1&fallbackToLegacyGlobal=true",
+    });
+
+    const res = await GET(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].courseId).toBeNull();
+    expect(listInterviewTemplates).toHaveBeenNthCalledWith(1, {
+      courseId: "11111111-1111-4111-8111-111111111111",
+      semester: 1,
+      includeDeleted: false,
+    });
+    expect(listInterviewTemplates).toHaveBeenNthCalledWith(2, {
+      courseId: null,
+      semester: 1,
+      includeDeleted: false,
+    });
+  });
+
   it("returns hydrated interview templates when requested", async () => {
     const req = makeJsonRequest({
       method: "GET",

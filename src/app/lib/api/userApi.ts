@@ -16,6 +16,15 @@ export interface User {
     deletedAt?: string | null;
     deactivatedAt?: string | null;
     hasActiveAppointment?: boolean;
+    activeAppointments?: Array<{
+        id: string;
+        positionId: string;
+        positionKey: string;
+        positionName: string | null;
+        scopeType: string;
+        scopeId: string | null;
+        startsAt: string;
+    }>;
 }
 
 // API Response Types

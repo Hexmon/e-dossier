@@ -21,15 +21,21 @@ async function GETHandler(req: AuditNextRequest) {
             semester: sp.get('semester') ?? undefined,
             includeDeleted: sp.get('includeDeleted') ?? undefined,
             hydrate: sp.get('hydrate') ?? undefined,
+            fallbackToLegacyGlobal: sp.get('fallbackToLegacyGlobal') ?? undefined,
         });
         const query = {
             courseId: qp.courseId,
             semester: qp.semester,
             includeDeleted: qp.includeDeleted ?? false,
         };
-        const items = qp.hydrate
-            ? await listInterviewTemplatesHydrated(query)
-            : await listInterviewTemplates(query);
+        const list = qp.hydrate ? listInterviewTemplatesHydrated : listInterviewTemplates;
+        let items = await list(query);
+        if (qp.fallbackToLegacyGlobal && qp.courseId && items.length === 0) {
+            items = await list({
+                ...query,
+                courseId: null,
+            });
+        }
         return json.ok({ message: 'Interview templates retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);

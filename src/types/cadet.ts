@@ -5,4 +5,7 @@ export type Cadet = {
   ocNumber: string;
   ocId:string;
   currentSemester?: number | null;
+  platoonId?: string | null;
+  platoonKey?: string | null;
+  platoonName?: string | null;
 };

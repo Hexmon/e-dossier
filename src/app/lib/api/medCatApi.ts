@@ -21,8 +21,9 @@ export interface MedicalCategoryResponse extends MedicalCategoryPayload {
 }
 
 export interface ApiResponse<T = any> {
-    status: number;
+    status?: number;
     ok?: boolean;
+    message?: string;
     data?: T;
 }
 
@@ -50,10 +51,14 @@ export async function saveMedicalCategory(
             };
 
             console.log(" Sending Medical CAT payload:", payload);
-            const response = (await api.post(
+            const response = (await api.post<ApiResponse<MedicalCategoryResponse>, typeof payload>(
                 endpoints.oc.medicalCategory(ocId),
                 payload
-            )) as ApiResponse;
+            )) as ApiResponse<MedicalCategoryResponse>;
+
+            if (!response || response.ok === false) {
+                throw new Error(response?.message || "Failed to save Medical CAT");
+            }
 
             responses.push(response);
         }
@@ -61,7 +66,7 @@ export async function saveMedicalCategory(
         return responses;
     } catch (error: any) {
         console.error(" Failed to save Medical CAT:", error);
-        return [];
+        throw error;
     }
 }
 

@@ -30,7 +30,7 @@ async function ensureCourseTemplateConfigured(ocId: string) {
         courseId: courseInfo.courseId,
         includeSubtitles: true,
         isActive: true,
-        fallbackToLegacyGlobal: false,
+        fallbackToLegacyGlobal: true,
     });
     const hasActiveSubtitle = categories.some((category) => (category.subtitles ?? []).length > 0);
 

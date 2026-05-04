@@ -59,7 +59,7 @@ export function useMedicalCategory(ocId: string) {
 
                 const response = await saveMedicalCategory(ocId, payload);
 
-                if (!Array.isArray(response)) {
+                if (!Array.isArray(response) || response.length !== payload.length) {
                     toast.error("Failed to save MED CAT");
                     return null;
                 }

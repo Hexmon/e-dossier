@@ -6,9 +6,11 @@ import { UniversalTable, TableColumn, TableConfig } from "@/components/layout/Ta
 import { UseFormRegister, FieldArrayWithId } from "react-hook-form";
 import { FormValues } from "@/types/club-detls";
 
+type DrillField = FieldArrayWithId<FormValues, "drillRows", "fieldId">;
+
 interface Props {
     register: UseFormRegister<FormValues>;
-    fields: FieldArrayWithId<FormValues, "drillRows", "id">[];
+    fields: DrillField[];
     onSubmit?: (e?: any) => void;
     onReset?: () => void;
     disabled?: boolean;
@@ -16,15 +18,22 @@ interface Props {
 }
 
 export default function DrillForm({ register, fields, onSubmit, onReset, disabled = false, onEdit }: Props) {
-    const columns: TableColumn<FieldArrayWithId<FormValues, "drillRows", "id">>[] = [
+    const columns: TableColumn<DrillField>[] = [
         {
             key: "semester",
             label: "Semester",
             render: (value, row, index) => (
                 <>
-                    <input type="hidden" {...register(`drillRows.${index}.id` as const)} />
+                    <input
+                        key={`${row.fieldId}-id`}
+                        type="hidden"
+                        {...register(`drillRows.${index}.id` as const)}
+                        defaultValue={row.id ?? ""}
+                    />
                     <Input
+                        key={`${row.fieldId}-semester`}
                         {...register(`drillRows.${index}.semester` as const)}
+                        defaultValue={row.semester ?? ""}
                         readOnly
                         disabled
                         className="bg-muted/70 cursor-not-allowed"
@@ -38,8 +47,10 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
             type: "number",
             render: (value, row, index) => (
                 <Input
+                    key={`${row.fieldId}-maxMks`}
                     type="number"
                     {...register(`drillRows.${index}.maxMks` as const)}
+                    defaultValue={row.maxMks ?? ""}
                     disabled={disabled}
                 />
             )
@@ -50,8 +61,10 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
             type: "number",
             render: (value, row, index) => (
                 <Input
+                    key={`${row.fieldId}-m1`}
                     type="number"
                     {...register(`drillRows.${index}.m1` as const)}
+                    defaultValue={row.m1 ?? ""}
                     disabled={disabled}
                 />
             )
@@ -62,8 +75,10 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
             type: "number",
             render: (value, row, index) => (
                 <Input
+                    key={`${row.fieldId}-m2`}
                     type="number"
                     {...register(`drillRows.${index}.m2` as const)}
+                    defaultValue={row.m2 ?? ""}
                     disabled={disabled}
                 />
             )
@@ -74,8 +89,10 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
             type: "number",
             render: (value, row, index) => (
                 <Input
+                    key={`${row.fieldId}-a1c1`}
                     type="number"
                     {...register(`drillRows.${index}.a1c1` as const)}
+                    defaultValue={row.a1c1 ?? ""}
                     disabled={disabled}
                 />
             )
@@ -86,8 +103,10 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
             type: "number",
             render: (value, row, index) => (
                 <Input
+                    key={`${row.fieldId}-a2c2`}
                     type="number"
                     {...register(`drillRows.${index}.a2c2` as const)}
+                    defaultValue={row.a2c2 ?? ""}
                     disabled={disabled}
                 />
             )
@@ -97,14 +116,16 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
             label: "Remarks",
             render: (value, row, index) => (
                 <Input
+                    key={`${row.fieldId}-remarks`}
                     {...register(`drillRows.${index}.remarks` as const)}
+                    defaultValue={row.remarks ?? ""}
                     disabled={disabled}
                 />
             )
         }
     ];
 
-    const config: TableConfig<FieldArrayWithId<FormValues, "drillRows", "id">> = {
+    const config: TableConfig<DrillField> = {
         columns,
         features: {
             sorting: false,
@@ -132,7 +153,7 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
             </div>
 
             <div className="border rounded-lg shadow-sm">
-                <UniversalTable<FieldArrayWithId<FormValues, "drillRows", "id">>
+                <UniversalTable<DrillField>
                     data={fields}
                     config={config}
                 />

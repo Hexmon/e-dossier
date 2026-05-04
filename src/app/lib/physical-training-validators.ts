@@ -111,6 +111,7 @@ export const ptTemplateQuerySchema = z.object({
     courseId: z.string().uuid(),
     semester: Semester,
     includeDeleted: BoolString.optional(),
+    fallbackToLegacyGlobal: BoolString.optional(),
 });
 
 export const ptTemplateCopySchema = z.object({

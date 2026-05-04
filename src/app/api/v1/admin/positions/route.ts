@@ -7,15 +7,31 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
-import { requireAdmin } from '@/app/lib/authz';
+import { hasAdminRole, requireAdmin, requireAuth } from '@/app/lib/authz';
 import { isProtectedSystemPositionKeyValue } from '@/app/lib/admin-boundaries';
+import { isBroadScopedPlatoonCommander } from '@/lib/platoon-commander-access';
 
 export const runtime = 'nodejs';
 
 async function GETHandler(req: AuditNextRequest) {
     try {
-        const adminCtx = await requireAdmin(req);
-        const actor = { type: 'user' as const, id: adminCtx.userId };
+        const authCtx = await requireAuth(req);
+        const position =
+            typeof (authCtx.claims as any)?.apt?.position === 'string'
+                ? String((authCtx.claims as any).apt.position)
+                : null;
+        const scopeType =
+            typeof (authCtx.claims as any)?.apt?.scope?.type === 'string'
+                ? String((authCtx.claims as any).apt.scope.type)
+                : null;
+        if (
+            !hasAdminRole(authCtx.roles) &&
+            !isBroadScopedPlatoonCommander({ roles: authCtx.roles, position, scopeType })
+        ) {
+            throw new ApiError(403, 'Admin or platoon commander privileges required', 'forbidden');
+        }
+
+        const actor = { type: 'user' as const, id: authCtx.userId };
 
         const url = new URL(req.url);
         const includePlatoons =
@@ -166,6 +182,6 @@ async function POSTHandler(req: AuditNextRequest) {
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const GET = withAuditRoute('GET', GETHandler);
 
 export const POST = withAuditRoute('POST', withAuthz(POSTHandler));

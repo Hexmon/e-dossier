@@ -30,18 +30,15 @@ import {
 import { useAutobiography } from "@/hooks/useAutobiography";
 import { AutoBio } from "@/types/background-detls";
 import { AutoBioPayload } from "@/app/lib/api/autobiographyApi";
-import { getUsersByQuery } from "@/app/lib/api/userApi";
+import { getAllUsers, getUsersByQuery, type User } from "@/app/lib/api/userApi";
 import type { RootState } from "@/store";
 import { saveAutobiographyForm, clearAutobiographyForm } from "@/store/slices/autobiographySlice";
-import { useMe } from "@/hooks/useMe";
 import { ApiClientError } from "@/app/lib/apiClient";
+import type { Cadet } from "@/types/cadet";
 
 type Props = {
     ocId: string;
-    cadet: {
-        name?: string;
-        ocNumber?: string;
-    } | null;
+    cadet: Partial<Cadet> | null;
 };
 
 const textFields = ["general", "proficiency", "work", "additional"] as const;
@@ -71,18 +68,49 @@ function todayStr(): string {
     return new Date().toISOString().slice(0, 10);
 }
 
+function normalizeAppointmentToken(value: string | null | undefined): string {
+    return (value ?? "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+}
+
+function isPlatoonCommanderAppointment(appointment: NonNullable<User["activeAppointments"]>[number]) {
+    const key = normalizeAppointmentToken(appointment.positionKey);
+    const name = normalizeAppointmentToken(appointment.positionName);
+    return ["PL_CDR", "PLCDR", "PLATOON_COMMANDER", "PLATOON_CDR", "PTN_CDR"].some(
+        (token) => key === token || name === token
+    );
+}
+
+function appointmentMatchesCadetPlatoon(
+    appointment: NonNullable<User["activeAppointments"]>[number],
+    cadet: Partial<Cadet> | null
+) {
+    if (!isPlatoonCommanderAppointment(appointment)) return false;
+    if (normalizeAppointmentToken(appointment.scopeType) !== "PLATOON") return false;
+
+    const cadetPlatoonRefs = [
+        cadet?.platoonId,
+        cadet?.platoonKey,
+        cadet?.platoonName,
+    ]
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase());
+
+    if (cadetPlatoonRefs.length === 0) return true;
+
+    const scopeId = (appointment.scopeId ?? "").trim().toLowerCase();
+    return Boolean(scopeId && cadetPlatoonRefs.includes(scopeId));
+}
+
+function formatCommanderLabel(user: User): string {
+    return user.rank ? `${user.rank} ${user.name}` : user.name;
+}
+
 export default function AutobiographySection({ ocId, cadet }: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [showClearDialog, setShowClearDialog] = useState(false);
     const [commanderOptions, setCommanderOptions] = useState<Array<{ id: string; label: string }>>([]);
     const [isLoadingCommanders, setIsLoadingCommanders] = useState(false);
     const isInitialLoad = useRef(true);
-
-    // Fetch logged-in user for Platoon Commander display in view mode
-    const { data: meData } = useMe();
-    const meSignature = meData?.user
-        ? `${meData.user.rank ? meData.user.rank + " " : ""}${meData.user.name}`
-        : "";
 
     // Redux
     const dispatch = useDispatch();
@@ -106,21 +134,52 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
 
     const cadetName = cadet?.name ?? "";
     const selectedCommander = watch("sign_pi") ?? "";
+    const defaultCommanderName = commanderOptions[0]?.label ?? "";
 
     useEffect(() => {
-        if (!isEditing) return;
+        if (!isEditing && selectedCommander) return;
 
         let cancelled = false;
         const loadPlatoonCommanders = async () => {
             setIsLoadingCommanders(true);
             try {
-                // Uses: GET /api/v1/admin/users?q=pl_cdr
-                const users = await getUsersByQuery("pl_cdr", 100);
+                let users: User[] = [];
+                try {
+                    users = await getAllUsers({ limit: 500, isActive: true });
+                } catch {
+                    users = await getUsersByQuery("pl_cdr", 100);
+                }
+
+                let matchedUsers = users.filter((user) =>
+                    user.activeAppointments?.some((appointment) =>
+                        appointmentMatchesCadetPlatoon(appointment, cadet)
+                    )
+                );
+
+                if (matchedUsers.length === 0) {
+                    users = await getUsersByQuery("pl_cdr", 100);
+                    matchedUsers = users.filter((user) =>
+                        user.activeAppointments?.some((appointment) =>
+                            appointmentMatchesCadetPlatoon(appointment, cadet)
+                        )
+                    );
+                }
+
+                if (matchedUsers.length === 0 && !cadet?.platoonId && !cadet?.platoonKey && !cadet?.platoonName) {
+                    matchedUsers = users.filter((user) =>
+                        user.activeAppointments?.some(isPlatoonCommanderAppointment)
+                    );
+                }
+
+                if (matchedUsers.length === 0) {
+                    matchedUsers = users;
+                }
+
                 if (cancelled) return;
 
-                const options = users.map((user) => ({
+                const options = matchedUsers.map((user) => ({
                     id: user.id ?? `${user.username}-${user.name}`,
-                    label: user.rank ? `${user.rank} ${user.name}` : user.name,
+                    label: formatCommanderLabel(user),
                 }));
 
                 // Keep labels unique for Select value matching.
@@ -131,7 +190,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
             } catch {
                 if (cancelled) return;
                 setCommanderOptions([]);
-                toast.error("Failed to load platoon commanders");
+                if (isEditing) toast.error("Failed to load platoon commanders");
             } finally {
                 if (!cancelled) setIsLoadingCommanders(false);
             }
@@ -141,7 +200,12 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         return () => {
             cancelled = true;
         };
-    }, [isEditing]);
+    }, [cadet, isEditing, selectedCommander]);
+
+    useEffect(() => {
+        if (selectedCommander || !defaultCommanderName) return;
+        setValue("sign_pi", defaultCommanderName, { shouldDirty: false });
+    }, [defaultCommanderName, selectedCommander, setValue]);
 
     // Auto-save to Redux on form changes (only when editing and not initial load)
     useEffect(() => {
@@ -212,12 +276,12 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                 additional: "",
                 date: todayStr(),
                 sign_oc: cadetName,
-                sign_pi: "",
+                sign_pi: defaultCommanderName,
             });
             setIsEditing(true);
             isInitialLoad.current = false;
         }
-    }, [autoBio, cadetName]);
+    }, [autoBio, cadetName, defaultCommanderName, reset, savedFormData]);
 
     // Save handler
     const onSubmit = async (form: AutoBio) => {
@@ -280,7 +344,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
             additional: "",
             date: todayStr(),
             sign_oc: cadetName,
-            sign_pi: "",
+            sign_pi: defaultCommanderName,
         });
         toast.info("Form cleared");
         setShowClearDialog(false);
@@ -388,7 +452,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                                     </SelectContent>
                                 </Select>
                             ) : (
-                                <Input disabled value={selectedCommander || meSignature || ""} />
+                                <Input disabled value={selectedCommander || defaultCommanderName || ""} />
                             )}
                         </div>
                     </div>

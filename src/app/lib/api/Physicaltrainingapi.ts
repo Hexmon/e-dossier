@@ -251,12 +251,22 @@ export interface DeleteOptions {
 // TEMPLATE API
 // ============================================================================
 
-export async function getPTTemplate(courseIdOrSemester: string | number, maybeSemester?: number): Promise<PTTemplate> {
+export async function getPTTemplate(
+    courseIdOrSemester: string | number,
+    maybeSemester?: number,
+    options: { fallbackToLegacyGlobal?: boolean } = {},
+): Promise<PTTemplate> {
     const courseId = typeof courseIdOrSemester === "string" ? courseIdOrSemester : undefined;
     const semester = typeof courseIdOrSemester === "number" ? courseIdOrSemester : (maybeSemester as number);
     const response = await api.get<{ data: PTTemplate }>(
         `/api/v1/admin/physical-training/templates`,
-        { query: { ...(courseId ? { courseId } : {}), semester } }
+        {
+            query: {
+                ...(courseId ? { courseId } : {}),
+                semester,
+                ...(options.fallbackToLegacyGlobal ? { fallbackToLegacyGlobal: true } : {}),
+            },
+        }
     );
     return response.data;
 }

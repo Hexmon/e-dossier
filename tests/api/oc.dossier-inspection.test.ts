@@ -58,8 +58,10 @@ describe("GET /api/v1/oc/[ocId]/dossier-inspection", () => {
         from: () => ({
           leftJoin: () => ({
             leftJoin: () => ({
-              where: () => ({
-                orderBy: async () => [],
+              leftJoin: () => ({
+                where: () => ({
+                  orderBy: async () => [],
+                }),
               }),
             }),
           }),

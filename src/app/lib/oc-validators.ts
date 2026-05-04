@@ -46,7 +46,20 @@ export const personalUpsertSchema = z.object({
     fatherProfession: z.string().optional(),
     guardianName: z.string().optional(),
     guardianAddress: z.string().optional(),
-    monthlyIncome: z.coerce.number().int().optional(),
+    monthlyIncome: z.preprocess(
+        (value) => {
+            if (
+                value === '' ||
+                value === null ||
+                value === undefined ||
+                (typeof value === 'number' && Number.isNaN(value))
+            ) {
+                return null;
+            }
+            return value;
+        },
+        z.coerce.number().int().nullable().optional()
+    ),
     nokDetails: z.string().optional(),
     nokAddrPerm: z.string().optional(),
     nokAddrPresent: z.string().optional(),

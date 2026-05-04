@@ -130,6 +130,7 @@ export default function PhysicalTrainingPage() {
                 ) : null}
                 <PhysicalForm
                   ocId={ocId}
+                  courseId={cadet?.course ?? null}
                   readOnly={ptWorkflowActive || isActiveSemesterLocked}
                   activeSemester={activeSemester}
                   onSemesterChange={setActiveSemester}

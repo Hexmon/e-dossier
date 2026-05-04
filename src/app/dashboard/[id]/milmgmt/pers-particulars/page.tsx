@@ -96,11 +96,95 @@ export default function PersParticularsPage() {
         return output;
     }
 
+    function toApiPayload(formData: OCPersonalRecord): OCPersonalRecord {
+        const swimmerBool =
+            formData.swimmer === true ||
+            String(formData.swimmer) === "on" ||
+            String(formData.swimmer) === "true";
+        const monthlyIncome =
+            typeof formData.monthlyIncome === "number" && Number.isNaN(formData.monthlyIncome)
+                ? null
+                : formData.monthlyIncome;
+
+        return {
+            ...formData,
+            ocId,
+            pi: formData.pl ?? formData.pi,
+            bloodGroup: formData.bloodGp ?? formData.bloodGroup,
+            swimmer: swimmerBool,
+            monthlyIncome,
+        };
+    }
+
+    function getClearedPersonalForm(): OCPersonalRecord {
+        return {
+            ocId,
+            no: cadet?.ocNumber ?? "",
+            name: cadet?.name ?? "",
+            course: cadet?.courseName ?? "",
+            visibleIdentMarks: "",
+            pl: "",
+            pi: "",
+            dob: "",
+            placeOfBirth: "",
+            domicile: "",
+            religion: "",
+            nationality: "",
+            bloodGp: "",
+            bloodGroup: "",
+            identMarks: "",
+            fatherName: "",
+            fatherMobile: "",
+            fatherAddrPerm: "",
+            fatherAddrPresent: "",
+            fatherProfession: "",
+            guardianName: "",
+            guardianAddress: "",
+            monthlyIncome: null,
+            nokDetails: "",
+            nokAddrPerm: "",
+            nokAddrPresent: "",
+            nearestRailwayStation: "",
+            familyInSecunderabad: "",
+            relativeInArmedForces: "",
+            govtFinancialAssistance: false,
+            mobileNo: "",
+            email: "",
+            passportNo: "",
+            panNo: "",
+            aadhaarNo: "",
+            bankDetails: "",
+            idenCardNo: "",
+            upscRollNo: "",
+            ssbCentre: "",
+            games: "",
+            hobbies: "",
+            languages: "",
+            swimmer: false,
+            dsPiSsicNo: "",
+            dsPiRank: "",
+            dsPiName: "",
+            dsPiUnitArm: "",
+            dsPiMobile: "",
+            dsDyIcNo: "",
+            dsDyRank: "",
+            dsDyName: "",
+            dsDyUnitArm: "",
+            dsDyMobile: "",
+            dsCdrIcNo: "",
+            dsCdrRank: "",
+            dsCdrName: "",
+            dsCdrUnitArm: "",
+            dsCdrMobile: "",
+        };
+    }
+
     // ---------------------------
     // PRELOAD FORM DATA - SMART MERGE VERSION
     // ---------------------------
     useEffect(() => {
         if (!cadet || !personal) return;
+        if (isEditing) return;
 
         // Transform API data
         const {
@@ -129,24 +213,10 @@ export default function PersParticularsPage() {
         if (savedFormData) {
             console.log("Merging API data with Redux fallback");
 
-            const mergedData: Partial<OCPersonalRecord> = { ...transformedApiData };
-
-            // For each field, check if API value is empty, if so use Redux value
-            (Object.keys(transformedApiData) as (keyof OCPersonalRecord)[]).forEach((key) => {
-                const apiValue = transformedApiData[key];
-                const reduxValue = savedFormData[key];
-
-                // If API value is empty/null/undefined, use Redux value as fallback
-                const isApiEmpty = apiValue === null || apiValue === undefined || apiValue === "";
-                const hasReduxValue = reduxValue !== null && reduxValue !== undefined && reduxValue !== "";
-
-                if (isApiEmpty && hasReduxValue) {
-                    (mergedData as Record<string, unknown>)[key] = reduxValue;
-                } else {
-                    // Use API value (whether it's filled or empty)
-                    (mergedData as Record<string, unknown>)[key] = apiValue;
-                }
-            });
+            const mergedData: Partial<OCPersonalRecord> = {
+                ...transformedApiData,
+                ...savedFormData,
+            };
 
             console.log("Merged data:", mergedData);
             reset(mergedData as OCPersonalRecord);
@@ -156,7 +226,7 @@ export default function PersParticularsPage() {
         }
 
         setIsInitialized(true);
-    }, [cadet, personal, savedFormData, reset]);
+    }, [cadet, personal, savedFormData, reset, isEditing]);
 
     // ---------------------------
     // AUTO-SAVE TO REDUX (DEBOUNCED)
@@ -193,20 +263,7 @@ export default function PersParticularsPage() {
 
             if (!personal) {
                 // CREATE
-                const { pl, bloodGp, swimmer } = formData;
-
-                const swimmerBool =
-                    swimmer === true ||
-                    String(swimmer) === "on" ||
-                    String(swimmer) === "true";
-
-                payload = {
-                    ...formData,
-                    ocId,
-                    pi: pl,
-                    bloodGroup: bloodGp,
-                    swimmer: swimmerBool,
-                };
+                payload = toApiPayload(formData);
 
             } else {
                 // UPDATE
@@ -215,18 +272,10 @@ export default function PersParticularsPage() {
                     personal
                 );
 
-                const swimmer = merged.swimmer;
-
-                const swimmerBool =
-                    swimmer === true ||
-                    String(swimmer) === "on" ||
-                    String(swimmer) === "true";
-
-                payload = {
+                payload = toApiPayload({
                     ...merged,
-                    ocId,
-                    swimmer: swimmerBool,
-                };
+                    ...formData,
+                });
             }
 
             const saved = await savePersonal(payload);
@@ -258,32 +307,8 @@ export default function PersParticularsPage() {
             console.log("Clearing Redux cache manually");
             dispatch(clearPersonalForm(ocId));
 
-            if (cadet && personal) {
-                const {
-                    ocNumber,
-                    name: cadetName,
-                    courseName
-                } = cadet;
-
-                const {
-                    pi,
-                    dob,
-                    bloodGroup
-                } = personal;
-
-                const transformed: OCPersonalRecord = {
-                    ...personal,
-                    no: ocNumber,
-                    name: cadetName,
-                    pl: pi ?? "",
-                    dob: dob ? dob.split("T")[0] : "",
-                    bloodGp: bloodGroup ?? "",
-                    course: courseName ?? "",
-                };
-
-                reset(transformed);
-            }
-            setIsEditing(false);
+            reset(getClearedPersonalForm());
+            setIsEditing(true);
             toast.info("Form cleared");
         }
     };

@@ -25,14 +25,22 @@ async function GETHandler(req: AuditNextRequest) {
             semester: sp.get('semester') ?? undefined,
             includeActivities: sp.get('includeActivities') ?? undefined,
             includeDeleted: sp.get('includeDeleted') ?? undefined,
+            fallbackToLegacyGlobal: sp.get('fallbackToLegacyGlobal') ?? undefined,
         });
 
-        const items = await listTrainingCamps({
+        const query = {
             courseId: qp.courseId,
             semester: qp.semester,
             includeActivities: qp.includeActivities ?? false,
             includeDeleted: qp.includeDeleted ?? false,
-        });
+        };
+        let items = await listTrainingCamps(query);
+        if (qp.fallbackToLegacyGlobal && qp.courseId && items.length === 0) {
+            items = await listTrainingCamps({
+                ...query,
+                courseId: null,
+            });
+        }
 
         return json.ok({ message: 'Training camps retrieved successfully.', items, count: items.length });
     } catch (err) {

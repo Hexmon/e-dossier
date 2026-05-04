@@ -81,8 +81,8 @@ export default function InterviewTemplateManagementPage() {
     const listParams = !selectedCourseId
         ? undefined
         : semesterFilter !== "all"
-            ? { courseId: selectedCourseId, semester: parseInt(semesterFilter) }
-            : { courseId: selectedCourseId };
+            ? { courseId: selectedCourseId, semester: parseInt(semesterFilter), fallbackToLegacyGlobal: true }
+            : { courseId: selectedCourseId, fallbackToLegacyGlobal: true };
 
     const {
         loading,

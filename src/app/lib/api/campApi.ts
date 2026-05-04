@@ -100,6 +100,13 @@ export interface UpdateOcCampPayload extends CreateOcCampPayload {
     ocCampId: string;
 }
 
+export interface OcCampMutationResponse {
+    message?: string;
+    camp?: OcCamp;
+    camps?: OcCamp[];
+    grandTotalMarksScored?: number;
+}
+
 // API Functions
 
 /**
@@ -195,8 +202,8 @@ export const getOcCampByName = async (
 export const createOcCamp = async (
     ocId: string,
     payload: CreateOcCampPayload
-): Promise<{ camp: OcCamp }> => {
-    return api.post<{ camp: OcCamp }, CreateOcCampPayload>(
+): Promise<OcCampMutationResponse> => {
+    return api.post<OcCampMutationResponse, CreateOcCampPayload>(
         endpoints.oc.camps.create(ocId),
         payload
     );
@@ -208,8 +215,8 @@ export const createOcCamp = async (
 export const updateOcCamp = async (
     ocId: string,
     payload: UpdateOcCampPayload
-): Promise<{ camp: OcCamp }> => {
-    return api.put<{ camp: OcCamp }, UpdateOcCampPayload>(
+): Promise<OcCampMutationResponse> => {
+    return api.put<OcCampMutationResponse, UpdateOcCampPayload>(
         endpoints.oc.camps.update(ocId),
         payload
     );

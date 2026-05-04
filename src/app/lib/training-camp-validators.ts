@@ -28,6 +28,7 @@ export const trainingCampQuerySchema = z.object({
     semester: CampSemester.optional(),
     includeActivities: BoolString.optional(),
     includeDeleted: BoolString.optional(),
+    fallbackToLegacyGlobal: BoolString.optional(),
 });
 
 export const trainingCampSettingsSchema = z.object({
