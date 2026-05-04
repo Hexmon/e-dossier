@@ -101,6 +101,10 @@ export default function PersParticularsPage() {
             formData.swimmer === true ||
             String(formData.swimmer) === "on" ||
             String(formData.swimmer) === "true";
+        const monthlyIncome =
+            typeof formData.monthlyIncome === "number" && Number.isNaN(formData.monthlyIncome)
+                ? null
+                : formData.monthlyIncome;
 
         return {
             ...formData,
@@ -108,6 +112,70 @@ export default function PersParticularsPage() {
             pi: formData.pl ?? formData.pi,
             bloodGroup: formData.bloodGp ?? formData.bloodGroup,
             swimmer: swimmerBool,
+            monthlyIncome,
+        };
+    }
+
+    function getClearedPersonalForm(): OCPersonalRecord {
+        return {
+            ocId,
+            no: cadet?.ocNumber ?? "",
+            name: cadet?.name ?? "",
+            course: cadet?.courseName ?? "",
+            visibleIdentMarks: "",
+            pl: "",
+            pi: "",
+            dob: "",
+            placeOfBirth: "",
+            domicile: "",
+            religion: "",
+            nationality: "",
+            bloodGp: "",
+            bloodGroup: "",
+            identMarks: "",
+            fatherName: "",
+            fatherMobile: "",
+            fatherAddrPerm: "",
+            fatherAddrPresent: "",
+            fatherProfession: "",
+            guardianName: "",
+            guardianAddress: "",
+            monthlyIncome: null,
+            nokDetails: "",
+            nokAddrPerm: "",
+            nokAddrPresent: "",
+            nearestRailwayStation: "",
+            familyInSecunderabad: "",
+            relativeInArmedForces: "",
+            govtFinancialAssistance: false,
+            mobileNo: "",
+            email: "",
+            passportNo: "",
+            panNo: "",
+            aadhaarNo: "",
+            bankDetails: "",
+            idenCardNo: "",
+            upscRollNo: "",
+            ssbCentre: "",
+            games: "",
+            hobbies: "",
+            languages: "",
+            swimmer: false,
+            dsPiSsicNo: "",
+            dsPiRank: "",
+            dsPiName: "",
+            dsPiUnitArm: "",
+            dsPiMobile: "",
+            dsDyIcNo: "",
+            dsDyRank: "",
+            dsDyName: "",
+            dsDyUnitArm: "",
+            dsDyMobile: "",
+            dsCdrIcNo: "",
+            dsCdrRank: "",
+            dsCdrName: "",
+            dsCdrUnitArm: "",
+            dsCdrMobile: "",
         };
     }
 
@@ -239,32 +307,8 @@ export default function PersParticularsPage() {
             console.log("Clearing Redux cache manually");
             dispatch(clearPersonalForm(ocId));
 
-            if (cadet && personal) {
-                const {
-                    ocNumber,
-                    name: cadetName,
-                    courseName
-                } = cadet;
-
-                const {
-                    pi,
-                    dob,
-                    bloodGroup
-                } = personal;
-
-                const transformed: OCPersonalRecord = {
-                    ...personal,
-                    no: ocNumber,
-                    name: cadetName,
-                    pl: pi ?? "",
-                    dob: dob ? dob.split("T")[0] : "",
-                    bloodGp: bloodGroup ?? "",
-                    course: courseName ?? "",
-                };
-
-                reset(transformed);
-            }
-            setIsEditing(false);
+            reset(getClearedPersonalForm());
+            setIsEditing(true);
             toast.info("Form cleared");
         }
     };
