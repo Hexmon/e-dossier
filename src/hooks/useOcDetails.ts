@@ -35,6 +35,9 @@ export function useOcDetails(ocId?: string) {
                 ocNumber: oc.ocNo,
                 ocId: oc.id,
                 currentSemester: oc.currentSemester ?? null,
+                platoonId: oc.platoon?.id ?? oc.platoonId ?? null,
+                platoonKey: oc.platoon?.key ?? oc.platoonKey ?? null,
+                platoonName: oc.platoon?.name ?? oc.platoonName ?? null,
             });
         } catch (err) {
             setError("Failed to load cadet details");

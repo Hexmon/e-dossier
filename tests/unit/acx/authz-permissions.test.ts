@@ -47,6 +47,7 @@ describe('authz-permissions helpers', () => {
     expect(permissionSet.has('page:dashboard:manage-pt-marks:view')).toBe(true);
     expect(permissionSet.has('page:dashboard:milmgmt:academics:view')).toBe(true);
     expect(permissionSet.has('page:dashboard:milmgmt:physical-training:view')).toBe(true);
+    expect(permissionSet.has('admin:punishments:read')).toBe(true);
     expect(permissionSet.has('admin:physical-training:templates:read')).toBe(true);
     expect(permissionSet.has('oc:academics:read')).toBe(true);
     expect(permissionSet.has('oc:physical-training:read')).toBe(true);

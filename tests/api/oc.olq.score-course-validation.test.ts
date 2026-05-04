@@ -93,6 +93,12 @@ describe('OC OLQ score writes validate current course template', () => {
 
         expect(res.status).toBe(201);
         expect(body.data.id).toBe('sheet-1');
+        expect(olqQueries.getCourseTemplateCategories).toHaveBeenCalledWith({
+            courseId: 'course-1',
+            includeSubtitles: true,
+            isActive: true,
+            fallbackToLegacyGlobal: true,
+        });
     });
 
     it('PATCH returns 400 when subtitle is not in active course template', async () => {

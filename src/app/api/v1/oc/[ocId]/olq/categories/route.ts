@@ -29,7 +29,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
             courseId: courseInfo.courseId,
             includeSubtitles: qp.includeSubtitles ?? false,
             isActive: qp.isActive,
-            fallbackToLegacyGlobal: false,
+            fallbackToLegacyGlobal: true,
         });
         const templateMissing = (qp.isActive ?? true) && items.length === 0;
         const message = templateMissing

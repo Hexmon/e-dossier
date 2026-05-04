@@ -59,7 +59,7 @@ describe('OC OLQ template routes (read-only)', () => {
             courseId,
             includeSubtitles: true,
             isActive: true,
-            fallbackToLegacyGlobal: false,
+            fallbackToLegacyGlobal: true,
         });
     });
 
@@ -84,13 +84,13 @@ describe('OC OLQ template routes (read-only)', () => {
             courseId,
             categoryId,
             isActive: true,
-            fallbackToLegacyGlobal: false,
+            fallbackToLegacyGlobal: true,
         });
         expect(olqQueries.getCourseTemplateCategories).toHaveBeenCalledWith({
             courseId,
             includeSubtitles: false,
             isActive: true,
-            fallbackToLegacyGlobal: false,
+            fallbackToLegacyGlobal: true,
         });
     });
 

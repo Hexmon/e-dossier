@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { useFormContext, FieldValues } from "react-hook-form";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -42,7 +42,6 @@ export default function OcCampReviews({
   secondarySignatureLabel = "PI Cdr",
 }: OcCampReviewsProps) {
   const { watch, setValue, register } = useFormContext<FormValues>();
-  const initializedRef = useRef<Set<string>>(new Set());
 
   // Watch this specific camp's data by campName
   const campFormRow = watch(`campsByName.${campName}`) as
@@ -52,13 +51,27 @@ export default function OcCampReviews({
 
   // Initialize form reviews for this specific camp
   useEffect(() => {
-    if (!campName || initializedRef.current.has(campName)) return;
+    if (!campName) return;
 
-    // Mark as initialized immediately
-    initializedRef.current.add(campName);
+    const syncCampMetadata = () => {
+      if (camp?.trainingCampId) {
+        setValue(`campsByName.${campName}.trainingCampId`, camp.trainingCampId, {
+          shouldValidate: false,
+          shouldDirty: false,
+        });
+      }
 
-    // If camp data exists from API, use that
-    if (camp?.reviews && camp.reviews.length > 0) {
+      setValue(
+        `campsByName.${campName}.year`,
+        camp?.year || new Date().getFullYear(),
+        {
+          shouldValidate: false,
+          shouldDirty: false,
+        }
+      );
+    };
+
+    if (camp?.reviews && camp.reviews.length > 0 && (disabled || formReviews.length === 0)) {
       const apiReviews = camp.reviews.map((review) => ({
         role: review.role,
         sectionTitle: review.sectionTitle,
@@ -70,18 +83,7 @@ export default function OcCampReviews({
         shouldDirty: false,
       });
 
-      if (camp.trainingCampId) {
-        setValue(`campsByName.${campName}.trainingCampId`, camp.trainingCampId, {
-          shouldValidate: false,
-          shouldDirty: false,
-        });
-      }
-
-      setValue(`campsByName.${campName}.year`, camp.year, {
-        shouldValidate: false,
-        shouldDirty: false,
-      });
-
+      syncCampMetadata();
       return;
     }
 
@@ -114,33 +116,9 @@ export default function OcCampReviews({
         shouldDirty: false,
       });
 
-      if (camp?.trainingCampId) {
-        setValue(`campsByName.${campName}.trainingCampId`, camp.trainingCampId, {
-          shouldValidate: false,
-          shouldDirty: false,
-        });
-      }
-
-      setValue(
-        `campsByName.${campName}.year`,
-        camp?.year || new Date().getFullYear(),
-        {
-          shouldValidate: false,
-          shouldDirty: false,
-        }
-      );
+      syncCampMetadata();
     }
-  }, [campName, camp, formReviews.length, primarySignatureLabel, secondarySignatureLabel, setValue]);
-
-  // Reset initialized flag when camp changes
-  useEffect(() => {
-    return () => {
-      // Cleanup when component unmounts or camp changes
-      if (campName) {
-        initializedRef.current.delete(campName);
-      }
-    };
-  }, [campName]);
+  }, [campName, camp, disabled, formReviews.length, primarySignatureLabel, secondarySignatureLabel, setValue]);
 
   return (
     <div className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-card">

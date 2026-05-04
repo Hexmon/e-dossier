@@ -16,7 +16,7 @@ import {
     upsertOcPtScores,
 } from '@/app/db/queries/physicalTrainingOc';
 import { listOCsBasic } from '@/app/db/queries/oc';
-import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
+import { getPtTemplateByCourseSemester } from '@/app/db/queries/physicalTraining';
 import { isFreeEntryPtAttemptCode } from '@/app/lib/physical-training-attempts';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
@@ -115,7 +115,10 @@ async function GETHandler(req: AuditNextRequest) {
         }
 
         const [template, ocRows] = await Promise.all([
-            getPtTemplateBySemester(query.semester, { includeDeleted: false }),
+            getPtTemplateByCourseSemester(query.courseId, query.semester, {
+                includeDeleted: false,
+                fallbackToLegacyGlobal: true,
+            }),
             listOCsBasic({
                 courseId: query.courseId,
                 active: query.active,

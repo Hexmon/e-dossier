@@ -85,7 +85,7 @@ const makeVirtualScoreId = (parts: Array<string | undefined | null>) => {
   return `virtual:${safe}`;
 };
 
-export function usePhysicalTraining(ocId: string): UsePTReturn {
+export function usePhysicalTraining(ocId: string, courseId?: string | null): UsePTReturn {
   const [scores, setScores] = useState<PhysicalTrainingScore[]>([]);
   const [templatesByType, setTemplatesByType] = useState<Record<string, PhysicalTrainingTemplateRow[]>>({});
   const [templateMetaByType, setTemplateMetaByType] = useState<Record<string, PhysicalTrainingTemplateTypeInfo>>({});
@@ -103,7 +103,10 @@ export function usePhysicalTraining(ocId: string): UsePTReturn {
       const data: any = await apiRequest<any>({
         method: "GET",
         endpoint: "/api/v1/admin/physical-training/templates",
-        query: { semester },
+        query: {
+          ...(courseId ? { courseId, fallbackToLegacyGlobal: "true" } : {}),
+          semester,
+        },
       });
 
       const types = data?.data?.types ?? [];
@@ -197,13 +200,20 @@ export function usePhysicalTraining(ocId: string): UsePTReturn {
       const motivationFields: MotivationField[] = data?.data?.motivationFields ?? [];
       return { templates, motivationFields, templateMeta };
     },
-    []
+    [courseId]
   );
 
   const fetchScores = useCallback(
     async (semester: number) => {
       if (!ocId) {
         setError("OC ID is required");
+        return;
+      }
+      if (!courseId) {
+        setScores([]);
+        setTemplatesByType({});
+        setTemplateMetaByType({});
+        setMotivationFields([]);
         return;
       }
 

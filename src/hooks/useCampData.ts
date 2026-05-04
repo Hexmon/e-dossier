@@ -11,6 +11,7 @@ import {
     OcCamp,
     CreateOcCampPayload,
     UpdateOcCampPayload,
+    OcCampMutationResponse,
 } from "@/app/lib/api/campApi";
 
 /* =========================================================
@@ -230,6 +231,29 @@ interface UseCampMutationsReturn {
     mutationError: string | null;
 }
 
+function selectMutatedCamp(
+    response: OcCampMutationResponse,
+    payload: CreateOcCampPayload | UpdateOcCampPayload
+): OcCamp | null {
+    if (response.camp) return response.camp;
+
+    const camps = response.camps ?? [];
+    if (camps.length === 0) return null;
+
+    if ("ocCampId" in payload) {
+        const byOcCampId = camps.find((camp) => {
+            return camp.id === payload.ocCampId || camp.ocCampId === payload.ocCampId;
+        });
+        if (byOcCampId) return byOcCampId;
+    }
+
+    return (
+        camps.find((camp) => camp.trainingCampId === payload.trainingCampId) ??
+        camps[0] ??
+        null
+    );
+}
+
 /**
  * Create / Update / Delete OC camps
  */
@@ -249,8 +273,8 @@ export const useCampMutations = (ocId: string): UseCampMutationsReturn => {
             try {
                 setIsCreating(true);
                 setMutationError(null);
-                const { camp } = await createOcCamp(ocId, payload);
-                return camp;
+                const response = await createOcCamp(ocId, payload);
+                return selectMutatedCamp(response, payload);
             } catch (err) {
                 const message =
                     err instanceof Error
@@ -276,8 +300,8 @@ export const useCampMutations = (ocId: string): UseCampMutationsReturn => {
             try {
                 setIsUpdating(true);
                 setMutationError(null);
-                const { camp } = await updateOcCamp(ocId, payload);
-                return camp;
+                const response = await updateOcCamp(ocId, payload);
+                return selectMutatedCamp(response, payload);
             } catch (err) {
                 const message =
                     err instanceof Error

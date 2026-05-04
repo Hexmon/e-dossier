@@ -36,7 +36,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const authCtx = await mustBeAdmin(req);
+    const authCtx = await mustBeAuthed(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
@@ -74,12 +74,12 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const authCtx = await mustBeAdmin(req);
+    const sp = new URL(req.url).searchParams;
+    const hard = sp.get('hard') === 'true';
+    const authCtx = hard ? await mustBeAdmin(req) : await mustBeAuthed(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
-    const sp = new URL(req.url).searchParams;
-    const hard = sp.get('hard') === 'true';
     const previous = await getSportsAndGames(ocId, id);
     if (!previous) throw new ApiError(404, 'Sports/games record not found', 'not_found');
     await assertOcSemesterWriteAllowed({ ocId, requestedSemester: previous.semester, request: req, authContext: authCtx });

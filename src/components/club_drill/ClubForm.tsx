@@ -9,9 +9,11 @@ import {
 } from "react-hook-form";
 import { FormValues } from "@/types/club-detls";
 
+type ClubField = FieldArrayWithId<FormValues, "clubRows", "fieldId">;
+
 interface Props {
     register: UseFormRegister<FormValues>;
-    fields: FieldArrayWithId<FormValues, "clubRows", "id">[];
+    fields: ClubField[];
     onSubmit?: (e?: any) => void;
     onReset?: () => void;
     disabled?: boolean;
@@ -26,17 +28,21 @@ export default function ClubForm({
     disabled = false,
     onEdit
 }: Props) {
-    const columns: TableColumn<FieldArrayWithId<FormValues, "clubRows", "id">>[] = [
+    const columns: TableColumn<ClubField>[] = [
         {
             key: "semester",
             label: "Semester",
             render: (value, row, index) => (
                 <>
                     <input type="hidden"
+                        key={`${row.fieldId}-id`}
                         {...register(`clubRows.${index}.id` as const)}
+                        defaultValue={row.id ?? ""}
                     />
                     <Input
+                        key={`${row.fieldId}-semester`}
                         {...register(`clubRows.${index}.semester` as const)}
+                        defaultValue={row.semester ?? ""}
                         readOnly
                         disabled
                         className="bg-muted/70 cursor-not-allowed"
@@ -49,7 +55,9 @@ export default function ClubForm({
             label: "Name of Club",
             render: (value, row, index) => (
                 <Input
+                    key={`${row.fieldId}-clubName`}
                     {...register(`clubRows.${index}.clubName` as const)}
+                    defaultValue={row.clubName ?? ""}
                     disabled={disabled}
                 />
             )
@@ -59,7 +67,9 @@ export default function ClubForm({
             label: "Spl Achievement",
             render: (value, row, index) => (
                 <Input
+                    key={`${row.fieldId}-splAchievement`}
                     {...register(`clubRows.${index}.splAchievement` as const)}
+                    defaultValue={row.splAchievement ?? ""}
                     disabled={disabled}
                 />
             )
@@ -69,14 +79,16 @@ export default function ClubForm({
             label: "Remarks",
             render: (value, row, index) => (
                 <Input
+                    key={`${row.fieldId}-remarks`}
                     {...register(`clubRows.${index}.remarks` as const)}
+                    defaultValue={row.remarks ?? ""}
                     disabled={disabled}
                 />
             )
         }
     ];
 
-    const config: TableConfig<FieldArrayWithId<FormValues, "clubRows", "id">> = {
+    const config: TableConfig<ClubField> = {
         columns,
         features: {
             sorting: false,
@@ -99,7 +111,7 @@ export default function ClubForm({
     return (
         <form onSubmit={onSubmit} className="space-y-6">
             <div className="border rounded-lg shadow-sm">
-                <UniversalTable<FieldArrayWithId<FormValues, "clubRows", "id">>
+                <UniversalTable<ClubField>
                     data={fields}
                     config={config}
                 />

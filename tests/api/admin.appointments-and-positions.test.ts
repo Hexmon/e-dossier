@@ -28,6 +28,7 @@ vi.mock("@/app/lib/acx/withAuthz", () => ({
 }));
 
 vi.mock("@/app/lib/authz", () => ({
+  hasAdminRole: vi.fn((roles?: string[]) => Array.isArray(roles) && roles.includes("ADMIN")),
   requireAuth: vi.fn(),
   requireAdmin: vi.fn(),
 }));
@@ -36,6 +37,16 @@ vi.mock("@/app/lib/admin-boundaries", () => ({
   assertCanAssignAppointment: vi.fn(async () => undefined),
   assertCanManageAppointmentRecord: vi.fn(async () => undefined),
   assertCanManageUser: vi.fn(async () => undefined),
+}));
+
+vi.mock("@/lib/platoon-commander-access", () => ({
+  isBroadScopedPlatoonCommander: vi.fn(
+    (input: { roles?: string[]; position?: string | null; scopeType?: string | null }) =>
+      input.scopeType === "PLATOON" &&
+      [...(input.roles ?? []), input.position ?? ""].some((token) =>
+        ["PL_CDR", "PLATOON_COMMANDER", "PTN_CDR"].includes(token)
+      )
+  ),
 }));
 
 vi.mock("@/app/db/client", () => ({
@@ -190,7 +201,7 @@ describe("admin appointments and positions access", () => {
   });
 
   it("denies unauthenticated GET /api/v1/admin/positions", async () => {
-    (requireAdmin as any).mockRejectedValueOnce(
+    (requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, "Unauthorized", "unauthorized")
     );
 
@@ -206,7 +217,7 @@ describe("admin appointments and positions access", () => {
   });
 
   it("allows admin GET /api/v1/admin/positions", async () => {
-    (requireAdmin as any).mockResolvedValueOnce({
+    (requireAuth as any).mockResolvedValueOnce({
       userId: "admin-1",
       roles: ["ADMIN"],
       claims: { apt: { position: "ADMIN" } },
@@ -235,6 +246,38 @@ describe("admin appointments and positions access", () => {
 
     expect(res.status).toBe(200);
     expect(body.data[0].key).toBe("ADMIN");
+  });
+
+  it("allows scoped PL CDR GET /api/v1/admin/positions", async () => {
+    (requireAuth as any).mockResolvedValueOnce({
+      userId: "plcdr-1",
+      roles: ["PL_CDR"],
+      claims: { apt: { position: "PL_CDR", scope: { type: "PLATOON", id: "platoon-1" } } },
+    });
+
+    selectMock.mockImplementationOnce(() =>
+      buildPositionsSelectResult([
+        {
+          id: "position-1",
+          key: "PL_CDR",
+          displayName: "PL CDR",
+          defaultScope: "PLATOON",
+          singleton: true,
+          description: null,
+          createdAt: "2026-04-04T00:00:00.000Z",
+        },
+      ])
+    );
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path: "/api/v1/admin/positions",
+    });
+    const res = await getPositionsRoute(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data[0].key).toBe("PL_CDR");
   });
 
   it("PATCH /api/v1/admin/appointments/[id] updates the appointment holder without mutating usernames", async () => {

@@ -36,7 +36,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
 async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const authCtx = await mustBeAdmin(req);
+    const authCtx = await mustBeAuthed(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
@@ -66,12 +66,12 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
 async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
-    const authCtx = await mustBeAdmin(req);
+    const sp = new URL(req.url).searchParams;
+    const hard = sp.get('hard') === 'true';
+    const authCtx = hard ? await mustBeAdmin(req) : await mustBeAuthed(req);
     const { ocId } = await parseParam({ params }, OcIdParam);
     await ensureOcExists(ocId);
     const { id } = await parseParam({ params }, IdSchema);
-    const sp = new URL(req.url).searchParams;
-    const hard = sp.get('hard') === 'true';
     const row = await deleteSpecialAchievementInFiring(ocId, id, { hard });
     if (!row) throw new ApiError(404, 'Special achievement record not found', 'not_found');
 

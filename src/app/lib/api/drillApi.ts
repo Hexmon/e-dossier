@@ -26,12 +26,18 @@ export interface DrillResponse {
     updatedAt: string;
 }
 
+type DataResponse<T> = {
+    message?: string;
+    data: T;
+};
+
 export async function createOcDrill(ocId: string, body: DrillPayload) {
-    return api.post<DrillResponse, DrillPayload>(
+    const res = await api.post<DataResponse<DrillResponse>, DrillPayload>(
         endpoints.oc.drill(ocId),
         body,
         { path: { ocId } }
     );
+    return res.data;
 }
 
 export async function listOcDrill(ocId: string, limit = 50, offset = 0) {
@@ -47,9 +53,10 @@ export async function listOcDrill(ocId: string, limit = 50, offset = 0) {
 }
 
 export async function updateOcDrill(ocId: string, drillId: string, body: Partial<DrillPayload>) {
-    return api.patch<DrillResponse, Partial<DrillPayload>>(
+    const res = await api.patch<DataResponse<DrillResponse>, Partial<DrillPayload>>(
         endpoints.oc.drillById(ocId, drillId),
         body,
         { path: { ocId, drillId } }
     );
+    return res.data;
 }

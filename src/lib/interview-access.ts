@@ -352,8 +352,11 @@ function hasPermission(context: InterviewAccessContext, permission: string) {
 
 export function resolveInterviewAccessContext(input: InterviewAccessInput): InterviewAccessContext {
     const explicitPermissions = collectPermissions(input.permissions);
+    const fallbackPermissions = collectFallbackPermissions(input);
+    addPermissions(explicitPermissions, fallbackPermissions);
+
     return {
-        permissions: explicitPermissions.size > 0 ? explicitPermissions : collectFallbackPermissions(input),
+        permissions: explicitPermissions,
         deniedPermissions: collectPermissions(input.deniedPermissions),
     };
 }

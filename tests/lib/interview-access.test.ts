@@ -31,6 +31,18 @@ describe("interview access mapping", () => {
     expect(context.permissions.has(INTERVIEW_WRITE_PERMISSIONS.term.postmid)).toBe(true);
   });
 
+  it("merges role fallback permissions when explicit permissions are present but incomplete", () => {
+    const context = resolveInterviewAccessContext({
+      permissions: ["page:dashboard:milmgmt:interviews:view"],
+      roles: ["PL_CDR"],
+      position: "PL_CDR",
+      scopeType: "PLATOON",
+    });
+
+    expect(context.permissions.has("page:dashboard:milmgmt:interviews:view")).toBe(true);
+    expect(canEditInitialInterviewOfficer(context, "plcdr")).toBe(true);
+  });
+
   it("recognizes platoon-specific PL CDR authority keys for fallback interview permissions", () => {
     expect(
       resolveInterviewFallbackPermissionKeys({

@@ -35,6 +35,9 @@ export function useOcPersonal(ocId?: string | null) {
                 ocNumber: oc.ocNo ?? "",
                 ocId: oc.id ?? "",
                 currentSemester: oc.currentSemester ?? null,
+                platoonId: oc.platoon?.id ?? oc.platoonId ?? null,
+                platoonKey: oc.platoon?.key ?? oc.platoonKey ?? null,
+                platoonName: oc.platoon?.name ?? oc.platoonName ?? null,
             };
 
             setCadet(data);

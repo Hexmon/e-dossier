@@ -17,15 +17,27 @@ export interface CreateClubResponse {
     remark: string;
 }
 
+type DataResponse<T> = {
+    message?: string;
+    data: T;
+};
+
+type ListResponse<T> = {
+    message?: string;
+    items: T[];
+    count: number;
+};
+
 export async function createOcClub(ocId: string, body: CreateClubBody) {
-    return api.post<CreateClubResponse, CreateClubBody>(
+    const res = await api.post<DataResponse<CreateClubResponse>, CreateClubBody>(
         endpoints.oc.clubDetls(ocId),
         body
     );
+    return res.data;
 }
 
 export async function getOcClubs(ocId: string) {
-    return api.get(
+    return api.get<ListResponse<CreateClubResponse>>(
         endpoints.oc.clubDetls(ocId)
     );
 }
@@ -35,8 +47,9 @@ export async function updateOcClub(
     clubDtlId: string,
     body: CreateClubBody
 ) {
-    return api.patch(
+    const res = await api.patch<DataResponse<CreateClubResponse>, CreateClubBody>(
         endpoints.oc.clubDetlsById(ocId, clubDtlId),
         body
     );
+    return res.data;
 }

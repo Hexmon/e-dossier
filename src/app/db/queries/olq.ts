@@ -146,7 +146,7 @@ export async function ensureCategoryBelongsToCourse(categoryId: string, courseId
 }
 
 export async function ensureSubtitleBelongsToCourseAndActive(subtitleId: string, courseId: string) {
-    const [row] = await db
+    const selectSubtitle = (allowLegacyGlobal: boolean) => db
         .select({
             id: ocOlqSubtitles.id,
             maxMarks: ocOlqSubtitles.maxMarks,
@@ -157,8 +157,18 @@ export async function ensureSubtitleBelongsToCourseAndActive(subtitleId: string,
         })
         .from(ocOlqSubtitles)
         .innerJoin(ocOlqCategories, eq(ocOlqCategories.id, ocOlqSubtitles.categoryId))
-        .where(and(eq(ocOlqSubtitles.id, subtitleId), eq(ocOlqCategories.courseId, courseId)))
+        .where(and(
+            eq(ocOlqSubtitles.id, subtitleId),
+            allowLegacyGlobal ? isNull(ocOlqCategories.courseId) : eq(ocOlqCategories.courseId, courseId),
+        ))
         .limit(1);
+
+    const [courseRow] = await selectSubtitle(false);
+    let row = courseRow;
+    if (!row) {
+        const [globalRow] = await selectSubtitle(true);
+        row = globalRow;
+    }
 
     if (!row) {
         throw new ApiError(400, 'Subtitle does not belong to OC course template', 'bad_request');

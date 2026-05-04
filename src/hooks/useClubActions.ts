@@ -54,8 +54,8 @@ export const useClubActions = (selectedCadet: any) => {
 
     const fetchClub = useCallback(async () => {
         if (!selectedCadet?.ocId) return [];
-        const res: any = await getOcClubs(selectedCadet.ocId);
-        return res?.items ?? res ?? [];
+        const res = await getOcClubs(selectedCadet.ocId);
+        return res.items ?? [];
     }, [selectedCadet?.ocId]);
 
     return { submitClub, fetchClub };

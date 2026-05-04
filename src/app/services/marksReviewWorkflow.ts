@@ -28,7 +28,7 @@ import {
   upsertOcPtMotivationValues,
   upsertOcPtScores,
 } from '@/app/db/queries/physicalTrainingOc';
-import { getPtTemplateBySemester } from '@/app/db/queries/physicalTraining';
+import { getPtTemplateByCourseSemester } from '@/app/db/queries/physicalTraining';
 import {
   buildAcademicsPublishItems,
   buildAcademicsWorkflowKey,
@@ -308,7 +308,10 @@ async function buildPtLiveDraftPayload(args: {
   }
 
   const [template, ocRows] = await Promise.all([
-    getPtTemplateBySemester(args.semester, { includeDeleted: false }),
+    getPtTemplateByCourseSemester(args.courseId, args.semester, {
+      includeDeleted: false,
+      fallbackToLegacyGlobal: true,
+    }),
     listOCsBasic({
       courseId: args.courseId,
       active: false,

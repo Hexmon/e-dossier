@@ -88,7 +88,7 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
     // -----------------------------------------------------------------------
     const templateQuery = useQuery({
         queryKey: QK.template(courseId, semester),
-        queryFn: () => getPTTemplate(courseId, semester),
+        queryFn: () => getPTTemplate(courseId, semester, { fallbackToLegacyGlobal: true }),
         staleTime: 5 * 60 * 1000,
         enabled: Boolean(courseId),
     });
