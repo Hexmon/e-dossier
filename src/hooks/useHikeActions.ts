@@ -10,6 +10,7 @@ import {
     deleteOcHikeRecord,
 } from "@/app/lib/api/hikeApi";
 import { HikeFormValues } from "@/types/hike";
+import { isHikeMissingDates } from "@/lib/hikeValidation";
 
 export const useHikeActions = (selectedCadet: any) => {
     const { getValues, setValue } = useFormContext<HikeFormValues>();
@@ -17,10 +18,14 @@ export const useHikeActions = (selectedCadet: any) => {
     const submitHike = async () => {
         if (!selectedCadet?.ocId) {
             toast.error("No cadet selected");
-            return;
+            return false;
         }
 
         const rows = getValues().hikeRows;
+        if (rows.some(isHikeMissingDates)) {
+            toast.error("Please mention dates");
+            return false;
+        }
 
         try {
             for (let i = 0; i < rows.length; i++) {
@@ -53,9 +58,11 @@ export const useHikeActions = (selectedCadet: any) => {
             }
 
             toast.success("Hike records saved!");
+            return true;
         } catch (err) {
             console.error(err);
             toast.error("Failed to save hike records");
+            return false;
         }
     };
 

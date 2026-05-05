@@ -5,6 +5,7 @@ import {
   applySpecialInterviewActorAutofill,
   buildInterviewActorDisplayName,
   createDefaultSpecialInterviewRecord,
+  normalizeExistingSpecialInterviewRecords,
   resolveTermActorAutofillFields,
 } from "@/lib/interviewFormAutofill";
 
@@ -103,5 +104,17 @@ describe("interview form autofill", () => {
       interviewedBy: "Capt A Kumar",
       rowIndex: 2,
     });
+  });
+
+  it("preserves intentionally cleared special interview interviewer names while normalizing saved rows", () => {
+    const records = normalizeExistingSpecialInterviewRecords([
+      { date: "", summary: "", interviewedBy: "" },
+      { date: "2026-05-05", summary: "Follow up", interviewedBy: "Maj Existing", rowIndex: 4, rowId: "row-4" },
+    ]);
+
+    expect(records).toEqual([
+      { date: "", summary: "", interviewedBy: "", rowIndex: 0, rowId: undefined },
+      { date: "2026-05-05", summary: "Follow up", interviewedBy: "Maj Existing", rowIndex: 4, rowId: "row-4" },
+    ]);
   });
 });

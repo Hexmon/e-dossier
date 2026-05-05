@@ -19,7 +19,7 @@ import {
 } from "@/types/detention";
 
 import DetentionForm from "@/components/detention/DetentionForm";
-import { useDetentionActions } from "@/hooks/useDetentionActions";
+import { isDetentionMissingDates, useDetentionActions } from "@/hooks/useDetentionActions";
 
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { semesters } from "@/constants/app.constants";
@@ -248,6 +248,10 @@ function InnerDetentionPage({
 
     const saveInlineEdit = async (rowIndex: number) => {
         if (!editingValues || !editingValues.id) return;
+        if (isDetentionMissingDates(editingValues)) {
+            toast.error("Please mention dates");
+            return;
+        }
 
         try {
             await updateOcDetentionRecord(ocId, editingValues.id, {
@@ -285,7 +289,11 @@ function InnerDetentionPage({
             setValue(`detentionRows.${index}.semester`, activeTab + 1);
         });
 
-        await submitDetention();
+        const didSave = await submitDetention();
+        if (!didSave) {
+            return;
+        }
+
         toast.success("New detention records saved");
 
         // Clear Redux cache after successful save

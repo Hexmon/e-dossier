@@ -180,22 +180,44 @@ interface UseTrainingCampsReturn {
     refetch: () => Promise<void>;
 }
 
+interface UseTrainingCampsOptions {
+    courseId?: string | null;
+    semester?: number;
+    enabled?: boolean;
+    fallbackToLegacyGlobal?: boolean;
+}
+
 /**
  * Fetch all training camps
  */
-export const useTrainingCamps = (): UseTrainingCampsReturn => {
+export const useTrainingCamps = (options: UseTrainingCampsOptions = {}): UseTrainingCampsReturn => {
+    const {
+        courseId,
+        semester,
+        enabled = true,
+        fallbackToLegacyGlobal = false,
+    } = options;
     const [trainingCamps, setTrainingCamps] = useState<TrainingCamp[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const fetchTrainingCamps = useCallback(async () => {
+        if (!enabled) {
+            setTrainingCamps([]);
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
             const { items } = await getAllTrainingCamps({
+                ...(courseId ? { courseId } : {}),
+                ...(semester ? { semester } : {}),
                 includeActivities: true,
                 includeReviews: true,
                 includeDeleted: false,
+                fallbackToLegacyGlobal,
             });
             setTrainingCamps(items ?? []);
         } catch (err) {
@@ -208,7 +230,7 @@ export const useTrainingCamps = (): UseTrainingCampsReturn => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [courseId, enabled, fallbackToLegacyGlobal, semester]);
 
     useEffect(() => {
         fetchTrainingCamps();

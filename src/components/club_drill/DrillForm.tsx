@@ -161,7 +161,15 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
 
             {disabled ? (
                 <div className="flex justify-center mt-4">
-                    <Button type="button" className="bg-primary text-primary-foreground" onClick={onEdit}>
+                    <Button
+                        type="button"
+                        className="bg-primary text-primary-foreground"
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onEdit?.();
+                        }}
+                    >
                         Edit Drill
                     </Button>
                 </div>
@@ -171,7 +179,7 @@ export default function DrillForm({ register, fields, onSubmit, onReset, disable
                         Save Drill
                     </Button>
                     <Button type="button" variant="outline" onClick={onReset}>
-                        Reset Drill
+                        Cancel
                     </Button>
                 </div>
             )}

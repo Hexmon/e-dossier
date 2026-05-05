@@ -2,25 +2,144 @@ import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { parseParam, ensureOcExists, mustHaveOcAccess } from '../../_checks';
-import { ocCommissioning, ocImages } from '@/app/db/schema/training/oc';
-import { eq } from 'drizzle-orm';
+import { ocCadets, ocCommissioning, ocImages } from '@/app/db/schema/training/oc';
+import { courses } from '@/app/db/schema/training/courses';
+import { eq, or } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { buildImageKey, createPresignedUploadUrl, headObject, createPresignedGetUrl } from '@/app/lib/storage';
-import { getDossierSnapshotView, getOcImage, upsertOcImage } from '@/app/db/queries/oc';
+import { getDossierSnapshotView, getOcImage, upsertOcImage, upsertPersonal } from '@/app/db/queries/oc';
 
 const OcIdParam = z.object({ ocId: z.string().uuid() });
 
-const optionalDate = z.preprocess((v) => (v === '' || v === null ? undefined : v), z.coerce.date().optional());
+const optionalText = z.preprocess((v) => {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  return String(v);
+}, z.string().nullable().optional());
 
 const dossierSnapshotSchema = z.object({
-  withdrawnOn: optionalDate,
-  dtOfPassingOut: optionalDate,
-  icNo: z.string().nullable().optional(),
-  orderOfMerit: z.string().nullable().optional(),
-  regtArm: z.string().nullable().optional(),
-  postedAtt: z.string().nullable().optional(),
+  tesNo: optionalText,
+  name: optionalText,
+  course: optionalText,
+  pi: optionalText,
+  dtOfArr: optionalText,
+  relegated: optionalText,
+  withdrawnOn: optionalText,
+  dtOfPassingOut: optionalText,
+  icNo: optionalText,
+  orderOfMerit: optionalText,
+  regtArm: optionalText,
+  postedAtt: optionalText,
 });
+
+type DossierSnapshotDto = z.infer<typeof dossierSnapshotSchema>;
+
+function normalizeFormValue(value: FormDataEntryValue | null) {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function readSnapshotFormData(formData: FormData) {
+  return {
+    tesNo: normalizeFormValue(formData.get('tesNo')),
+    name: normalizeFormValue(formData.get('name')),
+    course: normalizeFormValue(formData.get('course')),
+    pi: normalizeFormValue(formData.get('pi')),
+    dtOfArr: normalizeFormValue(formData.get('dtOfArr')),
+    relegated: normalizeFormValue(formData.get('relegated')),
+    withdrawnOn: normalizeFormValue(formData.get('withdrawnOn')),
+    dtOfPassingOut: normalizeFormValue(formData.get('dtOfPassingOut')),
+    icNo: normalizeFormValue(formData.get('icNo')),
+    orderOfMerit: normalizeFormValue(formData.get('orderOfMerit')),
+    regtArm: normalizeFormValue(formData.get('regtArm')),
+    postedAtt: normalizeFormValue(formData.get('postedAtt')),
+  } satisfies DossierSnapshotDto;
+}
+
+function toDbText(value: string | null | undefined) {
+  if (value === undefined) return undefined;
+  return value ?? null;
+}
+
+function toOptionalDate(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toOptionalInt(value: string | null | undefined) {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+async function resolveCourseIdByLabel(label: string, fieldName: string) {
+  const normalized = label.trim();
+  if (!normalized) return null;
+
+  const [course] = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(or(eq(courses.code, normalized), eq(courses.title, normalized)))
+    .limit(1);
+
+  if (!course) {
+    throw new ApiError(400, `${fieldName} must match an existing course code or title.`, 'bad_request');
+  }
+
+  return course.id;
+}
+
+async function buildOcCadetSnapshotPatch(dto: DossierSnapshotDto) {
+  const patch: Partial<typeof ocCadets.$inferInsert> = {};
+
+  if (dto.tesNo !== undefined && dto.tesNo !== null) patch.ocNo = dto.tesNo;
+  if (dto.name !== undefined && dto.name !== null) patch.name = dto.name;
+  if (dto.dtOfArr !== undefined && dto.dtOfArr) patch.arrivalAtUniversity = toOptionalDate(dto.dtOfArr) ?? undefined;
+  if (dto.withdrawnOn !== undefined) patch.withdrawnOn = toOptionalDate(dto.withdrawnOn);
+
+  if (dto.course !== undefined && dto.course) {
+    const courseId = await resolveCourseIdByLabel(dto.course, 'course');
+    if (courseId) patch.courseId = courseId;
+  }
+
+  if (dto.relegated !== undefined) {
+    const value = (dto.relegated ?? '').trim();
+    if (!value) {
+      patch.relegatedToCourseId = null;
+      patch.relegatedOn = null;
+    } else {
+      const match = /^Relegated to (.+) on (\d{4}-\d{2}-\d{2})$/i.exec(value);
+      if (!match) {
+        throw new ApiError(
+          400,
+          'relegated must be blank or in the format "Relegated to <course code> on YYYY-MM-DD".',
+          'bad_request',
+        );
+      }
+
+      patch.relegatedToCourseId = await resolveCourseIdByLabel(match[1], 'relegated course');
+      patch.relegatedOn = toOptionalDate(match[2]);
+    }
+  }
+
+  if (Object.keys(patch).length > 0) {
+    patch.updatedAt = new Date();
+  }
+
+  return patch;
+}
+
+async function applySnapshotCoreFields(ocId: string, dto: DossierSnapshotDto) {
+  const ocPatch = await buildOcCadetSnapshotPatch(dto);
+  if (Object.keys(ocPatch).length > 0) {
+    await db.update(ocCadets).set(ocPatch).where(eq(ocCadets.id, ocId));
+  }
+
+  if (dto.pi !== undefined) {
+    await upsertPersonal(ocId, { pi: toDbText(dto.pi) });
+  }
+}
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
   try {
@@ -143,20 +262,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     const contentType = req.headers.get('content-type') || '';
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
-      dto = {
-        tesNo: formData.get('tesNo') as string,
-        name: formData.get('name') as string,
-        course: formData.get('course') as string,
-        pi: formData.get('pi') as string,
-        dtOfArr: formData.get('dtOfArr') as string,
-        relegated: formData.get('relegated') as string,
-        withdrawnOn: formData.get('withdrawnOn') as string,
-        dtOfPassingOut: formData.get('dtOfPassingOut') as string,
-        icNo: formData.get('icNo') as string,
-        orderOfMerit: formData.get('orderOfMerit') as string,
-        regtArm: formData.get('regtArm') as string,
-        postedAtt: formData.get('postedAtt') as string,
-      };
+      dto = readSnapshotFormData(formData);
       arrivalPhoto = formData.get('arrivalPhoto') as File | null;
       departurePhoto = formData.get('departurePhoto') as File | null;
     } else {
@@ -181,14 +287,15 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     if (departurePhoto) {
       await uploadImage(ocId, departurePhoto, 'UNIFORM');
     }
+    await applySnapshotCoreFields(ocId, dto);
 
     const insertData: any = {
       ocId,
-      passOutDate: dto.dtOfPassingOut ? new Date(dto.dtOfPassingOut) : null,
-      icNo: dto.icNo,
-      orderOfMerit: dto.orderOfMerit ? parseInt(dto.orderOfMerit) : null,
-      regimentOrArm: dto.regtArm,
-      postedUnit: dto.postedAtt,
+      passOutDate: toOptionalDate(dto.dtOfPassingOut),
+      icNo: toDbText(dto.icNo),
+      orderOfMerit: toOptionalInt(dto.orderOfMerit),
+      regimentOrArm: toDbText(dto.regtArm),
+      postedUnit: toDbText(dto.postedAtt),
     };
 
     const [row] = await db.insert(ocCommissioning).values(insertData).returning();
@@ -224,20 +331,7 @@ async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{
     const contentType = req.headers.get('content-type') || '';
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
-      dto = {
-        tesNo: formData.get('tesNo') as string,
-        name: formData.get('name') as string,
-        course: formData.get('course') as string,
-        pi: formData.get('pi') as string,
-        dtOfArr: formData.get('dtOfArr') as string,
-        relegated: formData.get('relegated') as string,
-        withdrawnOn: formData.get('withdrawnOn') as string,
-        dtOfPassingOut: formData.get('dtOfPassingOut') as string,
-        icNo: formData.get('icNo') as string,
-        orderOfMerit: formData.get('orderOfMerit') as string,
-        regtArm: formData.get('regtArm') as string,
-        postedAtt: formData.get('postedAtt') as string,
-      };
+      dto = readSnapshotFormData(formData);
       arrivalPhoto = formData.get('arrivalPhoto') as File | null;
       departurePhoto = formData.get('departurePhoto') as File | null;
     } else {
@@ -258,15 +352,16 @@ async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{
     if (departurePhoto) {
       await uploadImage(ocId, departurePhoto, 'UNIFORM');
     }
+    await applySnapshotCoreFields(ocId, dto);
 
     if (!existing) {
       const insertData: any = {
         ocId,
-        passOutDate: dto.dtOfPassingOut ? new Date(dto.dtOfPassingOut) : null,
-        icNo: dto.icNo,
-        orderOfMerit: dto.orderOfMerit ? parseInt(dto.orderOfMerit) : null,
-        regimentOrArm: dto.regtArm,
-        postedUnit: dto.postedAtt,
+        passOutDate: toOptionalDate(dto.dtOfPassingOut),
+        icNo: toDbText(dto.icNo),
+        orderOfMerit: toOptionalInt(dto.orderOfMerit),
+        regimentOrArm: toDbText(dto.regtArm),
+        postedUnit: toDbText(dto.postedAtt),
       };
 
       const [row] = await db.insert(ocCommissioning).values(insertData).returning();
@@ -287,13 +382,15 @@ async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{
     }
 
     const updateData: any = {};
-    if (dto.dtOfPassingOut !== undefined) updateData.passOutDate = dto.dtOfPassingOut ? new Date(dto.dtOfPassingOut) : null;
-    if (dto.icNo !== undefined) updateData.icNo = dto.icNo;
-    if (dto.orderOfMerit !== undefined) updateData.orderOfMerit = dto.orderOfMerit ? parseInt(dto.orderOfMerit) : null;
-    if (dto.regtArm !== undefined) updateData.regimentOrArm = dto.regtArm;
-    if (dto.postedAtt !== undefined) updateData.postedUnit = dto.postedAtt;
+    if (dto.dtOfPassingOut !== undefined) updateData.passOutDate = toOptionalDate(dto.dtOfPassingOut);
+    if (dto.icNo !== undefined) updateData.icNo = toDbText(dto.icNo);
+    if (dto.orderOfMerit !== undefined) updateData.orderOfMerit = toOptionalInt(dto.orderOfMerit);
+    if (dto.regtArm !== undefined) updateData.regimentOrArm = toDbText(dto.regtArm);
+    if (dto.postedAtt !== undefined) updateData.postedUnit = toDbText(dto.postedAtt);
 
-    const [row] = await db.update(ocCommissioning).set(updateData).where(eq(ocCommissioning.ocId, ocId)).returning();
+    const [row] = Object.keys(updateData).length > 0
+      ? await db.update(ocCommissioning).set(updateData).where(eq(ocCommissioning.ocId, ocId)).returning()
+      : [existing];
 
     await req.audit.log({
       action: AuditEventType.OC_RECORD_UPDATED,
@@ -304,7 +401,7 @@ async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{
         description: `Updated dossier snapshot for ${ocId}`,
         ocId,
         module: 'dossier-snapshot',
-        changes: Object.keys(updateData),
+        changes: Object.keys(dto),
       },
     });
 

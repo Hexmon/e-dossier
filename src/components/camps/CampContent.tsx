@@ -20,6 +20,7 @@ import { CreateOcCampPayload, UpdateOcCampPayload } from "@/app/lib/api/campApi"
 
 interface CampContentProps {
   ocId: string;
+  courseId?: string | null;
   activeSemester?: number;
   onSemesterChange?: (semester: number) => void;
   readOnly?: boolean;
@@ -27,6 +28,7 @@ interface CampContentProps {
 
 export default function CampContent({
   ocId,
+  courseId,
   activeSemester: controlledSemester,
   onSemesterChange,
   readOnly = false,
@@ -35,7 +37,7 @@ export default function CampContent({
   // STATE MANAGEMENT
   // ---------------------------
   const [activeSemester, setActiveSemester] = useState(0);
-  const [selectedCampName, setSelectedCampName] = useState<string | null>(null);
+  const [selectedCampId, setSelectedCampId] = useState<string | null>(null);
   const [isEditingReviews, setIsEditingReviews] = useState(false);
   const [isEditingActivities, setIsEditingActivities] = useState(false);
 
@@ -58,11 +60,12 @@ export default function CampContent({
   // ---------------------------
   // API HOOKS
   // ---------------------------
-  const { trainingCamps, loading: loadingCamps, error: campsError } = useTrainingCamps();
-  const { camp: currentCamp, loading: loadingCamp, refetch: refetchCamp } = useOcCampByName(
-    ocId,
-    selectedCampName
-  );
+  const { trainingCamps, loading: loadingCamps, error: campsError } = useTrainingCamps({
+    courseId,
+    semester: currentSemester,
+    enabled: Boolean(courseId),
+    fallbackToLegacyGlobal: true,
+  });
   const {
     createCamp,
     updateCamp,
@@ -82,8 +85,15 @@ export default function CampContent({
   }, [trainingCamps, currentSemester]);
 
   const selectedTrainingCamp = useMemo(() => {
-    return availableCamps.find((camp) => camp.name === selectedCampName);
-  }, [availableCamps, selectedCampName]);
+    return availableCamps.find((camp) => camp.id === selectedCampId);
+  }, [availableCamps, selectedCampId]);
+
+  const selectedCampName = selectedTrainingCamp?.name ?? null;
+
+  const { camp: currentCamp, loading: loadingCamp, refetch: refetchCamp } = useOcCampByName(
+    ocId,
+    selectedCampName
+  );
 
   const availableActivities = useMemo(() => {
     if (!selectedTrainingCamp) return [];
@@ -138,7 +148,7 @@ export default function CampContent({
   const handleSemesterChange = (index: number) => {
     setActiveSemester(index);
     onSemesterChange?.(semesters[index] ?? 1);
-    setSelectedCampName(null);
+    setSelectedCampId(null);
     setIsEditingReviews(false);
     setIsEditingActivities(false);
   };
@@ -158,15 +168,15 @@ export default function CampContent({
   // Set first camp as selected when available camps change
   useEffect(() => {
     if (availableCamps.length === 0) {
-      setSelectedCampName(null);
+      setSelectedCampId(null);
       return;
     }
 
-    const selectedStillExists = availableCamps.some((camp) => camp.name === selectedCampName);
+    const selectedStillExists = availableCamps.some((camp) => camp.id === selectedCampId);
     if (!selectedStillExists) {
-      setSelectedCampName(availableCamps[0]?.name || null);
+      setSelectedCampId(availableCamps[0]?.id || null);
     }
-  }, [availableCamps, selectedCampName]);
+  }, [availableCamps, selectedCampId]);
 
   // ---------------------------
   // HANDLERS
@@ -300,7 +310,7 @@ export default function CampContent({
   // ---------------------------
   // RENDER
   // ---------------------------
-  if (loadingCamps) {
+  if (!courseId || loadingCamps) {
     return (
       <Card className="max-w-6xl mx-auto p-6 rounded-2xl shadow-xl bg-card">
         <CardContent className="flex items-center justify-center py-12">
@@ -370,9 +380,9 @@ export default function CampContent({
                     <Button
                       key={id}
                       type="button"
-                      variant={selectedCampName === name ? "default" : "outline"}
+                      variant={selectedCampId === id ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setSelectedCampName(name)}
+                      onClick={() => setSelectedCampId(id)}
                     >
                       {name}
                     </Button>

@@ -12,6 +12,38 @@ import {
 
 import type { CounsellingRow, CounsellingFormData } from "@/types/counselling";
 
+type CounsellingRequiredFields = {
+    reason?: string | null;
+    warningType?: string | null;
+    date?: string | null;
+    warningBy?: string | null;
+};
+
+const hasValue = (value: string | null | undefined) => Boolean(value?.trim());
+
+function hasEnteredCounsellingData(row: CounsellingRequiredFields) {
+    return hasValue(row.reason) || hasValue(row.warningType) || hasValue(row.date) || hasValue(row.warningBy);
+}
+
+function validateCounsellingRequiredFields(rows: CounsellingRequiredFields[]) {
+    const rowsWithData = rows.filter(hasEnteredCounsellingData);
+    if (!rowsWithData.length) return true;
+
+    const missingDate = rowsWithData.some((row) => !hasValue(row.date));
+    const missingWarningBy = rowsWithData.some((row) => !hasValue(row.warningBy));
+
+    if (missingDate) toast.error("Date is required");
+    if (missingWarningBy) {
+        if (missingDate) {
+            window.setTimeout(() => toast.error("Warning by is required"), 1000);
+        } else {
+            toast.error("Warning by is required");
+        }
+    }
+
+    return !missingDate && !missingWarningBy;
+}
+
 /**
  * Hook: useCounsellingRecords
  * - ocId: the dynamic route ocId
@@ -96,6 +128,8 @@ export function useCounsellingRecords(ocId: string, semesters: string[]) {
     const saveRecords = useCallback(
         async (termLabel: string, payloadRows: CounsellingFormData["records"]) => {
             if (!ocId) return null;
+            if (!validateCounsellingRequiredFields(payloadRows)) return null;
+
             try {
                 setLoading(true);
                 const payload = payloadRows.map((r) => {
@@ -135,6 +169,8 @@ export function useCounsellingRecords(ocId: string, semesters: string[]) {
     const updateRecord = useCallback(
         async (idToUpdate: string, payload: Partial<{ reason: string; warningType: string; date: string; warningBy: string }>) => {
             if (!ocId) return false;
+            if (!validateCounsellingRequiredFields([payload])) return false;
+
             try {
                 setLoading(true);
                 const userEnteredValue = payload.warningType ?? "";

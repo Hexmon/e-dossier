@@ -13,8 +13,8 @@ import { saveTermInterviewForm, SpecialInterviewRecord } from "@/store/slices/te
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from "@/types/interview-templates";
 import { resolveSpecialGroupFieldMap } from "@/lib/interviewFieldUtils";
 import {
-    applySpecialInterviewActorAutofill,
     createDefaultSpecialInterviewRecord,
+    normalizeExistingSpecialInterviewRecords,
 } from "@/lib/interviewFormAutofill";
 import { canEditTermField, type InterviewAccessContext } from "@/lib/interview-access";
 
@@ -47,14 +47,8 @@ interface Props {
     accessContext: InterviewAccessContext;
 }
 
-function normalizeSpecialInterviews(records?: SpecialInterviewRecord[], currentUserDisplayName?: string) {
-    return applySpecialInterviewActorAutofill((records ?? []).map((record, index) => ({
-        date: record.date ?? "",
-        summary: record.summary ?? "",
-        interviewedBy: record.interviewedBy ?? "",
-        rowIndex: record.rowIndex ?? index,
-        rowId: record.rowId,
-    })), currentUserDisplayName);
+function normalizeSpecialInterviews(records?: SpecialInterviewRecord[]) {
+    return normalizeExistingSpecialInterviewRecords(records);
 }
 
 function normalizeText(value: string | null | undefined) {
@@ -189,8 +183,8 @@ export default function TermSubForm({
     const canEditField = (field: TemplateField) => canEditTermField(accessContext, variant, field);
 
     const normalizedSavedSpecialInterviews = useMemo(
-        () => normalizeSpecialInterviews(savedSpecialInterviews, currentUserDisplayName),
-        [savedSpecialInterviews, currentUserDisplayName],
+        () => normalizeSpecialInterviews(savedSpecialInterviews),
+        [savedSpecialInterviews],
     );
     const [specialInterviews, setSpecialInterviews] = React.useState<SpecialInterviewRecord[]>(() =>
         normalizedSavedSpecialInterviews.map((record) => ({ ...record })),
@@ -277,7 +271,7 @@ export default function TermSubForm({
                 acc[key] = String(value ?? "");
                 return acc;
             }, {}),
-            specialInterviews: normalizeSpecialInterviews(specialInterviews, currentUserDisplayName).map((record) => ({
+            specialInterviews: normalizeSpecialInterviews(specialInterviews).map((record) => ({
                 ...record,
             })),
         };
@@ -290,7 +284,7 @@ export default function TermSubForm({
                 acc[key] = String(value ?? "");
                 return acc;
             }, {}),
-            specialInterviews: normalizeSpecialInterviews(savedSpecialInterviews, currentUserDisplayName).map((record) => ({
+            specialInterviews: normalizeSpecialInterviews(savedSpecialInterviews).map((record) => ({
                 ...record,
             })),
         };
