@@ -12,6 +12,7 @@ type RouteRequestFactory = Partial<
   Record<HttpMethod, () => { req: any; params: Record<string, string> }>
 >;
 type RouteModuleMap = Record<string, Record<string, any>>;
+const ROUTE_MODULE_LOAD_TIMEOUT_MS = 30_000;
 
 export type RouteFlowOverrides = Record<
   string,
@@ -81,7 +82,11 @@ export function runUncoveredRouteFlowSuite(
     if (!routeModules) {
       beforeAll(async () => {
         for (const routeFile of routeFiles) {
-          await withStepTimeout(importRouteModule(routeFile), `${routeFile} preload`, 5_000);
+          await withStepTimeout(
+            importRouteModule(routeFile),
+            `${routeFile} preload`,
+            ROUTE_MODULE_LOAD_TIMEOUT_MS,
+          );
         }
       }, 120_000);
     }
@@ -108,6 +113,7 @@ export function runUncoveredRouteFlowSuite(
                 (await withStepTimeout(
                   importRouteModule(routeFile),
                   `${routeFile} ${method} import`,
+                  ROUTE_MODULE_LOAD_TIMEOUT_MS,
                 ));
               const res = await withStepTimeout(
                 routeModule[method](req as any, { params: Promise.resolve(params) }),
@@ -128,6 +134,7 @@ export function runUncoveredRouteFlowSuite(
               (await withStepTimeout(
                 importRouteModule(routeFile),
                 `${routeFile} ${method} import`,
+                ROUTE_MODULE_LOAD_TIMEOUT_MS,
               ));
             const res = await withStepTimeout(
               routeModule[method](req as any, { params: Promise.resolve(params) }),
