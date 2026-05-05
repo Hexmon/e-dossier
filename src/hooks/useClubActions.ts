@@ -46,9 +46,11 @@ export const useClubActions = (selectedCadet: any) => {
             }
 
             toast.success("Club details saved!");
+            return true;
         } catch (err) {
             console.error(err);
             toast.error("Failed to save club details");
+            return false;
         }
     }, [selectedCadet?.ocId, getValues, setValue]);
 

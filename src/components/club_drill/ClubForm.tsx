@@ -122,7 +122,11 @@ export default function ClubForm({
                     <Button
                         type="button"
                         className="bg-primary text-primary-foreground"
-                        onClick={onEdit}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onEdit?.();
+                        }}
                     >
                         Edit Club
                     </Button>
@@ -137,7 +141,7 @@ export default function ClubForm({
                         variant="outline"
                         onClick={onReset}
                     >
-                        Reset Club
+                        Cancel
                     </Button>
                 </div>
             )}

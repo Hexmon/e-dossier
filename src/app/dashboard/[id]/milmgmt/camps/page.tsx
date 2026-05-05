@@ -155,6 +155,7 @@ export default function OcCampsPage() {
                   />
                 <CampContent
                   ocId={ocId}
+                  courseId={cadet?.course ?? null}
                   activeSemester={activeSemester}
                   onSemesterChange={setActiveSemester}
                   readOnly={isActiveSemesterLocked}

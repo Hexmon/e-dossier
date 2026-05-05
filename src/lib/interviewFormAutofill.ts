@@ -128,6 +128,16 @@ export function applySpecialInterviewActorAutofill(
     }));
 }
 
+export function normalizeExistingSpecialInterviewRecords(records?: SpecialInterviewRecord[]) {
+    return (records ?? []).map((record, index) => ({
+        date: record.date ?? "",
+        summary: record.summary ?? "",
+        interviewedBy: record.interviewedBy ?? "",
+        rowIndex: record.rowIndex ?? index,
+        rowId: record.rowId,
+    }));
+}
+
 export function createDefaultSpecialInterviewRecord(rowIndex: number, actorDisplayName?: string | null): SpecialInterviewRecord {
     return {
         date: "",

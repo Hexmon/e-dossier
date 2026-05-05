@@ -9,7 +9,7 @@ import type { CounsellingRow } from "@/types/counselling";
 interface Props {
     rows: CounsellingRow[];
     loading: boolean;
-    onEditSave: (id: string, payload: Partial<{ reason: string; warningType: string; date: string; warningBy: string }>) => Promise<void> | void;
+    onEditSave: (id: string, payload: Partial<{ reason: string; warningType: string; date: string; warningBy: string }>) => Promise<boolean | void> | boolean | void;
     onDelete: (id: string) => Promise<void> | void;
     readOnly?: boolean;
 }
@@ -36,7 +36,8 @@ export default function CounsellingTable({ rows, loading, onEditSave, onDelete, 
     const saveEdit = async () => {
         if (!editingId || !editForm) return;
         const { id, reason = "", warningType = "", date = "", warningBy = "" } = editForm;
-        await onEditSave(editingId, { reason, warningType, date, warningBy });
+        const saved = await onEditSave(editingId, { reason, warningType, date, warningBy });
+        if (saved === false) return;
         setEditingId(null);
         setEditForm(null);
     };

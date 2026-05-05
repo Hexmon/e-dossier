@@ -11,12 +11,15 @@ export const useDrillActions = (selectedCadet: any) => {
 
     const submitDrill = useCallback(async () => {
         try {
+            if (!selectedCadet?.ocId) throw new Error("No cadet selected");
+
             const values = getValues();
             const totals = calculateDrillTotals(values.drillRows);
 
             const rows = [...values.drillRows];
             // store totals into index 3 (as your original logic did)
             rows[3] = { ...rows[3], ...totals };
+            setValue("drillRows", rows);
 
             for (let i = 0; i < 3; i++) {
                 const { id, semester, maxMks, m1, m2, a1c1, a2c2, remarks } = rows[i];
@@ -40,9 +43,11 @@ export const useDrillActions = (selectedCadet: any) => {
             }
 
             toast.success("Drill saved successfully");
+            return true;
         } catch (err) {
             console.error(err);
             toast.error("Failed saving drill values");
+            return false;
         }
     }, [selectedCadet?.ocId, getValues, setValue]);
 

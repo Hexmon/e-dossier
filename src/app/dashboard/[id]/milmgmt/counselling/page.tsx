@@ -99,7 +99,8 @@ export default function CounsellingWarningPage() {
 
     const handleSubmit = async (data: CounsellingFormData) => {
         const termLabel = semesters[activeTab] ?? semesters[0];
-        await saveRecords(termLabel, data.records);
+        const saved = await saveRecords(termLabel, data.records);
+        if (!saved) return;
 
         // Clear Redux cache after successful save
         dispatch(clearCounsellingForm(ocId));
@@ -109,9 +110,9 @@ export default function CounsellingWarningPage() {
 
     const handleEditSave = async (
         idToUpdate: string,
-        payload: Partial<{ reason: string; date: string; warningBy: string }>
+        payload: Partial<{ reason: string; warningType: string; date: string; warningBy: string }>
     ) => {
-        await updateRecord(idToUpdate, payload);
+        return updateRecord(idToUpdate, payload);
     };
 
     const handleDelete = async (idToDelete: string) => {

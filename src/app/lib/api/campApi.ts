@@ -16,6 +16,7 @@ export interface TrainingCampActivity {
 
 export interface TrainingCamp {
     id: string;
+    courseId?: string | null;
     name: string;
     semester: number;
     sortOrder?: number;
@@ -113,19 +114,32 @@ export interface OcCampMutationResponse {
  * Get all training camps with optional filters
  */
 export const getAllTrainingCamps = async (params?: {
+    courseId?: string;
+    semester?: number;
     includeActivities?: boolean;
     includeReviews?: boolean;
     includeDeleted?: boolean;
+    fallbackToLegacyGlobal?: boolean;
 }): Promise<{ items: TrainingCamp[]; count: number }> => {
-    const { includeActivities = true, includeReviews = true, includeDeleted = false } = params || {};
+    const {
+        courseId,
+        semester,
+        includeActivities = true,
+        includeReviews = true,
+        includeDeleted = false,
+        fallbackToLegacyGlobal = false,
+    } = params || {};
 
     return api.get<{ items: TrainingCamp[]; count: number }>(
         endpoints.admin.trainingCamps.list,
         {
             query: {
+                ...(courseId && { courseId }),
+                ...(semester && { semester }),
                 includeActivities,
                 includeReviews,
                 includeDeleted,
+                ...(fallbackToLegacyGlobal && { fallbackToLegacyGlobal }),
             },
         }
     );

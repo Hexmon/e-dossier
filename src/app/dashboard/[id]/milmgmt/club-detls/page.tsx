@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     useForm,
     useFieldArray,
@@ -37,7 +37,7 @@ import {
     DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
 
-import { TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 import { Shield, ChevronDown } from "lucide-react";
@@ -46,6 +46,7 @@ import { useOcDetails } from "@/hooks/useOcDetails";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Cadet } from "@/types/cadet";
+import { calculateDrillTotals } from "@/utils/drillTotals";
 
 const EMPTY = "" as const;
 
@@ -115,12 +116,23 @@ function InnerClubDrillPage({
     selectedCadet: Cadet;
     ocId: string;
 }) {
+    const [isClubEditing, setIsClubEditing] = useState(false);
+    const [isDrillEditing, setIsDrillEditing] = useState(false);
+    const [isAchievementsEditing, setIsAchievementsEditing] = useState(false);
+    const loadedOcIdRef = useRef<string | null>(null);
+    const lastClubRowsRef = useRef<FormValues["clubRows"]>(
+        defaultClubRows.map((row) => ({ ...row }))
+    );
+    const lastDrillRowsRef = useRef<FormValues["drillRows"]>(
+        defaultDrillRows.map((row) => ({ ...row }))
+    );
+    const lastAchievementRowsRef = useRef<FormValues["achievements"]>([
+        { id: null, achievement: "" }
+    ]);
+
     const {
         control,
         register,
-        getValues,
-        reset,
-        setValue,
         handleSubmit
     } = useFormContext<FormValues>();
 
@@ -135,9 +147,10 @@ function InnerClubDrillPage({
         name: "drillRows",
         keyName: "fieldId",
     });
-    const { fields: achievementFields, append, remove } = useFieldArray({
+    const { fields: achievementFields, append, remove, replace: replaceAchievementRows } = useFieldArray({
         control,
-        name: "achievements"
+        name: "achievements",
+        keyName: "fieldId",
     });
 
     /* Action hooks */
@@ -145,16 +158,18 @@ function InnerClubDrillPage({
     const { submitDrill, fetchDrill } = useDrillActions(selectedCadet);
     const { submitAchievements, fetchAchievements, deleteAchievement } = useAchievementActions(selectedCadet);
 
-    useEffect(() => {
+    const loadRecords = useCallback(async () => {
         if (!selectedCadet?.ocId) return;
-        let cancelled = false;
 
-        // --- CLUB ---
-        fetchClub().then((items) => {
-            if (cancelled || !items) return;
-
+        const [clubResult, drillResult, achievementResult] = await Promise.allSettled([
+            fetchClub(),
+            fetchDrill(),
+            fetchAchievements(),
+        ]);
+        if (clubResult.status === "fulfilled") {
+            const clubItems = clubResult.value;
             const mapped = defaultClubRows.map(row => {
-                const found = items.find((x: any) => Number(x.semester) === romanToNumber[row.semester]);
+                const found = clubItems.find((x: any) => Number(x.semester) === romanToNumber[row.semester]);
                 const { clubName, specialAchievement, remark, id } = found || {};
                 return {
                     id: id ?? null,
@@ -165,15 +180,15 @@ function InnerClubDrillPage({
                 };
             });
 
-            replaceClubRows(mapped);
-        });
+            lastClubRowsRef.current = mapped.map((row) => ({ ...row }));
+            replaceClubRows(lastClubRowsRef.current.map((row) => ({ ...row })));
+        }
 
-        fetchDrill().then((items) => {
-            if (cancelled || !items) return;
-
+        if (drillResult.status === "fulfilled") {
+            const drillItems = drillResult.value;
             const mapped = defaultDrillRows.map(row => {
                 const numSemester = romanToNumber[row.semester];
-                const api = items.find((x: any) => Number(x.semester) === numSemester);
+                const api = drillItems.find((x: any) => Number(x.semester) === numSemester);
 
                 const {
                     id,
@@ -189,7 +204,7 @@ function InnerClubDrillPage({
                     id: id ?? undefined,
                     semester: row.semester,
 
-                    maxMks: maxMarks != null ? Number(maxMarks) : EMPTY,
+                    maxMks: maxMarks != null ? Number(maxMarks) : row.maxMks,
                     m1: m1Marks != null ? Number(m1Marks) : EMPTY,
                     m2: m2Marks != null ? Number(m2Marks) : EMPTY,
                     a1c1: a1c1Marks != null ? Number(a1c1Marks) : EMPTY,
@@ -199,18 +214,72 @@ function InnerClubDrillPage({
                 };
             });
 
-            replaceDrillRows(mapped);
-        });
+            const totals = calculateDrillTotals(mapped);
+            const mappedWithTotals = mapped.map((row, index) => (
+                index === 3 ? { ...row, ...totals, remarks: row.remarks ?? "" } : row
+            ));
 
-        fetchAchievements().then((rows) => {
-            if (cancelled) return;
-            setValue("achievements", rows.length ? rows : [{ id: null, achievement: "" }]);
-        });
+            lastDrillRowsRef.current = mappedWithTotals.map((row) => ({ ...row }));
+            replaceDrillRows(lastDrillRowsRef.current.map((row) => ({ ...row })));
+        }
 
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedCadet?.ocId, fetchClub, fetchDrill, fetchAchievements, replaceClubRows, replaceDrillRows, setValue]);
+        if (achievementResult.status === "fulfilled") {
+            const achievementRows = achievementResult.value;
+            const mapped = achievementRows.length
+                ? achievementRows.map((row) => ({ id: row.id ?? null, achievement: row.achievement ?? "" }))
+                : [{ id: null, achievement: "" }];
+
+            lastAchievementRowsRef.current = mapped.map((row) => ({ ...row }));
+            replaceAchievementRows(
+                lastAchievementRowsRef.current.map((row) => ({ ...row }))
+            );
+        }
+    }, [selectedCadet?.ocId, fetchClub, fetchDrill, fetchAchievements, replaceClubRows, replaceDrillRows, replaceAchievementRows]);
+
+    useEffect(() => {
+        if (!selectedCadet?.ocId || loadedOcIdRef.current === selectedCadet.ocId) {
+            return;
+        }
+
+        loadedOcIdRef.current = selectedCadet.ocId;
+        void loadRecords();
+    }, [selectedCadet?.ocId, loadRecords]);
+
+    const saveClub = handleSubmit(async () => {
+        if (await submitClub()) {
+            await loadRecords();
+            setIsClubEditing(false);
+        }
+    });
+
+    const saveDrill = handleSubmit(async () => {
+        if (await submitDrill()) {
+            await loadRecords();
+            setIsDrillEditing(false);
+        }
+    });
+
+    const saveAchievements = handleSubmit(async () => {
+        if (await submitAchievements()) {
+            await loadRecords();
+            setIsAchievementsEditing(false);
+        }
+    });
+
+    const cancelClubEdit = () => {
+        replaceClubRows(lastClubRowsRef.current.map((row) => ({ ...row })));
+        setIsClubEditing(false);
+    };
+
+    const cancelDrillEdit = () => {
+        replaceDrillRows(lastDrillRowsRef.current.map((row) => ({ ...row })));
+        setIsDrillEditing(false);
+    };
+
+    const cancelAchievementsEdit = () => {
+        replaceAchievementRows(lastAchievementRowsRef.current.map((row) => ({ ...row })));
+        setIsAchievementsEditing(false);
+    };
 
     return (
         <DossierTab
@@ -259,20 +328,20 @@ function InnerClubDrillPage({
                         <ClubForm
                             register={register}
                             fields={clubFields}
-                            onSubmit={handleSubmit(submitClub)}
-                            onReset={() =>
-                                reset({ ...getValues(), clubRows: defaultClubRows })
-                            }
+                            disabled={!isClubEditing}
+                            onEdit={() => setIsClubEditing(true)}
+                            onSubmit={saveClub}
+                            onReset={cancelClubEdit}
                         />
 
                         {/* DRILL FORM */}
                         <DrillForm
                             register={register}
                             fields={drillFields}
-                            onSubmit={handleSubmit(submitDrill)}
-                            onReset={() =>
-                                reset({ ...getValues(), drillRows: defaultDrillRows })
-                            }
+                            disabled={!isDrillEditing}
+                            onEdit={() => setIsDrillEditing(true)}
+                            onSubmit={saveDrill}
+                            onReset={cancelDrillEdit}
                         />
 
                         {/* ACHIEVEMENTS FORM */}
@@ -281,10 +350,10 @@ function InnerClubDrillPage({
                             fields={achievementFields}
                             append={append}
                             remove={remove}
-                            onSubmit={handleSubmit(submitAchievements)}
-                            onReset={() =>
-                                reset({ ...getValues(), achievements: [] })
-                            }
+                            disabled={!isAchievementsEditing}
+                            onEdit={() => setIsAchievementsEditing(true)}
+                            onSubmit={saveAchievements}
+                            onReset={cancelAchievementsEdit}
                             onDeleteRow={(index: number) => deleteAchievement(index, remove)}
                         />
 

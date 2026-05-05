@@ -10,16 +10,38 @@ import {
 } from "@/app/lib/api/leaveApi";
 import { LeaveFormValues } from "@/types/lve";
 
+type LeaveDateFields = {
+    reason?: string | null;
+    dateFrom?: string | null;
+    dateTo?: string | null;
+    remark?: string | null;
+};
+
+const hasValue = (value: string | null | undefined) => Boolean(value?.trim());
+
+function hasEnteredLeaveData(row: LeaveDateFields) {
+    return hasValue(row.reason) || hasValue(row.dateFrom) || hasValue(row.dateTo) || hasValue(row.remark);
+}
+
+export function isLeaveMissingDates(row: LeaveDateFields) {
+    if (!hasEnteredLeaveData(row)) return false;
+    return !hasValue(row.dateFrom) || !hasValue(row.dateTo);
+}
+
 export const useLeaveActions = (selectedCadet: any) => {
     const { getValues, setValue } = useFormContext<LeaveFormValues>();
 
     const submitLeave = async () => {
         if (!selectedCadet?.ocId) {
             toast.error("No cadet selected");
-            return;
+            return false;
         }
 
         const rows = getValues().leaveRows;
+        if (rows.some(isLeaveMissingDates)) {
+            toast.error("Please mention dates");
+            return false;
+        }
 
         try {
             for (let i = 0; i < rows.length; i++) {
@@ -52,9 +74,11 @@ export const useLeaveActions = (selectedCadet: any) => {
             }
 
             toast.success("Leave records saved!");
+            return true;
         } catch (e) {
             console.error(e);
             toast.error("Failed to save leave records");
+            return false;
         }
     };
 

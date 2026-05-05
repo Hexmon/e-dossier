@@ -13,7 +13,7 @@ import { useForm, useFieldArray, FormProvider, useFormContext } from "react-hook
 
 import { LeaveFormValues, defaultLeaveRows, LeaveRow } from "@/types/lve";
 import LeaveForm from "@/components/leave/LeaveForm";
-import { useLeaveActions } from "@/hooks/useLeaveActions";
+import { isLeaveMissingDates, useLeaveActions } from "@/hooks/useLeaveActions";
 
 import { dossierTabs, militaryTrainingCards } from "@/config/app.config";
 import { semesters } from "@/constants/app.constants";
@@ -244,6 +244,10 @@ function InnerLeavePage({
 
     const saveInlineEdit = async (rowIndex: number) => {
         if (!editingValues || !editingValues.id) return;
+        if (isLeaveMissingDates(editingValues)) {
+            toast.error("Please mention dates");
+            return;
+        }
 
         try {
             await updateOcLeaveRecord(ocId, editingValues.id, {
@@ -281,7 +285,12 @@ function InnerLeavePage({
             setValue(`leaveRows.${index}.semester`, activeTab + 1);
         });
 
-        await submitLeave();
+        const didSave = await submitLeave();
+        if (!didSave) {
+            setIsSubmitting(false);
+            return;
+        }
+
         toast.success("Leave records saved");
 
         // Clear Redux cache after successful save
