@@ -35,6 +35,7 @@ import { useMe } from "@/hooks/useMe";
 import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
 import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
+import { isHikeMissingDates } from "@/lib/hikeValidation";
 
 export default function HikePage() {
     const { id } = useParams();
@@ -222,6 +223,10 @@ function InnerHikePage({
 
     const saveInlineEdit = async (rowIndex: number) => {
         if (!editingValues || !editingValues.id) return;
+        if (isHikeMissingDates(editingValues)) {
+            toast.error("Please mention dates");
+            return;
+        }
 
         try {
             await updateOcHikeRecord(ocId, editingValues.id, {
@@ -262,7 +267,12 @@ function InnerHikePage({
             setValue(`hikeRows.${index}.semester`, activeTab + 1);
         });
 
-        await submitHike();
+        const didSave = await submitHike();
+        if (!didSave) {
+            setIsSubmitting(false);
+            return;
+        }
+
         toast.success("New hike records saved");
 
         // Clear Redux cache after successful save

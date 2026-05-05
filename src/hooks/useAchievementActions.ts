@@ -17,7 +17,7 @@ export const useAchievementActions = (selectedCadet: any) => {
 
         if (!selectedCadet?.ocId) {
             toast.error("No cadet selected");
-            return;
+            return false;
         }
 
         try {
@@ -46,9 +46,11 @@ export const useAchievementActions = (selectedCadet: any) => {
             }
 
             toast.success("Achievements saved!");
+            return true;
         } catch (err) {
             console.error(err);
             toast.error("Failed to save achievements");
+            return false;
         }
     }, [selectedCadet?.ocId, getValues, setValue]);
 

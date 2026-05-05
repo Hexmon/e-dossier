@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET as getDossierSnapshot } from "@/app/api/v1/oc/[ocId]/dossier-snapshot/route";
+import {
+  GET as getDossierSnapshot,
+  PATCH as patchDossierSnapshot,
+} from "@/app/api/v1/oc/[ocId]/dossier-snapshot/route";
 import { ApiError } from "@/app/lib/http";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
@@ -19,6 +22,8 @@ vi.mock("@/lib/audit", () => ({
   },
   AuditEventType: {
     API_REQUEST: "api.request",
+    OC_RECORD_CREATED: "oc.record.created",
+    OC_RECORD_UPDATED: "oc.record.updated",
   },
   AuditResourceType: {
     OC: "oc",
@@ -34,6 +39,8 @@ vi.mock("@/app/api/v1/oc/_checks", () => ({
 vi.mock("@/app/db/client", () => ({
   db: {
     select: vi.fn(),
+    update: vi.fn(),
+    insert: vi.fn(),
   },
 }));
 
@@ -48,6 +55,7 @@ vi.mock("@/app/db/queries/oc", () => ({
   getDossierSnapshotView: vi.fn(),
   getOcImage: vi.fn(),
   upsertOcImage: vi.fn(),
+  upsertPersonal: vi.fn(),
 }));
 
 const ocId = "11111111-1111-4111-8111-111111111111";
@@ -75,6 +83,118 @@ beforeEach(() => {
     orderOfMerit: "",
     regtArm: "",
     postedAtt: "",
+  });
+});
+
+describe("PATCH /api/v1/oc/[ocId]/dossier-snapshot", () => {
+  it("persists edited snapshot identity fields into existing OC tables", async () => {
+    const ocCadetSet = vi.fn(() => ({
+      where: vi.fn(async () => undefined),
+    }));
+    const commissioningSet = vi.fn(() => ({
+      where: vi.fn(() => ({
+        returning: vi.fn(async () => [{
+          ocId,
+          passOutDate: new Date("2026-12-31"),
+          icNo: "IC-9",
+          orderOfMerit: 7,
+          regimentOrArm: "Signals",
+          postedUnit: "Unit B",
+        }]),
+      })),
+    }));
+
+    (db.select as any)
+      .mockImplementationOnce(() => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [{ ocId }],
+          }),
+        }),
+      }))
+      .mockImplementationOnce(() => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [{ id: "22222222-2222-4222-8222-222222222222" }],
+          }),
+        }),
+      }));
+
+    (db.update as any)
+      .mockImplementationOnce(() => ({ set: ocCadetSet }))
+      .mockImplementationOnce(() => ({ set: commissioningSet }));
+
+    vi.mocked(ocQueries.upsertPersonal).mockResolvedValue({ ocId, pi: "PI-204" } as any);
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: `/api/v1/oc/${ocId}/dossier-snapshot`,
+      body: {
+        tesNo: "9001",
+        name: "Edited Cadet",
+        course: "TES-51",
+        pi: "PI-204",
+        dtOfArr: "2026-01-15",
+        withdrawnOn: "2026-03-10",
+        dtOfPassingOut: "2026-12-31",
+        icNo: "IC-9",
+        orderOfMerit: "7",
+        regtArm: "Signals",
+        postedAtt: "Unit B",
+      },
+    });
+
+    const res = await patchDossierSnapshot(req as any, createRouteContext({ ocId }));
+
+    expect(res.status).toBe(200);
+    expect(ocCadetSet).toHaveBeenCalledWith(expect.objectContaining({
+      ocNo: "9001",
+      name: "Edited Cadet",
+      courseId: "22222222-2222-4222-8222-222222222222",
+      arrivalAtUniversity: expect.any(Date),
+      withdrawnOn: expect.any(Date),
+    }));
+    expect(ocQueries.upsertPersonal).toHaveBeenCalledWith(ocId, { pi: "PI-204" });
+    expect(commissioningSet).toHaveBeenCalledWith(expect.objectContaining({
+      passOutDate: expect.any(Date),
+      icNo: "IC-9",
+      orderOfMerit: 7,
+      regimentOrArm: "Signals",
+      postedUnit: "Unit B",
+    }));
+  });
+
+  it("rejects a free-text course that cannot be stored in the existing course relationship", async () => {
+    (db.select as any)
+      .mockImplementationOnce(() => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [{ ocId }],
+          }),
+        }),
+      }))
+      .mockImplementationOnce(() => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [],
+          }),
+        }),
+      }));
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: `/api/v1/oc/${ocId}/dossier-snapshot`,
+      body: {
+        course: "Not A Real Course",
+      },
+    });
+
+    const res = await patchDossierSnapshot(req as any, createRouteContext({ ocId }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("bad_request");
+    expect(db.update).not.toHaveBeenCalled();
   });
 });
 

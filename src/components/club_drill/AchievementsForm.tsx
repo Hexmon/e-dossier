@@ -12,7 +12,7 @@ import { FormValues } from "@/types/club-detls";
 
 interface Props {
     register: UseFormRegister<FormValues>;
-    fields: FieldArrayWithId<FormValues, "achievements", "id">[];
+    fields: FieldArrayWithId<FormValues, "achievements", "fieldId">[];
     append: UseFieldArrayAppend<FormValues, "achievements">;
     remove: UseFieldArrayRemove;
     onDeleteRow?: (index: number) => void;
@@ -41,9 +41,8 @@ export default function AchievementsForm({
 
             <div className="mt-3 space-y-3">
                 {fields.map((field, i) => {
-                    const { id } = field;
                     return (
-                        <div key={id ?? i} className="flex items-center space-x-3">
+                        <div key={field.fieldId} className="flex items-center space-x-3">
                             <div className="w-6 text-sm">{i + 1}.</div>
 
                             <input type="hidden" {...register(`achievements.${i}.id` as const)} />
@@ -88,7 +87,11 @@ export default function AchievementsForm({
                     <Button
                         type="button"
                         className="bg-primary text-primary-foreground"
-                        onClick={onEdit}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onEdit?.();
+                        }}
                     >
                         Edit Achievements
                     </Button>
@@ -100,7 +103,7 @@ export default function AchievementsForm({
                     </Button>
 
                     <Button type="button" variant="outline" onClick={onReset}>
-                        Reset Achievements
+                        Cancel
                     </Button>
                 </div>
             )}

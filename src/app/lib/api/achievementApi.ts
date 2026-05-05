@@ -14,10 +14,16 @@ export interface AchievementResponse {
     updatedAt: string;
 }
 
+type DataResponse<T> = {
+    message?: string;
+    data: T;
+};
+
 export async function createOcAchievement(ocId: string, body: AchievementPayload) {
-    return api.post<AchievementResponse>(endpoints.oc.clubAchievement(ocId), body, {
+    const res = await api.post<DataResponse<AchievementResponse>, AchievementPayload>(endpoints.oc.clubAchievement(ocId), body, {
         path: { ocId }
     });
+    return res.data;
 }
 
 export async function listOcAchievements(ocId: string) {
@@ -33,11 +39,12 @@ export async function updateOcAchievement(
     achievementId: string,
     body: AchievementPayload
 ) {
-    return api.patch(
+    const res = await api.patch<DataResponse<AchievementResponse>, AchievementPayload>(
         endpoints.oc.clubAchievementById(ocId, achievementId),
         body,
         { path: { ocId, achievementId } }
     );
+    return res.data;
 }
 
 export async function deleteOcAchievement(ocId: string, achievementId: string) {
