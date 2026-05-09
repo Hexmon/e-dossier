@@ -52,10 +52,10 @@ export interface MedCatBackendPayload {
     semester: number;
     date: string;
     mosAndDiagnostics: string;
-    catFrom: string;
-    catTo: string;
-    mhFrom: string;
-    mhTo: string;
-    absence: string;
-    platoonCommanderName: string;
+    catFrom?: string | null;
+    catTo?: string | null;
+    mhFrom?: string | null;
+    mhTo?: string | null;
+    absence?: string | null;
+    platoonCommanderName?: string | null;
 }

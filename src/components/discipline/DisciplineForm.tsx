@@ -21,8 +21,6 @@ interface Props {
     onSubmit: (data: DisciplineFormType) => Promise<void> | void;
     defaultValues: DisciplineFormType;
     ocId: string;
-    appointmentOptions: Array<{ value: string; label: string }>;
-    appointmentsLoading: boolean;
     onClear: () => void;
 }
 
@@ -30,8 +28,6 @@ export default function DisciplineForm({
     onSubmit,
     defaultValues,
     ocId,
-    appointmentOptions,
-    appointmentsLoading,
     onClear,
 }: Props) {
     const dispatch = useDispatch();
@@ -251,49 +247,11 @@ export default function DisciplineForm({
                                     </td>
 
                                     <td className="p-2 border">
-                                        <Select
-                                            value={currentRecord?.byWhomAwarded || undefined}
-                                            onValueChange={(value) =>
-                                                setValue(`records.${index}.byWhomAwarded`, value, {
-                                                    shouldDirty: true,
-                                                    shouldTouch: true,
-                                                })
-                                            }
-                                            disabled={appointmentsLoading}
-                                        >
-                                            <SelectTrigger className="w-full min-w-0">
-                                                <SelectValue
-                                                    className="truncate"
-                                                    placeholder={
-                                                        appointmentsLoading
-                                                            ? "Loading appointments..."
-                                                            : "Select appointment holder"
-                                                    }
-                                                />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {currentRecord?.byWhomAwarded &&
-                                                    !appointmentOptions.some(
-                                                        (option) => option.value === currentRecord.byWhomAwarded
-                                                    ) && (
-                                                        <SelectItem
-                                                            value={currentRecord.byWhomAwarded}
-                                                            className="max-w-[360px] truncate"
-                                                        >
-                                                            {currentRecord.byWhomAwarded}
-                                                        </SelectItem>
-                                                    )}
-                                                {appointmentOptions.map((option) => (
-                                                    <SelectItem
-                                                        key={option.value}
-                                                        value={option.value}
-                                                        className="max-w-[360px] truncate"
-                                                    >
-                                                        {option.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Input
+                                            className="w-full min-w-0"
+                                            placeholder="Enter awarder"
+                                            {...register(`records.${index}.byWhomAwarded`)}
+                                        />
                                     </td>
 
                                     <td className="p-2 border">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -30,7 +30,7 @@ import {
 import { useAutobiography } from "@/hooks/useAutobiography";
 import { AutoBio } from "@/types/background-detls";
 import { AutoBioPayload } from "@/app/lib/api/autobiographyApi";
-import { getAllUsers, getUsersByQuery, type User } from "@/app/lib/api/userApi";
+import { getUsersByQuery, type User } from "@/app/lib/api/userApi";
 import type { RootState } from "@/store";
 import { saveAutobiographyForm, clearAutobiographyForm } from "@/store/slices/autobiographySlice";
 import { ApiClientError } from "@/app/lib/apiClient";
@@ -43,6 +43,19 @@ type Props = {
 
 const textFields = ["general", "proficiency", "work", "additional"] as const;
 type TextFieldKey = typeof textFields[number];
+
+let platoonCommanderUsersPromise: Promise<User[]> | null = null;
+
+function getCachedPlatoonCommanderUsers() {
+    if (!platoonCommanderUsersPromise) {
+        platoonCommanderUsersPromise = getUsersByQuery("pl_cdr", 100).catch((error) => {
+            platoonCommanderUsersPromise = null;
+            throw error;
+        });
+    }
+
+    return platoonCommanderUsersPromise;
+}
 
 const textFieldLabels: Record<TextFieldKey, string> = {
     general: "General Self Assessment",
@@ -135,37 +148,36 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
     const cadetName = cadet?.name ?? "";
     const selectedCommander = watch("sign_pi") ?? "";
     const defaultCommanderName = commanderOptions[0]?.label ?? "";
+    const cadetPlatoonLookup = useMemo(
+        () => ({
+            platoonId: cadet?.platoonId,
+            platoonKey: cadet?.platoonKey,
+            platoonName: cadet?.platoonName,
+        }),
+        [cadet?.platoonId, cadet?.platoonKey, cadet?.platoonName]
+    );
 
     useEffect(() => {
-        if (!isEditing && selectedCommander) return;
+        if (!isEditing) return;
 
         let cancelled = false;
         const loadPlatoonCommanders = async () => {
             setIsLoadingCommanders(true);
             try {
-                let users: User[] = [];
-                try {
-                    users = await getAllUsers({ limit: 500, isActive: true });
-                } catch {
-                    users = await getUsersByQuery("pl_cdr", 100);
-                }
+                const users = await getCachedPlatoonCommanderUsers();
 
                 let matchedUsers = users.filter((user) =>
                     user.activeAppointments?.some((appointment) =>
-                        appointmentMatchesCadetPlatoon(appointment, cadet)
+                        appointmentMatchesCadetPlatoon(appointment, cadetPlatoonLookup)
                     )
                 );
 
-                if (matchedUsers.length === 0) {
-                    users = await getUsersByQuery("pl_cdr", 100);
-                    matchedUsers = users.filter((user) =>
-                        user.activeAppointments?.some((appointment) =>
-                            appointmentMatchesCadetPlatoon(appointment, cadet)
-                        )
-                    );
-                }
-
-                if (matchedUsers.length === 0 && !cadet?.platoonId && !cadet?.platoonKey && !cadet?.platoonName) {
+                if (
+                    matchedUsers.length === 0 &&
+                    !cadetPlatoonLookup.platoonId &&
+                    !cadetPlatoonLookup.platoonKey &&
+                    !cadetPlatoonLookup.platoonName
+                ) {
                     matchedUsers = users.filter((user) =>
                         user.activeAppointments?.some(isPlatoonCommanderAppointment)
                     );
@@ -200,12 +212,12 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         return () => {
             cancelled = true;
         };
-    }, [cadet, isEditing, selectedCommander]);
+    }, [cadetPlatoonLookup, isEditing]);
 
     useEffect(() => {
-        if (selectedCommander || !defaultCommanderName) return;
+        if (!isEditing || selectedCommander || !defaultCommanderName) return;
         setValue("sign_pi", defaultCommanderName, { shouldDirty: false });
-    }, [defaultCommanderName, selectedCommander, setValue]);
+    }, [defaultCommanderName, isEditing, selectedCommander, setValue]);
 
     // Auto-save to Redux on form changes (only when editing and not initial load)
     useEffect(() => {
@@ -233,6 +245,8 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
 
     // Initialize form data
     useEffect(() => {
+        if (!isInitialLoad.current) return;
+
         // If backend data exists, use it
         if (autoBio) {
             const {
@@ -262,25 +276,23 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         // If no backend data but we have saved form data in Redux
         if (savedFormData && isInitialLoad.current) {
             reset(savedFormData);
-            setIsEditing(true);
+            setIsEditing(false);
             isInitialLoad.current = false;
             return;
         }
 
         // If no data at all — default date to today
-        if (isInitialLoad.current) {
-            reset({
-                general: "",
-                proficiency: "",
-                work: "",
-                additional: "",
-                date: todayStr(),
-                sign_oc: cadetName,
-                sign_pi: defaultCommanderName,
-            });
-            setIsEditing(true);
-            isInitialLoad.current = false;
-        }
+        reset({
+            general: "",
+            proficiency: "",
+            work: "",
+            additional: "",
+            date: todayStr(),
+            sign_oc: cadetName,
+            sign_pi: defaultCommanderName,
+        });
+        setIsEditing(false);
+        isInitialLoad.current = false;
     }, [autoBio, cadetName, defaultCommanderName, reset, savedFormData]);
 
     // Save handler
