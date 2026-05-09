@@ -1,12 +1,16 @@
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+
+const mockSearchParams = vi.hoisted(() => ({
+  current: new URLSearchParams(),
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),
   }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => mockSearchParams.current,
 }));
 
 vi.mock("next/image", () => ({
@@ -16,6 +20,10 @@ vi.mock("next/image", () => ({
 import LoginPageClient from "@/components/auth/LoginPageClient";
 
 describe("LoginPageClient", () => {
+  beforeEach(() => {
+    mockSearchParams.current = new URLSearchParams();
+  });
+
   it("shows the first-run setup CTA and accessible login controls when bootstrap is required", () => {
     const html = renderToStaticMarkup(
       <LoginPageClient bootstrapRequired />
@@ -39,5 +47,17 @@ describe("LoginPageClient", () => {
 
     expect(html).not.toContain("Initial setup required");
     expect(html).toContain("Sign in to MCEME CTW Portal");
+  });
+
+  it("ignores legacy role query params and still renders the normal sign-in flow", () => {
+    mockSearchParams.current = new URLSearchParams("role=oc");
+
+    const html = renderToStaticMarkup(
+      <LoginPageClient bootstrapRequired={false} />
+    );
+
+    expect(html).toContain("Sign in to MCEME CTW Portal");
+    expect(html).toContain('id="appointment-trigger"');
+    expect(html).not.toContain("Coming Soon");
   });
 });

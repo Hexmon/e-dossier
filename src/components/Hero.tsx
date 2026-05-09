@@ -49,7 +49,7 @@ const Hero = ({
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Button asChild variant="link" size="lg" className="bg-warning">
-                <Link href="/login?role=staff">Commander / Staff Login</Link>
+                <Link href="/login">Commander / Staff Login</Link>
               </Button>
             </div>
           </div>

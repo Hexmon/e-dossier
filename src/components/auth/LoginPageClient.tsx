@@ -42,7 +42,6 @@ export default function LoginPageClient({
 }: LoginPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isOcCorner = searchParams.get("role") === "oc";
 
   const [appointments, setAppointments] = useState<LoginAppointmentOption[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
@@ -229,169 +228,161 @@ export default function LoginPageClient({
           </p>
         </div>
 
-        {isOcCorner ? (
-          <div className="flex h-64 items-center justify-center rounded-lg bg-muted shadow-lg">
-            <h2 className="text-center text-4xl font-extrabold text-primary">
-              🚧 Coming Soon 🚧
-            </h2>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {bootstrapRequired ? (
-              <Card className="border-warning/30 bg-warning/20 shadow-command">
-                <CardHeader>
-                  <CardTitle className="text-center text-xl text-warning-foreground">
-                    Initial setup required
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-warning-foreground/80">
-                    This installation does not have an active SUPER_ADMIN yet. Complete the first-run setup before using the sign-in flow.
-                  </p>
-                  <Button asChild className="w-full">
-                    <Link href="/setup">Open First-Run Setup</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            <Card className="shadow-command">
+        <div className="space-y-4">
+          {bootstrapRequired ? (
+            <Card className="border-warning/30 bg-warning/20 shadow-command">
               <CardHeader>
-                <CardTitle className="text-center text-2xl text-primary">
-                  Sign in to MCEME CTW Portal
+                <CardTitle className="text-center text-xl text-warning-foreground">
+                  Initial setup required
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="appointment-trigger">Appointment</Label>
-                    <Select
-                      value={appointment}
-                      onValueChange={handleAppointmentChange}
-                      disabled={
-                        loadingAppointments ||
-                        appointmentsFetchError ||
-                        appointments.length === 0
-                      }
-                    >
-                      <SelectTrigger
-                        id="appointment-trigger"
-                        className="w-full"
-                        aria-describedby={appointmentDescribedBy}
-                      >
-                        <SelectValue
-                          placeholder={
-                            loadingAppointments
-                              ? "Loading..."
-                              : appointmentsFetchError
-                                ? "Failed to load appointments"
-                                : appointments.length === 0
-                                  ? "No appointments available"
-                                  : "Select your appointment"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {appointments.map((candidate) => (
-                          <SelectItem key={candidate.id} value={candidate.id}>
-                            {describeAppointment(candidate)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p id={appointmentHelpId} className="text-sm text-muted-foreground">
-                      Choose the appointment you are signing in for. Only appointments active right now are listed here.
-                    </p>
-                    {appointmentsFetchError ? (
-                      <p id={appointmentErrorId} className="text-sm text-destructive">
-                        Unable to load appointments. Please refresh the page.
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
-                    <Input
-                      id="username"
-                      {...register("username")}
-                      placeholder={
-                        selectedAppointment?.username ?? "Select an appointment first"
-                      }
-                      required
-                      disabled={!appointment}
-                      readOnly={Boolean(selectedAppointment)}
-                      autoComplete="username"
-                      aria-describedby={usernameHelpId}
-                      aria-readonly={selectedAppointment ? "true" : undefined}
-                      className={
-                        selectedAppointment
-                          ? "cursor-not-allowed bg-muted text-muted-foreground"
-                          : undefined
-                      }
-                    />
-                    <p id={usernameHelpId} className="text-sm text-muted-foreground">
-                      Username is auto-filled from the selected appointment.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        {...register("password")}
-                        placeholder="Enter password"
-                        required
-                        disabled={shouldDisableOtherFields}
-                        autoComplete="current-password"
-                        aria-describedby={passwordHelpId}
-                        className="pr-10"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                        onClick={() => setShowPassword((current) => !current)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                        aria-pressed={showPassword}
-                        aria-controls="password"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                    <p id={passwordHelpId} className="text-sm text-muted-foreground">
-                      Enter the password for the selected appointment account.
-                    </p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full cursor-pointer bg-[var(--primary)] text-primary-foreground"
-                    disabled={isSubmitting || shouldDisableOtherFields}
-                  >
-                    {isSubmitting ? "Signing In..." : "Sign In"}
-                  </Button>
-                </form>
-
-                <div className="mt-6 space-y-3">
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="flex-1 border border-[var(--primary)]"
-                    >
-                      <Link href="/signup">Create New Account</Link>
-                    </Button>
-                  </div>
-                </div>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-warning-foreground/80">
+                  This installation does not have an active SUPER_ADMIN yet. Complete the first-run setup before using the sign-in flow.
+                </p>
+                <Button asChild className="w-full">
+                  <Link href="/setup">Open First-Run Setup</Link>
+                </Button>
               </CardContent>
             </Card>
-          </div>
-        )}
+          ) : null}
+
+          <Card className="shadow-command">
+            <CardHeader>
+              <CardTitle className="text-center text-2xl text-primary">
+                Sign in to MCEME CTW Portal
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="appointment-trigger">Appointment</Label>
+                  <Select
+                    value={appointment}
+                    onValueChange={handleAppointmentChange}
+                    disabled={
+                      loadingAppointments ||
+                      appointmentsFetchError ||
+                      appointments.length === 0
+                    }
+                  >
+                    <SelectTrigger
+                      id="appointment-trigger"
+                      className="w-full"
+                      aria-describedby={appointmentDescribedBy}
+                    >
+                      <SelectValue
+                        placeholder={
+                          loadingAppointments
+                            ? "Loading..."
+                            : appointmentsFetchError
+                              ? "Failed to load appointments"
+                              : appointments.length === 0
+                                ? "No appointments available"
+                                : "Select your appointment"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {appointments.map((candidate) => (
+                        <SelectItem key={candidate.id} value={candidate.id}>
+                          {describeAppointment(candidate)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p id={appointmentHelpId} className="text-sm text-muted-foreground">
+                    Choose the appointment you are signing in for. Only appointments active right now are listed here.
+                  </p>
+                  {appointmentsFetchError ? (
+                    <p id={appointmentErrorId} className="text-sm text-destructive">
+                      Unable to load appointments. Please refresh the page.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    {...register("username")}
+                    placeholder={
+                      selectedAppointment?.username ?? "Select an appointment first"
+                    }
+                    required
+                    disabled={!appointment}
+                    readOnly={Boolean(selectedAppointment)}
+                    autoComplete="username"
+                    aria-describedby={usernameHelpId}
+                    aria-readonly={selectedAppointment ? "true" : undefined}
+                    className={
+                      selectedAppointment
+                        ? "cursor-not-allowed bg-muted text-muted-foreground"
+                        : undefined
+                    }
+                  />
+                  <p id={usernameHelpId} className="text-sm text-muted-foreground">
+                    Username is auto-filled from the selected appointment.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      {...register("password")}
+                      placeholder="Enter password"
+                      required
+                      disabled={shouldDisableOtherFields}
+                      autoComplete="current-password"
+                      aria-describedby={passwordHelpId}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                      onClick={() => setShowPassword((current) => !current)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-pressed={showPassword}
+                      aria-controls="password"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  <p id={passwordHelpId} className="text-sm text-muted-foreground">
+                    Enter the password for the selected appointment account.
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full cursor-pointer bg-[var(--primary)] text-primary-foreground"
+                  disabled={isSubmitting || shouldDisableOtherFields}
+                >
+                  {isSubmitting ? "Signing In..." : "Sign In"}
+                </Button>
+              </form>
+
+              <div className="mt-6 space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex-1 border border-[var(--primary)]"
+                  >
+                    <Link href="/signup">Create New Account</Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="mt-6 text-center">
           <Button asChild variant="link" className="text-primary-foreground">
