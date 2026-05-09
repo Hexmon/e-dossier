@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -10,6 +11,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { OfficerCadetForm } from "@/types/dossierSnap";
 import { useDossierSnapshot } from "@/hooks/useDossierSnapshot";
+import {
+    DOSSIER_SNAPSHOT_PHOTO_SIZE_MESSAGE,
+    isDossierSnapshotPhotoTooLarge,
+} from "@/lib/dossier-snapshot-photo";
 
 interface Props {
     ocId: string;
@@ -43,6 +48,18 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
 
     const handleEditClick = () => setIsEditMode(true);
 
+    const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.currentTarget.files?.[0];
+        if (!file || !isDossierSnapshotPhotoTooLarge(file)) return;
+
+        toast.error(DOSSIER_SNAPSHOT_PHOTO_SIZE_MESSAGE);
+        event.currentTarget.value = "";
+    };
+
+    const getSelectedPhoto = (value: OfficerCadetForm["arrivalPhoto"]) => {
+        return typeof FileList !== "undefined" && value instanceof FileList ? value[0] ?? null : null;
+    };
+
     /* 🔄 Load redux-persisted data */
     useEffect(() => {
         if (dossierSnapshot) {
@@ -72,6 +89,17 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
             return;
         }
 
+        const arrivalPhoto = getSelectedPhoto(data.arrivalPhoto);
+        const departurePhoto = getSelectedPhoto(data.departurePhoto);
+
+        if (
+            (arrivalPhoto && isDossierSnapshotPhotoTooLarge(arrivalPhoto)) ||
+            (departurePhoto && isDossierSnapshotPhotoTooLarge(departurePhoto))
+        ) {
+            toast.error(DOSSIER_SNAPSHOT_PHOTO_SIZE_MESSAGE);
+            return;
+        }
+
         // Create FormData to include files and text fields
         const formData = new FormData();
 
@@ -90,15 +118,19 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
         formData.append('postedAtt', data.postedAtt);
 
         // Append files if present
-        if (data.arrivalPhoto instanceof FileList && data.arrivalPhoto[0]) {
-            formData.append('arrivalPhoto', data.arrivalPhoto[0]);
+        if (arrivalPhoto) {
+            formData.append('arrivalPhoto', arrivalPhoto);
         }
-        if (data.departurePhoto instanceof FileList && data.departurePhoto[0]) {
-            formData.append('departurePhoto', data.departurePhoto[0]);
+        if (departurePhoto) {
+            formData.append('departurePhoto', departurePhoto);
         }
 
-        await saveSnapshot(formData);
-        setIsEditMode(false);
+        try {
+            await saveSnapshot(formData);
+            setIsEditMode(false);
+        } catch {
+            // saveSnapshot shows the user-facing toast.
+        }
     };
 
     const handleReset = () => {
@@ -220,11 +252,19 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="flex flex-col items-center border p-4 rounded-lg">
                                         <Label className="mb-2">Arrival (Civil Dress)</Label>
-                                        <Input type="file" accept="image/*" {...register("arrivalPhoto")} />
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            {...register("arrivalPhoto", { onChange: handlePhotoChange })}
+                                        />
                                     </div>
                                     <div className="flex flex-col items-center border p-4 rounded-lg">
                                         <Label className="mb-2">Departure (Uniform)</Label>
-                                        <Input type="file" accept="image/*" {...register("departurePhoto")} />
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            {...register("departurePhoto", { onChange: handlePhotoChange })}
+                                        />
                                     </div>
                                 </div>
 

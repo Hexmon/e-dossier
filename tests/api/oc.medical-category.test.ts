@@ -105,6 +105,65 @@ describe("medical category routes", () => {
     expect(body.error).toBe("forbidden");
   });
 
+  it("creates medical category records with only date and diagnosis required", async () => {
+    vi.mocked(ocQueries.createMedCat).mockResolvedValue({ id: recordId, ocId, semester: 5 } as any);
+
+    const res = await createMedicalCategoryRoute(
+      makeJsonRequest({
+        method: "POST",
+        path: `/api/v1/oc/${ocId}/medical-category`,
+        body: {
+          semester: 5,
+          date: "2026-04-05",
+          mosAndDiagnostics: "Observation",
+          catFrom: null,
+          catTo: null,
+          mhFrom: "",
+          mhTo: "",
+          absence: "",
+          platoonCommanderName: null,
+        },
+      }) as any,
+      createRouteContext({ ocId })
+    );
+
+    expect(res.status).toBe(201);
+    expect(ocQueries.createMedCat).toHaveBeenCalledWith(
+      ocId,
+      expect.objectContaining({
+        semester: 5,
+        date: expect.any(Date),
+        mosAndDiagnostics: "Observation",
+        catFrom: null,
+        catTo: null,
+        mhFrom: null,
+        mhTo: null,
+        absence: null,
+        platoonCommanderName: null,
+      })
+    );
+  });
+
+  it("rejects medical category records without diagnosis", async () => {
+    const res = await createMedicalCategoryRoute(
+      makeJsonRequest({
+        method: "POST",
+        path: `/api/v1/oc/${ocId}/medical-category`,
+        body: {
+          semester: 5,
+          date: "2026-04-05",
+          mosAndDiagnostics: "   ",
+        },
+      }) as any,
+      createRouteContext({ ocId })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("bad_request");
+    expect(ocQueries.createMedCat).not.toHaveBeenCalled();
+  });
+
   it("updates and deletes medical category records through the commander-only write path", async () => {
     vi.mocked(ocQueries.getMedCat).mockResolvedValue({
       id: recordId,

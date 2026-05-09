@@ -1,11 +1,9 @@
 //DisciplineRecordsPage
 "use client";
 
-import { useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
-import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -31,7 +29,6 @@ import { useDisciplineRecords } from "@/hooks/useDisciplineRecords";
 import DisciplineTable from "@/components/discipline/DisciplineTable";
 import DisciplineForm from "@/components/discipline/DisciplineForm";
 import { useOcDetails } from "@/hooks/useOcDetails";
-import { getDashboardAppointmentHolders } from "@/app/lib/api/appointmentApi";
 
 import type { RootState } from "@/store";
 import { clearDisciplineForm } from "@/store/slices/disciplineRecordsSlice";
@@ -101,38 +98,6 @@ export default function DisciplineRecordsPage() {
     const handleSemesterChange = (index: number) => {
         setActiveSemester(index + 1);
     };
-
-    const { data: appointmentOptions = [], isLoading: appointmentsLoading } = useQuery({
-        queryKey: ["discipline-awarded-by-options"],
-        queryFn: async () => {
-            try {
-                const appointments = await getDashboardAppointmentHolders();
-                const uniqueByOfficer = new Map<string, string>();
-
-                for (const appt of appointments) {
-                    const officerName = (appt.officerName || "").trim();
-                    if (!officerName) continue;
-
-                    if (!uniqueByOfficer.has(officerName)) {
-                        const position = (appt.positionName || "").trim();
-                        const label = [officerName, position ? `- ${position}` : ""]
-                            .filter(Boolean)
-                            .join(" ")
-                            .trim();
-                        uniqueByOfficer.set(officerName, label || officerName);
-                    }
-                }
-
-                return Array.from(uniqueByOfficer.entries())
-                    .map(([value, label]) => ({ value, label }))
-                    .sort((a, b) => a.label.localeCompare(b.label));
-            } catch {
-                toast.error("Failed to load appointments for awarder dropdown");
-                return [];
-            }
-        },
-        staleTime: 5 * 60 * 1000,
-    });
 
     // React Query handles fetching automatically, no need for manual fetchAll
     // The query will run when ocId changes due to the enabled flag in the hook
@@ -324,8 +289,6 @@ export default function DisciplineRecordsPage() {
                                 <DisciplineTable
                                     rows={groupedBySemester[activeTab]}
                                     loading={loading}
-                                    appointmentOptions={appointmentOptions}
-                                    appointmentsLoading={appointmentsLoading}
                                     onEditSave={handleUpdate}
                                     onDelete={handleDelete}
                                     readOnly={isActiveSemesterLocked}
@@ -338,8 +301,6 @@ export default function DisciplineRecordsPage() {
                                             onSubmit={handleSubmit}
                                             defaultValues={getDefaultValues()}
                                             ocId={ocId}
-                                            appointmentOptions={appointmentOptions}
-                                            appointmentsLoading={appointmentsLoading}
                                             onClear={handleClearForm}
                                         />
                                     </div>
