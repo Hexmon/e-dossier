@@ -3,15 +3,35 @@ import { courses } from '@/app/db/schema/training/courses';
 import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
 import { subjects } from '@/app/db/schema/training/subjects';
 import { ocCadets } from '@/app/db/schema/training/oc';
-import { and, eq, ilike, isNull, like, sql } from 'drizzle-orm';
+import { and, eq, ilike, isNull, sql } from 'drizzle-orm';
 
 export type CourseRow = typeof courses.$inferSelect;
 
-export async function listCourses(opts: { q?: string; includeDeleted?: boolean; limit?: number; offset?: number; }) {
+type CourseListOptions = {
+    q?: string;
+    includeDeleted?: boolean;
+    limit?: number;
+    offset?: number;
+};
+
+function buildCourseListWhere(opts: Pick<CourseListOptions, 'q' | 'includeDeleted'>) {
     const wh: any[] = [];
     if (!opts.includeDeleted) wh.push(isNull(courses.deletedAt));
     if (opts.q) wh.push(ilike(courses.code, `%${opts.q}%`));
 
+    return wh.length ? and(...wh) : undefined;
+}
+
+export async function countCourses(opts: Pick<CourseListOptions, 'q' | 'includeDeleted'>) {
+    const [row] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(courses)
+        .where(buildCourseListWhere(opts));
+
+    return Number(row?.count ?? 0);
+}
+
+export async function listCourses(opts: CourseListOptions) {
     return db
         .select({
             id: courses.id,
@@ -23,7 +43,7 @@ export async function listCourses(opts: { q?: string; includeDeleted?: boolean; 
             deletedAt: courses.deletedAt,
         })
         .from(courses)
-        .where(wh.length ? and(...wh) : undefined)
+        .where(buildCourseListWhere(opts))
         .orderBy(courses.code)
         .limit(opts.limit ?? 100)
         .offset(opts.offset ?? 0);

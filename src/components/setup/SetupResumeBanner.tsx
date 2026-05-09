@@ -16,6 +16,7 @@ type SetupResumeBannerProps = {
 const STEP_LABELS: Record<SetupStepKey, string> = {
   superAdmin: "Super Admin",
   platoons: "Platoons",
+  appointments: "Users & Appointments",
   hierarchy: "Hierarchy",
   courses: "Courses",
   offerings: "Offerings / Semesters",

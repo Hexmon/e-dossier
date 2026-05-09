@@ -39,6 +39,8 @@ describe("getSetupStatus runtime fallback", () => {
       [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
       [],
       []
     );
@@ -56,6 +58,8 @@ describe("getSetupStatus runtime fallback", () => {
       Object.assign(new Error("Failed query: select count(*)::int from appointments"), {
         cause: new Error('column "users"."is_active" does not exist'),
       }),
+      [{ count: 0 }],
+      [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
@@ -85,6 +89,8 @@ describe("getSetupStatus runtime fallback", () => {
       [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
       [],
       []
     );
@@ -100,6 +106,8 @@ describe("getSetupStatus runtime fallback", () => {
   it("still rethrows unexpected database failures", async () => {
     queryQueue.push(
       Object.assign(new Error("connection lost"), { code: "57P01" }),
+      [{ count: 0 }],
+      [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],

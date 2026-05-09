@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -36,16 +36,30 @@ const courseMgmtTabs = [
   },
 ];
 
+const COURSES_PAGE_SIZE = 5;
+
 export default function CourseManagement() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const {
     courses,
+    totalCount,
     loading,
+    isFetching,
     addCourse,
     editCourse,
     removeCourse,
-  } = useCourses();
+  } = useCourses({
+    q: searchQuery,
+    limit: COURSES_PAGE_SIZE,
+    offset: (currentPage - 1) * COURSES_PAGE_SIZE,
+  });
+  const { courses: allCourses } = useCourses({
+    limit: 200,
+    offset: 0,
+    queryScope: "all",
+  });
 
-  const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editCourseData, setEditCourseData] = useState<UICourse | null>(null);
   const [viewCourse, setViewCourse] = useState<UICourse | null>(null);
@@ -55,12 +69,15 @@ export default function CourseManagement() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return courses.filter(({ courseNo }) =>
-      (courseNo ?? "").toLowerCase().includes(q)
-    );
-  }, [courses, searchQuery]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / COURSES_PAGE_SIZE));
+  const pageStart = totalCount === 0 ? 0 : (currentPage - 1) * COURSES_PAGE_SIZE + 1;
+  const pageEnd = Math.min(currentPage * COURSES_PAGE_SIZE, totalCount);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleAdd = () => {
     setEditCourseData(null);
@@ -146,7 +163,10 @@ export default function CourseManagement() {
                     <Input
                       placeholder="Search courses..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
                       className="w-full sm:w-64"
                     />
                     <Button variant="outline" onClick={() => setAssignDialogOpen(true)}>
@@ -161,29 +181,60 @@ export default function CourseManagement() {
                 <div className="flex justify-end items-center">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">
-                      {loading ? "Loading courses..." : `${filtered.length} course${filtered.length === 1 ? "" : "s"}`}
+                      {loading
+                        ? "Loading courses..."
+                        : totalCount === 0
+                          ? "0 courses"
+                          : `Showing ${pageStart}-${pageEnd} of ${totalCount} course${totalCount === 1 ? "" : "s"}`}
                     </span>
                   </div>
                 </div>
 
                 {loading ? (
                   <div className="text-center py-12">Loading...</div>
-                ) : filtered.length === 0 ? (
+                ) : courses.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     No courses found.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filtered.map((course) => (
-                      <CourseCard
-                        key={course.id}
-                        course={course}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onView={handleView}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {courses.map((course) => (
+                        <CourseCard
+                          key={course.id}
+                          course={course}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onView={handleView}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Page {currentPage} of {totalPages}
+                        {isFetching && !loading ? " - updating..." : ""}
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={currentPage === 1 || isFetching}
+                          onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={currentPage >= totalPages || isFetching}
+                          onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </TabsContent>
             </GlobalTabs>
@@ -215,7 +266,7 @@ export default function CourseManagement() {
       <AssignOfferingsDialog
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
-        courses={courses}
+        courses={allCourses}
       />
 
       <AlertDialog

@@ -9,14 +9,15 @@ import { ApiClientError } from "@/app/lib/apiClient";
 import {
   hierarchyAdminApi,
   type HierarchyNodeInput,
+  type HierarchyNodeRecord,
   type HierarchyNodeReorderItem,
 } from "@/app/lib/api/hierarchyAdminApi";
 import { buildHierarchyReorderPayload, buildHierarchyTree, type HierarchyDropPosition } from "@/app/lib/hierarchy-tree";
-import { getPositions } from "@/app/lib/api/appointmentApi";
-import { getPlatoons } from "@/app/lib/api/platoonApi";
+import { getPositions, type Position } from "@/app/lib/api/appointmentApi";
+import { getPlatoons, type Platoon } from "@/app/lib/api/platoonApi";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
-import HierarchyTree from "@/components/hierarchy/HierarchyTree";
+import HierarchyTree, { type HierarchyInlineDraft } from "@/components/hierarchy/HierarchyTree";
 import { SetupReturnBanner } from "@/components/setup/SetupReturnBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,13 +47,11 @@ type InspectorState =
     }
   | null;
 
-type HierarchyInspectorDraft = {
-  key: string;
-  name: string;
-  nodeType: "ROOT" | "GROUP" | "PLATOON";
-  parentId: string;
-  platoonId: string;
-};
+type HierarchyInspectorDraft = HierarchyInlineDraft;
+
+const EMPTY_HIERARCHY_NODES: HierarchyNodeRecord[] = [];
+const EMPTY_PLATOONS: Platoon[] = [];
+const EMPTY_POSITIONS: Position[] = [];
 
 function parseApiError(error: unknown, fallback: string) {
   if (error instanceof ApiClientError) {
@@ -76,6 +75,16 @@ function makeCreateDraft(parentId: string, nodeType: "GROUP" | "PLATOON"): Hiera
   };
 }
 
+function makeDraftFromNode(node: HierarchyNodeRecord): HierarchyInlineDraft {
+  return {
+    key: node.key,
+    name: node.name,
+    nodeType: node.nodeType,
+    parentId: node.parentId ?? "",
+    platoonId: node.platoonId ?? "",
+  };
+}
+
 export default function HierarchyManagementPage() {
   const queryClient = useQueryClient();
   const { data: meData } = useMe();
@@ -85,6 +94,8 @@ export default function HierarchyManagementPage() {
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [inspectorState, setInspectorState] = useState<InspectorState>(null);
   const [inspectorDraft, setInspectorDraft] = useState<HierarchyInspectorDraft | null>(null);
+  const [inlineEditNodeId, setInlineEditNodeId] = useState<string | null>(null);
+  const [inlineEditDraft, setInlineEditDraft] = useState<HierarchyInlineDraft | null>(null);
   const [commanderPositionId, setCommanderPositionId] = useState<string>("");
 
   const hierarchyQuery = useQuery({
@@ -104,7 +115,7 @@ export default function HierarchyManagementPage() {
     queryFn: getPositions,
   });
 
-  const nodeOptions = hierarchyQuery.data?.items ?? [];
+  const nodeOptions = hierarchyQuery.data?.items ?? EMPTY_HIERARCHY_NODES;
   const tree = useMemo(() => buildHierarchyTree(nodeOptions), [nodeOptions]);
   const rootNode = useMemo(
     () => nodeOptions.find((node) => node.nodeType === "ROOT") ?? null,
@@ -114,8 +125,8 @@ export default function HierarchyManagementPage() {
     () => nodeOptions.find((node) => node.id === selectedNodeId) ?? rootNode ?? null,
     [nodeOptions, rootNode, selectedNodeId]
   );
-  const platoonOptions = platoonsQuery.data ?? [];
-  const positions = positionsQuery.data ?? [];
+  const platoonOptions = platoonsQuery.data ?? EMPTY_PLATOONS;
+  const positions = positionsQuery.data ?? EMPTY_POSITIONS;
   const isSuperAdmin = useMemo(
     () => (meData?.roles ?? []).some((role) => String(role).toUpperCase() === "SUPER_ADMIN"),
     [meData?.roles]
@@ -149,7 +160,13 @@ export default function HierarchyManagementPage() {
       .filter((node) => node.nodeType !== "PLATOON")
       .map((node) => node.id);
 
-    setExpandedNodeIds((current) => Array.from(new Set([...current, ...nextExpandedIds])));
+    setExpandedNodeIds((current) => {
+      const merged = Array.from(new Set([...current, ...nextExpandedIds]));
+      if (merged.length === current.length && merged.every((id, index) => id === current[index])) {
+        return current;
+      }
+      return merged;
+    });
   }, [nodeOptions]);
 
   const refresh = async () => {
@@ -189,6 +206,8 @@ export default function HierarchyManagementPage() {
       toast.success("Hierarchy node updated.");
       setInspectorState(null);
       setInspectorDraft(null);
+      setInlineEditNodeId(null);
+      setInlineEditDraft(null);
       await refresh();
     },
     onError: (error: unknown) => {
@@ -216,6 +235,8 @@ export default function HierarchyManagementPage() {
       toast.success("Hierarchy node deleted.");
       setInspectorState(null);
       setInspectorDraft(null);
+      setInlineEditNodeId(null);
+      setInlineEditDraft(null);
       await refresh();
     },
     onError: (error: unknown) => {
@@ -263,24 +284,25 @@ export default function HierarchyManagementPage() {
     setInspectorDraft(makeCreateDraft(parentId, nodeType));
   };
 
-  const openEditInspector = (nodeId: string) => {
+  const openInlineEditor = (nodeId: string) => {
     const node = nodeOptions.find((candidate) => candidate.id === nodeId);
     if (!node) return;
 
     setSelectedNodeId(node.id);
-    setInspectorState({ mode: "edit", nodeId: node.id });
-    setInspectorDraft({
-      key: node.key,
-      name: node.name,
-      nodeType: node.nodeType,
-      parentId: node.parentId ?? "",
-      platoonId: node.platoonId ?? "",
-    });
+    setInspectorState(null);
+    setInspectorDraft(null);
+    setInlineEditNodeId(node.id);
+    setInlineEditDraft(makeDraftFromNode(node));
   };
 
   const closeInspector = () => {
     setInspectorState(null);
     setInspectorDraft(null);
+  };
+
+  const cancelInlineEditor = () => {
+    setInlineEditNodeId(null);
+    setInlineEditDraft(null);
   };
 
   const submitInspector = () => {
@@ -322,6 +344,36 @@ export default function HierarchyManagementPage() {
         nodeType: inspectorDraft.nodeType,
         parentId: inspectorDraft.nodeType === "ROOT" ? null : inspectorDraft.parentId || null,
         platoonId: inspectorDraft.nodeType === "PLATOON" ? inspectorDraft.platoonId || null : null,
+      },
+    });
+  };
+
+  const submitInlineEdit = () => {
+    if (!inlineEditNodeId || !inlineEditDraft) return;
+
+    if (!inlineEditDraft.key.trim() || !inlineEditDraft.name.trim()) {
+      toast.error("Key and name are required.");
+      return;
+    }
+
+    if (inlineEditDraft.nodeType !== "ROOT" && !inlineEditDraft.parentId) {
+      toast.error("Parent node is required.");
+      return;
+    }
+
+    if (inlineEditDraft.nodeType === "PLATOON" && !inlineEditDraft.platoonId) {
+      toast.error("Platoon is required for platoon nodes.");
+      return;
+    }
+
+    updateNodeMutation.mutate({
+      nodeId: inlineEditNodeId,
+      payload: {
+        key: inlineEditDraft.key.trim(),
+        name: inlineEditDraft.name.trim(),
+        nodeType: inlineEditDraft.nodeType,
+        parentId: inlineEditDraft.nodeType === "ROOT" ? null : inlineEditDraft.parentId || null,
+        platoonId: inlineEditDraft.nodeType === "PLATOON" ? inlineEditDraft.platoonId || null : null,
       },
     });
   };
@@ -379,11 +431,8 @@ export default function HierarchyManagementPage() {
         <div className="grid gap-6 xl:grid-cols-[1.4fr,0.8fr]">
           <Card>
             <CardHeader>
-              <CardTitle>Organization Tree</CardTitle>
-              <CardDescription>
-                Drag nodes to move them, drop on a node to make it a child, and use the gaps above or below a node to
-                reorder siblings.
-              </CardDescription>
+              <CardTitle>Organization Graph</CardTitle>
+              <CardDescription>Linked hierarchy nodes with direct editing on each node card.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-4">
@@ -423,7 +472,7 @@ export default function HierarchyManagementPage() {
                     Add Child Platoon
                   </Button>
                   {selectedNode ? (
-                    <Button type="button" onClick={() => openEditInspector(selectedNode.id)}>
+                    <Button type="button" onClick={() => openInlineEditor(selectedNode.id)}>
                       <SquarePen className="mr-1 h-4 w-4" />
                       Edit Selected
                     </Button>
@@ -438,10 +487,15 @@ export default function HierarchyManagementPage() {
               ) : (
                 <HierarchyTree
                   tree={tree}
+                  nodeOptions={nodeOptions}
+                  platoonOptions={platoonOptions}
                   selectedNodeId={selectedNode?.id ?? null}
                   expandedNodeIds={new Set(expandedNodeIds)}
                   draggingNodeId={draggingNodeId}
                   deletePendingNodeId={deleteNodeMutation.isPending ? deleteNodeMutation.variables ?? null : null}
+                  editingNodeId={inlineEditNodeId}
+                  editingDraft={inlineEditDraft}
+                  savingNodeId={updateNodeMutation.isPending ? updateNodeMutation.variables?.nodeId ?? null : null}
                   onSelectNode={setSelectedNodeId}
                   onToggleNode={(nodeId) =>
                     setExpandedNodeIds((current) =>
@@ -454,7 +508,10 @@ export default function HierarchyManagementPage() {
                   onDragEnd={() => setDraggingNodeId(null)}
                   onDrop={handleDrop}
                   onAddChild={openCreateInspector}
-                  onEdit={openEditInspector}
+                  onEdit={openInlineEditor}
+                  onEditDraftChange={setInlineEditDraft}
+                  onSaveEdit={submitInlineEdit}
+                  onCancelEdit={cancelInlineEditor}
                   onDelete={handleDeleteNode}
                 />
               )}

@@ -35,10 +35,12 @@ import type { LoginForm } from "@/types/login";
 
 type LoginPageClientProps = {
   bootstrapRequired: boolean;
+  setupComplete?: boolean;
 };
 
 export default function LoginPageClient({
   bootstrapRequired,
+  setupComplete = true,
 }: LoginPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -155,7 +157,7 @@ export default function LoginPageClient({
       const redirectTo = resolvePostAuthRedirect({
         nextParam: searchParams.get("next"),
         storedReturnUrl: readReturnUrl(),
-        fallback: "/dashboard",
+        fallback: setupComplete ? "/dashboard" : "/setup",
       });
       clearReturnUrl();
       router.push(redirectTo);
@@ -243,6 +245,21 @@ export default function LoginPageClient({
                 <Button asChild className="w-full">
                   <Link href="/setup">Open First-Run Setup</Link>
                 </Button>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {!bootstrapRequired && !setupComplete ? (
+            <Card className="border-warning/30 bg-warning/20 shadow-command">
+              <CardHeader>
+                <CardTitle className="text-center text-xl text-warning-foreground">
+                  Initial setup in progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-warning-foreground/80">
+                  Only ADMIN or SUPER_ADMIN sign-in is enabled until the initial setup checklist is complete.
+                </p>
               </CardContent>
             </Card>
           ) : null}

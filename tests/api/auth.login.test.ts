@@ -5,6 +5,7 @@ import * as accountLockout from '@/app/db/queries/account-lockout';
 import * as effectiveAuthority from '@/app/lib/effective-authority';
 import * as jwt from '@/app/lib/jwt';
 import * as cookies from '@/app/lib/cookies';
+import { getSetupStatus } from '@/app/lib/setup-status';
 
 vi.mock('@/lib/ratelimit', () => {
   return {
@@ -71,6 +72,10 @@ vi.mock('@/app/lib/cookies', () => ({
   setAccessCookie: vi.fn(),
 }));
 
+vi.mock('@/app/lib/setup-status', () => ({
+  getSetupStatus: vi.fn(),
+}));
+
 vi.mock('argon2', () => ({
   default: {
     verify: vi.fn(async () => true),
@@ -85,6 +90,11 @@ const loginBody = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (getSetupStatus as any).mockResolvedValue({
+    bootstrapRequired: false,
+    setupComplete: true,
+    nextStep: null,
+  });
 });
 
 describe('POST /api/v1/auth/login', () => {
@@ -158,6 +168,72 @@ describe('POST /api/v1/auth/login', () => {
     expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', success: true }),
     );
+  });
+
+  it('blocks non-admin login while initial setup is incomplete', async () => {
+    (effectiveAuthority.getAuthorityForLogin as any).mockResolvedValueOnce({
+      authorityKind: 'APPOINTMENT',
+      authorityId: appointmentId,
+      appointmentId,
+      delegationId: null,
+      userId: 'user-1',
+      username: 'testuser',
+      positionId: 'position-2',
+      positionKey: 'TRAINING_OFFICER',
+      positionName: 'Training Officer',
+      defaultScope: 'GLOBAL',
+      scopeType: 'GLOBAL',
+      scopeId: null,
+      platoonKey: null,
+      platoonName: null,
+      startsAt: new Date('2026-04-04T00:00:00.000Z'),
+      endsAt: null,
+      grantorUserId: null,
+      grantorUsername: null,
+      grantorAppointmentId: null,
+    });
+    (getSetupStatus as any).mockResolvedValueOnce({
+      bootstrapRequired: false,
+      setupComplete: false,
+      nextStep: 'courses',
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: loginBody,
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(423);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('setup_incomplete');
+    expect(body.nextStep).toBe('courses');
+    expect(jwt.signAccessJWT).not.toHaveBeenCalled();
+    expect(cookies.setAccessCookie).not.toHaveBeenCalled();
+  });
+
+  it('allows admin login while initial setup is incomplete', async () => {
+    (getSetupStatus as any).mockResolvedValueOnce({
+      bootstrapRequired: false,
+      setupComplete: false,
+      nextStep: 'courses',
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: loginBody,
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.roles).toContain('ADMIN');
   });
 
   it('returns 401 for an invalid password without triggering account lockout', async () => {

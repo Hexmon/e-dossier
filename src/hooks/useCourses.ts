@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -9,6 +9,7 @@ import {
     updateCourse,
     deleteCourse,
     CourseResponse,
+    type GetCoursesParams,
 } from "@/app/lib/api/courseApi";
 import { ApiClientError } from "@/app/lib/apiClient";
 
@@ -57,21 +58,40 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
     return fallback;
 }
 
-export function useCourses() {
+type UseCoursesOptions = GetCoursesParams & {
+    queryScope?: string;
+};
+
+export function useCourses(options: UseCoursesOptions = {}) {
     const queryClient = useQueryClient();
+    const normalizedQuery = options.q?.trim() || undefined;
+    const limit = options.limit;
+    const offset = options.offset ?? 0;
+    const includeDeleted = options.includeDeleted;
 
     const coursesQuery = useQuery({
-        queryKey: ["courses"],
-        // queryFn always returns the raw shape — this is what goes into the cache
+        queryKey: [
+            "courses",
+            options.queryScope ?? "list",
+            { q: normalizedQuery ?? "", includeDeleted: includeDeleted ?? false, limit, offset },
+        ],
         queryFn: async () => {
-            const response = await getAllCourses();
-            return response?.items ?? [];
+            return getAllCourses({
+                q: normalizedQuery,
+                includeDeleted,
+                limit,
+                offset,
+            });
         },
-        // select transforms per-consumer without touching the cache
-        select: (items: CourseResponse[]) => items.map(toUICourse),
+        placeholderData: (previous) => previous,
     });
 
-    const { data: courses = [], isLoading: loading } = coursesQuery;
+    const courses = useMemo(
+        () => (coursesQuery.data?.items ?? []).map((item: CourseResponse) => toUICourse(item)),
+        [coursesQuery.data?.items]
+    );
+    const totalCount = coursesQuery.data?.total ?? coursesQuery.data?.count ?? courses.length;
+    const { isLoading: loading, isFetching } = coursesQuery;
 
     useEffect(() => {
         if (!coursesQuery.isError) return;
@@ -129,7 +149,11 @@ export function useCourses() {
 
     return {
         courses,
+        totalCount,
+        pageLimit: coursesQuery.data?.limit ?? limit ?? 100,
+        pageOffset: coursesQuery.data?.offset ?? offset,
         loading,
+        isFetching,
         fetchCourses: () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
         addCourse: addCourseMutation.mutateAsync,
         editCourse: (id: string, data: Omit<UICourse, "id">) =>

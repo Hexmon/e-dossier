@@ -24,8 +24,19 @@ describe("/setup page", () => {
     vi.clearAllMocks();
   });
 
-  it("redirects non-admin authenticated users back to the dashboard", async () => {
+  it("renders setup access guidance for non-admin users while setup is incomplete", async () => {
     (getSetupStatus as any).mockResolvedValueOnce({ setupComplete: false });
+    (getOptionalDashboardAccess as any).mockResolvedValueOnce({
+      roleGroup: "OTHER_USERS",
+    });
+
+    const element = await SetupPage();
+    expect(element).toBeTruthy();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("redirects non-admin authenticated users back to the dashboard after setup is complete", async () => {
+    (getSetupStatus as any).mockResolvedValueOnce({ setupComplete: true });
     (getOptionalDashboardAccess as any).mockResolvedValueOnce({
       roleGroup: "OTHER_USERS",
     });
@@ -51,6 +62,8 @@ describe("/setup page", () => {
       nextStep: "superAdmin",
       counts: {
         activeSuperAdmins: 0,
+        availableAppointmentPositions: 0,
+        activeOperationalAppointments: 0,
         activePlatoons: 0,
         activeCourses: 0,
         activeOfferings: 0,
@@ -62,6 +75,7 @@ describe("/setup page", () => {
       steps: {
         superAdmin: { status: "pending", complete: false },
         platoons: { status: "blocked", complete: false },
+        appointments: { status: "blocked", complete: false },
         hierarchy: { status: "blocked", complete: false },
         courses: { status: "blocked", complete: false },
         offerings: { status: "blocked", complete: false },

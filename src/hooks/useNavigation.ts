@@ -34,12 +34,14 @@ async function fetchNavigation(): Promise<NavigationResponse> {
     return api.get<NavigationResponse>('/api/v1/me/navigation');
 }
 
-export function useNavigation() {
+export function useNavigation(options?: { enabled?: boolean }) {
     const { refreshIntervalMs } = useDeviceRefreshInterval();
+    const enabled = options?.enabled ?? true;
 
     return useQuery({
         queryKey: ['navigation', 'me'],
         queryFn: fetchNavigation,
+        enabled,
         staleTime: 10 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
         retry: 2,

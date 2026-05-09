@@ -113,6 +113,7 @@ export default function OCManagementPage() {
     doValidateAll,
     doValidateRow,
     updateUploadedRow,
+    updateUploadedRawRow,
     deleteUploadedRow,
     clear: clearUpload,
   } = useOCUpload();
@@ -326,6 +327,7 @@ export default function OCManagementPage() {
                     clearUpload();
                   }}
                   onUpdateRow={updateUploadedRow}
+                  onUpdateRawRow={updateUploadedRawRow}
                   onDeleteRow={deleteUploadedRow}
                   onValidateAll={doValidateAll}
                   validateResult={validateResult}

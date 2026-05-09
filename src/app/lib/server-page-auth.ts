@@ -15,10 +15,15 @@ import {
 import { assertActiveAuthorityFromPayload } from "@/app/lib/active-authority";
 import { db } from "@/app/db/client";
 import { ocCadets } from "@/app/db/schema/training/oc";
+import { getSetupStatus } from "@/app/lib/setup-status";
+import {
+  isSetupDashboardPath,
+  isSetupManagerRoleGroup,
+} from "@/app/lib/setup-gate";
 import { hasScopeAccess } from "@/lib/authorization";
 import { canManageCadetAppointments } from "@/lib/platoon-commander-access";
 import { and, eq, isNull } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 type AdminPageAuthContext = {
@@ -85,12 +90,33 @@ export async function getOptionalDashboardAccess(): Promise<AdminPageAuthContext
   return buildDashboardAuthContext(accessToken);
 }
 
+async function getCurrentPathname(): Promise<string | null> {
+  const headerStore = await headers();
+  return headerStore.get("x-pathname") ?? headerStore.get("x-next-pathname") ?? null;
+}
+
+async function enforceInitialSetupDashboardGate(authContext: AdminPageAuthContext) {
+  const setupStatus = await getSetupStatus();
+
+  if (setupStatus.setupComplete) {
+    return;
+  }
+
+  const pathname = await getCurrentPathname();
+
+  if (!isSetupManagerRoleGroup(authContext.roleGroup) || !isSetupDashboardPath(pathname)) {
+    redirect("/setup");
+  }
+}
+
 export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
   const authContext = await getOptionalDashboardAccess();
 
   if (!authContext) {
     redirect("/login");
   }
+
+  await enforceInitialSetupDashboardGate(authContext);
 
   return authContext;
 }

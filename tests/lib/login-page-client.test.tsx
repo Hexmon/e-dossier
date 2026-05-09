@@ -49,6 +49,16 @@ describe("LoginPageClient", () => {
     expect(html).toContain("Sign in to MCEME CTW Portal");
   });
 
+  it("shows admin-only sign-in guidance while setup is incomplete", () => {
+    const html = renderToStaticMarkup(
+      <LoginPageClient bootstrapRequired={false} setupComplete={false} />
+    );
+
+    expect(html).toContain("Initial setup in progress");
+    expect(html).toContain("Only ADMIN or SUPER_ADMIN sign-in is enabled");
+    expect(html).not.toContain("Initial setup required");
+  });
+
   it("ignores legacy role query params and still renders the normal sign-in flow", () => {
     mockSearchParams.current = new URLSearchParams("role=oc");
 

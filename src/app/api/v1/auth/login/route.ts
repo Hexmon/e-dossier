@@ -12,6 +12,7 @@ import { getClientIp } from '@/lib/ratelimit';
 import {
   recordLoginAttempt,
 } from '@/app/db/queries/account-lockout';
+import { assertLoginAllowedDuringSetup } from '@/app/lib/setup-gate';
 import {
   withAuditRoute,
   AuditEventType,
@@ -19,6 +20,7 @@ import {
 } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { generateCsrfToken, setCsrfCookie } from '@/lib/csrf';
+import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.EXPOSE_TOKENS_IN_DEV === 'true';
 
@@ -101,6 +103,11 @@ async function POSTHandler(req: AuditNextRequest) {
     const { appointmentId, delegationId, platoonId, username, password } = parsed.data;
 
     const authority = await getAuthorityForLogin({ appointmentId, delegationId });
+    const loginRoleGroup = deriveSidebarRoleGroup({
+      roles: [authority.positionKey],
+      position: authority.positionKey,
+    });
+    await assertLoginAllowedDuringSetup(loginRoleGroup);
 
     /*
     Restorable account-lockout pre-check. Uncomment to block login for locked accounts again.

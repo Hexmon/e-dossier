@@ -7,6 +7,7 @@ import { isProtectedAdminApiPath } from '@/app/lib/access-control-policy';
 import { assertModuleApiAccessByPath } from '@/app/lib/module-access';
 import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
 import { assertActiveAuthorityFromPayload } from '@/app/lib/active-authority';
+import { assertApiAllowedDuringSetup } from '@/app/lib/setup-gate';
 
 export function hasAdminRole(roles?: string[]) {
   return Array.isArray(roles) && roles.some(r =>
@@ -29,12 +30,23 @@ export async function requireAuth(req: NextRequest) {
     await assertActiveAuthorityFromPayload(payload as Record<string, any>);
 
     const pathname = new URL(req.url).pathname;
+    const position =
+      typeof (payload as any)?.apt?.position === 'string' ? String((payload as any).apt.position) : null;
+    const roleGroup = deriveSidebarRoleGroup({
+      roles: authContext.roles,
+      position,
+    });
+
+    await assertApiAllowedDuringSetup({
+      pathname,
+      method: req.method,
+      roleGroup,
+    });
+
     if (isProtectedAdminApiPath(pathname, req.method) && !hasAdminRole(authContext.roles)) {
       throw new ApiError(403, 'Admin privileges required', 'forbidden');
     }
 
-    const position =
-      typeof (payload as any)?.apt?.position === 'string' ? String((payload as any).apt.position) : null;
     await assertModuleApiAccessByPath(pathname, {
       userId: authContext.userId,
       roles: authContext.roles,

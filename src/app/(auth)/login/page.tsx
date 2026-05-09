@@ -10,7 +10,10 @@ export default async function LoginPage() {
 
   return (
     <Suspense fallback={null}>
-      <LoginPageClient bootstrapRequired={setupStatus.bootstrapRequired} />
+      <LoginPageClient
+        bootstrapRequired={setupStatus.bootstrapRequired}
+        setupComplete={setupStatus.setupComplete}
+      />
     </Suspense>
   );
 }

@@ -20,7 +20,7 @@ import { HandoverForm } from "@/components/appointments/HandoverForm";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useForm } from "react-hook-form";
 import { ocTabs } from "@/config/app.config";
-import { Appointment } from "@/app/lib/api/appointmentApi";
+import { Appointment, Position } from "@/app/lib/api/appointmentApi";
 import { CreateAppointment } from "@/components/appointments/createappointment";
 import { applyOrgTemplate } from "@/app/lib/api/orgTemplateApi";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ export default function AppointmentManagement() {
     appointments,
     servedList,
     users,
+    positions,
     loading,
     fetchAppointments,
     fetchUsersAndPositions,
@@ -226,6 +227,8 @@ export default function AppointmentManagement() {
                   users={users}
                 />
 
+                <PositionDefinitionsTable positions={positions} />
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Active Delegations</CardTitle>
@@ -407,5 +410,43 @@ export default function AppointmentManagement() {
         </DialogContent>
       </Dialog>
     </SidebarProvider>
+  );
+}
+
+function PositionDefinitionsTable({ positions }: { positions: Position[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Appointment Positions</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {positions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No appointment positions found.</p>
+        ) : (
+          <section className="overflow-x-auto rounded-md border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted text-foreground">
+                <tr>
+                  <th className="px-4 py-2">Key</th>
+                  <th className="px-4 py-2">Display</th>
+                  <th className="px-4 py-2">Scope</th>
+                </tr>
+              </thead>
+              <tbody>
+                {positions.map((position) => (
+                  <tr key={position.id} className="border-t">
+                    <td className="px-4 py-2 font-mono text-xs">{position.key}</td>
+                    <td className="px-4 py-2 font-medium">
+                      {position.displayName || position.key}
+                    </td>
+                    <td className="px-4 py-2">{position.defaultScope}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+      </CardContent>
+    </Card>
   );
 }

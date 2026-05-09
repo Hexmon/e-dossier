@@ -79,7 +79,7 @@ The recommended setup path is now UI-first:
 2. Start the app with `pnpm dev`.
 3. Open [`/setup`](/setup) in the browser.
 4. Create the initial `SUPER_ADMIN`.
-5. Continue through the guided checklist for platoons, hierarchy, courses, offerings/semesters, and OCs.
+5. Continue through the guided checklist for platoons, users/appointments, hierarchy, courses, offerings/semesters, and OCs.
 
 This setup flow reuses the existing admin management pages. Scripts and seed commands remain useful for local/dev fallback, but they are no longer the primary recommended path for a fresh install.
 
@@ -87,7 +87,10 @@ Important behavior:
 
 - `POST /api/v1/bootstrap/super-admin` is only available until the first active `SUPER_ADMIN` exists.
 - After initial bootstrap, the setup page auto-signs the new `SUPER_ADMIN` in and continues the guided checklist.
-- If setup is incomplete later, admins will see a “Resume Setup” prompt from the dashboard and general management screens.
+- Create positions and assign operational user appointments before linking platoons into the hierarchy.
+- Until the checklist is complete, dashboard work and protected APIs are locked to the setup flow.
+- During this locked state, only `ADMIN` and `SUPER_ADMIN` identities can sign in and use the setup pages/APIs.
+- User signup and non-admin sign-in remain disabled until setup is complete.
 
 ## 6. RBAC Seeding Flow {#rbac-seeding-flow}
 

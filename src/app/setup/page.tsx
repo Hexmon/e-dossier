@@ -13,7 +13,7 @@ export default async function SetupPage() {
     getOptionalDashboardAccess(),
   ]);
 
-  if (authContext?.roleGroup === "OTHER_USERS") {
+  if (authContext?.roleGroup === "OTHER_USERS" && setupStatus.setupComplete) {
     redirect("/dashboard");
   }
 

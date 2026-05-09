@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { bootstrapSuperAdmin } from "@/app/lib/api/setupApi";
+import { applyBootstrapTemplate, bootstrapSuperAdmin } from "@/app/lib/api/setupApi";
 import { getAllCourses } from "@/app/lib/api/courseApi";
 import { loginUser } from "@/app/lib/api/authApi";
 import { hierarchyAdminApi } from "@/app/lib/api/hierarchyAdminApi";
@@ -29,6 +29,7 @@ type SetupPageClientProps = {
 const STEP_LABELS: Record<SetupStepKey, string> = {
   superAdmin: "Super Admin",
   platoons: "Platoons",
+  appointments: "Users & Appointments",
   hierarchy: "Hierarchy",
   courses: "Courses",
   offerings: "Offerings / Semesters",
@@ -89,7 +90,12 @@ function StepSummary({
 export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: setupStatus, isLoading, refetch } = useSetupStatus(initialStatus);
+  const { data: setupStatus, isLoading, refetch } = useSetupStatus(initialStatus, {
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
+    refetchOnWindowFocus: "always",
+    staleTime: 0,
+  });
   const [bootstrapForm, setBootstrapForm] = useState({
     username: "",
     email: "",
@@ -121,7 +127,7 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
   });
   const coursesQuery = useQuery({
     queryKey: ["setup-courses"],
-    queryFn: getAllCourses,
+    queryFn: () => getAllCourses(),
     enabled: canManageSetup,
   });
   const subjectsQuery = useQuery({
@@ -251,6 +257,47 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
             : "Failed to create missing platoon nodes.",
       });
       toast.error(error instanceof Error ? error.message : "Failed to create missing platoon nodes.");
+    },
+  });
+
+  const applyAppointmentTemplateMutation = useMutation({
+    mutationFn: async () =>
+      applyBootstrapTemplate({
+        module: "appointment",
+        profile: "default",
+        dryRun: false,
+      }),
+    onSuccess: async (result) => {
+      const warningText =
+        result.warnings.length > 0 ? ` ${result.warnings.length} assignment warning(s) need review.` : "";
+      const positionStats = result.stats?.positions;
+      const assignmentStats = result.stats?.assignments;
+      const detailText =
+        positionStats && assignmentStats
+          ? ` Positions created ${positionStats.created}, updated ${positionStats.updated}, skipped ${positionStats.skipped}. Assignments created ${assignmentStats.created}, updated ${assignmentStats.updated}, skipped ${assignmentStats.skipped}.`
+          : "";
+      setFeedback({
+        tone: "success",
+        message: `Default appointment positions applied.${detailText || ` Created ${result.createdCount}, updated ${result.updatedCount}, skipped ${result.skippedCount}.`}${warningText}`,
+      });
+      toast.success("Default appointment positions applied.");
+
+      await Promise.all([
+        refetch(),
+        queryClient.invalidateQueries({ queryKey: ["positions"] }),
+        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["users"] }),
+      ]);
+    },
+    onError: (error: unknown) => {
+      setFeedback({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to apply default appointment positions.",
+      });
+      toast.error(error instanceof Error ? error.message : "Failed to apply default appointment positions.");
     },
   });
 
@@ -421,6 +468,7 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
               <ol className="list-inside list-decimal space-y-3">
                 <li>Create the initial super admin account.</li>
                 <li>Add platoons.</li>
+                <li>Create users and assign operational appointments.</li>
                 <li>Link platoons into the live hierarchy tree.</li>
                 <li>Create courses.</li>
                 <li>Configure offerings and semester availability.</li>
@@ -481,7 +529,7 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
         {feedback.message || "No setup feedback available."}
       </div>
 
-      <div className="mb-8 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-8 grid gap-4 md:grid-cols-3 xl:grid-cols-[repeat(7,minmax(0,1fr))]">
         {(Object.entries(setupStatus.steps) as Array<
           [SetupStepKey, { status: SetupStepStatus }]
         >).map(([stepKey, step]) => (
@@ -497,6 +545,8 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
       <div className="mb-8 rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
         <p>
           Counts: {setupStatus.counts.activePlatoons} platoon(s), {setupStatus.counts.activeCourses} course(s),{" "}
+          {setupStatus.counts.availableAppointmentPositions} appointment position(s),{" "}
+          {setupStatus.counts.activeOperationalAppointments} operational appointment(s),{" "}
           {setupStatus.counts.activeOfferings} offering(s), {setupStatus.counts.activeOCs} OC record(s),{" "}
           {setupStatus.counts.activeHierarchyNodes} hierarchy node(s), and{" "}
           {setupStatus.counts.missingPlatoonHierarchyNodes} missing platoon hierarchy node(s).
@@ -515,6 +565,43 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
                 Open Platoon Management
               </Link>
             </Button>
+          </div>
+        </StepSummary>
+
+        <StepSummary
+          title="Users & Appointments"
+          status={setupStatus.steps.appointments.status}
+          description="Create positions, add users, and assign at least one non-super-admin appointment before linking the hierarchy."
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Appointment positions: {setupStatus.counts.availableAppointmentPositions}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Active operational appointments: {setupStatus.counts.activeOperationalAppointments}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => applyAppointmentTemplateMutation.mutate()}
+                disabled={applyAppointmentTemplateMutation.isPending}
+              >
+                {applyAppointmentTemplateMutation.isPending
+                  ? "Applying Positions..."
+                  : "Apply Default Positions"}
+              </Button>
+              <Button asChild>
+                <Link href={buildReturnToHref("/dashboard/genmgmt/usersmgmt")}>
+                  Open User Management
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={buildReturnToHref("/dashboard/genmgmt/appointmentmgmt")}>
+                  Open Appointment Management
+                </Link>
+              </Button>
+            </div>
           </div>
         </StepSummary>
 

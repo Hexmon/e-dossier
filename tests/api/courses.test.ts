@@ -11,6 +11,7 @@ vi.mock('@/app/lib/authz', () => ({
 
 vi.mock('@/app/db/queries/courses', () => ({
   listCourses: vi.fn(async () => []),
+  countCourses: vi.fn(async () => 0),
   createCourse: vi.fn(async (data: any) => ({
     id: 'course-1',
     code: data.code,
@@ -65,6 +66,7 @@ describe('GET /api/v1/courses', () => {
       { id: 'c1', code: 'TES-1', title: 'Course 1', notes: null },
       { id: 'c2', code: 'TES-2', title: 'Course 2', notes: null },
     ]);
+    (coursesQueries.countCourses as any).mockResolvedValueOnce(12);
 
     const req = makeJsonRequest({
       method: 'GET',
@@ -77,11 +79,18 @@ describe('GET /api/v1/courses', () => {
     expect(body.ok).toBe(true);
     expect(body.items).toHaveLength(2);
     expect(body.count).toBe(2);
+    expect(body.total).toBe(12);
+    expect(body.limit).toBe(10);
+    expect(body.offset).toBe(5);
     expect(coursesQueries.listCourses).toHaveBeenCalledWith({
       q: 'TES',
       includeDeleted: true,
       limit: 10,
       offset: 5,
+    });
+    expect(coursesQueries.countCourses).toHaveBeenCalledWith({
+      q: 'TES',
+      includeDeleted: true,
     });
   });
 });

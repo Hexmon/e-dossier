@@ -63,6 +63,7 @@ export async function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   const requestId = requestHeaders.get('x-request-id') ?? crypto.randomUUID();
   requestHeaders.set('x-request-id', requestId);
+  requestHeaders.set('x-pathname', pathname);
 
   const attachRequestId = (response: NextResponse) => {
     response.headers.set('x-request-id', requestId);

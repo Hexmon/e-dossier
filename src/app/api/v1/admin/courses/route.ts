@@ -1,7 +1,7 @@
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { listQuerySchema, courseCreateSchema } from '@/app/lib/validators.courses';
-import { createCourse, listCourses } from '@/app/db/queries/courses';
+import { countCourses, createCourse, listCourses } from '@/app/db/queries/courses';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -18,11 +18,18 @@ async function GETHandler(req: AuditNextRequest) {
             limit: sp.get('limit') ?? undefined,
             offset: sp.get('offset') ?? undefined,
         });
-        const rows = await listCourses({
+        const query = {
             q: qp.q,
             includeDeleted: qp.includeDeleted === 'true',
             limit: qp.limit, offset: qp.offset,
-        });
+        };
+        const [rows, total] = await Promise.all([
+            listCourses(query),
+            countCourses({
+                q: qp.q,
+                includeDeleted: qp.includeDeleted === 'true',
+            }),
+        ]);
 
         await req.audit.log({
             action: AuditEventType.API_REQUEST,
@@ -32,6 +39,7 @@ async function GETHandler(req: AuditNextRequest) {
             metadata: {
                 description: 'Courses retrieved successfully.',
                 count: rows.length,
+                total,
                 query: {
                     q: qp.q ?? null,
                     includeDeleted: qp.includeDeleted === 'true',
@@ -41,7 +49,14 @@ async function GETHandler(req: AuditNextRequest) {
             },
         });
 
-        return json.ok({ message: 'Courses retrieved successfully.', items: rows, count: rows.length });
+        return json.ok({
+            message: 'Courses retrieved successfully.',
+            items: rows,
+            count: rows.length,
+            total,
+            limit: qp.limit ?? 100,
+            offset: qp.offset ?? 0,
+        });
     } catch (err) { return handleApiError(err); }
 }
 

@@ -4,6 +4,7 @@
 import { useCallback, useState } from "react";
 import { bulkUploadOCs, bulkValidateOCs, type BulkUploadResult  } from "@/app/lib/api/ocApi";
 import type { RawRow, UploadedPreviewRow } from "@/components/oc/UploadButton";
+import { toDisplayDMY } from "@/app/lib/dateUtils";
 
 export type BulkResult =
     | {
@@ -58,6 +59,38 @@ export function useOCUpload() {
         [norm]
     );
 
+    const pickRawValue = useCallback(
+        (row: RawRow, aliases: string[]): unknown => {
+            const valuesByHeader = new Map<string, unknown>();
+            Object.keys(row).forEach((key) => valuesByHeader.set(norm(key), row[key]));
+
+            for (const alias of aliases) {
+                const value = valuesByHeader.get(norm(alias));
+                if (value !== undefined && value !== null && String(value).trim() !== "") {
+                    return value;
+                }
+            }
+
+            return undefined;
+        },
+        [norm]
+    );
+
+    const toPreviewRow = useCallback(
+        (row: RawRow): UploadedPreviewRow => {
+            const arrivalRaw = pickRawValue(row, ["Dt of Arrival", "Date of Arrival", "DOA"]);
+            return {
+                name: String(pickRawValue(row, ["Name"]) ?? ""),
+                tesNo: String(pickRawValue(row, ["Tes No", "TesNo", "TES NO", "OC No", "OC Number"]) ?? ""),
+                course: String(pickRawValue(row, ["Course", "Course Code", "Course Name"]) ?? ""),
+                branch: (pickRawValue(row, ["Branch"]) as string | null | undefined) ?? null,
+                platoon: (pickRawValue(row, ["Platoon", "PlatoonId", "Platoon Id", "PL", "Pl"]) as string | null | undefined) ?? null,
+                arrival: toDisplayDMY(arrivalRaw),
+            };
+        },
+        [pickRawValue]
+    );
+
     const updateUploadedRow = useCallback(
         (index: number, patch: Partial<UploadedPreviewRow>) => {
             setUploadedPreview((prev) =>
@@ -93,6 +126,21 @@ export function useOCUpload() {
             setRowValidations({});
         },
         [setRawValue]
+    );
+
+    const updateUploadedRawRow = useCallback(
+        (index: number, nextRawRow: RawRow) => {
+            setUploadedRawRows((prev) =>
+                prev.map((row, i) => (i === index ? { ...row, ...nextRawRow } : row))
+            );
+            setUploadedPreview((prev) =>
+                prev.map((row, i) => (i === index ? toPreviewRow(nextRawRow) : row))
+            );
+            setBulkResult(null);
+            setValidateResult(null);
+            setRowValidations({});
+        },
+        [toPreviewRow]
     );
 
     const deleteUploadedRow = useCallback((index: number) => {
@@ -227,6 +275,7 @@ export function useOCUpload() {
         doValidateAll,
         doValidateRow,
         updateUploadedRow,
+        updateUploadedRawRow,
         deleteUploadedRow,
         clear,
     };

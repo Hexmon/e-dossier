@@ -16,6 +16,8 @@ describe("GET /api/v1/setup/status", () => {
       nextStep: "superAdmin",
       counts: {
         activeSuperAdmins: 0,
+        availableAppointmentPositions: 0,
+        activeOperationalAppointments: 0,
         activePlatoons: 0,
         activeCourses: 0,
         activeOfferings: 0,
@@ -27,6 +29,7 @@ describe("GET /api/v1/setup/status", () => {
       steps: {
         superAdmin: { status: "pending", complete: false },
         platoons: { status: "blocked", complete: false },
+        appointments: { status: "blocked", complete: false },
         hierarchy: { status: "blocked", complete: false },
         courses: { status: "blocked", complete: false },
         offerings: { status: "blocked", complete: false },
@@ -42,6 +45,7 @@ describe("GET /api/v1/setup/status", () => {
     expect(body.ok).toBe(true);
     expect(body.setup.bootstrapRequired).toBe(true);
     expect(body.setup.nextStep).toBe("superAdmin");
+    expect(body.setup.counts.availableAppointmentPositions).toBe(0);
   });
 
   it("returns partial setup progress after bootstrap", async () => {
@@ -51,6 +55,8 @@ describe("GET /api/v1/setup/status", () => {
       nextStep: "offerings",
       counts: {
         activeSuperAdmins: 1,
+        availableAppointmentPositions: 9,
+        activeOperationalAppointments: 1,
         activePlatoons: 2,
         activeCourses: 1,
         activeOfferings: 0,
@@ -62,6 +68,7 @@ describe("GET /api/v1/setup/status", () => {
       steps: {
         superAdmin: { status: "complete", complete: true },
         platoons: { status: "complete", complete: true },
+        appointments: { status: "complete", complete: true },
         hierarchy: { status: "complete", complete: true },
         courses: { status: "complete", complete: true },
         offerings: { status: "pending", complete: false },
@@ -77,6 +84,7 @@ describe("GET /api/v1/setup/status", () => {
     expect(body.setup.bootstrapRequired).toBe(false);
     expect(body.setup.setupComplete).toBe(false);
     expect(body.setup.nextStep).toBe("offerings");
+    expect(body.setup.counts.availableAppointmentPositions).toBe(9);
   });
 
   it("returns fully complete setup state", async () => {
@@ -86,6 +94,8 @@ describe("GET /api/v1/setup/status", () => {
       nextStep: null,
       counts: {
         activeSuperAdmins: 1,
+        availableAppointmentPositions: 9,
+        activeOperationalAppointments: 1,
         activePlatoons: 2,
         activeCourses: 1,
         activeOfferings: 3,
@@ -97,6 +107,7 @@ describe("GET /api/v1/setup/status", () => {
       steps: {
         superAdmin: { status: "complete", complete: true },
         platoons: { status: "complete", complete: true },
+        appointments: { status: "complete", complete: true },
         hierarchy: { status: "complete", complete: true },
         courses: { status: "complete", complete: true },
         offerings: { status: "complete", complete: true },

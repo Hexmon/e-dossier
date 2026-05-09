@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -36,6 +36,7 @@ interface FormData {
 export const CreateAppointment = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPositionId, setSelectedPositionId] = useState("__custom__");
   const [formData, setFormData] = useState<FormData>({
     userId: "",
     appointmentName: "",
@@ -48,6 +49,7 @@ export const CreateAppointment = () => {
 
   const {
     users,
+    positions,
     platoons,
     loading,
     fetchUsersAndPositions,
@@ -56,6 +58,16 @@ export const CreateAppointment = () => {
     clearCreateAppointmentConflict,
   } =
     useAppointments();
+
+  const positionOptions = useMemo(
+    () =>
+      positions.map((position) => ({
+        id: position.id,
+        label: position.displayName || position.key,
+        scope: position.defaultScope,
+      })),
+    [positions],
+  );
 
   const handleOpenDialog = () => {
     setIsDialogOpen(true);
@@ -74,6 +86,7 @@ export const CreateAppointment = () => {
       platoonId: "",
       scopeType: "GLOBAL",
     });
+    setSelectedPositionId("__custom__");
     setErrors({});
     clearCreateAppointmentConflict();
   };
@@ -174,14 +187,63 @@ export const CreateAppointment = () => {
 
               {/* Appointment Name */}
               <div className="space-y-2">
-                <Label htmlFor="appointment-name">Appointment Name</Label>
+                <Label htmlFor="appointment-position">Appointment Position</Label>
+                <Select
+                  value={selectedPositionId}
+                  onValueChange={(value) => {
+                    setSelectedPositionId(value);
+                    clearCreateAppointmentConflict();
+
+                    if (value === "__custom__") {
+                      setFormData({
+                        ...formData,
+                        appointmentName: "",
+                        isPlatoonCommander: false,
+                        platoonId: "",
+                        scopeType: "GLOBAL",
+                      });
+                      return;
+                    }
+
+                    const selected = positions.find((position) => position.id === value);
+                    if (!selected) {
+                      return;
+                    }
+
+                    setFormData({
+                      ...formData,
+                      appointmentName: selected.displayName || selected.key,
+                      isPlatoonCommander: selected.defaultScope === "PLATOON",
+                      platoonId: selected.defaultScope === "PLATOON" ? formData.platoonId : "",
+                      scopeType: selected.defaultScope,
+                    });
+                    setErrors({ ...errors, appointmentName: "", platoonId: "" });
+                  }}
+                >
+                  <SelectTrigger id="appointment-position">
+                    <SelectValue placeholder="Select appointment position" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="__custom__">Custom Position</SelectItem>
+                    {positionOptions.map((position) => (
+                      <SelectItem key={position.id} value={position.id}>
+                        {position.label} ({position.scope})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="appointment-name">Display Name</Label>
                 <Input
                   id="appointment-name"
                   type="text"
-                  placeholder="Enter appointment name "
+                  placeholder="Enter appointment display name"
                   value={formData.appointmentName}
                   onChange={(e) => {
                     setFormData({ ...formData, appointmentName: e.target.value });
+                    setSelectedPositionId("__custom__");
                     setErrors({ ...errors, appointmentName: "" });
                     clearCreateAppointmentConflict();
                   }}
@@ -199,6 +261,7 @@ export const CreateAppointment = () => {
                 <Checkbox
                   id="platoon-commander"
                   checked={formData.isPlatoonCommander}
+                  disabled={selectedPositionId !== "__custom__"}
                   onCheckedChange={(checked) => {
                     setFormData({
                       ...formData,

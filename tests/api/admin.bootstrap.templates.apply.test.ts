@@ -19,9 +19,14 @@ vi.mock('@/app/lib/bootstrap/camp-template', () => ({
   applyCampTemplateProfile: vi.fn(),
 }));
 
+vi.mock('@/app/lib/bootstrap/appointment-template', () => ({
+  applyAppointmentTemplateProfile: vi.fn(),
+}));
+
 import { requireAdmin } from '@/app/lib/authz';
 import { applyPtTemplateProfile } from '@/app/lib/bootstrap/pt-template';
 import { applyCampTemplateProfile } from '@/app/lib/bootstrap/camp-template';
+import { applyAppointmentTemplateProfile } from '@/app/lib/bootstrap/appointment-template';
 
 describe('POST /api/v1/admin/bootstrap/templates/apply', () => {
   beforeEach(() => {
@@ -124,6 +129,45 @@ describe('POST /api/v1/admin/bootstrap/templates/apply', () => {
     expect(body.ok).toBe(true);
     expect(body.module).toBe('camp');
     expect(applyCampTemplateProfile).toHaveBeenCalledWith({
+      profile: 'default',
+      dryRun: false,
+      actorUserId: 'admin-user-1',
+    });
+  });
+
+  it('runs appointment template apply and returns position/assignment stats', async () => {
+    vi.mocked(applyAppointmentTemplateProfile).mockResolvedValue({
+      module: 'appointment',
+      profile: 'default',
+      dryRun: false,
+      createdCount: 12,
+      updatedCount: 0,
+      skippedCount: 11,
+      warnings: ['Skipped assignment for "missing@army.mil" because user does not exist.'],
+      stats: {
+        positions: { created: 9, updated: 0, skipped: 0 },
+        assignments: { created: 3, updated: 0, skipped: 11 },
+      },
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/admin/bootstrap/templates/apply',
+      body: {
+        module: 'appointment',
+        profile: 'default',
+      },
+    });
+
+    const res = await POST(req as any, createRouteContext() as any);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.module).toBe('appointment');
+    expect(body.stats.positions.created).toBe(9);
+    expect(body.warnings).toHaveLength(1);
+    expect(applyAppointmentTemplateProfile).toHaveBeenCalledWith({
       profile: 'default',
       dryRun: false,
       actorUserId: 'admin-user-1',

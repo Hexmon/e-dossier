@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { POST as postSignup } from '@/app/api/v1/auth/signup/route';
 import { makeJsonRequest, createRouteContext } from '../utils/next';
 import * as ratelimit from '@/lib/ratelimit';
 import * as authQueries from '@/app/db/queries/auth';
 import * as signupRequests from '@/app/db/queries/signupRequests';
 import * as conflicts from '@/utils/preflightConflicts';
+import { getSetupStatus } from '@/app/lib/setup-status';
 
 vi.mock('@/lib/audit-log', () => ({
   createAuditLog: vi.fn(async () => {}),
@@ -49,6 +50,10 @@ vi.mock('@/utils/preflightConflicts', () => ({
   preflightConflicts: vi.fn(async () => []),
 }));
 
+vi.mock('@/app/lib/setup-status', () => ({
+  getSetupStatus: vi.fn(),
+}));
+
 const validBody = {
   username: 'newuser',
   name: 'New User',
@@ -61,6 +66,34 @@ const validBody = {
 };
 
 describe('POST /api/v1/auth/signup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (getSetupStatus as any).mockResolvedValue({
+      bootstrapRequired: false,
+      setupComplete: true,
+      nextStep: null,
+    });
+  });
+
+  it('blocks signup while initial setup is incomplete', async () => {
+    (getSetupStatus as any).mockResolvedValueOnce({
+      bootstrapRequired: false,
+      setupComplete: false,
+      nextStep: 'superAdmin',
+    });
+
+    const req = makeJsonRequest({ method: 'POST', path: '/api/v1/auth/signup', body: validBody });
+    const res = await postSignup(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(423);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('setup_incomplete');
+    expect(body.nextStep).toBe('superAdmin');
+    expect(authQueries.signupLocal).not.toHaveBeenCalled();
+    expect(signupRequests.createSignupRequest).not.toHaveBeenCalled();
+  });
+
   it('returns 429 when signup rate limit is exceeded', async () => {
     (ratelimit.checkSignupRateLimit as any).mockResolvedValueOnce({
       success: false,

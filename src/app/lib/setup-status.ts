@@ -13,6 +13,7 @@ import { ocCadets } from "@/app/db/schema/training/oc";
 export type SetupStepKey =
   | "superAdmin"
   | "platoons"
+  | "appointments"
   | "hierarchy"
   | "courses"
   | "offerings"
@@ -22,6 +23,8 @@ export type SetupStepStatus = "complete" | "pending" | "blocked";
 
 export type SetupStatusCounts = {
   activeSuperAdmins: number;
+  availableAppointmentPositions: number;
+  activeOperationalAppointments: number;
   activePlatoons: number;
   activeCourses: number;
   activeOfferings: number;
@@ -63,9 +66,10 @@ function resolveStepStatus(params: {
 export function deriveSetupStatus(counts: SetupStatusCounts): SetupStatus {
   const superAdminComplete = counts.activeSuperAdmins > 0;
   const platoonsComplete = counts.activePlatoons > 0;
+  const appointmentsComplete = counts.activeOperationalAppointments > 0;
   const hierarchyCoverageComplete =
     counts.activeRootNodes === 1 && counts.missingPlatoonHierarchyNodes === 0;
-  const hierarchyComplete = platoonsComplete && hierarchyCoverageComplete;
+  const hierarchyComplete = platoonsComplete && appointmentsComplete && hierarchyCoverageComplete;
   const coursesComplete = counts.activeCourses > 0;
   const offeringsComplete = counts.activeOfferings > 0;
   const ocsComplete = counts.activeOCs > 0;
@@ -85,17 +89,25 @@ export function deriveSetupStatus(counts: SetupStatusCounts): SetupStatus {
       }),
       complete: platoonsComplete,
     },
+    appointments: {
+      status: resolveStepStatus({
+        complete: appointmentsComplete,
+        prerequisitesMet: superAdminComplete && platoonsComplete,
+      }),
+      complete: appointmentsComplete,
+    },
     hierarchy: {
       status: resolveStepStatus({
         complete: hierarchyComplete,
-        prerequisitesMet: superAdminComplete && platoonsComplete,
+        prerequisitesMet: superAdminComplete && platoonsComplete && appointmentsComplete,
       }),
       complete: hierarchyComplete,
     },
     courses: {
       status: resolveStepStatus({
         complete: coursesComplete,
-        prerequisitesMet: superAdminComplete && platoonsComplete && hierarchyComplete,
+        prerequisitesMet:
+          superAdminComplete && platoonsComplete && appointmentsComplete && hierarchyComplete,
       }),
       complete: coursesComplete,
     },
@@ -103,7 +115,11 @@ export function deriveSetupStatus(counts: SetupStatusCounts): SetupStatus {
       status: resolveStepStatus({
         complete: offeringsComplete,
         prerequisitesMet:
-          superAdminComplete && platoonsComplete && hierarchyComplete && coursesComplete,
+          superAdminComplete &&
+          platoonsComplete &&
+          appointmentsComplete &&
+          hierarchyComplete &&
+          coursesComplete,
       }),
       complete: offeringsComplete,
     },
@@ -113,6 +129,7 @@ export function deriveSetupStatus(counts: SetupStatusCounts): SetupStatus {
         prerequisitesMet:
           superAdminComplete &&
           platoonsComplete &&
+          appointmentsComplete &&
           hierarchyComplete &&
           coursesComplete &&
           offeringsComplete,
@@ -218,6 +235,8 @@ async function readRowsOrEmpty<T>(query: Promise<T[]>): Promise<T[]> {
 export async function getSetupStatus(): Promise<SetupStatus> {
   const [
     activeSuperAdmins,
+    availableAppointmentPositions,
+    activeOperationalAppointments,
     activePlatoons,
     activeCourses,
     activeOfferings,
@@ -240,6 +259,29 @@ export async function getSetupStatus(): Promise<SetupStatus> {
             isNull(users.deletedAt),
             isNull(appointments.deletedAt),
             isNull(appointments.endsAt)
+          )
+        )
+    ),
+    readCountOrZero(
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(positions)
+        .where(sql`${positions.key} <> 'SUPER_ADMIN'`)
+    ),
+    readCountOrZero(
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(appointments)
+        .innerJoin(users, eq(users.id, appointments.userId))
+        .innerJoin(positions, eq(positions.id, appointments.positionId))
+        .where(
+          and(
+            sql`${positions.key} <> 'SUPER_ADMIN'`,
+            eq(users.isActive, true),
+            isNull(users.deletedAt),
+            isNull(appointments.deletedAt),
+            sql`${appointments.startsAt} <= now()`,
+            sql`(${appointments.endsAt} IS NULL OR ${appointments.endsAt} > now())`
           )
         )
     ),
@@ -313,6 +355,8 @@ export async function getSetupStatus(): Promise<SetupStatus> {
 
   return deriveSetupStatus({
     activeSuperAdmins,
+    availableAppointmentPositions,
+    activeOperationalAppointments,
     activePlatoons,
     activeCourses,
     activeOfferings,
