@@ -16,6 +16,21 @@ const optionalFloat = z.preprocess(
     z.coerce.number().finite().optional()
 );
 
+const requiredNonEmptyText = z.preprocess(
+    (v) => (typeof v === 'string' ? v.trim() : v),
+    z.string().min(1)
+);
+
+const nullableOptionalText = z.preprocess(
+    (v) => (v === '' || v === undefined ? null : v),
+    z.string().nullable().optional()
+);
+
+const nullableOptionalDate = z.preprocess(
+    (v) => (v === '' || v === undefined ? null : v),
+    z.coerce.date().nullable().optional()
+);
+
 export const OcIdParam = z.object({ ocId: z.string().uuid() });
 export const ReportIdParam = z.object({ reportId: z.string().uuid() });
 export const Semester = z.coerce.number().int().min(1).max(6);
@@ -195,13 +210,13 @@ export const medicalUpdateSchema = medicalCreateSchema.partial();
 export const medCatCreateSchema = z.object({
     semester: Semester,
     date: z.coerce.date(),
-    mosAndDiagnostics: z.string().optional(),
-    catFrom: z.coerce.date().nullable().optional(),
-    catTo: z.coerce.date().nullable().optional(),
-    mhFrom: z.coerce.date().nullable().optional(),
-    mhTo: z.coerce.date().nullable().optional(),
-    absence: z.string().optional(),
-    platoonCommanderName: z.string().optional(),
+    mosAndDiagnostics: requiredNonEmptyText,
+    catFrom: nullableOptionalDate,
+    catTo: nullableOptionalDate,
+    mhFrom: nullableOptionalDate,
+    mhTo: nullableOptionalDate,
+    absence: nullableOptionalText,
+    platoonCommanderName: nullableOptionalText,
 });
 export const medCatUpdateSchema = medCatCreateSchema.partial();
 

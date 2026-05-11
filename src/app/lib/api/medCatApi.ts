@@ -27,6 +27,11 @@ export interface ApiResponse<T = any> {
     data?: T;
 }
 
+function toOptionalPayloadValue(value: string | null | undefined) {
+    const trimmed = (value ?? "").trim();
+    return trimmed ? trimmed : null;
+}
+
 /**
  * Save one or more Medical Category records for a cadet.
  */
@@ -41,13 +46,13 @@ export async function saveMedicalCategory(
             const payload = {
                 semester: Number(r.semester),
                 date: r.date ? r.date.split("T")[0] : "",
-                mosAndDiagnostics: r.mosAndDiagnostics,
-                catFrom: r.catFrom || null,
-                catTo: r.catTo || null,
-                mhFrom: r.mhFrom || null,
-                mhTo: r.mhTo || null,
-                absence: r.absence || null,
-                platoonCommanderName: r.platoonCommanderName || null,
+                mosAndDiagnostics: r.mosAndDiagnostics.trim(),
+                catFrom: toOptionalPayloadValue(r.catFrom),
+                catTo: toOptionalPayloadValue(r.catTo),
+                mhFrom: toOptionalPayloadValue(r.mhFrom),
+                mhTo: toOptionalPayloadValue(r.mhTo),
+                absence: toOptionalPayloadValue(r.absence),
+                platoonCommanderName: toOptionalPayloadValue(r.platoonCommanderName),
             };
 
             console.log(" Sending Medical CAT payload:", payload);
@@ -100,9 +105,25 @@ export async function updateMedicalCategory(
     payload: Partial<MedicalCategoryPayload>
 ): Promise<ApiResponse> {
     try {
+        const normalizedPayload: Partial<MedicalCategoryPayload> = {
+            ...payload,
+            ...(payload.date !== undefined ? { date: payload.date ? payload.date.split("T")[0] : "" } : {}),
+            ...(payload.mosAndDiagnostics !== undefined
+                ? { mosAndDiagnostics: payload.mosAndDiagnostics.trim() }
+                : {}),
+            ...(payload.catFrom !== undefined ? { catFrom: toOptionalPayloadValue(payload.catFrom) } : {}),
+            ...(payload.catTo !== undefined ? { catTo: toOptionalPayloadValue(payload.catTo) } : {}),
+            ...(payload.mhFrom !== undefined ? { mhFrom: toOptionalPayloadValue(payload.mhFrom) } : {}),
+            ...(payload.mhTo !== undefined ? { mhTo: toOptionalPayloadValue(payload.mhTo) } : {}),
+            ...(payload.absence !== undefined ? { absence: toOptionalPayloadValue(payload.absence) } : {}),
+            ...(payload.platoonCommanderName !== undefined
+                ? { platoonCommanderName: toOptionalPayloadValue(payload.platoonCommanderName) }
+                : {}),
+        };
+
         const response = (await api.patch(
             endpoints.oc.medcatById(ocId, catId),
-            payload
+            normalizedPayload
         )) as ApiResponse;
 
         return response;

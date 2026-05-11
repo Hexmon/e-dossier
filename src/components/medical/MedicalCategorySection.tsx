@@ -31,6 +31,11 @@ interface Props {
     canWriteMedical?: boolean;
 }
 
+function emptyToNull(value: string | null | undefined) {
+    const trimmed = (value ?? "").trim();
+    return trimmed ? trimmed : null;
+}
+
 export default function MedicalCategorySection({
     selectedCadet,
     semesters,
@@ -121,14 +126,14 @@ export default function MedicalCategorySection({
 
         const payload = filledRows.map((row) => ({
             semester: activeTab + 1,
-            date: row.date ?? "",
-            mosAndDiagnostics: row.diagnosis ?? "",
-            catFrom: row.catFrom ?? "",
-            catTo: row.catTo ?? "",
-            mhFrom: row.mhFrom ?? "",
-            mhTo: row.mhTo ?? "",
-            absence: row.absence ?? "",
-            platoonCommanderName: row.piCdrInitial ?? "",
+            date: row.date.trim(),
+            mosAndDiagnostics: row.diagnosis.trim(),
+            catFrom: emptyToNull(row.catFrom),
+            catTo: emptyToNull(row.catTo),
+            mhFrom: emptyToNull(row.mhFrom),
+            mhTo: emptyToNull(row.mhTo),
+            absence: emptyToNull(row.absence),
+            platoonCommanderName: emptyToNull(row.piCdrInitial),
         }));
 
         const saved = await saveRecords(payload);
@@ -173,15 +178,20 @@ export default function MedicalCategorySection({
             piCdrInitial = "",
         } = editForm;
 
+        if (!date.trim() || !diagnosis.trim()) {
+            toast.error("Date and Diagnosis are required");
+            return;
+        }
+
         const payload = {
-            date,
-            mosAndDiagnostics: diagnosis,
-            catFrom,
-            catTo,
-            mhFrom,
-            mhTo,
-            absence,
-            platoonCommanderName: piCdrInitial,
+            date: date.trim(),
+            mosAndDiagnostics: diagnosis.trim(),
+            catFrom: emptyToNull(catFrom),
+            catTo: emptyToNull(catTo),
+            mhFrom: emptyToNull(mhFrom),
+            mhTo: emptyToNull(mhTo),
+            absence: emptyToNull(absence),
+            platoonCommanderName: emptyToNull(piCdrInitial),
         };
 
         await updateRecord(editingId, payload);

@@ -17,8 +17,6 @@ import { usePunishments } from "@/hooks/usePunishments";
 interface Props {
     rows: HookRow[] | undefined;
     loading: boolean;
-    appointmentOptions: Array<{ value: string; label: string }>;
-    appointmentsLoading: boolean;
     onEditSave: (id: string, payload: Partial<HookRow>) => Promise<void> | void;
     onDelete: (row: HookRow) => Promise<void> | void;
     readOnly?: boolean;
@@ -27,8 +25,6 @@ interface Props {
 export default function DisciplineTable({
     rows,
     loading,
-    appointmentOptions,
-    appointmentsLoading,
     onEditSave,
     onDelete,
     readOnly = false,
@@ -181,44 +177,12 @@ export default function DisciplineTable({
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
-                    <Select
-                        value={String(editForm?.byWhomAwarded ?? value) || undefined}
-                        onValueChange={(val) => changeEdit("byWhomAwarded", val as any)}
-                        disabled={appointmentsLoading}
-                    >
-                        <SelectTrigger className="w-full min-w-0">
-                            <SelectValue
-                                className="truncate"
-                                placeholder={
-                                    appointmentsLoading
-                                        ? "Loading appointments..."
-                                        : "Select appointment holder"
-                                }
-                            />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {String(editForm?.byWhomAwarded ?? value) &&
-                                !appointmentOptions.some(
-                                    (option) => option.value === String(editForm?.byWhomAwarded ?? value)
-                                ) && (
-                                    <SelectItem
-                                        value={String(editForm?.byWhomAwarded ?? value)}
-                                        className="max-w-[360px] truncate"
-                                    >
-                                        {String(editForm?.byWhomAwarded ?? value)}
-                                    </SelectItem>
-                                )}
-                            {appointmentOptions.map((option) => (
-                                <SelectItem
-                                    key={option.value}
-                                    value={option.value}
-                                    className="max-w-[360px] truncate"
-                                >
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Input
+                        value={String(editForm?.byWhomAwarded ?? (value === "-" || !value ? "" : value))}
+                        onChange={(e) => changeEdit("byWhomAwarded", e.target.value as any)}
+                        className="w-full min-w-0"
+                        placeholder="Enter awarder"
+                    />
                 ) : value || "-";
             }
         },
