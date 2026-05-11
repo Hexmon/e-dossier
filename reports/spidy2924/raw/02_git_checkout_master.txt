@@ -1,0 +1,5 @@
+$ git checkout master
+Already on 'master'
+Your branch is behind 'origin/master' by 3 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+EXIT_CODE=0

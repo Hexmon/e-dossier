@@ -1,0 +1,10 @@
+$ git log master --format='%aN <%aE>' | sort | uniq -c | sort -nr
+ 281 anuragkmr45 <anuragkmr825@gmail.com>
+ 190 Pratik Mahapatra <pratikmahapatra29@gmail.com>
+ 159 Anurag Kumar <93537069+anuragkmr45@users.noreply.github.com>
+ 117 soumya-ranjan-pratap <srpratap021@gmail.com>
+  56 Soumya Ranjan Pratap <97959591+soumya-ranjan-pratap@users.noreply.github.com>
+   7 Spidy <105922663+Spidy2924@users.noreply.github.com>
+   1 dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+   1 Vercel <vercel[bot]@users.noreply.github.com>
+   1 Anurag Kumar <anuragkumar@Anurags-Mac-mini.local>

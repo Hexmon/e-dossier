@@ -1,0 +1,9 @@
+$ git branch --show-current
+master
+$ git rev-parse HEAD
+e30e59150d961ba468ffdfbcdca90d6616da84ed
+$ git rev-list --count master
+813
+$ git status --short --branch
+## master...origin/master
+?? reports/

@@ -1,0 +1,2470 @@
+$ git log master --numstat --format='commit %H%nAuthor: %aN <%aE>%nAuthorDate: %aI%nParents: %P%nSubject: %s' --author='Pratik Mahapatra\|pratikmahapatra29@gmail.com\|Spidy2924\|105922663+Spidy2924@users.noreply.github.com\|Spidy'
+commit 544f5f74f3359a325a7d13fd11fed3c395446087
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-09T11:27:01+05:30
+Parents: 8134f800d939aab23adf925a4315c39048e22b1b eb75ab24db8490ec54e305f24028248db5ea4838
+Subject: Merge remote-tracking branch 'origin/master' into fixing-credits-issues
+commit 8134f800d939aab23adf925a4315c39048e22b1b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-09T11:26:26+05:30
+Parents: 38e0ea82eb9e95c34ed7bb1da6ceed25a33fcad6
+Subject: Gave input field instead of dropdown in discipline, made only date and diagnosis compulsory for med cat, fixed autobiography edit issues and gave a notice for uploading photo under 200kb size only.
+
+0	39	src/app/dashboard/[id]/milmgmt/discip-records/page.tsx
+29	8	src/app/lib/api/medCatApi.ts
+22	7	src/app/lib/oc-validators.ts
+49	37	src/components/background/AutobiographySection.tsx
+5	47	src/components/discipline/DisciplineForm.tsx
+6	42	src/components/discipline/DisciplineTable.tsx
+48	8	src/components/dossier/OfficerCadetFormComponent.tsx
+26	16	src/components/medical/MedicalCategorySection.tsx
+16	1	src/hooks/useDossierSnapshot.ts
+8	0	src/lib/dossier-snapshot-photo.ts
+7	7	src/types/med-records.ts
+59	0	tests/api/oc.medical-category.test.ts
+commit 38e0ea82eb9e95c34ed7bb1da6ceed25a33fcad6
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-05T22:04:27+05:30
+Parents: bb4e55ff8db1914a88a2b5fb9a7ab27dcde3e937
+Subject: fuxed build error
+
+8	1	tests/utils/uncovered-route-suite.ts
+commit bb4e55ff8db1914a88a2b5fb9a7ab27dcde3e937
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-05T21:54:22+05:30
+Parents: 5484202a72feb0555a41c381f0e0427464ebbc4b
+Subject: Fixed all the issues..
+
+4	3	src/app/dashboard/[id]/milmgmt/counselling/page.tsx
+10	2	src/app/dashboard/[id]/milmgmt/detention/page.tsx
+11	2	src/app/dashboard/[id]/milmgmt/leave-record/page.tsx
+3	2	src/components/counselling/CounsellingTable.tsx
+36	0	src/hooks/useCounsellingRecords.ts
+28	1	src/hooks/useDetentionActions.ts
+25	1	src/hooks/useLeaveActions.ts
+commit 5484202a72feb0555a41c381f0e0427464ebbc4b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-05T21:53:33+05:30
+Parents: 6465ac69250c5dbb0654e861bd5a6a731c2857a4 e8935550dae77813b9217db612ac84b0dfffa0cd
+Subject: Merge remote-tracking branch 'origin/master' into fixing-credits-issues
+commit 6465ac69250c5dbb0654e861bd5a6a731c2857a4
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-05T15:59:50+05:30
+Parents: 744519d06f8f4cf63b78a384f5f3d29495aefd08
+Subject: Fixed all the remaining issues.
+
+152	55	src/app/api/v1/oc/[ocId]/dossier-snapshot/route.ts
+1	0	src/app/dashboard/[id]/milmgmt/camps/page.tsx
+112	43	src/app/dashboard/[id]/milmgmt/club-detls/page.tsx
+11	1	src/app/dashboard/[id]/milmgmt/hikes/page.tsx
+9	2	src/app/lib/api/achievementApi.ts
+15	1	src/app/lib/api/campApi.ts
+26	16	src/components/camps/CampContent.tsx
+8	5	src/components/club_drill/AchievementsForm.tsx
+6	2	src/components/club_drill/ClubForm.tsx
+10	2	src/components/club_drill/DrillForm.tsx
+7	13	src/components/interview-term/TermSubForm.tsx
+4	2	src/hooks/useAchievementActions.ts
+24	2	src/hooks/useCampData.ts
+2	0	src/hooks/useClubActions.ts
+6	1	src/hooks/useDrillActions.ts
+8	1	src/hooks/useHikeActions.ts
+14	0	src/lib/hikeValidation.ts
+10	0	src/lib/interviewFormAutofill.ts
+121	1	tests/api/oc.dossier-snapshot.test.ts
+13	0	tests/lib/interview-form-autofill.test.ts
+commit 744519d06f8f4cf63b78a384f5f3d29495aefd08
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-04T11:49:33+05:30
+Parents: ab078867c98ca6dc1041653fe7c99f4f5cdf6050
+Subject: fixed remaining issues.
+
+70	26	src/app/dashboard/[id]/milmgmt/pers-particulars/page.tsx
+11	4	src/app/lib/api/campApi.ts
+9	4	src/app/lib/api/medCatApi.ts
+19	0	src/app/lib/api/ocPersonalApi.ts
+14	1	src/app/lib/oc-validators.ts
+87	23	src/components/background/AutobiographySection.tsx
+23	45	src/components/camps/campReviews.tsx
+28	4	src/hooks/useCampData.ts
+1	1	src/hooks/useMedicalCategory.ts
+3	0	src/hooks/useOcDetails.ts
+3	0	src/hooks/useOcPersonal.ts
+3	0	src/types/cadet.ts
+commit ab078867c98ca6dc1041653fe7c99f4f5cdf6050
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-03T14:27:48+05:30
+Parents: 3d1c0e0b2a62a78a23e78977d8ce3d1050877f39
+Subject: fixed issues
+
+4	4	src/app/api/v1/oc/[ocId]/motivation-awards/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/obstacle-training/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/special-achievement-in-firing/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/speed-march/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/sports-and-games/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/weapon-training/[id]/route.ts
+25	44	src/app/dashboard/[id]/milmgmt/pers-particulars/page.tsx
+15	6	src/app/lib/api/ocPersonalApi.ts
+13	11	tests/api/oc.motivation-awards.[id].test.ts
+13	11	tests/api/oc.obstacle-training.[id].test.ts
+13	11	tests/api/oc.special-achievement-in-firing.[id].test.ts
+13	11	tests/api/oc.speed-march.[id].test.ts
+13	11	tests/api/oc.sports-and-games.[id].test.ts
+13	11	tests/api/oc.weapon-training.[id].test.ts
+commit 3d1c0e0b2a62a78a23e78977d8ce3d1050877f39
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-01T22:28:16+05:30
+Parents: c22c7928cbe64624d405e40790aeab3c272383d3 205eb4b8ee458e2b416bb165526f74f165eb7ced
+Subject: Merge remote-tracking branch 'origin/master' into fixing-credits-issues
+commit c22c7928cbe64624d405e40790aeab3c272383d3
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-05-01T22:27:51+05:30
+Parents: 7457b0a287fe73672afde6ed4aecb06a697b22de
+Subject: fixed all remaining issues of sheet.
+
+9	3	src/app/api/v1/admin/interview/templates/route.ts
+11	3	src/app/api/v1/admin/training-camps/route.ts
+1	1	src/app/api/v1/oc/[ocId]/olq/categories/route.ts
+1	1	src/app/api/v1/oc/[ocId]/olq/route.ts
+2	2	src/app/api/v1/oc/[ocId]/olq/subtitles/route.ts
+23	12	src/app/dashboard/[id]/milmgmt/club-detls/page.tsx
+6	2	src/app/dashboard/genmgmt/camps/page.tsx
+2	2	src/app/dashboard/genmgmt/interviews-mgmt/page.tsx
+12	2	src/app/db/queries/olq.ts
+2	1	src/app/lib/api/Interviewtemplateapi.ts
+13	3	src/app/lib/api/Physicaltrainingapi.ts
+16	3	src/app/lib/api/clubApi.ts
+9	2	src/app/lib/api/drillApi.ts
+3	1	src/app/lib/api/trainingCampsApi.ts
+1	0	src/app/lib/interview-template-validators.ts
+2	1	src/app/lib/training-camp-validators.ts
+16	4	src/components/club_drill/ClubForm.tsx
+26	5	src/components/club_drill/DrillForm.tsx
+3	3	src/hooks/useClubActions.ts
+2	2	src/hooks/usePhysicalTrainingMgmt.ts
+38	0	tests/api/admin.interview.templates.test.ts
+116	0	tests/api/admin.training-camps.test.ts
+4	1	tests/api/coverage.manifest.ts
+6	0	tests/api/oc.olq.score-course-validation.test.ts
+3	3	tests/api/oc.olq.template-readonly.test.ts
+commit 7457b0a287fe73672afde6ed4aecb06a697b22de
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-30T22:44:54+05:30
+Parents: 844a9aa2e7b514ae0404282c284b4e212d1647f4
+Subject: fixed sheet tasks.
+
+3	1	src/app/api/v1/admin/physical-training/templates/route.ts
+20	4	src/app/api/v1/admin/positions/route.ts
+19	4	src/app/api/v1/admin/users/route.ts
+14	3	src/app/api/v1/oc/[ocId]/dossier-inspection/route.ts
+5	2	src/app/api/v1/oc/physical-training/bulk/route.ts
+1	0	src/app/dashboard/[id]/milmgmt/physical-training/page.tsx
+1	0	src/app/db/queries/authz-permissions.ts
+3	0	src/app/lib/access-control-policy.ts
+9	0	src/app/lib/api/userApi.ts
+2	1	src/app/lib/physical-training-validators.ts
+5	2	src/app/services/marksReviewWorkflow.ts
+37	5	src/components/dossier/InspFormComponent.tsx
+5	3	src/components/physic-training/PhysicalForm.tsx
+13	3	src/hooks/usePhysicalTraining.ts
+4	1	src/lib/interview-access.ts
+45	2	tests/api/admin.appointments-and-positions.test.ts
+90	0	tests/api/admin.physical-training.templates.test.ts
+52	4	tests/api/admin.users.test.ts
+8	1	tests/api/coverage.manifest.ts
+4	2	tests/api/oc.dossier-inspection.test.ts
+8	3	tests/api/oc.physical-training.bulk.test.ts
+12	0	tests/lib/interview-access.test.ts
+7	1	tests/lib/middleware.access-control.test.ts
+1	0	tests/unit/acx/authz-permissions.test.ts
+commit 844a9aa2e7b514ae0404282c284b4e212d1647f4
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-29T15:43:02+05:30
+Parents: 7d0e6b6f724cc5cb0302c505f30dd16d70f13de8 476cf02dab737f2ee896d0af9a58a01abdf1dcdf
+Subject: Merge remote-tracking branch 'origin/master' into fixing-credits-issues
+commit 7d0e6b6f724cc5cb0302c505f30dd16d70f13de8
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-29T15:42:51+05:30
+Parents: 1ad958fe84334880e6ea50e567233a3c08e17dd3
+Subject: fixed interviews.
+
+7	5	src/lib/interviewFormAutofill.ts
+3	0	tests/lib/interview-form-autofill.test.ts
+commit 1ad958fe84334880e6ea50e567233a3c08e17dd3
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-29T00:48:12+05:30
+Parents: 7f69a7356d013cb8aa9b791800533ef22952d81f
+Subject: created excel sheet upload feature for bulk academcis.
+
+218	17	src/components/academics/SubjectWiseStudentsTable.tsx
+305	0	src/components/academics/bulkAcademicMarksImport.ts
+132	0	tests/unit/bulk-academic-marks-import.test.ts
+commit 7f69a7356d013cb8aa9b791800533ef22952d81f
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-28T23:43:06+05:30
+Parents: 85a556ddac7530cbfe745f018d42a55bf762a0b8 8694368473b34eb1ca0903f102fb9fd60842abc7
+Subject: Merge remote-tracking branch 'origin/master' into fixing-credits-issues
+commit 85a556ddac7530cbfe745f018d42a55bf762a0b8
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-28T23:42:53+05:30
+Parents: b96700b9813d1cd221a4e43f076d2be3542231ce
+Subject: Fixed all the sheet tasks and dossier lock settings.
+
+26	0	drizzle/0037_dossier_lock_and_enrollment_semester.sql
+4	0	drizzle/0038_reset_active_enrollment_semester_to_one.sql
+14	0	drizzle/meta/_journal.json
+2	1	src/app/api/v1/admin/appointments/[id]/route.ts
+45	6	src/app/api/v1/admin/appointments/route.ts
+79	0	src/app/api/v1/admin/dossier-lock/route.ts
+1	2	src/app/api/v1/admin/interview/pending/route.ts
+9	4	src/app/api/v1/admin/interview/pending/ticker-setting/route.ts
+4	3	src/app/api/v1/admin/relegation/promote-course/route.ts
+7	4	src/app/api/v1/admin/users/[id]/route.ts
+63	73	src/app/api/v1/auth/login/route.ts
+6	5	src/app/api/v1/dashboard/data/course/route.ts
+5	0	src/app/api/v1/me/route.ts
+2	2	src/app/api/v1/oc/[ocId]/route.ts
+21	9	src/app/api/v1/oc/_checks.ts
+49	11	src/app/dashboard/[id]/milmgmt/ssb-reports/page.tsx
+1	1	src/app/dashboard/genmgmt/promotion-relegation/promote-course/page.tsx
+15	0	src/app/dashboard/genmgmt/settings/dossier-lock/page.tsx
+8	8	src/app/dashboard/genmgmt/settings/marks-review-workflow/page.tsx
+85	0	src/app/db/queries/dossier-lock-settings.ts
+45	1	src/app/db/queries/oc-enrollments.ts
+4	4	src/app/db/queries/oc.ts
+127	107	src/app/db/queries/relegation.ts
+17	0	src/app/db/schema/auth/dossierLockSettings.ts
+7	0	src/app/db/schema/training/oc.ts
+3	1	src/app/db/schema/training/ocRelegations.ts
+25	0	src/app/lib/acx/action-map.ts
+31	3	src/app/lib/api/appointmentApi.ts
+25	0	src/app/lib/api/dossierLockAdminApi.ts
+3	0	src/app/lib/api/me.ts
+5	1	src/app/lib/api/relegationApi.ts
+4	4	src/app/lib/api/ssbReportApi.ts
+5	0	src/app/lib/marks-review-workflow.ts
+3	0	src/app/lib/oc-semester-write.ts
+13	0	src/app/lib/setup-status.ts
+7	0	src/app/lib/validators.dossier-lock-settings.ts
+1	1	src/app/lib/validators.relegation.ts
+3	0	src/app/lib/validators.ts
+16	4	src/app/services/marksReviewWorkflow.ts
+1	23	src/components/Dashboard/DashboardHomePageClient.tsx
+6	4	src/components/appointments/ServedHistoryTable.tsx
+76	1	src/components/appointments/createappointment.tsx
+1	1	src/components/auth/LoginPageClient.tsx
+3	0	src/components/auth/SwitchUserModal.tsx
+7	5	src/components/cadet_table/SelectedCadetTable.tsx
+21	0	src/components/dossier/SemesterLockNotice.tsx
+150	0	src/components/genmgmt/DossierLockSettingsPageClient.tsx
+9	0	src/components/genmgmt/GeneralManagementPageClient.tsx
+1	1	src/components/genmgmt/ModuleAccessSettingsPageClient.tsx
+49	101	src/components/genmgmt/promotion-relegation/PromoteCourseCard.tsx
+1	1	src/components/genmgmt/promotion-relegation/PromotionRelegationCards.tsx
+1	1	src/components/genmgmt/promotion-relegation/RelegationHistoryTable.tsx
+7	17	src/components/physic-training/bulk/PTBulkScoresTable.tsx
+36	0	src/components/physic-training/bulk/ptBulkScoreHelpers.ts
+74	44	src/components/relegation/RelegationForm.tsx
+141	94	src/components/ssb/SSBReportForm.tsx
+126	54	src/hooks/useAppointments.ts
+6	1	src/hooks/useDossierSemesterRouting.ts
+2	0	src/hooks/useSsbReport.ts
+30	0	src/lib/appointments/position-reuse.ts
+26	0	src/lib/appointments/served-history.ts
+20	0	src/lib/dossier-lock-policy.ts
+10	0	src/lib/dossier-semester.ts
+4	0	src/lib/interview-pending-ticker.ts
+11	0	src/middleware.ts
+13	2	src/store/slices/ssbReportSlice.ts
+164	3	tests/api/admin.appointments-and-positions.test.ts
+143	0	tests/api/admin.dossier-lock.test.ts
+32	1	tests/api/admin.interview.pending.ticker-setting.test.ts
+112	0	tests/api/admin.users.[id].test.ts
+28	25	tests/api/auth.login.test.ts
+23	3	tests/api/coverage.manifest.ts
+14	0	tests/api/me.test.ts
+4	6	tests/api/oc.[ocId].test.ts
+70	0	tests/api/relegation.admin.test.ts
+53	0	tests/lib/appointment-position-reuse.test.ts
+82	0	tests/lib/appointment-served-history.test.ts
+9	0	tests/lib/dossier-semester.test.ts
+12	1	tests/lib/interview-pending-ticker.test.ts
+8	0	tests/lib/middleware.logout-rate-limit.test.ts
+15	1	tests/lib/relegation-course-order.test.ts
+48	1	tests/lib/semester-lock-notice.test.tsx
+23	0	tests/lib/setup-status.runtime.test.ts
+13	0	tests/unit/marks-review-workflow.test.ts
+81	9	tests/unit/oc-semester-write-lock.test.ts
+22	0	tests/unit/pt-bulk-score-helpers.test.ts
+commit b96700b9813d1cd221a4e43f076d2be3542231ce
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-24T12:18:24+05:30
+Parents: 8cc4db2bdb77d505a71fc2444fc87eb9d7a82869
+Subject: fixed medical access for pl cdr logins.
+
+1	1	scripts/package-runtime.ts
+70	47	src/components/academics/AcademicTable.tsx
+9	5	src/components/academics/ManageMarksPageContent.tsx
+176	129	src/components/academics/SubjectWiseStudentsTable.tsx
+2	2	src/lib/medical-access.ts
+20	10	src/lib/platoon-commander-access.ts
+12	2	tests/lib/medical-access.test.ts
+21	0	tests/unit/academic-table-rows.test.ts
+commit cb117c22c5eb670ccb3aaeb0777fbf5ad75435d0
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-17T12:49:26+05:30
+Parents: eb5356999c9db5daf28f28fa626769696f71e307
+Subject: fixed build error
+
+2	2	src/components/academics/AcademicTable.tsx
+commit eb5356999c9db5daf28f28fa626769696f71e307
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-17T12:21:20+05:30
+Parents: 01503115b2817e89e775f8cbdaad059af8f0eb6b
+Subject: fixed 2500 academics marks scaling.
+
+7	1	src/app/db/queries/performance-records.ts
+20	2	src/app/lib/performance-record-academics.ts
+1	1	src/app/lib/reports/report-data.ts
+24	1	tests/unit/performance-record-academics.test.ts
+commit 01503115b2817e89e775f8cbdaad059af8f0eb6b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-17T12:05:28+05:30
+Parents: 67389713431faa960c412090402b62e076499e98
+Subject: fixed academics 1350 conversion.
+
+7	11	src/app/db/queries/performance-records.ts
+67	0	src/app/lib/performance-record-academics.ts
+10	2	src/app/services/oc-academics.ts
+61	1	src/components/academics/AcademicTable.tsx
+99	0	tests/unit/academic-table-rows.test.ts
+92	0	tests/unit/performance-record-academics.test.ts
+commit 67389713431faa960c412090402b62e076499e98
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-17T10:42:32+05:30
+Parents: d5bc7439953bc045a4ef56d09307d181106ee934
+Subject: fixed action map entries for pl cdr routes.
+
+61	0	src/app/lib/acx/action-map.ts
+commit d5bc7439953bc045a4ef56d09307d181106ee934
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-17T10:37:19+05:30
+Parents: bbd75ec674302012b225bf7649f8b03fd32398c3
+Subject: added cadet appointments table and settings for pl cdr's.
+
+80	0	drizzle/0036_cadet_appointments.sql
+7	0	drizzle/meta/_journal.json
+24	1	src/app/api/v1/dashboard/data/appointments/route.ts
+16	0	src/app/api/v1/me/route.ts
+122	0	src/app/api/v1/pl-cdr/cadet-appointments/[id]/route.ts
+62	0	src/app/api/v1/pl-cdr/cadet-appointments/[id]/transfer/route.ts
+91	0	src/app/api/v1/pl-cdr/cadet-appointments/route.ts
+611	0	src/app/dashboard/settings/device/appointments/CadetAppointmentsSettingsPageClient.tsx
+8	0	src/app/dashboard/settings/device/appointments/page.tsx
+29	1	src/app/dashboard/settings/page.tsx
+528	0	src/app/db/queries/cadet-appointments.ts
+41	0	src/app/db/schema/training/cadetAppointments.ts
+3	0	src/app/lib/api/me.ts
+97	0	src/app/lib/api/platoonCadetAppointmentsApi.ts
+44	0	src/app/lib/platoon-commander-auth.ts
+18	0	src/app/lib/server-page-auth.ts
+22	0	src/app/lib/validators.ts
+23	1	src/components/AppSidebar.tsx
+67	27	src/components/Dashboard/Appointments.tsx
+88	0	src/hooks/usePlatoonCadetAppointments.ts
+15	0	src/lib/platoon-commander-access.ts
+12	1	tests/api/coverage.manifest.ts
+262	0	tests/api/dashboard.appointments.test.ts
+67	2	tests/api/me.test.ts
+267	0	tests/api/pl-cdr.cadet-appointments.test.ts
+47	0	tests/lib/platoon-commander-access.test.ts
+85	0	tests/lib/server-page-auth.test.ts
+commit bbd75ec674302012b225bf7649f8b03fd32398c3
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-16T01:42:09+05:30
+Parents: a35e2cebdea0b5555cb97e2be76c8eb144aa010b
+Subject: fixed stale build issue
+
+21	0	scripts/build-next.ts
+commit a35e2cebdea0b5555cb97e2be76c8eb144aa010b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-16T01:21:50+05:30
+Parents: 11bdc935881ee8c2510ad28746b35140eadc5a3d
+Subject: added (Theory) under final column in bulk academics module.
+
+6	0	src/components/academics/SubjectWiseStudentsTable.tsx
+2	1	src/components/layout/TableLayout.tsx
+10	8	src/components/reports/cards/CourseWisePerformanceCard.tsx
+commit 11bdc935881ee8c2510ad28746b35140eadc5a3d
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-16T01:00:50+05:30
+Parents: c73b95390658607432d0ce93ef665d792f5cabc6
+Subject: fixed search oc autocomplete and letter based filtering.
+
+69	3	src/components/reports/cards/SemesterGradeCard.tsx
+commit c73b95390658607432d0ce93ef665d792f5cabc6
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-16T00:41:39+05:30
+Parents: aec50b237bc6fd0d3f8deaba09fa59dae77181fb
+Subject: fixed bulk academics cell size issue.
+
+26	17	src/components/academics/SubjectWiseStudentsTable.tsx
+commit aec50b237bc6fd0d3f8deaba09fa59dae77181fb
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-16T00:13:03+05:30
+Parents: 327017f12f598e4d9fe8ce4ee0b334aadf8df85a f538a65252621d88b52638e9bf12eff22b9813e9
+Subject: Merge remote-tracking branch 'origin/master' into fixing-credits-issues
+commit 327017f12f598e4d9fe8ce4ee0b334aadf8df85a
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-16T00:12:55+05:30
+Parents: 707e0a12201ce809b71803da9e8ff34e06644e72
+Subject: fixed academics credits,sgpa and cgpa display issue.
+
+1	0	package.json
+290	0	scripts/db-repair-course-offering-credits.ts
+25	6	src/app/api/v1/admin/courses/[courseId]/offerings/[offeringId]/route.ts
+40	40	src/app/api/v1/admin/courses/[courseId]/offerings/route.ts
+13	1	src/app/dashboard/genmgmt/coursemgmt/[courseId]/offerings/page.tsx
+48	0	src/app/db/queries/subjects.ts
+10	2	src/components/offerings/OfferingDialog.tsx
+79	12	src/components/offerings/OfferingForm.tsx
+230	0	tests/api/courses.offerings.test.ts
+0	2	tests/api/coverage.manifest.ts
+commit 6002909c037bee3871790db1002c7f0cf315ac1f
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-12T00:33:33+05:30
+Parents: 9f0f28c0cce8e4c23533849fd08faef8ca707de4
+Subject: fixed build errors.
+
+8	1	src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts
+8	1	src/app/api/v1/oc/[ocId]/interviews/route.ts
+2	1	src/components/interview/InterviewTabs.tsx
+1	1	src/lib/interviewFormAutofill.ts
+commit 9f0f28c0cce8e4c23533849fd08faef8ca707de4
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-11T16:52:22+05:30
+Parents: 3b9b0e766a586d8816484a04a5fc461ea79142a4
+Subject: tests fixed
+
+2	1	src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts
+2	1	src/app/api/v1/oc/[ocId]/interviews/route.ts
+commit 3b9b0e766a586d8816484a04a5fc461ea79142a4
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-11T14:38:57+05:30
+Parents: beb2ef506a32490bf35efe696088cf1b4169e975 ef626ffc96523bc311da654909873d5d16e6e9a6
+Subject: Merge remote-tracking branch 'origin/master' into restore-course-scoped-templates
+commit beb2ef506a32490bf35efe696088cf1b4169e975
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-11T14:38:49+05:30
+Parents: 90b9327227e107c0fc9d98fce4f5ab720b83ce9f
+Subject: fixed point 9 and oc interviews issues.
+
+12	4	src/app/api/v1/admin/interview/templates/route.ts
+9	12	src/app/api/v1/me/route.ts
+82	1	src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts
+82	1	src/app/api/v1/oc/[ocId]/interviews/route.ts
+29	4	src/app/dashboard/[id]/milmgmt/interviews/page.tsx
+166	1	src/app/db/queries/authz-permissions.ts
+18	0	src/app/db/queries/interviewOc.ts
+169	0	src/app/db/queries/interviewTemplates.ts
+6	0	src/app/db/queries/rbac-admin.ts
+15	1	src/app/db/seeds/seedPermissionsFromExcel.ts
+2	1	src/app/lib/interview-template-validators.ts
+11	0	src/app/lib/rbac/permission-display.ts
+55	26	src/components/interview-term/InterviewTermTabs.tsx
+62	31	src/components/interview-term/TermSubForm.tsx
+35	4	src/components/interview/InterviewTabs.tsx
+7	4	src/components/interview/forms/CdrForm.tsx
+7	4	src/components/interview/forms/DSCoordForm.tsx
+7	4	src/components/interview/forms/DyCdrForm.tsx
+7	3	src/components/interview/forms/PLCdrCombinedForm.tsx
+2	1	src/hooks/useMe.ts
+473	0	src/lib/interview-access.ts
+136	0	src/lib/interviewFormAutofill.ts
+49	85	src/lib/interviewTemplateLoader.ts
+162	0	tests/api/admin.interview.templates.test.ts
+8	1	tests/api/coverage.manifest.ts
+24	0	tests/api/me.test.ts
+167	4	tests/api/oc.interviews.[interviewId].test.ts
+212	0	tests/api/oc.interviews.test.ts
+1	0	tests/api/oc.semester-lock-derived.test.ts
+112	0	tests/lib/interview-access.test.ts
+104	0	tests/lib/interview-form-autofill.test.ts
+26	0	tests/unit/acx/authz-permissions.test.ts
+commit 90b9327227e107c0fc9d98fce4f5ab720b83ce9f
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-11T09:47:08+05:30
+Parents: 0ee3e4cdaeacea252adfe932f4776594b21d4158
+Subject: fixed point 30
+
+2	2	src/app/api/v1/admin/training-camps/settings/route.ts
+5	0	src/app/lib/access-control-policy.ts
+5	1	src/lib/interview-pending-ticker.ts
+29	2	tests/api/admin.interview.pending.ticker-setting.test.ts
+136	0	tests/api/admin.training-camps.settings.test.ts
+4	1	tests/api/coverage.manifest.ts
+38	0	tests/lib/interview-pending-ticker.test.ts
+47	0	tests/lib/middleware.access-control.test.ts
+commit 0ee3e4cdaeacea252adfe932f4776594b21d4158
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-11T09:16:58+05:30
+Parents: 443c46393b7562fefb8951ddd2e87b348919190e
+Subject: fixed point 32
+
+10	1	src/app/api/v1/reports/academics/consolidated-sessional/download/route.ts
+2	0	src/app/api/v1/reports/academics/consolidated-sessional/preview/route.ts
+4	0	src/app/lib/api/academicsMarksApi.ts
+3	0	src/app/lib/api/reportsApi.ts
+34	13	src/app/lib/reports/pdf/templates/consolidated-sessional.ts
+33	7	src/app/lib/reports/report-data.ts
+8	0	src/app/lib/validators.reports.ts
+86	29	src/components/reports/cards/ConsolidatedSessionalCard.tsx
+14	2	src/hooks/useReports.ts
+2	0	src/types/reports.ts
+9	3	tests/api/reports.academics.consolidated-sessional.test.ts
+commit 443c46393b7562fefb8951ddd2e87b348919190e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-11T09:01:37+05:30
+Parents: ec2f15b2929b704c17a346968dc7387ae64d5b38
+Subject: Fixed point 33
+
+2	2	src/app/lib/reports/pdf/templates/semester-grade.ts
+4	2	src/app/lib/reports/report-data.ts
+1	0	src/components/reports/cards/SemesterGradeCard.tsx
+1	0	src/types/reports.ts
+148	0	tests/unit/semester-grade-preview.test.ts
+commit ec2f15b2929b704c17a346968dc7387ae64d5b38
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-11T07:42:07+05:30
+Parents: 51c153ef4310fa9cd9365c9a8dd90b8976efc5ed
+Subject: bug fixed
+
+5	0	tests/api/reports.route-flow.uncovered.test.ts
+commit 51c153ef4310fa9cd9365c9a8dd90b8976efc5ed
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-11T07:30:07+05:30
+Parents: 3a8b46da57f87703895e2cf0b2e32b3fa76b0e5a
+Subject: completed point 10 and 32
+
+3	0	src/app/api/v1/reports/academics/consolidated-sessional/download/route.ts
+2	0	src/app/api/v1/reports/academics/consolidated-sessional/preview/route.ts
+4	0	src/app/db/schema/training/oc.ts
+21	0	src/app/lib/academic-marks-core.ts
+8	0	src/app/lib/api/academics.ts
+4	0	src/app/lib/api/academicsMarksApi.ts
+4	0	src/app/lib/api/marksWorkflowApi.ts
+7	1	src/app/lib/api/reportsApi.ts
+4	0	src/app/lib/marks-review-workflow.ts
+4	0	src/app/lib/oc-validators.ts
+28	10	src/app/lib/reports/pdf/templates/consolidated-sessional.ts
+35	4	src/app/lib/reports/report-data.ts
+5	0	src/app/lib/reports/types.ts
+30	3	src/app/lib/setup-status.ts
+9	0	src/app/lib/validators.reports.ts
+105	12	src/components/academics/SubjectWiseStudentsTable.tsx
+55	12	src/components/reports/cards/ConsolidatedSessionalCard.tsx
+3	1	src/hooks/useReports.ts
+8	0	src/types/academicsTypes.ts
+9	0	src/types/reports.ts
+55	3	tests/api/oc.academics.bulk.test.ts
+24	1	tests/api/reports.academics.consolidated-sessional.test.ts
+23	0	tests/lib/setup-status.runtime.test.ts
+25	0	tests/unit/academic-marks-core.test.ts
+14	2	tests/unit/marks-review-workflow.test.ts
+commit 3a8b46da57f87703895e2cf0b2e32b3fa76b0e5a
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-10T23:58:12+05:30
+Parents: 08c596002ce05b7bc8ab0282cf757547ff5e2282
+Subject: Fixed point 31 in excel sheet.
+
+4	0	src/app/api/v1/reports/academics/final-result-compilation/download/route.ts
+2	0	src/app/api/v1/reports/academics/final-result-compilation/preview/route.ts
+6	1	src/app/lib/api/reportsApi.ts
+4	1	src/app/lib/reports/pdf/templates/final-result-compilation.ts
+32	3	src/app/lib/reports/report-data.ts
+9	0	src/app/lib/validators.reports.ts
+80	6	src/components/reports/cards/FinalResultCompilationCard.tsx
+3	1	src/hooks/useReports.ts
+2	0	src/types/reports.ts
+11	1	tests/api/reports.academics.final-result-compilation.test.ts
+139	0	tests/unit/final-result-compilation-preview.test.ts
+commit 08c596002ce05b7bc8ab0282cf757547ff5e2282
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-10T17:05:10+05:30
+Parents: 8b8dadfbf23ee04fc8650adf2c9c420e401b9b15
+Subject: server bug
+
+2	1	scripts/db-baseline.ts
+2	1	scripts/db-repair-olq-course-template.ts
+2	1	scripts/db/export-schema-docs.ts
+2	1	scripts/health-check.ts
+2	1	src/app/db/client.ts
+27	0	src/app/db/connectionString.ts
+2	1	src/app/db/drizzle.config.ts
+2	1	src/lib/audit.ts
+commit 8b8dadfbf23ee04fc8650adf2c9c420e401b9b15
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-10T14:09:58+05:30
+Parents: 3e3b46085e662666b902283c7526848e59214272
+Subject: next standalone issue fixed.
+
+2	1	next.config.ts
+3	2	package.json
+19	0	scripts/build-next.ts
+1	1	scripts/package-runtime.ts
+commit 3e3b46085e662666b902283c7526848e59214272
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-10T13:36:42+05:30
+Parents: 6ac8d48e27da4f15282b2c5d3ef73a9a23a1302b 19a1fffce6cf90290f1c227a6d6945eea633da5b
+Subject: Merge remote-tracking branch 'origin/master' into restore-course-scoped-templates
+commit 6ac8d48e27da4f15282b2c5d3ef73a9a23a1302b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-10T13:36:32+05:30
+Parents: c9fd3ecd00d4f6932e3c64306468bd266aaee735
+Subject: completed point 18 in the sheet.
+
+722	0	drizzle/0035_restore_course_scoped_training_templates.sql
+7	0	drizzle/meta/_journal.json
+45	0	src/app/api/v1/admin/interview/templates/copy/route.ts
+6	2	src/app/api/v1/admin/interview/templates/route.ts
+11	3	src/app/api/v1/admin/physical-training/motivation-fields/[id]/route.ts
+9	5	src/app/api/v1/admin/physical-training/motivation-fields/route.ts
+46	0	src/app/api/v1/admin/physical-training/templates/copy/route.ts
+7	4	src/app/api/v1/admin/physical-training/templates/route.ts
+9	4	src/app/api/v1/admin/physical-training/types/[typeId]/route.ts
+9	5	src/app/api/v1/admin/physical-training/types/route.ts
+7	3	src/app/api/v1/admin/training-camps/[campId]/route.ts
+46	0	src/app/api/v1/admin/training-camps/copy/route.ts
+7	3	src/app/api/v1/admin/training-camps/route.ts
+205	8	src/app/dashboard/genmgmt/camps/page.tsx
+155	8	src/app/dashboard/genmgmt/interviews-mgmt/page.tsx
+46	5	src/app/dashboard/genmgmt/pt-mgmt/page.tsx
+721	3	src/app/db/queries/interviewTemplates.ts
+610	11	src/app/db/queries/physicalTraining.ts
+282	3	src/app/db/queries/trainingCamps.ts
+5	2	src/app/db/schema/training/interviewTemplates.ts
+3	2	src/app/db/schema/training/oc.ts
+8	3	src/app/db/schema/training/physicalTraining.ts
+27	0	src/app/lib/acx/action-map.ts
+33	1	src/app/lib/api/Interviewtemplateapi.ts
+70	7	src/app/lib/api/Physicaltrainingapi.ts
+47	2	src/app/lib/api/trainingCampsApi.ts
+10	2	src/app/lib/interview-template-validators.ts
+13	1	src/app/lib/physical-training-validators.ts
+57	17	src/app/lib/setup-status.ts
+10	1	src/app/lib/training-camp-validators.ts
+194	49	src/components/pt-mgmt/Pttemplateview.tsx
+17	2	src/hooks/useInterviewTemplates.ts
+61	18	src/hooks/usePhysicalTrainingMgmt.ts
+175	0	tests/api/admin.template-copy.test.ts
+8	0	tests/api/coverage.manifest.ts
+71	0	tests/lib/setup-status.runtime.test.ts
+133	0	tests/unit/template-copy-source-fallback.test.ts
+commit 62280f7b16ac7849395e256bce8fa386c7c49044
+Author: Spidy <105922663+Spidy2924@users.noreply.github.com>
+AuthorDate: 2026-04-04T19:19:00+05:30
+Parents: c80ee0e3e11b52af73edd6cd11e079f85f3bdf0b 1d1d1db1c45fcd2378bbbc3d17868185673c6d7b
+Subject: Merge pull request #241 from Hexmon/master
+commit 6225452d71d091661ca986c7ad6a607eac47c738
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-04T18:28:15+05:30
+Parents: d42bd35ded1c13f255b4f7e68d01ea7f033eb509 f0b34a0c3322548af0a9f1c5d9c50b4b1630c74b
+Subject: Merge remote-tracking branch 'origin/master' into deploy_6
+commit c80ee0e3e11b52af73edd6cd11e079f85f3bdf0b
+Author: Spidy <105922663+Spidy2924@users.noreply.github.com>
+AuthorDate: 2026-04-04T18:16:32+05:30
+Parents: 1f6f3162bbeeff487bfcaf624ebb429be3251f88 f0b34a0c3322548af0a9f1c5d9c50b4b1630c74b
+Subject: Merge pull request #239 from Hexmon/master
+commit d42bd35ded1c13f255b4f7e68d01ea7f033eb509
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-04T10:16:10+05:30
+Parents: b22aac95283bb73275a11d9da42dc9327dfe009b 83372ceaedf9456bfbce457c26af0eba03a198c4
+Subject: Merge remote-tracking branch 'origin/master' into deploy_6
+commit b22aac95283bb73275a11d9da42dc9327dfe009b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-04T10:12:33+05:30
+Parents: 2517dc8bdbd5c4fbda64ef15249dc7045a187c13
+Subject: fixed platoonSection
+
+1	1	src/app/page.tsx
+commit 5e725838605994bb54ea41c3a4506bcbbdf6d253
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-04T09:38:56+05:30
+Parents: 1e283618d8d6449cb7450513c5e1e3fc50c8e9b1
+Subject: fixed point 32 & 33.
+
+14	4	src/app/api/v1/reports/academics/consolidated-sessional/download/route.ts
+1	1	src/app/lib/api/reportsDownloadApi.ts
+14	5	src/app/lib/reports/pdf/templates/consolidated-sessional.ts
+3	0	src/app/lib/validators.reports.ts
+279	160	src/components/reports/cards/ConsolidatedSessionalCard.tsx
+3	0	src/types/reports.ts
+49	2	tests/api/reports.academics.consolidated-sessional.test.ts
+commit 1e283618d8d6449cb7450513c5e1e3fc50c8e9b1
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-04T02:23:39+05:30
+Parents: 270376b3360fa669b72793e1029a184c4b02e789
+Subject: fixed noPhaseTests, added 4 sub-columns for practical
+
+6	0	drizzle/0033_subject_phase_test_count.sql
+7	0	drizzle/meta/_journal.json
+5	28	src/app/api/v1/admin/interview/pending/route.ts
+1	1	src/app/api/v1/admin/subjects/[id]/route.ts
+2	0	src/app/api/v1/admin/subjects/route.ts
+3	0	src/app/db/queries/courses.ts
+11	7	src/app/db/queries/oc.ts
+2	0	src/app/db/queries/subjects.ts
+5	0	src/app/db/schema/training/oc.ts
+1	0	src/app/db/schema/training/subjects.ts
+9	0	src/app/lib/api/academics.ts
+5	0	src/app/lib/api/academicsMarksApi.ts
+1	0	src/app/lib/api/offeringsApi.ts
+3	0	src/app/lib/api/subjectsApi.ts
+6	1	src/app/lib/oc-validators.ts
+49	21	src/app/lib/reports/pdf/templates/consolidated-sessional.ts
+71	24	src/app/lib/reports/report-data.ts
+15	14	src/app/lib/semester-marks.ts
+1	0	src/app/lib/validators.courses.ts
+9	11	src/app/services/academic-grading-recalculate.ts
+16	10	src/app/services/oc-academics.ts
+7	1	src/components/academics/ManageMarksPageContent.tsx
+93	28	src/components/academics/SubjectWiseStudentsTable.tsx
+27	19	src/components/reports/cards/ConsolidatedSessionalCard.tsx
+4	0	src/components/subjects/SubjectCard.tsx
+23	1	src/components/subjects/SubjectForm.tsx
+63	0	src/lib/academics-practical.ts
+73	0	src/lib/academics-theory.ts
+27	0	src/lib/interview-pending-slots.ts
+9	0	src/types/academicsTypes.ts
+11	2	src/types/reports.ts
+7	3	tests/api/admin.interview.pending.test.ts
+1	0	tests/api/coverage.manifest.ts
+58	2	tests/api/oc.academics.bulk.test.ts
+1	0	tests/api/reports.academics.consolidated-sessional.test.ts
+7	1	tests/api/subjects.[id].test.ts
+4	0	tests/api/subjects.test.ts
+34	0	tests/unit/academics-practical.test.ts
+145	0	tests/unit/consolidated-sessional-practical-preview.test.ts
+148	0	tests/unit/consolidated-sessional-theory-preview.test.ts
+2	0	tests/unit/oc-academics-legacy.test.ts
+commit 270376b3360fa669b72793e1029a184c4b02e789
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-04T01:04:11+05:30
+Parents: 19a8f8e7e99c1cc6ca550893c527373da35feaf0
+Subject: fixed point 30
+
+13	41	src/app/api/v1/admin/interview/pending/route.ts
+2	3	src/app/dashboard/page.tsx
+2	3	src/components/Dashboard/InterviewsPending.tsx
+145	0	tests/api/admin.interview.pending.test.ts
+0	1	tests/api/coverage.manifest.ts
+commit 19a8f8e7e99c1cc6ca550893c527373da35feaf0
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-03T23:57:34+05:30
+Parents: 5b23a4d717c567c88d77a73a1626b726eced7180
+Subject: fixed
+
+88	0	src/app/lib/acx/action-map.ts
+commit 5b23a4d717c567c88d77a73a1626b726eced7180
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-03T23:45:11+05:30
+Parents: c911e4284e936727b09ddb8d5a96678a00b9ae5f 83372ceaedf9456bfbce457c26af0eba03a198c4
+Subject: Merge remote-tracking branch 'origin/master' into academic-issues
+commit c911e4284e936727b09ddb8d5a96678a00b9ae5f
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-03T23:45:00+05:30
+Parents: fff16f34f0db310357b799a0c0e8fa3d75e1d705
+Subject: fixed 1,18 and 9 points
+
+40	0	drizzle/0031_platoon_cadet_appointments.sql
+556	0	drizzle/0032_course_scoped_training_templates.sql
+14	0	drizzle/meta/_journal.json
+45	0	src/app/api/v1/admin/interview/templates/copy/route.ts
+4	0	src/app/api/v1/admin/interview/templates/route.ts
+9	1	src/app/api/v1/admin/physical-training/motivation-fields/[id]/route.ts
+7	3	src/app/api/v1/admin/physical-training/motivation-fields/route.ts
+46	0	src/app/api/v1/admin/physical-training/templates/copy/route.ts
+5	2	src/app/api/v1/admin/physical-training/templates/route.ts
+7	2	src/app/api/v1/admin/physical-training/types/[typeId]/route.ts
+7	3	src/app/api/v1/admin/physical-training/types/route.ts
+5	1	src/app/api/v1/admin/training-camps/[campId]/route.ts
+46	0	src/app/api/v1/admin/training-camps/copy/route.ts
+5	1	src/app/api/v1/admin/training-camps/route.ts
+36	1	src/app/api/v1/dashboard/data/appointments/route.ts
+8	0	src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts
+7	0	src/app/api/v1/oc/[ocId]/interviews/route.ts
+14	3	src/app/api/v1/oc/[ocId]/physical-training/route.ts
+15	6	src/app/api/v1/oc/physical-training/bulk/route.ts
+122	0	src/app/api/v1/pl-cdr/cadet-appointments/[id]/route.ts
+62	0	src/app/api/v1/pl-cdr/cadet-appointments/[id]/transfer/route.ts
+91	0	src/app/api/v1/pl-cdr/cadet-appointments/route.ts
+203	6	src/app/dashboard/genmgmt/camps/page.tsx
+154	6	src/app/dashboard/genmgmt/interviews-mgmt/page.tsx
+44	3	src/app/dashboard/genmgmt/pt-mgmt/page.tsx
+611	0	src/app/dashboard/settings/device/appointments/CadetAppointmentsSettingsPageClient.tsx
+8	0	src/app/dashboard/settings/device/appointments/page.tsx
+34	1	src/app/dashboard/settings/page.tsx
+558	0	src/app/db/queries/cadet-appointments.ts
+1	0	src/app/db/queries/interviewOc.ts
+703	2	src/app/db/queries/interviewTemplates.ts
+9	2	src/app/db/queries/oc.ts
+609	10	src/app/db/queries/physicalTraining.ts
+2	0	src/app/db/queries/physicalTrainingOc.ts
+249	2	src/app/db/queries/trainingCamps.ts
+52	0	src/app/db/schema/training/cadetAppointments.ts
+5	2	src/app/db/schema/training/interviewTemplates.ts
+3	2	src/app/db/schema/training/oc.ts
+8	3	src/app/db/schema/training/physicalTraining.ts
+33	1	src/app/lib/api/Interviewtemplateapi.ts
+70	7	src/app/lib/api/Physicaltrainingapi.ts
+3	1	src/app/lib/api/campApi.ts
+101	0	src/app/lib/api/platoonCadetAppointmentsApi.ts
+45	0	src/app/lib/api/trainingCampsApi.ts
+8	0	src/app/lib/interview-template-validators.ts
+12	0	src/app/lib/physical-training-validators.ts
+52	0	src/app/lib/platoon-commander-auth.ts
+30	0	src/app/lib/server-page-auth.ts
+9	0	src/app/lib/training-camp-validators.ts
+22	0	src/app/lib/validators.ts
+32	1	src/components/AppSidebar.tsx
+67	27	src/components/Dashboard/Appointments.tsx
+13	6	src/components/background/AutobiographySection.tsx
+21	1	src/components/camps/CampContent.tsx
+106	9	src/components/interview-term/InterviewTermTabs.tsx
+32	1	src/components/interview-term/TermSubForm.tsx
+42	2	src/components/interview/InterviewTabs.tsx
+16	1	src/components/layout/PageHeader.tsx
+192	47	src/components/pt-mgmt/Pttemplateview.tsx
+3	2	src/hooks/useCampData.ts
+26	4	src/hooks/useInterviewForms.ts
+16	0	src/hooks/useInterviewTemplates.ts
+59	16	src/hooks/usePhysicalTrainingMgmt.ts
+89	0	src/hooks/usePlatoonCadetAppointments.ts
+58	0	src/lib/currentUserSignature.ts
+22	14	src/lib/interviewTemplateLoader.ts
+45	0	src/lib/platoon-commander-access.ts
+175	0	tests/api/admin.template-copy.test.ts
+18	1	tests/api/coverage.manifest.ts
+158	0	tests/api/dashboard.appointments.test.ts
+3	3	tests/api/oc.physical-training.bulk.test.ts
+10	0	tests/api/oc.physical-training.test.ts
+267	0	tests/api/pl-cdr.cadet-appointments.test.ts
+194	0	tests/api/pl-cdr.route-flow.uncovered.test.ts
+2	0	tests/utils/uncovered-route-mocks.ts
+commit 2517dc8bdbd5c4fbda64ef15249dc7045a187c13
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-04-03T17:57:21+05:30
+Parents: 909c8ca54f86c7092ffa373c4f737f43c92483c8
+Subject: platoons section fixed
+
+18	14	src/components/PlatoonsSection.tsx
+commit fff16f34f0db310357b799a0c0e8fa3d75e1d705
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-26T20:06:09+05:30
+Parents: 2e176ee579785e689d2948198133a8f7ff2c10d2
+Subject: Done point 7 and fixed final result compilation pdf.
+
+6	0	drizzle/0030_preserve_jnu_enrollment_no.sql
+7	0	drizzle/meta/_journal.json
+14	4	src/app/api/v1/oc/[ocId]/route.ts
+16	2	src/app/api/v1/oc/route.ts
+8	18	src/app/api/v1/reports/academics/final-result-compilation/download/route.ts
+8	1	src/app/dashboard/genmgmt/ocmgmt/page.tsx
+2	0	src/app/db/migrations/add_jnu_enrollment_no_to_oc_cadets.sql
+3	0	src/app/db/queries/oc.ts
+1	0	src/app/db/schema/training/oc.ts
+1	0	src/app/lib/api/ocApi.ts
+225	168	src/app/lib/reports/pdf/templates/final-result-compilation.ts
+79	26	src/app/lib/reports/report-data.ts
+26	5	src/components/genmgmt/OCForm.tsx
+3	1	src/components/oc/OCDetailsModal.tsx
+1	1	src/components/oc/OCsTable.tsx
+62	98	src/components/reports/cards/FinalResultCompilationCard.tsx
+9	4	src/types/reports.ts
+0	3	tests/api/coverage.manifest.ts
+127	0	tests/api/oc.[ocId].test.ts
+95	0	tests/api/oc.list.test.ts
+218	0	tests/api/reports.academics.final-result-compilation.test.ts
+224	0	tests/unit/final-result-compilation-preview.test.ts
+commit 2e176ee579785e689d2948198133a8f7ff2c10d2
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-23T10:52:14+05:30
+Parents: 437852ae1656619541390aa0d6d61480ee80ba19
+Subject: fixed_sgpa_cgpa_grades_marks_for_academics.
+
+37	1	src/app/db/queries/subjects.ts
+76	1	src/app/services/oc-academics.ts
+133	19	src/components/academics/AcademicTable.tsx
+1	0	src/components/academics/DynamicSemesterTable.tsx
+122	0	tests/unit/academic-table-rows.test.ts
+74	0	tests/unit/oc-academics-legacy.test.ts
+commit 437852ae1656619541390aa0d6d61480ee80ba19
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-18T19:33:11+05:30
+Parents: 6ba91c10f6ed6b834df6705e77af7826cd9cad08
+Subject: Fixed PT reports, fixed bulk and individual PT form entry for A and C categories.
+
+3	1	src/app/api/v1/oc/[ocId]/physical-training/route.ts
+2	1	src/app/api/v1/oc/physical-training/bulk/route.ts
+7	3	src/app/api/v1/reports/mil-training/physical-assessment/download/route.ts
+2	1	src/app/api/v1/reports/mil-training/physical-assessment/preview/route.ts
+1	0	src/app/db/queries/physicalTrainingOc.ts
+20	0	src/app/lib/physical-training-attempts.ts
+2	1	src/app/lib/reports/pdf/pdf-engine.ts
+251	185	src/app/lib/reports/pdf/templates/pt-assessment.ts
+58	46	src/app/lib/reports/report-data.ts
+5	1	src/app/lib/validators.reports.ts
+20	10	src/components/physic-training/HigherTests.tsx
+24	10	src/components/physic-training/IpetForm.tsx
+24	10	src/components/physic-training/PhysicalForm.tsx
+20	10	src/components/physic-training/Swimming.tsx
+2	11	src/components/physic-training/bulk/PTBulkScoresTable.tsx
+23	3	src/components/physic-training/bulk/ptBulkScoreHelpers.ts
+4	4	src/components/physic-training/ptTableHelpers.ts
+135	53	src/components/reports/cards/PtAssessmentCard.tsx
+20	18	src/types/reports.ts
+0	3	tests/api/coverage.manifest.ts
+58	0	tests/api/oc.physical-training.bulk.test.ts
+125	0	tests/api/oc.physical-training.test.ts
+203	0	tests/api/reports.mil-training.physical-assessment.test.ts
+27	5	tests/utils/generic-api-mocks.ts
+commit 6ba91c10f6ed6b834df6705e77af7826cd9cad08
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-18T15:37:09+05:30
+Parents: ac9e8f0a78e846dbc2f0a1441dc9dec885b6a58d
+Subject: checking
+
+1	1	src/app/lib/apiClient.ts
+commit 91bf641419da8018241159c9e50d570b1156cc04
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-10T17:57:16+05:30
+Parents: acc6eb47e4e09c33d8d3c522a4048c82bf09314c
+Subject: deploy_6_feature_9_done
+
+13	0	src/app/api/v1/platoons/[idOrKey]/route.ts
+30	1	src/app/api/v1/platoons/route.ts
+59	14	src/app/platoon/[platoonKey]/page.tsx
+2	2	src/components/PlatoonsSection.tsx
+32	8	src/components/platoon/PlatoonForm.tsx
+22	7	src/components/platoon/PlatoonViewDialog.tsx
+1	1	src/components/platoon/PlatoonsTable.tsx
+commit acc6eb47e4e09c33d8d3c522a4048c82bf09314c
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-10T02:08:24+05:30
+Parents: e6bae914d3f4f89e9234dddc7aec6bab084c374a
+Subject: deploy_6_ticker_setting_done
+
+18	0	drizzle/0029_interview_pending_ticker_settings.sql
+7	0	drizzle/meta/_journal.json
+2	2	scripts/validate-action-map.ts
+138	0	src/app/api/v1/admin/interview/pending/ticker-setting/route.ts
+19	3	src/app/dashboard/[id]/milmgmt/page.tsx
+56	86	src/app/dashboard/page.tsx
+23	1	src/app/dashboard/settings/page.tsx
+261	0	src/app/dashboard/settings/ticker/page.tsx
+1	0	src/app/db/index.ts
+90	0	src/app/db/queries/interview-pending-ticker-settings.ts
+18	0	src/app/db/schema/auth/interviewPendingTickerSettings.ts
+39	0	src/app/lib/acx/action-map.ts
+44	0	src/app/lib/api/interviewPendingTickerSettingsApi.ts
+51	0	src/app/lib/validators.interview-pending-ticker-settings.ts
+30	24	src/components/auth/SwitchUserModal.tsx
+16	1	src/components/layout/PageHeader.tsx
+40	0	src/hooks/useInterviewPendingTickerSettings.ts
+87	0	src/lib/interview-pending-ticker.ts
+144	0	tests/api/admin.interview.pending.ticker-setting.test.ts
+commit e6bae914d3f4f89e9234dddc7aec6bab084c374a
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-07T02:26:48+05:30
+Parents: 3a0b0782ab323baa2ba9d784875ce43895a99286
+Subject: deploy_6_!7&18_done.
+
+72	32	src/app/services/oc-performance-records.ts
+commit 3a0b0782ab323baa2ba9d784875ce43895a99286
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-07T01:52:58+05:30
+Parents: a0076d791ac47604cd05e270200ed2a826a42f11
+Subject: deploy_6_feauture_16_done
+
+26	6	src/app/db/queries/oc.ts
+34	8	src/app/lib/semester-marks.ts
+15	11	src/app/services/oc-academics.ts
+189	275	src/components/academics/AcademicTable.tsx
+25	10	src/components/academics/DynamicSemesterTable.tsx
+commit a0076d791ac47604cd05e270200ed2a826a42f11
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-06T23:41:54+05:30
+Parents: d93bb116d6b0946c7aad33b5c8c377e71b8d8a82
+Subject: create and integrated footer api.
+
+3	0	drizzle/0028_site_footer.sql
+7	0	drizzle/meta/_journal.json
+121	0	src/app/api/v1/admin/site-settings/footer/route.ts
+27	0	src/app/api/v1/site-settings/footer/route.ts
+140	4	src/app/dashboard/genmgmt/settings/site/page.tsx
+56	0	src/app/db/queries/site-settings.ts
+4	0	src/app/db/schema/auth/siteSettings.ts
+36	0	src/app/lib/acx/action-map.ts
+21	0	src/app/lib/api/siteSettingsAdminApi.ts
+10	1	src/app/lib/public-site-settings.ts
+1	0	src/app/lib/rbac/permission-display.ts
+10	0	src/app/lib/validators.site-settings.ts
+1	3	src/app/page.tsx
+20	0	src/hooks/useAdminSiteSettings.ts
+74	0	tests/api/admin.site-settings.footer.test.ts
+17	0	tests/api/public.site-settings.test.ts
+5	0	tests/lib/site-settings-fallbacks.test.ts
+commit d93bb116d6b0946c7aad33b5c8c377e71b8d8a82
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-06T18:48:26+05:30
+Parents: aacf1743c7cde09ec3a632827bf2c2bc5265cd21
+Subject: Deployment_6_Events&News_feauture_created
+
+13	0	drizzle/0027_site_events_news.sql
+7	0	drizzle/meta/_journal.json
+48	0	src/app/api/v1/admin/site-settings/events-news/[id]/hard/route.ts
+120	0	src/app/api/v1/admin/site-settings/events-news/[id]/route.ts
+85	0	src/app/api/v1/admin/site-settings/events-news/route.ts
+43	0	src/app/api/v1/site-settings/events-news/route.ts
+279	8	src/app/dashboard/genmgmt/settings/site/page.tsx
+136	0	src/app/db/queries/site-settings.ts
+19	0	src/app/db/schema/auth/siteSettings.ts
+63	0	src/app/lib/acx/action-map.ts
+47	0	src/app/lib/api/siteSettingsAdminApi.ts
+12	1	src/app/lib/public-site-settings.ts
+1	0	src/app/lib/rbac/permission-display.ts
+25	0	src/app/lib/validators.site-settings.ts
+1	1	src/app/page.tsx
+52	43	src/components/EventsNews.tsx
+33	0	src/hooks/useAdminSiteSettings.ts
+156	0	tests/api/admin.site-settings.events-news.test.ts
+24	0	tests/api/public.site-settings.test.ts
+commit a491adca78ec9968a90c4ee14ff4cd89f72afa20
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-06T16:27:41+05:30
+Parents: 47e441416abe38c4ff39ecc3c0f7662537b5bbc8
+Subject: checking
+
+1	1	src/app/(auth)/login/page.tsx
+commit 47e441416abe38c4ff39ecc3c0f7662537b5bbc8
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-06T15:57:25+05:30
+Parents: 17eed22eee093a1222a6e6b6802e48baea7d356e
+Subject: fixed failed appointments error
+
+23	13	src/app/(auth)/login/page.tsx
+1	1	src/app/api/v1/admin/appointments/route.ts
+5	4	src/app/lib/api/appointmentApi.ts
+1	1	src/constants/endpoints.ts
+commit 17eed22eee093a1222a6e6b6802e48baea7d356e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-05T21:00:07+05:30
+Parents: 7771544555f37c9b7786b6fd38f35521b30b28b4 883f82e0b2815447260bc78b38ef4c36db3c54a9
+Subject: Merge remote-tracking branch 'origin/master' into fixes
+commit 7771544555f37c9b7786b6fd38f35521b30b28b4
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-03-05T20:07:17+05:30
+Parents: 4b00634207fab15d5c87fa23d4be7f4649bb406d
+Subject: Issues_Observed_2, 10-14 points covered and done.
+
+12	75	src/app/dashboard/[id]/milmgmt/initial-interview/page.tsx
+11	69	src/app/dashboard/[id]/milmgmt/interview-term/page.tsx
+137	0	src/app/dashboard/[id]/milmgmt/interviews/page.tsx
+19	4	src/app/dashboard/genmgmt/approvalmgmt/page.tsx
+8	1	src/app/dashboard/genmgmt/camps/page.tsx
+6	2	src/app/dashboard/genmgmt/coursemgmt/[courseId]/offerings/page.tsx
+11	2	src/app/dashboard/genmgmt/coursemgmt/page.tsx
+15	11	src/app/dashboard/genmgmt/discipline-records/page.tsx
+7	3	src/app/dashboard/genmgmt/instructors/page.tsx
+6	2	src/app/dashboard/genmgmt/interviews-mgmt/[id]/page.tsx
+6	2	src/app/dashboard/genmgmt/interviews-mgmt/page.tsx
+8	1	src/app/dashboard/genmgmt/platoon-management/page.tsx
+1	0	src/app/dashboard/genmgmt/promotion-relegation/page.tsx
+1	0	src/app/dashboard/genmgmt/promotion-relegation/promote-course/page.tsx
+1	0	src/app/dashboard/genmgmt/promotion-relegation/relegation/page.tsx
+8	1	src/app/dashboard/genmgmt/pt-mgmt/page.tsx
+6	2	src/app/dashboard/genmgmt/punishments/page.tsx
+6	2	src/app/dashboard/genmgmt/subjectmgmt/page.tsx
+1	1	src/app/db/seeds/seedPermissionsFromExcel.ts
+3	10	src/app/lib/acx/action-map.ts
+0	8	src/app/lib/navigation/config.ts
+29	43	src/config/app.config.ts
+12	0	src/lib/auth/logout.ts
+commit 4b00634207fab15d5c87fa23d4be7f4649bb406d
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-28T15:15:33+05:30
+Parents: 01a3f0cb2eeb1426525506bba618f03a47cd1a0e
+Subject: fixed PT and ODT graph
+
+78	3	src/app/db/queries/performance-graph.ts
+18	35	src/components/physic-training/HigherTests.tsx
+19	37	src/components/physic-training/IpetForm.tsx
+28	26	src/components/physic-training/PhysicalForm.tsx
+18	35	src/components/physic-training/Swimming.tsx
+8	2	src/components/physic-training/ptTableHelpers.ts
+commit 01a3f0cb2eeb1426525506bba618f03a47cd1a0e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-28T13:30:51+05:30
+Parents: 74bac0e2710bae46ce5706e73f301ec888f35306 f0f5722adf7240ee58a7bf455efeb86a411a85dd
+Subject: Merge remote-tracking branch 'origin/master' into fixes
+commit 74bac0e2710bae46ce5706e73f301ec888f35306
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-28T00:40:06+05:30
+Parents: f01f796ae9cd259604ca61d0a98683c25c0fb31e
+Subject: fixed ODT graph to show PT total marks scored data.
+
+9	35	src/app/db/queries/performance-graph.ts
+8	8	src/components/performance_graph/ODT_Graph.tsx
+commit f01f796ae9cd259604ca61d0a98683c25c0fb31e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-27T18:08:14+05:30
+Parents: 5f49a4f8f60efd361cf033756ea5cf66a5726b04
+Subject: fixed build errors
+
+2	3	src/components/performance_graph/Discipline.tsx
+2	3	src/components/performance_graph/Graph.tsx
+2	3	src/components/performance_graph/Med_Graph.tsx
+2	3	src/components/performance_graph/ODT_Graph.tsx
+2	3	src/components/performance_graph/OLQ_Graph.tsx
+commit 5f49a4f8f60efd361cf033756ea5cf66a5726b04
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-27T18:00:16+05:30
+Parents: 8a817a006abbbf19b4bce28f6429c7b28a46f85f 447696d1a7b15c296ae437e9c7a4526b2b68e82f
+Subject: Merge remote-tracking branch 'origin/master' into fixes
+commit 8a817a006abbbf19b4bce28f6429c7b28a46f85f
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-27T18:00:08+05:30
+Parents: c6c2c34f9b193cdba0a93a4dce7e5fcc8105ef87
+Subject: Created and Integrated the performance graph api endpoint.
+
+28	0	src/app/api/v1/oc/[ocId]/performance-graph/route.ts
+47	18	src/app/dashboard/[id]/milmgmt/performance-graph/page.tsx
+313	0	src/app/db/queries/performance-graph.ts
+14	0	src/app/lib/api/performanceGraphApi.ts
+5	15	src/components/cadet_table/SelectedCadetTable.tsx
+0	76	src/components/performance_graph/Data.tsx
+85	37	src/components/performance_graph/Discipline.tsx
+77	35	src/components/performance_graph/Graph.tsx
+262	216	src/components/performance_graph/Med_Graph.tsx
+85	37	src/components/performance_graph/ODT_Graph.tsx
+80	35	src/components/performance_graph/OLQ_Graph.tsx
+57	15	src/components/performance_graph/PerformanceGraphModal.tsx
+13	14	src/components/performance_graph/PerformanceGraphs.tsx
+1	0	src/constants/endpoints.ts
+58	0	src/types/performanceGraph.ts
+commit c6c2c34f9b193cdba0a93a4dce7e5fcc8105ef87
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-26T22:39:26+05:30
+Parents: 53a9d6700f17c125b060fc63ab044284b841c8bb c5b4c4ecee395c6c5e9a3403dc4b049cdf278874
+Subject: Merge remote-tracking branch 'origin/master' into fixes
+commit 53a9d6700f17c125b060fc63ab044284b841c8bb
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-26T22:39:19+05:30
+Parents: 52149467831f26d92a182b4967ab0184e9e487e1
+Subject: Made an api endpoint for interviews pending and integrated it for admin and pl cdr's, displayed an interviews pending table for pl cdr in dashboard in place of platoons table, made course table show the courses based on the active platoon.
+
+635	0	src/app/api/v1/admin/interview/pending/route.ts
+15	3	src/app/api/v1/dashboard/data/course/route.ts
+202	5	src/app/dashboard/page.tsx
+9	0	src/app/lib/acx/action-map.ts
+12	0	src/app/lib/acx/engine.ts
+151	0	src/components/Dashboard/InterviewsPending.tsx
+2	2	src/lib/interviewTemplateMatching.ts
+commit 52149467831f26d92a182b4967ab0184e9e487e1
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-26T19:48:46+05:30
+Parents: d55c1273896c861225a340460733e1b95b4eaf4c
+Subject: fixed course/cadet recreation issue and course page half UI issue.
+
+9	2	src/app/api/v1/admin/courses/[courseId]/route.ts
+29	14	src/app/dashboard/genmgmt/coursemgmt/page.tsx
+17	12	src/components/Tabs/GlobalTabs.tsx
+23	3	tests/api/courses.[courseId].test.ts
+commit d55c1273896c861225a340460733e1b95b4eaf4c
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-26T19:05:17+05:30
+Parents: cf5472b799fbce5f8bb2e022cf6df6da5757f1b4 e342fe77770e7bff2abf6e64df604deaef60ba81
+Subject: Merge remote-tracking branch 'origin/master' into fixes
+commit cf5472b799fbce5f8bb2e022cf6df6da5757f1b4
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-26T19:05:09+05:30
+Parents: 0ea7ad75f5d3fa02c9f561a453b9587db78dbc9d
+Subject: fixed auto computation of sgpa and cgpa for academics.
+
+0	2	src/app/lib/api/academics.ts
+1	3	src/app/lib/oc-validators.ts
+52	16	src/app/services/oc-academics.ts
+20	2	tests/api/oc.academics.test.ts
+commit 0ea7ad75f5d3fa02c9f561a453b9587db78dbc9d
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-23T22:59:35+05:30
+Parents: aeb19904c8f83e3d905bfb25270412f642c62865
+Subject: Improved admin, promotion & relegation mgmt UI, replaced profile with site settings and added courses fileter in place of sort by in Dossier OC modal.
+
+16	64	src/app/dashboard/genmgmt/page.tsx
+41	0	src/app/dashboard/genmgmt/promotion-relegation/promote-course/page.tsx
+41	0	src/app/dashboard/genmgmt/promotion-relegation/relegation/page.tsx
+0	8	src/components/Hero.tsx
+15	27	src/components/genmgmt/promotion-relegation/PromotionRelegationCards.tsx
+4	4	src/components/layout/PageHeader.tsx
+55	12	src/components/modals/OCSelectModal.tsx
+2	0	src/lib/oc-modal-scope.ts
+2	0	tests/lib/oc-modal-scope.test.ts
+commit aeb19904c8f83e3d905bfb25270412f642c62865
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-23T22:18:11+05:30
+Parents: 83c3d1858253b5e84a3855799d41ba7f2ac89b85 67824023e83bfe75f31e1b7b5284e4e5f96e7c5b
+Subject: Merge remote-tracking branch 'origin/master' into fixes
+commit 83c3d1858253b5e84a3855799d41ba7f2ac89b85
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-23T22:18:03+05:30
+Parents: 484e53be50a494f4683cf1464b17eb09adade878
+Subject: added experience, qualification and subjects fields in instructor
+
+3	0	drizzle/0023_instructor_profile_subjects.sql
+8	1	drizzle/meta/_journal.json
+10	0	src/app/api/v1/admin/instructors/[id]/route.ts
+15	0	src/app/api/v1/admin/instructors/route.ts
+3	0	src/app/db/queries/instructors.ts
+12	1	src/app/db/queries/subjects.ts
+4	0	src/app/db/schema/training/instructors.ts
+12	3	src/app/lib/api/instructorsApi.ts
+3	0	src/app/lib/validators.courses.ts
+123	3	src/components/instructors/InstructorForm.tsx
+29	1	src/components/instructors/InstructorsTable.tsx
+commit 484e53be50a494f4683cf1464b17eb09adade878
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-23T02:40:36+05:30
+Parents: b41382b9d2075bc662424d246e0a5fbd606107a5 9eb3252b4bbf05a5316f470ae4210aa939b633b0
+Subject: Merge remote-tracking branch 'origin/master' into fixes
+commit b41382b9d2075bc662424d246e0a5fbd606107a5
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-23T01:40:07+05:30
+Parents: e2aa563e73a57e142f2f27ed92c6c4ac6fd23892
+Subject: FIxed Interviews for admin and OC
+
+3	3	src/components/interview-mgmt/template-detail/GroupFieldsDialog.tsx
+3	3	src/components/interview-mgmt/template-detail/SectionFieldsDialog.tsx
+27	4	src/components/interview-term/InterviewTermTabs.tsx
+128	27	src/components/interview-term/TermSubForm.tsx
+134	38	src/components/interview/InterviewTabs.tsx
+48	33	src/components/interview/forms/CdrForm.tsx
+48	33	src/components/interview/forms/DSCoordForm.tsx
+48	33	src/components/interview/forms/DyCdrForm.tsx
+48	33	src/components/interview/forms/PLCdrCombinedForm.tsx
+39	3	src/hooks/useInterviewTemplates.ts
+79	7	src/lib/interviewFieldUtils.ts
+55	76	src/lib/interviewFormService.ts
+5	0	src/lib/interviewTemplateLoader.ts
+176	11	src/lib/interviewTemplateMatching.ts
+commit 50203f91d7df2bc55c59ff66bcbd6c68efe5ff8d
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-13T04:58:19+05:30
+Parents: 571b54fe27dccb4da1822066bfdbfe50edf85d97
+Subject: fixed build
+
+5	4	src/app/dashboard/settings/device/page.tsx
+commit 571b54fe27dccb4da1822066bfdbfe50edf85d97
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-13T04:51:47+05:30
+Parents: 309962b134e590ce72e7d0271b9568015f905165 4e792c2edc0d76381fcf0abb918e09b792f25271
+Subject: Merge remote-tracking branch 'origin/master' into fixes
+commit 309962b134e590ce72e7d0271b9568015f905165
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-13T04:51:32+05:30
+Parents: 24cdc9822d7e844b34c0f6a6ce28409a3b81c339
+Subject: fixed UI for dark theme.
+
+1	1	src/app/dashboard/[id]/milmgmt/club-detls/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/comn-parents/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/counselling/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/credit-excellence/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/detention/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/discip-records/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/hikes/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/leave-record/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/obstacle-trg/page.tsx
+19	6	src/app/dashboard/[id]/milmgmt/page.tsx
+2	2	src/app/dashboard/[id]/milmgmt/physical-training/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/semester-record/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/speed-march/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/sports-awards/page.tsx
+1	1	src/app/dashboard/[id]/milmgmt/wpn-trg/page.tsx
+9	2	src/app/dashboard/settings/device/page.tsx
+20	0	src/app/globals.css
+54	16	src/components/academics/AcademicTable.tsx
+30	4	src/components/academics/AcademicsTabs.tsx
+32	50	src/components/academics/DynamicSemesterTable.tsx
+2	2	src/components/cadet_table/SelectedCadetTable.tsx
+5	5	src/components/camps/CampContent.tsx
+2	2	src/components/camps/campMarksTable.tsx
+2	2	src/components/camps/campReviews.tsx
+1	1	src/components/finalPerformance/FinalPerformanceRecord.tsx
+1	1	src/components/interview-term/InterviewTermTabs.tsx
+1	1	src/components/interview-term/TermSubForm.tsx
+1	1	src/components/interview/InterviewTabs.tsx
+2	1	src/components/layout/PageHeader.tsx
+35	11	src/components/layout/TableLayout.tsx
+2	2	src/components/overall_assessment/OlqAssessment.tsx
+2	2	src/components/overall_assessment/OverallPerformance.tsx
+1	1	src/components/physic-training/PhysicalForm.tsx
+6	1	src/components/providers/DeviceSiteSettingsProvider.tsx
+1	1	src/components/semester-record/semesterForm.tsx
+1	1	src/components/ssb/SSBReportForm.tsx
+1	1	src/components/ui/button.tsx
+7	2	src/hooks/useAcademics.ts
+commit 6e851b5e30ec5e353b72ae555614275d4f7899bd
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-13T02:43:52+05:30
+Parents: 4feb19dc81e405de92a6e2925aec16a978943be1
+Subject: fixed color
+
+1	1	src/components/users/UserFormDialog.tsx
+commit 4feb19dc81e405de92a6e2925aec16a978943be1
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-13T02:31:34+05:30
+Parents: 66acc95eee46499ac1c03bac5566c327c73f7bad 1d37365cd5e8098402501500a7a32acc2907a774
+Subject: Merge remote-tracking branch 'origin/stage' into admin-fixes
+commit 66acc95eee46499ac1c03bac5566c327c73f7bad
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-13T02:25:41+05:30
+Parents: 44a88a51e25df14fafbbe03b5f8002832209bb9e
+Subject: Fixed all changes
+
+2	3	src/app/api/v1/oc/[ocId]/academics/route.ts
+3	2	src/app/api/v1/oc/route.ts
+69	0	src/app/dashboard/genmgmt/academics/page.tsx
+2	2	src/app/dashboard/genmgmt/coursemgmt/[courseId]/offerings/page.tsx
+2	2	src/app/dashboard/genmgmt/coursemgmt/page.tsx
+2	42	src/app/dashboard/genmgmt/page.tsx
+2	2	src/app/dashboard/genmgmt/subjectmgmt/page.tsx
+2	1	src/app/dashboard/genmgmt/usersmgmt/page.tsx
+3	1	src/app/db/queries/oc.ts
+11	0	src/app/globals.css
+4	2	src/app/lib/api/ocApi.ts
+21	6	src/components/Tabs/DossierTab.tsx
+31	3	src/components/cfe/CfeForm.tsx
+15	9	src/components/courses/CourseCard.tsx
+30	35	src/components/dossier/DossierFillingForm.tsx
+17	3	src/components/layout/TableLayout.tsx
+11	11	src/components/medical/MedicalInfoForm.tsx
+16	3	src/components/oc/OCDetailsModal.tsx
+30	2	src/components/oc/UploadButton.tsx
+15	9	src/components/users/UserCard.tsx
+9	1	src/components/users/UserFormDialog.tsx
+18	20	src/config/app.config.ts
+7	2	src/hooks/useUsers.ts
+commit cd67bd748acf49355205c650f54200094c34c969
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-12T21:28:24+05:30
+Parents: deba97d9347fc18592f42537348f3d7fff15c705
+Subject: fixed build
+
+3	3	src/components/Tabs/DossierTab.tsx
+11	3	src/config/app.config.ts
+commit deba97d9347fc18592f42537348f3d7fff15c705
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-12T21:20:41+05:30
+Parents: 19fc681ac6e13de74a53979823158fd2e5d807ad
+Subject: fixed
+
+4	4	src/components/Tabs/DossierTab.tsx
+commit 19fc681ac6e13de74a53979823158fd2e5d807ad
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-12T21:20:32+05:30
+Parents: ba92023edca43950e07fc92ac21924e08b8b078b
+Subject: fixed UI
+
+15	7	src/app/dashboard/[id]/milmgmt/discip-records/page.tsx
+39	3	src/app/dashboard/[id]/milmgmt/dossier-filling/page.tsx
+29	19	src/app/dashboard/[id]/milmgmt/page.tsx
+68	16	src/app/dashboard/genmgmt/page.tsx
+41	31	src/components/Tabs/DossierTab.tsx
+32	5	src/components/discipline/DisciplineForm.tsx
+74	50	src/components/ssb/SSBReportForm.tsx
+24	21	src/config/app.config.ts
+commit ba92023edca43950e07fc92ac21924e08b8b078b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-12T21:14:10+05:30
+Parents: b164e95019c4804dd69a53419717db9b5c7d27e5 0b05a0c67d50eafe192e3e3e2e79823fd555168d
+Subject: Merge remote-tracking branch 'origin/stage' into admin-fixes
+commit b164e95019c4804dd69a53419717db9b5c7d27e5
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-12T17:56:59+05:30
+Parents: 7b1ca676c303d6729c83e6e3c440d8ad66026ce0
+Subject: fixed type error
+
+4	3	src/components/courses/CourseViewModal.tsx
+commit 7b1ca676c303d6729c83e6e3c440d8ad66026ce0
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-12T17:56:46+05:30
+Parents: e8fb16fdc70948a8d0cbd8095a24e695cecd992d dcb70f3385801b7cf88c4405aea23ef899ea4e9e
+Subject: Merge remote-tracking branch 'origin/stage' into admin-fixes
+commit e8fb16fdc70948a8d0cbd8095a24e695cecd992d
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-12T17:20:46+05:30
+Parents: c418b4080860153112742c9187c8d8dbf0cf840b
+Subject: added view modal and search bar for all modules, removed unused fields from OC details view modal.
+
+51	3	src/app/dashboard/[id]/milmgmt/page.tsx
+20	2	src/app/dashboard/genmgmt/coursemgmt/page.tsx
+52	5	src/app/dashboard/genmgmt/page.tsx
+84	4	src/app/dashboard/genmgmt/subjectmgmt/page.tsx
+120	0	src/components/courses/CourseViewModal.tsx
+53	54	src/components/oc/OCDetailsModal.tsx
+commit c418b4080860153112742c9187c8d8dbf0cf840b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-12T13:06:02+05:30
+Parents: e678df27fd0353eff96da8af10fe3ce4fc1ea5ca
+Subject: fixed offerings, crossbow nav, added param query of the current page.
+
+37	6	src/app/dashboard/[id]/milmgmt/page.tsx
+1	1	src/app/dashboard/genmgmt/appointmentmgmt/page.tsx
+1	1	src/app/dashboard/genmgmt/approvalmgmt/page.tsx
+2	2	src/app/dashboard/genmgmt/camps/page.tsx
+4	4	src/app/dashboard/genmgmt/coursemgmt/[courseId]/offerings/page.tsx
+1	1	src/app/dashboard/genmgmt/coursemgmt/page.tsx
+1	1	src/app/dashboard/genmgmt/instructors/page.tsx
+2	2	src/app/dashboard/genmgmt/interviews-mgmt/[id]/page.tsx
+2	1	src/app/dashboard/genmgmt/interviews-mgmt/page.tsx
+1	1	src/app/dashboard/genmgmt/ocmgmt/page.tsx
+45	44	src/app/dashboard/genmgmt/page.tsx
+1	1	src/app/dashboard/genmgmt/platoon-management/page.tsx
+2	2	src/app/dashboard/genmgmt/pt-mgmt/page.tsx
+2	2	src/app/dashboard/genmgmt/punishments/page.tsx
+2	1	src/app/dashboard/genmgmt/relegation/page.tsx
+1	1	src/app/dashboard/genmgmt/subjectmgmt/page.tsx
+1	1	src/app/dashboard/genmgmt/usersmgmt/page.tsx
+48	3	src/components/Tabs/GlobalTabs.tsx
+18	3	src/components/layout/BreadcrumbNav.tsx
+7	1	src/config/app.config.ts
+commit e678df27fd0353eff96da8af10fe3ce4fc1ea5ca
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-11T16:50:45+05:30
+Parents: df3da8c39c50afd73f399cb39425ea7e5c12bb71
+Subject: Integrated courses, platoons and appointments api to the dashboard corresponding tables.
+
+41	0	src/app/api/v1/dashboard/data/appointments/route.ts
+51	0	src/app/api/v1/dashboard/data/course/route.ts
+42	0	src/app/api/v1/dashboard/data/platoon/route.ts
+52	107	src/components/Dashboard/Appointments.tsx
+47	18	src/components/Dashboard/Courses.tsx
+43	17	src/components/Dashboard/Platoons.tsx
+commit 8b141c86a7d964365bb79bc769de76ade9fecaf5
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-10T02:16:55+05:30
+Parents: d16075e337f7f2f34473ca0732886b9788826910 bfd0e92bcb9f2f3764e96afea5c817071f430aea
+Subject: Merge branch '169-spr-fpr-api-creation-and-integration-backend-frontend' of https://github.com/Hexmon/e-dossier into 169-spr-fpr-api-creation-and-integration-backend-frontend
+commit d16075e337f7f2f34473ca0732886b9788826910
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-10T02:12:14+05:30
+Parents: 5c31d8c86304049adf6c5d3906c9305b39f1a38e
+Subject: removed authorizeOcAcces function from spr and fpr
+
+0	1	src/app/api/v1/oc/[ocId]/fpr/route.ts
+0	2	src/app/api/v1/oc/[ocId]/spr/route.ts
+commit c50c8009d021e04104e8df74825c5d6e838d4731
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-10T00:55:30+05:30
+Parents: 010117ac6819e77abd2e25d93486e324effb5e91
+Subject: fixed snapshot and filling validation errors while saving them
+
+31	5	src/app/api/v1/oc/[ocId]/dossier-snapshot/route.ts
+1	1	src/app/lib/oc-validators.ts
+commit 010117ac6819e77abd2e25d93486e324effb5e91
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-09T19:50:06+05:30
+Parents: 7eff1f12b1dfdcc7bc45d41e9340ac956e43fc87
+Subject: fixed
+
+2	2	src/app/api/v1/oc/[ocId]/academics/[semester]/subjects/[subjectId]/route.ts
+commit 7eff1f12b1dfdcc7bc45d41e9340ac956e43fc87
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-09T19:46:57+05:30
+Parents: f981a264fbab4e04aad48fe081250439df2557b8
+Subject: fixed error
+
+2	2	src/app/api/v1/oc/[ocId]/academics/[semester]/route.ts
+commit f981a264fbab4e04aad48fe081250439df2557b8
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-09T19:43:34+05:30
+Parents: 9c89e8205f9c8fc264086b4b7e0572b86c95c1c3 9c79e7bf463d0abaede871b9482f93bf8d6a7d46
+Subject: Merge branch '183-bugs-and-fixes' of https://github.com/Hexmon/e-dossier into 183-bugs-and-fixes
+commit 9c89e8205f9c8fc264086b4b7e0572b86c95c1c3
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-09T19:02:36+05:30
+Parents: 7f96def16d8995d8c31074ddef7873737aa1d8bf
+Subject: error fixed
+
+1	1	src/app/api/v1/oc/[ocId]/olq/by-semester/route.ts
+commit 7f96def16d8995d8c31074ddef7873737aa1d8bf
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-09T18:58:20+05:30
+Parents: decccb89ab230aaf46f98499d695c4fff29f375d
+Subject: added mustBeAuthed removing admin priviliges in all OC files.
+
+7	7	src/app/api/v1/oc/[ocId]/academics/[semester]/route.ts
+7	7	src/app/api/v1/oc/[ocId]/academics/[semester]/subjects/[subjectId]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/achievements/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/club-achievements/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/clubs/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/counselling/[id]/route.ts
+2	2	src/app/api/v1/oc/[ocId]/credit-for-excellence/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/discipline/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/drill/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/education/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/family/[id]/route.ts
+3	3	src/app/api/v1/oc/[ocId]/images/complete/route.ts
+3	3	src/app/api/v1/oc/[ocId]/images/presign/route.ts
+3	3	src/app/api/v1/oc/[ocId]/images/route.ts
+4	4	src/app/api/v1/oc/[ocId]/motivation-awards/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/obstacle-training/[id]/route.ts
+2	2	src/app/api/v1/oc/[ocId]/olq/[id]/route.ts
+3	3	src/app/api/v1/oc/[ocId]/olq/by-semester/route.ts
+6	6	src/app/api/v1/oc/[ocId]/olq/categories/[categoryId]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/olq/categories/route.ts
+5	5	src/app/api/v1/oc/[ocId]/parent-comms/[id]/route.ts
+7	7	src/app/api/v1/oc/[ocId]/personal/route.ts
+4	4	src/app/api/v1/oc/[ocId]/recording-leave-hike-detention/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/special-achievement-in-firing/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/speed-march/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/sports-and-games/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/ssb/points/[id]/route.ts
+4	4	src/app/api/v1/oc/[ocId]/ssb/route.ts
+4	4	src/app/api/v1/oc/[ocId]/weapon-training/[id]/route.ts
+2	2	src/app/api/v1/oc/bulk-upload/route.ts
+0	7	src/config/app.config.ts
+commit decccb89ab230aaf46f98499d695c4fff29f375d
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-07T16:26:33+05:30
+Parents: d01b4cedc757352ac93bbaff9a9a1fc0bccef081
+Subject: gave permisson to pl cdr's for academics.
+
+7	7	src/app/api/v1/oc/academics/bulk/route.ts
+commit d01b4cedc757352ac93bbaff9a9a1fc0bccef081
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-07T16:13:04+05:30
+Parents: 3a8a184dcc581c4d2250f97f2c85121db2e5b89c
+Subject: fixed medical PATCH by implementing mustBeAuthed and loaded latest data from the api for text areas sections.
+
+4	4	src/app/api/v1/oc/[ocId]/medical-category/[id]/route.ts
+5	5	src/app/api/v1/oc/[ocId]/medical/[id]/route.ts
+3	3	src/components/layout/TableLayout.tsx
+54	2	src/components/medical/MedicalInfoForm.tsx
+65	18	src/components/medical/MedicalInfoSection.tsx
+commit feace4303d5f9ba25f217474474a54aa49e6f766
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-06T19:23:05+05:30
+Parents: b010ad078f1750b1fd2830484990e91ec87b3216
+Subject: fixed
+
+20	0	src/app/db/schema/training/oc.ts
+commit b010ad078f1750b1fd2830484990e91ec87b3216
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-06T19:19:42+05:30
+Parents: 708b9250e080c68dc2f6c12fde5950e2af6da0b9
+Subject: fixed issues
+
+168	0	src/app/db/queries/performance-records.ts
+41	0	src/app/lib/performance-record-validators.ts
+181	0	src/app/services/oc-performance-records.ts
+68	0	src/app/services/performance-record.constants.ts
+28	0	src/app/services/performance-record.conversion.ts
+commit 708b9250e080c68dc2f6c12fde5950e2af6da0b9
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-06T19:12:14+05:30
+Parents: 13aa4c61ff46c29f9a5532e72b193e4fdc6028a5
+Subject: fixed build
+
+22	0	src/app/api/v1/oc/[ocId]/fpr/route.ts
+55	0	src/app/api/v1/oc/[ocId]/spr/route.ts
+commit 13aa4c61ff46c29f9a5532e72b193e4fdc6028a5
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-06T18:47:22+05:30
+Parents: 3a8a184dcc581c4d2250f97f2c85121db2e5b89c
+Subject: SGPA, CGPA Computation and auto fetching. #180
+
+1	3	src/app/lib/api/academics.ts
+4	4	src/app/lib/api/academicsMarksApi.ts
+2	4	src/app/lib/oc-validators.ts
+4	1	src/app/lib/semester-marks.ts
+69	4	src/app/services/oc-academics.ts
+20	26	src/components/academics/AcademicTable.tsx
+1	3	src/types/academicsTypes.ts
+commit ccceb679a87148424a1f1c0ce5d0e15da8732b5b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-06T17:50:14+05:30
+Parents: fad6fb821b4e73a4982e35dd5c124ae7ae3d6b6a
+Subject: fixed build issue
+
+22	0	src/app/api/v1/oc/[ocId]/fpr/route.ts
+55	0	src/app/api/v1/oc/[ocId]/spr/route.ts
+168	0	src/app/db/queries/performance-records.ts
+41	0	src/app/lib/performance-record-validators.ts
+181	0	src/app/services/oc-performance-records.ts
+68	0	src/app/services/performance-record.constants.ts
+28	0	src/app/services/performance-record.conversion.ts
+commit fad6fb821b4e73a4982e35dd5c124ae7ae3d6b6a
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-06T17:44:06+05:30
+Parents: 3cd5bf7198ddbdf381086ca96c390ca0b9236d08
+Subject: Fixed term tabs in interview
+
+1	0	src/app/api/v1/admin/discipline/[id]/route.ts
+1	0	src/app/api/v1/admin/discipline/route.ts
+21	0	src/app/db/schema/training/oc.ts
+6	0	src/app/lib/api/disciplineApi.ts
+1	0	src/app/lib/oc-validators.ts
+102	63	src/components/interview/InterviewTabs.tsx
+7	8	src/hooks/useInterviewForms.ts
+85	33	src/lib/interviewFormService.ts
+14	10	src/store/slices/initialInterviewSlice.ts
+commit 5c31d8c86304049adf6c5d3906c9305b39f1a38e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-06T16:51:17+05:30
+Parents: f9916e1d678c8c18802060004686fd07a2277c59
+Subject: fixed error
+
+5	1	src/components/semester-record/semesterForm.tsx
+commit f9916e1d678c8c18802060004686fd07a2277c59
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-06T16:49:00+05:30
+Parents: 3a8a184dcc581c4d2250f97f2c85121db2e5b89c
+Subject: SPR, FPR API creation and Integration (Backend + Frontend) #169
+
+22	0	src/app/api/v1/oc/[ocId]/fpr/route.ts
+55	0	src/app/api/v1/oc/[ocId]/spr/route.ts
+0	1	src/app/dashboard/[id]/milmgmt/semester-record/page.tsx
+168	0	src/app/db/queries/performance-records.ts
+21	0	src/app/db/schema/training/oc.ts
+34	0	src/app/lib/api/performanceRecordsApi.ts
+41	0	src/app/lib/performance-record-validators.ts
+181	0	src/app/services/oc-performance-records.ts
+68	0	src/app/services/performance-record.constants.ts
+28	0	src/app/services/performance-record.conversion.ts
+58	171	src/components/finalPerformance/FinalPerformanceRecord.tsx
+241	269	src/components/semester-record/semesterForm.tsx
+2	0	src/constants/endpoints.ts
+37	0	tests/api/oc.fpr.test.ts
+53	0	tests/api/oc.spr.test.ts
+commit 9d09930ba02f406b1b41136ba37ffa394c59410f
+Author: Spidy <105922663+Spidy2924@users.noreply.github.com>
+AuthorDate: 2026-02-05T17:35:05+05:30
+Parents: cd7e2fcc97fb3a3d89d4d5f9c5067e00bc89d7d7 18da1878eebaf3d936cc634e7d990d90ab67c39a
+Subject: Merge branch 'stage' into 138-sp-01-cfe-implementation-of-auto-complete-for-marks-new-sub---category-field-and-mks-conversion
+commit cd7e2fcc97fb3a3d89d4d5f9c5067e00bc89d7d7
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-05T17:26:14+05:30
+Parents: 6631cb3a99d75bd7f5dbb930f35a8a1ae0559157
+Subject: fixedd
+
+5	4	src/hooks/useInterviewTemplates.ts
+commit 6631cb3a99d75bd7f5dbb930f35a8a1ae0559157
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-05T17:21:53+05:30
+Parents: 613554691a52f844eb5fd1ae9fd4a4411c544e9b
+Subject: fixed interview
+
+8	11	src/app/dashboard/genmgmt/interviews-mgmt/page.tsx
+7	7	src/components/interview-mgmt/template-detail/TemplateGroups.tsx
+6	6	src/components/interview-mgmt/template-detail/TemplateSections.tsx
+6	6	src/components/interview-mgmt/template-detail/TemplateSemesters.tsx
+4	4	src/hooks/useInterviewTemplates.ts
+commit 613554691a52f844eb5fd1ae9fd4a4411c544e9b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-05T17:10:00+05:30
+Parents: 45ebc3054c1ea444f1a040349cb2ec977047150e
+Subject: fixed interview
+
+502	424	src/hooks/useInterviewTemplates.ts
+commit 45ebc3054c1ea444f1a040349cb2ec977047150e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-05T15:07:31+05:30
+Parents: cd394b42794d1906a4f7772d2200acdfecdd5ae2
+Subject: Fixed issue
+
+481	0	src/hooks/useInterviewTemplates.ts
+commit cd394b42794d1906a4f7772d2200acdfecdd5ae2
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-05T14:39:45+05:30
+Parents: 3a8a184dcc581c4d2250f97f2c85121db2e5b89c
+Subject: Implemented auto-complete marks for category.
+
+10	5	src/components/cfe/CfeForm.tsx
+17	15	src/constants/app.constants.ts
+0	589	src/hooks/useInterviewTemplates.ts
+commit 3cd5bf7198ddbdf381086ca96c390ca0b9236d08
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-02-02T18:15:12+05:30
+Parents: 3a8a184dcc581c4d2250f97f2c85121db2e5b89c
+Subject: OC/Dossier Interview APIs (Frontend Integration)
+
+42	13	src/components/interview-term/InterviewTermTabs.tsx
+3	5	src/components/interview-term/TermSubForm.tsx
+20	19	src/components/interview/InterviewTabs.tsx
+18	4	src/lib/interviewFormService.ts
+commit d54370b7fe648d3d043f9ab337ac4ab54c32d1fe
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-31T23:55:36+05:30
+Parents: efbdf1c80cbdd6e5750f4d1c5cb0db5498a01bcc 2f61bd98bc7d6a362ad20d8a0d1e1b09dab8630f
+Subject: Merge remote-tracking branch 'origin/master' into 143-logout-api-is-slow-takes-too-much-time-investigate-fix-performance
+commit efbdf1c80cbdd6e5750f4d1c5cb0db5498a01bcc
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-31T15:56:16+05:30
+Parents: fe46995406a7c423974d70802140ce1b75fc3da9 b8d6003dddc640facedccac9ad1396266ce4f32c
+Subject: Merge remote-tracking branch 'origin/master' into 143-logout-api-is-slow-takes-too-much-time-investigate-fix-performance
+commit fe46995406a7c423974d70802140ce1b75fc3da9
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-31T15:56:08+05:30
+Parents: 71187c9c5fdb9194beb72505a444069bdd6cb080
+Subject: Logout API is Slow / Takes Too Much Time (Investigate + Fix Performance)
+
+8	25	src/app/api/v1/auth/logout/route.ts
+commit 71187c9c5fdb9194beb72505a444069bdd6cb080
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-31T15:29:03+05:30
+Parents: 989db9c6cb753902e2edbad3a4d410a3a2b78b91 ceab21b7a76f147ce9262c17b2fa6e6aeaa17542
+Subject: Merge remote-tracking branch 'origin/master' into 143-logout-api-is-slow-takes-too-much-time-investigate-fix-performance
+commit 989db9c6cb753902e2edbad3a4d410a3a2b78b91
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-31T15:28:27+05:30
+Parents: cff974becdb69c0096a5f4589f67e6cef968f0a1
+Subject: checking logout time issue
+
+25	8	src/app/api/v1/auth/logout/route.ts
+commit cff974becdb69c0096a5f4589f67e6cef968f0a1
+Author: Spidy <105922663+Spidy2924@users.noreply.github.com>
+AuthorDate: 2026-01-30T09:36:41+05:30
+Parents: c7b76e561248c52e24f3db3ec6bb4e0363c4925b c2d227e929fa0c3d94cbedfbd08ed0cf1b5f9341
+Subject: Merge pull request #126 from Hexmon/api-creation
+commit c2d227e929fa0c3d94cbedfbd08ed0cf1b5f9341
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-30T09:35:36+05:30
+Parents: d1f0cd032e7bc3de2e080731d975b8d6857fea7c c7b76e561248c52e24f3db3ec6bb4e0363c4925b
+Subject: Merge remote-tracking branch 'origin/master' into api-creation
+commit d1f0cd032e7bc3de2e080731d975b8d6857fea7c
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-30T09:35:30+05:30
+Parents: 8deaebe00621a476a494d2ab2f60e6f2497ce12e
+Subject: created sub_category field in backend and frontend for OC cfe.
+
+3	1	src/app/dashboard/[id]/milmgmt/credit-excellence/page.tsx
+1	0	src/app/db/schema/training/oc.ts
+1	0	src/app/lib/api/cfeApi.ts
+1	0	src/app/lib/oc-validators.ts
+7	0	src/components/cfe/CfeForm.tsx
+217	158	src/components/cfe/CfeTable.tsx
+7	4	src/hooks/useCfeRecords.ts
+1	0	src/store/slices/cfeRecordsSlice.ts
+2	0	src/types/cfe.ts
+commit c7b76e561248c52e24f3db3ec6bb4e0363c4925b
+Author: Spidy <105922663+Spidy2924@users.noreply.github.com>
+AuthorDate: 2026-01-30T08:33:22+05:30
+Parents: 2a92e0cd72951cfd7b56f857ff39f003526f41c4 8deaebe00621a476a494d2ab2f60e6f2497ce12e
+Subject: Merge pull request #125 from Hexmon/api-creation
+commit 8deaebe00621a476a494d2ab2f60e6f2497ce12e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-30T08:27:56+05:30
+Parents: 1645ddfa80356ba161e2de1ceed30fc551a3521d
+Subject: fixed marks scored col to be editable.
+
+124	38	src/components/physic-training/HigherTests.tsx
+122	47	src/components/physic-training/IpetForm.tsx
+120	36	src/components/physic-training/Swimming.tsx
+commit 1645ddfa80356ba161e2de1ceed30fc551a3521d
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-30T02:06:50+05:30
+Parents: 6c400b8a9d232f705c77bbed8628c921b5e0c7df
+Subject: integrated PT for OC properly
+
+296	287	src/components/physic-training/HigherTests.tsx
+302	295	src/components/physic-training/IpetForm.tsx
+28	13	src/components/physic-training/MotivationAwards.tsx
+463	524	src/components/physic-training/PhysicalForm.tsx
+300	288	src/components/physic-training/Swimming.tsx
+210	0	src/components/physic-training/ptTableHelpers.ts
+403	200	src/hooks/usePhysicalTraining.ts
+commit 6c400b8a9d232f705c77bbed8628c921b5e0c7df
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-30T02:04:07+05:30
+Parents: c43de5dd30629f70ec8cf5300a383dcbefe90ee2 2a92e0cd72951cfd7b56f857ff39f003526f41c4
+Subject: Merge remote-tracking branch 'origin/master' into api-creation
+commit c43de5dd30629f70ec8cf5300a383dcbefe90ee2
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-29T12:33:54+05:30
+Parents: 0ac27982ee0a4b918d5143bb59c686732565fd03 c11efcf65ab4b34c9ed2705c2af3b605d0ffd3ad
+Subject: Merge remote-tracking branch 'origin/master' into api-creation
+commit 0ac27982ee0a4b918d5143bb59c686732565fd03
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-29T00:59:16+05:30
+Parents: 42dd21a6498be92cf66fcb0634b60ddd711e4918
+Subject: integration
+
+572	178	src/hooks/useInterviewTemplates.ts
+commit 42dd21a6498be92cf66fcb0634b60ddd711e4918
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-29T00:58:25+05:30
+Parents: 02ba22c8a346b641d2c1ad294aa6935b80b1471c 21306cb8dc296711e509a088617eba01cda510ee
+Subject: Merge remote-tracking branch 'origin/master' into api-creation
+commit 02ba22c8a346b641d2c1ad294aa6935b80b1471c
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-29T00:57:53+05:30
+Parents: 3c8c32bd657867d60a8e64db31be729ea4261408
+Subject: integrated interview api's to interview pages.
+
+116	48	src/components/interview-term/InterviewTermTabs.tsx
+244	201	src/components/interview-term/TermSubForm.tsx
+60	27	src/components/interview/InterviewTabs.tsx
+136	86	src/components/interview/forms/CdrForm.tsx
+135	86	src/components/interview/forms/DSCoordForm.tsx
+136	84	src/components/interview/forms/DyCdrForm.tsx
+126	97	src/components/interview/forms/PLCdrCombinedForm.tsx
+7	15	src/components/physic-training/HigherTests.tsx
+7	15	src/components/physic-training/IpetForm.tsx
+30	24	src/components/physic-training/PhysicalForm.tsx
+6	14	src/components/physic-training/Swimming.tsx
+162	51	src/hooks/useInterviewForms.ts
+195	0	src/hooks/useInterviewTemplates.ts
+8	2	src/hooks/usePhysicalTraining.ts
+139	0	src/lib/interviewFieldUtils.ts
+414	0	src/lib/interviewFormService.ts
+168	0	src/lib/interviewTemplateLoader.ts
+318	0	src/lib/interviewTemplateMatching.ts
+3	1	src/store/slices/termInterviewSlice.ts
+50	0	src/types/interview-templates.ts
+commit 3c8c32bd657867d60a8e64db31be729ea4261408
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-27T18:25:41+05:30
+Parents: 269080c0c0a197102718a76daf7200f948dcc794 bf548235eb98015194c488e527fc63c6b9b119a6
+Subject: Merge remote-tracking branch 'origin/master' into api-creation
+commit 269080c0c0a197102718a76daf7200f948dcc794
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-27T18:25:30+05:30
+Parents: b080e1efe69a1597f63d4c23a8ce5352037da5df
+Subject: Integrated PT API's for OC.
+
+11	1	src/app/dashboard/[id]/milmgmt/physical-training/page.tsx
+1	1	src/app/db/queries/physicalTraining.ts
+78	77	src/components/physic-training/HigherTests.tsx
+0	323	src/components/physic-training/Ipet2Form.tsx
+95	56	src/components/physic-training/{Ipet1Form.tsx => IpetForm.tsx}
+87	58	src/components/physic-training/MotivationAwards.tsx
+123	119	src/components/physic-training/PhysicalForm.tsx
+82	79	src/components/physic-training/Swimming.tsx
+0	319	src/components/physic-training/Swimming1.tsx
+72	0	src/hooks/useHigherTestTemplates.ts
+72	0	src/hooks/useIpetTemplates.ts
+129	0	src/hooks/useMotivationAwards.ts
+217	0	src/hooks/usePhysicalTraining.ts
+200	0	src/hooks/usePhysicalTrainingMotivationAwards.ts
+72	0	src/hooks/useSwimmingTemplates.ts
+commit 5209b14300cfe905743ad9d1d4c47c75dddc0518
+Author: Spidy <105922663+Spidy2924@users.noreply.github.com>
+AuthorDate: 2026-01-15T14:23:36+05:30
+Parents: 3f6182ce94de61a7cf028ac96200f32d7955ee94 7de36f762f65bb996270a0c44040740d6472b2fe
+Subject: Merge pull request #105 from Hexmon/api-creation
+commit 7de36f762f65bb996270a0c44040740d6472b2fe
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-15T12:48:36+05:30
+Parents: 4d8922c257e3ceae25324852dc23d363503f81b5 3f6182ce94de61a7cf028ac96200f32d7955ee94
+Subject: Merge remote-tracking branch 'origin/master' into api-creation
+commit 4d8922c257e3ceae25324852dc23d363503f81b5
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-15T12:48:28+05:30
+Parents: 4dbf24e0bea2ef1f3dcabd1da71e2bbcdd99d64b
+Subject: Integrated PATCH and DELETE api to the discipline-records admin module.
+
+70	0	src/app/api/v1/admin/discipline/[id]/route.ts
+132	6	src/app/dashboard/genmgmt/discipline-records/page.tsx
+20	0	src/app/lib/api/disciplineApi.ts
+1	0	src/constants/endpoints.ts
+31	1	src/hooks/useDisciplineRecordsAdmin.ts
+commit 4dbf24e0bea2ef1f3dcabd1da71e2bbcdd99d64b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-15T04:00:26+05:30
+Parents: 81afdd91f665bc88591973169d81e8720b5d4890
+Subject: created discipline mgmt and integrated GET api to the discipline records module for admin.
+
+38	0	src/app/api/v1/admin/discipline/route.ts
+178	0	src/app/dashboard/genmgmt/discipline-records/page.tsx
+19	0	src/app/lib/api/disciplineApi.ts
+113	0	src/components/genmgmt/DisciplineRecordsTable.tsx
+13	0	src/config/app.config.ts
+1	0	src/constants/endpoints.ts
+63	0	src/hooks/useDisciplineRecordsAdmin.ts
+commit 81afdd91f665bc88591973169d81e8720b5d4890
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-15T01:14:23+05:30
+Parents: a21f7c5af16a2466065c73da3d762f8c944c3456
+Subject: fixed 403 status code issues
+
+5	4	src/app/api/v1/oc/[ocId]/autobiography/route.ts
+5	4	src/app/api/v1/oc/[ocId]/dossier-filling/route.ts
+5	9	src/app/api/v1/oc/[ocId]/dossier-snapshot/route.ts
+5	4	src/app/api/v1/oc/[ocId]/personal/route.ts
+commit a21f7c5af16a2466065c73da3d762f8c944c3456
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-15T00:31:02+05:30
+Parents: ee762b9f1fbfb42e637a2360766f964733d94c2a 391b9cbc5cd2580263034760dfc6cff273ee806f
+Subject: Merge remote-tracking branch 'origin/master' into api-creation
+commit ee762b9f1fbfb42e637a2360766f964733d94c2a
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-15T00:30:51+05:30
+Parents: c4b33b00845df97749242d8b7d3906a8b578f046
+Subject: Created and integrated dossier inspection api's. Also fixed 403 errors.
+
+25	0	drizzle/0001_glossy_the_spike.sql
+5872	0	drizzle/meta/0001_snapshot.json
+7	0	drizzle/meta/_journal.json
+4	4	src/app/api/v1/admin/users/route.ts
+300	0	src/app/api/v1/oc/[ocId]/dossier-inspection/route.ts
+1	1	src/app/dashboard/[id]/milmgmt/dossier-insp/page.tsx
+85	1	src/app/db/queries/oc.ts
+13	0	src/app/db/schema/training/dossierInspections.ts
+221	119	src/components/dossier/InspFormComponent.tsx
+64	24	src/components/dossier/InspTable.tsx
+1	0	src/constants/endpoints.ts
+137	0	src/hooks/useDossierInspections.ts
+2	1	src/types/dossierInsp.ts
+commit c4b33b00845df97749242d8b7d3906a8b578f046
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-13T20:07:04+05:30
+Parents: 6e1a07b35cead450ec827e51b79d984c6ee55df4
+Subject: fixed changes
+
+1	1	src/components/genmgmt/OCForm.tsx
+1	1	src/components/oc/OCDetailsModal.tsx
+1	1	src/components/oc/OCsTable.tsx
+2	2	src/hooks/useOCs.ts
+2	2	src/hooks/useOcPersonal.ts
+commit 6e1a07b35cead450ec827e51b79d984c6ee55df4
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-13T19:12:12+05:30
+Parents: 02cc50c005219eaa7fd74b1f08f2a0621d1e38fd
+Subject: resolved conflicts
+
+1	1	src/app/dashboard/[id]/milmgmt/dossier-insp/page.tsx
+2	2	src/app/dashboard/genmgmt/ocmgmt/page.tsx
+commit 02cc50c005219eaa7fd74b1f08f2a0621d1e38fd
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-13T18:59:40+05:30
+Parents: b726b007fe29f3c8e8a9727ceaf84a14bd573b2e 4274021bc09493340166bf081da6cb126804e87a
+Subject: Merge remote-tracking branch 'origin/master' into api-creation
+commit b726b007fe29f3c8e8a9727ceaf84a14bd573b2e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-13T18:49:21+05:30
+Parents: 1445c0f394611a6327f74d4a3b0c2a07f66bd4c1
+Subject: made the inspForm dynamic
+
+186	124	src/components/dossier/InspFormComponent.tsx
+commit 1445c0f394611a6327f74d4a3b0c2a07f66bd4c1
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-13T15:53:21+05:30
+Parents: 9ca69871aa3fa81be3bc313352ba7c9f61adbb16 074202159a682698a5531a840e493200173e0fd3
+Subject: Merge branch 'api-creation' of https://github.com/Hexmon/e-dossier into api-creation
+commit 9ca69871aa3fa81be3bc313352ba7c9f61adbb16
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-13T15:27:10+05:30
+Parents: cf8279f894e4fd1a554cd7cf90016d24119024f8
+Subject: fixed changes
+
+19	9	src/components/dossier/DossierFillingForm.tsx
+commit cf8279f894e4fd1a554cd7cf90016d24119024f8
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-13T15:03:37+05:30
+Parents: 36c22f95491cd951034d26a11c7cf63bcbff9588 371a245b5628ba544b8d4f3f0cd4fc2ed746ea75
+Subject: resolved conflicts
+commit 36c22f95491cd951034d26a11c7cf63bcbff9588
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-13T14:34:37+05:30
+Parents: 05c55f32d06a6c0df64de87887326618dd451080
+Subject: created and integrated dossier filling api to the dossier filling page.
+
+13	0	drizzle/0000_nice_the_santerians.sql
+101	0	src/app/api/v1/oc/[ocId]/dossier-filling/route.ts
+2	10	src/app/dashboard/[id]/milmgmt/dossier-filling/page.tsx
+20	1	src/app/db/queries/oc.ts
+13	0	src/app/db/schema/training/oc.ts
+39	0	src/app/lib/api/dossierFillingApi.ts
+9	0	src/app/lib/oc-validators.ts
+59	44	src/components/dossier/DossierFillingForm.tsx
+71	0	src/hooks/useDossierFilling.ts
+commit 074202159a682698a5531a840e493200173e0fd3
+Author: Spidy <105922663+Spidy2924@users.noreply.github.com>
+AuthorDate: 2026-01-13T12:42:00+05:30
+Parents: 05c55f32d06a6c0df64de87887326618dd451080 371a245b5628ba544b8d4f3f0cd4fc2ed746ea75
+Subject: Merge branch 'master' into api-creation
+commit 05c55f32d06a6c0df64de87887326618dd451080
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-12T21:28:47+05:30
+Parents: 96a44e783fbed635698ed59dba3aec3a85a6fd74
+Subject: fixed the dossier snapshot images issue.
+
+1	1	next.config.ts
+2	2	src/app/api/v1/oc/[ocId]/dossier-snapshot/route.ts
+2	2	src/app/api/v1/oc/[ocId]/images/route.ts
+17	1	src/app/lib/storage.ts
+commit 96a44e783fbed635698ed59dba3aec3a85a6fd74
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-10T15:30:49+05:30
+Parents: 34e0dc680c22f39e6083a071d8dae4512ba3bc72
+Subject: created and integrated the api for dossier snapshot.
+
+818	0	drizzle/0000_nice_the_santerians.sql
+0	12	drizzle/0002_overrated_infant_terrible.sql
+0	1	drizzle/0003_rapid_the_executioner.sql
+0	143	drizzle/0004_odd_angel.sql
+0	16	drizzle/0005_oc_semester_marks.sql
+0	1	drizzle/0006_add_inactive_oc_status.sql
+0	32	drizzle/0007_audit_log_upgrade.sql
+3016	608	drizzle/meta/0000_snapshot.json
+0	3921	drizzle/meta/0001_snapshot.json
+0	3921	drizzle/meta/0002_snapshot.json
+0	3927	drizzle/meta/0003_snapshot.json
+0	4881	drizzle/meta/0004_snapshot.json
+3	52	drizzle/meta/_journal.json
+351	0	src/app/api/v1/oc/[ocId]/dossier-snapshot/route.ts
+10	31	src/app/dashboard/[id]/milmgmt/dossier-snapshot/page.tsx
+56	0	src/app/lib/api/dossierSnapshotApi.ts
+12	28	src/app/lib/api/ocApi.ts
+236	113	src/components/dossier/OfficerCadetFormComponent.tsx
+71	0	src/hooks/useDossierSnapshot.ts
+5	9	src/hooks/useOcDetails.ts
+3	3	src/types/dossierSnap.ts
+commit 57e82b36db44ca38aec4a77c8d1ca02358e4cdfc
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-06T16:59:37+05:30
+Parents: 26679749cc2e870c420c685e09b029392ca446dd 9caf794ae403e51c412b3cc964cbc531ba78ab84
+Subject: Merge remote-tracking branch 'origin/master' into camp-admin
+commit 26679749cc2e870c420c685e09b029392ca446dd
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2026-01-06T16:59:26+05:30
+Parents: 2eef807f11cc25423f0765f402700bf5be2dc0d0
+Subject: Implemented create, update and delete appointments for appointments table. Made the dossier snapshot and filling same form edit and view, converted the dossier inspection form to become dynamic
+
+12	1	src/app/dashboard/genmgmt/appointmentmgmt/page.tsx
+232	1	src/app/lib/api/appointmentApi.ts
+1	1	src/components/Dashboard/Marquee.tsx
+237	25	src/components/appointments/AppointmentTable.tsx
+270	0	src/components/appointments/createappointment.tsx
+96	57	src/components/dossier/DossierFillingForm.tsx
+216	135	src/components/dossier/InspFormComponent.tsx
+229	0	src/components/dossier/InspTable.tsx
+167	90	src/components/dossier/OfficerCadetFormComponent.tsx
+195	1	src/hooks/useAppointments.ts
+commit 2eef807f11cc25423f0765f402700bf5be2dc0d0
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-27T14:21:47+05:30
+Parents: f08df17e19158d486452d2adfef5362c4694da85
+Subject: converted the normal tables to universal table layoiut for 15 modules.
+
+135	106	src/components/background/AchievementsSection.tsx
+159	132	src/components/background/EducationQualifications.tsx
+159	130	src/components/background/FamilyBackground.tsx
+77	59	src/components/background_detls/EditableTable.tsx
+119	96	src/components/cfe/CfeTable.tsx
+76	55	src/components/club_drill/ClubForm.tsx
+115	82	src/components/club_drill/DrillForm.tsx
+128	88	src/components/counselling/CounsellingTable.tsx
+159	155	src/components/discipline/DisciplineTable.tsx
+215	119	src/components/hike/HikeForm.tsx
+211	181	src/components/leave/LeaveForm.tsx
+182	94	src/components/medical/MedicalCategoryTable.tsx
+171	75	src/components/medical/MedicalInfoTable.tsx
+106	64	src/components/obstacle/ObstacleTrainingForm.tsx
+163	114	src/components/overall_assessment/OlqAssessment.tsx
+132	101	src/components/parent/ParentCommTable.tsx
+50	16	src/components/physic-training/GrandTotal.tsx
+148	96	src/components/physic-training/HigherTests.tsx
+140	106	src/components/physic-training/Ipet1Form.tsx
+143	116	src/components/physic-training/Ipet2Form.tsx
+60	52	src/components/physic-training/MotivationAwards.tsx
+130	103	src/components/physic-training/PhysicalForm.tsx
+146	97	src/components/physic-training/Swimming.tsx
+146	97	src/components/physic-training/Swimming1.tsx
+54	41	src/components/speedMarch/SpeedMarchForm.tsx
+86	65	src/components/sports/SportsTable.tsx
+59	44	src/components/wpnTrg/WeaponTrainingForm.tsx
+75	41	src/components/wpnTrg/WeaponTrainingTable.tsx
+2	2	src/config/app.config.ts
+commit f08df17e19158d486452d2adfef5362c4694da85
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-27T11:06:34+05:30
+Parents: b04fc5d882be94f9e65605ea06b315a0d0975f72
+Subject: created camp & activities management for admin. Integrated CRUD APIs to them.
+
+317	0	src/app/dashboard/genmgmt/camps/page.tsx
+1	1	src/app/dashboard/genmgmt/page.tsx
+119	0	src/app/lib/api/trainingCampActivitiesApi.ts
+118	0	src/app/lib/api/trainingCampsApi.ts
+92	0	src/components/camps/ActivitiesList.tsx
+60	0	src/components/camps/ActivityDialog.tsx
+116	0	src/components/camps/ActivityForm.tsx
+59	0	src/components/camps/CampDialog.tsx
+138	0	src/components/camps/CampForm.tsx
+134	0	src/components/camps/CampsTable.tsx
+55	0	src/components/camps/DeleteActivityDialog.tsx
+59	0	src/components/camps/DeleteCampDialog.tsx
+1	1	src/components/cards/DashboardCard.tsx
+2	2	src/components/layout/BreadcrumbNav.tsx
+13	0	src/config/app.config.ts
+commit 4126a76cae7a362d0c766c716a32954dc75cbdf9
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-15T19:58:55+05:30
+Parents: 983ca1a981de4bec5e02e6a6f143d682ea7de76c 58bd40f8870dee1aa824c9349973b9258bda355a
+Subject: Merge remote-tracking branch 'origin/master' into bug-fixes
+commit 983ca1a981de4bec5e02e6a6f143d682ea7de76c
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-15T19:58:45+05:30
+Parents: c9736603f4de0345f4543b96a529926c8f466344
+Subject: changes button color, made appealing UI
+
+3	3	src/app/dashboard/[id]/milmgmt/page.tsx
+1	1	src/app/dashboard/genmgmt/coursemgmt/page.tsx
+1	1	src/app/dashboard/genmgmt/ocmgmt/page.tsx
+8	4	src/app/dashboard/page.tsx
+8	8	src/components/AppSidebar.tsx
+7	4	src/components/Dashboard/Appointments.tsx
+6	3	src/components/Dashboard/Courses.tsx
+6	6	src/components/Dashboard/Marquee.tsx
+1	1	src/components/Dashboard/MarqueeData.tsx
+6	3	src/components/Dashboard/Platoons.tsx
+8	8	src/components/Tabs/GlobalTabs.tsx
+1	1	src/components/background/AchievementsSection.tsx
+3	3	src/components/background/AutobiographySection.tsx
+1	1	src/components/background/EducationQualifications.tsx
+1	1	src/components/background/FamilyBackground.tsx
+3	3	src/components/cadet_table/SelectedCadetTable.tsx
+2	2	src/components/cards/DashboardCard.tsx
+2	2	src/components/courses/CourseFormModal.tsx
+2	2	src/components/discipline/DisciplineForm.tsx
+2	2	src/components/dossier/DossierFillingForm.tsx
+2	2	src/components/dossier/InspFormComponent.tsx
+2	2	src/components/dossier/OfficerCadetFormComponent.tsx
+2	2	src/components/layout/PageHeader.tsx
+58	5	src/components/layout/TableLayout.tsx
+1	1	src/components/medical/MedicalInfoForm.tsx
+2	2	src/components/modals/OCSelectModal.tsx
+1	1	src/components/oc/OCsTable.tsx
+1	1	src/components/oc/UploadButton.tsx
+2	2	src/components/parent/ParentCommForm.tsx
+2	2	src/components/pers/PersonalForm.tsx
+2	1	src/components/sports/SportsForm.tsx
+4	1	src/components/ssb/SSBReportForm.tsx
+1	1	src/constants/endpoints.ts
+commit 299e09a3471ebdac0e77f35f0ad409bb96223ab1
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-13T20:24:59+05:30
+Parents: 95fc28dc97ffb4ecd239726d009050ab1d2e5630 0393851a135adbdb9918da68d264f497c7d2b2d5
+Subject: Merge remote-tracking branch 'origin/master' into new-module
+commit 95fc28dc97ffb4ecd239726d009050ab1d2e5630
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-13T20:24:21+05:30
+Parents: 6a5e454c92b404548d9b8421ceb1dfeab1fb65d4
+Subject: added logos, marquees
+
+-	-	public/images/army_logo.jpeg
+-	-	public/images/brigadier_logo.jpeg
+-	-	public/images/eme_logo.jpeg
+4	4	src/app/(auth)/login/page.tsx
+1	1	src/app/(auth)/signup/page.tsx
+87	9	src/app/dashboard/[id]/milmgmt/page.tsx
+18	16	src/app/dashboard/page.tsx
+64	22	src/components/Dashboard/Appointments.tsx
+4	6	src/components/Dashboard/Courses.tsx
+60	0	src/components/Dashboard/Marquee.tsx
+15	0	src/components/Dashboard/MarqueeData.tsx
+7	7	src/components/Dashboard/Platoons.tsx
+2	2	src/components/Hero.tsx
+13	5	src/components/Navbar.tsx
+10	3	src/components/layout/DashboardLayout.tsx
+7	5	src/components/performance_graph/Data.tsx
+8	8	src/components/performance_graph/Discipline.tsx
+3	3	src/components/performance_graph/Graph.tsx
+3	3	src/components/performance_graph/ODT_Graph.tsx
+2	2	src/components/performance_graph/OLQ_Graph.tsx
+5	0	src/config/app.config.ts
+commit 9225b9b08f9b189baa4252f886197552952a3e9b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-13T01:14:53+05:30
+Parents: 756492a65a876119894cbc6b0ce914d5b3065e4b
+Subject: Created tables to show in the dashboard
+
+22	20	src/app/dashboard/page.tsx
+126	0	src/components/Dashboard/Appointments.tsx
+73	0	src/components/Dashboard/Courses.tsx
+65	0	src/components/Dashboard/Platoons.tsx
+commit 756492a65a876119894cbc6b0ce914d5b3065e4b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-12T23:48:57+05:30
+Parents: 0eca89a8a685b680b3394c001aa1da61dfbf419e 0b057ebf5532f2475b970caa4344773fa4461baa
+Subject: resolved conflicts
+commit 0eca89a8a685b680b3394c001aa1da61dfbf419e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-12T23:43:17+05:30
+Parents: 7d23bc2e199369984d20c920744303aefceae203
+Subject: fixed, motivation and added performance graph in selected cadet table, also made a modal to show the graphs.
+
+2	2	src/app/dashboard/[id]/milmgmt/counselling/page.tsx
+82	76	src/app/dashboard/[id]/milmgmt/performance-graph/page.tsx
+101	150	src/app/dashboard/[id]/milmgmt/sports-awards/page.tsx
+73	25	src/components/cadet_table/SelectedCadetTable.tsx
+3	18	src/components/counselling/CounsellingForm.tsx
+188	219	src/components/performance_graph/Discipline.tsx
+202	242	src/components/performance_graph/Graph.tsx
+196	240	src/components/performance_graph/ODT_Graph.tsx
+196	240	src/components/performance_graph/OLQ_Graph.tsx
+103	0	src/components/performance_graph/PerformanceGraphModal.tsx
+31	0	src/components/performance_graph/PerformanceGraphs.tsx
+44	67	src/components/sports/SportsTable.tsx
+52	18	src/hooks/useCounsellingRecords.ts
+1	1	src/types/counselling.ts
+commit 7d23bc2e199369984d20c920744303aefceae203
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-12T00:49:27+05:30
+Parents: b7aedd4ad714b09320fafeb64768f3c5ef5a5078
+Subject: Fixed detention and snapshot UI issues
+
+50	2	src/app/dashboard/[id]/milmgmt/detention/page.tsx
+5	14	src/app/dashboard/[id]/milmgmt/dossier-snapshot/page.tsx
+65	17	src/app/dashboard/[id]/milmgmt/sports-awards/page.tsx
+0	0	src/components/dossier/{OfficerCadetForm.tsx => OfficerCadetFormComponent.tsx}
+commit b7aedd4ad714b09320fafeb64768f3c5ef5a5078
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-11T23:09:38+05:30
+Parents: c462d9969fe509646e16013cd51a6e600d59d0e7 4771b43a7ddbff1388819beb3f42cfbea1b5cfa1
+Subject: Merge remote-tracking branch 'origin/master' into new-module
+commit c462d9969fe509646e16013cd51a6e600d59d0e7
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-11T23:09:24+05:30
+Parents: acdeb7888a2ca22b1b1fac92a8693a12ee2ea211
+Subject: updated and fixed UI
+
+18	16	src/app/dashboard/[id]/milmgmt/counselling/page.tsx
+54	18	src/app/dashboard/[id]/milmgmt/credit-excellence/page.tsx
+8	7	src/app/dashboard/[id]/milmgmt/performance-graph/page.tsx
+26	12	src/components/cfe/CfeForm.tsx
+23	14	src/components/cfe/CfeTable.tsx
+74	0	src/components/performance_graph/Data.tsx
+32	12	src/components/performance_graph/{Discpline.tsx => Discipline.tsx}
+45	10	src/components/performance_graph/Graph.tsx
+45	12	src/components/performance_graph/ODT_Graph.tsx
+45	12	src/components/performance_graph/OLQ_Graph.tsx
+8	8	src/config/app.config.ts
+48	10	src/hooks/useCfeRecords.ts
+20	61	src/hooks/useCounsellingRecords.ts
+commit acdeb7888a2ca22b1b1fac92a8693a12ee2ea211
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-10T12:54:00+05:30
+Parents: 3fde93805ef5a9773fd0061cdded602d3f7c790f a3f9c6a43bae85f215aedfbd237ffe4d2c308f08
+Subject: Merge remote-tracking branch 'origin/master' into new-module
+commit 3fde93805ef5a9773fd0061cdded602d3f7c790f
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-10T12:52:08+05:30
+Parents: 7b30ecbd4a4a3aace69b6a767e92c06011b1f6e0
+Subject: created Performance Graph module UI with chart.js
+
+2	0	package.json
+30	0	pnpm-lock.yaml
+94	0	src/app/dashboard/[id]/milmgmt/performance-graph/page.tsx
+223	0	src/components/performance_graph/Discpline.tsx
+223	0	src/components/performance_graph/Graph.tsx
+223	0	src/components/performance_graph/Med_Graph.tsx
+223	0	src/components/performance_graph/ODT_Graph.tsx
+223	0	src/components/performance_graph/OLQ_Graph.tsx
+14	1	src/config/app.config.ts
+2	0	src/constants/app.constants.ts
+commit 7b30ecbd4a4a3aace69b6a767e92c06011b1f6e0
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-09T23:44:57+05:30
+Parents: 8ce69b849da66b7e7b89ff3820d8d0aefde09a93
+Subject: made some changes to the UI
+
+66	17	src/components/finalPerformance/FinalPerformanceRecord.tsx
+115	15	src/components/overall_assessment/Appointments.tsx
+39	16	src/components/overall_assessment/OlqAssessment.tsx
+113	15	src/components/overall_assessment/Relegations.tsx
+104	14	src/components/overall_assessment/Withdrawal.tsx
+30	1	src/components/physic-training/HigherTests.tsx
+39	4	src/components/physic-training/Ipet1Form.tsx
+84	48	src/components/physic-training/Ipet2Form.tsx
+47	37	src/components/physic-training/PhysicalForm.tsx
+41	1	src/components/physic-training/Swimming.tsx
+41	1	src/components/physic-training/Swimming1.tsx
+123	35	src/components/semester-record/semesterForm.tsx
+commit 8ce69b849da66b7e7b89ff3820d8d0aefde09a93
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-09T11:24:39+05:30
+Parents: a75566c5bb27c5e1806e0f4bb5d12c276577c707 c5bc6c9d8d9b29b960e1f55e727f7d48f4c72451
+Subject: Merge remote-tracking branch 'origin/master' into new-module
+commit a75566c5bb27c5e1806e0f4bb5d12c276577c707
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-09T11:24:27+05:30
+Parents: 61817c4f0aaf4584d3e731f99c0028d049e76cfd
+Subject: created Overall Assessment module UI
+
+93	0	src/app/dashboard/[id]/milmgmt/overall-assessment/page.tsx
+0	13	src/components/finalPerformance/FinalPerformanceRecord.tsx
+174	0	src/components/overall_assessment/Appointments.tsx
+222	0	src/components/overall_assessment/OlqAssessment.tsx
+187	0	src/components/overall_assessment/OverallPerformance.tsx
+158	0	src/components/overall_assessment/Relegations.tsx
+142	0	src/components/overall_assessment/Withdrawal.tsx
+12	0	src/config/app.config.ts
+commit 61817c4f0aaf4584d3e731f99c0028d049e76cfd
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-07T23:31:54+05:30
+Parents: 8166c80e9b5ab51358f096ded5509a86b9d1607e
+Subject: changed cadet data from static to dynamic
+
+10	13	src/app/dashboard/[id]/milmgmt/camps/page.tsx
+commit 8166c80e9b5ab51358f096ded5509a86b9d1607e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-12-06T22:19:49+05:30
+Parents: 63773ffddfb5f29920613aa760044fe23306e369
+Subject: UI for camp and created semester,performance and physical training module UI
+
+145	0	src/app/dashboard/[id]/milmgmt/camps/page.tsx
+90	0	src/app/dashboard/[id]/milmgmt/final-performance/page.tsx
+106	0	src/app/dashboard/[id]/milmgmt/physical-training/page.tsx
+101	0	src/app/dashboard/[id]/milmgmt/semester-record/page.tsx
+457	0	src/components/camps/CampContent.tsx
+310	0	src/components/camps/campMarksTable.tsx
+230	0	src/components/camps/campReviews.tsx
+189	0	src/components/finalPerformance/FinalPerformanceRecord.tsx
+35	0	src/components/physic-training/GrandTotal.tsx
+194	0	src/components/physic-training/HigherTests.tsx
+194	0	src/components/physic-training/Ipet1Form.tsx
+225	0	src/components/physic-training/Ipet2Form.tsx
+109	0	src/components/physic-training/MotivationAwards.tsx
+430	0	src/components/physic-training/PhysicalForm.tsx
+194	0	src/components/physic-training/Swimming.tsx
+194	0	src/components/physic-training/Swimming1.tsx
+320	0	src/components/semester-record/semesterForm.tsx
+147	0	src/components/semester-record/semesterReviews.tsx
+42	0	src/config/app.config.ts
+commit 880c487ccf76922db4ad5b1328ffc661cd4e9358
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-29T11:52:54+05:30
+Parents: 8d88ffda1990c2c9ab3894c60f1616ea71f7939e b5afa3a02014a083e081580ae49c1ff3359736a5
+Subject: Merge remote-tracking branch 'origin/master' into obstacleChanges
+commit 8d88ffda1990c2c9ab3894c60f1616ea71f7939e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-29T11:47:58+05:30
+Parents: 57786dd342f738a1dd24307bbd59d0dac7de0903 fe755eec8fa47b4c1aba5a7ea64337016c8aa860
+Subject: Merge remote-tracking branch 'origin/stage' into obstacleChanges
+commit 57786dd342f738a1dd24307bbd59d0dac7de0903
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-29T11:46:34+05:30
+Parents: 690e48610116b75aeeecb040a863c8d04e99b23b
+Subject: Integrated delete & edit api into CFE & Counselling page
+
+50	0	src/app/dashboard/milmgmt/counselling/page.tsx
+136	87	src/app/dashboard/milmgmt/credit-excellence/page.tsx
+1	0	src/types/cfe.ts
+commit 690e48610116b75aeeecb040a863c8d04e99b23b
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-28T13:05:49+05:30
+Parents: 97d65c38e66eff3892950d6310428929fd286eea
+Subject: fixed conflicts
+
+3	0	src/constants/endpoints.ts
+commit 97d65c38e66eff3892950d6310428929fd286eea
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-28T12:57:38+05:30
+Parents: e944209004d5eacdbd6dc62f131754eb7405e371 f62f7529acca78ae670bf37e5499eca582a8fa95
+Subject: FIxed Conflicts
+commit e944209004d5eacdbd6dc62f131754eb7405e371
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-28T12:31:47+05:30
+Parents: 162d0fa4e0d2fec08be35c99a2239e9f2db00ef1
+Subject: Integrated API in counselling and updated UI for CFE and counselling
+
+1	1	src/app/api/v1/oc/[ocId]/credit-for-excellence/[id]/route.ts
+14	0	src/app/api/v1/oc/[ocId]/credit-for-excellence/route.ts
+31	17	src/app/dashboard/milmgmt/counselling/page.tsx
+262	43	src/app/dashboard/milmgmt/credit-excellence/page.tsx
+135	52	src/app/lib/api/counsellingApi.ts
+1	1	src/app/lib/oc-validators.ts
+3	0	src/constants/endpoints.ts
+commit 162d0fa4e0d2fec08be35c99a2239e9f2db00ef1
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-27T10:57:38+05:30
+Parents: cb4f9c732d4e27c6814f16a3e77c4126b35bf197
+Subject: Integrated API in counselling and updated UI in rest files
+
+17	13	src/app/dashboard/milmgmt/counselling/page.tsx
+182	60	src/app/dashboard/milmgmt/sports-awards/page.tsx
+67	74	src/app/dashboard/milmgmt/wpn-trg/page.tsx
+39	0	src/app/lib/api/cfeApi.ts
+1	0	src/app/lib/oc-validators.ts
+108	0	src/components/wpnTrg/AchievementsForm.tsx
+commit cb4f9c732d4e27c6814f16a3e77c4126b35bf197
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-25T23:58:46+05:30
+Parents: cedfdaf1aae4badfe34198b4d214963f7b5890f3
+Subject: added cdf logic to cumulative column
+
+134	85	src/app/dashboard/milmgmt/discip-records/page.tsx
+commit cedfdaf1aae4badfe34198b4d214963f7b5890f3
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-24T22:50:21+05:30
+Parents: b608ce7b521173900c85efd64398fb0ef7f8e396
+Subject: Updated edit,save functionality and modified UI
+
+40	14	src/app/dashboard/milmgmt/obstacle-trg/page.tsx
+224	358	src/app/dashboard/milmgmt/sports-awards/page.tsx
+113	66	src/app/dashboard/milmgmt/wpn-trg/page.tsx
+0	1	src/app/lib/api/sportsAndGamesApi.ts
+6	192	src/components/sports/SportsTable.tsx
+5	147	src/components/wpnTrg/WeaponTrainingTable.tsx
+commit b608ce7b521173900c85efd64398fb0ef7f8e396
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-24T22:43:21+05:30
+Parents: 12376d6cfe6be3e5709167b13732c9595f3f27a3 3d6c425471da49934c06873374b1431331cb2894
+Subject: Merge branch 'stage' of https://github.com/Hexmon/e-dossier into obstacleChanges
+commit 12376d6cfe6be3e5709167b13732c9595f3f27a3
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-24T16:40:56+05:30
+Parents: 646c70554a1fcefced48fea94fcccc2a1291e774
+Subject: updated the table functionality and changed the UI
+
+62	183	src/app/dashboard/milmgmt/obstacle-trg/page.tsx
+63	191	src/app/dashboard/milmgmt/speed-march/page.tsx
+commit 646c70554a1fcefced48fea94fcccc2a1291e774
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-24T12:57:32+05:30
+Parents: 93f7ef5512a6ddab1917a1ddeed2f1b9e59a500e
+Subject: fixed speedmarch and obstacle
+
+131	105	src/app/dashboard/milmgmt/obstacle-trg/page.tsx
+58	47	src/app/dashboard/milmgmt/speed-march/page.tsx
+commit 93f7ef5512a6ddab1917a1ddeed2f1b9e59a500e
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-22T17:38:13+05:30
+Parents: c0a7459aa7a92d1a3a5d9528e4d0b52d113ada2a b9da7b867d5af6e3454115c47833d6554c7949c5
+Subject: Merge branch 'master' of https://github.com/Hexmon/e-dossier into obstacleChanges
+commit c0a7459aa7a92d1a3a5d9528e4d0b52d113ada2a
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-22T17:35:35+05:30
+Parents: ee5a4e49bf07197137189bfcb7db6056885f043f
+Subject: Integrated Speed March Api
+
+1	1	src/app/dashboard/milmgmt/obstacle-trg/page.tsx
+231	19	src/app/dashboard/milmgmt/speed-march/page.tsx
+1	0	src/types/speedMarchRunback.ts
+commit ee5a4e49bf07197137189bfcb7db6056885f043f
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-21T15:37:37+05:30
+Parents: d90856728a5e2584207dcdfd8e68181799ad583f 9dc5fb9c0807f8857c9dfe774366c0b060624cae
+Subject: Merge remote-tracking branch 'origin/master' into obstacleChanges
+commit d90856728a5e2584207dcdfd8e68181799ad583f
+Author: Pratik Mahapatra <pratikmahapatra29@gmail.com>
+AuthorDate: 2025-11-21T15:37:02+05:30
+Parents: e39229881e898a40b18a66c58614f8e53bc28fdb
+Subject: ObstacleChanges
+
+243	18	src/app/dashboard/milmgmt/obstacle-trg/page.tsx
+19	52	src/app/dashboard/milmgmt/speed-march/page.tsx
+89	80	src/constants/app.constants.ts
+1	0	src/types/obstacleTrg.ts

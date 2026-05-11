@@ -1,0 +1,1468 @@
+COMMAND: pnpm test
+START: 2026-05-09T23:25:25+0530
+
+> e-dossier-v2@0.1.0 test /Users/anuragkumar/Desktop/e-dossier
+> vitest run
+
+
+ RUN  v4.0.18 /Users/anuragkumar/Desktop/e-dossier
+
+ ✓ tests/lib/api-client-401.test.ts (4 tests) 87ms
+ ✓ tests/lib/logout-orchestrator.test.ts (5 tests) 99ms
+ ✓ tests/lib/medical-accessibility.test.tsx (3 tests) 35ms
+stdout | tests/api/oc.sports-and-games.[id].test.ts > GET /api/v1/oc/:ocId/sports-and-games/:id > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.700Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > GET /api/v1/oc/:ocId/sports-and-games/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.706Z","requestId":"","method":"GET","path":"/api/v1/oc/not-a-uuid/sports-and-games/not-a-uuid","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > GET /api/v1/oc/:ocId/sports-and-games/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.707Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > GET /api/v1/oc/:ocId/sports-and-games/:id > returns 404 when sports/games record is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.708Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > GET /api/v1/oc/:ocId/sports-and-games/:id > returns 200 with sports/games record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.711Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > PATCH /api/v1/oc/:ocId/sports-and-games/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.712Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > PATCH /api/v1/oc/:ocId/sports-and-games/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.712Z","requestId":"","method":"PATCH","path":"/api/v1/oc/not-a-uuid/sports-and-games/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > PATCH /api/v1/oc/:ocId/sports-and-games/:id > returns 400 when request body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.715Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > PATCH /api/v1/oc/:ocId/sports-and-games/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.716Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > PATCH /api/v1/oc/:ocId/sports-and-games/:id > returns 404 when sports/games record to update is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.718Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > PATCH /api/v1/oc/:ocId/sports-and-games/:id > returns 200 with updated sports/games record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.719Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > DELETE /api/v1/oc/:ocId/sports-and-games/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.720Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > DELETE /api/v1/oc/:ocId/sports-and-games/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.720Z","requestId":"","method":"DELETE","path":"/api/v1/oc/not-a-uuid/sports-and-games/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > DELETE /api/v1/oc/:ocId/sports-and-games/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.721Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > DELETE /api/v1/oc/:ocId/sports-and-games/:id > returns 404 when sports/games record to delete is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.722Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > DELETE /api/v1/oc/:ocId/sports-and-games/:id > returns 200 with soft-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.722Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > DELETE /api/v1/oc/:ocId/sports-and-games/:id > returns 403 when hard delete lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.723Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.sports-and-games.[id].test.ts > DELETE /api/v1/oc/:ocId/sports-and-games/:id > returns 200 with hard-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.723Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/sports-and-games/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.sports-and-games.[id].test.ts (18 tests) 31ms
+ ✓ tests/lib/setup-status.runtime.test.ts (4 tests) 638ms
+     ✓ treats missing setup/auth columns as an incomplete setup instead of crashing  622ms
+ ✓ tests/lib/login-page-client.test.tsx (2 tests) 29ms
+ ✓ tests/api/reports.route-flow.uncovered.test.ts (22 tests) 413ms
+ ✓ tests/api/misc.route-flow.uncovered.test.ts (4 tests) 434ms
+stdout | tests/api/oc.motivation-awards.[id].test.ts > GET /api/v1/oc/:ocId/motivation-awards/:id > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.989Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":4,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > GET /api/v1/oc/:ocId/motivation-awards/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.993Z","requestId":"","method":"GET","path":"/api/v1/oc/not-a-uuid/motivation-awards/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > GET /api/v1/oc/:ocId/motivation-awards/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.994Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > GET /api/v1/oc/:ocId/motivation-awards/:id > returns 404 when motivation award is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.995Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > GET /api/v1/oc/:ocId/motivation-awards/:id > returns 200 with motivation award on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.997Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > PATCH /api/v1/oc/:ocId/motivation-awards/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.998Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > PATCH /api/v1/oc/:ocId/motivation-awards/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.998Z","requestId":"","method":"PATCH","path":"/api/v1/oc/not-a-uuid/motivation-awards/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > PATCH /api/v1/oc/:ocId/motivation-awards/:id > returns 400 when request body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:27.999Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > PATCH /api/v1/oc/:ocId/motivation-awards/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.000Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > PATCH /api/v1/oc/:ocId/motivation-awards/:id > returns 404 when motivation award to update is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.002Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > PATCH /api/v1/oc/:ocId/motivation-awards/:id > returns 200 with updated motivation award on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.003Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > DELETE /api/v1/oc/:ocId/motivation-awards/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.004Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > DELETE /api/v1/oc/:ocId/motivation-awards/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.004Z","requestId":"","method":"DELETE","path":"/api/v1/oc/not-a-uuid/motivation-awards/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > DELETE /api/v1/oc/:ocId/motivation-awards/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.005Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > DELETE /api/v1/oc/:ocId/motivation-awards/:id > returns 404 when motivation award to delete is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.005Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > DELETE /api/v1/oc/:ocId/motivation-awards/:id > returns 200 with soft-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.006Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > DELETE /api/v1/oc/:ocId/motivation-awards/:id > returns 403 when hard delete lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.006Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.motivation-awards.[id].test.ts > DELETE /api/v1/oc/:ocId/motivation-awards/:id > returns 200 with hard-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.007Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/motivation-awards/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.motivation-awards.[id].test.ts (18 tests) 24ms
+ ✓ tests/lib/logout-request.test.ts (4 tests) 32ms
+ ✓ tests/lib/search-hotkey.test.ts (6 tests) 303ms
+stdout | tests/api/admin.interview.pending.ticker-setting.test.ts > Admin interview pending ticker setting API > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.205Z","requestId":"","method":"GET","path":"/api/v1/admin/interview/pending/ticker-setting","durationMs":2,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.interview.pending.ticker-setting.test.ts > Admin interview pending ticker setting API > GET returns latest setting without logs when includeLogs=false
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.212Z","requestId":"","method":"GET","path":"/api/v1/admin/interview/pending/ticker-setting","durationMs":4,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.interview.pending.ticker-setting.test.ts > Admin interview pending ticker setting API > GET returns logs when includeLogs=true
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.214Z","requestId":"","method":"GET","path":"/api/v1/admin/interview/pending/ticker-setting","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.interview.pending.ticker-setting.test.ts > Admin interview pending ticker setting API > GET allows non-admin users outside platoon scope for dashboard marquee reads
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.216Z","requestId":"","method":"GET","path":"/api/v1/admin/interview/pending/ticker-setting","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.interview.pending.ticker-setting.test.ts > Admin interview pending ticker setting API > POST returns 403 for non-admin users outside platoon scope
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.217Z","requestId":"","method":"POST","path":"/api/v1/admin/interview/pending/ticker-setting","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.interview.pending.ticker-setting.test.ts > Admin interview pending ticker setting API > POST validates start/end range
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.218Z","requestId":"","method":"POST","path":"/api/v1/admin/interview/pending/ticker-setting","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.interview.pending.ticker-setting.test.ts > Admin interview pending ticker setting API > POST saves setting and returns computed days
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.219Z","requestId":"","method":"POST","path":"/api/v1/admin/interview/pending/ticker-setting","durationMs":1,"statusCode":201,"outcome":"SUCCESS"}
+
+ ✓ tests/api/admin.interview.pending.ticker-setting.test.ts (7 tests) 19ms
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > returns 401 when admin auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.236Z","requestId":"","method":"GET","path":"/api/v1/admin/relegation/ocs","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > returns 403 when admin auth is forbidden
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.239Z","requestId":"","method":"GET","path":"/api/v1/admin/relegation/ocs","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > GET /ocs returns OC options
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.241Z","requestId":"","method":"GET","path":"/api/v1/admin/relegation/ocs","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > GET /courses validates currentCourseId
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.244Z","requestId":"","method":"GET","path":"/api/v1/admin/relegation/courses","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > GET /courses returns immediate next options
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.244Z","requestId":"","method":"GET","path":"/api/v1/admin/relegation/courses","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > POST /presign rejects invalid payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.245Z","requestId":"","method":"POST","path":"/api/v1/admin/relegation/presign","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > POST /presign returns upload URL
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.246Z","requestId":"","method":"POST","path":"/api/v1/admin/relegation/presign","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > POST /transfer validates payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.247Z","requestId":"","method":"POST","path":"/api/v1/admin/relegation/transfer","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > POST /promote-course validates payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.248Z","requestId":"","method":"POST","path":"/api/v1/admin/relegation/promote-course","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > POST /promote-course promotes semester-wise within a course
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.248Z","requestId":"","method":"POST","path":"/api/v1/admin/relegation/promote-course","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > POST /transfer returns 400 when target is not immediate next
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.249Z","requestId":"","method":"POST","path":"/api/v1/admin/relegation/transfer","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/relegation.admin.test.ts > Admin relegation APIs > POST /transfer applies relegation and returns summary
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.250Z","requestId":"","method":"POST","path":"/api/v1/admin/relegation/transfer","durationMs":0,"statusCode":201,"outcome":"SUCCESS"}
+
+ ✓ tests/api/relegation.admin.test.ts (12 tests) 21ms
+stdout | tests/api/device-site-settings.test.ts > Admin device site settings API > GET returns 401 when admin auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.286Z","requestId":"","method":"GET","path":"/api/v1/admin/device-site-settings","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/device-site-settings.test.ts > Admin device site settings API > GET returns effective settings for a device
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.294Z","requestId":"","method":"GET","path":"/api/v1/admin/device-site-settings","durationMs":4,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/device-site-settings.test.ts > Admin device site settings API > GET returns paginated list when deviceId is absent
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.296Z","requestId":"","method":"GET","path":"/api/v1/admin/device-site-settings","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/device-site-settings.test.ts > Admin device site settings API > PUT returns 403 for non-admin
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.297Z","requestId":"","method":"PUT","path":"/api/v1/admin/device-site-settings","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/device-site-settings.test.ts > Admin device site settings API > PUT validates payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.298Z","requestId":"","method":"PUT","path":"/api/v1/admin/device-site-settings","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/device-site-settings.test.ts > Admin device site settings API > PUT rejects unknown accentPalette values
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.299Z","requestId":"","method":"PUT","path":"/api/v1/admin/device-site-settings","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/device-site-settings.test.ts > Admin device site settings API > PUT enforces refresh interval bounds
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.299Z","requestId":"","method":"PUT","path":"/api/v1/admin/device-site-settings","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/device-site-settings.test.ts > Admin device site settings API > PUT defaults accentPalette to blue when omitted
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.300Z","requestId":"","method":"PUT","path":"/api/v1/admin/device-site-settings","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/device-site-settings.test.ts > Admin device site settings API > PUT upserts device settings
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.300Z","requestId":"","method":"PUT","path":"/api/v1/admin/device-site-settings","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/device-site-settings.test.ts > Legacy /api/v1/settings/device-site alias > GET allows authenticated users
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.301Z","requestId":"","method":"GET","path":"/api/v1/settings/device-site","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/device-site-settings.test.ts > Legacy /api/v1/settings/device-site alias > PUT allows authenticated users
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.302Z","requestId":"","method":"PUT","path":"/api/v1/settings/device-site","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/device-site-settings.test.ts (11 tests) 21ms
+stdout | tests/api/admin.site-settings.history.test.ts > Admin site settings history routes > lists history with sort query
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.520Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/history","durationMs":5,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.history.test.ts > Admin site settings history routes > creates history
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.523Z","requestId":"","method":"POST","path":"/api/v1/admin/site-settings/history","durationMs":2,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.history.test.ts > Admin site settings history routes > gets, updates and soft deletes history
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.525Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/history/efff9dd0-f8f8-4cf7-962e-2ede2583a5b4","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.history.test.ts > Admin site settings history routes > gets, updates and soft deletes history
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.526Z","requestId":"","method":"PUT","path":"/api/v1/admin/site-settings/history/efff9dd0-f8f8-4cf7-962e-2ede2583a5b4","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.history.test.ts > Admin site settings history routes > gets, updates and soft deletes history
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.527Z","requestId":"","method":"DELETE","path":"/api/v1/admin/site-settings/history/efff9dd0-f8f8-4cf7-962e-2ede2583a5b4","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.history.test.ts > Admin site settings history routes > hard deletes history
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.527Z","requestId":"","method":"DELETE","path":"/api/v1/admin/site-settings/history/efff9dd0-f8f8-4cf7-962e-2ede2583a5b4/hard","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/admin.site-settings.history.test.ts (4 tests) 16ms
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.617Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":4,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > returns 400 when platoon scoped user is missing scope id
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.623Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > returns 403 when platoon scoped user passes another platoon
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.624Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > forces own platoon for scoped users when platoon query is omitted
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.627Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > supports query alias and sort mapping
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.631Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > returns current semester from the OC list payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.632Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > caps limit to 1000
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.632Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > supports platoon key filtering for global users
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.634Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > passes the selected oc id to the full query when requesting one OC
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.634Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.list.test.ts > GET /api/v1/oc > returns 400 for invalid sort
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.635Z","requestId":"","method":"GET","path":"/api/v1/oc","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.list.test.ts > POST /api/v1/oc > creates an OC with jnu enrollment number
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.637Z","requestId":"","method":"POST","path":"/api/v1/oc","durationMs":1,"statusCode":201,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.list.test.ts (11 tests) 27ms
+stderr | tests/lib/audit-log.test.ts > audit-log utilities > swallows failures for non-required events
+Failed to create audit log {
+  eventType: 'TEST.EVENT',
+  resourceType: 'user',
+  requestId: 'ee0102b4-20b1-45aa-a26d-697b27088af0',
+  error: Error: db down
+      at Object.<anonymous> (/Users/anuragkumar/Desktop/e-dossier/tests/lib/audit-log.test.ts:78:35)
+      at Object.Mock [as values] (file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+spy@4.0.18/node_modules/@vitest/spy/dist/index.js:285:34)
+      at Module.createAuditLog (/Users/anuragkumar/Desktop/e-dossier/src/lib/audit-log.ts:347:51)
+      at /Users/anuragkumar/Desktop/e-dossier/tests/lib/audit-log.test.ts:80:18
+      at file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+      at file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+      at file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+      at new Promise (<anonymous>)
+      at runWithTimeout (file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+      at file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+}
+
+stderr | tests/lib/audit-log.test.ts > audit-log utilities > throws when required audit log fails
+Failed to create audit log {
+  eventType: 'TEST.EVENT',
+  resourceType: 'user',
+  requestId: '652b6726-75f8-4311-ae7d-cc023d04da4f',
+  error: Error: db down
+      at Object.<anonymous> (/Users/anuragkumar/Desktop/e-dossier/tests/lib/audit-log.test.ts:89:35)
+      at Object.Mock [as values] (file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+spy@4.0.18/node_modules/@vitest/spy/dist/index.js:285:34)
+      at Module.createAuditLog (/Users/anuragkumar/Desktop/e-dossier/src/lib/audit-log.ts:347:51)
+      at /Users/anuragkumar/Desktop/e-dossier/tests/lib/audit-log.test.ts:91:18
+      at file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+      at file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+      at file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+      at new Promise (<anonymous>)
+      at runWithTimeout (file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+      at file:///Users/anuragkumar/Desktop/e-dossier/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+}
+
+ ✓ tests/lib/audit-log.test.ts (5 tests) 27ms
+stdout | tests/api/instructors.[id].test.ts > GET /api/v1/admin/instructors/[id] > returns 401 when auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.747Z","requestId":"","method":"GET","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":2,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.[id].test.ts > GET /api/v1/admin/instructors/[id] > returns 400 for invalid id
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.753Z","requestId":"","method":"GET","path":"/api/v1/admin/instructors/not-a-uuid","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.[id].test.ts > GET /api/v1/admin/instructors/[id] > returns 404 when instructor not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.755Z","requestId":"","method":"GET","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.[id].test.ts > GET /api/v1/admin/instructors/[id] > returns instructor on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.758Z","requestId":"","method":"GET","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/instructors.[id].test.ts > PATCH /api/v1/admin/instructors/[id] > returns 403 when user lacks admin role
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.759Z","requestId":"","method":"PATCH","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.[id].test.ts > PATCH /api/v1/admin/instructors/[id] > returns 400 when body has no changes
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.761Z","requestId":"","method":"PATCH","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.[id].test.ts > PATCH /api/v1/admin/instructors/[id] > returns 409 when update violates unique constraint
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.762Z","requestId":"","method":"PATCH","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.[id].test.ts > PATCH /api/v1/admin/instructors/[id] > updates instructor on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.763Z","requestId":"","method":"PATCH","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/instructors.[id].test.ts > DELETE /api/v1/admin/instructors/[id] > returns 401 when not authenticated as admin
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.763Z","requestId":"","method":"DELETE","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.[id].test.ts > DELETE /api/v1/admin/instructors/[id] > returns 404 when instructor to delete is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.764Z","requestId":"","method":"DELETE","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.[id].test.ts > DELETE /api/v1/admin/instructors/[id] > soft-deletes instructor on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.765Z","requestId":"","method":"DELETE","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/instructors.[id].test.ts > DELETE /api/v1/admin/instructors/[id] > hard-deletes instructor when ?hard=true
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.767Z","requestId":"","method":"DELETE","path":"/api/v1/admin/instructors/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/instructors.[id].test.ts (12 tests) 25ms
+stdout | tests/api/subjects.test.ts > GET /api/v1/subjects > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.985Z","requestId":"","method":"GET","path":"/api/v1/subjects","durationMs":4,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > GET /api/v1/subjects > returns 400 for invalid query parameters
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.991Z","requestId":"","method":"GET","path":"/api/v1/subjects","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > GET /api/v1/subjects > returns 400 for invalid semester filter
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.992Z","requestId":"","method":"GET","path":"/api/v1/subjects","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > GET /api/v1/subjects > returns 400 for invalid courseId filter
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.993Z","requestId":"","method":"GET","path":"/api/v1/subjects","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > GET /api/v1/subjects > returns filtered list of subjects on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:28.997Z","requestId":"","method":"GET","path":"/api/v1/subjects","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/subjects.test.ts > POST /api/v1/subjects > returns 401 when not authenticated
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.000Z","requestId":"","method":"POST","path":"/api/v1/subjects","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > POST /api/v1/subjects > returns 403 when user lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.001Z","requestId":"","method":"POST","path":"/api/v1/subjects","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > POST /api/v1/subjects > returns 400 when request body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.003Z","requestId":"","method":"POST","path":"/api/v1/subjects","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > POST /api/v1/subjects > returns 400 when noOfPeriods is missing
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.004Z","requestId":"","method":"POST","path":"/api/v1/subjects","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > POST /api/v1/subjects > returns 400 when noOfPeriods is out of range
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.005Z","requestId":"","method":"POST","path":"/api/v1/subjects","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > POST /api/v1/subjects > returns 409 when subject code already exists
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.007Z","requestId":"","method":"POST","path":"/api/v1/subjects","durationMs":1,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.test.ts > POST /api/v1/subjects > creates a subject on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.008Z","requestId":"","method":"POST","path":"/api/v1/subjects","durationMs":1,"statusCode":201,"outcome":"SUCCESS"}
+
+ ✓ tests/api/subjects.test.ts (12 tests) 30ms
+stdout | tests/api/courses.test.ts > GET /api/v1/courses > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.022Z","requestId":"","method":"GET","path":"/api/v1/courses","durationMs":2,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.test.ts > GET /api/v1/courses > returns 400 for invalid query parameters
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.027Z","requestId":"","method":"GET","path":"/api/v1/courses","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.test.ts > GET /api/v1/courses > returns filtered list of courses on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.030Z","requestId":"","method":"GET","path":"/api/v1/courses","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.test.ts > POST /api/v1/courses > returns 401 when not authenticated
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.033Z","requestId":"","method":"POST","path":"/api/v1/courses","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > GET /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.031Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.test.ts > GET /api/v1/oc/:ocId/academics > returns 403 when authorization fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.032Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics","durationMs":3,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.test.ts > POST /api/v1/courses > returns 403 when user lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.035Z","requestId":"","method":"POST","path":"/api/v1/courses","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > GET /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.035Z","requestId":"","method":"GET","path":"/api/v1/oc/not-a-uuid/special-achievement-in-firing/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > GET /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.036Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > GET /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 404 when special achievement record is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.037Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.test.ts > POST /api/v1/courses > returns 400 when request body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.037Z","requestId":"","method":"POST","path":"/api/v1/courses","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.test.ts > GET /api/v1/oc/:ocId/academics > returns academic semesters on success
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.038Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.test.ts > POST /api/v1/courses > returns 409 when course code already exists
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.038Z","requestId":"","method":"POST","path":"/api/v1/courses","durationMs":0,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > GET /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 200 with special achievement record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.039Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.test.ts > GET /api/v1/oc/:ocId/academics > accepts the legacy semister query key
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.039Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > PATCH /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.040Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > PATCH /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.040Z","requestId":"","method":"PATCH","path":"/api/v1/oc/not-a-uuid/special-achievement-in-firing/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.test.ts > POST /api/v1/courses > creates a course on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.040Z","requestId":"","method":"POST","path":"/api/v1/courses","durationMs":1,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.test.ts > GET /api/v1/oc/:ocId/academics > returns 400 for invalid semester query
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.041Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.test.ts > GET /api/v1/oc/:ocId/academics/:semester > returns academic semester
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.042Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > PATCH /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 400 when request body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.042Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.test.ts > PATCH /api/v1/oc/:ocId/academics/:semester > blocks write when caller has read-only academics access
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.043Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.test.ts > PATCH /api/v1/oc/:ocId/academics/:semester > updates academic summary on success
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.045Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/courses.test.ts (8 tests) 23ms
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > PATCH /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.043Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > PATCH /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 404 when special achievement record to update is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.044Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > PATCH /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 200 with updated special achievement record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.044Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > DELETE /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.045Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > DELETE /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.046Z","requestId":"","method":"DELETE","path":"/api/v1/oc/not-a-uuid/special-achievement-in-firing/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.test.ts > PATCH /api/v1/oc/:ocId/academics/:semester > returns workflow_required when workflow is active
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.046Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1","durationMs":0,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.test.ts > PATCH /api/v1/oc/:ocId/academics/:semester > returns semester_locked when a non-current semester is patched
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.047Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > DELETE /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.047Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > DELETE /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 404 when special achievement record to delete is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.048Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.test.ts > PATCH /api/v1/oc/:ocId/academics/:semester > rejects manual sgpa/cgpa patch values
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.048Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > DELETE /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 200 with soft-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.050Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.test.ts > DELETE /api/v1/oc/:ocId/academics/:semester > soft deletes semester
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.049Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.test.ts > DELETE /api/v1/oc/:ocId/academics/:semester > hard deletes semester
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.050Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > DELETE /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 403 when hard delete lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.050Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.special-achievement-in-firing.[id].test.ts > DELETE /api/v1/oc/:ocId/special-achievement-in-firing/:id > returns 200 with hard-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.051Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/special-achievement-in-firing/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.special-achievement-in-firing.[id].test.ts (18 tests) 27ms
+stdout | tests/api/oc.academics.test.ts > PATCH /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId > updates subject marks
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.062Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1/subjects/22222222-2222-4222-8222-222222222222","durationMs":11,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.test.ts > PATCH /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId > rejects invalid letter grade values
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.063Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1/subjects/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.test.ts > DELETE /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId > deletes subject entry
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.064Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1/subjects/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.test.ts > DELETE /api/v1/oc/:ocId/academics/:semester/subjects/:subjectId > hard deletes subject entry
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.065Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/academics/1/subjects/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.academics.test.ts (16 tests) 39ms
+ ✓ tests/api/admin.route-flow.uncovered.test.ts (203 tests) 1781ms
+ ✓ tests/api/oc.route-flow.uncovered.test.ts (246 tests) 1802ms
+stdout | tests/api/auth.login.test.ts > POST /api/v1/auth/login > ignores prior account lockout state and allows valid credentials
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.349Z","requestId":"","method":"POST","path":"/api/v1/auth/login","durationMs":10,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/auth.login.test.ts > POST /api/v1/auth/login > returns 400 when required fields are missing
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.352Z","requestId":"","method":"POST","path":"/api/v1/auth/login","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/auth.login.test.ts > POST /api/v1/auth/login > returns 400 when body is not valid JSON
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.353Z","requestId":"","method":"POST","path":"/api/v1/auth/login","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/auth.login.test.ts > POST /api/v1/auth/login > logs in successfully with valid credentials and active appointment
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.355Z","requestId":"","method":"POST","path":"/api/v1/auth/login","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/auth.login.test.ts > POST /api/v1/auth/login > returns 401 for an invalid password without triggering account lockout
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.359Z","requestId":"","method":"POST","path":"/api/v1/auth/login","durationMs":1,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/auth.login.test.ts > POST /api/v1/auth/login > logs in successfully with an active delegation identity
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.361Z","requestId":"","method":"POST","path":"/api/v1/auth/login","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/auth.login.test.ts (6 tests) 27ms
+stdout | tests/api/oc.physical-training.bulk.test.ts > PT bulk API > GET returns template and per-oc items
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.365Z","requestId":"","method":"GET","path":"/api/v1/oc/physical-training/bulk","durationMs":10,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.physical-training.bulk.test.ts > PT bulk API > GET returns 400 on invalid query
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.370Z","requestId":"","method":"GET","path":"/api/v1/oc/physical-training/bulk","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.physical-training.bulk.test.ts > PT bulk API > POST supports partial success
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.374Z","requestId":"","method":"POST","path":"/api/v1/oc/physical-training/bulk","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.physical-training.bulk.test.ts > PT bulk API > POST allows manual marks above template max for free-entry PT attempts
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.376Z","requestId":"","method":"POST","path":"/api/v1/oc/physical-training/bulk","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.physical-training.bulk.test.ts > PT bulk API > POST returns workflow_required when workflow is active
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.377Z","requestId":"","method":"POST","path":"/api/v1/oc/physical-training/bulk","durationMs":0,"statusCode":409,"outcome":"FAILURE"}
+
+ ✓ tests/api/oc.physical-training.bulk.test.ts (5 tests) 26ms
+stdout | tests/api/oc.obstacle-training.[id].test.ts > GET /api/v1/oc/:ocId/obstacle-training/:id > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.434Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":4,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > GET /api/v1/oc/:ocId/obstacle-training/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.439Z","requestId":"","method":"GET","path":"/api/v1/oc/not-a-uuid/obstacle-training/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > GET /api/v1/oc/:ocId/obstacle-training/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.440Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > GET /api/v1/oc/:ocId/obstacle-training/:id > returns 404 when obstacle training record is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.440Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > GET /api/v1/oc/:ocId/obstacle-training/:id > returns 200 with obstacle training record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.443Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > PATCH /api/v1/oc/:ocId/obstacle-training/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.444Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > PATCH /api/v1/oc/:ocId/obstacle-training/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.444Z","requestId":"","method":"PATCH","path":"/api/v1/oc/not-a-uuid/obstacle-training/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > PATCH /api/v1/oc/:ocId/obstacle-training/:id > returns 400 when request body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.446Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > PATCH /api/v1/oc/:ocId/obstacle-training/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.446Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > PATCH /api/v1/oc/:ocId/obstacle-training/:id > returns 404 when obstacle training record to update is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.447Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > PATCH /api/v1/oc/:ocId/obstacle-training/:id > returns 200 with updated obstacle training record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.448Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > DELETE /api/v1/oc/:ocId/obstacle-training/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.448Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > DELETE /api/v1/oc/:ocId/obstacle-training/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.449Z","requestId":"","method":"DELETE","path":"/api/v1/oc/not-a-uuid/obstacle-training/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > DELETE /api/v1/oc/:ocId/obstacle-training/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.450Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > DELETE /api/v1/oc/:ocId/obstacle-training/:id > returns 404 when obstacle training record to delete is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.450Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > DELETE /api/v1/oc/:ocId/obstacle-training/:id > returns 200 with soft-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.451Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > DELETE /api/v1/oc/:ocId/obstacle-training/:id > returns 403 when hard delete lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.451Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.obstacle-training.[id].test.ts > DELETE /api/v1/oc/:ocId/obstacle-training/:id > returns 200 with hard-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.451Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/obstacle-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.awards.test.ts > Admin site settings awards routes > lists awards
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.454Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/awards","durationMs":5,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.obstacle-training.[id].test.ts (18 tests) 23ms
+stdout | tests/api/admin.site-settings.awards.test.ts > Admin site settings awards routes > creates award
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.457Z","requestId":"","method":"POST","path":"/api/v1/admin/site-settings/awards","durationMs":2,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.awards.test.ts > Admin site settings awards routes > gets, updates and soft deletes award
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.458Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/awards/f4f23f49-334d-435a-9c54-e4383a9088bd","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.awards.test.ts > Admin site settings awards routes > gets, updates and soft deletes award
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.459Z","requestId":"","method":"PUT","path":"/api/v1/admin/site-settings/awards/f4f23f49-334d-435a-9c54-e4383a9088bd","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.awards.test.ts > Admin site settings awards routes > gets, updates and soft deletes award
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.460Z","requestId":"","method":"DELETE","path":"/api/v1/admin/site-settings/awards/f4f23f49-334d-435a-9c54-e4383a9088bd","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.awards.test.ts > Admin site settings awards routes > hard deletes award
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.461Z","requestId":"","method":"DELETE","path":"/api/v1/admin/site-settings/awards/f4f23f49-334d-435a-9c54-e4383a9088bd/hard","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.awards.test.ts > Admin site settings awards routes > reorders awards
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.462Z","requestId":"","method":"PATCH","path":"/api/v1/admin/site-settings/awards/reorder","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.awards.test.ts > Admin site settings awards routes > rejects reorder duplicates
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.465Z","requestId":"","method":"PATCH","path":"/api/v1/admin/site-settings/awards/reorder","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+ ✓ tests/api/admin.site-settings.awards.test.ts (6 tests) 19ms
+stdout | tests/api/courses.[courseId].test.ts > GET /api/v1/courses/[courseId] > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.503Z","requestId":"","method":"GET","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > GET /api/v1/courses/[courseId] > returns 400 for invalid courseId param
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.508Z","requestId":"","method":"GET","path":"/api/v1/courses/invalid-id","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > GET /api/v1/courses/[courseId] > returns 404 when course is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.509Z","requestId":"","method":"GET","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > GET /api/v1/courses/[courseId] > returns course and offerings on happy path with expand=subjects
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.511Z","requestId":"","method":"GET","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.[courseId].test.ts > PATCH /api/v1/courses/[courseId] > returns 403 when user lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.515Z","requestId":"","method":"PATCH","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > PATCH /api/v1/courses/[courseId] > returns 400 when request body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.516Z","requestId":"","method":"PATCH","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > PATCH /api/v1/courses/[courseId] > returns 409 when updating course violates unique code constraint
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.517Z","requestId":"","method":"PATCH","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > PATCH /api/v1/courses/[courseId] > updates course on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.519Z","requestId":"","method":"PATCH","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.[courseId].test.ts > DELETE /api/v1/courses/[courseId] > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.520Z","requestId":"","method":"DELETE","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > DELETE /api/v1/courses/[courseId] > returns 404 when course to delete is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.521Z","requestId":"","method":"DELETE","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > DELETE /api/v1/courses/[courseId] > returns 409 with OC count when cadets are assigned to the course
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.521Z","requestId":"","method":"DELETE","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > DELETE /api/v1/courses/[courseId] > blocks hard-delete when cadets are assigned to the course
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.523Z","requestId":"","method":"DELETE","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.[courseId].test.ts > DELETE /api/v1/courses/[courseId] > hard-deletes course on happy path by default
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.524Z","requestId":"","method":"DELETE","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.[courseId].test.ts > DELETE /api/v1/courses/[courseId] > soft-deletes course when explicitly requested
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.525Z","requestId":"","method":"DELETE","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.[courseId].test.ts > DELETE /api/v1/courses/[courseId] > hard-deletes course when requested
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.526Z","requestId":"","method":"DELETE","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.[courseId].test.ts > DELETE /api/v1/courses/[courseId] > hard-deletes course when mode=hard is requested
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.527Z","requestId":"","method":"DELETE","path":"/api/v1/courses/11111111-1111-4111-8111-111111111111","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/courses.[courseId].test.ts (16 tests) 30ms
+ ✓ tests/api/oc.medical.test.ts (6 tests) 13ms
+ ✓ tests/api/reports.academics.final-result-compilation.test.ts (3 tests) 14ms
+stdout | tests/api/admin.rbac.test.ts > RBAC permissions routes > GET /api/v1/admin/rbac/permissions returns 401 when auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.837Z","requestId":"","method":"GET","path":"/api/v1/admin/rbac/permissions","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC permissions routes > GET /api/v1/admin/rbac/permissions returns items
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.843Z","requestId":"","method":"GET","path":"/api/v1/admin/rbac/permissions","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.bulk.test.ts > OC academics bulk API > allows authenticated non-admin users to read bulk academics
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.850Z","requestId":"","method":"GET","path":"/api/v1/oc/academics/bulk","durationMs":6,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC permissions routes > POST /api/v1/admin/rbac/permissions validates payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.852Z","requestId":"","method":"POST","path":"/api/v1/admin/rbac/permissions","durationMs":4,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC permissions routes > POST /api/v1/admin/rbac/permissions creates permission
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.853Z","requestId":"","method":"POST","path":"/api/v1/admin/rbac/permissions","durationMs":1,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.bulk.test.ts > OC academics bulk API > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.854Z","requestId":"","method":"GET","path":"/api/v1/oc/academics/bulk","durationMs":1,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC permissions routes > PATCH /api/v1/admin/rbac/permissions/:permissionId updates permission
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.854Z","requestId":"","method":"PATCH","path":"/api/v1/admin/rbac/permissions/perm-1","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC permissions routes > DELETE /api/v1/admin/rbac/permissions/:permissionId returns 404 when missing
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.855Z","requestId":"","method":"DELETE","path":"/api/v1/admin/rbac/permissions/perm-missing","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC permissions routes > GET /api/v1/admin/rbac/permissions returns 403 for non-admin
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.855Z","requestId":"","method":"GET","path":"/api/v1/admin/rbac/permissions","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > GET /api/v1/admin/rbac/mappings returns role and position mappings
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.856Z","requestId":"","method":"GET","path":"/api/v1/admin/rbac/mappings","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > PUT /api/v1/admin/rbac/mappings validates payload requirements
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.857Z","requestId":"","method":"PUT","path":"/api/v1/admin/rbac/mappings","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.bulk.test.ts > OC academics bulk API > returns 403 when authz denies the bulk-read action
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.858Z","requestId":"","method":"GET","path":"/api/v1/oc/academics/bulk","durationMs":4,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > PUT /api/v1/admin/rbac/mappings updates role mappings
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.858Z","requestId":"","method":"PUT","path":"/api/v1/admin/rbac/mappings","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.bulk.test.ts > OC academics bulk API > returns workflow_required for POST when workflow is active
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.859Z","requestId":"","method":"POST","path":"/api/v1/oc/academics/bulk","durationMs":0,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > GET /api/v1/admin/rbac/roles returns roles and positions
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.859Z","requestId":"","method":"GET","path":"/api/v1/admin/rbac/roles","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > POST /api/v1/admin/rbac/roles validates payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.860Z","requestId":"","method":"POST","path":"/api/v1/admin/rbac/roles","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > POST /api/v1/admin/rbac/roles creates role
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.861Z","requestId":"","method":"POST","path":"/api/v1/admin/rbac/roles","durationMs":0,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.bulk.test.ts > OC academics bulk API > accepts practical breakdown fields for POST bulk upserts
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.862Z","requestId":"","method":"POST","path":"/api/v1/oc/academics/bulk","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > PATCH /api/v1/admin/rbac/roles/:roleId updates role
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.863Z","requestId":"","method":"PATCH","path":"/api/v1/admin/rbac/roles/role-2","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.bulk.test.ts > OC academics bulk API > returns 403 when admin bulk access is disabled by module access settings
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.863Z","requestId":"","method":"GET","path":"/api/v1/oc/academics/bulk","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > DELETE /api/v1/admin/rbac/roles/:roleId rejects immutable roles
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.864Z","requestId":"","method":"DELETE","path":"/api/v1/admin/rbac/roles/role-1","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+ ✓ tests/api/oc.academics.bulk.test.ts (6 tests) 25ms
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > GET /api/v1/admin/rbac/field-rules returns field rules
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.865Z","requestId":"","method":"GET","path":"/api/v1/admin/rbac/field-rules","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.rbac.test.ts > RBAC mappings, roles, and field rules routes > POST /api/v1/admin/rbac/field-rules validates payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.867Z","requestId":"","method":"POST","path":"/api/v1/admin/rbac/field-rules","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+ ✓ tests/api/admin.rbac.test.ts (17 tests) 39ms
+stdout | tests/api/subjects.[id].test.ts > GET /api/v1/subjects/[id] > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.876Z","requestId":"","method":"GET","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":4,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.[id].test.ts > GET /api/v1/subjects/[id] > returns 400 for invalid id param
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.882Z","requestId":"","method":"GET","path":"/api/v1/subjects/invalid-id","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.[id].test.ts > GET /api/v1/subjects/[id] > returns 404 when subject is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.883Z","requestId":"","method":"GET","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.[id].test.ts > GET /api/v1/subjects/[id] > returns subject on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.885Z","requestId":"","method":"GET","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/subjects.[id].test.ts > PATCH /api/v1/subjects/[id] > returns 403 when user lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.886Z","requestId":"","method":"PATCH","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.[id].test.ts > PATCH /api/v1/subjects/[id] > returns 400 when request body has no changes
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.888Z","requestId":"","method":"PATCH","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.[id].test.ts > PATCH /api/v1/subjects/[id] > returns 400 when noOfPeriods is out of range on patch
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.889Z","requestId":"","method":"PATCH","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.[id].test.ts > PATCH /api/v1/subjects/[id] > returns 409 when updating subject violates unique code constraint
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.891Z","requestId":"","method":"PATCH","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.[id].test.ts > PATCH /api/v1/subjects/[id] > updates subject on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.893Z","requestId":"","method":"PATCH","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/subjects.[id].test.ts > DELETE /api/v1/subjects/[id] > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.895Z","requestId":"","method":"DELETE","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.[id].test.ts > DELETE /api/v1/subjects/[id] > returns 404 when subject to delete is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.897Z","requestId":"","method":"DELETE","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/subjects.[id].test.ts > DELETE /api/v1/subjects/[id] > soft-deletes subject on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.898Z","requestId":"","method":"DELETE","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/subjects.[id].test.ts > DELETE /api/v1/subjects/[id] > hard-deletes subject when requested
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.899Z","requestId":"","method":"DELETE","path":"/api/v1/subjects/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/subjects.[id].test.ts (13 tests) 30ms
+stdout | tests/api/admin.olq.templates.test.ts > Admin OLQ template APIs > GET categories returns course-scoped categories
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.984Z","requestId":"","method":"GET","path":"/api/v1/admin/olq/courses/11111111-1111-4111-8111-111111111111/categories","durationMs":6,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.olq.templates.test.ts > Admin OLQ template APIs > POST categories creates category for a course
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.989Z","requestId":"","method":"POST","path":"/api/v1/admin/olq/courses/11111111-1111-4111-8111-111111111111/categories","durationMs":1,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.olq.templates.test.ts > Admin OLQ template APIs > PATCH category by id updates course-scoped category
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.995Z","requestId":"","method":"PATCH","path":"/api/v1/admin/olq/courses/11111111-1111-4111-8111-111111111111/categories/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.olq.templates.test.ts > Admin OLQ template APIs > GET subtitles lists course-scoped subtitles
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.996Z","requestId":"","method":"GET","path":"/api/v1/admin/olq/courses/11111111-1111-4111-8111-111111111111/subtitles","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.olq.templates.test.ts > Admin OLQ template APIs > DELETE subtitle by id removes course-scoped subtitle
+{"type":"access.log","timestamp":"2026-05-09T17:55:29.997Z","requestId":"","method":"DELETE","path":"/api/v1/admin/olq/courses/11111111-1111-4111-8111-111111111111/subtitles/33333333-3333-4333-8333-333333333333","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.olq.templates.test.ts > Admin OLQ template APIs > POST copy template replaces target course template
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.000Z","requestId":"","method":"POST","path":"/api/v1/admin/olq/courses/44444444-4444-4444-8444-444444444444/copy","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.olq.templates.test.ts > Admin OLQ template APIs > returns 401 when admin auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.001Z","requestId":"","method":"GET","path":"/api/v1/admin/olq/courses/11111111-1111-4111-8111-111111111111/categories","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+ ✓ tests/api/admin.olq.templates.test.ts (7 tests) 27ms
+ ✓ tests/unit/final-result-compilation-preview.test.ts (3 tests) 23ms
+stdout | tests/api/oc.speed-march.[id].test.ts > GET /api/v1/oc/:ocId/speed-march/:id > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.083Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > GET /api/v1/oc/:ocId/speed-march/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.088Z","requestId":"","method":"GET","path":"/api/v1/oc/not-a-uuid/speed-march/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > GET /api/v1/oc/:ocId/speed-march/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.089Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > GET /api/v1/oc/:ocId/speed-march/:id > returns 404 when speed march record is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.090Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > GET /api/v1/oc/:ocId/speed-march/:id > returns 200 with speed march record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.093Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > PATCH /api/v1/oc/:ocId/speed-march/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.095Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > PATCH /api/v1/oc/:ocId/speed-march/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.095Z","requestId":"","method":"PATCH","path":"/api/v1/oc/not-a-uuid/speed-march/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > PATCH /api/v1/oc/:ocId/speed-march/:id > returns 400 when request body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.097Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > PATCH /api/v1/oc/:ocId/speed-march/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.098Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > PATCH /api/v1/oc/:ocId/speed-march/:id > returns 404 when speed march record to update is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.098Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > PATCH /api/v1/oc/:ocId/speed-march/:id > returns 200 with updated speed march record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.099Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > DELETE /api/v1/oc/:ocId/speed-march/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.099Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > DELETE /api/v1/oc/:ocId/speed-march/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.100Z","requestId":"","method":"DELETE","path":"/api/v1/oc/not-a-uuid/speed-march/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > DELETE /api/v1/oc/:ocId/speed-march/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.100Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > DELETE /api/v1/oc/:ocId/speed-march/:id > returns 404 when speed march record to delete is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.100Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > DELETE /api/v1/oc/:ocId/speed-march/:id > returns 200 with soft-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.101Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > DELETE /api/v1/oc/:ocId/speed-march/:id > returns 403 when hard delete lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.101Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.speed-march.[id].test.ts > DELETE /api/v1/oc/:ocId/speed-march/:id > returns 200 with hard-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.101Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/speed-march/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.speed-march.[id].test.ts (18 tests) 23ms
+ ✓ tests/lib/middleware.access-control.test.ts (22 tests) 29ms
+stdout | tests/api/instructors.test.ts > GET /api/v1/admin/instructors > returns 401 when auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.254Z","requestId":"","method":"GET","path":"/api/v1/admin/instructors","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.test.ts > GET /api/v1/admin/instructors > returns filtered instructors on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.262Z","requestId":"","method":"GET","path":"/api/v1/admin/instructors","durationMs":4,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/instructors.test.ts > POST /api/v1/admin/instructors > returns 401 when not authenticated
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.266Z","requestId":"","method":"POST","path":"/api/v1/admin/instructors","durationMs":1,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.test.ts > POST /api/v1/admin/instructors > returns 400 when external instructor is missing contact info
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.268Z","requestId":"","method":"POST","path":"/api/v1/admin/instructors","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.test.ts > POST /api/v1/admin/instructors > returns 400 when userId does not resolve to an active user
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.271Z","requestId":"","method":"POST","path":"/api/v1/admin/instructors","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.test.ts > POST /api/v1/admin/instructors > returns 409 when unique constraint is violated
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.273Z","requestId":"","method":"POST","path":"/api/v1/admin/instructors","durationMs":1,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/instructors.test.ts > POST /api/v1/admin/instructors > creates instructor on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.276Z","requestId":"","method":"POST","path":"/api/v1/admin/instructors","durationMs":1,"statusCode":201,"outcome":"SUCCESS"}
+
+ ✓ tests/api/instructors.test.ts (7 tests) 29ms
+stdout | tests/api/oc.weapon-training.[id].test.ts > GET /api/v1/oc/:ocId/weapon-training/:id > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.290Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > GET /api/v1/oc/:ocId/weapon-training/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.296Z","requestId":"","method":"GET","path":"/api/v1/oc/not-a-uuid/weapon-training/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > GET /api/v1/oc/:ocId/weapon-training/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.298Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > GET /api/v1/oc/:ocId/weapon-training/:id > returns 404 when weapon training record is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.299Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > GET /api/v1/oc/:ocId/weapon-training/:id > returns 200 with weapon training record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.302Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > PATCH /api/v1/oc/:ocId/weapon-training/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.303Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > PATCH /api/v1/oc/:ocId/weapon-training/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.305Z","requestId":"","method":"PATCH","path":"/api/v1/oc/not-a-uuid/weapon-training/not-a-uuid","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > PATCH /api/v1/oc/:ocId/weapon-training/:id > returns 400 when request body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.307Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > PATCH /api/v1/oc/:ocId/weapon-training/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.308Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > PATCH /api/v1/oc/:ocId/weapon-training/:id > returns 404 when weapon training record to update is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.309Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > PATCH /api/v1/oc/:ocId/weapon-training/:id > returns 200 with updated weapon training record on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.309Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > DELETE /api/v1/oc/:ocId/weapon-training/:id > returns 403 when user lacks OC access
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.310Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > DELETE /api/v1/oc/:ocId/weapon-training/:id > returns 400 for invalid UUID in path params
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.310Z","requestId":"","method":"DELETE","path":"/api/v1/oc/not-a-uuid/weapon-training/not-a-uuid","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > DELETE /api/v1/oc/:ocId/weapon-training/:id > returns 404 when OC cadet is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.310Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > DELETE /api/v1/oc/:ocId/weapon-training/:id > returns 404 when weapon training record to delete is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.311Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > DELETE /api/v1/oc/:ocId/weapon-training/:id > returns 200 with soft-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.311Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > DELETE /api/v1/oc/:ocId/weapon-training/:id > returns 403 when hard delete lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.311Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.weapon-training.[id].test.ts > DELETE /api/v1/oc/:ocId/weapon-training/:id > returns 200 with hard-delete message on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.312Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/weapon-training/22222222-2222-4222-8222-222222222222","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.weapon-training.[id].test.ts (18 tests) 29ms
+stdout | tests/api/platoons.test.ts > GET /api/v1/platoons > returns platoons with optional filters
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.313Z","requestId":"","method":"GET","path":"/api/v1/platoons","durationMs":4,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/admin.appointments-and-positions.test.ts (7 tests) 17ms
+stdout | tests/api/platoons.test.ts > POST /api/v1/platoons > returns 401 when not authenticated as admin
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.318Z","requestId":"","method":"POST","path":"/api/v1/platoons","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.test.ts > POST /api/v1/platoons > returns 400 when body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.320Z","requestId":"","method":"POST","path":"/api/v1/platoons","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.test.ts > POST /api/v1/platoons > returns 409 when platoon key or name already exists
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.321Z","requestId":"","method":"POST","path":"/api/v1/platoons","durationMs":0,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.test.ts > POST /api/v1/platoons > creates platoon on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.324Z","requestId":"","method":"POST","path":"/api/v1/platoons","durationMs":2,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/platoons.test.ts > DELETE /api/v1/platoons > returns 403 when user lacks admin privileges
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.325Z","requestId":"","method":"DELETE","path":"/api/v1/platoons","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.test.ts > DELETE /api/v1/platoons > soft-deletes all platoons on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.325Z","requestId":"","method":"DELETE","path":"/api/v1/platoons","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/platoons.test.ts (7 tests) 19ms
+stdout | tests/api/admin.site-settings.commanders.test.ts > Admin site settings commanders routes > returns 401 when auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.487Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/commanders","durationMs":2,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.site-settings.commanders.test.ts > Admin site settings commanders routes > lists commanders
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.493Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/commanders","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.commanders.test.ts > Admin site settings commanders routes > creates commander
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.497Z","requestId":"","method":"POST","path":"/api/v1/admin/site-settings/commanders","durationMs":2,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.commanders.test.ts > Admin site settings commanders routes > gets a commander by id
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.499Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/commanders/commander-1","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.commanders.test.ts > Admin site settings commanders routes > updates commander
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.501Z","requestId":"","method":"PUT","path":"/api/v1/admin/site-settings/commanders/commander-1","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.commanders.test.ts > Admin site settings commanders routes > soft deletes commander
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.502Z","requestId":"","method":"DELETE","path":"/api/v1/admin/site-settings/commanders/commander-1","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.commanders.test.ts > Admin site settings commanders routes > hard deletes commander
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.504Z","requestId":"","method":"DELETE","path":"/api/v1/admin/site-settings/commanders/commander-1/hard","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/admin.site-settings.commanders.test.ts (7 tests) 22ms
+ ✓ tests/lib/academics-api-feedback.test.ts (4 tests) 20ms
+stdout | tests/api/me.device-site-settings.test.ts > GET /api/v1/me/device-site-settings > returns 401 when auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.599Z","requestId":"","method":"GET","path":"/api/v1/me/device-site-settings","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/me.device-site-settings.test.ts > GET /api/v1/me/device-site-settings > returns settings using explicit query deviceId
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.605Z","requestId":"","method":"GET","path":"/api/v1/me/device-site-settings","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/me.device-site-settings.test.ts > GET /api/v1/me/device-site-settings > resolves deviceId from x-device-id header when query is absent
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.609Z","requestId":"","method":"GET","path":"/api/v1/me/device-site-settings","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/me.device-site-settings.test.ts > GET /api/v1/me/device-site-settings > returns defaults when no deviceId can be resolved
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.610Z","requestId":"","method":"GET","path":"/api/v1/me/device-site-settings","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/me.device-site-settings.test.ts (4 tests) 17ms
+stdout | tests/api/me.test.ts > GET /api/v1/me > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.659Z","requestId":"","method":"GET","path":"/api/v1/me","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/me.test.ts > GET /api/v1/me > returns 404 when the user no longer exists
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.663Z","requestId":"","method":"GET","path":"/api/v1/me","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/me.test.ts > GET /api/v1/me > returns current user profile on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.665Z","requestId":"","method":"GET","path":"/api/v1/me","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/me.test.ts > GET /api/v1/me > marks cadet appointments visible for platoon commander scoped identities
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.668Z","requestId":"","method":"GET","path":"/api/v1/me","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/me.test.ts > GET /api/v1/me > marks cadet appointments visible for dynamic platoon-cdr identities
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.669Z","requestId":"","method":"GET","path":"/api/v1/me","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/auth.signup.test.ts > POST /api/v1/auth/signup > returns 429 when signup rate limit is exceeded
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.669Z","requestId":"","method":"POST","path":"/api/v1/auth/signup","durationMs":4,"statusCode":429,"outcome":"FAILURE"}
+
+ ✓ tests/api/me.test.ts (5 tests) 18ms
+stdout | tests/api/auth.signup.test.ts > POST /api/v1/auth/signup > returns 400 when validation fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.673Z","requestId":"","method":"POST","path":"/api/v1/auth/signup","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/auth.signup.test.ts > POST /api/v1/auth/signup > returns 400 when preflight detects conflicts
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.674Z","requestId":"","method":"POST","path":"/api/v1/auth/signup","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/auth.signup.test.ts > POST /api/v1/auth/signup > creates a disabled user and signup request on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.676Z","requestId":"","method":"POST","path":"/api/v1/auth/signup","durationMs":1,"statusCode":201,"outcome":"SUCCESS"}
+
+ ✓ tests/api/auth.signup.test.ts (4 tests) 17ms
+stdout | tests/api/courses.offerings.test.ts > course offerings credit defaults > defaults include flags and credits from the selected subject during creation
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.850Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings","durationMs":7,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.offerings.test.ts > course offerings credit defaults > preserves explicit credit overrides during creation
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.854Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings","durationMs":0,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.offerings.test.ts > course offerings credit defaults > defaults practical credits from the subject when practical is enabled later
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.857Z","requestId":"","method":"PATCH","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings/22222222-2222-4222-8222-222222222222","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/courses.offerings.test.ts (3 tests) 21ms
+ ✓ tests/api/reports.academics.consolidated-sessional.test.ts (4 tests) 14ms
+stdout | tests/api/admin.template-copy.test.ts > Admin template copy APIs > copies PT template between courses for a semester
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.911Z","requestId":"","method":"POST","path":"/api/v1/admin/physical-training/templates/copy","durationMs":7,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.template-copy.test.ts > Admin template copy APIs > rejects PT copy when source and target course are the same
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.915Z","requestId":"","method":"POST","path":"/api/v1/admin/physical-training/templates/copy","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.template-copy.test.ts > Admin template copy APIs > copies training camp template between courses for a semester
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.916Z","requestId":"","method":"POST","path":"/api/v1/admin/training-camps/copy","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.template-copy.test.ts > Admin template copy APIs > copies interview templates between courses
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.917Z","requestId":"","method":"POST","path":"/api/v1/admin/interview/templates/copy","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.template-copy.test.ts > Admin template copy APIs > returns 401 when admin auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.918Z","requestId":"","method":"POST","path":"/api/v1/admin/physical-training/templates/copy","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+ ✓ tests/api/admin.template-copy.test.ts (5 tests) 17ms
+stdout | tests/api/oc.[ocId].test.ts > GET /api/v1/oc/[ocId] > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.950Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111","durationMs":7,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.[ocId].test.ts > GET /api/v1/oc/[ocId] > returns 403 when the OC is outside the caller scope
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.954Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.[ocId].test.ts > GET /api/v1/oc/[ocId] > returns the OC including jnu enrollment number
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.957Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.[ocId].test.ts > PATCH /api/v1/oc/[ocId] > updates jnu enrollment number for an OC
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.960Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.[ocId].test.ts > DELETE /api/v1/oc/[ocId] > archives an OC instead of hard deleting it
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.961Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.[ocId].test.ts (5 tests) 21ms
+ ✓ tests/api/admin.hierarchy.nodes.test.ts (10 tests) 17ms
+stdout | tests/api/platoons.[idOrKey].test.ts > PATCH /api/v1/platoons/[idOrKey] > returns 403 when user is not admin
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.991Z","requestId":"","method":"PATCH","path":"/api/v1/platoons/P1","durationMs":3,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.[idOrKey].test.ts > PATCH /api/v1/platoons/[idOrKey] > returns 400 when body fails validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.996Z","requestId":"","method":"PATCH","path":"/api/v1/platoons/P1","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.[idOrKey].test.ts > PATCH /api/v1/platoons/[idOrKey] > returns 404 when platoon is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.997Z","requestId":"","method":"PATCH","path":"/api/v1/platoons/P1","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.[idOrKey].test.ts > PATCH /api/v1/platoons/[idOrKey] > returns 409 when key or name conflicts
+{"type":"access.log","timestamp":"2026-05-09T17:55:30.998Z","requestId":"","method":"PATCH","path":"/api/v1/platoons/P1","durationMs":0,"statusCode":409,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.[idOrKey].test.ts > PATCH /api/v1/platoons/[idOrKey] > updates platoon on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.000Z","requestId":"","method":"PATCH","path":"/api/v1/platoons/P1","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/platoons.[idOrKey].test.ts > DELETE /api/v1/platoons/[idOrKey] > returns 401 when not authenticated as admin
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.001Z","requestId":"","method":"DELETE","path":"/api/v1/platoons/P1","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.[idOrKey].test.ts > DELETE /api/v1/platoons/[idOrKey] > returns 400 when idOrKey is missing
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.001Z","requestId":"","method":"DELETE","path":"/api/v1/platoons/","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/platoons.[idOrKey].test.ts > DELETE /api/v1/platoons/[idOrKey] > soft-deletes platoon on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.003Z","requestId":"","method":"DELETE","path":"/api/v1/platoons/P1","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/platoons.[idOrKey].test.ts (8 tests) 27ms
+stdout | tests/api/oc.olq.score-course-validation.test.ts > OC OLQ score writes validate current course template > POST returns 400 when subtitle does not belong to OC course template
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.070Z","requestId":"","method":"POST","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq","durationMs":3,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.olq.score-course-validation.test.ts > OC OLQ score writes validate current course template > POST returns 201 for valid subtitle in current course template
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.077Z","requestId":"","method":"POST","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq","durationMs":3,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.olq.score-course-validation.test.ts > OC OLQ score writes validate current course template > PATCH returns 400 when subtitle is not in active course template
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.080Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.olq.score-course-validation.test.ts > OC OLQ score writes validate current course template > PATCH returns 200 when subtitle is valid in active course template
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.080Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/oc.olq.score-course-validation.test.ts (4 tests) 17ms
+stdout | tests/api/courses.offerings.assign.test.ts > POST /api/v1/admin/courses/:courseId/offerings/assign > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.123Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings/assign","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.offerings.assign.test.ts > POST /api/v1/admin/courses/:courseId/offerings/assign > returns 403 for forbidden user
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.126Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings/assign","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.offerings.assign.test.ts > POST /api/v1/admin/courses/:courseId/offerings/assign > returns 400 for invalid payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.129Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings/assign","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.offerings.assign.test.ts > POST /api/v1/admin/courses/:courseId/offerings/assign > returns 400 when source and target are the same
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.130Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings/assign","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.offerings.assign.test.ts > POST /api/v1/admin/courses/:courseId/offerings/assign > returns 404 when target course is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.132Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings/assign","durationMs":0,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.offerings.assign.test.ts > POST /api/v1/admin/courses/:courseId/offerings/assign > returns 404 when source course is not found
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.133Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings/assign","durationMs":1,"statusCode":404,"outcome":"FAILURE"}
+
+stdout | tests/api/courses.offerings.assign.test.ts > POST /api/v1/admin/courses/:courseId/offerings/assign > copies offerings and returns created/skipped summary
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.136Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings/assign","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/courses.offerings.assign.test.ts > POST /api/v1/admin/courses/:courseId/offerings/assign > applies semester/subject filters
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.138Z","requestId":"","method":"POST","path":"/api/v1/admin/courses/11111111-1111-4111-8111-111111111111/offerings/assign","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/courses.offerings.assign.test.ts (8 tests) 23ms
+ ✓ tests/api/oc.physical-training.test.ts (7 tests) 16ms
+stdout | tests/api/oc.physical-training.workflow.test.ts > PT workflow API > GET returns PT workflow state
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.259Z","requestId":"","method":"GET","path":"/api/v1/oc/physical-training/workflow","durationMs":7,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.physical-training.workflow.test.ts > PT workflow API > POST applies PT workflow action
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.263Z","requestId":"","method":"POST","path":"/api/v1/oc/physical-training/workflow","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.physical-training.workflow.test.ts > PT workflow API > returns 400 for malformed action payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.266Z","requestId":"","method":"POST","path":"/api/v1/oc/physical-training/workflow","durationMs":3,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.physical-training.workflow.test.ts > PT workflow API > returns 400 for invalid query params
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.268Z","requestId":"","method":"GET","path":"/api/v1/oc/physical-training/workflow","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.physical-training.workflow.test.ts > PT workflow API > returns 403 when admin PT bulk access is disabled by module access settings
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.268Z","requestId":"","method":"GET","path":"/api/v1/oc/physical-training/workflow","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+ ✓ tests/api/oc.physical-training.workflow.test.ts (5 tests) 20ms
+stdout | tests/api/public.site-settings.test.ts > Public site settings routes > returns base public settings
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.308Z","requestId":"","method":"GET","path":"/api/v1/site-settings","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/public.site-settings.test.ts > Public site settings routes > returns public commanders
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.313Z","requestId":"","method":"GET","path":"/api/v1/site-settings/commanders","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/public.site-settings.test.ts > Public site settings routes > returns public awards
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.314Z","requestId":"","method":"GET","path":"/api/v1/site-settings/awards","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/public.site-settings.test.ts > Public site settings routes > returns public history for selected sort
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.316Z","requestId":"","method":"GET","path":"/api/v1/site-settings/history","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/public.site-settings.test.ts > Public site settings routes > returns public events and news for selected filters
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.318Z","requestId":"","method":"GET","path":"/api/v1/site-settings/events-news","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/public.site-settings.test.ts > Public site settings routes > returns public footer
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.319Z","requestId":"","method":"GET","path":"/api/v1/site-settings/footer","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/public.site-settings.test.ts (6 tests) 19ms
+ ✓ tests/api/pl-cdr.cadet-appointments.test.ts (5 tests) 19ms
+stdout | tests/api/oc.olq.template-readonly.test.ts > OC OLQ template routes (read-only) > GET categories resolves by OC course template
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.370Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq/categories","durationMs":7,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.olq.template-readonly.test.ts > OC OLQ template routes (read-only) > GET subtitles resolves by OC course template
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.376Z","requestId":"","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq/subtitles","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.olq.template-readonly.test.ts > OC OLQ template routes (read-only) > POST categories is blocked with 403
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.377Z","requestId":"","method":"POST","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq/categories","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.olq.template-readonly.test.ts > OC OLQ template routes (read-only) > PATCH category detail is blocked with 403
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.378Z","requestId":"","method":"PATCH","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq/categories/33333333-3333-4333-8333-333333333333","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.olq.template-readonly.test.ts > OC OLQ template routes (read-only) > POST subtitles is blocked with 403
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.378Z","requestId":"","method":"POST","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq/subtitles","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.olq.template-readonly.test.ts > OC OLQ template routes (read-only) > DELETE subtitle detail is blocked with 403
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.380Z","requestId":"","method":"DELETE","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/olq/subtitles/44444444-4444-4444-8444-444444444444","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+ ✓ tests/api/oc.olq.template-readonly.test.ts (6 tests) 22ms
+stdout | tests/api/auth.change-password.test.ts > POST /api/v1/auth/change-password > returns 401 when authentication fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.423Z","requestId":"","method":"POST","path":"/api/v1/auth/change-password","durationMs":5,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/auth.change-password.test.ts > POST /api/v1/auth/change-password > returns 400 when body is not valid JSON
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.426Z","requestId":"","method":"POST","path":"/api/v1/auth/change-password","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/auth.change-password.test.ts > POST /api/v1/auth/change-password > returns 400 when request body fails schema validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.428Z","requestId":"","method":"POST","path":"/api/v1/auth/change-password","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/auth.change-password.test.ts > POST /api/v1/auth/change-password > forbids non-admin from changing another user's password
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.428Z","requestId":"","method":"POST","path":"/api/v1/auth/change-password","durationMs":0,"statusCode":403,"outcome":"FAILURE"}
+
+ ✓ tests/api/oc.interviews.[interviewId].test.ts (6 tests) 19ms
+stdout | tests/api/auth.change-password.test.ts > POST /api/v1/auth/change-password > allows admin to reset another user's password
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.431Z","requestId":"","method":"POST","path":"/api/v1/auth/change-password","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/auth.change-password.test.ts (5 tests) 22ms
+stdout | tests/api/admin.site-settings.test.ts > Admin site settings base routes > GET returns 401 when auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.517Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings","durationMs":3,"statusCode":401,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.site-settings.test.ts > Admin site settings base routes > GET returns site settings
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.522Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.test.ts > Admin site settings base routes > PUT validates payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.526Z","requestId":"","method":"PUT","path":"/api/v1/admin/site-settings","durationMs":2,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.site-settings.test.ts > Admin site settings base routes > PUT updates settings
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.527Z","requestId":"","method":"PUT","path":"/api/v1/admin/site-settings","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.test.ts > Admin site settings logo routes > DELETE logo clears settings and removes object
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.533Z","requestId":"","method":"DELETE","path":"/api/v1/admin/site-settings/logo","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.test.ts > Admin site settings logo routes > POST presign validates and returns upload data
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.537Z","requestId":"","method":"POST","path":"/api/v1/admin/site-settings/logo/presign","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.test.ts > Admin site settings logo routes > POST presign rejects unsupported content type
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.539Z","requestId":"","method":"POST","path":"/api/v1/admin/site-settings/logo/presign","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+ ✓ tests/api/admin.site-settings.test.ts (7 tests) 28ms
+ ✓ tests/lib/ratelimit.config.test.ts (23 tests) 20ms
+ ✓ tests/lib/hierarchy-tree.test.ts (5 tests) 16ms
+stdout | tests/api/oc.academics.workflow.test.ts > academics workflow API > GET returns workflow state
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.659Z","requestId":"","method":"GET","path":"/api/v1/oc/academics/workflow","durationMs":6,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.workflow.test.ts > academics workflow API > POST applies workflow action
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.664Z","requestId":"","method":"POST","path":"/api/v1/oc/academics/workflow","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/oc.academics.workflow.test.ts > academics workflow API > returns 400 for malformed action payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.665Z","requestId":"","method":"POST","path":"/api/v1/oc/academics/workflow","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/oc.academics.workflow.test.ts > academics workflow API > returns 401 when auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.665Z","requestId":"","method":"GET","path":"/api/v1/oc/academics/workflow","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+ ✓ tests/api/oc.academics.workflow.test.ts (4 tests) 21ms
+ ✓ tests/lib/setup-resume-banner.test.tsx (2 tests) 15ms
+stdout | tests/api/admin.site-settings.footer.test.ts > Admin site settings footer route > gets footer
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.769Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/footer","durationMs":5,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.footer.test.ts > Admin site settings footer route > creates footer
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.772Z","requestId":"","method":"POST","path":"/api/v1/admin/site-settings/footer","durationMs":1,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.footer.test.ts > Admin site settings footer route > updates footer
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.775Z","requestId":"","method":"PATCH","path":"/api/v1/admin/site-settings/footer","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/admin.site-settings.footer.test.ts (3 tests) 16ms
+ ✓ tests/api/platoon-image-presign.test.ts (3 tests) 13ms
+stdout | tests/api/admin.olq.templates.apply.test.ts > POST /api/v1/admin/olq/templates/apply > runs dry-run for selected course
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.905Z","requestId":"","method":"POST","path":"/api/v1/admin/olq/templates/apply","durationMs":9,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.olq.templates.apply.test.ts > POST /api/v1/admin/olq/templates/apply > runs apply for all courses
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.909Z","requestId":"","method":"POST","path":"/api/v1/admin/olq/templates/apply","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.olq.templates.apply.test.ts > POST /api/v1/admin/olq/templates/apply > returns 400 when scope=course and courseId missing
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.910Z","requestId":"","method":"POST","path":"/api/v1/admin/olq/templates/apply","durationMs":0,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.olq.templates.apply.test.ts > POST /api/v1/admin/olq/templates/apply > returns 401 when admin auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:31.911Z","requestId":"","method":"POST","path":"/api/v1/admin/olq/templates/apply","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+ ✓ tests/api/admin.olq.templates.apply.test.ts (4 tests) 18ms
+ ✓ tests/api/reports.mil-training.physical-assessment.test.ts (3 tests) 13ms
+ ✓ tests/api/oc.discipline.test.ts (4 tests) 9ms
+ ✓ tests/lib/server-page-auth.test.ts (11 tests) 15ms
+stdout | tests/api/admin.site-settings.events-news.test.ts > Admin site settings events/news routes > lists events/news with filters
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.098Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/events-news","durationMs":5,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.events-news.test.ts > Admin site settings events/news routes > creates an event/news item
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.103Z","requestId":"","method":"POST","path":"/api/v1/admin/site-settings/events-news","durationMs":2,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.events-news.test.ts > Admin site settings events/news routes > gets, updates and soft deletes an item
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.104Z","requestId":"","method":"GET","path":"/api/v1/admin/site-settings/events-news/1b1d4d12-7a63-4ac7-8047-67a5a7b2aa56","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.events-news.test.ts > Admin site settings events/news routes > gets, updates and soft deletes an item
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.105Z","requestId":"","method":"PUT","path":"/api/v1/admin/site-settings/events-news/1b1d4d12-7a63-4ac7-8047-67a5a7b2aa56","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.events-news.test.ts > Admin site settings events/news routes > gets, updates and soft deletes an item
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.106Z","requestId":"","method":"DELETE","path":"/api/v1/admin/site-settings/events-news/1b1d4d12-7a63-4ac7-8047-67a5a7b2aa56","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.site-settings.events-news.test.ts > Admin site settings events/news routes > hard deletes an item
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.107Z","requestId":"","method":"DELETE","path":"/api/v1/admin/site-settings/events-news/1b1d4d12-7a63-4ac7-8047-67a5a7b2aa56/hard","durationMs":1,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/admin.site-settings.events-news.test.ts (4 tests) 19ms
+ ✓ tests/api/oc.physical-training.motivation-awards.test.ts (2 tests) 10ms
+ ✓ tests/api/oc.ssb.test.ts (4 tests) 11ms
+stdout | tests/api/admin.bootstrap.templates.apply.test.ts > POST /api/v1/admin/bootstrap/templates/apply > runs dry-run apply and returns summary
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.261Z","requestId":"","method":"POST","path":"/api/v1/admin/bootstrap/templates/apply","durationMs":5,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.bootstrap.templates.apply.test.ts > POST /api/v1/admin/bootstrap/templates/apply > rejects unsupported module via validation
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.267Z","requestId":"","method":"POST","path":"/api/v1/admin/bootstrap/templates/apply","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+stdout | tests/api/admin.bootstrap.templates.apply.test.ts > POST /api/v1/admin/bootstrap/templates/apply > runs camp apply and returns summary
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.267Z","requestId":"","method":"POST","path":"/api/v1/admin/bootstrap/templates/apply","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/admin.dossier-lock.test.ts (3 tests) 9ms
+stdout | tests/api/admin.bootstrap.templates.apply.test.ts > POST /api/v1/admin/bootstrap/templates/apply > returns unauthorized when admin auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.268Z","requestId":"","method":"POST","path":"/api/v1/admin/bootstrap/templates/apply","durationMs":0,"statusCode":401,"outcome":"FAILURE"}
+
+ ✓ tests/api/admin.bootstrap.templates.apply.test.ts (4 tests) 14ms
+stdout | tests/api/me.workflow-notifications.test.ts > workflow notifications API > GET lists current user notifications
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.331Z","requestId":"","method":"GET","path":"/api/v1/me/workflow-notifications","durationMs":3,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/me.workflow-notifications.test.ts > workflow notifications API > POST marks notifications as read
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.335Z","requestId":"","method":"POST","path":"/api/v1/me/workflow-notifications","durationMs":2,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/me.workflow-notifications.test.ts > workflow notifications API > returns 401 when current user auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.336Z","requestId":"","method":"GET","path":"/api/v1/me/workflow-notifications","durationMs":1,"statusCode":401,"outcome":"FAILURE"}
+
+ ✓ tests/api/me.workflow-notifications.test.ts (3 tests) 17ms
+ ✓ tests/api/oc.dossier-snapshot.test.ts (6 tests) 22ms
+ ✓ tests/api/oc.medical-category.test.ts (8 tests) 19ms
+stdout | tests/api/setup.status.test.ts > GET /api/v1/setup/status > returns fresh-install bootstrap-required status
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.436Z","requestId":"","method":"GET","path":"/api/v1/setup/status","durationMs":5,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/setup.status.test.ts > GET /api/v1/setup/status > returns partial setup progress after bootstrap
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.439Z","requestId":"","method":"GET","path":"/api/v1/setup/status","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/setup.status.test.ts > GET /api/v1/setup/status > returns fully complete setup state
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.440Z","requestId":"","method":"GET","path":"/api/v1/setup/status","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/setup.status.test.ts (3 tests) 14ms
+stdout | tests/api/bootstrap.super-admin.test.ts > POST /api/v1/bootstrap/super-admin > creates the first super admin and returns the active appointment id
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.614Z","requestId":"","method":"POST","path":"/api/v1/bootstrap/super-admin","durationMs":16,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/bootstrap.super-admin.test.ts > POST /api/v1/bootstrap/super-admin > disables bootstrap after the initial super admin exists
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.617Z","requestId":"","method":"POST","path":"/api/v1/bootstrap/super-admin","durationMs":0,"statusCode":409,"outcome":"FAILURE"}
+
+ ✓ tests/api/bootstrap.super-admin.test.ts (2 tests) 24ms
+ ✓ tests/api/oc.spr.test.ts (4 tests) 13ms
+stdout | tests/api/admin.marks-review-workflow.test.ts > admin marks review workflow API > GET returns workflow settings
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.763Z","requestId":"","method":"GET","path":"/api/v1/admin/marks-review-workflow","durationMs":9,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.marks-review-workflow.test.ts > admin marks review workflow API > PUT updates workflow settings
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.766Z","requestId":"","method":"PUT","path":"/api/v1/admin/marks-review-workflow","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.marks-review-workflow.test.ts > admin marks review workflow API > returns 403 when admin auth fails
+{"type":"access.log","timestamp":"2026-05-09T17:55:32.768Z","requestId":"","method":"GET","path":"/api/v1/admin/marks-review-workflow","durationMs":1,"statusCode":403,"outcome":"FAILURE"}
+
+ ✓ tests/api/admin.marks-review-workflow.test.ts (3 tests) 18ms
+ ✓ tests/api/oc.dossier-filling.test.ts (3 tests) 11ms
+ ✓ tests/api/appointments.active-user.test.ts (2 tests) 10ms
+ ✓ tests/api/auth.logout.test.ts (4 tests) 19ms
+ ✓ tests/api/admin.delegations.test.ts (5 tests) 25ms
+ ✓ tests/unit/acx/withAuthz.test.ts (5 tests) 15ms
+ ✓ tests/api/admin.users.test.ts (3 tests) 13ms
+ ✓ tests/api/navigation.test.ts (4 tests) 12ms
+ ✓ tests/api/oc.semester-lock-derived.test.ts (3 tests) 14ms
+ ✓ tests/api/admin.interview.templates.test.ts (3 tests) 12ms
+stdout | tests/api/admin.physical-training.templates.test.ts > Admin PT templates API > GET returns a course PT template
+{"type":"access.log","timestamp":"2026-05-09T17:55:33.336Z","requestId":"","method":"GET","path":"/api/v1/admin/physical-training/templates","durationMs":4,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/roles.test.ts > GET /api/v1/roles > returns an empty roles array by default
+{"type":"access.log","timestamp":"2026-05-09T17:55:33.340Z","requestId":"","method":"GET","path":"/api/v1/roles","durationMs":5,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/roles.test.ts > POST /api/v1/roles > echoes created role payload on happy path
+{"type":"access.log","timestamp":"2026-05-09T17:55:33.343Z","requestId":"","method":"POST","path":"/api/v1/roles","durationMs":0,"statusCode":201,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.physical-training.templates.test.ts > Admin PT templates API > GET can request legacy global fallback for dossier display compatibility
+{"type":"access.log","timestamp":"2026-05-09T17:55:33.341Z","requestId":"","method":"GET","path":"/api/v1/admin/physical-training/templates","durationMs":0,"statusCode":200,"outcome":"SUCCESS"}
+
+stdout | tests/api/admin.physical-training.templates.test.ts > Admin PT templates API > GET returns 400 when course id is missing
+{"type":"access.log","timestamp":"2026-05-09T17:55:33.343Z","requestId":"","method":"GET","path":"/api/v1/admin/physical-training/templates","durationMs":1,"statusCode":400,"outcome":"FAILURE"}
+
+ ✓ tests/api/admin.physical-training.templates.test.ts (3 tests) 14ms
+ ✓ tests/api/roles.test.ts (2 tests) 13ms
+ ✓ tests/lib/report-verification.test.ts (5 tests) 9ms
+ ✓ tests/api/oc.interviews.test.ts (3 tests) 20ms
+ ✓ tests/api/oc.autobiography.test.ts (2 tests) 10ms
+ ✓ tests/api/platoon-commander-history.public.test.ts (3 tests) 11ms
+ ✓ tests/api/admin.training-camps.settings.test.ts (4 tests) 12ms
+ ✓ tests/api/oc.parent-comms.test.ts (4 tests) 12ms
+stdout | tests/api/health.test.ts > GET /api/v1/health > returns 200 with ok=true and service metadata
+{"type":"access.log","timestamp":"2026-05-09T17:55:33.685Z","requestId":"","method":"GET","path":"/api/v1/health","durationMs":5,"statusCode":200,"outcome":"SUCCESS"}
+
+ ✓ tests/api/health.test.ts (1 test) 12ms
+ ✓ tests/lib/ratelimit.integration.test.ts (30 tests) 16ms
+ ✓ tests/api/admin.training-camps.test.ts (2 tests) 11ms
+ ✓ tests/api/admin.hierarchy.functional-role-mappings.test.ts (5 tests) 13ms
+ ✓ tests/api/admin.module-access.test.ts (3 tests) 13ms
+ ✓ tests/api/dashboard.appointments.test.ts (4 tests) 11ms
+ ✓ tests/api/me.switchable-identities.test.ts (3 tests) 14ms
+ ✓ tests/lib/semester-lock-notice.test.tsx (5 tests) 17ms
+ ✓ tests/unit/acx/action-map-baselines.test.ts (2 tests) 7ms
+ ✓ tests/api/reports.module-access.test.ts (2 tests) 8ms
+ ✓ tests/lib/authz.require-auth.test.ts (3 tests) 6ms
+ ✓ tests/unit/oc-semester-write-lock.test.ts (8 tests) 10ms
+ ✓ tests/lib/auth-return-url.test.ts (4 tests) 6ms
+ ✓ tests/lib/chart-theme.test.ts (3 tests) 5ms
+ ✓ tests/lib/module-access.test.ts (9 tests) 6ms
+ ✓ tests/api/admin.users.[id].test.ts (2 tests) 14ms
+ ✓ tests/api/oc.dossier-inspection.test.ts (2 tests) 9ms
+ ✓ tests/lib/sidebar-state.test.ts (5 tests) 5ms
+stdout | tests/api/oc.fpr.test.ts > GET /api/v1/oc/:ocId/fpr > returns fpr payload
+{"type":"access.log","timestamp":"2026-05-09T17:55:34.545Z","requestId":"e30e8f9f-d3a1-44d4-a4e6-53a0d46961ca","method":"GET","path":"/api/v1/oc/11111111-1111-4111-8111-111111111111/fpr","durationMs":7,"statusCode":200,"outcome":"SUCCESS","actorUserId":null,"tenantId":"11111111-1111-4111-8111-111111111111","eventType":"ACCESS.REQUEST","resourceType":"api"}
+
+ ✓ tests/api/oc.fpr.test.ts (1 test) 14ms
+ ✓ tests/lib/setup.page.test.ts (3 tests) 4ms
+ ✓ tests/unit/acx/principal.test.ts (3 tests) 6ms
+ ✓ tests/unit/bulk-academic-marks-import.test.ts (3 tests) 6ms
+ ✓ tests/lib/olq-template-apply.test.ts (4 tests) 5ms
+ ✓ tests/unit/academics-zero-credit-grades.test.ts (2 tests) 6ms
+ ✓ tests/lib/sidebar-visibility.test.ts (11 tests) 5ms
+ ✓ tests/unit/academic-table-rows.test.ts (8 tests) 7ms
+ ✓ tests/lib/device-site-settings.test.ts (4 tests) 6ms
+ ✓ tests/lib/interview-access.test.ts (8 tests) 4ms
+ ✓ tests/lib/switch-session.test.ts (2 tests) 4ms
+ ✓ tests/lib/dossier-route.test.ts (11 tests) 4ms
+ ✓ tests/lib/med-record.page.test.ts (2 tests) 5ms
+ ✓ tests/unit/pt-bulk-score-helpers.test.ts (7 tests) 5ms
+ ✓ tests/lib/switch-user.test.ts (9 tests) 9ms
+ ✓ tests/unit/marks-review-workflow.test.ts (7 tests) 8ms
+ ✓ tests/lib/grading.test.ts (2 tests) 4ms
+ ✓ tests/lib/theme-color.test.ts (3 tests) 5ms
+ ✓ tests/lib/interview-form-autofill.test.ts (6 tests) 4ms
+ ✓ tests/unit/template-copy-source-fallback.test.ts (6 tests) 7ms
+ ✓ tests/lib/dossier-semester.test.ts (9 tests) 6ms
+ ✓ tests/lib/site-settings-fallbacks.test.ts (4 tests) 4ms
+ ✓ tests/lib/background-detail-tabs.test.ts (4 tests) 3ms
+ ✓ tests/lib/permission-display.test.ts (5 tests) 3ms
+ ✓ tests/lib/oc-modal-scope.test.ts (4 tests) 3ms
+ ✓ tests/lib/jwt-unsafe.test.ts (2 tests) 4ms
+ ✓ tests/unit/performance-record-academics.test.ts (3 tests) 3ms
+ ✓ tests/lib/platoon-commander-access.test.ts (4 tests) 3ms
+ ✓ tests/unit/acx/authz-permissions.test.ts (6 tests) 6ms
+ ✓ tests/lib/accent-palette.test.ts (3 tests) 3ms
+ ✓ tests/lib/appointment-position-reuse.test.ts (4 tests) 3ms
+ ✓ tests/lib/interview-pending-ticker.test.ts (4 tests) 3ms
+ ✓ tests/unit/semester-grade-preview.test.ts (1 test) 5ms
+ ✓ tests/lib/medical-access.test.ts (5 tests) 3ms
+ ✓ tests/unit/oc-academics-legacy.test.ts (2 tests) 14ms
+ ✓ tests/lib/appointment-served-history.test.ts (1 test) 2ms
+ ✓ tests/lib/academics-access.test.ts (5 tests) 3ms
+ ✓ tests/lib/middleware.logout-rate-limit.test.ts (6 tests) 3ms
+ ✓ tests/lib/report-versioning-coverage.test.ts (1 test) 3ms
+ ✓ tests/lib/oc-selection.test.ts (3 tests) 2ms
+ ✓ tests/lib/module-access-draft.test.ts (3 tests) 3ms
+ ✓ tests/unit/academic-marks-core.test.ts (2 tests) 2ms
+ ✓ tests/lib/site-settings-reorder.test.ts (3 tests) 3ms
+ ✓ tests/lib/relegation-course-order.test.ts (4 tests) 3ms
+ ✓ tests/lib/setup-status.test.ts (4 tests) 2ms
+ ✓ tests/lib/bootstrap.pt-template.test.ts (2 tests) 3ms
+
+ Test Files  166 passed (166)
+      Tests  1413 passed (1413)
+   Start at  23:25:26
+   Duration  9.23s (transform 8.59s, setup 2.46s, import 45.04s, tests 7.82s, environment 23ms)
+
+END: 2026-05-09T23:25:36+0530
+EXIT_CODE: 0

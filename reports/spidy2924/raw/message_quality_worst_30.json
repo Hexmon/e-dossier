@@ -1,0 +1,365 @@
+[
+  {
+    "sha": "50203f91d7df2bc55c59ff66bcbd6c68efe5ff8d",
+    "short_sha": "50203f9",
+    "date": "2026-02-13T04:58:19+05:30",
+    "subject": "fixed build",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope",
+      "build_error_message"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "cd67bd748acf49355205c650f54200094c34c969",
+    "short_sha": "cd67bd7",
+    "date": "2026-02-12T21:28:24+05:30",
+    "subject": "fixed build",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope",
+      "build_error_message"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "708b9250e080c68dc2f6c12fde5950e2af6da0b9",
+    "short_sha": "708b925",
+    "date": "2026-02-06T19:12:14+05:30",
+    "subject": "fixed build",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope",
+      "build_error_message"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "38e0ea82eb9e95c34ed7bb1da6ceed25a33fcad6",
+    "short_sha": "38e0ea8",
+    "date": "2026-05-05T22:04:27+05:30",
+    "subject": "fuxed build error",
+    "flags": [
+      "spelling_issue",
+      "without_module_scope",
+      "build_error_message"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "ab078867c98ca6dc1041653fe7c99f4f5cdf6050",
+    "short_sha": "ab07886",
+    "date": "2026-05-03T14:27:48+05:30",
+    "subject": "fixed issues",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "cb117c22c5eb670ccb3aaeb0777fbf5ad75435d0",
+    "short_sha": "cb117c2",
+    "date": "2026-04-17T12:49:26+05:30",
+    "subject": "fixed build error",
+    "flags": [
+      "generic",
+      "without_module_scope",
+      "build_error_message"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "bbd75ec674302012b225bf7649f8b03fd32398c3",
+    "short_sha": "bbd75ec",
+    "date": "2026-04-16T01:42:09+05:30",
+    "subject": "fixed stale build issue",
+    "flags": [
+      "generic",
+      "without_module_scope",
+      "build_error_message"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "6002909c037bee3871790db1002c7f0cf315ac1f",
+    "short_sha": "6002909",
+    "date": "2026-04-12T00:33:33+05:30",
+    "subject": "fixed build errors.",
+    "flags": [
+      "generic",
+      "without_module_scope",
+      "build_error_message"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "90b9327227e107c0fc9d98fce4f5ab720b83ce9f",
+    "short_sha": "90b9327",
+    "date": "2026-04-11T09:47:08+05:30",
+    "subject": "fixed point 30",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "0ee3e4cdaeacea252adfe932f4776594b21d4158",
+    "short_sha": "0ee3e4c",
+    "date": "2026-04-11T09:16:58+05:30",
+    "subject": "fixed point 32",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "443c46393b7562fefb8951ddd2e87b348919190e",
+    "short_sha": "443c463",
+    "date": "2026-04-11T09:01:37+05:30",
+    "subject": "Fixed point 33",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "ec2f15b2929b704c17a346968dc7387ae64d5b38",
+    "short_sha": "ec2f15b",
+    "date": "2026-04-11T07:42:07+05:30",
+    "subject": "bug fixed",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "270376b3360fa669b72793e1029a184c4b02e789",
+    "short_sha": "270376b",
+    "date": "2026-04-04T01:04:11+05:30",
+    "subject": "fixed point 30",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "19a8f8e7e99c1cc6ca550893c527373da35feaf0",
+    "short_sha": "19a8f8e",
+    "date": "2026-04-03T23:57:34+05:30",
+    "subject": "fixed",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "6ba91c10f6ed6b834df6705e77af7826cd9cad08",
+    "short_sha": "6ba91c1",
+    "date": "2026-03-18T15:37:09+05:30",
+    "subject": "checking",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "a491adca78ec9968a90c4ee14ff4cd89f72afa20",
+    "short_sha": "a491adc",
+    "date": "2026-03-06T16:27:41+05:30",
+    "subject": "checking",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "f01f796ae9cd259604ca61d0a98683c25c0fb31e",
+    "short_sha": "f01f796",
+    "date": "2026-02-27T18:08:14+05:30",
+    "subject": "fixed build errors",
+    "flags": [
+      "generic",
+      "without_module_scope",
+      "build_error_message"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "6e851b5e30ec5e353b72ae555614275d4f7899bd",
+    "short_sha": "6e851b5",
+    "date": "2026-02-13T02:43:52+05:30",
+    "subject": "fixed color",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "deba97d9347fc18592f42537348f3d7fff15c705",
+    "short_sha": "deba97d",
+    "date": "2026-02-12T21:20:41+05:30",
+    "subject": "fixed",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "19fc681ac6e13de74a53979823158fd2e5d807ad",
+    "short_sha": "19fc681",
+    "date": "2026-02-12T21:20:32+05:30",
+    "subject": "fixed UI",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "010117ac6819e77abd2e25d93486e324effb5e91",
+    "short_sha": "010117a",
+    "date": "2026-02-09T19:50:06+05:30",
+    "subject": "fixed",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "7eff1f12b1dfdcc7bc45d41e9340ac956e43fc87",
+    "short_sha": "7eff1f1",
+    "date": "2026-02-09T19:46:57+05:30",
+    "subject": "fixed error",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "9c89e8205f9c8fc264086b4b7e0572b86c95c1c3",
+    "short_sha": "9c89e82",
+    "date": "2026-02-09T19:02:36+05:30",
+    "subject": "error fixed",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "feace4303d5f9ba25f217474474a54aa49e6f766",
+    "short_sha": "feace43",
+    "date": "2026-02-06T19:23:05+05:30",
+    "subject": "fixed",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "b010ad078f1750b1fd2830484990e91ec87b3216",
+    "short_sha": "b010ad0",
+    "date": "2026-02-06T19:19:42+05:30",
+    "subject": "fixed issues",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "ccceb679a87148424a1f1c0ce5d0e15da8732b5b",
+    "short_sha": "ccceb67",
+    "date": "2026-02-06T17:50:14+05:30",
+    "subject": "fixed build issue",
+    "flags": [
+      "generic",
+      "without_module_scope",
+      "build_error_message"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "5c31d8c86304049adf6c5d3906c9305b39f1a38e",
+    "short_sha": "5c31d8c",
+    "date": "2026-02-06T16:51:17+05:30",
+    "subject": "fixed error",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "cd7e2fcc97fb3a3d89d4d5f9c5067e00bc89d7d7",
+    "short_sha": "cd7e2fc",
+    "date": "2026-02-05T17:26:14+05:30",
+    "subject": "fixedd",
+    "flags": [
+      "spelling_issue",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "45ebc3054c1ea444f1a040349cb2ec977047150e",
+    "short_sha": "45ebc30",
+    "date": "2026-02-05T15:07:31+05:30",
+    "subject": "Fixed issue",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  },
+  {
+    "sha": "0ac27982ee0a4b918d5143bb59c686732565fd03",
+    "short_sha": "0ac2798",
+    "date": "2026-01-29T00:59:16+05:30",
+    "subject": "integration",
+    "flags": [
+      "generic",
+      "short_under_15_chars",
+      "without_module_scope"
+    ],
+    "weak": true
+  }
+]

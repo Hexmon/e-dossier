@@ -1,0 +1,4 @@
+COMMAND: pnpm exec eslint . -f json -o reports/spidy2924/raw/16_eslint_report.json
+START: 2026-05-09T23:26:57+0530
+END: 2026-05-09T23:27:56+0530
+EXIT_CODE: 1

@@ -1,0 +1,8 @@
+COMMAND: pnpm run typecheck
+START: 2026-05-09T23:25:04+0530
+
+> e-dossier-v2@0.1.0 typecheck /Users/anuragkumar/Desktop/e-dossier
+> tsc --noEmit --project tsconfig.json
+
+END: 2026-05-09T23:25:20+0530
+EXIT_CODE: 0

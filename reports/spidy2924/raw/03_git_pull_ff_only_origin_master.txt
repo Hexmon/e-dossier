@@ -1,0 +1,20 @@
+$ git pull --ff-only origin master
+From https://github.com/Hexmon/e-dossier
+ * branch            master     -> FETCH_HEAD
+Updating eb75ab2..e30e591
+Fast-forward
+ .../dashboard/[id]/milmgmt/discip-records/page.tsx | 39 ----------
+ src/app/lib/api/medCatApi.ts                       | 37 ++++++++--
+ src/app/lib/oc-validators.ts                       | 29 ++++++--
+ src/components/background/AutobiographySection.tsx | 86 ++++++++++++----------
+ src/components/discipline/DisciplineForm.tsx       | 52 ++-----------
+ src/components/discipline/DisciplineTable.tsx      | 48 ++----------
+ .../dossier/OfficerCadetFormComponent.tsx          | 56 ++++++++++++--
+ src/components/medical/MedicalCategorySection.tsx  | 42 +++++++----
+ src/hooks/useDossierSnapshot.ts                    | 17 ++++-
+ src/lib/dossier-snapshot-photo.ts                  |  8 ++
+ src/types/med-records.ts                           | 14 ++--
+ tests/api/oc.medical-category.test.ts              | 59 +++++++++++++++
+ 12 files changed, 275 insertions(+), 212 deletions(-)
+ create mode 100644 src/lib/dossier-snapshot-photo.ts
+EXIT_CODE=0

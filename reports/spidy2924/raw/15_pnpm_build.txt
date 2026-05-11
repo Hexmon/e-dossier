@@ -1,0 +1,363 @@
+COMMAND: pnpm run build
+START: 2026-05-09T23:25:40+0530
+
+> e-dossier-v2@0.1.0 build /Users/anuragkumar/Desktop/e-dossier
+> tsx scripts/build-next.ts
+
+   ▲ Next.js 15.4.11
+   - Environments: .env
+
+   Creating an optimized production build ...
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (139kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ ✓ Compiled successfully in 25.0s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/111) ...
+   Generating static pages (27/111) 
+   Generating static pages (55/111) 
+   Generating static pages (83/111) 
+ ✓ Generating static pages (111/111)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                                                  Size  First Load JS
+┌ ƒ /                                                                                     2.46 kB         133 kB
+├ ○ /_not-found                                                                             996 B         102 kB
+├ ƒ /api/v1/admin/academics/grading-policy                                                  633 B         102 kB
+├ ƒ /api/v1/admin/academics/grading-policy/recalculate                                      633 B         102 kB
+├ ƒ /api/v1/admin/appointments                                                              633 B         102 kB
+├ ƒ /api/v1/admin/appointments/[id]                                                         633 B         102 kB
+├ ƒ /api/v1/admin/appointments/[id]/transfer                                                252 B         111 kB
+├ ƒ /api/v1/admin/audit-logs                                                                633 B         102 kB
+├ ƒ /api/v1/admin/bootstrap/templates/apply                                                 633 B         102 kB
+├ ƒ /api/v1/admin/courses                                                                   633 B         102 kB
+├ ƒ /api/v1/admin/courses/[courseId]                                                        633 B         102 kB
+├ ƒ /api/v1/admin/courses/[courseId]/offerings                                              633 B         102 kB
+├ ƒ /api/v1/admin/courses/[courseId]/offerings/[offeringId]                                 633 B         102 kB
+├ ƒ /api/v1/admin/courses/[courseId]/offerings/assign                                       633 B         102 kB
+├ ƒ /api/v1/admin/delegations                                                               633 B         102 kB
+├ ƒ /api/v1/admin/delegations/[id]/terminate                                                252 B         111 kB
+├ ƒ /api/v1/admin/device-site-settings                                                      633 B         102 kB
+├ ƒ /api/v1/admin/discipline                                                                633 B         102 kB
+├ ƒ /api/v1/admin/discipline/[id]                                                           633 B         102 kB
+├ ƒ /api/v1/admin/dossier-lock                                                              633 B         102 kB
+├ ƒ /api/v1/admin/hierarchy/functional-role-mappings                                        633 B         102 kB
+├ ƒ /api/v1/admin/hierarchy/nodes                                                           633 B         102 kB
+├ ƒ /api/v1/admin/hierarchy/nodes/[id]                                                      252 B         111 kB
+├ ƒ /api/v1/admin/hierarchy/nodes/reorder                                                   633 B         102 kB
+├ ƒ /api/v1/admin/instructors                                                               633 B         102 kB
+├ ƒ /api/v1/admin/instructors/[id]                                                          633 B         102 kB
+├ ƒ /api/v1/admin/interview/pending                                                         633 B         102 kB
+├ ƒ /api/v1/admin/interview/pending/ticker-setting                                          633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates                                                       633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]                                          633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/fields/[fieldId]                         633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/fields/[fieldId]/options                 633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/fields/[fieldId]/options/[optionId]      633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/groups                                   633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/groups/[groupId]                         633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/groups/[groupId]/fields                  633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/sections                                 633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/sections/[sectionId]                     633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/sections/[sectionId]/fields              633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/semesters                                633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/[templateId]/semesters/[semester]                     633 B         102 kB
+├ ƒ /api/v1/admin/interview/templates/copy                                                  633 B         102 kB
+├ ƒ /api/v1/admin/marks-review-workflow                                                     633 B         102 kB
+├ ƒ /api/v1/admin/module-access                                                             633 B         102 kB
+├ ƒ /api/v1/admin/olq/courses/[courseId]/categories                                         633 B         102 kB
+├ ƒ /api/v1/admin/olq/courses/[courseId]/categories/[categoryId]                            633 B         102 kB
+├ ƒ /api/v1/admin/olq/courses/[courseId]/copy                                               633 B         102 kB
+├ ƒ /api/v1/admin/olq/courses/[courseId]/subtitles                                          633 B         102 kB
+├ ƒ /api/v1/admin/olq/courses/[courseId]/subtitles/[subtitleId]                             633 B         102 kB
+├ ƒ /api/v1/admin/olq/templates/apply                                                       633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/motivation-fields                                       633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/motivation-fields/[id]                                  633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/templates                                               633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/templates/copy                                          633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types                                                   633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types/[typeId]                                          633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types/[typeId]/attempts                                 633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types/[typeId]/attempts/[attemptId]                     633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types/[typeId]/attempts/[attemptId]/grades              633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types/[typeId]/attempts/[attemptId]/grades/[gradeId]    633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types/[typeId]/tasks                                    633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types/[typeId]/tasks/[taskId]                           633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types/[typeId]/tasks/[taskId]/scores                    633 B         102 kB
+├ ƒ /api/v1/admin/physical-training/types/[typeId]/tasks/[taskId]/scores/[scoreId]          633 B         102 kB
+├ ƒ /api/v1/admin/platoons/[idOrKey]/commander-history                                      633 B         102 kB
+├ ƒ /api/v1/admin/positions                                                                 633 B         102 kB
+├ ƒ /api/v1/admin/positions/[id]                                                            633 B         102 kB
+├ ƒ /api/v1/admin/positions/active-holder                                                   633 B         102 kB
+├ ƒ /api/v1/admin/positions/slots                                                           633 B         102 kB
+├ ƒ /api/v1/admin/punishments                                                               633 B         102 kB
+├ ƒ /api/v1/admin/punishments/[id]                                                          633 B         102 kB
+├ ƒ /api/v1/admin/rbac/field-rules                                                          633 B         102 kB
+├ ƒ /api/v1/admin/rbac/field-rules/[ruleId]                                                 633 B         102 kB
+├ ƒ /api/v1/admin/rbac/mappings                                                             633 B         102 kB
+├ ƒ /api/v1/admin/rbac/permissions                                                          633 B         102 kB
+├ ƒ /api/v1/admin/rbac/permissions/[permissionId]                                           633 B         102 kB
+├ ƒ /api/v1/admin/rbac/roles                                                                633 B         102 kB
+├ ƒ /api/v1/admin/rbac/roles/[roleId]                                                       633 B         102 kB
+├ ƒ /api/v1/admin/relegation/courses                                                        633 B         102 kB
+├ ƒ /api/v1/admin/relegation/enrollments/[ocId]                                             633 B         102 kB
+├ ƒ /api/v1/admin/relegation/enrollments/[ocId]/modules                                     633 B         102 kB
+├ ƒ /api/v1/admin/relegation/exception                                                      633 B         102 kB
+├ ƒ /api/v1/admin/relegation/history                                                        633 B         102 kB
+├ ƒ /api/v1/admin/relegation/media/[historyId]/signed-url                                   633 B         102 kB
+├ ƒ /api/v1/admin/relegation/ocs                                                            633 B         102 kB
+├ ƒ /api/v1/admin/relegation/presign                                                        633 B         102 kB
+├ ƒ /api/v1/admin/relegation/promote-course                                                 633 B         102 kB
+├ ƒ /api/v1/admin/relegation/transfer                                                       633 B         102 kB
+├ ƒ /api/v1/admin/relegation/void-promotion                                                 633 B         102 kB
+├ ƒ /api/v1/admin/reports/verification/verify                                               633 B         102 kB
+├ ƒ /api/v1/admin/signup-requests                                                           252 B         111 kB
+├ ƒ /api/v1/admin/signup-requests/[id]                                                      252 B         111 kB
+├ ƒ /api/v1/admin/signup-requests/[id]/approve                                              252 B         111 kB
+├ ƒ /api/v1/admin/signup-requests/[id]/reject                                               252 B         111 kB
+├ ƒ /api/v1/admin/site-settings                                                             633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/awards                                                      633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/awards/[id]                                                 633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/awards/[id]/hard                                            633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/awards/reorder                                              633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/commanders                                                  633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/commanders/[id]                                             633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/commanders/[id]/hard                                        633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/events-news                                                 633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/events-news/[id]                                            633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/events-news/[id]/hard                                       633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/footer                                                      633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/hero-bg                                                     633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/hero-bg/presign                                             633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/history                                                     633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/history/[id]                                                633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/history/[id]/hard                                           633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/logo                                                        633 B         102 kB
+├ ƒ /api/v1/admin/site-settings/logo/presign                                                633 B         102 kB
+├ ƒ /api/v1/admin/subjects                                                                  633 B         102 kB
+├ ƒ /api/v1/admin/subjects/[id]                                                             633 B         102 kB
+├ ƒ /api/v1/admin/training-camps                                                            633 B         102 kB
+├ ƒ /api/v1/admin/training-camps/[campId]                                                   633 B         102 kB
+├ ƒ /api/v1/admin/training-camps/[campId]/activities                                        633 B         102 kB
+├ ƒ /api/v1/admin/training-camps/[campId]/activities/[activityId]                           633 B         102 kB
+├ ƒ /api/v1/admin/training-camps/copy                                                       633 B         102 kB
+├ ƒ /api/v1/admin/training-camps/settings                                                   633 B         102 kB
+├ ƒ /api/v1/admin/users                                                                     633 B         102 kB
+├ ƒ /api/v1/admin/users/[id]                                                                252 B         111 kB
+├ ƒ /api/v1/admin/users/check-username                                                      633 B         102 kB
+├ ƒ /api/v1/appointments/[id]/active-user                                                   633 B         102 kB
+├ ƒ /api/v1/auth/change-password                                                            633 B         102 kB
+├ ƒ /api/v1/auth/login                                                                      633 B         102 kB
+├ ƒ /api/v1/auth/logout                                                                     633 B         102 kB
+├ ƒ /api/v1/auth/signup                                                                     252 B         111 kB
+├ ƒ /api/v1/bootstrap/super-admin                                                           633 B         102 kB
+├ ƒ /api/v1/dashboard/data/appointments                                                     633 B         102 kB
+├ ƒ /api/v1/dashboard/data/course                                                           633 B         102 kB
+├ ƒ /api/v1/dashboard/data/platoon                                                          633 B         102 kB
+├ ƒ /api/v1/health                                                                          633 B         102 kB
+├ ƒ /api/v1/me                                                                              633 B         102 kB
+├ ƒ /api/v1/me/device-site-settings                                                         633 B         102 kB
+├ ƒ /api/v1/me/navigation                                                                   633 B         102 kB
+├ ƒ /api/v1/me/switchable-identities                                                        633 B         102 kB
+├ ƒ /api/v1/me/workflow-notifications                                                       633 B         102 kB
+├ ƒ /api/v1/oc                                                                              633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]                                                                       633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/academics                                                             633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/academics/[semester]                                                  633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/academics/[semester]/subjects/[subjectId]                             633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/achievements                                                          633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/achievements/[id]                                                     252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/autobiography                                                         633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/camps                                                                 633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/club-achievements                                                     633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/club-achievements/[id]                                                252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/clubs                                                                 633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/clubs/[id]                                                            252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/counselling                                                           633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/counselling/[id]                                                      252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/credit-for-excellence                                                 633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/credit-for-excellence/[id]                                            252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/discipline                                                            633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/discipline/[id]                                                       252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/dossier-filling                                                       633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/dossier-inspection                                                    633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/dossier-snapshot                                                      633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/drill                                                                 633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/drill/[id]                                                            252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/education                                                             633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/education/[id]                                                        252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/family                                                                633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/family/[id]                                                           252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/fpr                                                                   633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/images                                                                633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/images/complete                                                       633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/images/presign                                                        633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/interviews                                                            633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/interviews/[interviewId]                                              633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/medical                                                               633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/medical-category                                                      633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/medical-category/[id]                                                 252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/medical/[id]                                                          252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/motivation-awards                                                     633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/motivation-awards/[id]                                                252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/obstacle-training                                                     633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/obstacle-training/[id]                                                252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/olq                                                                   633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/olq/[id]                                                              633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/olq/by-semester                                                       633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/olq/categories                                                        633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/olq/categories/[categoryId]                                           633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/olq/subtitles                                                         633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/olq/subtitles/[subtitleId]                                            633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/parent-comms                                                          633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/parent-comms/[id]                                                     252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/performance-graph                                                     633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/personal                                                              633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/physical-training                                                     633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/physical-training/motivation-awards                                   633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/recording-leave-hike-detention                                        633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/recording-leave-hike-detention/[id]                                   252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/special-achievement-in-firing                                         633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/special-achievement-in-firing/[id]                                    252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/speed-march                                                           633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/speed-march/[id]                                                      252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/sports-and-games                                                      633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/sports-and-games/[id]                                                 252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/spr                                                                   633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/ssb                                                                   633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/ssb/points                                                            633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/ssb/points/[id]                                                       252 B         111 kB
+├ ƒ /api/v1/oc/[ocId]/weapon-training                                                       633 B         102 kB
+├ ƒ /api/v1/oc/[ocId]/weapon-training/[id]                                                  252 B         111 kB
+├ ƒ /api/v1/oc/academics/bulk                                                               633 B         102 kB
+├ ƒ /api/v1/oc/academics/workflow                                                           633 B         102 kB
+├ ƒ /api/v1/oc/bulk-upload                                                                  633 B         102 kB
+├ ƒ /api/v1/oc/physical-training/bulk                                                       633 B         102 kB
+├ ƒ /api/v1/oc/physical-training/workflow                                                   633 B         102 kB
+├ ƒ /api/v1/pl-cdr/cadet-appointments                                                       633 B         102 kB
+├ ƒ /api/v1/pl-cdr/cadet-appointments/[id]                                                  252 B         111 kB
+├ ƒ /api/v1/pl-cdr/cadet-appointments/[id]/transfer                                         252 B         111 kB
+├ ƒ /api/v1/platoons                                                                        633 B         102 kB
+├ ƒ /api/v1/platoons/[idOrKey]                                                              633 B         102 kB
+├ ƒ /api/v1/platoons/[idOrKey]/commander-history                                            633 B         102 kB
+├ ƒ /api/v1/platoons/image/presign                                                          633 B         102 kB
+├ ƒ /api/v1/reports/academics/consolidated-sessional/download                               633 B         102 kB
+├ ƒ /api/v1/reports/academics/consolidated-sessional/preview                                633 B         102 kB
+├ ƒ /api/v1/reports/academics/final-result-compilation/download                             633 B         102 kB
+├ ƒ /api/v1/reports/academics/final-result-compilation/preview                              633 B         102 kB
+├ ƒ /api/v1/reports/academics/semester-grade/candidates                                     633 B         102 kB
+├ ƒ /api/v1/reports/academics/semester-grade/download                                       633 B         102 kB
+├ ƒ /api/v1/reports/academics/semester-grade/preview/[ocId]                                 633 B         102 kB
+├ ƒ /api/v1/reports/metadata/course-semesters                                               633 B         102 kB
+├ ƒ /api/v1/reports/mil-training/physical-assessment/download                               633 B         102 kB
+├ ƒ /api/v1/reports/mil-training/physical-assessment/preview                                633 B         102 kB
+├ ƒ /api/v1/reports/overall-training/course-wise-final-performance/download                 633 B         102 kB
+├ ƒ /api/v1/reports/overall-training/course-wise-final-performance/preview                  633 B         102 kB
+├ ƒ /api/v1/reports/overall-training/course-wise-performance/download                       633 B         102 kB
+├ ƒ /api/v1/reports/overall-training/course-wise-performance/preview                        633 B         102 kB
+├ ƒ /api/v1/roles                                                                           633 B         102 kB
+├ ƒ /api/v1/settings/device-site                                                            633 B         102 kB
+├ ƒ /api/v1/setup/status                                                                    633 B         102 kB
+├ ƒ /api/v1/site-settings                                                                   633 B         102 kB
+├ ƒ /api/v1/site-settings/awards                                                            633 B         102 kB
+├ ƒ /api/v1/site-settings/commanders                                                        633 B         102 kB
+├ ƒ /api/v1/site-settings/events-news                                                       633 B         102 kB
+├ ƒ /api/v1/site-settings/footer                                                            633 B         102 kB
+├ ƒ /api/v1/site-settings/history                                                           633 B         102 kB
+├ ƒ /dashboard                                                                            5.38 kB         240 kB
+├ ƒ /dashboard/[id]/milmgmt                                                               4.78 kB         321 kB
+├ ƒ /dashboard/[id]/milmgmt/academics                                                     13.4 kB         325 kB
+├ ƒ /dashboard/[id]/milmgmt/background-detls                                              14.1 kB         328 kB
+├ ƒ /dashboard/[id]/milmgmt/camps                                                         8.82 kB         324 kB
+├ ƒ /dashboard/[id]/milmgmt/club-detls                                                    7.47 kB         320 kB
+├ ƒ /dashboard/[id]/milmgmt/comn-parents                                                  6.47 kB         323 kB
+├ ƒ /dashboard/[id]/milmgmt/counselling                                                   6.79 kB         324 kB
+├ ƒ /dashboard/[id]/milmgmt/credit-excellence                                             8.15 kB         325 kB
+├ ƒ /dashboard/[id]/milmgmt/detention                                                     5.41 kB         319 kB
+├ ƒ /dashboard/[id]/milmgmt/discip-records                                                6.71 kB         327 kB
+├ ƒ /dashboard/[id]/milmgmt/dossier-filling                                               5.61 kB         314 kB
+├ ƒ /dashboard/[id]/milmgmt/dossier-insp                                                  5.89 kB         324 kB
+├ ƒ /dashboard/[id]/milmgmt/dossier-snapshot                                               6.1 kB         315 kB
+├ ƒ /dashboard/[id]/milmgmt/final-performance                                             4.91 kB         317 kB
+├ ƒ /dashboard/[id]/milmgmt/hikes                                                         5.81 kB         323 kB
+├ ƒ /dashboard/[id]/milmgmt/initial-interview                                               487 B         102 kB
+├ ƒ /dashboard/[id]/milmgmt/interview-term                                                  484 B         102 kB
+├ ƒ /dashboard/[id]/milmgmt/interviews                                                    16.8 kB         330 kB
+├ ƒ /dashboard/[id]/milmgmt/leave-record                                                   5.9 kB         323 kB
+├ ƒ /dashboard/[id]/milmgmt/med-record                                                      11 kB         328 kB
+├ ƒ /dashboard/[id]/milmgmt/obstacle-trg                                                  5.58 kB         322 kB
+├ ƒ /dashboard/[id]/milmgmt/olq-assessment                                                 5.5 kB         317 kB
+├ ƒ /dashboard/[id]/milmgmt/overall-assessment                                            7.26 kB         321 kB
+├ ƒ /dashboard/[id]/milmgmt/performance-graph                                             4.16 kB         313 kB
+├ ƒ /dashboard/[id]/milmgmt/pers-particulars                                              7.89 kB         318 kB
+├ ƒ /dashboard/[id]/milmgmt/physical-training                                             10.7 kB         326 kB
+├ ƒ /dashboard/[id]/milmgmt/semester-record                                                  6 kB         323 kB
+├ ƒ /dashboard/[id]/milmgmt/speed-march                                                   5.82 kB         323 kB
+├ ƒ /dashboard/[id]/milmgmt/sports-awards                                                 6.28 kB         320 kB
+├ ƒ /dashboard/[id]/milmgmt/ssb-reports                                                   3.89 kB         314 kB
+├ ƒ /dashboard/[id]/milmgmt/wpn-trg                                                       6.27 kB         323 kB
+├ ƒ /dashboard/audit-logs                                                                   166 B         105 kB
+├ ƒ /dashboard/bulk-upload                                                                2.23 kB         229 kB
+├ ƒ /dashboard/genmgmt                                                                    7.29 kB         244 kB
+├ ƒ /dashboard/genmgmt/academics                                                          5.78 kB         240 kB
+├ ƒ /dashboard/genmgmt/appointmentmgmt                                                    8.56 kB         251 kB
+├ ƒ /dashboard/genmgmt/approvalmgmt                                                       5.68 kB         243 kB
+├ ƒ /dashboard/genmgmt/camps                                                              8.93 kB         252 kB
+├ ƒ /dashboard/genmgmt/coursemgmt                                                         12.8 kB         243 kB
+├ ƒ /dashboard/genmgmt/coursemgmt/[courseId]/offerings                                    7.25 kB         254 kB
+├ ƒ /dashboard/genmgmt/discipline-records                                                 9.38 kB         250 kB
+├ ƒ /dashboard/genmgmt/grading-policy                                                     8.37 kB         245 kB
+├ ƒ /dashboard/genmgmt/hierarchy                                                          9.96 kB         237 kB
+├ ƒ /dashboard/genmgmt/instructors                                                        3.81 kB         251 kB
+├ ƒ /dashboard/genmgmt/interviews-mgmt                                                    4.58 kB         256 kB
+├ ƒ /dashboard/genmgmt/interviews-mgmt/[id]                                               13.1 kB         251 kB
+├ ƒ /dashboard/genmgmt/ocmgmt                                                             19.6 kB         408 kB
+├ ƒ /dashboard/genmgmt/olq-mgmt                                                             13 kB         275 kB
+├ ƒ /dashboard/genmgmt/platoon-management                                                 7.71 kB         276 kB
+├ ƒ /dashboard/genmgmt/promotion-relegation                                               2.56 kB         230 kB
+├ ƒ /dashboard/genmgmt/promotion-relegation/promote-course                                5.67 kB         233 kB
+├ ƒ /dashboard/genmgmt/promotion-relegation/relegation                                    11.6 kB         239 kB
+├ ƒ /dashboard/genmgmt/pt-mgmt                                                            16.7 kB         250 kB
+├ ƒ /dashboard/genmgmt/punishments                                                        5.37 kB         249 kB
+├ ƒ /dashboard/genmgmt/rbac                                                                 17 kB         244 kB
+├ ƒ /dashboard/genmgmt/relegation                                                           633 B         102 kB
+├ ƒ /dashboard/genmgmt/report-verification                                                6.47 kB         243 kB
+├ ƒ /dashboard/genmgmt/settings/dossier-lock                                               2.8 kB         230 kB
+├ ƒ /dashboard/genmgmt/settings/marks-review-workflow                                      5.5 kB         233 kB
+├ ƒ /dashboard/genmgmt/settings/module-access                                             4.22 kB         231 kB
+├ ƒ /dashboard/genmgmt/settings/site                                                      12.7 kB         265 kB
+├ ƒ /dashboard/genmgmt/subjectmgmt                                                         6.8 kB         247 kB
+├ ƒ /dashboard/genmgmt/usersmgmt                                                          5.67 kB         246 kB
+├ ƒ /dashboard/help                                                                       1.45 kB         229 kB
+├ ƒ /dashboard/help/admin-operations                                                      1.65 kB         272 kB
+├ ƒ /dashboard/help/org-templates                                                         1.65 kB         272 kB
+├ ƒ /dashboard/help/org-templates/grading-policy                                          1.65 kB         272 kB
+├ ƒ /dashboard/help/org-templates/olq                                                     1.65 kB         272 kB
+├ ƒ /dashboard/help/org-templates/physical-training                                       1.65 kB         272 kB
+├ ƒ /dashboard/help/setup-guide                                                           1.65 kB         272 kB
+├ ƒ /dashboard/manage-marks                                                               9.89 kB         388 kB
+├ ƒ /dashboard/manage-pt-marks                                                            11.2 kB         238 kB
+├ ƒ /dashboard/reports                                                                    16.3 kB         243 kB
+├ ƒ /dashboard/settings                                                                   1.72 kB         229 kB
+├ ƒ /dashboard/settings/device                                                            5.03 kB         232 kB
+├ ƒ /dashboard/settings/device/appointments                                               5.47 kB         233 kB
+├ ƒ /dashboard/settings/ticker                                                            4.94 kB         235 kB
+├ ƒ /login                                                                                3.39 kB         178 kB
+├ ƒ /platoon/[platoonKey]                                                                 1.16 kB         132 kB
+├ ○ /robots.txt                                                                             633 B         102 kB
+├ ƒ /setup                                                                                9.07 kB         145 kB
+├ ○ /signup                                                                               3.97 kB         149 kB
+└ ○ /sitemap.xml                                                                            633 B         102 kB
++ First Load JS shared by all                                                              101 kB
+  ├ chunks/3204-334a4648f56c1b57.js                                                       44.4 kB
+  ├ chunks/5f147f2e-9363238978ad4421.js                                                   54.1 kB
+  └ other shared chunks (total)                                                            2.8 kB
+
+
+ƒ Middleware                                                                              90.8 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+END: 2026-05-09T23:26:49+0530
+EXIT_CODE: 0

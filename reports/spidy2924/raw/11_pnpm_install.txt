@@ -1,0 +1,37 @@
+COMMAND: pnpm install
+START: 2026-05-09T23:29:16+0530
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+
+> e-dossier-v2@0.1.0 postinstall /Users/anuragkumar/Desktop/e-dossier
+> pnpm run setup:git-hooks
+
+
+> e-dossier-v2@0.1.0 setup:git-hooks /Users/anuragkumar/Desktop/e-dossier
+> bash scripts/setup-git-hooks.sh || pwsh -File scripts/setup-git-hooks.ps1
+
+Configured core.hooksPath to .githooks and made hooks executable.
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;34m🔧 Setting Up Git Hooks (macOS/Linux)[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[1;33m[1/3][0m Configuring Git to use .githooks directory...
+[0;32m✓[0m core.hooksPath set to: .githooks
+[1;33m[2/3][0m Making hooks executable...
+[0;32m✓[0m .githooks/pre-push is now executable
+[1;33m[3/3][0m Verifying setup...
+[0;32m✓[0m Git hooks path verified: .githooks
+[0;32m✓[0m .githooks/pre-push is executable
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m✅ Git Hooks Setup Complete![0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+Next steps:
+  1. Verify setup: git config core.hooksPath
+  2. Make a commit and try: git push
+  3. The pre-push hook will automatically run lint, typecheck, and build
+
+Done in 960ms using pnpm v10.25.0
+END: 2026-05-09T23:29:17+0530
+EXIT_CODE: 0

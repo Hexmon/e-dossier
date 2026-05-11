@@ -1,0 +1,1399 @@
+{
+  "generated_at": "2026-05-09T18:02:04.187Z",
+  "repository": {
+    "current_branch": "master",
+    "head_sha": "e30e59150d961ba468ffdfbcdca90d6616da84ed",
+    "total_commits_on_master": 813,
+    "status_short_branch": [
+      "## master...origin/master",
+      "?? reports/"
+    ]
+  },
+  "contributor": {
+    "github_username": "Spidy2924",
+    "target_name": "Pratik Mahapatra",
+    "aliases": [
+      {
+        "name": "Pratik Mahapatra",
+        "email": "pratikmahapatra29@gmail.com"
+      },
+      {
+        "name": "Spidy",
+        "email": "105922663+Spidy2924@users.noreply.github.com"
+      }
+    ],
+    "local_author_matching": {
+      "matched_commit_count": 197,
+      "local_alias_commit_counts_on_master": [
+        {
+          "name": "Pratik Mahapatra",
+          "email": "pratikmahapatra29@gmail.com",
+          "commits": 190
+        },
+        {
+          "name": "Spidy",
+          "email": "105922663+Spidy2924@users.noreply.github.com",
+          "commits": 7
+        }
+      ]
+    },
+    "github_cli": {
+      "available": false,
+      "reason": "gh command not found in PATH; see raw/06_gh_auth_status.txt"
+    }
+  },
+  "commit_metrics": {
+    "total_commits": 197,
+    "non_merge_commits": 140,
+    "merge_commits": 57,
+    "first_commit_date": "2025-11-21T15:37:02+05:30",
+    "latest_commit_date": "2026-05-09T11:27:01+05:30",
+    "active_commit_days": 61,
+    "missing_calendar_days": 109,
+    "missing_weekdays": 76,
+    "commits_per_month": {
+      "2025-11": 16,
+      "2025-12": 19,
+      "2026-01": 38,
+      "2026-02": 56,
+      "2026-03": 14,
+      "2026-04": 44,
+      "2026-05": 10
+    },
+    "commits_per_week": {
+      "2025-W47": 4,
+      "2025-W48": 12,
+      "2025-W49": 2,
+      "2025-W50": 13,
+      "2025-W51": 2,
+      "2025-W52": 2,
+      "2026-W02": 3,
+      "2026-W03": 17,
+      "2026-W05": 18,
+      "2026-W06": 17,
+      "2026-W07": 23,
+      "2026-W09": 16,
+      "2026-W10": 8,
+      "2026-W11": 2,
+      "2026-W12": 2,
+      "2026-W13": 2,
+      "2026-W14": 12,
+      "2026-W15": 14,
+      "2026-W16": 11,
+      "2026-W17": 1,
+      "2026-W18": 9,
+      "2026-W19": 7
+    },
+    "commits_per_day": {
+      "2025-11-21": 2,
+      "2025-11-22": 2,
+      "2025-11-24": 4,
+      "2025-11-25": 1,
+      "2025-11-27": 1,
+      "2025-11-28": 3,
+      "2025-11-29": 3,
+      "2025-12-06": 1,
+      "2025-12-07": 1,
+      "2025-12-09": 3,
+      "2025-12-10": 2,
+      "2025-12-11": 2,
+      "2025-12-12": 3,
+      "2025-12-13": 3,
+      "2025-12-15": 2,
+      "2025-12-27": 2,
+      "2026-01-06": 2,
+      "2026-01-10": 1,
+      "2026-01-12": 1,
+      "2026-01-13": 9,
+      "2026-01-15": 7,
+      "2026-01-27": 2,
+      "2026-01-29": 4,
+      "2026-01-30": 7,
+      "2026-01-31": 5,
+      "2026-02-02": 1,
+      "2026-02-05": 6,
+      "2026-02-06": 8,
+      "2026-02-07": 2,
+      "2026-02-09": 5,
+      "2026-02-10": 3,
+      "2026-02-11": 1,
+      "2026-02-12": 8,
+      "2026-02-13": 6,
+      "2026-02-23": 5,
+      "2026-02-26": 5,
+      "2026-02-27": 3,
+      "2026-02-28": 3,
+      "2026-03-05": 2,
+      "2026-03-06": 4,
+      "2026-03-07": 2,
+      "2026-03-10": 2,
+      "2026-03-18": 2,
+      "2026-03-23": 1,
+      "2026-03-26": 1,
+      "2026-04-03": 4,
+      "2026-04-04": 8,
+      "2026-04-10": 5,
+      "2026-04-11": 8,
+      "2026-04-12": 1,
+      "2026-04-16": 6,
+      "2026-04-17": 5,
+      "2026-04-24": 1,
+      "2026-04-28": 2,
+      "2026-04-29": 3,
+      "2026-04-30": 1,
+      "2026-05-01": 2,
+      "2026-05-03": 1,
+      "2026-05-04": 1,
+      "2026-05-05": 4,
+      "2026-05-09": 2
+    },
+    "longest_inactivity_gaps": [
+      {
+        "from": "2025-12-15",
+        "to": "2025-12-27",
+        "inactive_days": 11
+      },
+      {
+        "from": "2026-01-15",
+        "to": "2026-01-27",
+        "inactive_days": 11
+      },
+      {
+        "from": "2025-12-27",
+        "to": "2026-01-06",
+        "inactive_days": 9
+      },
+      {
+        "from": "2026-02-13",
+        "to": "2026-02-23",
+        "inactive_days": 9
+      },
+      {
+        "from": "2026-03-10",
+        "to": "2026-03-18",
+        "inactive_days": 7
+      },
+      {
+        "from": "2026-03-26",
+        "to": "2026-04-03",
+        "inactive_days": 7
+      },
+      {
+        "from": "2025-11-29",
+        "to": "2025-12-06",
+        "inactive_days": 6
+      },
+      {
+        "from": "2026-04-17",
+        "to": "2026-04-24",
+        "inactive_days": 6
+      },
+      {
+        "from": "2026-04-04",
+        "to": "2026-04-10",
+        "inactive_days": 5
+      },
+      {
+        "from": "2026-02-28",
+        "to": "2026-03-05",
+        "inactive_days": 4
+      }
+    ],
+    "commit_burst_days_gt_5": [
+      {
+        "date": "2026-01-13",
+        "commits": 9
+      },
+      {
+        "date": "2026-01-15",
+        "commits": 7
+      },
+      {
+        "date": "2026-01-30",
+        "commits": 7
+      },
+      {
+        "date": "2026-02-05",
+        "commits": 6
+      },
+      {
+        "date": "2026-02-06",
+        "commits": 8
+      },
+      {
+        "date": "2026-02-12",
+        "commits": 8
+      },
+      {
+        "date": "2026-02-13",
+        "commits": 6
+      },
+      {
+        "date": "2026-04-04",
+        "commits": 8
+      },
+      {
+        "date": "2026-04-11",
+        "commits": 8
+      },
+      {
+        "date": "2026-04-16",
+        "commits": 6
+      }
+    ]
+  },
+  "loc_metrics": {
+    "total_added": 78935,
+    "total_deleted": 36903,
+    "binary_files_touched": 3,
+    "production_added": 59088,
+    "production_deleted": 19185,
+    "test_added": 8148,
+    "test_deleted": 190,
+    "documentation_added": 0,
+    "documentation_deleted": 0,
+    "config_build_added": 2686,
+    "config_build_deleted": 217,
+    "generated_lock_artifact_added": 9013,
+    "generated_lock_artifact_deleted": 17311,
+    "clean_code_added": 69922,
+    "clean_code_deleted": 19592,
+    "excluded_added": 9013,
+    "excluded_deleted": 17311,
+    "net_lines": 42032,
+    "clean_code_net_lines": 50330,
+    "excluded_net_lines": -8298,
+    "files_touched": 649,
+    "category_rules": {
+      "production": "Default category for non-test, non-doc, non-config, non-generated tracked paths.",
+      "test": "tests/**, __tests__/**, and *.test/spec source files.",
+      "documentation": "docs/** and Markdown/text documentation, excluding generated database docs.",
+      "config_build": "Build/config/scripts/SQL migration style files.",
+      "generated_lock_artifact": "Lock files, build artifacts, generated files, media/binary paths, drizzle/meta snapshots, and docs/reference/database/generated/**."
+    },
+    "clean_code_exclusion_rules": [
+      "pnpm-lock.yaml",
+      "package-lock.json",
+      "yarn.lock",
+      "node_modules/**",
+      ".next/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      "test-results/**",
+      "playwright-report/**",
+      "*.map",
+      "generated files",
+      "binary files",
+      "image/font/media files"
+    ]
+  },
+  "surviving_current_loc_ownership": {
+    "source_like_file_extensions": [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".cjs",
+      ".css",
+      ".scss",
+      ".json (only non-lock, non-generated, non-config noise)"
+    ],
+    "excluded_paths": [
+      "lock files",
+      "generated files",
+      "build artifacts",
+      "test-results",
+      "node_modules",
+      "images/binaries",
+      "drizzle/meta/**",
+      "docs/reference/database/generated/**"
+    ],
+    "source_like_files_scanned": 1296,
+    "files_with_surviving_lines": 566,
+    "total_surviving_loc": 45116,
+    "top_20_files_owned_by_contributor": [
+      {
+        "file": "src/app/db/queries/interviewTemplates.ts",
+        "surviving_loc": 890
+      },
+      {
+        "file": "src/app/api/v1/admin/interview/pending/route.ts",
+        "surviving_loc": 634
+      },
+      {
+        "file": "src/app/dashboard/settings/device/appointments/CadetAppointmentsSettingsPageClient.tsx",
+        "surviving_loc": 611
+      },
+      {
+        "file": "src/app/db/queries/physicalTraining.ts",
+        "surviving_loc": 611
+      },
+      {
+        "file": "src/hooks/useInterviewTemplates.ts",
+        "surviving_loc": 611
+      },
+      {
+        "file": "src/app/db/queries/cadet-appointments.ts",
+        "surviving_loc": 528
+      },
+      {
+        "file": "src/components/physic-training/PhysicalForm.tsx",
+        "surviving_loc": 497
+      },
+      {
+        "file": "src/lib/interviewTemplateMatching.ts",
+        "surviving_loc": 483
+      },
+      {
+        "file": "src/lib/interview-access.ts",
+        "surviving_loc": 476
+      },
+      {
+        "file": "src/components/academics/SubjectWiseStudentsTable.tsx",
+        "surviving_loc": 472
+      },
+      {
+        "file": "src/lib/interviewFormService.ts",
+        "surviving_loc": 459
+      },
+      {
+        "file": "src/components/academics/AcademicTable.tsx",
+        "surviving_loc": 442
+      },
+      {
+        "file": "src/hooks/usePhysicalTraining.ts",
+        "surviving_loc": 436
+      },
+      {
+        "file": "src/app/dashboard/genmgmt/settings/site/page.tsx",
+        "surviving_loc": 415
+      },
+      {
+        "file": "src/app/dashboard/genmgmt/camps/page.tsx",
+        "surviving_loc": 406
+      },
+      {
+        "file": "src/components/physic-training/Swimming.tsx",
+        "surviving_loc": 393
+      },
+      {
+        "file": "src/components/semester-record/semesterForm.tsx",
+        "surviving_loc": 393
+      },
+      {
+        "file": "src/components/physic-training/IpetForm.tsx",
+        "surviving_loc": 392
+      },
+      {
+        "file": "src/components/physic-training/HigherTests.tsx",
+        "surviving_loc": 389
+      },
+      {
+        "file": "src/components/interview-term/TermSubForm.tsx",
+        "surviving_loc": 380
+      }
+    ]
+  },
+  "commit_message_quality": {
+    "weak_messages": 197,
+    "weak_message_percentage": 100,
+    "generic_messages": 81,
+    "spelling_issue_messages": 6,
+    "shorter_than_15_characters": 28,
+    "without_module_scope": 143,
+    "merge_commit_messages": 57,
+    "build_error_messages": 9,
+    "worst_30_messages": [
+      {
+        "sha": "50203f91d7df2bc55c59ff66bcbd6c68efe5ff8d",
+        "short_sha": "50203f9",
+        "date": "2026-02-13T04:58:19+05:30",
+        "subject": "fixed build",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope",
+          "build_error_message"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "cd67bd748acf49355205c650f54200094c34c969",
+        "short_sha": "cd67bd7",
+        "date": "2026-02-12T21:28:24+05:30",
+        "subject": "fixed build",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope",
+          "build_error_message"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "708b9250e080c68dc2f6c12fde5950e2af6da0b9",
+        "short_sha": "708b925",
+        "date": "2026-02-06T19:12:14+05:30",
+        "subject": "fixed build",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope",
+          "build_error_message"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "38e0ea82eb9e95c34ed7bb1da6ceed25a33fcad6",
+        "short_sha": "38e0ea8",
+        "date": "2026-05-05T22:04:27+05:30",
+        "subject": "fuxed build error",
+        "flags": [
+          "spelling_issue",
+          "without_module_scope",
+          "build_error_message"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "ab078867c98ca6dc1041653fe7c99f4f5cdf6050",
+        "short_sha": "ab07886",
+        "date": "2026-05-03T14:27:48+05:30",
+        "subject": "fixed issues",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "cb117c22c5eb670ccb3aaeb0777fbf5ad75435d0",
+        "short_sha": "cb117c2",
+        "date": "2026-04-17T12:49:26+05:30",
+        "subject": "fixed build error",
+        "flags": [
+          "generic",
+          "without_module_scope",
+          "build_error_message"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "bbd75ec674302012b225bf7649f8b03fd32398c3",
+        "short_sha": "bbd75ec",
+        "date": "2026-04-16T01:42:09+05:30",
+        "subject": "fixed stale build issue",
+        "flags": [
+          "generic",
+          "without_module_scope",
+          "build_error_message"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "6002909c037bee3871790db1002c7f0cf315ac1f",
+        "short_sha": "6002909",
+        "date": "2026-04-12T00:33:33+05:30",
+        "subject": "fixed build errors.",
+        "flags": [
+          "generic",
+          "without_module_scope",
+          "build_error_message"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "90b9327227e107c0fc9d98fce4f5ab720b83ce9f",
+        "short_sha": "90b9327",
+        "date": "2026-04-11T09:47:08+05:30",
+        "subject": "fixed point 30",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "0ee3e4cdaeacea252adfe932f4776594b21d4158",
+        "short_sha": "0ee3e4c",
+        "date": "2026-04-11T09:16:58+05:30",
+        "subject": "fixed point 32",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "443c46393b7562fefb8951ddd2e87b348919190e",
+        "short_sha": "443c463",
+        "date": "2026-04-11T09:01:37+05:30",
+        "subject": "Fixed point 33",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "ec2f15b2929b704c17a346968dc7387ae64d5b38",
+        "short_sha": "ec2f15b",
+        "date": "2026-04-11T07:42:07+05:30",
+        "subject": "bug fixed",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "270376b3360fa669b72793e1029a184c4b02e789",
+        "short_sha": "270376b",
+        "date": "2026-04-04T01:04:11+05:30",
+        "subject": "fixed point 30",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "19a8f8e7e99c1cc6ca550893c527373da35feaf0",
+        "short_sha": "19a8f8e",
+        "date": "2026-04-03T23:57:34+05:30",
+        "subject": "fixed",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "6ba91c10f6ed6b834df6705e77af7826cd9cad08",
+        "short_sha": "6ba91c1",
+        "date": "2026-03-18T15:37:09+05:30",
+        "subject": "checking",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "a491adca78ec9968a90c4ee14ff4cd89f72afa20",
+        "short_sha": "a491adc",
+        "date": "2026-03-06T16:27:41+05:30",
+        "subject": "checking",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "f01f796ae9cd259604ca61d0a98683c25c0fb31e",
+        "short_sha": "f01f796",
+        "date": "2026-02-27T18:08:14+05:30",
+        "subject": "fixed build errors",
+        "flags": [
+          "generic",
+          "without_module_scope",
+          "build_error_message"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "6e851b5e30ec5e353b72ae555614275d4f7899bd",
+        "short_sha": "6e851b5",
+        "date": "2026-02-13T02:43:52+05:30",
+        "subject": "fixed color",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "deba97d9347fc18592f42537348f3d7fff15c705",
+        "short_sha": "deba97d",
+        "date": "2026-02-12T21:20:41+05:30",
+        "subject": "fixed",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "19fc681ac6e13de74a53979823158fd2e5d807ad",
+        "short_sha": "19fc681",
+        "date": "2026-02-12T21:20:32+05:30",
+        "subject": "fixed UI",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "010117ac6819e77abd2e25d93486e324effb5e91",
+        "short_sha": "010117a",
+        "date": "2026-02-09T19:50:06+05:30",
+        "subject": "fixed",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "7eff1f12b1dfdcc7bc45d41e9340ac956e43fc87",
+        "short_sha": "7eff1f1",
+        "date": "2026-02-09T19:46:57+05:30",
+        "subject": "fixed error",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "9c89e8205f9c8fc264086b4b7e0572b86c95c1c3",
+        "short_sha": "9c89e82",
+        "date": "2026-02-09T19:02:36+05:30",
+        "subject": "error fixed",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "feace4303d5f9ba25f217474474a54aa49e6f766",
+        "short_sha": "feace43",
+        "date": "2026-02-06T19:23:05+05:30",
+        "subject": "fixed",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "b010ad078f1750b1fd2830484990e91ec87b3216",
+        "short_sha": "b010ad0",
+        "date": "2026-02-06T19:19:42+05:30",
+        "subject": "fixed issues",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "ccceb679a87148424a1f1c0ce5d0e15da8732b5b",
+        "short_sha": "ccceb67",
+        "date": "2026-02-06T17:50:14+05:30",
+        "subject": "fixed build issue",
+        "flags": [
+          "generic",
+          "without_module_scope",
+          "build_error_message"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "5c31d8c86304049adf6c5d3906c9305b39f1a38e",
+        "short_sha": "5c31d8c",
+        "date": "2026-02-06T16:51:17+05:30",
+        "subject": "fixed error",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "cd7e2fcc97fb3a3d89d4d5f9c5067e00bc89d7d7",
+        "short_sha": "cd7e2fc",
+        "date": "2026-02-05T17:26:14+05:30",
+        "subject": "fixedd",
+        "flags": [
+          "spelling_issue",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "45ebc3054c1ea444f1a040349cb2ec977047150e",
+        "short_sha": "45ebc30",
+        "date": "2026-02-05T15:07:31+05:30",
+        "subject": "Fixed issue",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      },
+      {
+        "sha": "0ac27982ee0a4b918d5143bb59c686732565fd03",
+        "short_sha": "0ac2798",
+        "date": "2026-01-29T00:59:16+05:30",
+        "subject": "integration",
+        "flags": [
+          "generic",
+          "short_under_15_chars",
+          "without_module_scope"
+        ],
+        "weak": true
+      }
+    ]
+  },
+  "rework_instability": {
+    "rework_like_commits": 86,
+    "rework_like_ratio": 0.4365,
+    "rework_like_percentage": 43.65,
+    "consecutive_fix_chains": [
+      {
+        "length": 2,
+        "from": "2025-11-28T12:57:38+05:30",
+        "to": "2025-11-28T13:05:49+05:30",
+        "commits": [
+          {
+            "sha": "97d65c38e66eff3892950d6310428929fd286eea",
+            "date": "2025-11-28T12:57:38+05:30",
+            "subject": "FIxed Conflicts"
+          },
+          {
+            "sha": "690e48610116b75aeeecb040a863c8d04e99b23b",
+            "date": "2025-11-28T13:05:49+05:30",
+            "subject": "fixed conflicts"
+          }
+        ]
+      },
+      {
+        "length": 2,
+        "from": "2025-12-12T00:49:27+05:30",
+        "to": "2025-12-12T23:43:17+05:30",
+        "commits": [
+          {
+            "sha": "7d23bc2e199369984d20c920744303aefceae203",
+            "date": "2025-12-12T00:49:27+05:30",
+            "subject": "Fixed detention and snapshot UI issues"
+          },
+          {
+            "sha": "0eca89a8a685b680b3394c001aa1da61dfbf419e",
+            "date": "2025-12-12T23:43:17+05:30",
+            "subject": "fixed, motivation and added performance graph in selected cadet table, also made a modal to show the graphs."
+          }
+        ]
+      },
+      {
+        "length": 2,
+        "from": "2026-01-13T20:07:04+05:30",
+        "to": "2026-01-15T00:30:51+05:30",
+        "commits": [
+          {
+            "sha": "c4b33b00845df97749242d8b7d3906a8b578f046",
+            "date": "2026-01-13T20:07:04+05:30",
+            "subject": "fixed changes"
+          },
+          {
+            "sha": "ee762b9f1fbfb42e637a2360766f964733d94c2a",
+            "date": "2026-01-15T00:30:51+05:30",
+            "subject": "Created and integrated dossier inspection api's. Also fixed 403 errors."
+          }
+        ]
+      },
+      {
+        "length": 5,
+        "from": "2026-01-31T15:28:27+05:30",
+        "to": "2026-01-31T23:55:36+05:30",
+        "commits": [
+          {
+            "sha": "989db9c6cb753902e2edbad3a4d410a3a2b78b91",
+            "date": "2026-01-31T15:28:27+05:30",
+            "subject": "checking logout time issue"
+          },
+          {
+            "sha": "71187c9c5fdb9194beb72505a444069bdd6cb080",
+            "date": "2026-01-31T15:29:03+05:30",
+            "subject": "Merge remote-tracking branch 'origin/master' into 143-logout-api-is-slow-takes-too-much-time-investigate-fix-performance"
+          },
+          {
+            "sha": "fe46995406a7c423974d70802140ce1b75fc3da9",
+            "date": "2026-01-31T15:56:08+05:30",
+            "subject": "Logout API is Slow / Takes Too Much Time (Investigate + Fix Performance)"
+          },
+          {
+            "sha": "efbdf1c80cbdd6e5750f4d1c5cb0db5498a01bcc",
+            "date": "2026-01-31T15:56:16+05:30",
+            "subject": "Merge remote-tracking branch 'origin/master' into 143-logout-api-is-slow-takes-too-much-time-investigate-fix-performance"
+          },
+          {
+            "sha": "d54370b7fe648d3d043f9ab337ac4ab54c32d1fe",
+            "date": "2026-01-31T23:55:36+05:30",
+            "subject": "Merge remote-tracking branch 'origin/master' into 143-logout-api-is-slow-takes-too-much-time-investigate-fix-performance"
+          }
+        ]
+      },
+      {
+        "length": 3,
+        "from": "2026-02-05T15:07:31+05:30",
+        "to": "2026-02-05T17:21:53+05:30",
+        "commits": [
+          {
+            "sha": "45ebc3054c1ea444f1a040349cb2ec977047150e",
+            "date": "2026-02-05T15:07:31+05:30",
+            "subject": "Fixed issue"
+          },
+          {
+            "sha": "613554691a52f844eb5fd1ae9fd4a4411c544e9b",
+            "date": "2026-02-05T17:10:00+05:30",
+            "subject": "fixed interview"
+          },
+          {
+            "sha": "6631cb3a99d75bd7f5dbb930f35a8a1ae0559157",
+            "date": "2026-02-05T17:21:53+05:30",
+            "subject": "fixed interview"
+          }
+        ]
+      },
+      {
+        "length": 3,
+        "from": "2026-02-06T16:51:17+05:30",
+        "to": "2026-02-06T17:50:14+05:30",
+        "commits": [
+          {
+            "sha": "5c31d8c86304049adf6c5d3906c9305b39f1a38e",
+            "date": "2026-02-06T16:51:17+05:30",
+            "subject": "fixed error"
+          },
+          {
+            "sha": "fad6fb821b4e73a4982e35dd5c124ae7ae3d6b6a",
+            "date": "2026-02-06T17:44:06+05:30",
+            "subject": "Fixed term tabs in interview"
+          },
+          {
+            "sha": "ccceb679a87148424a1f1c0ce5d0e15da8732b5b",
+            "date": "2026-02-06T17:50:14+05:30",
+            "subject": "fixed build issue"
+          }
+        ]
+      },
+      {
+        "length": 4,
+        "from": "2026-02-06T19:12:14+05:30",
+        "to": "2026-02-07T16:13:04+05:30",
+        "commits": [
+          {
+            "sha": "708b9250e080c68dc2f6c12fde5950e2af6da0b9",
+            "date": "2026-02-06T19:12:14+05:30",
+            "subject": "fixed build"
+          },
+          {
+            "sha": "b010ad078f1750b1fd2830484990e91ec87b3216",
+            "date": "2026-02-06T19:19:42+05:30",
+            "subject": "fixed issues"
+          },
+          {
+            "sha": "feace4303d5f9ba25f217474474a54aa49e6f766",
+            "date": "2026-02-06T19:23:05+05:30",
+            "subject": "fixed"
+          },
+          {
+            "sha": "d01b4cedc757352ac93bbaff9a9a1fc0bccef081",
+            "date": "2026-02-07T16:13:04+05:30",
+            "subject": "fixed medical PATCH by implementing mustBeAuthed and loaded latest data from the api for text areas sections."
+          }
+        ]
+      },
+      {
+        "length": 3,
+        "from": "2026-02-09T19:46:57+05:30",
+        "to": "2026-02-10T00:55:30+05:30",
+        "commits": [
+          {
+            "sha": "7eff1f12b1dfdcc7bc45d41e9340ac956e43fc87",
+            "date": "2026-02-09T19:46:57+05:30",
+            "subject": "fixed error"
+          },
+          {
+            "sha": "010117ac6819e77abd2e25d93486e324effb5e91",
+            "date": "2026-02-09T19:50:06+05:30",
+            "subject": "fixed"
+          },
+          {
+            "sha": "c50c8009d021e04104e8df74825c5d6e838d4731",
+            "date": "2026-02-10T00:55:30+05:30",
+            "subject": "fixed snapshot and filling validation errors while saving them"
+          }
+        ]
+      },
+      {
+        "length": 4,
+        "from": "2026-02-12T21:20:32+05:30",
+        "to": "2026-02-13T02:25:41+05:30",
+        "commits": [
+          {
+            "sha": "19fc681ac6e13de74a53979823158fd2e5d807ad",
+            "date": "2026-02-12T21:20:32+05:30",
+            "subject": "fixed UI"
+          },
+          {
+            "sha": "deba97d9347fc18592f42537348f3d7fff15c705",
+            "date": "2026-02-12T21:20:41+05:30",
+            "subject": "fixed"
+          },
+          {
+            "sha": "cd67bd748acf49355205c650f54200094c34c969",
+            "date": "2026-02-12T21:28:24+05:30",
+            "subject": "fixed build"
+          },
+          {
+            "sha": "66acc95eee46499ac1c03bac5566c327c73f7bad",
+            "date": "2026-02-13T02:25:41+05:30",
+            "subject": "Fixed all changes"
+          }
+        ]
+      },
+      {
+        "length": 2,
+        "from": "2026-02-13T02:43:52+05:30",
+        "to": "2026-02-13T04:51:32+05:30",
+        "commits": [
+          {
+            "sha": "6e851b5e30ec5e353b72ae555614275d4f7899bd",
+            "date": "2026-02-13T02:43:52+05:30",
+            "subject": "fixed color"
+          },
+          {
+            "sha": "309962b134e590ce72e7d0271b9568015f905165",
+            "date": "2026-02-13T04:51:32+05:30",
+            "subject": "fixed UI for dark theme."
+          }
+        ]
+      },
+      {
+        "length": 2,
+        "from": "2026-02-13T04:58:19+05:30",
+        "to": "2026-02-23T01:40:07+05:30",
+        "commits": [
+          {
+            "sha": "50203f91d7df2bc55c59ff66bcbd6c68efe5ff8d",
+            "date": "2026-02-13T04:58:19+05:30",
+            "subject": "fixed build"
+          },
+          {
+            "sha": "b41382b9d2075bc662424d246e0a5fbd606107a5",
+            "date": "2026-02-23T01:40:07+05:30",
+            "subject": "FIxed Interviews for admin and OC"
+          }
+        ]
+      },
+      {
+        "length": 2,
+        "from": "2026-02-27T18:08:14+05:30",
+        "to": "2026-02-28T00:40:06+05:30",
+        "commits": [
+          {
+            "sha": "f01f796ae9cd259604ca61d0a98683c25c0fb31e",
+            "date": "2026-02-27T18:08:14+05:30",
+            "subject": "fixed build errors"
+          },
+          {
+            "sha": "74bac0e2710bae46ce5706e73f301ec888f35306",
+            "date": "2026-02-28T00:40:06+05:30",
+            "subject": "fixed ODT graph to show PT total marks scored data."
+          }
+        ]
+      },
+      {
+        "length": 2,
+        "from": "2026-03-06T15:57:25+05:30",
+        "to": "2026-03-06T16:27:41+05:30",
+        "commits": [
+          {
+            "sha": "47e441416abe38c4ff39ecc3c0f7662537b5bbc8",
+            "date": "2026-03-06T15:57:25+05:30",
+            "subject": "fixed failed appointments error"
+          },
+          {
+            "sha": "a491adca78ec9968a90c4ee14ff4cd89f72afa20",
+            "date": "2026-03-06T16:27:41+05:30",
+            "subject": "checking"
+          }
+        ]
+      },
+      {
+        "length": 2,
+        "from": "2026-03-18T15:37:09+05:30",
+        "to": "2026-03-18T19:33:11+05:30",
+        "commits": [
+          {
+            "sha": "6ba91c10f6ed6b834df6705e77af7826cd9cad08",
+            "date": "2026-03-18T15:37:09+05:30",
+            "subject": "checking"
+          },
+          {
+            "sha": "437852ae1656619541390aa0d6d61480ee80ba19",
+            "date": "2026-03-18T19:33:11+05:30",
+            "subject": "Fixed PT reports, fixed bulk and individual PT form entry for A and C categories."
+          }
+        ]
+      },
+      {
+        "length": 3,
+        "from": "2026-03-26T20:06:09+05:30",
+        "to": "2026-04-03T23:45:00+05:30",
+        "commits": [
+          {
+            "sha": "fff16f34f0db310357b799a0c0e8fa3d75e1d705",
+            "date": "2026-03-26T20:06:09+05:30",
+            "subject": "Done point 7 and fixed final result compilation pdf."
+          },
+          {
+            "sha": "2517dc8bdbd5c4fbda64ef15249dc7045a187c13",
+            "date": "2026-04-03T17:57:21+05:30",
+            "subject": "platoons section fixed"
+          },
+          {
+            "sha": "c911e4284e936727b09ddb8d5a96678a00b9ae5f",
+            "date": "2026-04-03T23:45:00+05:30",
+            "subject": "fixed 1,18 and 9 points"
+          }
+        ]
+      },
+      {
+        "length": 5,
+        "from": "2026-04-03T23:57:34+05:30",
+        "to": "2026-04-04T10:12:33+05:30",
+        "commits": [
+          {
+            "sha": "19a8f8e7e99c1cc6ca550893c527373da35feaf0",
+            "date": "2026-04-03T23:57:34+05:30",
+            "subject": "fixed"
+          },
+          {
+            "sha": "270376b3360fa669b72793e1029a184c4b02e789",
+            "date": "2026-04-04T01:04:11+05:30",
+            "subject": "fixed point 30"
+          },
+          {
+            "sha": "1e283618d8d6449cb7450513c5e1e3fc50c8e9b1",
+            "date": "2026-04-04T02:23:39+05:30",
+            "subject": "fixed noPhaseTests, added 4 sub-columns for practical"
+          },
+          {
+            "sha": "5e725838605994bb54ea41c3a4506bcbbdf6d253",
+            "date": "2026-04-04T09:38:56+05:30",
+            "subject": "fixed point 32 & 33."
+          },
+          {
+            "sha": "b22aac95283bb73275a11d9da42dc9327dfe009b",
+            "date": "2026-04-04T10:12:33+05:30",
+            "subject": "fixed platoonSection"
+          }
+        ]
+      },
+      {
+        "length": 5,
+        "from": "2026-04-11T07:42:07+05:30",
+        "to": "2026-04-11T14:38:49+05:30",
+        "commits": [
+          {
+            "sha": "ec2f15b2929b704c17a346968dc7387ae64d5b38",
+            "date": "2026-04-11T07:42:07+05:30",
+            "subject": "bug fixed"
+          },
+          {
+            "sha": "443c46393b7562fefb8951ddd2e87b348919190e",
+            "date": "2026-04-11T09:01:37+05:30",
+            "subject": "Fixed point 33"
+          },
+          {
+            "sha": "0ee3e4cdaeacea252adfe932f4776594b21d4158",
+            "date": "2026-04-11T09:16:58+05:30",
+            "subject": "fixed point 32"
+          },
+          {
+            "sha": "90b9327227e107c0fc9d98fce4f5ab720b83ce9f",
+            "date": "2026-04-11T09:47:08+05:30",
+            "subject": "fixed point 30"
+          },
+          {
+            "sha": "beb2ef506a32490bf35efe696088cf1b4169e975",
+            "date": "2026-04-11T14:38:49+05:30",
+            "subject": "fixed point 9 and oc interviews issues."
+          }
+        ]
+      },
+      {
+        "length": 3,
+        "from": "2026-04-11T16:52:22+05:30",
+        "to": "2026-04-16T00:12:55+05:30",
+        "commits": [
+          {
+            "sha": "9f0f28c0cce8e4c23533849fd08faef8ca707de4",
+            "date": "2026-04-11T16:52:22+05:30",
+            "subject": "tests fixed"
+          },
+          {
+            "sha": "6002909c037bee3871790db1002c7f0cf315ac1f",
+            "date": "2026-04-12T00:33:33+05:30",
+            "subject": "fixed build errors."
+          },
+          {
+            "sha": "327017f12f598e4d9fe8ce4ee0b334aadf8df85a",
+            "date": "2026-04-16T00:12:55+05:30",
+            "subject": "fixed academics credits,sgpa and cgpa display issue."
+          }
+        ]
+      },
+      {
+        "length": 2,
+        "from": "2026-04-16T00:41:39+05:30",
+        "to": "2026-04-16T01:00:50+05:30",
+        "commits": [
+          {
+            "sha": "c73b95390658607432d0ce93ef665d792f5cabc6",
+            "date": "2026-04-16T00:41:39+05:30",
+            "subject": "fixed bulk academics cell size issue."
+          },
+          {
+            "sha": "11bdc935881ee8c2510ad28746b35140eadc5a3d",
+            "date": "2026-04-16T01:00:50+05:30",
+            "subject": "fixed search oc autocomplete and letter based filtering."
+          }
+        ]
+      },
+      {
+        "length": 6,
+        "from": "2026-04-17T10:42:32+05:30",
+        "to": "2026-04-28T23:42:53+05:30",
+        "commits": [
+          {
+            "sha": "67389713431faa960c412090402b62e076499e98",
+            "date": "2026-04-17T10:42:32+05:30",
+            "subject": "fixed action map entries for pl cdr routes."
+          },
+          {
+            "sha": "01503115b2817e89e775f8cbdaad059af8f0eb6b",
+            "date": "2026-04-17T12:05:28+05:30",
+            "subject": "fixed academics 1350 conversion."
+          },
+          {
+            "sha": "eb5356999c9db5daf28f28fa626769696f71e307",
+            "date": "2026-04-17T12:21:20+05:30",
+            "subject": "fixed 2500 academics marks scaling."
+          },
+          {
+            "sha": "cb117c22c5eb670ccb3aaeb0777fbf5ad75435d0",
+            "date": "2026-04-17T12:49:26+05:30",
+            "subject": "fixed build error"
+          },
+          {
+            "sha": "b96700b9813d1cd221a4e43f076d2be3542231ce",
+            "date": "2026-04-24T12:18:24+05:30",
+            "subject": "fixed medical access for pl cdr logins."
+          },
+          {
+            "sha": "85a556ddac7530cbfe745f018d42a55bf762a0b8",
+            "date": "2026-04-28T23:42:53+05:30",
+            "subject": "Fixed all the sheet tasks and dossier lock settings."
+          }
+        ]
+      },
+      {
+        "length": 2,
+        "from": "2026-04-30T22:44:54+05:30",
+        "to": "2026-05-01T22:27:51+05:30",
+        "commits": [
+          {
+            "sha": "7457b0a287fe73672afde6ed4aecb06a697b22de",
+            "date": "2026-04-30T22:44:54+05:30",
+            "subject": "fixed sheet tasks."
+          },
+          {
+            "sha": "c22c7928cbe64624d405e40790aeab3c272383d3",
+            "date": "2026-05-01T22:27:51+05:30",
+            "subject": "fixed all remaining issues of sheet."
+          }
+        ]
+      },
+      {
+        "length": 3,
+        "from": "2026-05-03T14:27:48+05:30",
+        "to": "2026-05-05T15:59:50+05:30",
+        "commits": [
+          {
+            "sha": "ab078867c98ca6dc1041653fe7c99f4f5cdf6050",
+            "date": "2026-05-03T14:27:48+05:30",
+            "subject": "fixed issues"
+          },
+          {
+            "sha": "744519d06f8f4cf63b78a384f5f3d29495aefd08",
+            "date": "2026-05-04T11:49:33+05:30",
+            "subject": "fixed remaining issues."
+          },
+          {
+            "sha": "6465ac69250c5dbb0654e861bd5a6a731c2857a4",
+            "date": "2026-05-05T15:59:50+05:30",
+            "subject": "Fixed all the remaining issues."
+          }
+        ]
+      },
+      {
+        "length": 3,
+        "from": "2026-05-05T21:54:22+05:30",
+        "to": "2026-05-09T11:26:26+05:30",
+        "commits": [
+          {
+            "sha": "bb4e55ff8db1914a88a2b5fb9a7ab27dcde3e937",
+            "date": "2026-05-05T21:54:22+05:30",
+            "subject": "Fixed all the issues.."
+          },
+          {
+            "sha": "38e0ea82eb9e95c34ed7bb1da6ceed25a33fcad6",
+            "date": "2026-05-05T22:04:27+05:30",
+            "subject": "fuxed build error"
+          },
+          {
+            "sha": "8134f800d939aab23adf925a4315c39048e22b1b",
+            "date": "2026-05-09T11:26:26+05:30",
+            "subject": "Gave input field instead of dropdown in discipline, made only date and diagnosis compulsory for med cat, fixed autobiography edit issues and gave a notice for uploading photo under 200kb size only."
+          }
+        ]
+      }
+    ],
+    "only_tests_or_build_config_commits": [
+      {
+        "sha": "8b8dadfbf23ee04fc8650adf2c9c420e401b9b15",
+        "short_sha": "8b8dadf",
+        "date": "2026-04-10T14:09:58+05:30",
+        "subject": "next standalone issue fixed.",
+        "files_changed": 4
+      },
+      {
+        "sha": "ec2f15b2929b704c17a346968dc7387ae64d5b38",
+        "short_sha": "ec2f15b",
+        "date": "2026-04-11T07:42:07+05:30",
+        "subject": "bug fixed",
+        "files_changed": 1
+      },
+      {
+        "sha": "bbd75ec674302012b225bf7649f8b03fd32398c3",
+        "short_sha": "bbd75ec",
+        "date": "2026-04-16T01:42:09+05:30",
+        "subject": "fixed stale build issue",
+        "files_changed": 1
+      },
+      {
+        "sha": "38e0ea82eb9e95c34ed7bb1da6ceed25a33fcad6",
+        "short_sha": "38e0ea8",
+        "date": "2026-05-05T22:04:27+05:30",
+        "subject": "fuxed build error",
+        "files_changed": 1
+      }
+    ],
+    "explicit_revert_commits": [],
+    "reverse_delete_recently_added_code": {
+      "status": "Not confidently detectable from git metadata alone without semantic patch/revert analysis; explicit revert commits are reported separately."
+    }
+  },
+  "github_pr_check_data": {
+    "status": "Not available",
+    "reason": "gh CLI unavailable; install/authenticate GitHub CLI to collect PR/check-suite data."
+  },
+  "code_quality": {
+    "command_results": {
+      "pnpm_install": {
+        "command": "pnpm install",
+        "raw_output": "reports/spidy2924/raw/11_pnpm_install.txt",
+        "exit_code": 0
+      },
+      "pnpm_lint": {
+        "command": "pnpm run lint",
+        "raw_output": "reports/spidy2924/raw/12_pnpm_lint.txt",
+        "exit_code": 0
+      },
+      "pnpm_typecheck": {
+        "command": "pnpm run typecheck",
+        "raw_output": "reports/spidy2924/raw/13_pnpm_typecheck.txt",
+        "exit_code": 0
+      },
+      "pnpm_test": {
+        "command": "pnpm test",
+        "raw_output": "reports/spidy2924/raw/14_pnpm_test.txt",
+        "exit_code": 0
+      },
+      "pnpm_build": {
+        "command": "pnpm run build",
+        "raw_output": "reports/spidy2924/raw/15_pnpm_build.txt",
+        "exit_code": 0
+      },
+      "eslint_dot_json_attempt": {
+        "command": "pnpm exec eslint . -f json -o reports/spidy2924/raw/16_eslint_report.json",
+        "raw_output": "reports/spidy2924/raw/16_eslint_json_run.txt",
+        "json_output": "reports/spidy2924/raw/16_eslint_report.json",
+        "exit_code": 1,
+        "used_for_attribution": false,
+        "reason": "Included generated .next build output; tracked-source JSON run used for attribution instead."
+      },
+      "eslint_tracked_source_json": {
+        "command": "pnpm exec eslint <tracked source files> -f json -o reports/spidy2924/raw/17_eslint_tracked_source_report.json",
+        "raw_output": "reports/spidy2924/raw/17_eslint_tracked_source_run.txt",
+        "json_output": "reports/spidy2924/raw/17_eslint_tracked_source_report.json",
+        "exit_code": 1
+      }
+    },
+    "standard_checks_summary": {
+      "pnpm_install_exit_code": 0,
+      "pnpm_lint_exit_code": 0,
+      "pnpm_typecheck_exit_code": 0,
+      "pnpm_test_exit_code": 0,
+      "pnpm_build_exit_code": 0,
+      "vitest_summary": "166 test files passed; 1413 tests passed (from reports/spidy2924/raw/14_pnpm_test.txt).",
+      "note": "pnpm run lint passed. The tracked-source ESLint JSON run is a separate structured attribution pass and includes files outside Next lint default scope."
+    },
+    "eslint_issue_attribution": {
+      "tracked_source_files_linted": 1291,
+      "total_issues": 7,
+      "errors": 6,
+      "warnings": 1,
+      "attributed_to_spidy2924": 0,
+      "attributed_to_other_contributors": 7,
+      "unknown_attribution": 0,
+      "findings_csv": "reports/spidy2924/code_quality_findings.csv"
+    },
+    "typescript_error_attribution": {
+      "total_errors_parsed": 0,
+      "attributed_to_spidy2924": 0,
+      "attributed_to_other_contributors": 0,
+      "unknown_attribution": 0,
+      "note": "No TypeScript errors to attribute because pnpm run typecheck exited 0."
+    }
+  }
+}

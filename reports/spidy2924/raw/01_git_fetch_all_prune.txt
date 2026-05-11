@@ -1,0 +1,6 @@
+$ git fetch --all --prune
+From https://github.com/Hexmon/e-dossier
+   eb75ab2..e30e591  master                -> origin/master
+   02046f2..a7ae424  deployment-local      -> origin/deployment-local
+   38e0ea8..544f5f7  fixing-credits-issues -> origin/fixing-credits-issues
+EXIT_CODE=0

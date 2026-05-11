@@ -1,0 +1,8 @@
+source,severity,rule_or_code,file,line,column,message,blame_author,blame_email,attribution
+eslint_tracked_source_json,error,@typescript-eslint/no-require-imports,scripts/runtime/edossier-migrate-runner.js,3,16,A `require()` style import is forbidden.,anuragkmr45,anuragkmr825@gmail.com,other_contributor
+eslint_tracked_source_json,error,@typescript-eslint/no-require-imports,scripts/runtime/edossier-migrate-runner.js,4,12,A `require()` style import is forbidden.,anuragkmr45,anuragkmr825@gmail.com,other_contributor
+eslint_tracked_source_json,error,@typescript-eslint/no-require-imports,scripts/runtime/edossier-migrate-runner.js,5,12,A `require()` style import is forbidden.,anuragkmr45,anuragkmr825@gmail.com,other_contributor
+eslint_tracked_source_json,error,@typescript-eslint/no-require-imports,scripts/runtime/edossier-migrate-runner.js,6,14,A `require()` style import is forbidden.,anuragkmr45,anuragkmr825@gmail.com,other_contributor
+eslint_tracked_source_json,error,@typescript-eslint/no-require-imports,scripts/runtime/edossier-migrate-runner.js,7,23,A `require()` style import is forbidden.,anuragkmr45,anuragkmr825@gmail.com,other_contributor
+eslint_tracked_source_json,warning,jsx-a11y/alt-text,tests/lib/login-page-client.test.tsx,13,66,"img elements must have an alt prop, either with meaningful text, or an empty string for decorative images.",anuragkmr45,anuragkmr825@gmail.com,other_contributor
+eslint_tracked_source_json,error,@next/next/no-assign-module-variable,tests/utils/generic-api-mocks.ts,390,3,Do not assign to the variable `module`. See: https://nextjs.org/docs/messages/no-assign-module-variable,anuragkmr45,anuragkmr825@gmail.com,other_contributor
