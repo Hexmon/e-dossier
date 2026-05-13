@@ -158,6 +158,13 @@ render_template() {
   printf '%s\n' "$rendered" > "$destination"
 }
 
+url_host() {
+  local url="$1"
+  url="${url#*://}"
+  url="${url%%/*}"
+  printf '%s' "$url"
+}
+
 require_root
 
 prompt_default APP_USER "Application service user" "nextapp"
@@ -182,6 +189,8 @@ NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/edossier.conf"
 PUBLIC_APP_ORIGIN="${PUBLIC_APP_ORIGIN%/}"
 MINIO_ORIGIN="${MINIO_ORIGIN%/}"
 MEDIA_PROXY_URL="${PUBLIC_APP_ORIGIN}/media"
+PUBLIC_APP_HOST="$(url_host "$PUBLIC_APP_ORIGIN")"
+MINIO_HOST="$(url_host "$MINIO_ORIGIN")"
 
 if ! id "$APP_USER" >/dev/null 2>&1; then
   log "Creating service user ${APP_USER}"
@@ -211,7 +220,9 @@ render_template \
   "${SCRIPT_DIR}/templates/edossier-nginx.conf" \
   "$NGINX_SITE_AVAILABLE" \
   "__APP_PORT__" "$APP_PORT" \
-  "__MINIO_ORIGIN__" "$MINIO_ORIGIN"
+  "__MINIO_ORIGIN__" "$MINIO_ORIGIN" \
+  "__PUBLIC_HOST__" "$PUBLIC_APP_HOST" \
+  "__MINIO_HOST__" "$MINIO_HOST"
 
 ln -sfn "$NGINX_SITE_AVAILABLE" "$NGINX_SITE_ENABLED"
 if [[ -L /etc/nginx/sites-enabled/default ]]; then

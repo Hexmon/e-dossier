@@ -3,8 +3,22 @@
 // Edge Runtime compatible - uses Web Crypto API instead of Node.js crypto
 import { NextRequest, NextResponse } from 'next/server';
 
-// Secret for CSRF token generation (should be in environment variable in production)
-const CSRF_SECRET = process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production';
+const DEFAULT_CSRF_SECRET = 'default-csrf-secret-change-in-production';
+const WEAK_CSRF_SECRETS = new Set([
+  '',
+  'change_me',
+  'dev_change_me',
+  'qa_change_me',
+  DEFAULT_CSRF_SECRET,
+]);
+
+function getCsrfSecret(): string {
+  const secret = process.env.CSRF_SECRET || DEFAULT_CSRF_SECRET;
+  if (process.env.NODE_ENV === 'production' && WEAK_CSRF_SECRETS.has(secret.trim())) {
+    throw new Error('CSRF_SECRET must be set to a strong non-default value in production.');
+  }
+  return secret;
+}
 
 /**
  * Generate a random token using Web Crypto API (Edge Runtime compatible)
@@ -51,7 +65,7 @@ async function createHmac(message: string, secret: string): Promise<string> {
  */
 export async function generateCsrfToken(): Promise<string> {
   const randomToken = generateRandomToken();
-  const signature = await createHmac(randomToken, CSRF_SECRET);
+  const signature = await createHmac(randomToken, getCsrfSecret());
   return `${randomToken}.${signature}`;
 }
 
@@ -67,7 +81,7 @@ export async function verifyCsrfToken(token: string): Promise<boolean> {
   if (parts.length !== 2) return false;
 
   const [randomToken, providedSignature] = parts;
-  const expectedSignature = await createHmac(randomToken, CSRF_SECRET);
+  const expectedSignature = await createHmac(randomToken, getCsrfSecret());
 
   // Constant-time comparison to prevent timing attacks
   if (providedSignature.length !== expectedSignature.length) return false;
@@ -107,7 +121,7 @@ export function setCsrfCookie(res: NextResponse, token: string): void {
   // for SPA clients (see apiClient.ts).
   res.cookies.set('csrf-token', token, {
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
     maxAge: 3600, // 1 hour
@@ -148,4 +162,3 @@ export function requiresCsrfProtection(method: string): boolean {
   const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
   return !safeMethods.includes(method.toUpperCase());
 }
-

@@ -175,12 +175,13 @@ export const auditLogger = createAuditLogger({
 
 // ── Route Handler Types ───────────────────────────────────────────
 type RouteParams = Record<string, string | string[] | undefined>;
+type EmptyRouteParams = Record<string, never>;
 
-export type RouteContext<TParams = RouteParams> = {
+export type RouteContext<TParams = EmptyRouteParams> = {
   params: Promise<TParams>;
 };
 
-type AuditRouteHandler<TParams = undefined> = (
+type AuditRouteHandler<TParams = EmptyRouteParams> = (
   req: AuditNextRequest,
   context: RouteContext<TParams>
 ) => Promise<Response> | Response;
@@ -214,7 +215,7 @@ function logAccess(
 }
 
 // ── withAuditRoute Wrapper ────────────────────────────────────────
-export function withAuditRoute<TParams = undefined>(
+export function withAuditRoute<TParams = EmptyRouteParams>(
   _method: string,
   handler: AuditRouteHandler<TParams>,
   options?: NextAuditOptions,

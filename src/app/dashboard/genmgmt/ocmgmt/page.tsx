@@ -31,12 +31,14 @@ import { useDebouncedValue } from "@/app/lib/debounce";
 
 import { useOCUpload } from "@/hooks/useOCUpload";
 
-import type { OCListRow, OCRecord } from "@/app/lib/api/ocApi";
+import { fetchOCByIdFull, updateOC } from "@/app/lib/api/ocApi";
+import type { FullOCRecord, OCListRow, OCRecord } from "@/app/lib/api/ocApi";
 import { useOCs } from "@/hooks/useOCs";
 import OCFilters from "@/components/genmgmt/OCFilters";
 import { OCForm } from "@/components/genmgmt/OCForm";
 import { useQuery } from "@tanstack/react-query";
 import { SetupReturnBanner } from "@/components/setup/SetupReturnBanner";
+import SearchableSelect from "@/components/ui/searchable-select";
 
 type CourseLike = { id: string; code?: string; title?: string };
 type PlatoonLike = { id: string; key?: string; name?: string };
@@ -81,14 +83,15 @@ export default function OCManagementPage() {
       platoonId: platoonFilter || undefined,
       branch: safeBranch,
       status: safeStatus,
-      // Backend only respects limit/offset, but we pass everything for client-side filtering
+      sort: "updated_desc" as const,
+      // Backend handles list controls; the remaining filters are applied client-side.
       limit: 1000, // Fetch more records so we have enough to filter client-side
       offset: 0,   // Always fetch from start for client-side filtering
     };
   }, [debouncedSearch, courseFilter, platoonFilter, safeBranch, safeStatus]);
 
   // Use React Query hook - it will filter client-side
-  const { ocList, totalCount, loading, addOC, editOC, removeOC } = useOCs(params);
+  const { ocList, totalCount, loading, addOC, editOC, removeOC, refreshOCs } = useOCs(params);
 
   // Client-side pagination (after filters are applied)
   const paginatedList = useMemo(() => {
@@ -138,10 +141,14 @@ export default function OCManagementPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingOC, setEditingOC] = useState<Partial<FullOCRecord> | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [deleteTarget, setDeleteTarget] = useState<OCListRow | null>(null);
   const [deleteNameInput, setDeleteNameInput] = useState<string>("");
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [selectedOcIds, setSelectedOcIds] = useState<Set<string>>(new Set());
+  const [bulkPlatoonId, setBulkPlatoonId] = useState<string>("");
+  const [bulkAssigning, setBulkAssigning] = useState<boolean>(false);
 
   const { reset } = useForm<Partial<OCRecord>>();
 
@@ -151,15 +158,18 @@ export default function OCManagementPage() {
   const onSubmit = async (data: Partial<OCRecord>): Promise<void> => {
     try {
       if (editingIndex !== null) {
-        const { id } = paginatedList[editingIndex];
+        const id = editingOC?.id ?? paginatedList[editingIndex]?.id;
+        if (!id) throw new Error("Selected OC was not found.");
         await editOC(id, data);
       } else {
         await addOC(data as Omit<OCRecord, "id" | "uid" | "createdAt">);
+        setCurrentPage(1);
       }
 
       setIsDialogOpen(false);
       reset();
       setEditingIndex(null);
+      setEditingOC(null);
     } catch (error: any) {
 
       if (error.status === 400 && error.issues?.fieldErrors) {
@@ -179,9 +189,22 @@ export default function OCManagementPage() {
     }
   };
 
-  const handleEdit = (index: number) => {
-    setEditingIndex(index);
-    setIsDialogOpen(true);
+  const handleEdit = async (index: number) => {
+    const target = paginatedList[index];
+    if (!target?.id) {
+      toast.error("OC not found.");
+      return;
+    }
+    try {
+      const fullRecord = await fetchOCByIdFull(target.id);
+      setEditingOC(fullRecord ?? target);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to load complete OC details.");
+      setEditingOC(target);
+    } finally {
+      setEditingIndex(index);
+      setIsDialogOpen(true);
+    }
   };
 
   const closeDeleteDialog = () => {
@@ -219,12 +242,15 @@ export default function OCManagementPage() {
 
   const handleAdd = () => {
     setEditingIndex(null);
+    setEditingOC(null);
     reset();
     setIsDialogOpen(true);
   };
 
   const handleBulkUpload = async (selectedIndexes: number[]) => {
     await doBulkUploadSelected(selectedIndexes, async () => {
+      setCurrentPage(1);
+      await refreshOCs();
       toast.success("Bulk upload completed successfully");
     });
   };
@@ -243,7 +269,62 @@ export default function OCManagementPage() {
 
   const handleFilterChange = (filterSetter: (val: string) => void, value: string) => {
     filterSetter(value);
+    setSelectedOcIds(new Set());
     setCurrentPage(1); // Reset to page 1 when filter changes
+  };
+
+  const selectedCount = selectedOcIds.size;
+
+  const toggleSelectedOc = (id: string, checked: boolean) => {
+    setSelectedOcIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const togglePageSelected = (checked: boolean) => {
+    setSelectedOcIds((prev) => {
+      const next = new Set(prev);
+      for (const oc of paginatedList) {
+        if (!oc.id) continue;
+        if (checked) next.add(oc.id);
+        else next.delete(oc.id);
+      }
+      return next;
+    });
+  };
+
+  const selectAllFiltered = () => {
+    setSelectedOcIds(new Set(ocList.map((oc) => oc.id).filter(Boolean)));
+  };
+
+  const clearSelection = () => {
+    setSelectedOcIds(new Set());
+    setBulkPlatoonId("");
+  };
+
+  const handleBulkPlatoonAssign = async () => {
+    if (selectedCount === 0) {
+      toast.error("Select at least one OC.");
+      return;
+    }
+
+    try {
+      setBulkAssigning(true);
+      const ids = Array.from(selectedOcIds);
+      for (const id of ids) {
+        await updateOC(id, { platoonId: bulkPlatoonId || null });
+      }
+      await refreshOCs();
+      toast.success(`Updated platoon for ${ids.length} OC${ids.length === 1 ? "" : "s"}.`);
+      clearSelection();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update selected OCs.");
+    } finally {
+      setBulkAssigning(false);
+    }
   };
 
   return (
@@ -378,6 +459,9 @@ export default function OCManagementPage() {
                     onView={openView}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    selectedIds={selectedOcIds}
+                    onToggleSelected={toggleSelectedOc}
+                    onTogglePageSelected={togglePageSelected}
                     pagination={{
                       mode: "server", // Actually client-side now, but keeps the same interface
                       currentPage,
@@ -393,6 +477,45 @@ export default function OCManagementPage() {
                     }}
                     loading={loading}
                   />
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card p-3">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="font-medium">{selectedCount} selected</span>
+                      <Button type="button" variant="outline" size="sm" onClick={() => togglePageSelected(true)}>
+                        Select Page
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={selectAllFiltered} disabled={ocList.length === 0}>
+                        Select All Filtered ({ocList.length})
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={clearSelection} disabled={selectedCount === 0}>
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex min-w-[320px] flex-1 items-center justify-end gap-2">
+                      <div className="w-full max-w-xs">
+                        <SearchableSelect
+                          value={bulkPlatoonId}
+                          onValueChange={setBulkPlatoonId}
+                          options={platoons.map(({ id, key, name }) => ({
+                            value: id,
+                            label: key && name ? `${key} - ${name}` : name ?? key ?? id,
+                          }))}
+                          placeholder="Select platoon"
+                          searchPlaceholder="Search platoon..."
+                          allOptionLabel="No Platoon"
+                          emptyLabel="No platoon found"
+                          disabled={bulkAssigning}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={handleBulkPlatoonAssign}
+                        disabled={bulkAssigning || selectedCount === 0}
+                      >
+                        {bulkAssigning ? "Assigning..." : "Assign Platoon"}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
             </GlobalTabs>
@@ -400,10 +523,24 @@ export default function OCManagementPage() {
         </main>
       </section>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            reset();
+            setEditingIndex(null);
+            setEditingOC(null);
+          }
+        }}
+      >
         <OCForm
-          key={editingIndex !== null && paginatedList[editingIndex] ? paginatedList[editingIndex].id : "new"}
-          defaultValues={editingIndex !== null && paginatedList[editingIndex] ? paginatedList[editingIndex] : {}}
+          key={
+            editingIndex !== null && editingOC?.id
+              ? `${editingOC.id}-${editingOC.personal ? "full" : "basic"}`
+              : "new"
+          }
+          defaultValues={editingIndex !== null ? editingOC ?? {} : {}}
           courses={courses}
           platoons={platoons}
           isEditing={editingIndex !== null}
@@ -411,6 +548,7 @@ export default function OCManagementPage() {
             setIsDialogOpen(false);
             reset();
             setEditingIndex(null);
+            setEditingOC(null);
           }}
           onSubmit={onSubmit}
         />

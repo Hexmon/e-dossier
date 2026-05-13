@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
-import { ocCadets } from '@/app/db/schema/training/oc';
 import { eq } from 'drizzle-orm';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { listOCsBasic, listOCsFull } from '@/app/db/queries/oc';
+import { createOcWithLifecycle } from '@/app/db/queries/oc-lifecycle';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
@@ -80,33 +80,16 @@ async function POSTHandler(req: AuditNextRequest) {
             platoonId = pl.id;
         }
 
-        const uid = `UID-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-
-        const [row] = await db
-            .insert(ocCadets)
-            .values({
-                name: body.name.trim(),
-                ocNo: body.ocNo.trim(),
-                jnuEnrollmentNo: body.jnuEnrollmentNo ?? null,
-                uid,
-                courseId: body.courseId,
-                ...(body.branch != null ? { branch: body.branch } : {}),
-                platoonId,
-                arrivalAtUniversity: body.arrivalAtUniversity,
-            })
-            .returning({
-                id: ocCadets.id,
-                name: ocCadets.name,
-                ocNo: ocCadets.ocNo,
-                jnuEnrollmentNo: ocCadets.jnuEnrollmentNo,
-                uid: ocCadets.uid,
-                courseId: ocCadets.courseId,
-                branch: ocCadets.branch,
-                platoonId: ocCadets.platoonId,
-                arrivalAtUniversity: ocCadets.arrivalAtUniversity,
-                withdrawnOn: ocCadets.withdrawnOn,
-                createdAt: ocCadets.createdAt,
-            });
+        const { oc: row } = await createOcWithLifecycle({
+            name: body.name,
+            ocNo: body.ocNo,
+            jnuEnrollmentNo: body.jnuEnrollmentNo ?? null,
+            courseId: body.courseId,
+            branch: body.branch ?? undefined,
+            platoonId,
+            arrivalAtUniversity: body.arrivalAtUniversity,
+            actorUserId: authCtx.userId,
+        });
 
         await req.audit.log({
             action: AuditEventType.OC_CREATED,

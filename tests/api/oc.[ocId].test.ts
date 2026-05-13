@@ -5,8 +5,16 @@ import { ApiError } from "@/app/lib/http";
 import * as authz from "@/app/lib/authz";
 import * as ocChecks from "@/app/api/v1/oc/_checks";
 import * as ocEnrollmentQueries from "@/app/db/queries/oc-enrollments";
+import * as ocLifecycle from "@/app/db/queries/oc-lifecycle";
 import { db } from "@/app/db/client";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
+
+const dbMock = vi.hoisted(() => ({
+  select: vi.fn(),
+  update: vi.fn(),
+  insert: vi.fn(),
+  transaction: vi.fn(),
+}));
 
 vi.mock("@/app/lib/authz", async () => {
   return {
@@ -20,14 +28,15 @@ vi.mock("@/app/api/v1/oc/_checks", () => ({
 }));
 
 vi.mock("@/app/db/client", () => ({
-  db: {
-    select: vi.fn(),
-    update: vi.fn(),
-  },
+  db: dbMock,
 }));
 
 vi.mock("@/app/db/queries/oc-enrollments", () => ({
   getCurrentSemesterForOc: vi.fn(),
+}));
+
+vi.mock("@/app/db/queries/oc-lifecycle", () => ({
+  syncOcLifecycleFromCadet: vi.fn(),
 }));
 
 const path = "/api/v1/oc";
@@ -35,6 +44,7 @@ const ocId = "11111111-1111-4111-8111-111111111111";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (db.transaction as any).mockImplementation((callback: any) => callback(db));
 });
 
 describe("GET /api/v1/oc/[ocId]", () => {
@@ -148,6 +158,98 @@ describe("PATCH /api/v1/oc/[ocId]", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.oc.jnuEnrollmentNo).toBe("001");
+    expect(ocLifecycle.syncOcLifecycleFromCadet).not.toHaveBeenCalled();
+  });
+
+  it("syncs lifecycle compatibility rows when placement fields change", async () => {
+    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: "admin-1", roles: ["ADMIN"] });
+    (db.select as any).mockImplementationOnce(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{ id: ocId, name: "OC One" }],
+        }),
+      }),
+    }));
+    (db.update as any).mockImplementationOnce(() => ({
+      set: (payload: any) => ({
+        where: () => ({
+          returning: async () => [{ id: ocId, courseId: payload.courseId }],
+        }),
+      }),
+    }));
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: `${path}/${ocId}`,
+      body: { courseId: "22222222-2222-4222-8222-222222222222" },
+    });
+    const ctx = { params: Promise.resolve({ ocId }) } as any;
+    const res = await patchOcById(req as any, ctx);
+
+    expect(res.status).toBe(200);
+    expect(ocLifecycle.syncOcLifecycleFromCadet).toHaveBeenCalledWith(ocId, {
+      actorUserId: "admin-1",
+      reason: "oc_patch_canonical_sync",
+    });
+  });
+
+  it("upserts imported personal fields when editing an OC", async () => {
+    (authz.requireAdmin as any).mockResolvedValueOnce({ userId: "admin-1", roles: ["ADMIN"] });
+    (db.select as any).mockImplementationOnce(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{ id: ocId, name: "OC One" }],
+        }),
+      }),
+    }));
+    (db.update as any).mockImplementationOnce(() => ({
+      set: (payload: any) => ({
+        where: () => ({
+          returning: async () => [{ id: ocId, name: payload.name }],
+        }),
+      }),
+    }));
+    const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
+    (db.insert as any).mockImplementationOnce(() => ({
+      values: (payload: any) => ({
+        onConflictDoUpdate: (config: any) => onConflictDoUpdate({ payload, config }),
+      }),
+    }));
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: `${path}/${ocId}`,
+      body: {
+        name: "OC One Edited",
+        personal: {
+          email: "edited@example.com",
+          panNo: "ABCDE1234F",
+          fatherName: "Father Name",
+          games: "Football",
+          swimmer: true,
+        },
+      },
+    });
+    const ctx = { params: Promise.resolve({ ocId }) } as any;
+    const res = await patchOcById(req as any, ctx);
+
+    expect(res.status).toBe(200);
+    expect(onConflictDoUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({
+        ocId,
+        email: "edited@example.com",
+        panNo: "ABCDE1234F",
+        fatherName: "Father Name",
+        games: "Football",
+        swimmer: true,
+      }),
+      config: expect.objectContaining({
+        set: expect.objectContaining({
+          email: "edited@example.com",
+          panNo: "ABCDE1234F",
+        }),
+      }),
+    }));
   });
 });
 

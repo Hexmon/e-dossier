@@ -16,7 +16,7 @@ import {
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ campId: string }> }) {
     try {
         await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);
@@ -33,7 +33,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
     }
 }
 
-async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<{ campId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { campId } = trainingCampParam.parse(await params);

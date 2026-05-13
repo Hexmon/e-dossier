@@ -25,6 +25,48 @@ export interface PlatoonRef {
   name: string;
 }
 
+export interface OCPersonalProfile {
+  [key: string]: unknown;
+  ocId?: string;
+  visibleIdentMarks?: string | null;
+  pi?: string | null;
+  dob?: string | null;
+  placeOfBirth?: string | null;
+  domicile?: string | null;
+  religion?: string | null;
+  nationality?: string | null;
+  bloodGroup?: string | null;
+  identMarks?: string | null;
+  mobileNo?: string | null;
+  email?: string | null;
+  passportNo?: string | null;
+  panNo?: string | null;
+  aadhaarNo?: string | null;
+  fatherName?: string | null;
+  fatherMobile?: string | null;
+  fatherAddrPerm?: string | null;
+  fatherAddrPresent?: string | null;
+  fatherProfession?: string | null;
+  guardianName?: string | null;
+  guardianAddress?: string | null;
+  monthlyIncome?: number | null;
+  nokDetails?: string | null;
+  nokAddrPerm?: string | null;
+  nokAddrPresent?: string | null;
+  nearestRailwayStation?: string | null;
+  familyInSecunderabad?: string | null;
+  relativeInArmedForces?: string | null;
+  govtFinancialAssistance?: boolean | null;
+  bankDetails?: string | null;
+  idenCardNo?: string | null;
+  upscRollNo?: string | null;
+  ssbCentre?: string | null;
+  games?: string | null;
+  hobbies?: string | null;
+  swimmer?: boolean | null;
+  languages?: string | null;
+}
+
 /** Base OC row from oc_cadets */
 export interface OCRecord {
   id: string;
@@ -42,6 +84,7 @@ export interface OCRecord {
   platoon?: PlatoonRef;
   courseId?: string;
   currentSemester?: number | null;
+  personal?: OCPersonalProfile | null;
 }
 
 /** Optional denormalized fields the list API now returns */
@@ -65,7 +108,7 @@ export type OCListRow = OCRecord & OCDenorm;
 
 /** Full graph shape when full=true */
 export interface FullOCRecord extends OCListRow {
-  personal?: Record<string, unknown> | null;
+  personal?: OCPersonalProfile | null;
   preCommission?: Record<string, unknown> | null;
   commissioning?: Record<string, unknown> | null;
   autobiography?: Record<string, unknown> | null;

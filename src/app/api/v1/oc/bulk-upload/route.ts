@@ -6,6 +6,7 @@ import { json, handleApiError } from '@/app/lib/http';
 import { ocCadets, ocPersonal } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
+import { createOcWithLifecycle } from '@/app/db/queries/oc-lifecycle';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { checkApiRateLimit, getClientIp, getRateLimitHeaders } from '@/lib/ratelimit';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
@@ -356,59 +357,55 @@ async function POSTHandler(req: AuditNextRequest) {
       // --- Insert (single transaction per row) ---
       try {
         const inserted = await db.transaction(async (tx) => {
-          const uid = `UID-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-          const [oc] = await tx
-            .insert(ocCadets)
-            .values({
+          const { oc } = await createOcWithLifecycle(
+            {
               name: String(name).trim(),
               ocNo,
-              uid,
               courseId,
-              // branch could be parsed if you want; left as-is from original route
               platoonId: platoonId ?? null,
               arrivalAtUniversity,
-            })
-            .returning({ id: ocCadets.id });
-
-          await tx.insert(ocPersonal).values({
-            ocId: oc.id,
-            visibleIdentMarks: visibleIdentMarks ? String(visibleIdentMarks) : undefined,
-            pi: pi ? String(pi) : undefined,
-            dob: dobDate,
-            placeOfBirth: placeOfBirth ? String(placeOfBirth) : undefined,
-            domicile: domicile ? String(domicile) : undefined,
-            religion: religion ? String(religion) : undefined,
-            nationality: nationality ? String(nationality) : undefined,
-            bloodGroup: bloodGroup ? String(bloodGroup) : undefined,
-            identMarks: identMarks ? String(identMarks) : undefined,
-            mobileNo,
-            email: emailStr || undefined,
-            passportNo: passportNo ? String(passportNo) : undefined,
-            panNo: panStr || undefined,
-            aadhaarNo: aadhaarStr || undefined,
-            fatherName: fatherName ? String(fatherName) : undefined,
-            fatherMobile: fatherMobile ? String(fatherMobile) : undefined,
-            fatherAddrPerm: fatherAddress ? String(fatherAddress) : undefined,
-            fatherProfession: fatherProfession ? String(fatherProfession) : undefined,
-            guardianName: guardianName ? String(guardianName) : undefined,
-            guardianAddress: guardianAddress ? String(guardianAddress) : undefined,
-            monthlyIncome: monthlyIncomeNum,
-            nokDetails: nokDetails ? String(nokDetails) : undefined,
-            nokAddrPerm,
-            nokAddrPresent,
-            nearestRailwayStation: nearestRailwayStation ? String(nearestRailwayStation) : undefined,
-            familyInSecunderabad: familyInSecunderabad ? String(familyInSecunderabad) : undefined,
-            relativeInArmedForces: relativeInArmedForces ? String(relativeInArmedForces) : undefined,
-            govtFinancialAssistance,
-            bankDetails: bankDetails ? String(bankDetails) : undefined,
-            idenCardNo: idenCardNo ? String(idenCardNo) : undefined,
-            upscRollNo: upscStr || undefined,
-            ssbCentre: ssbCentre ? String(ssbCentre) : undefined,
-            games: games ? String(games) : undefined,
-            hobbies: hobbies ? String(hobbies) : undefined,
-            swimmer: swimmer,
-            languages: languages ? String(languages) : undefined,
-          });
+              actorUserId: authCtx.userId,
+              personal: {
+                visibleIdentMarks: visibleIdentMarks ? String(visibleIdentMarks) : undefined,
+                pi: pi ? String(pi) : undefined,
+                dob: dobDate,
+                placeOfBirth: placeOfBirth ? String(placeOfBirth) : undefined,
+                domicile: domicile ? String(domicile) : undefined,
+                religion: religion ? String(religion) : undefined,
+                nationality: nationality ? String(nationality) : undefined,
+                bloodGroup: bloodGroup ? String(bloodGroup) : undefined,
+                identMarks: identMarks ? String(identMarks) : undefined,
+                mobileNo,
+                email: emailStr || undefined,
+                passportNo: passportNo ? String(passportNo) : undefined,
+                panNo: panStr || undefined,
+                aadhaarNo: aadhaarStr || undefined,
+                fatherName: fatherName ? String(fatherName) : undefined,
+                fatherMobile: fatherMobile ? String(fatherMobile) : undefined,
+                fatherAddrPerm: fatherAddress ? String(fatherAddress) : undefined,
+                fatherProfession: fatherProfession ? String(fatherProfession) : undefined,
+                guardianName: guardianName ? String(guardianName) : undefined,
+                guardianAddress: guardianAddress ? String(guardianAddress) : undefined,
+                monthlyIncome: monthlyIncomeNum,
+                nokDetails: nokDetails ? String(nokDetails) : undefined,
+                nokAddrPerm,
+                nokAddrPresent,
+                nearestRailwayStation: nearestRailwayStation ? String(nearestRailwayStation) : undefined,
+                familyInSecunderabad: familyInSecunderabad ? String(familyInSecunderabad) : undefined,
+                relativeInArmedForces: relativeInArmedForces ? String(relativeInArmedForces) : undefined,
+                govtFinancialAssistance,
+                bankDetails: bankDetails ? String(bankDetails) : undefined,
+                idenCardNo: idenCardNo ? String(idenCardNo) : undefined,
+                upscRollNo: upscStr || undefined,
+                ssbCentre: ssbCentre ? String(ssbCentre) : undefined,
+                games: games ? String(games) : undefined,
+                hobbies: hobbies ? String(hobbies) : undefined,
+                swimmer: swimmer,
+                languages: languages ? String(languages) : undefined,
+              },
+            },
+            tx,
+          );
 
           return {
             ocId: oc.id,

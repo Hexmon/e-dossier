@@ -1,0 +1,23 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Intentional non-secret placeholders used in committed examples"
+regexes = [
+  '''REPLACE_WITH_[A-Z0-9_]+''',
+  '''GENERATE_[A-Z0-9_]+''',
+  '''your-[a-z0-9-]+-here''',
+]
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)\.artifacts/''',
+  '''(^|/)\.security/''',
+  '''(^|/)\.zap/''',
+  '''(^|/)\.env$''',
+  '''(^|/)coverage/''',
+  '''(^|/)reports/''',
+  '''(^|/)test-results/''',
+  '''(^|/)playwright-report/''',
+  '''(^|/)pnpm-lock\.yaml$''',
+]

@@ -181,6 +181,24 @@ export const ocPreCommission = pgTable('oc_pre_commission', {
     withdrawnOn: timestamp('withdrawn_on', { withTimezone: true }),
 });
 
+export const ocReconciliationAudit = pgTable('oc_reconciliation_audit', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
+    sourceTable: varchar('source_table', { length: 96 }).notNull(),
+    targetTable: varchar('target_table', { length: 96 }).notNull(),
+    conflictType: varchar('conflict_type', { length: 96 }).notNull(),
+    fieldName: varchar('field_name', { length: 128 }).notNull(),
+    sourceValue: jsonb('source_value').$type<unknown>(),
+    targetValue: jsonb('target_value').$type<unknown>(),
+    resolution: text('resolution').notNull(),
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    idxOcCreated: index('idx_oc_reconciliation_audit_oc_created').on(t.ocId, t.createdAt),
+    idxConflictType: index('idx_oc_reconciliation_audit_conflict_type').on(t.conflictType),
+}));
+
 // === Commissioning details (0/1 row) ========================================
 export const ocCommissioning = pgTable('oc_commissioning', {
     ocId: uuid('oc_id').primaryKey().references(() => ocCadets.id, { onDelete: 'restrict' }),

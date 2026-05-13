@@ -3,7 +3,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
     fetchOCsWithCount,
     createOC,
@@ -14,8 +14,16 @@ import {
     type FetchOCParams,
 } from "@/app/lib/api/ocApi";
 
+const OCS_QUERY_KEY = ["ocs"] as const;
+
 export function useOCs(params?: FetchOCParams) {
     const queryClient = useQueryClient();
+    const refreshOCs = useCallback(async () => {
+        await queryClient.invalidateQueries({
+            queryKey: OCS_QUERY_KEY,
+            refetchType: "active",
+        });
+    }, [queryClient]);
 
     // Extract filter params for client-side filtering
     const {
@@ -34,13 +42,14 @@ export function useOCs(params?: FetchOCParams) {
         refetch,
         error,
     } = useQuery({
-        queryKey: ["ocs", backendParams], // Only use pagination params for cache key
+        queryKey: [...OCS_QUERY_KEY, backendParams], // Backend controls affect the cache key.
         queryFn: async () => {
             try {
-                // Only send pagination to backend since it ignores other filters anyway
+                // Only send backend-supported list controls. Other filters are applied client-side below.
                 const res = await fetchOCsWithCount<OCListRow>({
                     limit: backendParams.limit,
                     offset: backendParams.offset,
+                    sort: backendParams.sort,
                 });
                 return {
                     items: res.items ?? [],
@@ -115,8 +124,8 @@ export function useOCs(params?: FetchOCParams) {
         mutationFn: async (payload: Omit<OCRecord, "id" | "uid" | "createdAt">) => {
             return await createOC(payload);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["ocs"] });
+        onSuccess: async () => {
+            await refreshOCs();
             toast.success("OC added successfully");
         },
         onError: (error: any) => {
@@ -129,8 +138,8 @@ export function useOCs(params?: FetchOCParams) {
         mutationFn: async ({ id, payload }: { id: string; payload: Partial<OCRecord> }) => {
             return await updateOC(id, payload);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["ocs"] });
+        onSuccess: async () => {
+            await refreshOCs();
             toast.success("OC updated successfully");
         },
         onError: (error: any) => {
@@ -143,8 +152,8 @@ export function useOCs(params?: FetchOCParams) {
         mutationFn: async (id: string) => {
             await deleteOC(id);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["ocs"] });
+        onSuccess: async () => {
+            await refreshOCs();
             toast.success("OC deleted successfully");
         },
         onError: (error: any) => {
@@ -158,7 +167,8 @@ export function useOCs(params?: FetchOCParams) {
         loading,
         error,
         fetchOCs: (newParams: FetchOCParams) => {
-            queryClient.invalidateQueries({ queryKey: ["ocs"] });
+            void newParams;
+            return refreshOCs();
         },
         addOC: addOCMutation.mutateAsync,
         editOC: (id: string, payload: Partial<OCRecord>) =>
@@ -167,6 +177,7 @@ export function useOCs(params?: FetchOCParams) {
         setOcList: () => {
             // Kept for backward compatibility
         },
+        refreshOCs,
         refetch,
     };
 }

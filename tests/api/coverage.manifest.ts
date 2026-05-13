@@ -114,7 +114,6 @@ export const OC_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/oc/[ocId]/ssb/points/route.ts',
   'src/app/api/v1/oc/[ocId]/ssb/route.ts',
   'src/app/api/v1/oc/[ocId]/weapon-training/route.ts',
-  'src/app/api/v1/oc/bulk-upload/route.ts',
 ] as const;
 
 export const REPORT_UNCOVERED_ROUTE_FILES = [
@@ -191,6 +190,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/admin.module-access.test.ts',
     routeFiles: ['src/app/api/v1/admin/module-access/route.ts'],
+  },
+  {
+    testFile: 'tests/api/admin.oc-data-health.test.ts',
+    routeFiles: ['src/app/api/v1/admin/oc-data-health/route.ts'],
   },
   {
     testFile: 'tests/api/admin.dossier-lock.test.ts',

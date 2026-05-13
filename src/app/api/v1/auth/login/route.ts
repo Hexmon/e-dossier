@@ -8,8 +8,11 @@ import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { eq } from 'drizzle-orm';
 import argon2 from 'argon2';
 import { getAuthorityForLogin, buildAuthorityRoleKeys } from '@/app/lib/effective-authority';
-import { getClientIp } from '@/lib/ratelimit';
+import { checkLoginRateLimit, getClientIp } from '@/lib/ratelimit';
 import {
+  checkAndLockAccount,
+  clearFailedAttempts,
+  isAccountLocked,
   recordLoginAttempt,
 } from '@/app/db/queries/account-lockout';
 import { assertLoginAllowedDuringSetup } from '@/app/lib/setup-gate';
@@ -24,24 +27,9 @@ import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.EXPOSE_TOKENS_IN_DEV === 'true';
 
-/*
-Restorable login protection imports. Left commented so current behavior stays unchanged.
-
-import { checkLoginRateLimit } from '@/lib/ratelimit';
-import {
-  recordLoginAttempt,
-  isAccountLocked,
-  checkAndLockAccount,
-  clearFailedAttempts,
-} from '@/app/db/queries/account-lockout';
-*/
-
 async function POSTHandler(req: AuditNextRequest) {
   try {
     const clientIp = getClientIp(req);
-
-    /*
-    Restorable login rate-limit block. Uncomment to enforce per-login throttling again.
 
     const rateLimitResult = await checkLoginRateLimit(clientIp);
     if (!rateLimitResult.success) {
@@ -54,7 +42,6 @@ async function POSTHandler(req: AuditNextRequest) {
         }
       );
     }
-    */
 
     // 0) Parse JSON safely
     let body: unknown;
@@ -109,9 +96,6 @@ async function POSTHandler(req: AuditNextRequest) {
     });
     await assertLoginAllowedDuringSetup(loginRoleGroup);
 
-    /*
-    Restorable account-lockout pre-check. Uncomment to block login for locked accounts again.
-
     const activeLockout = await isAccountLocked(authority.userId);
     if (activeLockout) {
       throw new ApiError(
@@ -124,7 +108,6 @@ async function POSTHandler(req: AuditNextRequest) {
         }
       );
     }
-    */
 
     // 3) Domain checks & auth
     if (authority.scopeType === 'PLATOON') {
@@ -181,9 +164,6 @@ async function POSTHandler(req: AuditNextRequest) {
         metadata: { username: username.toLowerCase(), reason: 'Invalid password' },
       });
 
-      /*
-      Restorable failed-attempt escalation. Uncomment to re-enable account lockout creation.
-
       const lockout = await checkAndLockAccount(
         username.toLowerCase(),
         authority.userId,
@@ -201,7 +181,6 @@ async function POSTHandler(req: AuditNextRequest) {
           }
         );
       }
-      */
 
       throw new ApiError(401, 'invalid_credentials', 'BAD_PASSWORD');
     }
@@ -215,10 +194,7 @@ async function POSTHandler(req: AuditNextRequest) {
       success: true,
     });
 
-    /*
-    Restorable successful-login cleanup hook. Uncomment if lockout logic is re-enabled.
     await clearFailedAttempts(username.toLowerCase());
-    */
 
     // Audit log - successful login
     await req.audit.log({
