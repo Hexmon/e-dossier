@@ -5,6 +5,7 @@ import path from 'node:path';
 import { Client } from 'pg';
 import { signAccessJWT } from '../src/app/lib/jwt';
 import { normalizeDatabaseUrl } from '../src/app/db/connectionString';
+import { OC_SMOKE_OC_NO_PREFIXES } from './oc-smoke-data';
 
 type SmokeRow = {
   step: string;
@@ -41,6 +42,7 @@ type Args = {
   outDir: string;
   baseUrl: string;
   mutate: boolean;
+  keepSmokeOcs: boolean;
 };
 
 function parseArgs(): Args {
@@ -49,6 +51,7 @@ function parseArgs(): Args {
   let outDir = path.join('.artifacts', 'oc-zero-loss', now);
   let baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
   let mutate = false;
+  let keepSmokeOcs = false;
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
@@ -58,10 +61,12 @@ function parseArgs(): Args {
       baseUrl = args[++i] ?? baseUrl;
     } else if (arg === '--mutate') {
       mutate = true;
+    } else if (arg === '--keep-smoke-ocs') {
+      keepSmokeOcs = true;
     }
   }
 
-  return { outDir, baseUrl: baseUrl.replace(/\/$/, ''), mutate };
+  return { outDir, baseUrl: baseUrl.replace(/\/$/, ''), mutate, keepSmokeOcs };
 }
 
 function csvEscape(value: unknown) {
@@ -187,6 +192,26 @@ async function findOcIdByOcNo(client: Client, ocNo: string) {
   return result.rows[0]?.id ?? null;
 }
 
+async function softDeleteSmokeOcsByOcNo(client: Client, ocNos: string[]) {
+  const normalizedOcNos = Array.from(new Set(ocNos.map((value) => value.trim()).filter(Boolean)));
+  if (!normalizedOcNos.length) return [];
+
+  const prefixPredicates = OC_SMOKE_OC_NO_PREFIXES.map((prefix, index) => `oc_no like $${index + 2}`).join(' or ');
+  const result = await client.query<{ id: string; oc_no: string }>(
+    `
+      update oc_cadets
+      set deleted_at = now(), updated_at = now()
+      where deleted_at is null
+        and oc_no = any($1::text[])
+        and (${prefixPredicates})
+      returning id, oc_no;
+    `,
+    [normalizedOcNos, ...OC_SMOKE_OC_NO_PREFIXES.map((prefix) => `${prefix}%`)],
+  );
+
+  return result.rows;
+}
+
 async function createAuth(baseUrl: string, session: Session) {
   const accessToken = await signAccessJWT({
     sub: session.userId,
@@ -233,6 +258,8 @@ async function main() {
   let cookie = '';
   let createdOcId: string | null = null;
   let bulkOcId: string | null = null;
+  const createdSmokeOcNos: string[] = [];
+  let smokeCleanupDetail = 'not applicable';
 
   const { session, targets } = await withDb(async (client) => ({
     session: await loadSession(client),
@@ -301,9 +328,9 @@ async function main() {
     await request('direct-admin-oc-data-health-before', 'GET', '/api/v1/admin/oc-data-health');
 
     if (args.mutate) {
-      const singleOcNo = `ZL-SINGLE-${runId}`;
+      const singleOcNo = `SMOKE-OC-SINGLE-${runId}`;
       const createResponse = await request('direct-single-oc-create', 'POST', '/api/v1/oc', {
-        name: `Zero Loss Single ${runId}`,
+        name: `OC Smoke Single ${runId}`,
         ocNo: singleOcNo,
         courseId: targets.courseId,
         branch: 'O',
@@ -313,21 +340,22 @@ async function main() {
 
       if (createResponse?.response.ok) {
         createdOcId = createResponse.json?.oc?.id ?? await withDb((client) => findOcIdByOcNo(client, singleOcNo));
+        createdSmokeOcNos.push(singleOcNo);
       }
 
-      const bulkOcNo = `ZL-BULK-${runId}`;
+      const bulkOcNo = `SMOKE-OC-BULK-${runId}`;
       const bulkRow = {
         'Tes No': bulkOcNo,
-        Name: `Zero Loss Bulk ${runId}`,
+        Name: `OC Smoke Bulk ${runId}`,
         Course: targets.courseCode,
         'Dt of Arrival': '2026-01-11',
         ...(targets.platoonLabel ? { Platoon: targets.platoonLabel } : {}),
-        'E mail': `zero.loss.${runId}@example.com`,
-        'PAN Card No': `ZL${String(runId).slice(-8)}`,
+        'E mail': `oc.smoke.${runId}@example.com`,
+        'PAN Card No': `SM${String(runId).slice(-8)}`,
         'Aadhar No': `8${String(runId).padStart(11, '0').slice(-11)}`,
-        'UPSC Roll No': `ZL-UPSC-${runId}`,
+        'UPSC Roll No': `SMOKE-UPSC-${runId}`,
         PI: `PI-${String(runId).slice(-5)}`,
-        "Father's Name": 'Zero Loss Father',
+        "Father's Name": 'OC Smoke Father',
         'Blood GP': 'O+',
       };
 
@@ -335,11 +363,12 @@ async function main() {
       const bulkResponse = await request('direct-bulk-upload-create', 'POST', '/api/v1/oc/bulk-upload', { rows: [bulkRow] });
       if (bulkResponse?.response.ok) {
         bulkOcId = await withDb((client) => findOcIdByOcNo(client, bulkOcNo));
+        createdSmokeOcNos.push(bulkOcNo);
       }
 
       if (createdOcId) {
         await request('direct-oc-patch-lifecycle', 'PATCH', `/api/v1/oc/${createdOcId}`, {
-          name: `Zero Loss Single Edited ${runId}`,
+          name: `OC Smoke Single Edited ${runId}`,
           branch: 'O',
           platoonId: targets.platoonId,
           withdrawnOn: null,
@@ -348,7 +377,7 @@ async function main() {
         await request('direct-dossier-snapshot-get', 'GET', `/api/v1/oc/${createdOcId}/dossier-snapshot`);
         await request('direct-dossier-snapshot-patch', 'PATCH', `/api/v1/oc/${createdOcId}/dossier-snapshot`, {
           tesNo: singleOcNo,
-          name: `Zero Loss Single Edited ${runId}`,
+          name: `OC Smoke Single Edited ${runId}`,
           course: targets.courseCode,
           pi: `PI-${String(runId).slice(-5)}`,
           dtOfArr: '2026-01-10',
@@ -365,8 +394,31 @@ async function main() {
         await request('direct-bulk-created-oc-detail', 'GET', `/api/v1/oc/${bulkOcId}`);
       }
 
-      await request('direct-oc-list-after', 'GET', `/api/v1/oc?q=${encodeURIComponent('Zero Loss')}&limit=10&offset=0`);
+      await request('direct-oc-list-after', 'GET', `/api/v1/oc?q=${encodeURIComponent('OC Smoke')}&limit=10&offset=0`);
       await request('direct-admin-oc-data-health-after', 'GET', '/api/v1/admin/oc-data-health');
+
+      if (args.keepSmokeOcs) {
+        smokeCleanupDetail = 'Skipped because --keep-smoke-ocs was provided.';
+        rows.push({
+          step: 'direct-smoke-oc-cleanup',
+          method: 'DB',
+          path: 'oc_cadets',
+          status: null,
+          ok: true,
+          detail: smokeCleanupDetail,
+        });
+      } else {
+        const cleanedRows = await withDb((client) => softDeleteSmokeOcsByOcNo(client, createdSmokeOcNos));
+        smokeCleanupDetail = `Soft-deleted ${cleanedRows.length} created smoke OC(s).`;
+        rows.push({
+          step: 'direct-smoke-oc-cleanup',
+          method: 'DB',
+          path: 'oc_cadets',
+          status: null,
+          ok: cleanedRows.length === createdSmokeOcNos.length,
+          detail: smokeCleanupDetail,
+        });
+      }
     } else {
       rows.push({
         step: 'mutation-flows-skipped',
@@ -425,6 +477,7 @@ async function main() {
       `Existing OC checked: ${targets.existingOcId}`,
       `Single created OC: ${createdOcId ?? 'not created'}`,
       `Bulk created OC: ${bulkOcId ?? 'not created'}`,
+      `Smoke OC cleanup: ${smokeCleanupDetail}`,
       `Total checks: ${rows.length}`,
       `Failed checks: ${rows.filter((row) => !row.ok).length}`,
       '',

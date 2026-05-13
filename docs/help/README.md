@@ -21,18 +21,25 @@ flowchart LR
 ```
 
 - Keep commands copy-paste ready.
-- Prefer concise checklists over long paragraphs.
+- Use concise checklists for operator actions, then add detailed reference sections for data ownership, dependencies, QA evidence, and troubleshooting.
+- For module guides, include route, audience, managed data, workflow, business rules, validation, related pages, and a detailed appendix when the module affects other workflows.
+- Do not document behavior that is not backed by code, routes, scripts, or verified product workflows.
+- When adding new help sections, update `src/app/lib/help/help-index.ts` so search can find the guide and section anchors.
 
 ## v1 active docs
 
+- `software-overview.md`
 - `setup-guide.md`
 - `org-templates.md`
 - `physical-training-template.md`
 - `olq-template.md`
 - `grading-policy.md`
 - `admin-operations.md`
-
-## future docs
-
-- RBAC & Permissions
-- Deployment & Environment
+- `general-management.md`
+- `module-management.md`
+- `dossier-management.md`
+- `bulk-upload.md`
+- `reports.md`
+- `settings-controls.md`
+- `rbac-permissions.md`
+- `deployment-environment.md`

@@ -26,3 +26,12 @@
 - Client/UI surfaces must not import database clients, schema, server services, Node-only modules, or direct backend implementation details. Use API routes or server helpers as the boundary.
 - API, DB, and server service modules must not import UI components, React hooks, browser-only notification libraries, or client state modules.
 - Tests may mock across boundaries when needed, but production modules should keep these boundaries clean so one module does not silently affect another.
+
+## Worklog Maintenance
+
+- When asked to maintain task sheets, update `/Users/anuragkumar/Desktop/Tasks/<PROJECT>.xlsx`.
+- Keep one workbook per project and split work into 8-day sprint sheets.
+- Preserve the standard columns: `Task`, `Project`, `Priority`, `Story Points`, `Status`, `Start date`, `End date`, `Deliverable`, `Notes`, `Remarks`.
+- Story points must use Fibonacci-style values `1`, `2`, `3`, `5`, `8`, or `13`; split work larger than `13` into smaller tracker rows.
+- Use git/history evidence first, conversation evidence second, and never fabricate worklog entries.
+- After future completed feature work, update the relevant project workbook when the user requests it.

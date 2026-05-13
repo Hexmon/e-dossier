@@ -216,3 +216,76 @@ Symptom:
 Fix:
 
 - Align `pnpm.overrides` and lockfile to patched versions, then rerun install and audit.
+
+## 10. Full Setup Acceptance Criteria {#full-setup-acceptance-criteria}
+
+A fresh environment is not considered ready until these checks pass.
+
+### 10.1 Infrastructure acceptance
+
+- PostgreSQL container/service is running.
+- MinIO or S3-compatible storage is running if uploads are required.
+- `DATABASE_URL` points to the intended database.
+- Storage endpoint, bucket, access key, and secret key are valid.
+- App starts without missing secret errors.
+
+### 10.2 Database acceptance
+
+- `pnpm db:migrate` succeeds.
+- No unexpected migration is generated after migrate.
+- Core tables exist.
+- First Super Admin bootstrap route is disabled after first active Super Admin exists.
+- Setup status API returns the expected next step.
+
+### 10.3 Setup checklist acceptance
+
+Setup should include:
+
+- First Super Admin.
+- Platoons.
+- Users and appointments.
+- Hierarchy.
+- Courses.
+- Subjects.
+- Course offerings/semesters where required.
+- OCs.
+- Optional default templates for PT, camps, OLQ, appointments, and platoons.
+
+### 10.4 Access acceptance
+
+Before setup complete:
+
+- Admin/Super Admin can open setup task pages.
+- Other users cannot sign in for normal work.
+- Edited dashboard URLs redirect to `/setup`.
+- Only `/dashboard/help/setup-guide` is allowed from Help.
+
+After setup complete:
+
+- Admin/Super Admin can use their allowed modules.
+- Non-admin users can sign in according to their appointment/role.
+- Sidebar matches module access settings.
+
+### 10.5 Functional acceptance
+
+Minimum functional smoke:
+
+- Course list loads.
+- OC list loads.
+- Add/edit OC works.
+- Dossier snapshot loads for an OC.
+- Bulk upload dry-run works.
+- Reports page loads.
+- Device/site settings load.
+- Help Center opens and search returns results.
+
+### 10.6 Troubleshooting order
+
+If setup does not complete:
+
+1. Check browser console and network response.
+2. Check `/api/v1/setup/status`.
+3. Check DB row counts for the setup item.
+4. Check whether the setup task created active or soft-deleted rows.
+5. Return to `/setup` and force status refetch.
+6. Check server logs.

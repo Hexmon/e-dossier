@@ -170,6 +170,15 @@ describe("server page auth", () => {
     "/dashboard/reports",
     "/dashboard/settings",
     "/dashboard/oc-1/milmgmt",
+    "/dashboard/help/software-overview",
+    "/dashboard/help/general-management",
+    "/dashboard/help/module-management",
+    "/dashboard/help/dossier-management",
+    "/dashboard/help/bulk-upload",
+    "/dashboard/help/reports",
+    "/dashboard/help/settings-controls",
+    "/dashboard/help/rbac-permissions",
+    "/dashboard/help/deployment-environment",
   ])("redirects edited URL access to %s while initial setup is incomplete", async (pathname) => {
     (getSetupStatus as any).mockResolvedValueOnce({
       bootstrapRequired: false,
