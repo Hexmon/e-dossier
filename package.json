@@ -22,7 +22,7 @@
     "lint:theme": "tsx scripts/check-theme-token-compliance.ts",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "type-check": "tsc --noEmit",
-    "verify": "pnpm run validate:action-map && pnpm run validate:api-tests && pnpm test && pnpm run lint && pnpm run typecheck && pnpm run build",
+    "verify": "pnpm run validate:action-map && pnpm run validate:api-tests && pnpm run test && pnpm run lint && pnpm run typecheck && pnpm run build",
     "validate:action-map": "tsx scripts/validate-action-map.ts",
     "validate:api-tests": "tsx scripts/validate-api-tests.ts",
     "validate:docs": "tsx scripts/validate-docs.ts",
