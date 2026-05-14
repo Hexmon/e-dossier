@@ -2,12 +2,12 @@
 
 import { Controller, useForm } from "react-hook-form";
 import { useState } from "react";
-import type { ComponentProps } from "react";
-import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { ComponentProps, ReactNode } from "react";
+import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { OCRecord, type OCPersonalProfile } from "@/app/lib/api/ocApi";
+import type { OCRecord, OCPersonalProfile } from "@/app/lib/api/ocApi";
 import { Alert, AlertDescription } from "../ui/alert";
 import SearchableSelect from "@/components/ui/searchable-select";
 
@@ -19,6 +19,15 @@ interface OCFormProps {
     platoons: Array<{ id: string; key?: string; name?: string }>;
     isEditing: boolean;
 }
+
+export const OC_FORM_DIALOG_CONTENT_CLASS =
+    "w-[96vw] sm:!max-w-[96vw] lg:!max-w-[1280px] xl:!max-w-[1500px] max-h-[92vh] overflow-hidden p-0 flex flex-col";
+
+export const OC_FORM_BODY_CLASS =
+    "min-h-0 flex-1 overflow-y-auto bg-muted/20 px-6 py-5";
+
+export const OC_FORM_SECTION_GRID_CLASS =
+    "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3";
 
 type SwimmerValue = "" | "true" | "false";
 
@@ -92,10 +101,50 @@ function nullableNumber(value: string | undefined): number | null {
     return Number.isFinite(parsed) ? parsed : null;
 }
 
-function sectionTitle(title: string) {
+function fieldContainerClass(wide = false): string {
+    return wide ? "space-y-1 md:col-span-2 xl:col-span-3" : "space-y-1";
+}
+
+function FormSection({
+    id,
+    title,
+    description,
+    children,
+}: {
+    id: string;
+    title: string;
+    description?: string;
+    children: ReactNode;
+}) {
     return (
-        <div className="col-span-2 border-t pt-4 first:border-t-0 first:pt-0">
-            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <section id={id} className="rounded-md border bg-background p-4 shadow-sm scroll-mt-6">
+            <div className="mb-4 flex flex-col gap-1 border-b pb-3">
+                <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+                {description && <p className="text-xs text-muted-foreground">{description}</p>}
+            </div>
+            <div className={OC_FORM_SECTION_GRID_CLASS}>{children}</div>
+        </section>
+    );
+}
+
+function FieldShell({
+    label,
+    error,
+    htmlFor,
+    wide,
+    children,
+}: {
+    label: string;
+    error: string | null;
+    htmlFor?: string;
+    wide?: boolean;
+    children: ReactNode;
+}) {
+    return (
+        <div className={fieldContainerClass(wide)}>
+            <Label htmlFor={htmlFor}>{label}</Label>
+            {children}
+            {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
     );
 }
@@ -274,261 +323,303 @@ export function OCForm({
         name: keyof OCFormData,
         label: string,
         props: ComponentProps<typeof Input> = {},
+        wide = false,
     ) => (
-        <div>
-            <Label>{label}</Label>
-            <Input {...register(name)} {...props} />
-            {getFieldError(name) && (
-                <p className="text-sm text-destructive mt-1">{getFieldError(name)}</p>
-            )}
-        </div>
+        <FieldShell label={label} error={getFieldError(name)} htmlFor={String(name)} wide={wide}>
+            <Input id={String(name)} {...register(name)} {...props} />
+        </FieldShell>
     );
 
-    const textarea = (name: keyof OCFormData, label: string) => (
-        <div>
-            <Label>{label}</Label>
+    const textarea = (name: keyof OCFormData, label: string, wide = true) => (
+        <FieldShell label={label} error={getFieldError(name)} htmlFor={String(name)} wide={wide}>
             <textarea
+                id={String(name)}
                 {...register(name)}
                 rows={3}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
-            {getFieldError(name) && (
-                <p className="text-sm text-destructive mt-1">{getFieldError(name)}</p>
-            )}
-        </div>
+        </FieldShell>
     );
 
+    const sectionLinks = [
+        { id: "oc-core-details", label: "Core details" },
+        { id: "oc-personal-details", label: "Personal" },
+        { id: "oc-contact-details", label: "Contact and IDs" },
+        { id: "oc-family-details", label: "Family and NOK" },
+        { id: "oc-other-details", label: "Other details" },
+    ];
+
     return (
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
+        <DialogContent className={OC_FORM_DIALOG_CONTENT_CLASS}>
+            <DialogHeader className="shrink-0 border-b px-6 py-5 pr-12">
                 <DialogTitle>{isEditing ? "Edit OC" : "Add New OC"}</DialogTitle>
+                <DialogDescription>
+                    Maintain the OC identity, current placement, and imported profile details.
+                </DialogDescription>
             </DialogHeader>
 
-            {apiErrors && Object.keys(apiErrors).length > 0 && (
-                <Alert variant="destructive" className="mb-4">
-                    <AlertDescription>
-                        <div className="font-semibold mb-2">Validation failed. Please fix the following errors:</div>
-                        <ul className="list-disc list-inside space-y-1">
-                            {Object.entries(apiErrors).map(([field, messages]) => (
-                                <li key={field} className="text-sm">
-                                    <strong>{field}:</strong> {messages[0]}
-                                </li>
-                            ))}
-                        </ul>
-                    </AlertDescription>
-                </Alert>
-            )}
+            <form onSubmit={handleSubmit(handleFormSubmit)} className="min-h-0 flex flex-1 flex-col">
+                <div className={OC_FORM_BODY_CLASS}>
+                    {apiErrors && Object.keys(apiErrors).length > 0 && (
+                        <Alert variant="destructive" className="mb-5">
+                            <AlertDescription>
+                                <div className="font-semibold mb-2">Validation failed. Please fix the following errors:</div>
+                                <ul className="list-disc list-inside space-y-1">
+                                    {Object.entries(apiErrors).map(([field, messages]) => (
+                                        <li key={field} className="text-sm">
+                                            <strong>{field}:</strong> {messages[0]}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </AlertDescription>
+                        </Alert>
+                    )}
 
-            <form onSubmit={handleSubmit(handleFormSubmit)} className="grid grid-cols-2 gap-4 mb-6">
-                {sectionTitle("Core Details")}
+                    <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
+                        <aside className="hidden xl:block">
+                            <nav className="sticky top-0 rounded-md border bg-background p-3 text-sm shadow-sm">
+                                <div className="mb-2 px-2 text-xs font-medium uppercase text-muted-foreground">
+                                    Sections
+                                </div>
+                                <div className="space-y-1">
+                                    {sectionLinks.map((section) => (
+                                        <a
+                                            key={section.id}
+                                            href={`#${section.id}`}
+                                            className="block rounded px-2 py-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        >
+                                            {section.label}
+                                        </a>
+                                    ))}
+                                </div>
+                            </nav>
+                        </aside>
 
-                <div className="col-span-2">
-                    <Label>Upload Photo</Label>
-                    <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                    />
-                    {(selectedFile || previewUrl) && (
-                        <div className="mt-2">
-                            {selectedFile && (
-                                <p className="text-sm text-muted-foreground">
-                                    Selected: {selectedFile.name}
-                                </p>
-                            )}
-                            {previewUrl && (
-                                <img
-                                    src={previewUrl}
-                                    alt="Preview"
-                                    className="mt-2 w-32 h-32 object-cover rounded border"
-                                />
-                            )}
+                        <div className="space-y-5">
+                            <FormSection
+                                id="oc-core-details"
+                                title="Core Details"
+                                description="Identity, course, platoon, branch, arrival, and photo."
+                            >
+                                <div className="rounded-md border border-dashed bg-muted/20 p-4 md:col-span-2 xl:col-span-3">
+                                    <div className="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)]">
+                                        <div>
+                                            {previewUrl ? (
+                                                <img
+                                                    src={previewUrl}
+                                                    alt="OC photo preview"
+                                                    className="h-32 w-32 rounded-md border object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex h-32 w-32 items-center justify-center rounded-md border bg-background text-xs text-muted-foreground">
+                                                    No photo
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="oc-photo">Upload Photo</Label>
+                                            <Input
+                                                id="oc-photo"
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFileChange}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                {selectedFile ? `Selected: ${selectedFile.name}` : "Optional image for OC profile display."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <FieldShell label="Full Name *" error={getFieldError("name")} htmlFor="name">
+                                    <Input
+                                        id="name"
+                                        {...register("name", {
+                                            required: "Full name is required",
+                                            minLength: { value: 2, message: "Full name must be at least 2 characters" },
+                                        })}
+                                        placeholder="Enter full name"
+                                    />
+                                </FieldShell>
+
+                                <FieldShell label="OC No / TES No *" error={getFieldError("ocNo")} htmlFor="ocNo">
+                                    <Input
+                                        id="ocNo"
+                                        {...register("ocNo", {
+                                            required: "OC No is required",
+                                            pattern: {
+                                                value: /^[A-Z0-9-]+$/i,
+                                                message: "OC No should contain only letters, numbers and hyphens",
+                                            },
+                                        })}
+                                        placeholder="Enter OC number"
+                                    />
+                                </FieldShell>
+
+                                {input("jnuEnrollmentNo", "JNU Enrollment No", {
+                                    inputMode: "numeric",
+                                    placeholder: "Enter JNU enrollment number",
+                                })}
+
+                                <FieldShell label="Course *" error={getFieldError("courseId")}>
+                                    <Controller
+                                        name="courseId"
+                                        control={control}
+                                        rules={{ required: "Course is required" }}
+                                        render={({ field }) => (
+                                            <SearchableSelect
+                                                value={field.value ?? ""}
+                                                onValueChange={field.onChange}
+                                                options={courses.map(({ id, code, title }) => ({
+                                                    value: id,
+                                                    label: code ? `${code}${title ? ` - ${title}` : ""}` : title ?? id,
+                                                }))}
+                                                placeholder="Select Course"
+                                                searchPlaceholder="Search course..."
+                                                emptyLabel="No course found"
+                                            />
+                                        )}
+                                    />
+                                </FieldShell>
+
+                                <FieldShell label="Branch" error={getFieldError("branch")} htmlFor="branch">
+                                    <select
+                                        id="branch"
+                                        {...register("branch")}
+                                        className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                                    >
+                                        <option value="">Select Branch</option>
+                                        <option value="O">O (Others)</option>
+                                        <option value="E">E (Electronics)</option>
+                                        <option value="M">M (Mechanical)</option>
+                                    </select>
+                                </FieldShell>
+
+                                <FieldShell label="Platoon" error={getFieldError("platoonId")}>
+                                    <Controller
+                                        name="platoonId"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <SearchableSelect
+                                                value={field.value ?? ""}
+                                                onValueChange={field.onChange}
+                                                options={platoons.map(({ id, key, name }) => ({
+                                                    value: id,
+                                                    label: key && name ? `${key} - ${name}` : name ?? key ?? id,
+                                                }))}
+                                                placeholder="Select Platoon"
+                                                searchPlaceholder="Search platoon..."
+                                                allOptionLabel="No Platoon"
+                                                emptyLabel="No platoon found"
+                                            />
+                                        )}
+                                    />
+                                </FieldShell>
+
+                                <FieldShell label="Arrival Date *" error={getFieldError("arrivalAtUniversity")} htmlFor="arrivalAtUniversity">
+                                    <Input
+                                        id="arrivalAtUniversity"
+                                        type="date"
+                                        {...register("arrivalAtUniversity", { required: "Arrival date is required" })}
+                                    />
+                                </FieldShell>
+                            </FormSection>
+
+                            <FormSection
+                                id="oc-personal-details"
+                                title="Imported Personal Details"
+                                description="Personal values imported from the OC bulk sheet."
+                            >
+                                {input("visibleIdentMarks", "Visible Ident Marks")}
+                                {input("pi", "PI")}
+                                {input("dob", "DOB", { type: "date" })}
+                                {input("placeOfBirth", "Place of Birth")}
+                                {input("domicile", "Domicile")}
+                                {input("religion", "Religion")}
+                                {input("nationality", "Nationality")}
+                                {input("bloodGroup", "Blood Group")}
+                                {textarea("identMarks", "Identification Marks")}
+                            </FormSection>
+
+                            <FormSection
+                                id="oc-contact-details"
+                                title="Contact And IDs"
+                                description="Communication, identity, and reference numbers."
+                            >
+                                {input("mobileNo", "Govt Fin Asst Mob No / Mobile No")}
+                                {input("email", "Email", { type: "email" })}
+                                {input("passportNo", "Passport No")}
+                                {input("panNo", "PAN Card No")}
+                                {input("aadhaarNo", "Aadhaar No")}
+                                {input("upscRollNo", "UPSC Roll No")}
+                                {input("idenCardNo", "Iden Card No")}
+                                {textarea("bankDetails", "Bank Details")}
+                            </FormSection>
+
+                            <FormSection
+                                id="oc-family-details"
+                                title="Family And NOK"
+                                description="Family, guardian, address, and next-of-kin details."
+                            >
+                                {input("fatherName", "Father's Name")}
+                                {input("fatherMobile", "Father's Mobile")}
+                                {input("fatherProfession", "Father's Profession")}
+                                {input("guardianName", "Guardian Name")}
+                                {input("monthlyIncome", "Income (Parents)", { inputMode: "numeric" })}
+                                {input("nearestRailwayStation", "Nearest Railway Station")}
+                                {textarea("fatherAddrPerm", "Father's Address")}
+                                {textarea("guardianAddress", "Guardian Address")}
+                                {textarea("nokDetails", "Details of NOK")}
+                                {textarea("nokAddrPerm", "Permanent Address")}
+                                {textarea("nokAddrPresent", "Present Address")}
+                                {textarea("familyInSecunderabad", "Family/Friends Address in Secunderabad")}
+                                {textarea("relativeInArmedForces", "Near Relative in Armed Forces")}
+                                <div className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2">
+                                    <input
+                                        id="govtFinancialAssistance"
+                                        type="checkbox"
+                                        {...register("govtFinancialAssistance")}
+                                        className="h-4 w-4"
+                                    />
+                                    <Label htmlFor="govtFinancialAssistance">Govt Financial Assistance</Label>
+                                </div>
+                            </FormSection>
+
+                            <FormSection
+                                id="oc-other-details"
+                                title="Other Imported Details"
+                                description="SSB, games, hobbies, swimmer status, and languages."
+                            >
+                                {input("ssbCentre", "SSB Centre")}
+                                <FieldShell label="Swimmer/Non Swimmer" error={getFieldError("swimmer")} htmlFor="swimmer">
+                                    <select
+                                        id="swimmer"
+                                        {...register("swimmer")}
+                                        className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                                    >
+                                        <option value="">Select Status</option>
+                                        <option value="true">Swimmer</option>
+                                        <option value="false">Non Swimmer</option>
+                                    </select>
+                                </FieldShell>
+                                {textarea("games", "Games")}
+                                {textarea("hobbies", "Hobbies")}
+                                {textarea("languages", "Languages")}
+                            </FormSection>
                         </div>
-                    )}
+                    </div>
                 </div>
 
-                <div>
-                    <Label>Full Name *</Label>
-                    <Input
-                        {...register("name", {
-                            required: "Full name is required",
-                            minLength: { value: 2, message: "Full name must be at least 2 characters" }
-                        })}
-                        placeholder="Enter full name"
-                    />
-                    {getFieldError("name") && (
-                        <p className="text-sm text-destructive mt-1">{getFieldError("name")}</p>
-                    )}
-                </div>
-
-                <div>
-                    <Label>OC No / TES No *</Label>
-                    <Input
-                        {...register("ocNo", {
-                            required: "OC No is required",
-                            pattern: {
-                                value: /^[A-Z0-9-]+$/i,
-                                message: "OC No should contain only letters, numbers and hyphens"
-                            }
-                        })}
-                        placeholder="Enter OC number"
-                    />
-                    {getFieldError("ocNo") && (
-                        <p className="text-sm text-destructive mt-1">{getFieldError("ocNo")}</p>
-                    )}
-                </div>
-
-                {input("jnuEnrollmentNo", "JNU Enrollment No", {
-                    inputMode: "numeric",
-                    placeholder: "Enter JNU enrollment number",
-                })}
-
-                <div>
-                    <Label>Course *</Label>
-                    <Controller
-                        name="courseId"
-                        control={control}
-                        rules={{ required: "Course is required" }}
-                        render={({ field }) => (
-                            <SearchableSelect
-                                value={field.value ?? ""}
-                                onValueChange={field.onChange}
-                                options={courses.map(({ id, code, title }) => ({
-                                    value: id,
-                                    label: code ? `${code}${title ? ` - ${title}` : ""}` : title ?? id,
-                                }))}
-                                placeholder="Select Course"
-                                searchPlaceholder="Search course..."
-                                emptyLabel="No course found"
-                            />
-                        )}
-                    />
-                    {getFieldError("courseId") && (
-                        <p className="text-sm text-destructive mt-1">{getFieldError("courseId")}</p>
-                    )}
-                </div>
-
-                <div>
-                    <Label>Branch</Label>
-                    <select
-                        {...register("branch")}
-                        className="w-full border rounded-md p-2 bg-background"
-                    >
-                        <option value="">Select Branch</option>
-                        <option value="O">O (Others)</option>
-                        <option value="E">E (Electronics)</option>
-                        <option value="M">M (Mechanical)</option>
-                    </select>
-                    {getFieldError("branch") && (
-                        <p className="text-sm text-destructive mt-1">{getFieldError("branch")}</p>
-                    )}
-                </div>
-
-                <div>
-                    <Label>Platoon</Label>
-                    <Controller
-                        name="platoonId"
-                        control={control}
-                        render={({ field }) => (
-                            <SearchableSelect
-                                value={field.value ?? ""}
-                                onValueChange={field.onChange}
-                                options={platoons.map(({ id, key, name }) => ({
-                                    value: id,
-                                    label: key && name ? `${key} - ${name}` : name ?? key ?? id,
-                                }))}
-                                placeholder="Select Platoon"
-                                searchPlaceholder="Search platoon..."
-                                allOptionLabel="No Platoon"
-                                emptyLabel="No platoon found"
-                            />
-                        )}
-                    />
-                    {getFieldError("platoonId") && (
-                        <p className="text-sm text-destructive mt-1">{getFieldError("platoonId")}</p>
-                    )}
-                </div>
-
-                <div>
-                    <Label>Arrival Date *</Label>
-                    <Input
-                        type="date"
-                        {...register("arrivalAtUniversity", { required: "Arrival date is required" })}
-                    />
-                    {getFieldError("arrivalAtUniversity") && (
-                        <p className="text-sm text-destructive mt-1">{getFieldError("arrivalAtUniversity")}</p>
-                    )}
-                </div>
-
-                {sectionTitle("Imported Personal Details")}
-                {input("visibleIdentMarks", "Visible Ident Marks")}
-                {input("pi", "PI")}
-                {input("dob", "DOB", { type: "date" })}
-                {input("placeOfBirth", "Place of Birth")}
-                {input("domicile", "Domicile")}
-                {input("religion", "Religion")}
-                {input("nationality", "Nationality")}
-                {input("bloodGroup", "Blood Group")}
-                {textarea("identMarks", "Identification Marks")}
-
-                {sectionTitle("Contact And IDs")}
-                {input("mobileNo", "Govt Fin Asst Mob No / Mobile No")}
-                {input("email", "Email", { type: "email" })}
-                {input("passportNo", "Passport No")}
-                {input("panNo", "PAN Card No")}
-                {input("aadhaarNo", "Aadhaar No")}
-                {input("upscRollNo", "UPSC Roll No")}
-                {input("idenCardNo", "Iden Card No")}
-                {textarea("bankDetails", "Bank Details")}
-
-                {sectionTitle("Family And NOK")}
-                {input("fatherName", "Father's Name")}
-                {input("fatherMobile", "Father's Mobile")}
-                {textarea("fatherAddrPerm", "Father's Address")}
-                {input("fatherProfession", "Father's Profession")}
-                {input("guardianName", "Guardian Name")}
-                {textarea("guardianAddress", "Guardian Address")}
-                {input("monthlyIncome", "Income (Parents)", { inputMode: "numeric" })}
-                {textarea("nokDetails", "Details of NOK")}
-                {textarea("nokAddrPerm", "Permanent Address")}
-                {textarea("nokAddrPresent", "Present Address")}
-                {input("nearestRailwayStation", "Nearest Railway Station")}
-                {textarea("familyInSecunderabad", "Family/Friends Address in Secunderabad")}
-                {textarea("relativeInArmedForces", "Near Relative in Armed Forces")}
-                <div className="flex items-center gap-2 pt-7">
-                    <input
-                        id="govtFinancialAssistance"
-                        type="checkbox"
-                        {...register("govtFinancialAssistance")}
-                        className="h-4 w-4"
-                    />
-                    <Label htmlFor="govtFinancialAssistance">Govt Financial Assistance</Label>
-                </div>
-
-                {sectionTitle("Other Imported Details")}
-                {input("ssbCentre", "SSB Centre")}
-                {textarea("games", "Games")}
-                {textarea("hobbies", "Hobbies")}
-                <div>
-                    <Label>Swimmer/Non Swimmer</Label>
-                    <select
-                        {...register("swimmer")}
-                        className="w-full border rounded-md p-2 bg-background"
-                    >
-                        <option value="">Select Status</option>
-                        <option value="true">Swimmer</option>
-                        <option value="false">Non Swimmer</option>
-                    </select>
-                </div>
-                {textarea("languages", "Languages")}
-
-                <div className="col-span-2 flex justify-end gap-2 mt-4">
-                    <Button variant="outline" type="button" onClick={onCancel} disabled={isSubmitting}>
-                        Cancel
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update" : "Save")}
-                    </Button>
+                <div className="flex shrink-0 flex-col gap-3 border-t bg-background px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-muted-foreground">Fields marked * are required.</p>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" type="button" onClick={onCancel} disabled={isSubmitting}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update" : "Save")}
+                        </Button>
+                    </div>
                 </div>
             </form>
         </DialogContent>

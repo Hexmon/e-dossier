@@ -14,6 +14,8 @@ export type BulkResult =
     }
     | null;
 
+type NonNullBulkResult = NonNullable<BulkResult>;
+
 export function useOCUpload() {
     const [parsing, setParsing] = useState<boolean>(false);
     const [uploadedRawRows, setUploadedRawRows] = useState<RawRow[]>([]);
@@ -152,7 +154,10 @@ export function useOCUpload() {
     }, []);
 
     const doBulkUploadSelected = useCallback(
-        async (selectedIndexes: number[], onComplete?: () => Promise<void>) => {
+        async (
+            selectedIndexes: number[],
+            onComplete?: (result: NonNullBulkResult) => Promise<void>
+        ): Promise<NonNullBulkResult | null> => {
             const uniqueIndexes = Array.from(
                 new Set(
                     selectedIndexes
@@ -162,10 +167,10 @@ export function useOCUpload() {
                 )
             ).sort((a, b) => a - b);
 
-            if (uniqueIndexes.length === 0) return;
+            if (uniqueIndexes.length === 0) return null;
 
             const selectedRows = uniqueIndexes.map((idx) => uploadedRawRows[idx]).filter(Boolean) as RawRow[];
-            if (selectedRows.length === 0) return;
+            if (selectedRows.length === 0) return null;
 
             setBulkUploading(true);
             try {
@@ -190,13 +195,16 @@ export function useOCUpload() {
                 );
                 setRowValidations({});
 
-                if (onComplete) await onComplete();
+                if (onComplete) await onComplete(res);
+                return res;
             } catch (err: any) {
-                setBulkResult({
+                const failureResult: NonNullBulkResult = {
                     success: 0,
                     failed: selectedRows.length,
                     errors: [{ row: 0, error: err?.message ?? "Upload failed" }],
-                });
+                };
+                setBulkResult(failureResult);
+                return failureResult;
             } finally {
                 setBulkUploading(false);
             }
@@ -205,9 +213,9 @@ export function useOCUpload() {
     );
 
     const doBulkUpload = useCallback(
-        async (onComplete?: () => Promise<void>) => {
-            if (uploadedRawRows.length === 0) return;
-            await doBulkUploadSelected(
+        async (onComplete?: (result: NonNullBulkResult) => Promise<void>) => {
+            if (uploadedRawRows.length === 0) return null;
+            return doBulkUploadSelected(
                 uploadedRawRows.map((_, idx) => idx),
                 onComplete
             );

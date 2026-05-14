@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -31,8 +31,14 @@ import { useDebouncedValue } from "@/app/lib/debounce";
 
 import { useOCUpload } from "@/hooks/useOCUpload";
 
-import { fetchOCByIdFull, updateOC } from "@/app/lib/api/ocApi";
+import { deleteOC, fetchOCByIdFull, updateOC } from "@/app/lib/api/ocApi";
 import type { FullOCRecord, OCListRow, OCRecord } from "@/app/lib/api/ocApi";
+import {
+  archiveOCsSequentially,
+  buildBulkArchiveSummary,
+  type BulkArchiveFailure,
+} from "@/app/lib/oc/bulk-archive";
+import { buildOCBulkUploadToast } from "@/app/lib/oc/bulk-upload-result";
 import { useOCs } from "@/hooks/useOCs";
 import OCFilters from "@/components/genmgmt/OCFilters";
 import { OCForm } from "@/components/genmgmt/OCForm";
@@ -42,6 +48,8 @@ import SearchableSelect from "@/components/ui/searchable-select";
 
 type CourseLike = { id: string; code?: string; title?: string };
 type PlatoonLike = { id: string; key?: string; name?: string };
+const ALLOWED_BRANCHES = ["O", "E", "M"] as const;
+const ALLOWED_STATUS = ["ACTIVE", "DELEGATED", "WITHDRAWN", "PASSED_OUT"] as const;
 
 export default function OCManagementPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -55,22 +63,20 @@ export default function OCManagementPage() {
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
-  type BranchType = "O" | "E" | "M";
-  const allowedBranches = useMemo(() => ["O", "E", "M"] as const, []);
+  type BranchType = (typeof ALLOWED_BRANCHES)[number];
 
   const safeBranch = useMemo((): BranchType | undefined => {
     if (!branchFilter) return undefined;
-    return allowedBranches.includes(branchFilter as BranchType)
+    return ALLOWED_BRANCHES.includes(branchFilter as BranchType)
       ? (branchFilter as BranchType)
       : undefined;
-  }, [branchFilter, allowedBranches]);
+  }, [branchFilter]);
 
-  type StatusType = "ACTIVE" | "DELEGATED" | "WITHDRAWN" | "PASSED_OUT";
-  const allowedStatus: StatusType[] = ["ACTIVE", "DELEGATED", "WITHDRAWN", "PASSED_OUT"];
+  type StatusType = (typeof ALLOWED_STATUS)[number];
 
   const safeStatus = useMemo((): StatusType | undefined => {
     if (!statusFilter) return undefined;
-    return allowedStatus.includes(statusFilter as StatusType)
+    return ALLOWED_STATUS.includes(statusFilter as StatusType)
       ? (statusFilter as StatusType)
       : undefined;
   }, [statusFilter]);
@@ -149,6 +155,10 @@ export default function OCManagementPage() {
   const [selectedOcIds, setSelectedOcIds] = useState<Set<string>>(new Set());
   const [bulkPlatoonId, setBulkPlatoonId] = useState<string>("");
   const [bulkAssigning, setBulkAssigning] = useState<boolean>(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState<boolean>(false);
+  const [bulkDeleteConfirmInput, setBulkDeleteConfirmInput] = useState<string>("");
+  const [bulkDeleting, setBulkDeleting] = useState<boolean>(false);
+  const [bulkDeleteFailures, setBulkDeleteFailures] = useState<BulkArchiveFailure[]>([]);
 
   const { reset } = useForm<Partial<OCRecord>>();
 
@@ -235,7 +245,7 @@ export default function OCManagementPage() {
       setIsDeleting(true);
       await removeOC(deleteTarget.id);
       closeDeleteDialog();
-    } catch (error: any) {
+    } catch {
       setIsDeleting(false);
     }
   };
@@ -248,11 +258,21 @@ export default function OCManagementPage() {
   };
 
   const handleBulkUpload = async (selectedIndexes: number[]) => {
-    await doBulkUploadSelected(selectedIndexes, async () => {
-      setCurrentPage(1);
-      await refreshOCs();
-      toast.success("Bulk upload completed successfully");
+    const result = await doBulkUploadSelected(selectedIndexes, async (uploadResult) => {
+      if (uploadResult.success > 0) {
+        setCurrentPage(1);
+        await refreshOCs();
+      }
     });
+
+    const toastConfig = buildOCBulkUploadToast(result);
+    if (!toastConfig) return;
+
+    if (toastConfig.variant === "success") {
+      toast.success(toastConfig.message);
+    } else {
+      toast.error(toastConfig.message);
+    }
   };
 
   const openView = (id: string) => {
@@ -274,6 +294,10 @@ export default function OCManagementPage() {
   };
 
   const selectedCount = selectedOcIds.size;
+  const selectedRows = useMemo(
+    () => ocList.filter((oc) => oc.id && selectedOcIds.has(oc.id)),
+    [ocList, selectedOcIds],
+  );
 
   const toggleSelectedOc = (id: string, checked: boolean) => {
     setSelectedOcIds((prev) => {
@@ -303,6 +327,8 @@ export default function OCManagementPage() {
   const clearSelection = () => {
     setSelectedOcIds(new Set());
     setBulkPlatoonId("");
+    setBulkDeleteConfirmInput("");
+    setBulkDeleteFailures([]);
   };
 
   const handleBulkPlatoonAssign = async () => {
@@ -324,6 +350,59 @@ export default function OCManagementPage() {
       toast.error(error?.message || "Failed to update selected OCs.");
     } finally {
       setBulkAssigning(false);
+    }
+  };
+
+  const openBulkDeleteDialog = () => {
+    if (selectedCount === 0) {
+      toast.error("Select at least one OC to delete.");
+      return;
+    }
+
+    setBulkDeleteConfirmInput("");
+    setBulkDeleteFailures([]);
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const closeBulkDeleteDialog = () => {
+    if (bulkDeleting) return;
+    setBulkDeleteDialogOpen(false);
+    setBulkDeleteConfirmInput("");
+    setBulkDeleteFailures([]);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (bulkDeleteConfirmInput.trim().toUpperCase() !== "DELETE") return;
+
+    if (selectedRows.length === 0) {
+      toast.error("Selected OCs are no longer visible. Refresh the list and try again.");
+      return;
+    }
+
+    try {
+      setBulkDeleting(true);
+      const result = await archiveOCsSequentially(selectedRows, deleteOC);
+      await refreshOCs();
+
+      setSelectedOcIds((prev) => {
+        const next = new Set(prev);
+        for (const id of result.archivedIds) {
+          next.delete(id);
+        }
+        return next;
+      });
+      setBulkDeleteFailures(result.failed);
+
+      const message = buildBulkArchiveSummary(result);
+      if (result.failed.length === 0) {
+        toast.success(message);
+        setBulkDeleteDialogOpen(false);
+        setBulkDeleteConfirmInput("");
+      } else {
+        toast.error(`${message} Review the failed rows below.`);
+      }
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -514,6 +593,14 @@ export default function OCManagementPage() {
                       >
                         {bulkAssigning ? "Assigning..." : "Assign Platoon"}
                       </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={openBulkDeleteDialog}
+                        disabled={bulkDeleting || selectedCount === 0}
+                      >
+                        Delete Selected
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -565,7 +652,8 @@ export default function OCManagementPage() {
           <DialogHeader>
             <DialogTitle>Confirm OC Deletion</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. Type the OC name exactly to enable delete.
+              This uses the existing OC delete policy. The OC is archived from active lists,
+              while dossier and related records are kept. Type the OC name exactly to enable delete.
             </DialogDescription>
           </DialogHeader>
 
@@ -610,6 +698,94 @@ export default function OCManagementPage() {
               }
             >
               {isDeleting ? "Deleting..." : "Delete OC"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeBulkDeleteDialog();
+          else setBulkDeleteDialogOpen(true);
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Confirm Bulk OC Deletion</DialogTitle>
+            <DialogDescription>
+              This uses the existing OC delete policy. Selected OCs are archived from active
+              lists; dossier and related records are not hard-deleted.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 text-sm">
+            <div className="rounded-md border bg-muted/20 p-3">
+              <p className="font-medium">
+                {selectedRows.length} selected OC{selectedRows.length === 1 ? "" : "s"}
+              </p>
+              <div className="mt-2 max-h-40 overflow-y-auto rounded border bg-background">
+                {selectedRows.slice(0, 25).map((oc) => (
+                  <div key={oc.id} className="flex items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0">
+                    <span className="font-medium">{oc.name ?? "Unnamed OC"}</span>
+                    <span className="text-muted-foreground">{oc.ocNo ?? "-"}</span>
+                  </div>
+                ))}
+                {selectedRows.length > 25 && (
+                  <div className="px-3 py-2 text-muted-foreground">
+                    +{selectedRows.length - 25} more selected OCs
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="confirm-bulk-delete" className="font-medium">
+                Type DELETE to confirm
+              </label>
+              <input
+                id="confirm-bulk-delete"
+                type="text"
+                value={bulkDeleteConfirmInput}
+                onChange={(event) => setBulkDeleteConfirmInput(event.target.value)}
+                placeholder="DELETE"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                autoComplete="off"
+              />
+            </div>
+
+            {bulkDeleteFailures.length > 0 && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                <p className="font-medium text-destructive">
+                  {bulkDeleteFailures.length} OC{bulkDeleteFailures.length === 1 ? "" : "s"} could not be deleted
+                </p>
+                <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                  {bulkDeleteFailures.map((failure) => (
+                    <li key={failure.id}>
+                      <span className="font-medium">{failure.label}:</span>{" "}
+                      <span>{failure.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeBulkDeleteDialog} disabled={bulkDeleting}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmBulkDelete}
+              disabled={
+                bulkDeleting ||
+                selectedRows.length === 0 ||
+                bulkDeleteConfirmInput.trim().toUpperCase() !== "DELETE"
+              }
+            >
+              {bulkDeleting ? "Deleting..." : `Delete ${selectedRows.length} OC${selectedRows.length === 1 ? "" : "s"}`}
             </Button>
           </DialogFooter>
         </DialogContent>

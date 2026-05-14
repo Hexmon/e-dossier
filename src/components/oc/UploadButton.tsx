@@ -4,7 +4,6 @@ import { useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
-import { toDisplayDMY } from "@/app/lib/dateUtils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download, FileSpreadsheet } from "lucide-react";
 import {
@@ -16,16 +15,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  toOCBulkPreviewRow,
+  validateOCBulkUploadRows,
+  type RawRow,
+  type UploadedPreviewRow,
+} from "@/app/lib/oc/bulk-upload-format";
 
-export type RawRow = Record<string, unknown>;
-export type UploadedPreviewRow = {
-  name: string;
-  tesNo: string;
-  course?: string;
-  branch?: string | null;
-  platoon?: string | null;
-  arrival: string; // DD-MMM-YYYY
-};
+export type { RawRow, UploadedPreviewRow } from "@/app/lib/oc/bulk-upload-format";
 
 type Props = {
   disabled?: boolean;
@@ -251,6 +248,7 @@ export default function UploadButton({
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [alertOpen, setAlertOpen] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("Notice");
   const [alertMessage, setAlertMessage] = useState("");
   const [sampleOpen, setSampleOpen] = useState(false);
 
@@ -267,7 +265,8 @@ export default function UploadButton({
     [platoonOptions]
   );
 
-  const openAlert = (message: string) => {
+  const openAlert = (message: string, title = "Notice") => {
+    setAlertTitle(title);
     setAlertMessage(message);
     setAlertOpen(true);
   };
@@ -287,34 +286,24 @@ export default function UploadButton({
     URL.revokeObjectURL(url);
   };
 
-  const norm = (s: string) => s.toLowerCase().replace(/['`’]/g, "'").replace(/[^a-z0-9]+/g, " ").trim();
-  const pick = (row: RawRow, aliases: string[]): unknown => {
-    const map: Record<string, unknown> = {};
-    Object.keys(row).forEach((k) => (map[norm(k)] = (row as any)[k]));
-    for (const a of aliases) {
-      const v = map[norm(a)];
-      if (v !== undefined && v !== null && String(v).trim() !== "") return v;
-    }
-    return undefined;
-  };
-
-  const toPreviewRow = (row: RawRow): UploadedPreviewRow => {
-    const arrivalRaw = pick(row, ["Dt of Arrival", "Date of Arrival", "DOA"]);
-    return {
-      name: String(pick(row, ["Name"]) ?? ""),
-      tesNo: String(pick(row, ["Tes No", "TesNo", "TES NO", "OC No", "OC Number"]) ?? ""),
-      course: String(pick(row, ["Course", "Course Code", "Course Name"]) ?? ""),
-      branch: (pick(row, ["Branch"]) as string | null | undefined) ?? null,
-      platoon: (pick(row, ["Platoon", "PlatoonId"]) as string | null | undefined) ?? null,
-      arrival: toDisplayDMY(arrivalRaw),
-    };
-  };
-
   const acceptRows = (rows: RawRow[]) => {
-    const parsed = rows
-      .filter((r) => Object.values(r).some((v) => String(v ?? "").trim() !== ""))
-      .map((rawRow) => ({ rawRow, previewRow: toPreviewRow(rawRow) }))
+    const validation = validateOCBulkUploadRows(rows);
+    if (!validation.ok) {
+      openAlert(validation.message, validation.title);
+      return;
+    }
+
+    const parsed = validation.nonEmptyRows
+      .map((rawRow) => ({ rawRow, previewRow: toOCBulkPreviewRow(rawRow) }))
       .filter(({ previewRow }) => previewRow.name || previewRow.tesNo || previewRow.course);
+
+    if (parsed.length === 0) {
+      openAlert(
+        "No usable OC rows were found. Fill TES No, Name, Course, and Dt of Arrival for each OC before uploading again.",
+        "Invalid upload format",
+      );
+      return;
+    }
 
     onParsed(
       parsed.map((entry) => entry.rawRow),
@@ -336,7 +325,10 @@ export default function UploadButton({
           acceptRows(results.data as RawRow[]);
           onParsingStateChange?.(false);
         },
-        error: () => onParsingStateChange?.(false),
+        error: () => {
+          openAlert("Could not read the CSV file. Check the file format and upload again.", "Upload failed");
+          onParsingStateChange?.(false);
+        },
       });
     } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
       const reader = new FileReader();
@@ -347,14 +339,20 @@ export default function UploadButton({
           const sheetName = workbook.SheetNames[0];
           const worksheet = XLSX.utils.sheet_to_json<RawRow>(workbook.Sheets[sheetName], { raw: true });
           acceptRows(worksheet);
+        } catch {
+          openAlert("Could not read the Excel file. Check the file format and upload again.", "Upload failed");
         } finally {
           onParsingStateChange?.(false);
         }
       };
+      reader.onerror = () => {
+        openAlert("Could not read the Excel file. Check the file format and upload again.", "Upload failed");
+        onParsingStateChange?.(false);
+      };
       reader.readAsArrayBuffer(file);
     } else {
       onParsingStateChange?.(false);
-      openAlert("Unsupported file type. Allowed files: .csv, .xlsx, .xls");
+      openAlert("Unsupported file type. Allowed files: .csv, .xlsx, .xls", "Unsupported file type");
     }
 
     // reset so same file can be chosen again
@@ -543,7 +541,7 @@ export default function UploadButton({
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Notice</AlertDialogTitle>
+            <AlertDialogTitle>{alertTitle}</AlertDialogTitle>
             <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
