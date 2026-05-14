@@ -52,6 +52,45 @@ describe("OC bulk upload format validation", () => {
     });
   });
 
+  it("uses PI as the platoon preview fallback when no Platoon column exists", () => {
+    const validation = validateOCBulkUploadRows([
+      {
+        "Tes No": "7506",
+        Name: "OC PI Platoon",
+        Course: "TES-51",
+        "Dt of Arrival": "2026-06-01",
+        PI: "RANAPRATAP",
+      },
+    ]);
+
+    expect(validation.ok).toBe(true);
+    if (!validation.ok) return;
+
+    expect(toOCBulkPreviewRow(validation.nonEmptyRows[0])).toMatchObject({
+      platoon: "RANAPRATAP",
+    });
+  });
+
+  it("prefers explicit Platoon over PI for preview when both are present", () => {
+    const validation = validateOCBulkUploadRows([
+      {
+        "Tes No": "7507",
+        Name: "OC Explicit Platoon",
+        Course: "TES-51",
+        "Dt of Arrival": "2026-06-02",
+        Platoon: "ARJUN",
+        PI: "RANAPRATAP",
+      },
+    ]);
+
+    expect(validation.ok).toBe(true);
+    if (!validation.ok) return;
+
+    expect(toOCBulkPreviewRow(validation.nonEmptyRows[0])).toMatchObject({
+      platoon: "ARJUN",
+    });
+  });
+
   it("rejects files that are missing required headers before preview/upload", () => {
     const validation = validateOCBulkUploadRows([
       {

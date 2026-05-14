@@ -117,6 +117,83 @@ describe("POST /api/v1/oc/bulk-upload", () => {
     );
   });
 
+  it("uses PI as the platoon source for legacy TES sheets without a Platoon column", async () => {
+    queueSelectRows([{ id: "course-1" }]);
+    queueSelectRows([{ id: "platoon-1" }]);
+    queueSelectRows([]);
+
+    (db.transaction as any).mockImplementation(async (callback: any) => callback({ tx: true }));
+    vi.mocked(ocLifecycle.createOcWithLifecycle).mockResolvedValueOnce({
+      oc: { id: "oc-pi" },
+      enrollment: { id: "enrollment-pi" },
+    } as any);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: "/api/v1/oc/bulk-upload",
+      body: {
+        rows: [
+          {
+            "Tes No": "TES-9010",
+            Name: "PI Platoon OC",
+            Course: "TES-50",
+            "Dt of Arrival": "2026-01-01",
+            PI: "RANAPRATAP",
+          },
+        ],
+      },
+    });
+
+    const res = await bulkUploadOc(req as any);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(1);
+    expect(body.failed).toBe(0);
+    expect(ocLifecycle.createOcWithLifecycle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "PI Platoon OC",
+        ocNo: "TES-9010",
+        courseId: "course-1",
+        platoonId: "platoon-1",
+        personal: expect.objectContaining({
+          pi: "RANAPRATAP",
+        }),
+      }),
+      { tx: true },
+    );
+  });
+
+  it("fails clearly when a PI fallback platoon value does not match an active platoon", async () => {
+    queueSelectRows([{ id: "course-1" }]);
+    queueSelectRows([]);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: "/api/v1/oc/bulk-upload",
+      body: {
+        rows: [
+          {
+            "Tes No": "TES-9011",
+            Name: "Missing PI Platoon OC",
+            Course: "TES-50",
+            "Dt of Arrival": "2026-01-01",
+            PI: "UNKNOWN-PLATOON",
+          },
+        ],
+      },
+    });
+
+    const res = await bulkUploadOc(req as any);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(0);
+    expect(body.failed).toBe(1);
+    expect(body.errors).toEqual([{ row: 1, error: "PI platoon not found: UNKNOWN-PLATOON" }]);
+    expect(ocLifecycle.createOcWithLifecycle).not.toHaveBeenCalled();
+  });
+
   it("blocks duplicate TES numbers for active OCs", async () => {
     queueSelectRows([{ id: "course-1" }]);
     queueSelectRows([{ id: "active-oc", deletedAt: null }]);

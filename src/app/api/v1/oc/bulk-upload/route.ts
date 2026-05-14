@@ -223,8 +223,12 @@ async function POSTHandler(req: AuditNextRequest) {
       const swimmerText = pick(row, ['Swimmer/Non Swimmer', 'Swimmer Status']);
       const languages = pick(row, ['Language', 'Languages']);
 
-      // NEW: platoon (optional)
-      const platoonText = pick(row, ['Platoon', 'PlatoonId', 'Platoon Id', 'PL', 'Pl']);
+      // Platoon is stored canonically on oc_cadets. Legacy TES sheets often
+      // use "PI" for the same platoon value, so use it only when no explicit
+      // Platoon column is present. The PI value is still preserved in personal.
+      const explicitPlatoonText = pick(row, ['Platoon', 'PlatoonId', 'Platoon Id', 'PL', 'Pl']);
+      const platoonText = explicitPlatoonText ?? pi;
+      const platoonSource = explicitPlatoonText == null ? 'PI' : 'Platoon';
 
       // --- Required fields check ---
       const missing: string[] = [];
@@ -259,7 +263,7 @@ async function POSTHandler(req: AuditNextRequest) {
       if (platoonText != null && String(platoonText).trim() !== '') {
         platoonId = await resolvePlatoonId(String(platoonText));
         if (!platoonId) {
-          errors.push({ row: i + 1, error: `Platoon not found: ${String(platoonText)}` });
+          errors.push({ row: i + 1, error: `${platoonSource} platoon not found: ${String(platoonText)}` });
           continue;
         }
       }

@@ -223,6 +223,9 @@ export const OC_BULK_REQUIRED_FIELD_GROUPS = OC_BULK_FIELD_GROUPS.filter((group)
 
 export const OC_BULK_SAMPLE_HEADERS = OC_BULK_FIELD_GROUPS.map((group) => group.label);
 
+export const OC_BULK_PLATOON_ALIASES = ["Platoon", "PlatoonId", "Platoon Id", "PL", "Pl"];
+export const OC_BULK_PI_ALIASES = ["PI"];
+
 export type OCBulkUploadFormatValidation =
   | {
       ok: true;
@@ -274,6 +277,10 @@ export function pickOCBulkValue(row: RawRow, aliases: string[]): unknown {
   return undefined;
 }
 
+export function pickOCBulkPlatoonValue(row: RawRow): unknown {
+  return pickOCBulkValue(row, OC_BULK_PLATOON_ALIASES) ?? pickOCBulkValue(row, OC_BULK_PI_ALIASES);
+}
+
 export function toOCBulkPreviewRow(row: RawRow): UploadedPreviewRow {
   const arrivalRaw = pickOCBulkValue(row, ["Dt of Arrival", "Date of Arrival", "DOA"]);
 
@@ -282,11 +289,7 @@ export function toOCBulkPreviewRow(row: RawRow): UploadedPreviewRow {
     tesNo: String(pickOCBulkValue(row, ["Tes No", "TesNo", "TES NO", "OC No", "OC Number"]) ?? ""),
     course: String(pickOCBulkValue(row, ["Course", "Course Code", "Course Name"]) ?? ""),
     branch: (pickOCBulkValue(row, ["Branch"]) as string | null | undefined) ?? null,
-    platoon:
-      (pickOCBulkValue(row, ["Platoon", "PlatoonId", "Platoon Id", "PL", "Pl"]) as
-        | string
-        | null
-        | undefined) ?? null,
+    platoon: (pickOCBulkPlatoonValue(row) as string | null | undefined) ?? null,
     arrival: toDisplayDMY(arrivalRaw),
   };
 }

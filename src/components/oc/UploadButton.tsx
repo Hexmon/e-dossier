@@ -123,10 +123,10 @@ const FIELD_INSTRUCTIONS: FieldInstruction[] = [
   {
     field: "Platoon",
     required: "No",
-    acceptedHeaders: "Platoon / PlatoonId / Platoon Id / PL / Pl",
+    acceptedHeaders: "Platoon / PlatoonId / Platoon Id / PL / Pl / PI fallback",
     expectedFormat: "Existing platoon key/name/UUID",
     example: "Arjun",
-    notes: "If value is present and not found, row fails.",
+    notes: "If no Platoon column exists, PI is treated as the platoon value and must match an active platoon.",
   },
   {
     field: "Email",
@@ -402,6 +402,7 @@ export default function UploadButton({
             <div className="rounded-md border bg-muted/20 p-3 text-xs leading-5 space-y-2">
               <p className="font-semibold text-sm">3. Platoon Input Rules</p>
               <p>You can put any one exact value: <span className="font-medium">Platoon Key</span> OR <span className="font-medium">Platoon Name</span> OR <span className="font-medium">Platoon UUID</span>.</p>
+              <p>If the sheet has no Platoon column, the PI column is used as the platoon value.</p>
               <p>Use exact spelling from the table below to avoid row failure.</p>
             </div>
 
