@@ -118,6 +118,30 @@ function formatCommanderLabel(user: User): string {
     return user.rank ? `${user.rank} ${user.name}` : user.name;
 }
 
+function toFormValues(autoBio: AutoBioPayload, cadetName: string): AutoBio {
+    return {
+        general: autoBio.generalSelf ?? "",
+        proficiency: autoBio.proficiencySports ?? "",
+        work: autoBio.achievementsNote ?? "",
+        additional: autoBio.areasToWork || autoBio.additionalInfo || "",
+        date: toDateInputValue(autoBio.filledOn),
+        sign_oc: cadetName,
+        sign_pi: autoBio.platoonCommanderName ?? "",
+    };
+}
+
+function hasAutoBioValues(autoBio: AutoBioPayload): boolean {
+    return [
+        autoBio.generalSelf,
+        autoBio.proficiencySports,
+        autoBio.achievementsNote,
+        autoBio.areasToWork,
+        autoBio.additionalInfo,
+        autoBio.filledOn,
+        autoBio.platoonCommanderName,
+    ].some((value) => Boolean(value?.trim()));
+}
+
 export default function AutobiographySection({ ocId, cadet }: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [showClearDialog, setShowClearDialog] = useState(false);
@@ -131,7 +155,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         state.autobiography.forms[ocId]
     );
 
-    const { autoBio, exists, fetchAutoBio, save } = useAutobiography(ocId);
+    const { autoBio, hasFetched, fetchAutoBio, save } = useAutobiography(ocId);
 
     const { register, handleSubmit, reset, watch, setValue } = useForm<AutoBio>({
         defaultValues: {
@@ -243,31 +267,12 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         fetchAutoBio();
     }, [fetchAutoBio]);
 
-    // Initialize form data
+    // Initialize form data after the backend response is known.
     useEffect(() => {
-        if (!isInitialLoad.current) return;
+        if (!hasFetched || isEditing) return;
 
-        // If backend data exists, use it
-        if (autoBio) {
-            const {
-                generalSelf,
-                proficiencySports,
-                achievementsNote,
-                areasToWork,
-                filledOn,
-                platoonCommanderName,
-            } = autoBio;
-
-            reset({
-                general: generalSelf ?? "",
-                proficiency: proficiencySports ?? "",
-                work: achievementsNote ?? "",
-                additional: areasToWork ?? "",
-                date: toDateInputValue(filledOn),
-                sign_oc: cadetName,
-                sign_pi: platoonCommanderName ?? "",
-            });
-
+        if (autoBio && (hasAutoBioValues(autoBio) || !savedFormData || !isInitialLoad.current)) {
+            reset(toFormValues(autoBio, cadetName));
             setIsEditing(false);
             isInitialLoad.current = false;
             return;
@@ -293,7 +298,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         });
         setIsEditing(false);
         isInitialLoad.current = false;
-    }, [autoBio, cadetName, defaultCommanderName, reset, savedFormData]);
+    }, [autoBio, cadetName, defaultCommanderName, hasFetched, isEditing, reset, savedFormData]);
 
     // Save handler
     const onSubmit = async (form: AutoBio) => {
@@ -366,24 +371,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
     const handleCancel = () => {
         // If we have backend data, restore it
         if (autoBio) {
-            const {
-                generalSelf,
-                proficiencySports,
-                achievementsNote,
-                areasToWork,
-                filledOn,
-                platoonCommanderName,
-            } = autoBio;
-
-            reset({
-                general: generalSelf ?? "",
-                proficiency: proficiencySports ?? "",
-                work: achievementsNote ?? "",
-                additional: areasToWork ?? "",
-                date: toDateInputValue(filledOn),
-                sign_oc: cadetName,
-                sign_pi: platoonCommanderName ?? "",
-            });
+            reset(toFormValues(autoBio, cadetName));
         }
         setIsEditing(false);
     };
