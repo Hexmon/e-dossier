@@ -16,11 +16,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  toOCBulkPreviewRow,
-  validateOCBulkUploadRows,
+  OC_BULK_SAMPLE_HEADERS,
+  prepareOCBulkUploadPreview,
   type RawRow,
   type UploadedPreviewRow,
 } from "@/app/lib/oc/bulk-upload-format";
+import { cn } from "@/lib/utils";
 
 export type { RawRow, UploadedPreviewRow } from "@/app/lib/oc/bulk-upload-format";
 
@@ -33,47 +34,7 @@ type Props = {
   platoonOptions?: Array<{ id: string; key?: string; name?: string }>;
 };
 
-const SAMPLE_HEADERS = [
-  "Tes No",
-  "Name",
-  "Course",
-  "Dt of Arrival",
-  "Platoon",
-  "E mail",
-  "PAN Card No",
-  "Aadhar No",
-  "UPSC Roll No",
-  "DOB",
-  "Place of Birth",
-  "Domicile",
-  "Religion",
-  "Nationality",
-  "Blood GP",
-  "Iden Marks",
-  "Father's Name",
-  "Father's Mobile",
-  "Father's Address",
-  "Father's Profession",
-  "Guardian Name",
-  "Guardian's Address",
-  "Income(parents)",
-  "Detls of NOK",
-  "Permanent & Present Address",
-  "Nearest RLY Stn",
-  "Address of Family/Friends in Secunderabad",
-  "RK Name & Relan of near Relative in Armed force",
-  "Govt Fin Asst Mob No",
-  "Passport No",
-  "Bank Detail",
-  "Iden card No",
-  "SSB Centre",
-  "Games",
-  "Hobbies",
-  "Swimmer/Non Swimmer",
-  "Language",
-  "Visible Iden Mks",
-  "PI",
-] as const;
+const SAMPLE_HEADERS = OC_BULK_SAMPLE_HEADERS;
 
 const SAMPLE_ROW: Record<(typeof SAMPLE_HEADERS)[number], string> = {
   "Tes No": "7501",
@@ -251,6 +212,7 @@ export default function UploadButton({
   const [alertTitle, setAlertTitle] = useState("Notice");
   const [alertMessage, setAlertMessage] = useState("");
   const [sampleOpen, setSampleOpen] = useState(false);
+  const [sampleNeedsAttention, setSampleNeedsAttention] = useState(false);
 
   const sortedCourseOptions = useMemo(
     () =>
@@ -287,28 +249,15 @@ export default function UploadButton({
   };
 
   const acceptRows = (rows: RawRow[]) => {
-    const validation = validateOCBulkUploadRows(rows);
-    if (!validation.ok) {
-      openAlert(validation.message, validation.title);
+    const prepared = prepareOCBulkUploadPreview(rows);
+    if (!prepared.ok) {
+      setSampleNeedsAttention(prepared.highlightSampleFormat);
+      openAlert(prepared.message, prepared.title);
       return;
     }
 
-    const parsed = validation.nonEmptyRows
-      .map((rawRow) => ({ rawRow, previewRow: toOCBulkPreviewRow(rawRow) }))
-      .filter(({ previewRow }) => previewRow.name || previewRow.tesNo || previewRow.course);
-
-    if (parsed.length === 0) {
-      openAlert(
-        "No usable OC rows were found. Fill TES No, Name, Course, and Dt of Arrival for each OC before uploading again.",
-        "Invalid upload format",
-      );
-      return;
-    }
-
-    onParsed(
-      parsed.map((entry) => entry.rawRow),
-      parsed.map((entry) => entry.previewRow)
-    );
+    setSampleNeedsAttention(false);
+    onParsed(prepared.rawRows, prepared.previewRows);
   };
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -371,9 +320,17 @@ export default function UploadButton({
       <div className="flex items-center gap-2">
         <Button
           variant="outline"
-          className="cursor-pointer"
-          onClick={() => setSampleOpen(true)}
+          className={cn(
+            "cursor-pointer",
+            sampleNeedsAttention &&
+              "animate-pulse border-destructive bg-destructive/10 text-destructive ring-2 ring-destructive/40 hover:bg-destructive/15"
+          )}
+          onClick={() => {
+            setSampleNeedsAttention(false);
+            setSampleOpen(true);
+          }}
           type="button"
+          aria-invalid={sampleNeedsAttention ? "true" : undefined}
         >
           <FileSpreadsheet className="mr-2 h-4 w-4" />
           View Sample Format
@@ -383,7 +340,13 @@ export default function UploadButton({
         </Button>
       </div>
 
-      <Dialog open={sampleOpen} onOpenChange={setSampleOpen}>
+      <Dialog
+        open={sampleOpen}
+        onOpenChange={(open) => {
+          if (open) setSampleNeedsAttention(false);
+          setSampleOpen(open);
+        }}
+      >
         <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[90vw] max-h-[92vh] overflow-hidden p-0 flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <DialogTitle>OC Bulk Upload Sample Format</DialogTitle>

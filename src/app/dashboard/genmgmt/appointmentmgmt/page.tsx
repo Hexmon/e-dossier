@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +11,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { AppointmentTable } from "@/components/appointments/AppointmentTable";
 import { ServedHistoryTable } from "@/components/appointments/ServedHistoryTable";
@@ -20,7 +19,7 @@ import { HandoverForm } from "@/components/appointments/HandoverForm";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useForm } from "react-hook-form";
 import { ocTabs } from "@/config/app.config";
-import { Appointment, Position } from "@/app/lib/api/appointmentApi";
+import { Appointment } from "@/app/lib/api/appointmentApi";
 import { CreateAppointment } from "@/components/appointments/createappointment";
 import { applyOrgTemplate } from "@/app/lib/api/orgTemplateApi";
 import { Button } from "@/components/ui/button";
@@ -29,16 +28,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { delegationAdminApi } from "@/app/lib/api/delegationAdminApi";
+import {
+  DEFAULT_APPOINTMENT_TEMPLATE_POSITIONS,
+  type AppointmentTemplatePositionSummary,
+} from "@/app/lib/bootstrap/appointment-template-view";
 
 export default function AppointmentManagement() {
-  const router = useRouter();
   const queryClient = useQueryClient();
 
   const {
     appointments,
     servedList,
     users,
-    positions,
     loading,
     fetchAppointments,
     fetchUsersAndPositions,
@@ -49,6 +50,7 @@ export default function AppointmentManagement() {
 
   const [handoverDialog, setHandoverDialog] = useState(false);
   const [delegationDialog, setDelegationDialog] = useState(false);
+  const [positionTemplateDialog, setPositionTemplateDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [delegationDraft, setDelegationDraft] = useState({
     grantorAppointmentId: "",
@@ -151,7 +153,7 @@ export default function AppointmentManagement() {
     try {
       await handleHandover(selectedAppointment, data);
       setHandoverDialog(false);
-    } catch (error) {
+    } catch {
       // Error already handled by mutation
     }
   };
@@ -183,31 +185,9 @@ export default function AppointmentManagement() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => applyDefaultTemplateMutation.mutate(true)}
-                      disabled={applyDefaultTemplateMutation.isPending}
+                      onClick={() => setPositionTemplateDialog(true)}
                     >
-                      {applyDefaultTemplateMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Running
-                        </>
-                      ) : (
-                        "Preview Changes (Dry Run)"
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => applyDefaultTemplateMutation.mutate(false)}
-                      disabled={applyDefaultTemplateMutation.isPending}
-                    >
-                      {applyDefaultTemplateMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Applying
-                        </>
-                      ) : (
-                        "Apply Default Appointment Template"
-                      )}
+                      Default Appointment Template
                     </Button>
                     <Button
                       variant="outline"
@@ -226,8 +206,6 @@ export default function AppointmentManagement() {
                   onDelete={handleDeleteAppointment}
                   users={users}
                 />
-
-                <PositionDefinitionsTable positions={positions} />
 
                 <Card>
                   <CardHeader>
@@ -279,6 +257,49 @@ export default function AppointmentManagement() {
           </section>
         </main>
       </section>
+
+      <Dialog open={positionTemplateDialog} onOpenChange={setPositionTemplateDialog}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Default Appointment Template</DialogTitle>
+            <DialogDescription>
+              Review the default appointment positions before applying them. Dry run previews the same template without saving.
+            </DialogDescription>
+          </DialogHeader>
+
+          <PositionDefinitionsTable positions={DEFAULT_APPOINTMENT_TEMPLATE_POSITIONS} />
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => applyDefaultTemplateMutation.mutate(true)}
+              disabled={applyDefaultTemplateMutation.isPending}
+            >
+              {applyDefaultTemplateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Running
+                </>
+              ) : (
+                "Preview Changes"
+              )}
+            </Button>
+            <Button
+              onClick={() => applyDefaultTemplateMutation.mutate(false)}
+              disabled={applyDefaultTemplateMutation.isPending}
+            >
+              {applyDefaultTemplateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Applying
+                </>
+              ) : (
+                "Apply Template"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={handoverDialog} onOpenChange={setHandoverDialog}>
         <DialogContent>
@@ -413,7 +434,7 @@ export default function AppointmentManagement() {
   );
 }
 
-function PositionDefinitionsTable({ positions }: { positions: Position[] }) {
+function PositionDefinitionsTable({ positions }: { positions: AppointmentTemplatePositionSummary[] }) {
   return (
     <Card>
       <CardHeader>
@@ -434,7 +455,7 @@ function PositionDefinitionsTable({ positions }: { positions: Position[] }) {
               </thead>
               <tbody>
                 {positions.map((position) => (
-                  <tr key={position.id} className="border-t">
+                  <tr key={position.key} className="border-t">
                     <td className="px-4 py-2 font-mono text-xs">{position.key}</td>
                     <td className="px-4 py-2 font-medium">
                       {position.displayName || position.key}

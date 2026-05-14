@@ -15,6 +15,7 @@ import { IdSchema } from '@/app/lib/apiClient';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { assertCanManageUser } from '@/app/lib/admin-boundaries';
+import { activationRequiresPassword } from '@/app/lib/users/credential-policy';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
@@ -138,6 +139,30 @@ async function PATCHHandler(
       .limit(1);
 
     if (!previous) throw new ApiError(404, 'User not found', 'not_found');
+
+    let existingCredential = false;
+    if (d.isActive === true) {
+      const [credential] = await db
+        .select({ userId: credentialsLocal.userId })
+        .from(credentialsLocal)
+        .where(eq(credentialsLocal.userId, id))
+        .limit(1);
+      existingCredential = Boolean(credential?.userId);
+
+      if (activationRequiresPassword({
+        nextIsActive: d.isActive,
+        hasCredential: existingCredential,
+        password: d.password,
+      })) {
+        return json.badRequest('Password is required before activating this user.', {
+          issues: {
+            fieldErrors: {
+              password: ['Set or reset this user password before activating the account.'],
+            },
+          },
+        });
+      }
+    }
 
     const updates: Partial<typeof users.$inferInsert> = {};
     if (d.username !== undefined) updates.username = d.username.trim();

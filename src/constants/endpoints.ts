@@ -12,6 +12,7 @@ export const endpoints = {
         login: "/api/v1/auth/login",
         signup: "/api/v1/auth/signup",
         logout: "/api/v1/auth/logout",
+        changePassword: "/api/v1/auth/change-password",
     },
     admin: {
         approval: "/api/v1/admin/signup-requests",

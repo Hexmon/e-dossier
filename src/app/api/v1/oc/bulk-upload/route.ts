@@ -115,19 +115,29 @@ async function resolvePlatoonId(plText: string): Promise<string | null> {
 async function existsOcNo(ocNo: string): Promise<boolean> {
   const canonical = ocNo.replace(/\s+/g, '').toUpperCase();
   const rows = await db
-    .select({ id: ocCadets.id })
+    .select({ id: ocCadets.id, deletedAt: ocCadets.deletedAt })
     .from(ocCadets)
-    .where(sql`upper(regexp_replace(${ocCadets.ocNo}, '\\s+', '', 'g')) = ${canonical}`)
+    .where(
+      and(
+        isNull(ocCadets.deletedAt),
+        sql`upper(regexp_replace(${ocCadets.ocNo}, '\\s+', '', 'g')) = ${canonical}`
+      )
+    )
     .limit(1);
-  return !!rows[0];
+  return rows.some((row) => row.deletedAt == null);
 }
 
 async function existsPersonalField<K extends keyof typeof ocPersonal['_']['columns']>(
   col: (typeof ocPersonal)[K],
   value: string
 ): Promise<boolean> {
-  const rows = await db.select({ ocId: ocPersonal.ocId }).from(ocPersonal).where(eq(col as any, value)).limit(1);
-  return !!rows[0];
+  const rows = await db
+    .select({ ocId: ocPersonal.ocId, deletedAt: ocCadets.deletedAt })
+    .from(ocPersonal)
+    .innerJoin(ocCadets, eq(ocCadets.id, ocPersonal.ocId))
+    .where(and(isNull(ocCadets.deletedAt), eq(col as any, value)))
+    .limit(1);
+  return rows.some((row) => row.deletedAt == null);
 }
 
 // ---------- Handler ----------

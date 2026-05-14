@@ -15,6 +15,8 @@ export interface User {
     updatedAt?: string;
     deletedAt?: string | null;
     deactivatedAt?: string | null;
+    password?: string;
+    confirmPassword?: string;
     hasActiveAppointment?: boolean;
     activeAppointments?: Array<{
         id: string;

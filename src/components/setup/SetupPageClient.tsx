@@ -15,8 +15,10 @@ import { listSubjects } from "@/app/lib/api/subjectsApi";
 import type { SetupStatus, SetupStepKey, SetupStepStatus } from "@/app/lib/setup-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { IndiaPhoneInput } from "@/components/ui/india-phone-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useSetupStatus } from "@/hooks/useSetupStatus";
 import type { SidebarRoleGroup } from "@/lib/sidebar-visibility";
 import { resolveToneClasses } from "@/lib/theme-color";
@@ -386,9 +388,8 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="setup-password">Password</Label>
-                    <Input
+                    <PasswordInput
                       id="setup-password"
-                      type="password"
                       value={bootstrapForm.password}
                       onChange={(event) =>
                         setBootstrapForm((current) => ({ ...current, password: event.target.value }))
@@ -399,9 +400,8 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="setup-password-confirm">Confirm Password</Label>
-                    <Input
+                    <PasswordInput
                       id="setup-password-confirm"
-                      type="password"
                       value={bootstrapForm.confirmPassword}
                       onChange={(event) =>
                         setBootstrapForm((current) => ({
@@ -438,14 +438,14 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="setup-phone">Phone</Label>
-                    <Input
+                    <IndiaPhoneInput
                       id="setup-phone"
                       value={bootstrapForm.phone}
-                      onChange={(event) =>
-                        setBootstrapForm((current) => ({ ...current, phone: event.target.value }))
+                      onValueChange={(value) =>
+                        setBootstrapForm((current) => ({ ...current, phone: value }))
                       }
-                      placeholder="+0000000000"
-                      autoComplete="tel"
+                      placeholder="9876543210"
+                      autoComplete="tel-national"
                     />
                   </div>
                 </div>

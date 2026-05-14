@@ -5,7 +5,7 @@ import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth, hasAdminRole } from '@/app/lib/authz';
 import { users } from '@/app/db/schema/auth/users';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
-import { eq, isNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
@@ -73,10 +73,9 @@ async function POSTHandler(req: AuditNextRequest) {
       .where(eq(credentialsLocal.userId, targetUserId))
       .limit(1);
 
-    // 7) If caller is not admin (or is admin changing own password and provided current),
-    //    verify current password. For regular users, it is required.
-    const mustVerifyCurrent =
-      !callerIsAdmin || (!!currentPassword && targetUserId === callerId);
+    // 7) Self-service password changes always verify current password.
+    //    Admin reset for a different user remains allowed without current password.
+    const mustVerifyCurrent = targetUserId === callerId || !callerIsAdmin;
 
     if (mustVerifyCurrent) {
       if (!currentPassword) {

@@ -13,6 +13,7 @@ import { eq, isNull, or, and } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { isBroadScopedPlatoonCommander } from '@/lib/platoon-commander-access';
+import { activeUserCreateRequiresPassword } from '@/app/lib/users/credential-policy';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
@@ -65,6 +66,17 @@ async function POSTHandler(req: AuditNextRequest) {
             return json.badRequest('Validation failed.', { issues });
         }
         const d = parsed.data;
+
+        if (activeUserCreateRequiresPassword({ isActive: d.isActive, password: d.password })) {
+            return json.badRequest('Password is required for active users.', {
+                issues: {
+                    fieldErrors: {
+                        password: ['Set an initial password before creating an active user.'],
+                    },
+                },
+            });
+        }
+
         const username = d.username.trim();
         const email = d.email.trim();
         const phone = d.phone.trim();
@@ -159,13 +171,6 @@ async function POSTHandler(req: AuditNextRequest) {
         const code = e?.code ?? e?.cause?.code;
         if (code === '23505') {
             const detail = (e?.detail ?? e?.cause?.detail ?? '').toLowerCase();
-
-            // Adjust index names if yours differ
-            const idxToField: Array<[RegExp, { field: 'username' | 'email' | 'phone'; label: string }]> = [
-                /ux_users_username_active|username/.test(detail)
-                    ? [/ux_users_username_active|username/, { field: 'username', label: 'Username' }]
-                    : [/^$/, { field: 'username', label: 'Username' }],
-            ];
 
             const messages: string[] = [];
             const fields: string[] = [];

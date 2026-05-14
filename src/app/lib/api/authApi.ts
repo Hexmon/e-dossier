@@ -96,6 +96,20 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
   }
 }
 
+export type ChangePasswordPayload = {
+  userId?: string;
+  currentPassword?: string;
+  newPassword: string;
+};
+
+export async function changePassword(payload: ChangePasswordPayload): Promise<{ message: string; userId: string }> {
+  return api.post<{ message: string; userId: string }, ChangePasswordPayload>(
+    endpoints.auth.changePassword,
+    payload,
+    { baseURL }
+  );
+}
+
 export async function logout() {
   localStorage.removeItem("authToken");
   return requestServerLogout();

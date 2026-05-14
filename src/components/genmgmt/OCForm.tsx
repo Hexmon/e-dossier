@@ -6,6 +6,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { IndiaPhoneInput } from "@/components/ui/india-phone-input";
 import { Input } from "@/components/ui/input";
 import type { OCRecord, OCPersonalProfile } from "@/app/lib/api/ocApi";
 import { Alert, AlertDescription } from "../ui/alert";
@@ -341,6 +342,24 @@ export function OCForm({
         </FieldShell>
     );
 
+    const phoneInput = (name: keyof OCFormData, label: string) => (
+        <FieldShell label={label} error={getFieldError(name)} htmlFor={String(name)}>
+            <Controller
+                name={name}
+                control={control}
+                render={({ field }) => (
+                    <IndiaPhoneInput
+                        id={String(name)}
+                        value={(field.value as string | undefined) ?? ""}
+                        onValueChange={field.onChange}
+                        placeholder="9876543210"
+                        autoComplete="tel-national"
+                    />
+                )}
+            />
+        </FieldShell>
+    );
+
     const sectionLinks = [
         { id: "oc-core-details", label: "Core details" },
         { id: "oc-personal-details", label: "Personal" },
@@ -546,7 +565,7 @@ export function OCForm({
                                 title="Contact And IDs"
                                 description="Communication, identity, and reference numbers."
                             >
-                                {input("mobileNo", "Govt Fin Asst Mob No / Mobile No")}
+                                {phoneInput("mobileNo", "Govt Fin Asst Mob No / Mobile No")}
                                 {input("email", "Email", { type: "email" })}
                                 {input("passportNo", "Passport No")}
                                 {input("panNo", "PAN Card No")}
@@ -562,7 +581,7 @@ export function OCForm({
                                 description="Family, guardian, address, and next-of-kin details."
                             >
                                 {input("fatherName", "Father's Name")}
-                                {input("fatherMobile", "Father's Mobile")}
+                                {phoneInput("fatherMobile", "Father's Mobile")}
                                 {input("fatherProfession", "Father's Profession")}
                                 {input("guardianName", "Guardian Name")}
                                 {input("monthlyIncome", "Income (Parents)", { inputMode: "numeric" })}

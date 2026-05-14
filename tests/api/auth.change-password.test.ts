@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import argon2 from 'argon2';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { POST as postChangePassword } from '@/app/api/v1/auth/change-password/route';
 import { makeJsonRequest, createRouteContext } from '../utils/next';
 import { ApiError } from '@/app/lib/http';
@@ -38,6 +39,10 @@ vi.mock('argon2', () => ({
 const path = '/api/v1/auth/change-password';
 
 describe('POST /api/v1/auth/change-password', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('returns 401 when authentication fails', async () => {
     (authz.requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),
@@ -110,5 +115,55 @@ describe('POST /api/v1/auth/change-password', () => {
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.userId).toBe('5f01fd9d-11e0-43e1-bf49-bc64ebd3e49b');
+    expect(argon2.verify).not.toHaveBeenCalled();
+  });
+
+  it('requires current password when an admin changes their own password', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({
+      userId: '5f01fd9d-11e0-43e1-bf49-bc64ebd3e49b',
+      roles: ['ADMIN'],
+    });
+    (authz.hasAdminRole as any).mockReturnValueOnce(true);
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path,
+      body: {
+        userId: '5f01fd9d-11e0-43e1-bf49-bc64ebd3e49b',
+        newPassword: 'NewPassword1',
+      },
+    });
+
+    const res = await postChangePassword(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.ok).toBe(false);
+    expect(body.message).toBe('currentPassword is required.');
+  });
+
+  it('allows self-service password change after current password verification', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({
+      userId: '5f01fd9d-11e0-43e1-bf49-bc64ebd3e49b',
+      roles: ['ADMIN'],
+    });
+    (authz.hasAdminRole as any).mockReturnValueOnce(true);
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path,
+      body: {
+        userId: '5f01fd9d-11e0-43e1-bf49-bc64ebd3e49b',
+        currentPassword: 'CurrentPassword1',
+        newPassword: 'NewPassword1',
+      },
+    });
+
+    const res = await postChangePassword(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(argon2.verify).toHaveBeenCalledWith('old-hash', 'CurrentPassword1');
   });
 });

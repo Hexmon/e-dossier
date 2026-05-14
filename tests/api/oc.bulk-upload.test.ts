@@ -44,6 +44,21 @@ vi.mock("@/app/db/queries/oc-lifecycle", () => ({
   createOcWithLifecycle: vi.fn(),
 }));
 
+function queueSelectRows(rows: unknown[]) {
+  (db.select as any).mockImplementationOnce(() => ({
+    from: () => ({
+      where: () => ({
+        limit: async () => rows,
+      }),
+      innerJoin: () => ({
+        where: () => ({
+          limit: async () => rows,
+        }),
+      }),
+    }),
+  }));
+}
+
 describe("POST /api/v1/oc/bulk-upload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -54,21 +69,8 @@ describe("POST /api/v1/oc/bulk-upload", () => {
   });
 
   it("creates OC lifecycle rows through the shared zero-loss helper", async () => {
-    (db.select as any)
-      .mockImplementationOnce(() => ({
-        from: () => ({
-          where: () => ({
-            limit: async () => [{ id: "course-1" }],
-          }),
-        }),
-      }))
-      .mockImplementationOnce(() => ({
-        from: () => ({
-          where: () => ({
-            limit: async () => [],
-          }),
-        }),
-      }));
+    queueSelectRows([{ id: "course-1" }]);
+    queueSelectRows([]);
 
     (db.transaction as any).mockImplementation(async (callback: any) => callback({ tx: true }));
     vi.mocked(ocLifecycle.createOcWithLifecycle).mockResolvedValueOnce({
@@ -109,6 +111,150 @@ describe("POST /api/v1/oc/bulk-upload", () => {
         personal: expect.objectContaining({
           games: "Football",
           hobbies: "Reading",
+        }),
+      }),
+      { tx: true },
+    );
+  });
+
+  it("blocks duplicate TES numbers for active OCs", async () => {
+    queueSelectRows([{ id: "course-1" }]);
+    queueSelectRows([{ id: "active-oc", deletedAt: null }]);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: "/api/v1/oc/bulk-upload",
+      body: {
+        rows: [
+          {
+            "Tes No": "TES-9001",
+            Name: "Duplicate OC",
+            Course: "TES-50",
+            "Dt of Arrival": "2026-01-01",
+          },
+        ],
+      },
+    });
+
+    const res = await bulkUploadOc(req as any);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(0);
+    expect(body.failed).toBe(1);
+    expect(body.errors).toEqual([{ row: 1, error: "TES No already exists: TES-9001" }]);
+    expect(ocLifecycle.createOcWithLifecycle).not.toHaveBeenCalled();
+  });
+
+  it("does not block re-upload when the matching TES number belongs only to an archived OC", async () => {
+    queueSelectRows([{ id: "course-1" }]);
+    queueSelectRows([{ id: "archived-oc", deletedAt: new Date("2026-01-02T00:00:00.000Z") }]);
+
+    (db.transaction as any).mockImplementation(async (callback: any) => callback({ tx: true }));
+    vi.mocked(ocLifecycle.createOcWithLifecycle).mockResolvedValueOnce({
+      oc: { id: "oc-2" },
+      enrollment: { id: "enrollment-2" },
+    } as any);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: "/api/v1/oc/bulk-upload",
+      body: {
+        rows: [
+          {
+            "Tes No": "TES-9001",
+            Name: "Reuploaded OC",
+            Course: "TES-50",
+            "Dt of Arrival": "2026-01-01",
+          },
+        ],
+      },
+    });
+
+    const res = await bulkUploadOc(req as any);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(1);
+    expect(body.failed).toBe(0);
+    expect(ocLifecycle.createOcWithLifecycle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Reuploaded OC",
+        ocNo: "TES-9001",
+      }),
+      { tx: true },
+    );
+  });
+
+  it("blocks duplicate personal identifiers for active OCs", async () => {
+    queueSelectRows([{ id: "course-1" }]);
+    queueSelectRows([]);
+    queueSelectRows([{ ocId: "active-oc", deletedAt: null }]);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: "/api/v1/oc/bulk-upload",
+      body: {
+        rows: [
+          {
+            "Tes No": "TES-9002",
+            Name: "Duplicate Email OC",
+            Course: "TES-50",
+            "Dt of Arrival": "2026-01-01",
+            "E mail": "DUP@example.com",
+          },
+        ],
+      },
+    });
+
+    const res = await bulkUploadOc(req as any);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(0);
+    expect(body.failed).toBe(1);
+    expect(body.errors).toEqual([{ row: 1, error: "Email already exists: dup@example.com" }]);
+    expect(ocLifecycle.createOcWithLifecycle).not.toHaveBeenCalled();
+  });
+
+  it("does not block personal identifiers when the match belongs only to an archived OC", async () => {
+    queueSelectRows([{ id: "course-1" }]);
+    queueSelectRows([]);
+    queueSelectRows([{ ocId: "archived-oc", deletedAt: new Date("2026-01-02T00:00:00.000Z") }]);
+
+    (db.transaction as any).mockImplementation(async (callback: any) => callback({ tx: true }));
+    vi.mocked(ocLifecycle.createOcWithLifecycle).mockResolvedValueOnce({
+      oc: { id: "oc-3" },
+      enrollment: { id: "enrollment-3" },
+    } as any);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: "/api/v1/oc/bulk-upload",
+      body: {
+        rows: [
+          {
+            "Tes No": "TES-9003",
+            Name: "Reuploaded Email OC",
+            Course: "TES-50",
+            "Dt of Arrival": "2026-01-01",
+            "E mail": "DUP@example.com",
+          },
+        ],
+      },
+    });
+
+    const res = await bulkUploadOc(req as any);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(1);
+    expect(body.failed).toBe(0);
+    expect(ocLifecycle.createOcWithLifecycle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Reuploaded Email OC",
+        personal: expect.objectContaining({
+          email: "dup@example.com",
         }),
       }),
       { tx: true },
