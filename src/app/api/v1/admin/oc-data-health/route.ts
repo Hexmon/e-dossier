@@ -1,10 +1,11 @@
 import { getOcDataHealth } from '@/app/db/queries/oc-data-health';
 import { requireAdmin } from '@/app/lib/authz';
 import { handleApiError, json } from '@/app/lib/http';
+import { withAuditRoute, type AuditNextRequest } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
-export async function GET(req: Request) {
+async function GETHandler(req: AuditNextRequest) {
   try {
     await requireAdmin(req as any);
     const health = await getOcDataHealth();
@@ -13,3 +14,5 @@ export async function GET(req: Request) {
     return handleApiError(error);
   }
 }
+
+export const GET = withAuditRoute('GET', GETHandler);

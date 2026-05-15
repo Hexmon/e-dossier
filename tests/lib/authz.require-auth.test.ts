@@ -23,6 +23,7 @@ vi.mock("@/app/lib/effective-authority", () => ({
 
 vi.mock("@/app/lib/setup-status", () => ({
   getSetupStatus: vi.fn(),
+  isSetupStatusUnavailable: (status: any) => status.availability?.ok === false,
 }));
 
 import { makeJsonRequest } from "../utils/next";

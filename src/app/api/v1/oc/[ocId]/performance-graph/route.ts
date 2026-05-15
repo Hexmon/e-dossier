@@ -2,7 +2,7 @@ import { json, handleApiError } from "@/app/lib/http";
 import { parseParam, ensureOcExists } from "../../_checks";
 import { OcIdParam } from "@/app/lib/oc-validators";
 import { authorizeOcAccess } from "@/lib/authorization";
-import { withRouteLogging } from "@/lib/withRouteLogging";
+import { withAuditRoute } from "@/lib/audit";
 import { getPerformanceGraphData } from "@/app/db/queries/performance-graph";
 import { NextRequest } from "next/server";
 
@@ -25,4 +25,4 @@ async function GETHandler(
   }
 }
 
-export const GET = withRouteLogging("GET", GETHandler);
+export const GET = withAuditRoute("GET", GETHandler);

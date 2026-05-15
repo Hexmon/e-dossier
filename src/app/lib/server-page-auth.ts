@@ -15,7 +15,7 @@ import {
 import { assertActiveAuthorityFromPayload } from "@/app/lib/active-authority";
 import { db } from "@/app/db/client";
 import { ocCadets } from "@/app/db/schema/training/oc";
-import { getSetupStatus } from "@/app/lib/setup-status";
+import { getSetupStatus, isSetupStatusUnavailable } from "@/app/lib/setup-status";
 import {
   isSetupDashboardPath,
   isSetupManagerRoleGroup,
@@ -98,7 +98,7 @@ async function getCurrentPathname(): Promise<string | null> {
 async function enforceInitialSetupDashboardGate(authContext: AdminPageAuthContext) {
   const setupStatus = await getSetupStatus();
 
-  if (setupStatus.setupComplete) {
+  if (setupStatus.setupComplete || isSetupStatusUnavailable(setupStatus)) {
     return;
   }
 

@@ -82,6 +82,7 @@ vi.mock('@/app/lib/cookies', () => ({
 
 vi.mock('@/app/lib/setup-status', () => ({
   getSetupStatus: vi.fn(),
+  isSetupStatusUnavailable: (status: any) => status.availability?.ok === false,
 }));
 
 vi.mock('argon2', () => ({

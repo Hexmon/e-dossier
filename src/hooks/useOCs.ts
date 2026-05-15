@@ -13,6 +13,7 @@ import {
     type OCRecord,
     type FetchOCParams,
 } from "@/app/lib/api/ocApi";
+import { getFriendlyApiErrorMessage } from "@/app/lib/apiClient";
 
 const OCS_QUERY_KEY = ["ocs"] as const;
 
@@ -56,7 +57,7 @@ export function useOCs(params?: FetchOCParams) {
                     count: res.count ?? 0,
                 };
             } catch (err) {
-                toast.error("Failed to load OCs");
+                toast.error(getFriendlyApiErrorMessage(err, "Failed to load OCs"));
                 return { items: [], count: 0 };
             }
         },
@@ -129,7 +130,7 @@ export function useOCs(params?: FetchOCParams) {
             toast.success("OC added successfully");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to add OC");
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to add OC"));
         },
     });
 
@@ -143,7 +144,7 @@ export function useOCs(params?: FetchOCParams) {
             toast.success("OC updated successfully");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to update OC");
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to update OC"));
         },
     });
 
@@ -157,7 +158,7 @@ export function useOCs(params?: FetchOCParams) {
             toast.success("OC deleted successfully");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to delete OC");
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to delete OC"));
         },
     });
 

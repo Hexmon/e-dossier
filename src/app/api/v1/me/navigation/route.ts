@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { NAVIGATION_TREE, NavSectionConfig } from "@/app/lib/navigation/config";
 import { handleApiError } from "@/app/lib/http";
 import { requireAuth } from "@/app/lib/guard";
+import { withAuditRoute } from "@/lib/audit";
 import {
   filterNavigationSectionsForResolvedAccess,
   resolveModuleAccessForUser,
@@ -44,4 +45,4 @@ async function GETHandler(req: NextRequest) {
   }
 }
 
-export const GET = GETHandler;
+export const GET = withAuditRoute("GET", GETHandler);

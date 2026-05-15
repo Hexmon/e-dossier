@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/app/lib/setup-status", () => ({
   getSetupStatus: vi.fn(),
+  isSetupStatusUnavailable: (status: any) => status.availability?.ok === false,
 }));
 
 import { GET as getSetupStatusRoute } from "@/app/api/v1/setup/status/route";
@@ -122,5 +123,54 @@ describe("GET /api/v1/setup/status", () => {
     expect(res.status).toBe(200);
     expect(body.setup.setupComplete).toBe(true);
     expect(body.setup.nextStep).toBeNull();
+  });
+
+  it("returns degraded setup status without exposing database internals", async () => {
+    (getSetupStatus as any).mockResolvedValueOnce({
+      bootstrapRequired: false,
+      setupComplete: false,
+      nextStep: null,
+      availability: {
+        ok: false,
+        code: "database_unavailable",
+        message: "Database is temporarily unavailable. Please try again after the service is restored.",
+        retryable: true,
+      },
+      counts: {
+        activeSuperAdmins: 0,
+        availableAppointmentPositions: 0,
+        activeOperationalAppointments: 0,
+        activePlatoons: 0,
+        activeCourses: 0,
+        activeOfferings: 0,
+        activeOCs: 0,
+        activeHierarchyNodes: 0,
+        activeRootNodes: 0,
+        missingPlatoonHierarchyNodes: 0,
+      },
+      steps: {
+        superAdmin: { status: "blocked", complete: false },
+        platoons: { status: "blocked", complete: false },
+        appointments: { status: "blocked", complete: false },
+        hierarchy: { status: "blocked", complete: false },
+        courses: { status: "blocked", complete: false },
+        offerings: { status: "blocked", complete: false },
+        ocs: { status: "blocked", complete: false },
+      },
+    });
+
+    const req = makeJsonRequest({ method: "GET", path: "/api/v1/setup/status" });
+    const res = await getSetupStatusRoute(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.setup.availability).toMatchObject({
+      ok: false,
+      code: "database_unavailable",
+      retryable: true,
+    });
+    expect(JSON.stringify(body)).not.toContain("ECONNREFUSED");
+    expect(JSON.stringify(body)).not.toContain("select count");
   });
 });

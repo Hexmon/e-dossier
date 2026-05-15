@@ -750,6 +750,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/oc-data-health",
+    "action": "admin:oc-data-health:read",
+    "resourceType": "admin:oc-data-health",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/courses",
     "action": "admin:courses:read",
     "resourceType": "admin:courses",

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((path: string) => {
@@ -8,6 +9,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/app/lib/setup-status", () => ({
   getSetupStatus: vi.fn(),
+  isSetupStatusUnavailable: (status: any) => status.availability?.ok === false,
 }));
 
 vi.mock("@/app/lib/server-page-auth", () => ({
@@ -86,5 +88,25 @@ describe("/setup page", () => {
 
     const element = await SetupPage();
     expect(element).toBeTruthy();
+  });
+
+  it("renders database unavailable UI instead of setup actions", async () => {
+    (getSetupStatus as any).mockResolvedValueOnce({
+      bootstrapRequired: false,
+      setupComplete: false,
+      nextStep: null,
+      availability: {
+        ok: false,
+        code: "database_unavailable",
+        message: "Database is temporarily unavailable. Please try again after the service is restored.",
+        retryable: true,
+      },
+    });
+
+    const html = renderToStaticMarkup(await SetupPage());
+
+    expect(html).toContain("Database service unavailable");
+    expect(html).toContain("PostgreSQL/Docker database service");
+    expect(getOptionalDashboardAccess).not.toHaveBeenCalled();
   });
 });

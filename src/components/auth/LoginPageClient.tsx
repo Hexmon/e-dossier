@@ -14,7 +14,7 @@ import {
   type LoginAppointmentOption,
 } from "@/app/lib/api/appointmentApi";
 import { loginUser } from "@/app/lib/api/authApi";
-import { ApiClientError } from "@/app/lib/apiClient";
+import { ApiClientError, getFriendlyApiErrorMessage } from "@/app/lib/apiClient";
 import {
   clearReturnUrl,
   readReturnUrl,
@@ -74,8 +74,8 @@ export default function LoginPageClient({
       const data = await getLoginAppointments();
       setAppointments(data);
       setAppointmentsFetchError(false);
-    } catch {
-      toast.error("Unable to load appointments. Please try again.");
+    } catch (error) {
+      toast.error(getFriendlyApiErrorMessage(error, "Unable to load appointments. Please try again."));
       setAppointmentsFetchError(true);
     } finally {
       setLoadingAppointments(false);

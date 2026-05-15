@@ -8,7 +8,7 @@ import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError } from '@/app/lib/http';
 import { passwordSchema } from '@/app/lib/validators';
 import { and, eq, ilike, isNull, or } from 'drizzle-orm';
-import { getSetupStatus } from '@/app/lib/setup-status';
+import { getSetupStatus, isSetupStatusUnavailable } from '@/app/lib/setup-status';
 import {
   withAuditRoute,
   AuditEventType,
@@ -30,6 +30,10 @@ const bodySchema = z.object({
 async function POSTHandler(req: AuditNextRequest) {
   try {
     const setupStatus = await getSetupStatus();
+    if (isSetupStatusUnavailable(setupStatus)) {
+      return json.serviceUnavailable(setupStatus.availability.message);
+    }
+
     if (!setupStatus.bootstrapRequired) {
       return json.conflict('Bootstrap is disabled after initial SUPER_ADMIN setup.', {
         error: 'bootstrap_disabled',

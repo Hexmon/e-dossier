@@ -52,6 +52,7 @@ vi.mock('@/utils/preflightConflicts', () => ({
 
 vi.mock('@/app/lib/setup-status', () => ({
   getSetupStatus: vi.fn(),
+  isSetupStatusUnavailable: (status: any) => status.availability?.ok === false,
 }));
 
 const validBody = {

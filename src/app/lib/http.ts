@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
+export const DATABASE_UNAVAILABLE_MESSAGE =
+  'Database is temporarily unavailable. Please try again after the service is restored.';
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -93,6 +96,16 @@ function serverError(messageText?: string, extras?: object, init?: ResponseInit)
   return envelope(500, 'server_error', messageText ?? 'Internal server error', extras, init);
 }
 
+function serviceUnavailable(messageText?: string, extras?: object, init?: ResponseInit) {
+  return envelope(
+    503,
+    'service_unavailable',
+    messageText ?? DATABASE_UNAVAILABLE_MESSAGE,
+    { retryable: true, service: 'database', ...(extras ?? {}) },
+    init
+  );
+}
+
 /** Optional helpers */
 export const isPgUniqueViolation = (e: unknown) =>
   typeof e === 'object' &&
@@ -109,6 +122,67 @@ const isZod = (e: unknown): e is ZodError =>
     typeof (e as { flatten?: unknown }).flatten === 'function'
   );
 
+const DATABASE_UNAVAILABLE_CODES = new Set([
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  '08000',
+  '08001',
+  '08003',
+  '08004',
+  '08006',
+  '08007',
+  '53300',
+  '57P03',
+]);
+
+export function isDatabaseUnavailableError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const visited = new Set<unknown>();
+  const queue: Array<Record<string, unknown>> = [error as Record<string, unknown>];
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) {
+      continue;
+    }
+    visited.add(current);
+
+    const code = current.code;
+    if (typeof code === 'string' && DATABASE_UNAVAILABLE_CODES.has(code)) {
+      return true;
+    }
+
+    const errno = current.errno;
+    if (typeof errno === 'string' && DATABASE_UNAVAILABLE_CODES.has(errno)) {
+      return true;
+    }
+
+    const message = typeof current.message === 'string' ? current.message.toLowerCase() : '';
+    if (
+      message.includes('connect econnrefused') ||
+      message.includes('connection terminated') ||
+      message.includes('connection timeout') ||
+      message.includes('database system is starting up') ||
+      message.includes('failed to connect')
+    ) {
+      return true;
+    }
+
+    const cause = current.cause;
+    if (cause && typeof cause === 'object') {
+      queue.push(cause as Record<string, unknown>);
+    }
+  }
+
+  return false;
+}
+
 /** Centralized error -> response mapper (use in catch blocks) */
 export function handleApiError(err: unknown) {
   if (err instanceof ApiError) {
@@ -123,6 +197,10 @@ export function handleApiError(err: unknown) {
       detail: (err as any).detail ?? (err as any).cause?.detail,
       constraint: (err as any).constraint ?? (err as any).cause?.constraint,
     });
+  }
+  if (isDatabaseUnavailableError(err)) {
+    console.error('[API ERROR]', err);
+    return serviceUnavailable();
   }
   // last resort
   console.error('[API ERROR]', err);
@@ -139,5 +217,6 @@ export const json = {
   notFound,
   conflict,
   unprocessable,
+  serviceUnavailable,
   serverError,
 };

@@ -1,10 +1,15 @@
 import { ApiError } from "@/app/lib/http";
-import { getSetupStatus, type SetupStatus } from "@/app/lib/setup-status";
+import {
+  getSetupStatus,
+  isSetupStatusUnavailable,
+  type SetupStatus,
+} from "@/app/lib/setup-status";
 import type { SidebarRoleGroup } from "@/lib/sidebar-visibility";
 
 export const SETUP_INCOMPLETE_ERROR = "setup_incomplete";
 export const SETUP_INCOMPLETE_MESSAGE =
   "Initial setup is incomplete. An ADMIN or SUPER_ADMIN must complete setup before this action is available.";
+export const SETUP_UNAVAILABLE_ERROR = "service_unavailable";
 
 type PathRule = {
   path?: string;
@@ -95,12 +100,27 @@ export function createSetupIncompleteError(
   });
 }
 
+function createSetupUnavailableError(setupStatus: SetupStatus) {
+  return new ApiError(
+    503,
+    setupStatus.availability?.ok === false
+      ? setupStatus.availability.message
+      : "Database is temporarily unavailable. Please try again after the service is restored.",
+    SETUP_UNAVAILABLE_ERROR,
+    { retryable: true, service: "database" }
+  );
+}
+
 export async function assertApiAllowedDuringSetup(params: {
   pathname: string;
   method: string;
   roleGroup: SidebarRoleGroup;
 }) {
   const setupStatus = await getSetupStatus();
+
+  if (isSetupStatusUnavailable(setupStatus)) {
+    throw createSetupUnavailableError(setupStatus);
+  }
 
   if (setupStatus.setupComplete) {
     return setupStatus;
@@ -119,6 +139,10 @@ export async function assertApiAllowedDuringSetup(params: {
 export async function assertLoginAllowedDuringSetup(roleGroup: SidebarRoleGroup) {
   const setupStatus = await getSetupStatus();
 
+  if (isSetupStatusUnavailable(setupStatus)) {
+    throw createSetupUnavailableError(setupStatus);
+  }
+
   if (setupStatus.setupComplete || isSetupManagerRoleGroup(roleGroup)) {
     return setupStatus;
   }
@@ -128,6 +152,10 @@ export async function assertLoginAllowedDuringSetup(roleGroup: SidebarRoleGroup)
 
 export async function assertSignupAllowedDuringSetup() {
   const setupStatus = await getSetupStatus();
+
+  if (isSetupStatusUnavailable(setupStatus)) {
+    throw createSetupUnavailableError(setupStatus);
+  }
 
   if (setupStatus.setupComplete) {
     return setupStatus;

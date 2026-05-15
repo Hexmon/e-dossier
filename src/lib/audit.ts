@@ -6,7 +6,7 @@ import { createPostgresAuditSink } from '@hexmon_tech/audit-sink-postgres';
 import { withAudit } from '@hexmon_tech/audit-next';
 import type { AuditNextRequest, NextAuditOptions } from '@hexmon_tech/audit-next';
 import { NextRequest } from 'next/server';
-import { ApiError } from '@/app/lib/http';
+import { ApiError, handleApiError } from '@/app/lib/http';
 import { normalizeDatabaseUrl } from '@/app/db/connectionString';
 
 // ── Re-export types ───────────────────────────────────────────────
@@ -235,9 +235,13 @@ export function withAuditRoute<TParams = EmptyRouteParams>(
         }
         return response;
       } catch (error) {
-        const status = error instanceof ApiError ? error.status : 500;
+        const response = handleApiError(error);
+        const status = response.status ?? (error instanceof ApiError ? error.status : 500);
         logAccess(req, startTime, status, status >= 500 ? 'ERROR' : 'FAILURE');
-        throw error;
+        if (requestIdHeader && !response.headers.get('x-request-id')) {
+          response.headers.set('x-request-id', requestIdHeader);
+        }
+        return response;
       }
     },
     {

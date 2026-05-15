@@ -2,16 +2,20 @@ import React from "react";
 import { redirect } from "next/navigation";
 
 import { SetupPageClient } from "@/components/setup/SetupPageClient";
+import { SystemUnavailablePanel } from "@/components/system/SystemUnavailablePanel";
 import { getOptionalDashboardAccess } from "@/app/lib/server-page-auth";
-import { getSetupStatus } from "@/app/lib/setup-status";
+import { getSetupStatus, isSetupStatusUnavailable } from "@/app/lib/setup-status";
 
 export const dynamic = "force-dynamic";
 
 export default async function SetupPage() {
-  const [setupStatus, authContext] = await Promise.all([
-    getSetupStatus(),
-    getOptionalDashboardAccess(),
-  ]);
+  const setupStatus = await getSetupStatus();
+
+  if (isSetupStatusUnavailable(setupStatus)) {
+    return <SystemUnavailablePanel message={setupStatus.availability.message} />;
+  }
+
+  const authContext = await getOptionalDashboardAccess();
 
   if (authContext?.roleGroup === "OTHER_USERS" && setupStatus.setupComplete) {
     redirect("/dashboard");

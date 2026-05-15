@@ -11,7 +11,7 @@ import {
     CourseResponse,
     type GetCoursesParams,
 } from "@/app/lib/api/courseApi";
-import { ApiClientError } from "@/app/lib/apiClient";
+import { getFriendlyApiErrorMessage } from "@/app/lib/apiClient";
 
 export interface UICourse {
     id: string;
@@ -43,19 +43,6 @@ function toUICourse(course: CourseResponse): UICourse {
         endDate,
         trgModel: 0,
     };
-}
-
-function getApiErrorMessage(error: unknown, fallback: string): string {
-    if (error instanceof ApiClientError) {
-        const detail = typeof error.extras?.detail === "string" ? error.extras.detail : null;
-        return detail || error.message || fallback;
-    }
-
-    if (error instanceof Error) {
-        return error.message || fallback;
-    }
-
-    return fallback;
 }
 
 type UseCoursesOptions = GetCoursesParams & {
@@ -95,7 +82,7 @@ export function useCourses(options: UseCoursesOptions = {}) {
 
     useEffect(() => {
         if (!coursesQuery.isError) return;
-        toast.error(getApiErrorMessage(coursesQuery.error, "Failed to load courses"));
+        toast.error(getFriendlyApiErrorMessage(coursesQuery.error, "Failed to load courses"));
     }, [coursesQuery.isError, coursesQuery.error]);
 
     const addCourseMutation = useMutation({
@@ -112,7 +99,7 @@ export function useCourses(options: UseCoursesOptions = {}) {
             toast.success("Course added successfully");
         },
         onError: (error) => {
-            toast.error(getApiErrorMessage(error, "Failed to add course"));
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to add course"));
         },
     });
 
@@ -130,7 +117,7 @@ export function useCourses(options: UseCoursesOptions = {}) {
             toast.success("Course updated successfully");
         },
         onError: (error) => {
-            toast.error(getApiErrorMessage(error, "Failed to update course"));
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to update course"));
         },
     });
 
@@ -143,7 +130,7 @@ export function useCourses(options: UseCoursesOptions = {}) {
             toast.success("Course deleted successfully");
         },
         onError: (error) => {
-            toast.error(getApiErrorMessage(error, "Failed to delete course"));
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to delete course"));
         },
     });
 

@@ -155,4 +155,22 @@ describe("apiClient 401 handling", () => {
     expect(logoutAndRedirectMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("maps browser fetch failures to a friendly network_error", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const { apiRequest } = await import("@/app/lib/apiClient");
+
+    await expect(
+      apiRequest({
+        method: "GET",
+        endpoint: "/api/v1/me",
+      })
+    ).rejects.toMatchObject({
+      status: 0,
+      code: "network_error",
+      message: "Unable to reach the server. Please check the connection and retry.",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

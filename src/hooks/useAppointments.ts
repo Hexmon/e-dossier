@@ -20,7 +20,7 @@ import {
   deleteAppointment,
   updatePosition,
 } from "@/app/lib/api/appointmentApi";
-import { ApiClientError } from "@/app/lib/apiClient";
+import { ApiClientError, getFriendlyApiErrorMessage } from "@/app/lib/apiClient";
 
 import { getAllUsers, User } from "@/app/lib/api/userApi";
 import { getPlatoons, Platoon } from "@/app/lib/api/platoonApi";
@@ -78,8 +78,8 @@ export function useAppointments() {
           throw new Error("No appointment data available");
         }
         return data;
-      } catch {
-        toast.info("Using fallback appointments.");
+      } catch (error) {
+        toast.info(getFriendlyApiErrorMessage(error, "Using fallback appointments."));
         return fallbackAppointments;
       }
     },
@@ -91,8 +91,8 @@ export function useAppointments() {
     queryFn: async () => {
       try {
         return await getAllUsers();
-      } catch {
-        toast.error("Unable to load users, using fallback.");
+      } catch (error) {
+        toast.error(getFriendlyApiErrorMessage(error, "Unable to load users, using fallback."));
         return fallbackUsers;
       }
     },
@@ -179,7 +179,7 @@ export function useAppointments() {
       toast.success("Appointment handed over successfully");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Handover failed. Try again.");
+      toast.error(getFriendlyApiErrorMessage(error, "Handover failed. Try again."));
     },
   });
 
@@ -280,8 +280,7 @@ export function useAppointments() {
       }
 
       setCreateAppointmentConflict(null);
-      const message = error?.message || "Failed to create appointment";
-      toast.error(message);
+      toast.error(getFriendlyApiErrorMessage(error, "Failed to create appointment"));
     },
   });
 
@@ -319,7 +318,7 @@ export function useAppointments() {
       toast.success("Appointment updated successfully!");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to update appointment");
+      toast.error(getFriendlyApiErrorMessage(error, "Failed to update appointment"));
     },
   });
 
@@ -337,7 +336,7 @@ export function useAppointments() {
       toast.success("Appointment deleted successfully!");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to delete appointment");
+      toast.error(getFriendlyApiErrorMessage(error, "Failed to delete appointment"));
     },
   });
 

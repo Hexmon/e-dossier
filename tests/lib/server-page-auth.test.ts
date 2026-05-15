@@ -24,6 +24,7 @@ vi.mock("@/app/lib/active-authority", () => ({
 
 vi.mock("@/app/lib/setup-status", () => ({
   getSetupStatus: vi.fn(),
+  isSetupStatusUnavailable: (status: any) => status.availability?.ok === false,
 }));
 
 vi.mock("@/app/lib/module-access", () => {
