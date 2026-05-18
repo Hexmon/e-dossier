@@ -32,14 +32,22 @@ import {
   DEFAULT_APPOINTMENT_TEMPLATE_POSITIONS,
   type AppointmentTemplatePositionSummary,
 } from "@/app/lib/bootstrap/appointment-template-view";
+import { useMe } from "@/hooks/useMe";
+import { deriveSidebarRoleGroup } from "@/lib/sidebar-visibility";
+
+type AppointmentPositionTableRow = Omit<AppointmentTemplatePositionSummary, "displayName"> & {
+  displayName?: string | null;
+};
 
 export default function AppointmentManagement() {
   const queryClient = useQueryClient();
+  const { data: meData } = useMe();
 
   const {
     appointments,
     servedList,
     users,
+    positions,
     loading,
     fetchAppointments,
     fetchUsersAndPositions,
@@ -59,6 +67,11 @@ export default function AppointmentManagement() {
     endsAt: "",
     reason: "",
   });
+  const actorIsSuperAdmin =
+    deriveSidebarRoleGroup({
+      roles: meData?.roles ?? [],
+      position: meData?.apt?.position ?? null,
+    }) === "SUPER_ADMIN";
 
   const delegationsQuery = useQuery({
     queryKey: ["delegations"],
@@ -73,13 +86,20 @@ export default function AppointmentManagement() {
         fetchAppointments(),
         fetchUsersAndPositions(),
         queryClient.invalidateQueries({ queryKey: ["positions"] }),
+        queryClient.invalidateQueries({ queryKey: ["servedList"] }),
       ]);
       const prefix = dryRun ? "Dry run complete." : "Default appointment template applied.";
-      toast.success(
-        `${prefix} Created: ${result.createdCount}, Updated: ${result.updatedCount}, Skipped: ${result.skippedCount}`
-      );
-      if (result.warnings.length > 0) {
-        toast.warning(`Completed with ${result.warnings.length} warning(s).`);
+      const appointmentStats = result.module === "appointment" ? result.stats : null;
+      const positionStats = appointmentStats?.positions;
+      const assignmentStats = appointmentStats?.assignments;
+      const summary =
+        positionStats && assignmentStats
+          ? ` Positions created: ${positionStats.created}, updated: ${positionStats.updated}, skipped: ${positionStats.skipped}. Holder assignments created: ${assignmentStats.created}, skipped: ${assignmentStats.skipped}.`
+          : ` Created: ${result.createdCount}, Updated: ${result.updatedCount}, Skipped: ${result.skippedCount}.`;
+      toast.success(`${prefix}${summary}`);
+      const warnings = result.warnings ?? [];
+      if (warnings.length > 0) {
+        toast.warning(`Completed with ${warnings.length} warning(s).`);
       }
     },
     onError: (error: any) => {
@@ -184,12 +204,14 @@ export default function AppointmentManagement() {
                   <h2 className="text-2xl font-bold">Transfer / Delegate</h2>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
+                      type="button"
                       variant="outline"
                       onClick={() => setPositionTemplateDialog(true)}
                     >
                       Default Appointment Template
                     </Button>
                     <Button
+                      type="button"
                       variant="outline"
                       onClick={() => setDelegationDialog(true)}
                     >
@@ -205,7 +227,10 @@ export default function AppointmentManagement() {
                   onEdit={handleEditAppointment}
                   onDelete={handleDeleteAppointment}
                   users={users}
+                  actorIsSuperAdmin={actorIsSuperAdmin}
                 />
+
+                <PositionDefinitionsTable positions={positions} title="Available Appointment Positions" />
 
                 <Card>
                   <CardHeader>
@@ -267,10 +292,14 @@ export default function AppointmentManagement() {
             </DialogDescription>
           </DialogHeader>
 
-          <PositionDefinitionsTable positions={DEFAULT_APPOINTMENT_TEMPLATE_POSITIONS} />
+          <PositionDefinitionsTable
+            positions={DEFAULT_APPOINTMENT_TEMPLATE_POSITIONS}
+            title="Template Appointment Positions"
+          />
 
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
               onClick={() => applyDefaultTemplateMutation.mutate(true)}
               disabled={applyDefaultTemplateMutation.isPending}
@@ -285,6 +314,7 @@ export default function AppointmentManagement() {
               )}
             </Button>
             <Button
+              type="button"
               onClick={() => applyDefaultTemplateMutation.mutate(false)}
               disabled={applyDefaultTemplateMutation.isPending}
             >
@@ -421,6 +451,7 @@ export default function AppointmentManagement() {
 
             <div className="flex justify-end">
               <Button
+                type="button"
                 onClick={() => createDelegationMutation.mutate()}
                 disabled={createDelegationMutation.isPending}
               >
@@ -434,11 +465,17 @@ export default function AppointmentManagement() {
   );
 }
 
-function PositionDefinitionsTable({ positions }: { positions: AppointmentTemplatePositionSummary[] }) {
+function PositionDefinitionsTable({
+  positions,
+  title,
+}: {
+  positions: AppointmentPositionTableRow[];
+  title: string;
+}) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Appointment Positions</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         {positions.length === 0 ? (

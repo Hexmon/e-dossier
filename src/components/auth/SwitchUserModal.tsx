@@ -195,7 +195,7 @@ export default function SwitchUserModal({
   };
 
   const onSubmit = async (formData: LoginForm) => {
-    if (!formData.username || !formData.password || !formData.appointment) {
+    if (!formData.password || !formData.appointment) {
       toast.error("Please fill in all required fields.");
       return;
     }
@@ -225,19 +225,10 @@ export default function SwitchUserModal({
       return;
     }
 
-    const isPlatoonScopedIdentity = selectedAppointment.scopeType === "PLATOON";
-    const platoonId = isPlatoonScopedIdentity ? selectedAppointment.scopeId ?? null : null;
-    if (isPlatoonScopedIdentity && !platoonId) {
-      toast.error("Selected platoon-scoped identity has no platoon scope.");
-      return;
-    }
-
     const payload = {
       ...(selectedAppointment.kind === "DELEGATION"
         ? { delegationId: selectedAppointment.delegationId ?? selectedAppointment.id }
         : { appointmentId: selectedAppointment.appointmentId ?? selectedAppointment.id }),
-      ...(platoonId ? { platoonId } : {}),
-      username: loginUsername,
       password: formData.password,
     };
 

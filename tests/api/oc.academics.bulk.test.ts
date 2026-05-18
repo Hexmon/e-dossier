@@ -226,6 +226,35 @@ describe('OC academics bulk API', () => {
     );
   });
 
+  it('rejects bulk upserts with empty academic mark objects', async () => {
+    const req = attachAudit(
+      makeJsonRequest({
+        method: 'POST',
+        path: '/api/v1/oc/academics/bulk',
+        body: {
+          items: [
+            {
+              op: 'upsert',
+              ocId: '11111111-1111-4111-8111-111111111111',
+              semester: 1,
+              subjectId: '22222222-2222-4222-8222-222222222222',
+              theory: {},
+              practical: {},
+            },
+          ],
+          failFast: true,
+        },
+      }),
+    );
+
+    const res = await POST(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('bad_request');
+    expect(updateOcAcademicSubject).not.toHaveBeenCalled();
+  });
+
   it('returns 403 when admin bulk access is disabled by module access settings', async () => {
     (mustBeAuthed as any).mockRejectedValueOnce(
       new ApiError(

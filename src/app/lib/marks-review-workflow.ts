@@ -375,14 +375,34 @@ export function buildWorkflowDeepLink(args: {
   return `/dashboard/manage-pt-marks?${params.toString()}`;
 }
 
+function hasDraftMarkValue(value: unknown): boolean {
+  if (value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  return true;
+}
+
+function hasDraftComponentValues(component: Record<string, unknown> | null | undefined): boolean {
+  if (!component) return false;
+  return Object.values(component).some(hasDraftMarkValue);
+}
+
 export function buildAcademicsPublishItems(payload: AcademicWorkflowDraftPayload) {
-  return payload.items.map((item) => ({
-    ocId: item.ocId,
-    semester: payload.semester,
-    subjectId: payload.subjectId,
-    theory: item.theory,
-    practical: item.practical,
-  }));
+  return payload.items.flatMap((item) => {
+    const theory = hasDraftComponentValues(item.theory) ? item.theory : undefined;
+    const practical = hasDraftComponentValues(item.practical) ? item.practical : undefined;
+
+    if (!theory && !practical) return [];
+
+    return [
+      {
+        ocId: item.ocId,
+        semester: payload.semester,
+        subjectId: payload.subjectId,
+        theory,
+        practical,
+      },
+    ];
+  });
 }
 
 export function buildPtPublishItems(payload: PtWorkflowDraftPayload) {
@@ -392,4 +412,36 @@ export function buildPtPublishItems(payload: PtWorkflowDraftPayload) {
     scores: item.scores,
     motivationValues: item.motivationValues,
   }));
+}
+
+export function removeOcFromWorkflowDraftPayload(
+  payload: Record<string, unknown>,
+  ocId: string,
+): { payload: Record<string, unknown>; removedCount: number } {
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  if (!items.length) {
+    return { payload, removedCount: 0 };
+  }
+
+  const filteredItems = items.filter((item) => {
+    if (!item || typeof item !== 'object') return true;
+    const itemRecord = item as Record<string, unknown>;
+    const academicOcId = typeof itemRecord.ocId === 'string' ? itemRecord.ocId : null;
+    const ptOc = itemRecord.oc && typeof itemRecord.oc === 'object' ? itemRecord.oc as Record<string, unknown> : null;
+    const ptOcId = typeof ptOc?.id === 'string' ? ptOc.id : null;
+    return academicOcId !== ocId && ptOcId !== ocId;
+  });
+
+  const removedCount = items.length - filteredItems.length;
+  if (removedCount === 0) {
+    return { payload, removedCount: 0 };
+  }
+
+  return {
+    payload: {
+      ...payload,
+      items: filteredItems,
+    },
+    removedCount,
+  };
 }

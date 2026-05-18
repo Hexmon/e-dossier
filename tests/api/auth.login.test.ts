@@ -93,7 +93,6 @@ vi.mock('argon2', () => ({
 
 const loginBody = {
   appointmentId,
-  username: 'testuser',
   password: 'password123',
 };
 
@@ -164,8 +163,8 @@ describe('POST /api/v1/auth/login', () => {
     expect(body.ok).toBe(false);
     expect(body.error).toBe('missing_fields');
     expect(body.missing).toContain('appointmentId|delegationId');
-    expect(body.missing).toContain('username');
     expect(body.missing).toContain('password');
+    expect(body.missing).not.toContain('username');
   });
 
   it('returns 400 when body is not valid JSON', async () => {
@@ -205,6 +204,69 @@ describe('POST /api/v1/auth/login', () => {
       expect.objectContaining({ userId: 'user-1', success: true }),
     );
     expect(accountLockout.clearFailedAttempts).toHaveBeenCalledWith('testuser');
+  });
+
+  it('derives username from appointment authority and ignores legacy username input', async () => {
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: {
+        appointmentId,
+        username: 'wrong-frontend-user',
+        password: 'password123',
+      },
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.user.username).toBe('testuser');
+    expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ username: 'testuser', success: true }),
+    );
+    expect(accountLockout.clearFailedAttempts).toHaveBeenCalledWith('testuser');
+  });
+
+  it('logs in with a platoon-scoped appointment without frontend platoonId', async () => {
+    (effectiveAuthority.getAuthorityForLogin as any).mockResolvedValueOnce({
+      authorityKind: 'APPOINTMENT',
+      authorityId: appointmentId,
+      appointmentId,
+      delegationId: null,
+      userId: 'user-1',
+      username: 'testuser',
+      positionId: 'position-2',
+      positionKey: 'PTN_CDR',
+      positionName: 'Platoon Commander',
+      defaultScope: 'PLATOON',
+      scopeType: 'PLATOON',
+      scopeId: '33333333-3333-4333-8333-333333333333',
+      platoonKey: 'alpha',
+      platoonName: 'Alpha Platoon',
+      startsAt: new Date('2026-04-04T00:00:00.000Z'),
+      endsAt: null,
+      grantorUserId: null,
+      grantorUsername: null,
+      grantorAppointmentId: null,
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: loginBody,
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.active_appointment.scope).toEqual({
+      type: 'PLATOON',
+      id: '33333333-3333-4333-8333-333333333333',
+    });
   });
 
   it('blocks non-admin login while initial setup is incomplete', async () => {
@@ -351,8 +413,6 @@ describe('POST /api/v1/auth/login', () => {
       path: '/api/v1/auth/login',
       body: {
         delegationId,
-        platoonId: '33333333-3333-4333-8333-333333333333',
-        username: 'delegateuser',
         password: 'password123',
       },
     });

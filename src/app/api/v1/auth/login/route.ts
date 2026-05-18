@@ -65,7 +65,6 @@ async function POSTHandler(req: AuditNextRequest) {
     if (!b.appointmentId && !b.delegationId) {
       missing.push('appointmentId|delegationId');
     }
-    if (!b.username || String(b.username).trim() === '') missing.push('username');
     if (!b.password || String(b.password).trim() === '') missing.push('password');
 
     if (missing.length) {
@@ -77,7 +76,7 @@ async function POSTHandler(req: AuditNextRequest) {
       });
       throw new ApiError(400, 'Missing required fields', 'missing_fields', {
         missing,
-        hint: 'Provide: exactly one of appointmentId or delegationId, plus username and password.',
+        hint: 'Provide: exactly one of appointmentId or delegationId, plus password.',
       });
     }
 
@@ -87,9 +86,10 @@ async function POSTHandler(req: AuditNextRequest) {
       return json.badRequest('Validation failed.', { details: parsed.error.format() });
     }
 
-    const { appointmentId, delegationId, platoonId, username, password } = parsed.data;
+    const { appointmentId, delegationId, password } = parsed.data;
 
     const authority = await getAuthorityForLogin({ appointmentId, delegationId });
+    const loginUsername = authority.username.toLowerCase();
     const loginRoleGroup = deriveSidebarRoleGroup({
       roles: [authority.positionKey],
       position: authority.positionKey,
@@ -109,25 +109,11 @@ async function POSTHandler(req: AuditNextRequest) {
       );
     }
 
-    // 3) Domain checks & auth
-    if (authority.scopeType === 'PLATOON') {
-      if (!platoonId) throw new ApiError(400, 'platoonId required for platoon-scoped identities', 'PLATOON_REQUIRED');
-      if (authority.scopeId !== platoonId) {
-        throw new ApiError(403, 'Platoon mismatch for this identity', 'PLATOON_MISMATCH');
-      }
-    } else if (platoonId) {
-      throw new ApiError(400, 'platoonId not allowed for non-platoon identities', 'PLATOON_NOT_ALLOWED');
-    }
-
-    if ((authority.username ?? '').toLowerCase() !== username.trim().toLowerCase()) {
-      throw new ApiError(403, 'Username does not match the active holder of this appointment', 'USERNAME_MISMATCH');
-    }
-
     const [cred] = await db.select().from(credentialsLocal).where(eq(credentialsLocal.userId, authority.userId)).limit(1);
     if (!cred) {
       await recordLoginAttempt({
         userId: authority.userId,
-        username: username.toLowerCase(),
+        username: loginUsername,
         ipAddress: clientIp,
         userAgent: req.headers.get('user-agent') ?? undefined,
         success: false,
@@ -139,7 +125,7 @@ async function POSTHandler(req: AuditNextRequest) {
         outcome: 'FAILURE',
         actor: { type: 'user', id: authority.userId },
         target: { type: AuditResourceType.USER, id: authority.userId },
-        metadata: { username: username.toLowerCase(), reason: 'No credentials found' },
+        metadata: { username: loginUsername, reason: 'No credentials found' },
       });
 
       throw new ApiError(401, 'invalid_credentials', 'NO_CREDENTIALS');
@@ -149,7 +135,7 @@ async function POSTHandler(req: AuditNextRequest) {
     if (!ok) {
       await recordLoginAttempt({
         userId: authority.userId,
-        username: username.toLowerCase(),
+        username: loginUsername,
         ipAddress: clientIp,
         userAgent: req.headers.get('user-agent') ?? undefined,
         success: false,
@@ -161,11 +147,11 @@ async function POSTHandler(req: AuditNextRequest) {
         outcome: 'FAILURE',
         actor: { type: 'user', id: authority.userId },
         target: { type: AuditResourceType.USER, id: authority.userId },
-        metadata: { username: username.toLowerCase(), reason: 'Invalid password' },
+        metadata: { username: loginUsername, reason: 'Invalid password' },
       });
 
       const lockout = await checkAndLockAccount(
-        username.toLowerCase(),
+        loginUsername,
         authority.userId,
         clientIp
       );
@@ -188,13 +174,13 @@ async function POSTHandler(req: AuditNextRequest) {
     // Record successful login attempt
     await recordLoginAttempt({
       userId: authority.userId,
-      username: username.toLowerCase(),
+      username: loginUsername,
       ipAddress: clientIp,
       userAgent: req.headers.get('user-agent') ?? undefined,
       success: true,
     });
 
-    await clearFailedAttempts(username.toLowerCase());
+    await clearFailedAttempts(loginUsername);
 
     // Audit log - successful login
     await req.audit.log({
@@ -203,7 +189,7 @@ async function POSTHandler(req: AuditNextRequest) {
       actor: { type: 'user', id: authority.userId },
       target: { type: AuditResourceType.USER, id: authority.userId },
       metadata: {
-        username: username.toLowerCase(),
+        username: loginUsername,
         appointmentId: authority.appointmentId,
         delegationId: authority.delegationId,
         authorityKind: authority.authorityKind,

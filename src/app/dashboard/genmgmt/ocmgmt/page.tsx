@@ -39,7 +39,7 @@ import {
   type BulkArchiveFailure,
 } from "@/app/lib/oc/bulk-archive";
 import { buildOCBulkUploadToast } from "@/app/lib/oc/bulk-upload-result";
-import { useOCs } from "@/hooks/useOCs";
+import { useOCs, type OCSemesterFilter } from "@/hooks/useOCs";
 import OCFilters from "@/components/genmgmt/OCFilters";
 import { OCForm } from "@/components/genmgmt/OCForm";
 import { useQuery } from "@tanstack/react-query";
@@ -50,6 +50,7 @@ type CourseLike = { id: string; code?: string; title?: string };
 type PlatoonLike = { id: string; key?: string; name?: string };
 const ALLOWED_BRANCHES = ["O", "E", "M"] as const;
 const ALLOWED_STATUS = ["ACTIVE", "DELEGATED", "WITHDRAWN", "PASSED_OUT"] as const;
+const ALLOWED_SEMESTERS = [1, 2, 3, 4, 5, 6] as const;
 
 export default function OCManagementPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -60,6 +61,7 @@ export default function OCManagementPage() {
   const [platoonFilter, setPlatoonFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [branchFilter, setBranchFilter] = useState<string>("");
+  const [semesterFilter, setSemesterFilter] = useState<string>("");
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -81,6 +83,14 @@ export default function OCManagementPage() {
       : undefined;
   }, [statusFilter]);
 
+  const safeSemester = useMemo((): OCSemesterFilter | undefined => {
+    if (!semesterFilter) return undefined;
+    const parsed = Number(semesterFilter);
+    return ALLOWED_SEMESTERS.includes(parsed as OCSemesterFilter)
+      ? (parsed as OCSemesterFilter)
+      : undefined;
+  }, [semesterFilter]);
+
   // Build params - backend will ignore most filters, we'll filter client-side
   const params = useMemo(() => {
     return {
@@ -89,12 +99,13 @@ export default function OCManagementPage() {
       platoonId: platoonFilter || undefined,
       branch: safeBranch,
       status: safeStatus,
+      semester: safeSemester,
       sort: "updated_desc" as const,
       // Backend handles list controls; the remaining filters are applied client-side.
       limit: 1000, // Fetch more records so we have enough to filter client-side
       offset: 0,   // Always fetch from start for client-side filtering
     };
-  }, [debouncedSearch, courseFilter, platoonFilter, safeBranch, safeStatus]);
+  }, [debouncedSearch, courseFilter, platoonFilter, safeBranch, safeStatus, safeSemester]);
 
   // Use React Query hook - it will filter client-side
   const { ocList, totalCount, loading, addOC, editOC, removeOC, refreshOCs } = useOCs(params);
@@ -474,6 +485,8 @@ export default function OCManagementPage() {
                   onBranchChange={(val) => handleFilterChange(setBranchFilter, val)}
                   statusFilter={statusFilter}
                   onStatusChange={(val) => handleFilterChange(setStatusFilter, val)}
+                  semesterFilter={semesterFilter}
+                  onSemesterChange={(val) => handleFilterChange(setSemesterFilter, val)}
                 />
 
                 <UploadPreviewTable
@@ -507,7 +520,7 @@ export default function OCManagementPage() {
                     </h3>
 
                     {/* Active filters display */}
-                    {(platoonFilter || branchFilter || courseFilter || statusFilter || search) && (
+                    {(platoonFilter || branchFilter || courseFilter || statusFilter || semesterFilter || search) && (
                       <div className="text-xs text-muted-foreground flex gap-2 items-center">
                         <span>Active filters:</span>
                         {search && <span className="bg-primary/10 px-2 py-1 rounded">Search: {search}</span>}
@@ -515,6 +528,11 @@ export default function OCManagementPage() {
                         {platoonFilter && <span className="bg-primary/10 px-2 py-1 rounded">Platoon</span>}
                         {branchFilter && <span className="bg-primary/10 px-2 py-1 rounded">Branch: {branchFilter}</span>}
                         {statusFilter && <span className="bg-primary/10 px-2 py-1 rounded">Status: {statusFilter}</span>}
+                        {safeSemester && (
+                          <span className="bg-primary/10 px-2 py-1 rounded">
+                            Semester: {safeSemester}
+                          </span>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -524,6 +542,7 @@ export default function OCManagementPage() {
                             setPlatoonFilter("");
                             setBranchFilter("");
                             setStatusFilter("");
+                            setSemesterFilter("");
                             setCurrentPage(1);
                           }}
                         >

@@ -10,6 +10,7 @@ import {
     createPTBulkTaskSelectionFromAttemptChange,
     createPTBulkTaskSelectionFromGradeChange,
     getDefaultPTBulkTaskSelection,
+    resolvePTBulkDisplayedSelection,
     type PTBulkTaskSelection,
 } from '@/components/physic-training/bulk/ptBulkScoreHelpers';
 
@@ -119,10 +120,11 @@ export function PTBulkScoresTable({
                                     const initialSelection = initialSelections[item.oc.id]?.[task.taskId];
                                     const draftSelection = scoreDraftValues[item.oc.id]?.[task.taskId];
                                     const isCleared = (clearScoreIds[item.oc.id] ?? []).includes(task.taskId);
-                                    const fallbackSelection = getDefaultPTBulkTaskSelection(task);
-                                    const selection = isCleared
-                                        ? null
-                                        : draftSelection ?? initialSelection ?? fallbackSelection;
+                                    const selection = resolvePTBulkDisplayedSelection({
+                                        initialSelection,
+                                        draftSelection,
+                                        isCleared,
+                                    });
                                     const showClear = Boolean(initialSelection || draftSelection || isCleared);
 
                                     return (
@@ -131,17 +133,19 @@ export function PTBulkScoresTable({
                                                 <select
                                                     className="h-8 w-full rounded-md border px-2 text-xs disabled:cursor-not-allowed disabled:bg-muted/60"
                                                     value={selection?.selectedAttemptCode ?? ''}
-                                                    disabled={disabled || isCleared || !selection}
+                                                    disabled={disabled || isCleared}
                                                     onChange={(e) => {
+                                                        if (!e.target.value) return;
                                                         const nextSelection = createPTBulkTaskSelectionFromAttemptChange(
                                                             task,
                                                             e.target.value,
-                                                            selection,
+                                                            selection ?? getDefaultPTBulkTaskSelection(task),
                                                         );
                                                         if (!nextSelection) return;
                                                         onTaskSelectionChange(item.oc.id, task.taskId, nextSelection);
                                                     }}
                                                 >
+                                                    {!selection ? <option value="">Select category</option> : null}
                                                     {task.attempts.map((attempt) => (
                                                         <option key={`${task.taskId}-${attempt.attemptCode}`} value={attempt.attemptCode}>
                                                             Category: {attempt.attemptCode}
@@ -165,6 +169,7 @@ export function PTBulkScoresTable({
                                                         onTaskSelectionChange(item.oc.id, task.taskId, nextSelection);
                                                     }}
                                                 >
+                                                    {!selection ? <option value="">Select status</option> : null}
                                                     {(task.attempts.find(
                                                         (attempt) => attempt.attemptCode === selection?.selectedAttemptCode,
                                                     )?.grades ?? []).map((grade) => (
@@ -193,7 +198,11 @@ export function PTBulkScoresTable({
                                                 />
 
                                                 <div className="text-[11px] text-muted-foreground">
-                                                    {selection ? `Max: ${selection.maxMarks}` : 'Selection cleared'}
+                                                    {selection
+                                                        ? `Max: ${selection.maxMarks}`
+                                                        : isCleared
+                                                            ? 'Selection cleared'
+                                                            : 'No marks saved'}
                                                 </div>
 
                                                 {showClear ? (

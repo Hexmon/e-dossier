@@ -80,6 +80,24 @@ export default function RelegationHistoryTable({
     setPageSize(25);
   };
 
+  const formatCourseSemester = (courseCode: string, semester?: number | null) =>
+    semester ? `${courseCode} / Sem ${semester}` : courseCode;
+
+  const formatMovementKind = (kind: string) => {
+    switch (kind) {
+      case "SEMESTER_RELEGATION":
+        return "Previous-semester relegation";
+      case "PROMOTION_BATCH":
+        return "Semester promotion";
+      case "PROMOTION_EXCEPTION":
+        return "Promotion exception";
+      case "VOID_PROMOTION":
+        return "Voided promotion";
+      default:
+        return "Course transfer";
+    }
+  };
+
   return (
     <div className="space-y-4 rounded-xl border border-border p-4">
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
@@ -170,13 +188,11 @@ export default function RelegationHistoryTable({
                 <tr key={row.id} className="border-b align-top">
                   <td className="p-2 font-medium">{row.ocNo}</td>
                   <td className="p-2">{row.ocName}</td>
-                  <td className="p-2">{row.fromCourseCode}</td>
-                  <td className="p-2">{row.toCourseCode}</td>
+                  <td className="p-2">{formatCourseSemester(row.fromCourseCode, row.fromSemester)}</td>
+                  <td className="p-2">{formatCourseSemester(row.toCourseCode, row.toSemester)}</td>
                   <td className="p-2">
                     <div>{row.reason}</div>
-                    {row.movementKind !== "TRANSFER" ? (
-                      <div className="mt-1 text-xs text-muted-foreground">{row.movementKind}</div>
-                    ) : null}
+                    <div className="mt-1 text-xs text-muted-foreground">{formatMovementKind(row.movementKind)}</div>
                   </td>
                   <td className="p-2">{new Date(row.performedAt).toLocaleDateString()}</td>
                   <td className="p-2">

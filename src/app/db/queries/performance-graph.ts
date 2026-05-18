@@ -80,10 +80,6 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
   enrollmentIdSet.add(activeEnrollment.id);
   const courseEnrollmentIds = Array.from(enrollmentIdSet);
 
-  const ocIdSet = new Set(activeCourseEnrollments.map((row) => row.ocId));
-  ocIdSet.add(ocId);
-  const courseOcIds = Array.from(ocIdSet);
-
   const courseCadetCount = Math.max(1, courseEnrollmentIds.length);
 
   const [
@@ -137,7 +133,7 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
       .where(inArray(ocDiscipline.enrollmentId, courseEnrollmentIds)),
     db
       .select({
-        ocId: ocMedicalCategory.ocId,
+        enrollmentId: ocMedicalCategory.enrollmentId,
         semester: ocMedicalCategory.semester,
         absence: ocMedicalCategory.absence,
         catFrom: ocMedicalCategory.catFrom,
@@ -146,7 +142,12 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
         mhTo: ocMedicalCategory.mhTo,
       })
       .from(ocMedicalCategory)
-      .where(inArray(ocMedicalCategory.ocId, courseOcIds)),
+      .where(
+        and(
+          inArray(ocMedicalCategory.enrollmentId, courseEnrollmentIds),
+          isNull(ocMedicalCategory.deletedAt),
+        ),
+      ),
   ]);
 
   const academicsCadet = createTermArray();
@@ -301,33 +302,35 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
     }
   }
 
-  const medicalByOcTerm = new Map<string, number>();
+  const medicalByEnrollmentTerm = new Map<string, number>();
   const medicalCadetPresence = Array.from({ length: TERM_COUNT }, () => false);
 
   for (const row of medicalCategoryRows) {
     if (!isValidSemester(row.semester)) continue;
-    const key = `${row.ocId}:${row.semester}`;
-    if (row.ocId === ocId) {
+    const enrollmentId = row.enrollmentId ?? "";
+    if (!enrollmentId) continue;
+    const key = `${enrollmentId}:${row.semester}`;
+    if (enrollmentId === activeEnrollment.id) {
       medicalCadetPresence[toTermIndex(row.semester)] = true;
     }
     const absenceDays = parseAbsenceDays(row.absence);
     const catDays = durationInDays(row.catFrom, row.catTo);
     const mhDays = durationInDays(row.mhFrom, row.mhTo);
     const value = absenceDays ?? (catDays > 0 ? catDays : mhDays);
-    medicalByOcTerm.set(key, (medicalByOcTerm.get(key) ?? 0) + toFiniteNumber(value));
+    medicalByEnrollmentTerm.set(key, (medicalByEnrollmentTerm.get(key) ?? 0) + toFiniteNumber(value));
   }
 
   const medicalCadet = createTermArray();
   const medicalCourseSum = createTermArray();
 
-  for (const [key, rawValue] of medicalByOcTerm.entries()) {
-    const [medicalOcId, semesterRaw] = key.split(":");
+  for (const [key, rawValue] of medicalByEnrollmentTerm.entries()) {
+    const [enrollmentId, semesterRaw] = key.split(":");
     const semester = Number(semesterRaw);
     if (!isValidSemester(semester)) continue;
     const termIndex = toTermIndex(semester);
     const value = toFiniteNumber(rawValue);
     medicalCourseSum[termIndex] += value;
-    if (medicalOcId === ocId) {
+    if (enrollmentId === activeEnrollment.id) {
       medicalCadet[termIndex] = round1(value);
     }
   }

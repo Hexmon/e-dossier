@@ -28,6 +28,8 @@ export const relegationTransferSchema = z
   .object({
     ocId: z.string().uuid("ocId must be a valid uuid"),
     toCourseId: z.string().uuid("toCourseId must be a valid uuid"),
+    relegationMode: z.enum(["COURSE_TRANSFER", "PREVIOUS_SEMESTER"]).optional().default("COURSE_TRANSFER"),
+    targetSemester: z.coerce.number().int().min(1).max(6).optional().nullable(),
     reason: z.string().trim().min(2, "reason is required").max(2000),
     remark: optionalTrimmedText,
     pdfObjectKey: z.string().trim().min(1).max(512).optional().nullable(),
@@ -44,6 +46,14 @@ export const relegationTransferSchema = z
         message: "pdfObjectKey and pdfUrl must be provided together",
       });
     }
+
+    if (value.relegationMode === "PREVIOUS_SEMESTER" && value.targetSemester == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["targetSemester"],
+        message: "targetSemester is required for previous-semester relegation",
+      });
+    }
   });
 
 export const relegationOcOptionsQuerySchema = z.object({
@@ -57,7 +67,7 @@ export const relegationHistoryQuerySchema = z.object({
   courseFromId: z.string().uuid("courseFromId must be a valid uuid").optional(),
   courseToId: z.string().uuid("courseToId must be a valid uuid").optional(),
   movementKind: z
-    .enum(["TRANSFER", "PROMOTION_BATCH", "PROMOTION_EXCEPTION", "VOID_PROMOTION"])
+    .enum(["TRANSFER", "PROMOTION_BATCH", "PROMOTION_EXCEPTION", "VOID_PROMOTION", "SEMESTER_RELEGATION"])
     .optional(),
   limit: z.coerce.number().int().positive().max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
@@ -109,6 +119,9 @@ export const relegationEnrollmentModulesQuerySchema = z.object({
     "interviews",
     "pt_scores",
     "pt_motivation",
+    "medical",
+    "medical_category",
+    "parent_comms",
     "spr",
     "sports_games",
     "motivation_awards",

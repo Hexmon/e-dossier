@@ -171,7 +171,6 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
     onSuccess: async (result) => {
       await loginUser({
         appointmentId: result.appointmentId,
-        username: bootstrapForm.username.trim().toLowerCase(),
         password: bootstrapForm.password,
       });
 
@@ -204,16 +203,31 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
 
   const syncHierarchyMutation = useMutation({
     mutationFn: async () => {
-      if (!rootNode) {
-        throw new Error("ROOT hierarchy node is missing.");
+      let targetRootNode = rootNode;
+      let createdRoot = false;
+
+      if (!targetRootNode) {
+        const created = await hierarchyAdminApi.createNode({
+          key: "CTW_ROOT",
+          name: "Cadets Training Wing",
+          nodeType: "ROOT",
+          parentId: null,
+          sortOrder: 0,
+        });
+        targetRootNode = created.item;
+        createdRoot = true;
       }
 
       if (missingPlatoonNodes.length === 0) {
-        return 0;
+        return { createdRoot, createdPlatoonNodes: 0 };
+      }
+
+      if (!targetRootNode) {
+        throw new Error("ROOT hierarchy node is missing.");
       }
 
       const maxSortOrder = hierarchyNodes
-        .filter((node) => node.parentId === rootNode.id)
+        .filter((node) => node.parentId === targetRootNode.id)
         .reduce((current, node) => Math.max(current, Number(node.sortOrder ?? 0)), 0);
 
       for (const [index, platoon] of missingPlatoonNodes.entries()) {
@@ -221,27 +235,34 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
           key: `SETUP_PLATOON_${platoon.key}_${platoon.id.slice(0, 8).toUpperCase()}`,
           name: platoon.name,
           nodeType: "PLATOON",
-          parentId: rootNode.id,
+          parentId: targetRootNode.id,
           platoonId: platoon.id,
           sortOrder: maxSortOrder + index + 1,
         });
       }
 
-      return missingPlatoonNodes.length;
+      return { createdRoot, createdPlatoonNodes: missingPlatoonNodes.length };
     },
-    onSuccess: async (createdCount) => {
-      if (createdCount === 0) {
+    onSuccess: async ({ createdRoot, createdPlatoonNodes }) => {
+      if (!createdRoot && createdPlatoonNodes === 0) {
         setFeedback({
           tone: "info",
           message: "Hierarchy is already aligned with the active platoons.",
         });
         toast.success("Hierarchy is already aligned with the active platoons.");
       } else {
+        const parts = [
+          createdRoot ? "created root hierarchy node" : null,
+          createdPlatoonNodes > 0
+            ? `created ${createdPlatoonNodes} missing platoon hierarchy node(s)`
+            : null,
+        ].filter(Boolean);
+        const message = `Hierarchy updated: ${parts.join(", ")}.`;
         setFeedback({
           tone: "success",
-          message: `Created ${createdCount} missing platoon hierarchy node(s).`,
+          message,
         });
-        toast.success(`Created ${createdCount} missing platoon hierarchy node(s).`);
+        toast.success(message);
       }
 
       await Promise.all([
@@ -608,7 +629,7 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
         <StepSummary
           title="Hierarchy"
           status={setupStatus.steps.hierarchy.status}
-          description="ROOT already exists. Each active platoon must have one linked PLATOON node."
+          description="Create the ROOT node, then link each active platoon as a PLATOON node."
         >
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
@@ -619,13 +640,14 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
                 onClick={() => syncHierarchyMutation.mutate()}
                 disabled={
                   syncHierarchyMutation.isPending ||
-                  !rootNode ||
-                  missingPlatoonNodes.length === 0
+                  (Boolean(rootNode) && missingPlatoonNodes.length === 0)
                 }
               >
                 {syncHierarchyMutation.isPending
                   ? "Creating Missing Nodes..."
-                  : "Create Missing Platoon Nodes"}
+                  : rootNode
+                    ? "Create Missing Platoon Nodes"
+                    : "Create Root & Platoon Nodes"}
               </Button>
               <Button asChild variant="outline">
                 <Link href={buildReturnToHref("/dashboard/genmgmt/hierarchy")}>

@@ -64,9 +64,7 @@ export async function signupUser(requestBody: Record<string, any>) {
 export interface LoginPayload {
   appointmentId?: string;
   delegationId?: string;
-  username: string;
   password: string;
-  platoonId?: string;
 }
 
 export interface LoginResponse {

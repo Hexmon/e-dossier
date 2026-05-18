@@ -40,6 +40,7 @@ vi.mock("@/app/lib/authz", () => ({
 }));
 
 vi.mock("@/app/lib/admin-boundaries", () => ({
+  assertCanEditManagedUser: vi.fn(async () => undefined),
   assertCanManageUser: vi.fn(async () => undefined),
 }));
 

@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDebouncedValue } from "@/app/lib/debounce";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useRelegationActions, useRelegationModule } from "@/hooks/useRelegation";
 import type { PromotionRelegationCourseOption } from "@/hooks/usePromotionRelegationMgmt";
+import { Undo2, UserMinus } from "lucide-react";
 
 type PromoteCourseCardProps = {
   courses: PromotionRelegationCourseOption[];
@@ -42,6 +44,9 @@ export default function PromoteCourseCard({ courses }: PromoteCourseCardProps) {
     const items = ocOptionsQuery.data ?? [];
     return items.filter((oc) => Number(oc.currentSemester) === selectedSemester);
   }, [ocOptionsQuery.data, selectedSemester]);
+  const visibleExcludedCount = ocOptions.filter((oc) => excludedOcIds.includes(oc.ocId)).length;
+  const visiblePromotionCount = Math.max(ocOptions.length - visibleExcludedCount, 0);
+  const hasExcludedOcs = excludedOcIds.length > 0;
 
   const toggleExcludedOc = (ocId: string) => {
     setExcludedOcIds((current) =>
@@ -142,6 +147,33 @@ export default function PromoteCourseCard({ courses }: PromoteCourseCardProps) {
           />
         </div>
 
+        <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant="outline"
+              className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
+            >
+              Will promote: {visiblePromotionCount}
+            </Badge>
+            <Badge variant={visibleExcludedCount > 0 ? "destructive" : "outline"}>
+              Excluded: {visibleExcludedCount}
+            </Badge>
+          </div>
+          {hasExcludedOcs ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={() => setExcludedOcIds([])}
+              aria-label="Restore all excluded OCs to promotion list"
+            >
+              <Undo2 className="h-4 w-4" />
+              Restore all
+            </Button>
+          ) : null}
+        </div>
+
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
@@ -150,8 +182,8 @@ export default function PromoteCourseCard({ courses }: PromoteCourseCardProps) {
                 <th className="p-2">Name</th>
                 <th className="p-2">Current Semester</th>
                 <th className="p-2">Platoon</th>
-                <th className="p-2">Status</th>
-                <th className="p-2">Action</th>
+                <th className="p-2">Promotion Status</th>
+                <th className="p-2">Decision</th>
               </tr>
             </thead>
             <tbody>
@@ -177,19 +209,48 @@ export default function PromoteCourseCard({ courses }: PromoteCourseCardProps) {
                 ocOptions.map((oc) => {
                   const isExcluded = excludedOcIds.includes(oc.ocId);
                   return (
-                    <tr key={oc.ocId} className="border-b">
+                    <tr
+                      key={oc.ocId}
+                      className={isExcluded ? "border-b bg-destructive/5 dark:bg-destructive/10" : "border-b"}
+                    >
                       <td className="p-2 font-medium">{oc.ocNo}</td>
                       <td className="p-2">{oc.ocName}</td>
                       <td className="p-2">Semester {oc.currentSemester}</td>
                       <td className="p-2">{oc.platoonKey ?? "-"}</td>
-                      <td className="p-2">{isExcluded ? "Excluded" : "Eligible"}</td>
+                      <td className="p-2">
+                        {isExcluded ? (
+                          <Badge variant="destructive">Excluded from this batch</Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
+                          >
+                            Will be promoted
+                          </Badge>
+                        )}
+                      </td>
                       <td className="p-2">
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant={isExcluded ? "outline" : "destructive"}
                           onClick={() => toggleExcludedOc(oc.ocId)}
+                          aria-label={
+                            isExcluded
+                              ? `Restore ${oc.ocNo} to promotion list`
+                              : `Exclude ${oc.ocNo} from promotion`
+                          }
                         >
-                          {isExcluded ? "Include" : "Exclude"}
+                          {isExcluded ? (
+                            <>
+                              <Undo2 className="h-4 w-4" />
+                              Restore to promotion list
+                            </>
+                          ) : (
+                            <>
+                              <UserMinus className="h-4 w-4" />
+                              Exclude from promotion
+                            </>
+                          )}
                         </Button>
                       </td>
                     </tr>

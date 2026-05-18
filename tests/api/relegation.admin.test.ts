@@ -33,8 +33,12 @@ vi.mock("@/app/db/queries/relegation", () => ({
     },
     history: {
       id: "44444444-4444-4444-8444-444444444444",
+      movementKind: "TRANSFER",
+      fromSemester: 4,
+      toSemester: 1,
       performedAt: new Date().toISOString(),
     },
+    cleanupSummary: null,
   })),
   promoteCourseBatch: vi.fn(async () => ({
     fromCourse: {
@@ -125,8 +129,12 @@ describe("Admin relegation APIs", () => {
         ocId: "11111111-1111-4111-8111-111111111111",
         ocNo: "OC-001",
         ocName: "Cadet One",
+        status: "ACTIVE",
         isActive: true,
         currentSemester: 1,
+        platoonId: null,
+        platoonKey: null,
+        platoonName: null,
         currentCourseId: "22222222-2222-4222-8222-222222222222",
         currentCourseCode: "TES-50",
       },
@@ -271,6 +279,8 @@ describe("Admin relegation APIs", () => {
       body: {
         ocId: "11111111-1111-4111-8111-111111111111",
         toCourseId: "33333333-3333-4333-8333-333333333333",
+        relegationMode: "COURSE_TRANSFER",
+        targetSemester: null,
         reason: "Failed modules",
       },
     });
@@ -286,6 +296,8 @@ describe("Admin relegation APIs", () => {
       body: {
         ocId: "11111111-1111-4111-8111-111111111111",
         toCourseId: "33333333-3333-4333-8333-333333333333",
+        relegationMode: "COURSE_TRANSFER",
+        targetSemester: null,
         reason: "Failed modules",
         remark: "Retake required",
         pdfObjectKey: "relegation/abc.pdf",
@@ -302,6 +314,8 @@ describe("Admin relegation APIs", () => {
       {
         ocId: "11111111-1111-4111-8111-111111111111",
         toCourseId: "33333333-3333-4333-8333-333333333333",
+        relegationMode: "COURSE_TRANSFER",
+        targetSemester: null,
         reason: "Failed modules",
         remark: "Retake required",
         pdfObjectKey: "relegation/abc.pdf",
@@ -310,5 +324,52 @@ describe("Admin relegation APIs", () => {
       "admin-1",
       { scopePlatoonId: null }
     );
+  });
+
+  it("POST /transfer accepts previous-semester relegation payload", async () => {
+    const req = makeJsonRequest({
+      method: "POST",
+      path: transferPath,
+      body: {
+        ocId: "11111111-1111-4111-8111-111111111111",
+        toCourseId: "33333333-3333-4333-8333-333333333333",
+        relegationMode: "PREVIOUS_SEMESTER",
+        targetSemester: 3,
+        reason: "Late result correction",
+      },
+    });
+
+    const res = await postTransfer(req as any, createRouteContext());
+
+    expect(res.status).toBe(201);
+    expect(relegationQueries.applyOcRelegationTransfer).toHaveBeenCalledWith(
+      {
+        ocId: "11111111-1111-4111-8111-111111111111",
+        toCourseId: "33333333-3333-4333-8333-333333333333",
+        relegationMode: "PREVIOUS_SEMESTER",
+        targetSemester: 3,
+        reason: "Late result correction",
+      },
+      "admin-1",
+      { scopePlatoonId: null }
+    );
+  });
+
+  it("POST /transfer rejects previous-semester relegation without target semester", async () => {
+    const req = makeJsonRequest({
+      method: "POST",
+      path: transferPath,
+      body: {
+        ocId: "11111111-1111-4111-8111-111111111111",
+        toCourseId: "33333333-3333-4333-8333-333333333333",
+        relegationMode: "PREVIOUS_SEMESTER",
+        reason: "Late result correction",
+      },
+    });
+
+    const res = await postTransfer(req as any, createRouteContext());
+
+    expect(res.status).toBe(400);
+    expect(relegationQueries.applyOcRelegationTransfer).not.toHaveBeenCalled();
   });
 });

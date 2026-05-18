@@ -6,10 +6,13 @@ import {
   ocCadets,
   ocCourseEnrollments,
   ocSemesterMarks,
+  ocMedicals,
+  ocMedicalCategory,
   ocOlq,
   ocCreditForExcellence,
   ocSprRecords,
   ocDiscipline,
+  ocParentComms,
   ocMotivationAwards,
   ocSportsAndGames,
   ocWeaponTraining,
@@ -17,13 +20,15 @@ import {
   ocSpeedMarch,
   ocDrill,
   ocCamps,
+  trainingCamps,
   ocClubs,
   ocRecordingLeaveHikeDetention,
   ocCounselling,
 } from "@/app/db/schema/training/oc";
 import { ocMovementKind, ocRelegations } from "@/app/db/schema/training/ocRelegations";
+import { marksWorkflowTickets } from "@/app/db/schema/training/marksReviewWorkflow";
 import { platoons } from "@/app/db/schema/auth/platoons";
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import {
   createEnrollment,
@@ -35,6 +40,7 @@ import {
 } from "@/app/db/queries/oc-enrollments";
 import { ocPtMotivationAwards, ocPtTaskScores } from "@/app/db/schema/training/physicalTrainingOc";
 import { ocInterviews } from "@/app/db/schema/training/interviewOc";
+import { removeOcFromWorkflowDraftPayload } from "@/app/lib/marks-review-workflow";
 
 export type RelegationOcOption = {
   ocId: string;
@@ -61,6 +67,8 @@ export type RelegationMovementKind = (typeof ocMovementKind.enumValues)[number];
 export type ApplyOcRelegationTransferInput = {
   ocId: string;
   toCourseId: string;
+  relegationMode?: "COURSE_TRANSFER" | "PREVIOUS_SEMESTER";
+  targetSemester?: number | null;
   reason: string;
   remark?: string | null;
   pdfObjectKey?: string | null;
@@ -360,6 +368,267 @@ async function ensureAllowedNextCourse(
   }
 }
 
+export type RelegationTransferMode = "COURSE_TRANSFER" | "PREVIOUS_SEMESTER";
+
+export type RelegationTransferSemesterPlan = {
+  mode: RelegationTransferMode;
+  movementKind: RelegationMovementKind;
+  fromSemester: number;
+  toSemester: number | null;
+  cleanupFromSemester: number | null;
+  newEnrollmentCurrentSemester: number | null;
+};
+
+function normalizeSemester(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.max(1, Math.min(Math.trunc(parsed), 6));
+}
+
+export function resolveRelegationTransferSemesterPlan(args: {
+  currentSemester: number;
+  relegationMode?: RelegationTransferMode | null;
+  targetSemester?: number | null;
+}): RelegationTransferSemesterPlan {
+  const mode = args.relegationMode ?? "COURSE_TRANSFER";
+  const fromSemester = normalizeSemester(args.currentSemester);
+
+  if (mode !== "PREVIOUS_SEMESTER") {
+    return {
+      mode: "COURSE_TRANSFER",
+      movementKind: "TRANSFER",
+      fromSemester,
+      toSemester: null,
+      cleanupFromSemester: null,
+      newEnrollmentCurrentSemester: null,
+    };
+  }
+
+  if (fromSemester <= 1) {
+    throw new ApiError(
+      400,
+      "Previous-semester relegation is not available from semester 1.",
+      "bad_request"
+    );
+  }
+
+  const expectedTargetSemester = fromSemester - 1;
+  if (args.targetSemester !== expectedTargetSemester) {
+    throw new ApiError(
+      400,
+      `Previous-semester relegation target must be semester ${expectedTargetSemester}.`,
+      "bad_request",
+      {
+        currentSemester: fromSemester,
+        expectedTargetSemester,
+        providedTargetSemester: args.targetSemester ?? null,
+      }
+    );
+  }
+
+  return {
+    mode,
+    movementKind: "SEMESTER_RELEGATION",
+    fromSemester,
+    toSemester: expectedTargetSemester,
+    cleanupFromSemester: expectedTargetSemester + 1,
+    newEnrollmentCurrentSemester: expectedTargetSemester,
+  };
+}
+
+export type PreviousSemesterCleanupSummary = {
+  cleanupFromSemester: number;
+  deletedRows: Record<string, number>;
+  workflowTicketsUpdated: number;
+  workflowItemsRemoved: number;
+};
+
+async function deleteReturningCount(
+  tx: any,
+  table: any,
+  whereClause: any
+): Promise<number> {
+  const rows = await tx.delete(table).where(whereClause).returning({ id: table.id });
+  return rows.length;
+}
+
+async function cleanupSourceEnrollmentFutureSemesterData(args: {
+  tx: any;
+  ocId: string;
+  sourceEnrollmentId: string;
+  sourceCourseId: string;
+  cleanupFromSemester: number;
+  actorUserId: string;
+}): Promise<PreviousSemesterCleanupSummary> {
+  const { tx, ocId, sourceEnrollmentId, sourceCourseId, cleanupFromSemester, actorUserId } = args;
+  const deletedRows: Record<string, number> = {};
+  const bySourceEnrollmentAndFutureSemester = (table: any) =>
+    and(
+      eq(table.ocId, ocId),
+      eq(table.enrollmentId, sourceEnrollmentId),
+      gte(table.semester, cleanupFromSemester)
+    );
+
+  deletedRows.ocSemesterMarks = await deleteReturningCount(
+    tx,
+    ocSemesterMarks,
+    bySourceEnrollmentAndFutureSemester(ocSemesterMarks)
+  );
+  deletedRows.ocMedicals = await deleteReturningCount(
+    tx,
+    ocMedicals,
+    bySourceEnrollmentAndFutureSemester(ocMedicals)
+  );
+  deletedRows.ocMedicalCategory = await deleteReturningCount(
+    tx,
+    ocMedicalCategory,
+    bySourceEnrollmentAndFutureSemester(ocMedicalCategory)
+  );
+  deletedRows.ocParentComms = await deleteReturningCount(
+    tx,
+    ocParentComms,
+    bySourceEnrollmentAndFutureSemester(ocParentComms)
+  );
+  deletedRows.ocSprRecords = await deleteReturningCount(
+    tx,
+    ocSprRecords,
+    bySourceEnrollmentAndFutureSemester(ocSprRecords)
+  );
+  deletedRows.ocDiscipline = await deleteReturningCount(
+    tx,
+    ocDiscipline,
+    bySourceEnrollmentAndFutureSemester(ocDiscipline)
+  );
+  deletedRows.ocMotivationAwards = await deleteReturningCount(
+    tx,
+    ocMotivationAwards,
+    bySourceEnrollmentAndFutureSemester(ocMotivationAwards)
+  );
+  deletedRows.ocSportsAndGames = await deleteReturningCount(
+    tx,
+    ocSportsAndGames,
+    bySourceEnrollmentAndFutureSemester(ocSportsAndGames)
+  );
+  deletedRows.ocWeaponTraining = await deleteReturningCount(
+    tx,
+    ocWeaponTraining,
+    bySourceEnrollmentAndFutureSemester(ocWeaponTraining)
+  );
+  deletedRows.ocObstacleTraining = await deleteReturningCount(
+    tx,
+    ocObstacleTraining,
+    bySourceEnrollmentAndFutureSemester(ocObstacleTraining)
+  );
+  deletedRows.ocSpeedMarch = await deleteReturningCount(
+    tx,
+    ocSpeedMarch,
+    bySourceEnrollmentAndFutureSemester(ocSpeedMarch)
+  );
+  deletedRows.ocDrill = await deleteReturningCount(
+    tx,
+    ocDrill,
+    bySourceEnrollmentAndFutureSemester(ocDrill)
+  );
+  deletedRows.ocOlq = await deleteReturningCount(
+    tx,
+    ocOlq,
+    bySourceEnrollmentAndFutureSemester(ocOlq)
+  );
+  deletedRows.ocCreditForExcellence = await deleteReturningCount(
+    tx,
+    ocCreditForExcellence,
+    bySourceEnrollmentAndFutureSemester(ocCreditForExcellence)
+  );
+  deletedRows.ocClubs = await deleteReturningCount(
+    tx,
+    ocClubs,
+    bySourceEnrollmentAndFutureSemester(ocClubs)
+  );
+  deletedRows.ocRecordingLeaveHikeDetention = await deleteReturningCount(
+    tx,
+    ocRecordingLeaveHikeDetention,
+    bySourceEnrollmentAndFutureSemester(ocRecordingLeaveHikeDetention)
+  );
+  deletedRows.ocCounselling = await deleteReturningCount(
+    tx,
+    ocCounselling,
+    bySourceEnrollmentAndFutureSemester(ocCounselling)
+  );
+  deletedRows.ocPtTaskScores = await deleteReturningCount(
+    tx,
+    ocPtTaskScores,
+    bySourceEnrollmentAndFutureSemester(ocPtTaskScores)
+  );
+  deletedRows.ocPtMotivationAwards = await deleteReturningCount(
+    tx,
+    ocPtMotivationAwards,
+    bySourceEnrollmentAndFutureSemester(ocPtMotivationAwards)
+  );
+  deletedRows.ocInterviews = await deleteReturningCount(
+    tx,
+    ocInterviews,
+    bySourceEnrollmentAndFutureSemester(ocInterviews)
+  );
+  deletedRows.ocCamps = await deleteReturningCount(
+    tx,
+    ocCamps,
+    and(
+      eq(ocCamps.ocId, ocId),
+      eq(ocCamps.enrollmentId, sourceEnrollmentId),
+      inArray(
+        ocCamps.trainingCampId,
+        tx.select({ id: trainingCamps.id }).from(trainingCamps).where(gte(trainingCamps.semester, cleanupFromSemester))
+      )
+    )
+  );
+
+  const workflowRows = await tx
+    .select({
+      id: marksWorkflowTickets.id,
+      draftPayload: marksWorkflowTickets.draftPayload,
+      currentRevision: marksWorkflowTickets.currentRevision,
+    })
+    .from(marksWorkflowTickets)
+    .where(
+      and(
+        eq(marksWorkflowTickets.courseId, sourceCourseId),
+        gte(marksWorkflowTickets.semester, cleanupFromSemester),
+        inArray(marksWorkflowTickets.module, ["ACADEMICS_BULK", "PT_BULK"])
+      )
+    );
+
+  let workflowTicketsUpdated = 0;
+  let workflowItemsRemoved = 0;
+  const now = new Date();
+
+  for (const ticket of workflowRows) {
+    const result = removeOcFromWorkflowDraftPayload(ticket.draftPayload, ocId);
+    if (result.removedCount === 0) continue;
+
+    await tx
+      .update(marksWorkflowTickets)
+      .set({
+        draftPayload: result.payload,
+        currentRevision: ticket.currentRevision + 1,
+        lastActorUserId: actorUserId,
+        lastActorMessage: `Removed OC from invalid semester workflow payload during previous-semester relegation.`,
+        draftUpdatedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(marksWorkflowTickets.id, ticket.id));
+
+    workflowTicketsUpdated += 1;
+    workflowItemsRemoved += result.removedCount;
+  }
+
+  return {
+    cleanupFromSemester,
+    deletedRows,
+    workflowTicketsUpdated,
+    workflowItemsRemoved,
+  };
+}
+
 export async function applyOcRelegationTransfer(
   input: ApplyOcRelegationTransferInput,
   actorUserId: string,
@@ -368,10 +637,26 @@ export async function applyOcRelegationTransfer(
   return db.transaction(async (tx) => {
     const ocRow = await getScopedOcForMove(tx, input.ocId, scope.scopePlatoonId ?? null);
     const targetCourse = await getActiveCourseById(input.toCourseId, tx);
+    const semesterPlan = resolveRelegationTransferSemesterPlan({
+      currentSemester: ocRow.activeEnrollment.currentSemester,
+      relegationMode: input.relegationMode,
+      targetSemester: input.targetSemester ?? null,
+    });
 
     await ensureAllowedNextCourse(ocRow.fromCourseId, targetCourse.id, ocRow.fromCourseCode, tx);
 
     const now = new Date();
+    const cleanupSummary = semesterPlan.cleanupFromSemester
+      ? await cleanupSourceEnrollmentFutureSemesterData({
+          tx,
+          ocId: ocRow.ocId,
+          sourceEnrollmentId: ocRow.activeEnrollment.id,
+          sourceCourseId: ocRow.fromCourseId,
+          cleanupFromSemester: semesterPlan.cleanupFromSemester,
+          actorUserId,
+        })
+      : null;
+
     const archivedEnrollment = await setEnrollmentStatus(ocRow.activeEnrollment.id, "ARCHIVED", tx, {
       endedOn: now,
       reason: input.reason,
@@ -388,6 +673,7 @@ export async function applyOcRelegationTransfer(
         ocId: ocRow.ocId,
         courseId: targetCourse.id,
         origin: "TRANSFER",
+        currentSemester: semesterPlan.newEnrollmentCurrentSemester,
         startedOn: now,
         reason: input.reason,
         note: input.remark ?? null,
@@ -405,14 +691,16 @@ export async function applyOcRelegationTransfer(
         fromCourseId: ocRow.fromCourseId,
         fromEnrollmentId: archivedEnrollment.id,
         fromCourseCode: ocRow.fromCourseCode,
+        fromSemester: semesterPlan.fromSemester,
         toCourseId: targetCourse.id,
         toEnrollmentId: newEnrollment.id,
         toCourseCode: targetCourse.code,
+        toSemester: semesterPlan.toSemester ?? newEnrollment.currentSemester,
         reason: input.reason,
         remark: input.remark ?? null,
         pdfObjectKey: input.pdfObjectKey ?? null,
         pdfUrl: input.pdfUrl ?? null,
-        movementKind: "TRANSFER",
+        movementKind: semesterPlan.movementKind,
         performedByUserId: actorUserId,
         performedAt: now,
         createdAt: now,
@@ -423,8 +711,10 @@ export async function applyOcRelegationTransfer(
         ocId: ocRelegations.ocId,
         fromCourseId: ocRelegations.fromCourseId,
         fromCourseCode: ocRelegations.fromCourseCode,
+        fromSemester: ocRelegations.fromSemester,
         toCourseId: ocRelegations.toCourseId,
         toCourseCode: ocRelegations.toCourseCode,
+        toSemester: ocRelegations.toSemester,
         reason: ocRelegations.reason,
         remark: ocRelegations.remark,
         pdfObjectKey: ocRelegations.pdfObjectKey,
@@ -450,6 +740,7 @@ export async function applyOcRelegationTransfer(
         code: targetCourse.code,
         title: targetCourse.title,
       }),
+      cleanupSummary,
       history,
     };
   });
@@ -496,6 +787,7 @@ export async function recordPromotionException(
         fromCourseId: ocRow.fromCourseId,
         fromEnrollmentId: ocRow.activeEnrollment.id,
         fromCourseCode: ocRow.fromCourseCode,
+        fromSemester: normalizeSemester(ocRow.activeEnrollment.currentSemester),
         toCourseId: targetCourse.id,
         toCourseCode: targetCourse.code,
         reason: input.reason,
@@ -513,8 +805,10 @@ export async function recordPromotionException(
         ocId: ocRelegations.ocId,
         fromCourseId: ocRelegations.fromCourseId,
         fromCourseCode: ocRelegations.fromCourseCode,
+        fromSemester: ocRelegations.fromSemester,
         toCourseId: ocRelegations.toCourseId,
         toCourseCode: ocRelegations.toCourseCode,
+        toSemester: ocRelegations.toSemester,
         reason: ocRelegations.reason,
         remark: ocRelegations.remark,
         pdfObjectKey: ocRelegations.pdfObjectKey,
@@ -740,9 +1034,11 @@ export async function voidPromotionForOc(
         fromCourseId: activeEnrollment.courseId,
         fromEnrollmentId: activeEnrollment.id,
         fromCourseCode: ocRow.fromCourseCode,
+        fromSemester: normalizeSemester(activeEnrollment.currentSemester),
         toCourseId: previousEnrollment.courseId,
         toEnrollmentId: previousEnrollment.id,
         toCourseCode: toCourse.code,
+        toSemester: normalizeSemester(previousEnrollment.currentSemester),
         reason: input.reason,
         remark: input.remark ?? null,
         pdfObjectKey: input.pdfObjectKey ?? null,
@@ -759,8 +1055,10 @@ export async function voidPromotionForOc(
         ocId: ocRelegations.ocId,
         fromCourseId: ocRelegations.fromCourseId,
         fromCourseCode: ocRelegations.fromCourseCode,
+        fromSemester: ocRelegations.fromSemester,
         toCourseId: ocRelegations.toCourseId,
         toCourseCode: ocRelegations.toCourseCode,
+        toSemester: ocRelegations.toSemester,
         reason: ocRelegations.reason,
         remark: ocRelegations.remark,
         pdfObjectKey: ocRelegations.pdfObjectKey,
@@ -799,9 +1097,11 @@ export type RelegationHistoryRow = {
   fromCourseId: string;
   fromCourseCode: string;
   fromCourseName: string | null;
+  fromSemester: number | null;
   toCourseId: string;
   toCourseCode: string;
   toCourseName: string | null;
+  toSemester: number | null;
   reason: string;
   remark: string | null;
   hasMedia: boolean;
@@ -854,9 +1154,11 @@ export async function listRelegationHistory(opts: {
         platoonName: platoons.name,
         fromCourseId: ocRelegations.fromCourseId,
         fromCourseCode: ocRelegations.fromCourseCode,
+        fromSemester: ocRelegations.fromSemester,
         fromCourseName: courses.title,
         toCourseId: ocRelegations.toCourseId,
         toCourseCode: ocRelegations.toCourseCode,
+        toSemester: ocRelegations.toSemester,
         toCourseName: toCourses.title,
         reason: ocRelegations.reason,
         remark: ocRelegations.remark,
@@ -893,9 +1195,11 @@ export async function listRelegationHistory(opts: {
     fromCourseId: row.fromCourseId,
     fromCourseCode: row.fromCourseCode,
     fromCourseName: row.fromCourseName,
+    fromSemester: row.fromSemester,
     toCourseId: row.toCourseId,
     toCourseCode: row.toCourseCode,
     toCourseName: row.toCourseName,
+    toSemester: row.toSemester,
     reason: row.reason,
     remark: row.remark,
     hasMedia: Boolean(row.pdfObjectKey || row.pdfUrl),
@@ -986,6 +1290,9 @@ export type EnrollmentModuleKey =
   | "interviews"
   | "pt_scores"
   | "pt_motivation"
+  | "medical"
+  | "medical_category"
+  | "parent_comms"
   | "spr"
   | "sports_games"
   | "motivation_awards"
@@ -1084,6 +1391,45 @@ export async function getEnrollmentModuleDataset(opts: {
           )
         )
         .orderBy(asc(ocPtMotivationAwards.semester), asc(ocPtMotivationAwards.createdAt));
+    case "medical":
+      return db
+        .select()
+        .from(ocMedicals)
+        .where(
+          and(
+            eq(ocMedicals.ocId, opts.ocId),
+            eq(ocMedicals.enrollmentId, opts.enrollmentId),
+            isNull(ocMedicals.deletedAt),
+            semester !== undefined ? eq(ocMedicals.semester, semester) : undefined
+          )
+        )
+        .orderBy(asc(ocMedicals.semester), asc(ocMedicals.date));
+    case "medical_category":
+      return db
+        .select()
+        .from(ocMedicalCategory)
+        .where(
+          and(
+            eq(ocMedicalCategory.ocId, opts.ocId),
+            eq(ocMedicalCategory.enrollmentId, opts.enrollmentId),
+            isNull(ocMedicalCategory.deletedAt),
+            semester !== undefined ? eq(ocMedicalCategory.semester, semester) : undefined
+          )
+        )
+        .orderBy(asc(ocMedicalCategory.semester), asc(ocMedicalCategory.date));
+    case "parent_comms":
+      return db
+        .select()
+        .from(ocParentComms)
+        .where(
+          and(
+            eq(ocParentComms.ocId, opts.ocId),
+            eq(ocParentComms.enrollmentId, opts.enrollmentId),
+            isNull(ocParentComms.deletedAt),
+            semester !== undefined ? eq(ocParentComms.semester, semester) : undefined
+          )
+        )
+        .orderBy(asc(ocParentComms.semester), asc(ocParentComms.date));
     case "spr":
       return db
         .select()
@@ -1276,8 +1622,10 @@ export async function getOcRelegationHistory(ocId: string) {
       ocId: ocRelegations.ocId,
       fromCourseId: ocRelegations.fromCourseId,
       fromCourseCode: ocRelegations.fromCourseCode,
+      fromSemester: ocRelegations.fromSemester,
       toCourseId: ocRelegations.toCourseId,
       toCourseCode: ocRelegations.toCourseCode,
+      toSemester: ocRelegations.toSemester,
       reason: ocRelegations.reason,
       remark: ocRelegations.remark,
       pdfObjectKey: ocRelegations.pdfObjectKey,

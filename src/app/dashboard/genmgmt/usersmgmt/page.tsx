@@ -23,6 +23,7 @@ import {
   activeUserCreateRequiresPassword,
   passwordConfirmationError,
 } from "@/app/lib/users/credential-policy";
+import { getUserManagementProtectionReason } from "@/lib/protected-admin";
 
 export default function UserManagement() {
   const { users, loading, addUser, editUser, removeUser } = useUsers();
@@ -185,6 +186,7 @@ export default function UserManagement() {
                         appointId = "N/A",
                         isActive = false,
                       } = u;
+                      const protectedReason = getUserManagementProtectionReason(u);
 
                       return (
                         <UserListItem
@@ -197,6 +199,9 @@ export default function UserManagement() {
                           unit={appointId ?? undefined}
                           role={rank}
                           status={isActive ? "active" : "disabled"}
+                          editDisabled={Boolean(protectedReason)}
+                          deleteDisabled={Boolean(protectedReason)}
+                          actionDisabledReason={protectedReason}
                           onEdit={() => handleEdit(u)}
                           onView={() => handleView(u)}
                           onDelete={() => handleDelete(u)}

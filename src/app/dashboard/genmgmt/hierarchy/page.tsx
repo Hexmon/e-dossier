@@ -38,8 +38,8 @@ import { useMe } from "@/hooks/useMe";
 type InspectorState =
   | {
       mode: "create";
-      parentId: string;
-      nodeType: "GROUP" | "PLATOON";
+      parentId: string | null;
+      nodeType: "ROOT" | "GROUP" | "PLATOON";
     }
   | {
       mode: "edit";
@@ -65,12 +65,15 @@ function parseApiError(error: unknown, fallback: string) {
   return fallback;
 }
 
-function makeCreateDraft(parentId: string, nodeType: "GROUP" | "PLATOON"): HierarchyInspectorDraft {
+function makeCreateDraft(
+  parentId: string | null,
+  nodeType: "ROOT" | "GROUP" | "PLATOON"
+): HierarchyInspectorDraft {
   return {
-    key: "",
-    name: "",
+    key: nodeType === "ROOT" ? "CTW_ROOT" : "",
+    name: nodeType === "ROOT" ? "Cadets Training Wing" : "",
     nodeType,
-    parentId,
+    parentId: parentId ?? "",
     platoonId: "",
   };
 }
@@ -279,9 +282,13 @@ export default function HierarchyManagementPage() {
   const effectiveMapping = mappingQuery.data?.effective ?? null;
   const configuredMapping = mappingQuery.data?.configured ?? null;
 
-  const openCreateInspector = (parentId: string, nodeType: "GROUP" | "PLATOON") => {
+  const openCreateInspector = (parentId: string | null, nodeType: "ROOT" | "GROUP" | "PLATOON") => {
     setInspectorState({ mode: "create", parentId, nodeType });
     setInspectorDraft(makeCreateDraft(parentId, nodeType));
+  };
+
+  const openCreateRootInspector = () => {
+    openCreateInspector(null, "ROOT");
   };
 
   const openInlineEditor = (nodeId: string) => {
@@ -447,12 +454,22 @@ export default function HierarchyManagementPage() {
                     <p className="text-sm text-muted-foreground">
                       {selectedNode
                         ? `${selectedNode.nodeType} • ${selectedNode.key}${selectedNode.platoonName ? ` • ${selectedNode.platoonName}` : ""}`
-                        : "The ROOT node is seeded automatically and remains fixed at the top of the tree."}
+                        : "Create one ROOT node first, then link platoons below it."}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  {!rootNode ? (
+                    <Button
+                      type="button"
+                      onClick={openCreateRootInspector}
+                      disabled={createNodeMutation.isPending}
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Create Root Node
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="outline"
@@ -483,7 +500,21 @@ export default function HierarchyManagementPage() {
               {hierarchyQuery.isLoading ? (
                 <p className="text-sm text-muted-foreground">Loading hierarchy tree...</p>
               ) : tree.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hierarchy nodes found.</p>
+                <div className="rounded-lg border border-dashed p-5">
+                  <p className="text-sm font-medium">No hierarchy nodes found.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Create the root node first. After that, add each active platoon below it.
+                  </p>
+                  <Button
+                    type="button"
+                    className="mt-4"
+                    onClick={openCreateRootInspector}
+                    disabled={createNodeMutation.isPending}
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    Create Root Node
+                  </Button>
+                </div>
               ) : (
                 <HierarchyTree
                   tree={tree}
@@ -666,13 +697,13 @@ export default function HierarchyManagementPage() {
                           : current
                       )
                     }
-                    disabled={inspectorState?.mode === "edit" && inspectorDraft.nodeType === "ROOT"}
+                    disabled={inspectorDraft.nodeType === "ROOT"}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {inspectorState?.mode === "edit" && inspectorDraft.nodeType === "ROOT" ? (
+                      {inspectorDraft.nodeType === "ROOT" ? (
                         <SelectItem value="ROOT">ROOT</SelectItem>
                       ) : (
                         <>

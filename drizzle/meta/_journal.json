@@ -288,6 +288,13 @@
       "when": 1778664526279,
       "tag": "0040_wide_slipstream",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779052200000,
+      "tag": "0041_previous_semester_relegation",
+      "breakpoints": true
     }
   ]
 }

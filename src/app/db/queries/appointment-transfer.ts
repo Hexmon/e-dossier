@@ -5,8 +5,9 @@ import { appointments } from '@/app/db/schema/auth/appointments';
 import { users } from '@/app/db/schema/auth/users';
 import { positions } from '@/app/db/schema/auth/positions';
 import { platoons } from '@/app/db/schema/auth/platoons';
-import { and, eq, or, isNull, lte, gt } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { appointmentTransfers } from '../schema/admin/appointmentTransfers';
+import { findOverlappingPrimaryAppointment } from './appointment-overlap';
 
 type DB = typeof defaultDb;
 
@@ -52,7 +53,7 @@ export interface TransferAppointmentResult {
  * - bumps prevEndsAt to startsAt if needed
  * - validates new user exists & not deleted
  * - validates position/scope still exist
- * - checks overlapping active holder at newStartsAt (boundary handoff allowed)
+ * - checks overlapping holders for the replacement appointment window
  * - transactionally: end current, create next, write audit
  */
 export async function transferAppointment(
@@ -140,31 +141,24 @@ export async function transferAppointment(
         }
     }
 
-    // 5) Ensure no active holder at newStartsAt (allow boundary: endsAt == newStartsAt)
-    const overlapping = await db
-        .select({ id: appointments.id })
-        .from(appointments)
-        .where(
-            and(
-                eq(appointments.positionId, curr.positionId),
-                eq(appointments.scopeType, curr.scopeType),
-                curr.scopeType === 'PLATOON' && curr.scopeId
-                    ? eq(appointments.scopeId, curr.scopeId)
-                    : isNull(appointments.scopeId),
-                isNull(appointments.deletedAt),
-                lte(appointments.startsAt, newStartsAt),
-                // strictly > newStartsAt so a handoff at the boundary is OK
-                or(isNull(appointments.endsAt), gt(appointments.endsAt, newStartsAt))
-            )
-        );
+    // 5) Ensure the new open-ended appointment will not overlap an existing holder.
+    // Boundary handoff is allowed: an existing row ending exactly at newStartsAt is not a conflict.
+    const conflict = await findOverlappingPrimaryAppointment({
+        db,
+        positionId: curr.positionId,
+        scopeType: curr.scopeType,
+        scopeId: curr.scopeId ?? null,
+        startsAt: newStartsAt,
+        endsAt: null,
+        excludeAppointmentId: curr.id,
+    });
 
-    const conflicts = overlapping.filter((o) => o.id !== curr.id);
-    if (conflicts.length) {
+    if (conflict) {
         throw new ApiError(
             409,
-            'Another active holder exists at the newStartsAt time',
+            'Another active/overlapping appointment already exists for this position & scope',
             'conflict',
-            { conflictingAppointmentId: conflicts[0].id }
+            { conflictingAppointmentId: conflict.id }
         );
     }
 

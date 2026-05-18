@@ -420,6 +420,11 @@ const academicLetterGradeSchema = z.preprocess((value) => {
     return normalized === '' ? undefined : normalized;
 }, z.enum(LETTER_GRADE_VALUES).optional());
 
+function hasAcademicSubjectFields(value: Record<string, unknown> | undefined): boolean {
+    if (!value) return false;
+    return Object.values(value).some((entry) => entry !== undefined);
+}
+
 export const academicSubjectPatchSchema = z.object({
     theory: z.object({
         phaseTest1Marks: z.coerce.number().optional(),
@@ -437,7 +442,7 @@ export const academicSubjectPatchSchema = z.object({
         grade: academicLetterGradeSchema,
         tutorial: z.string().optional(),
     }).partial().optional(),
-}).refine((value) => Boolean(value.theory || value.practical), {
+}).refine((value) => hasAcademicSubjectFields(value.theory) || hasAcademicSubjectFields(value.practical), {
     message: 'No subject fields provided.',
 });
 

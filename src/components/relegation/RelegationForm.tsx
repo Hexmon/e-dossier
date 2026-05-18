@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, SubmitHandler, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -15,9 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useRelegationActions, useRelegationModule } from "@/hooks/useRelegation";
 import { ApiClientError } from "@/app/lib/apiClient";
-import type { RelegationTransferResponse } from "@/app/lib/api/relegationApi";
+import type { RelegationTransferMode, RelegationTransferResponse } from "@/app/lib/api/relegationApi";
 
 interface RelegationFormValues {
   ocId: string;
@@ -101,10 +103,12 @@ export default function RelegationForm({
     useRelegationModule(currentCourseId || null);
   const { exceptionMutation } = useRelegationActions();
 
-  const ocOptions = ocOptionsQuery.data ?? [];
-  const transferOptions = nextCoursesQuery.data ?? [];
+  const ocOptions = useMemo(() => ocOptionsQuery.data ?? [], [ocOptionsQuery.data]);
+  const transferOptions = useMemo(() => nextCoursesQuery.data ?? [], [nextCoursesQuery.data]);
   const [ocNameSearch, setOcNameSearch] = useState("");
   const [isOcNameDropdownOpen, setIsOcNameDropdownOpen] = useState(false);
+  const [transferMode, setTransferMode] = useState<RelegationTransferMode>("PREVIOUS_SEMESTER");
+  const [cleanupConfirmed, setCleanupConfirmed] = useState(false);
   const ocNameDropdownRef = useRef<HTMLDivElement>(null);
 
   const isBusy =
@@ -119,6 +123,15 @@ export default function RelegationForm({
     [transferOptions, selectedTransferToCourseId]
   );
   const selectedCurrentSemester = selectedOc?.currentSemester ?? null;
+  const isPreviousSemesterMode = mode === "transfer" && transferMode === "PREVIOUS_SEMESTER";
+  const targetSemester =
+    selectedCurrentSemester == null
+      ? null
+      : isPreviousSemesterMode
+        ? Math.max(1, selectedCurrentSemester - 1)
+        : selectedCurrentSemester;
+  const previousSemesterUnavailable = isPreviousSemesterMode && selectedCurrentSemester != null && selectedCurrentSemester <= 1;
+  const requiresCleanupConfirmation = isPreviousSemesterMode && Boolean(selectedOc) && !previousSemesterUnavailable;
 
   useEffect(() => {
     setOcNameSearch(selectedOc?.ocName ?? "");
@@ -139,6 +152,17 @@ export default function RelegationForm({
     setValue("ocId", prefill.ocId, { shouldDirty: false, shouldValidate: true });
     setOcNameSearch(prefill.ocName);
   }, [prefill, reset, setValue]);
+
+  useEffect(() => {
+    setCleanupConfirmed(false);
+  }, [selectedOcId, selectedTransferToCourseId, transferMode]);
+
+  useEffect(() => {
+    if (!isPreviousSemesterMode || lockTransferTo || selectedTransferToCourseId || transferOptions.length !== 1) {
+      return;
+    }
+    setValue("transferTo", transferOptions[0].courseId, { shouldDirty: true, shouldValidate: true });
+  }, [isPreviousSemesterMode, lockTransferTo, selectedTransferToCourseId, setValue, transferOptions]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -187,6 +211,10 @@ export default function RelegationForm({
 
   const onSubmit: SubmitHandler<RelegationFormValues> = async (formData) => {
     try {
+      if (isPreviousSemesterMode && (!targetSemester || previousSemesterUnavailable || !cleanupConfirmed)) {
+        throw new Error("Confirm the previous-semester cleanup before submitting.");
+      }
+
       let pdfObjectKey: string | null = null;
       let pdfUrl: string | null = null;
 
@@ -221,6 +249,8 @@ export default function RelegationForm({
       const payload = {
         ocId: formData.ocId,
         toCourseId: formData.transferTo,
+        relegationMode: isPreviousSemesterMode ? "PREVIOUS_SEMESTER" as const : "COURSE_TRANSFER" as const,
+        targetSemester: isPreviousSemesterMode ? targetSemester : null,
         reason: formData.reason.trim(),
         remark: formData.remark?.trim() ? formData.remark.trim() : null,
         pdfObjectKey,
@@ -247,6 +277,8 @@ export default function RelegationForm({
       const successMessage =
         mode === "promotion-exception"
           ? `OC ${transfer.oc.ocNo} marked as promotion exception.`
+          : transfer.history.movementKind === "SEMESTER_RELEGATION"
+            ? `OC ${transfer.oc.ocNo} moved to ${transfer.toCourse.courseCode} semester ${transfer.history.toSemester ?? targetSemester}.`
           : `OC ${transfer.oc.ocNo} transferred from ${transfer.fromCourse.courseCode} to ${transfer.toCourse.courseCode}.`;
       toast.success(successMessage);
       onSuccess?.(transfer);
@@ -341,6 +373,30 @@ export default function RelegationForm({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
+        {mode === "transfer" ? (
+          <div className="space-y-2 md:col-span-2">
+            <Label>Relegation Type</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant={transferMode === "PREVIOUS_SEMESTER" ? "destructive" : "outline"}
+                onClick={() => setTransferMode("PREVIOUS_SEMESTER")}
+                disabled={isBusy}
+              >
+                Previous semester relegation
+              </Button>
+              <Button
+                type="button"
+                variant={transferMode === "COURSE_TRANSFER" ? "default" : "outline"}
+                onClick={() => setTransferMode("COURSE_TRANSFER")}
+                disabled={isBusy}
+              >
+                Course transfer
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="courseNo">Current Course</Label>
           <Input id="courseNo" {...register("courseNo")} disabled />
@@ -403,13 +459,43 @@ export default function RelegationForm({
           <Label htmlFor="targetSemester">Targeted Semester</Label>
           <Input
             id="targetSemester"
-            value={selectedCurrentSemester ? `Semester ${selectedCurrentSemester}` : ""}
+            value={targetSemester ? `Semester ${targetSemester}` : ""}
             placeholder={selectedTargetCourse ? "Target semester resolved" : "Select target course"}
             disabled
             readOnly
           />
         </div>
       </div>
+
+      {isPreviousSemesterMode && selectedOc ? (
+        <Alert variant={previousSemesterUnavailable ? "destructive" : "default"} className="border-destructive/50">
+          <AlertTitle>Previous-Semester Relegation</AlertTitle>
+          <AlertDescription className="space-y-3">
+            {previousSemesterUnavailable ? (
+              <p>OC {selectedOc.ocNo} is already in semester 1, so previous-semester relegation is not available.</p>
+            ) : (
+              <>
+                <p>
+                  OC {selectedOc.ocNo} will move from {selectedOc.currentCourseCode} semester {selectedCurrentSemester} to{" "}
+                  {selectedTargetCourse?.courseCode ?? "the selected next course"} semester {targetSemester}.
+                </p>
+                <p>
+                  Data from {selectedOc.currentCourseCode} semester {selectedCurrentSemester} and later will be deleted
+                  for the current attempt. Semester {targetSemester} data from the first attempt will remain in history.
+                </p>
+                <label className="flex items-start gap-2 text-sm">
+                  <Checkbox
+                    checked={cleanupConfirmed}
+                    onCheckedChange={(checked) => setCleanupConfirmed(checked === true)}
+                    disabled={isBusy}
+                  />
+                  <span>I understand the future-semester data cleanup for this OC.</span>
+                </label>
+              </>
+            )}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="reason">Reason</Label>
@@ -448,7 +534,11 @@ export default function RelegationForm({
         />
       </div>
 
-      <Button type="submit" disabled={isBusy} className="w-full cursor-pointer">
+      <Button
+        type="submit"
+        disabled={isBusy || previousSemesterUnavailable || (requiresCleanupConfirmation && !cleanupConfirmed)}
+        className="w-full cursor-pointer"
+      >
         {isBusy
           ? mode === "promotion-exception"
             ? "Saving Exception..."

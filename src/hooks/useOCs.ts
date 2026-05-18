@@ -17,7 +17,76 @@ import { getFriendlyApiErrorMessage } from "@/app/lib/apiClient";
 
 const OCS_QUERY_KEY = ["ocs"] as const;
 
-export function useOCs(params?: FetchOCParams) {
+export type OCSemesterFilter = 1 | 2 | 3 | 4 | 5 | 6;
+
+type UseOCsParams = FetchOCParams & {
+    semester?: OCSemesterFilter;
+};
+
+type OCManagementFilters = {
+    platoonId?: string;
+    branch?: FetchOCParams["branch"];
+    status?: FetchOCParams["status"];
+    q?: string;
+    courseId?: string;
+    semester?: OCSemesterFilter;
+};
+
+export function filterOCsForManagement(items: OCListRow[], filters: OCManagementFilters): OCListRow[] {
+    let filtered = [...items];
+
+    // Apply search filter (q)
+    if (filters.q && filters.q.trim()) {
+        const query = filters.q.toLowerCase().trim();
+        filtered = filtered.filter((oc) => {
+            const nameMatch = oc.name?.toLowerCase().includes(query);
+            const ocNoMatch = oc.ocNo?.toLowerCase().includes(query);
+            return nameMatch || ocNoMatch;
+        });
+    }
+
+    // Apply course filter
+    if (filters.courseId && filters.courseId.trim()) {
+        filtered = filtered.filter((oc) => oc.courseId === filters.courseId);
+    }
+
+    // Apply platoon filter
+    if (filters.platoonId && filters.platoonId.trim()) {
+        filtered = filtered.filter((oc) => oc.platoonId === filters.platoonId);
+    }
+
+    // Apply branch filter
+    if (filters.branch && filters.branch.trim()) {
+        filtered = filtered.filter((oc) => oc.branch === filters.branch);
+    }
+
+    // Apply status filter
+    if (filters.status) {
+        switch (filters.status) {
+            case 'ACTIVE':
+                filtered = filtered.filter((oc) => !oc.withdrawnOn);
+                break;
+            case 'WITHDRAWN':
+                filtered = filtered.filter((oc) => oc.withdrawnOn);
+                break;
+            case 'DELEGATED':
+                filtered = filtered.filter((oc) => oc.status === 'DELEGATED');
+                break;
+            case 'PASSED_OUT':
+                filtered = filtered.filter((oc) => oc.status === 'PASSED_OUT');
+                break;
+        }
+    }
+
+    // Apply current semester filter.
+    if (filters.semester) {
+        filtered = filtered.filter((oc) => Number(oc.currentSemester ?? 1) === filters.semester);
+    }
+
+    return filtered;
+}
+
+export function useOCs(params?: UseOCsParams) {
     const queryClient = useQueryClient();
     const refreshOCs = useCallback(async () => {
         await queryClient.invalidateQueries({
@@ -33,6 +102,7 @@ export function useOCs(params?: FetchOCParams) {
         status: filterStatus,
         q: filterQuery,
         courseId: filterCourseId,
+        semester: filterSemester,
         ...backendParams
     } = params || {};
 
@@ -68,57 +138,21 @@ export function useOCs(params?: FetchOCParams) {
 
     // CLIENT-SIDE FILTERING
     const filteredData = useMemo(() => {
-        let filtered = [...rawData.items];
-
-        // Apply search filter (q)
-        if (filterQuery && filterQuery.trim()) {
-            const query = filterQuery.toLowerCase().trim();
-            filtered = filtered.filter((oc) => {
-                const nameMatch = oc.name?.toLowerCase().includes(query);
-                const ocNoMatch = oc.ocNo?.toLowerCase().includes(query);
-                return nameMatch || ocNoMatch;
-            });
-        }
-
-        // Apply course filter
-        if (filterCourseId && filterCourseId.trim()) {
-            filtered = filtered.filter((oc) => oc.courseId === filterCourseId);
-        }
-
-        // Apply platoon filter
-        if (filterPlatoonId && filterPlatoonId.trim()) {
-            filtered = filtered.filter((oc) => oc.platoonId === filterPlatoonId);
-        }
-
-        // Apply branch filter
-        if (filterBranch && filterBranch.trim()) {
-            filtered = filtered.filter((oc) => oc.branch === filterBranch);
-        }
-
-        // Apply status filter
-        if (filterStatus) {
-            switch (filterStatus) {
-                case 'ACTIVE':
-                    filtered = filtered.filter((oc) => !oc.withdrawnOn);
-                    break;
-                case 'WITHDRAWN':
-                    filtered = filtered.filter((oc) => oc.withdrawnOn);
-                    break;
-                case 'DELEGATED':
-                    filtered = filtered.filter((oc) => oc.status === 'DELEGATED');
-                    break;
-                case 'PASSED_OUT':
-                    filtered = filtered.filter((oc) => oc.status === 'PASSED_OUT');
-                    break;
-            }
-        }
+        const filtered = filterOCsForManagement(rawData.items, {
+            platoonId: filterPlatoonId,
+            branch: filterBranch,
+            status: filterStatus,
+            q: filterQuery,
+            courseId: filterCourseId,
+            semester: filterSemester,
+        });
 
 
         return {
             items: filtered,
             count: filtered.length,
         };
-    }, [rawData.items, filterPlatoonId, filterBranch, filterStatus, filterQuery, filterCourseId]);
+    }, [rawData.items, filterPlatoonId, filterBranch, filterStatus, filterQuery, filterCourseId, filterSemester]);
 
     // Add OC mutation
     const addOCMutation = useMutation({

@@ -132,24 +132,10 @@ export default function LoginPageClient({
         return;
       }
 
-      if (selectedAppointment.scopeType === "PLATOON" && !selectedAppointment.scopeId) {
-        toast.error("Selected platoon mapping is invalid. Please reselect.");
-        return;
-      }
-
-      const payload =
-        selectedAppointment.scopeType === "PLATOON"
-          ? {
-              appointmentId: selectedAppointment.id,
-              platoonId: selectedAppointment.scopeId as string,
-              username: selectedAppointment.username,
-              password: data.password,
-            }
-          : {
-              appointmentId: selectedAppointment.id,
-              username: selectedAppointment.username,
-              password: data.password,
-            };
+      const payload = {
+        appointmentId: selectedAppointment.id,
+        password: data.password,
+      };
 
       await loginUser(payload);
 
