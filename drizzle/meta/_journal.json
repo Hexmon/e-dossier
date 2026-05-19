@@ -295,6 +295,13 @@
       "when": 1779127200000,
       "tag": "0041_decimal_discipline_points",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779177600000,
+      "tag": "0042_manual_dossier_inspector",
+      "breakpoints": true
     }
   ]
 }

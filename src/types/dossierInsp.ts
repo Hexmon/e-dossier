@@ -1,5 +1,7 @@
 export interface InspFormData {
     id?: string;
+    inspectorUserId?: string | null;
+    manualInspector?: boolean;
     date: string;
     rk: string;
     name: string;

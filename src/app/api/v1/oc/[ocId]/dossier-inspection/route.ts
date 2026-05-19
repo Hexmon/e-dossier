@@ -12,11 +12,76 @@ import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
 // Schema for creating/updating inspection
-const inspectionSchema = z.object({
-  inspectorUserId: z.string().uuid(),
+const inspectionBaseSchema = z.object({
+  inspectorUserId: z.string().uuid().nullable().optional(),
+  inspectorName: z.string().trim().min(1).max(160).optional(),
+  inspectorRank: z.string().trim().min(1).max(80).optional(),
+  inspectorAppointment: z.string().trim().min(1).max(160).optional(),
   date: z.coerce.date(),
   remarks: z.string().optional(),
 });
+
+const inspectionSchema = inspectionBaseSchema.refine(
+  (value) =>
+    Boolean(value.inspectorUserId) ||
+    Boolean(value.inspectorName && value.inspectorRank && value.inspectorAppointment),
+  'Select an inspector or enter inspector name, rank, and appointment.'
+);
+
+const inspectionPatchSchema = inspectionBaseSchema.partial().refine(
+  (value) =>
+    value.inspectorUserId !== undefined ||
+    value.inspectorName !== undefined ||
+    value.inspectorRank !== undefined ||
+    value.inspectorAppointment !== undefined ||
+    value.date !== undefined ||
+    value.remarks !== undefined,
+  'At least one field is required.'
+).refine(
+  (value) => {
+    const changesInspector =
+      value.inspectorUserId !== undefined ||
+      value.inspectorName !== undefined ||
+      value.inspectorRank !== undefined ||
+      value.inspectorAppointment !== undefined;
+    if (!changesInspector || value.inspectorUserId) return true;
+    return Boolean(value.inspectorName && value.inspectorRank && value.inspectorAppointment);
+  },
+  'Select an inspector or enter inspector name, rank, and appointment.'
+);
+
+function inspectionSelect() {
+  const name = sql<string>`coalesce(${dossierInspections.inspectorName}, ${users.name})`;
+  const rank = sql<string>`coalesce(${dossierInspections.inspectorRank}, ${users.rank})`;
+  const appointment = sql<string>`coalesce(${dossierInspections.inspectorAppointment}, ${positions.displayName})`;
+
+  return {
+    id: dossierInspections.id,
+    date: dossierInspections.date,
+    remarks: dossierInspections.remarks,
+    createdAt: dossierInspections.createdAt,
+    updatedAt: dossierInspections.updatedAt,
+    inspector: {
+      id: dossierInspections.inspectorUserId,
+      name,
+      rank,
+      appointment,
+    },
+    initials: sql<string>`trim(concat(coalesce(${rank}, ''), ' ', coalesce(${name}, '')))`,
+  };
+}
+
+function toInspectionWrite(body: z.infer<typeof inspectionBaseSchema>) {
+  const isManual = !body.inspectorUserId;
+  return {
+    inspectorUserId: isManual ? null : body.inspectorUserId!,
+    inspectorName: isManual ? body.inspectorName!.trim() : null,
+    inspectorRank: isManual ? body.inspectorRank!.trim() : null,
+    inspectorAppointment: isManual ? body.inspectorAppointment!.trim() : null,
+    date: body.date,
+    remarks: body.remarks,
+  };
+}
 
 const activeAppointmentJoin = and(
   eq(appointments.userId, users.id),
@@ -43,20 +108,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
 
     // Get inspections with inspector details
     const inspections = await db
-      .select({
-        id: dossierInspections.id,
-        date: dossierInspections.date,
-        remarks: dossierInspections.remarks,
-        createdAt: dossierInspections.createdAt,
-        updatedAt: dossierInspections.updatedAt,
-        inspector: {
-          id: users.id,
-          name: users.name,
-          rank: users.rank,
-          appointment: positions.displayName,
-        },
-        initials: sql<string>`CONCAT(${users.rank}, ' ', ${users.name})`,
-      })
+      .select(inspectionSelect())
       .from(dossierInspections)
       .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
       .leftJoin(appointments, activeAppointmentJoin)
@@ -103,24 +155,24 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
       return json.notFound('OC not found.');
     }
 
-    // Verify inspector exists
-    const [inspector] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.id, body.inspectorUserId))
-      .limit(1);
+    if (body.inspectorUserId) {
+      const [inspector] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, body.inspectorUserId))
+        .limit(1);
 
-    if (!inspector) {
-      return json.badRequest('Inspector not found.');
+      if (!inspector) {
+        return json.badRequest('Inspector not found.');
+      }
     }
 
+    const write = toInspectionWrite(body);
     const [inspection] = await db
       .insert(dossierInspections)
       .values({
         ocId,
-        inspectorUserId: body.inspectorUserId,
-        date: body.date,
-        remarks: body.remarks,
+        ...write,
         deletedAt: null,
       })
       .returning({
@@ -129,20 +181,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
 
     // Fetch the full inspection with inspector details
     const fullInspection = await db
-      .select({
-        id: dossierInspections.id,
-        date: dossierInspections.date,
-        remarks: dossierInspections.remarks,
-        createdAt: dossierInspections.createdAt,
-        updatedAt: dossierInspections.updatedAt,
-        inspector: {
-          id: users.id,
-          name: users.name,
-          rank: users.rank,
-          appointment: positions.displayName,
-        },
-        initials: sql<string>`CONCAT(${users.rank}, ' ', ${users.name})`,
-      })
+      .select(inspectionSelect())
       .from(dossierInspections)
       .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
       .leftJoin(appointments, activeAppointmentJoin)
@@ -159,7 +198,10 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         description: `Created dossier inspection for OC ${ocId}`,
         inspectionId: inspection.id,
         ocId,
-        inspectorUserId: body.inspectorUserId,
+        inspectorUserId: write.inspectorUserId,
+        inspectorName: write.inspectorName,
+        inspectorRank: write.inspectorRank,
+        inspectorAppointment: write.inspectorAppointment,
         date: body.date,
         remarks: body.remarks,
       },
@@ -185,7 +227,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
       return json.badRequest('Inspection ID is required.');
     }
 
-    const body = inspectionSchema.partial().parse(await req.json());
+    const body = inspectionPatchSchema.parse(await req.json());
 
     // Verify inspection exists and belongs to OC
     const [existing] = await db
@@ -210,30 +252,32 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
       }
     }
 
+    const inspectorPatch =
+      body.inspectorUserId !== undefined ||
+      body.inspectorName !== undefined ||
+      body.inspectorRank !== undefined ||
+      body.inspectorAppointment !== undefined
+        ? {
+            inspectorUserId: body.inspectorUserId ?? null,
+            inspectorName: body.inspectorUserId ? null : body.inspectorName?.trim() ?? null,
+            inspectorRank: body.inspectorUserId ? null : body.inspectorRank?.trim() ?? null,
+            inspectorAppointment: body.inspectorUserId ? null : body.inspectorAppointment?.trim() ?? null,
+          }
+        : {};
+
     await db
       .update(dossierInspections)
       .set({
-        ...body,
+        ...(body.date !== undefined ? { date: body.date } : {}),
+        ...(body.remarks !== undefined ? { remarks: body.remarks } : {}),
+        ...inspectorPatch,
         updatedAt: new Date(),
       })
       .where(eq(dossierInspections.id, inspectionId));
 
     // Fetch the full updated inspection with inspector details
     const fullInspection = await db
-      .select({
-        id: dossierInspections.id,
-        date: dossierInspections.date,
-        remarks: dossierInspections.remarks,
-        createdAt: dossierInspections.createdAt,
-        updatedAt: dossierInspections.updatedAt,
-        inspector: {
-          id: users.id,
-          name: users.name,
-          rank: users.rank,
-          appointment: positions.displayName,
-        },
-        initials: sql<string>`CONCAT(${users.rank}, ' ', ${users.name})`,
-      })
+      .select(inspectionSelect())
       .from(dossierInspections)
       .leftJoin(users, eq(dossierInspections.inspectorUserId, users.id))
       .leftJoin(appointments, activeAppointmentJoin)
