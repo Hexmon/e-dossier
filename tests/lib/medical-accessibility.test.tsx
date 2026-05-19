@@ -103,6 +103,7 @@ describe("medical accessibility", () => {
             diagnosis: "Rest",
             catFrom: "2026-02-01",
             catTo: "2026-02-07",
+            category: "Fit",
             mhFrom: "",
             mhTo: "",
             absence: "0",
@@ -137,6 +138,7 @@ describe("medical accessibility", () => {
               diagnosis: "",
               catFrom: "",
               catTo: "",
+              category: "",
               mhFrom: "",
               mhTo: "",
               absence: "",
@@ -152,6 +154,7 @@ describe("medical accessibility", () => {
 
     expect(html).toContain("Medical category entry rows for the selected semester.");
     expect(html).toContain('aria-describedby="medical-category-lock medical-category-writer"');
+    expect(html).toContain("(No of Days)");
     expect(html).toContain('scope="col"');
     expect(html).toContain('aria-label="Remove medical category row 1"');
   });

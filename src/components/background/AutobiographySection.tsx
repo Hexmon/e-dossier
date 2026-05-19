@@ -46,12 +46,45 @@ type TextFieldKey = typeof textFields[number];
 
 let platoonCommanderUsersPromise: Promise<User[]> | null = null;
 
+const platoonCommanderSearchTerms = [
+    "PLATOON_COMMANDER",
+    "Platoon Commander",
+    "PL_CDR",
+    "PL CDR",
+    "PLCDR",
+    "PLATOON_CDR",
+    "Platoon Cdr",
+    "PTN_CDR",
+    "PTN CDR",
+    "platoon-commander",
+];
+
+function mergeUsersByIdentity(usersByQuery: User[][]): User[] {
+    const seen = new Set<string>();
+    const merged: User[] = [];
+
+    for (const users of usersByQuery) {
+        for (const user of users) {
+            const identity = user.id ?? user.username ?? `${user.rank ?? ""}:${user.name}`;
+            if (seen.has(identity)) continue;
+            seen.add(identity);
+            merged.push(user);
+        }
+    }
+
+    return merged;
+}
+
 function getCachedPlatoonCommanderUsers() {
     if (!platoonCommanderUsersPromise) {
-        platoonCommanderUsersPromise = getUsersByQuery("pl_cdr", 100).catch((error) => {
-            platoonCommanderUsersPromise = null;
-            throw error;
-        });
+        platoonCommanderUsersPromise = Promise.all(
+            platoonCommanderSearchTerms.map((term) => getUsersByQuery(term, 100))
+        )
+            .then(mergeUsersByIdentity)
+            .catch((error) => {
+                platoonCommanderUsersPromise = null;
+                throw error;
+            });
     }
 
     return platoonCommanderUsersPromise;
@@ -172,6 +205,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
     const cadetName = cadet?.name ?? "";
     const selectedCommander = watch("sign_pi") ?? "";
     const defaultCommanderName = commanderOptions[0]?.label ?? "";
+    const hasCommanderOptions = commanderOptions.length > 0;
     const cadetPlatoonLookup = useMemo(
         () => ({
             platoonId: cadet?.platoonId,
@@ -449,6 +483,11 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                                                 {option.label}
                                             </SelectItem>
                                         ))}
+                                        {!hasCommanderOptions && !selectedCommander && !isLoadingCommanders && (
+                                            <SelectItem value="__no_platoon_commanders__" disabled>
+                                                No platoon commanders found
+                                            </SelectItem>
+                                        )}
                                     </SelectContent>
                                 </Select>
                             ) : (

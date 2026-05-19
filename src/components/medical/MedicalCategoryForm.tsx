@@ -44,6 +44,7 @@ export default function MedicalCategoryForm({
                     diagnosis: record?.diagnosis || "",
                     catFrom: record?.catFrom || "",
                     catTo: record?.catTo || "",
+                    category: record?.category || "",
                     mhFrom: record?.mhFrom || "",
                     mhTo: record?.mhTo || "",
                     absence: record?.absence || "",
@@ -70,14 +71,22 @@ export default function MedicalCategoryForm({
                                 "Diagnosis",
                                 "Cat From",
                                 "Cat To",
+                                "Category",
                                 "MH From",
                                 "MH To",
                                 "Absence",
-                                "PI Cdr Initial",
+                                "Remarks",
                                 "Action",
                             ].map((h) => {
                                 return (
-                                    <th key={h} scope="col" className="border p-2 text-center">{h}</th>
+                                    <th key={h} scope="col" className="border p-2 text-center">
+                                        {h === "Absence" ? (
+                                            <>
+                                                Absence
+                                                <span className="block text-xs font-normal">(No of Days)</span>
+                                            </>
+                                        ) : h}
+                                    </th>
                                 )
                             })}
                         </tr>
@@ -101,6 +110,10 @@ export default function MedicalCategoryForm({
 
                                     <td className="border p-2">
                                         <Input type="date" {...register(`records.${index}.catTo`)} className="w-24 h-7 px-1 text-xs" disabled={readOnly} />
+                                    </td>
+
+                                    <td className="border p-2">
+                                        <Input type="text" {...register(`records.${index}.category`)} disabled={readOnly} />
                                     </td>
 
                                     <td className="border p-2">
@@ -146,6 +159,7 @@ export default function MedicalCategoryForm({
                             diagnosis: "",
                             catFrom: "",
                             catTo: "",
+                            category: "",
                             mhFrom: "",
                             mhTo: "",
                             absence: "",

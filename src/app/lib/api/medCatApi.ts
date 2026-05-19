@@ -7,6 +7,7 @@ export interface MedicalCategoryPayload {
     mosAndDiagnostics: string;
     catFrom?: string | null;
     catTo?: string | null;
+    category?: string | null;
     mhFrom?: string | null;
     mhTo?: string | null;
     absence?: string | null;
@@ -49,6 +50,7 @@ export async function saveMedicalCategory(
                 mosAndDiagnostics: r.mosAndDiagnostics.trim(),
                 catFrom: toOptionalPayloadValue(r.catFrom),
                 catTo: toOptionalPayloadValue(r.catTo),
+                category: toOptionalPayloadValue(r.category),
                 mhFrom: toOptionalPayloadValue(r.mhFrom),
                 mhTo: toOptionalPayloadValue(r.mhTo),
                 absence: toOptionalPayloadValue(r.absence),
@@ -113,6 +115,7 @@ export async function updateMedicalCategory(
                 : {}),
             ...(payload.catFrom !== undefined ? { catFrom: toOptionalPayloadValue(payload.catFrom) } : {}),
             ...(payload.catTo !== undefined ? { catTo: toOptionalPayloadValue(payload.catTo) } : {}),
+            ...(payload.category !== undefined ? { category: toOptionalPayloadValue(payload.category) } : {}),
             ...(payload.mhFrom !== undefined ? { mhFrom: toOptionalPayloadValue(payload.mhFrom) } : {}),
             ...(payload.mhTo !== undefined ? { mhTo: toOptionalPayloadValue(payload.mhTo) } : {}),
             ...(payload.absence !== undefined ? { absence: toOptionalPayloadValue(payload.absence) } : {}),
