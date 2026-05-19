@@ -23,6 +23,7 @@ export type SiteCommanderModel = {
   name: string;
   designation: string;
   imageUrl: string | null;
+  displayImageUrl?: string | null;
   imageObjectKey?: string | null;
   tenure: string;
   description: string;

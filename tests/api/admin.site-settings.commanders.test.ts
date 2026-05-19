@@ -22,11 +22,12 @@ vi.mock("@/app/lib/storage", () => ({
 }));
 
 vi.mock("@/app/db/queries/site-settings", () => ({
-  listSiteCommanders: vi.fn(async () => [
+  listSiteCommandersForDisplay: vi.fn(async () => [
     {
       id: "commander-1",
       name: "Commander",
       imageUrl: null,
+      displayImageUrl: null,
       imageObjectKey: null,
       tenure: "2025",
       description: "valid description",
@@ -50,10 +51,11 @@ vi.mock("@/app/db/queries/site-settings", () => ({
     createdAt: null,
     updatedAt: null,
   })),
-  getSiteCommanderById: vi.fn(async () => ({
+  getSiteCommanderByIdForDisplay: vi.fn(async () => ({
     id: "commander-1",
     name: "Commander",
     imageUrl: null,
+    displayImageUrl: null,
     imageObjectKey: null,
     tenure: "2025",
     description: "valid description",
@@ -140,7 +142,7 @@ describe("Admin site settings commanders routes", () => {
 
     expect(res.status).toBe(200);
     expect(body.items).toHaveLength(1);
-    expect(siteQueries.listSiteCommanders).toHaveBeenCalledTimes(1);
+    expect(siteQueries.listSiteCommandersForDisplay).toHaveBeenCalledTimes(1);
   });
 
   it("creates commander", async () => {
