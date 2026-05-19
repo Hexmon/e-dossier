@@ -142,11 +142,14 @@ describe("API route safety coverage", () => {
       { method: "ANY", path: "/api/v1/auth/logout", exact: true },
       { method: "ANY", path: "/api/v1/health", exact: true },
       { method: "ANY", path: "/api/v1/bootstrap/super-admin", exact: true },
+      { method: "GET", path: "/api/v1/admin/appointments", exact: true },
       { method: "GET", path: "/api/v1/site-settings" },
       { method: "GET", path: "/api/v1/setup/status", exact: true },
     ]);
     expect(isPublicApiPath("/api/v1/platoons", "GET")).toBe(false);
-    expect(isPublicApiPath("/api/v1/admin/appointments", "GET")).toBe(false);
+    expect(isPublicApiPath("/api/v1/admin/appointments", "GET")).toBe(true);
+    expect(isPublicApiPath("/api/v1/admin/appointments/appointment-1", "GET")).toBe(false);
+    expect(isPublicApiPath("/api/v1/admin/appointments", "POST")).toBe(false);
     expect(isPublicApiPath("/api/v1/admin/users/check-username", "GET")).toBe(false);
     expect(isPublicApiPath("/api/v1/site-settings/awards", "GET")).toBe(true);
   });

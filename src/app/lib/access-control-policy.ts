@@ -13,6 +13,9 @@ const PUBLIC_API_ANY_RULES: readonly PathRule[] = [
 
 const PUBLIC_API_METHOD_RULES: Readonly<Record<string, readonly PathRule[]>> = {
   GET: [
+    // Login needs active appointment identities before a user has a token.
+    // The route handler forces anonymous callers into active-only public projection mode.
+    { path: "/api/v1/admin/appointments", exact: true },
     { path: "/api/v1/site-settings" },
     { path: "/api/v1/setup/status", exact: true },
   ],

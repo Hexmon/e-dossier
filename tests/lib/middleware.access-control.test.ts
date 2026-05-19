@@ -149,8 +149,14 @@ describe("middleware access-control hardening", () => {
     expect(verifyAccessJWT).not.toHaveBeenCalled();
   });
 
+  it("allows anonymous active appointment lookup for the login page", async () => {
+    const res = await middleware(makeRequest("/api/v1/admin/appointments?active=true"));
+
+    expect(res.status).toBe(200);
+    expect(verifyAccessJWT).not.toHaveBeenCalled();
+  });
+
   it.each([
-    "/api/v1/admin/appointments",
     "/api/v1/platoons",
     "/api/v1/admin/users/check-username?username=demo",
   ])("requires auth for former public operational data endpoint %s", async (path) => {
