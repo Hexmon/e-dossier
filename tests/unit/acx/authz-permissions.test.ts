@@ -43,8 +43,15 @@ describe('authz-permissions helpers', () => {
 
     expect(admin?.permissionKeys).toContain('page:dashboard:genmgmt:view');
     expect(admin?.permissionKeys).toContain('admin:rbac:effective:read');
+    expect(admin?.permissionKeys).toContain('me:read');
+    expect(admin?.permissionKeys).toContain('me:navigation:read');
+    expect(admin?.permissionKeys).toContain('dashboard:data:course:read');
     expect(platoon?.permissionKeys).toContain('page:dashboard:manage-marks:view');
     expect(platoon?.permissionKeys).toContain('oc:physical-training:bulk:create');
+    expect(platoon?.permissionKeys).toContain('me:read');
+    expect(platoon?.permissionKeys).toContain('me:navigation:read');
+    expect(platoon?.positionKeys).toContain('PTN_CDR');
+    expect(platoon?.roleKeys).toContain('ptn_cdr');
   });
 
   it('recognizes platoon commanders without granting hidden permissions', () => {

@@ -302,6 +302,13 @@
       "when": 1779148800000,
       "tag": "0042_repeat_semester_relegation",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1779193110000,
+      "tag": "0043_rbac_permission_key_uniqueness",
+      "breakpoints": true
     }
   ]
 }

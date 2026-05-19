@@ -7,6 +7,7 @@ import { authzPolicyState, permissionFieldRules } from '../schema/auth/rbac-exte
 import { clearEffectivePermissionsCache, effectivePermissionsCache } from '@/app/lib/acx/cache';
 import { hasPlatoonCommanderRole } from '@/lib/platoon-commander-access';
 import {
+  AUTHENTICATED_DASHBOARD_PERMISSION_KEYS,
   getAllMappedActionKeys,
   getRbacDefaultProfiles,
   normalizeRbacKey,
@@ -228,13 +229,26 @@ export async function ensureInterviewRbacDefaults(): Promise<void> {
 }
 
 const RBAC_CODE_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v1';
+const RBAC_DASHBOARD_SESSION_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v2_dashboard_session';
 let ensureCodeRbacDefaultsPromise: Promise<void> | null = null;
 
 async function upsertPermissionKeys(permissionKeys: string[]): Promise<Map<string, string>> {
   const keys = Array.from(new Set(permissionKeys)).filter(Boolean);
   if (keys.length === 0) return new Map();
 
-  for (const key of keys) {
+  const existingRows = await db
+    .select({ id: permissions.id, key: permissions.key })
+    .from(permissions)
+    .where(inArray(permissions.key, keys));
+  const permissionIdByKey = new Map<string, string>();
+  for (const row of existingRows) {
+    if (!permissionIdByKey.has(row.key)) {
+      permissionIdByKey.set(row.key, row.id);
+    }
+  }
+
+  const missingKeys = keys.filter((key) => !permissionIdByKey.has(key));
+  for (const key of missingKeys) {
     await db
       .insert(permissions)
       .values({
@@ -244,12 +258,20 @@ async function upsertPermissionKeys(permissionKeys: string[]): Promise<Map<strin
       .onConflictDoNothing();
   }
 
-  const rows = await db
-    .select({ id: permissions.id, key: permissions.key })
-    .from(permissions)
-    .where(inArray(permissions.key, keys));
+  if (missingKeys.length > 0) {
+    const insertedRows = await db
+      .select({ id: permissions.id, key: permissions.key })
+      .from(permissions)
+      .where(inArray(permissions.key, missingKeys));
 
-  return new Map(rows.map((row) => [row.key, row.id]));
+    for (const row of insertedRows) {
+      if (!permissionIdByKey.has(row.key)) {
+        permissionIdByKey.set(row.key, row.id);
+      }
+    }
+  }
+
+  return permissionIdByKey;
 }
 
 async function upsertRoleByKey(roleKey: string): Promise<{ id: string; key: string }> {
@@ -280,13 +302,20 @@ async function upsertPositionByKey(positionKey: string): Promise<{ id: string; k
     .limit(1);
   if (existing) return existing;
 
+  const isPlatoonScoped =
+    dbKey.includes('PLATOON') ||
+    dbKey === 'PTN_CDR' ||
+    dbKey === 'PL_CDR' ||
+    dbKey.endsWith('_PTN_CDR') ||
+    dbKey.endsWith('_PL_CDR');
+
   const [created] = await db
     .insert(positions)
     .values({
       key: dbKey,
       displayName: dbKey.replace(/_/g, ' '),
-      defaultScope: dbKey.includes('PLATOON') ? 'PLATOON' : 'GLOBAL',
-      singleton: !dbKey.includes('PLATOON'),
+      defaultScope: isPlatoonScoped ? 'PLATOON' : 'GLOBAL',
+      singleton: !isPlatoonScoped,
       description: `RBAC default position for ${dbKey}`,
     })
     .returning({ id: positions.id, key: positions.key });
@@ -311,38 +340,101 @@ async function addPositionPermissions(positionId: string, permissionIds: string[
     .onConflictDoNothing();
 }
 
-async function ensureCodeRbacDefaultsInner(): Promise<void> {
-  const permissionIdByKey = await upsertPermissionKeys(getAllMappedActionKeys());
+function getPermissionIds(
+  permissionIdByKey: Map<string, string>,
+  permissionKeys: readonly string[]
+): string[] {
+  return permissionKeys
+    .map((key) => permissionIdByKey.get(key))
+    .filter((id): id is string => Boolean(id));
+}
 
+async function applyPermissionsToRolesAndPositions(args: {
+  roleKeys: readonly string[];
+  positionKeys: readonly string[];
+  permissionIds: string[];
+}) {
+  for (const roleKey of args.roleKeys) {
+    const role = await upsertRoleByKey(roleKey);
+    await addRolePermissions(role.id, args.permissionIds);
+  }
+
+  for (const positionKey of args.positionKeys) {
+    const position = await upsertPositionByKey(positionKey);
+    await addPositionPermissions(position.id, args.permissionIds);
+  }
+}
+
+async function hasRbacDefaultsState(key: string): Promise<boolean> {
   const [existingState] = await db
     .select({ key: authzPolicyState.key })
     .from(authzPolicyState)
-    .where(eq(authzPolicyState.key, RBAC_CODE_DEFAULTS_STATE_KEY))
+    .where(eq(authzPolicyState.key, key))
     .limit(1);
+  return Boolean(existingState);
+}
 
-  if (existingState) return;
-
-  for (const profile of getRbacDefaultProfiles()) {
-    const permissionIds = profile.permissionKeys
-      .map((key) => permissionIdByKey.get(key))
-      .filter((id): id is string => Boolean(id));
-
-    for (const roleKey of profile.roleKeys) {
-      const role = await upsertRoleByKey(roleKey);
-      await addRolePermissions(role.id, permissionIds);
-    }
-
-    for (const positionKey of profile.positionKeys) {
-      const position = await upsertPositionByKey(positionKey);
-      await addPositionPermissions(position.id, permissionIds);
-    }
-  }
-
+async function markRbacDefaultsState(key: string): Promise<void> {
   await db
     .insert(authzPolicyState)
-    .values({ key: RBAC_CODE_DEFAULTS_STATE_KEY, version: 1 })
+    .values({ key, version: 1 })
     .onConflictDoNothing();
-  await bumpPolicyVersionAndInvalidate();
+}
+
+async function applyInitialCodeDefaults(permissionIdByKey: Map<string, string>): Promise<void> {
+  for (const profile of getRbacDefaultProfiles()) {
+    await applyPermissionsToRolesAndPositions({
+      roleKeys: profile.roleKeys,
+      positionKeys: profile.positionKeys,
+      permissionIds: getPermissionIds(permissionIdByKey, profile.permissionKeys),
+    });
+  }
+}
+
+async function applyDashboardSessionDefaults(permissionIdByKey: Map<string, string>): Promise<void> {
+  const dashboardPermissionIds = getPermissionIds(
+    permissionIdByKey,
+    AUTHENTICATED_DASHBOARD_PERMISSION_KEYS
+  );
+  const profiles = getRbacDefaultProfiles();
+
+  for (const profile of profiles.filter((item) => item.key !== 'super_admin')) {
+    await applyPermissionsToRolesAndPositions({
+      roleKeys: profile.roleKeys,
+      positionKeys: profile.positionKeys,
+      permissionIds: dashboardPermissionIds,
+    });
+  }
+
+  const platoonProfile = profiles.find((profile) => profile.key === 'platoon_commander');
+  if (platoonProfile) {
+    await applyPermissionsToRolesAndPositions({
+      roleKeys: ['ptn_cdr'],
+      positionKeys: ['PTN_CDR'],
+      permissionIds: getPermissionIds(permissionIdByKey, platoonProfile.permissionKeys),
+    });
+  }
+}
+
+async function ensureCodeRbacDefaultsInner(): Promise<void> {
+  const permissionIdByKey = await upsertPermissionKeys(getAllMappedActionKeys());
+  let changed = false;
+
+  if (!(await hasRbacDefaultsState(RBAC_CODE_DEFAULTS_STATE_KEY))) {
+    await applyInitialCodeDefaults(permissionIdByKey);
+    await markRbacDefaultsState(RBAC_CODE_DEFAULTS_STATE_KEY);
+    changed = true;
+  }
+
+  if (!(await hasRbacDefaultsState(RBAC_DASHBOARD_SESSION_DEFAULTS_STATE_KEY))) {
+    await applyDashboardSessionDefaults(permissionIdByKey);
+    await markRbacDefaultsState(RBAC_DASHBOARD_SESSION_DEFAULTS_STATE_KEY);
+    changed = true;
+  }
+
+  if (changed) {
+    await bumpPolicyVersionAndInvalidate();
+  }
 }
 
 export async function ensureCodeRbacDefaults(): Promise<void> {

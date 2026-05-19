@@ -20,6 +20,17 @@ export const RBAC_SIDEBAR_PERMISSION_KEYS = [
   "sidebar:bulk-upload",
 ] as const;
 
+export const AUTHENTICATED_DASHBOARD_PERMISSION_KEYS = [
+  "me:read",
+  "me:navigation:read",
+  "me:device-site-settings:read",
+  "me:workflow-notifications:read",
+  "me:workflow-notifications:update",
+  "dashboard:data:appointments:read",
+  "dashboard:data:course:read",
+  "dashboard:data:platoon:read",
+] as const;
+
 const MANAGE_MARKS_API_PATHS = new Set<string>([
   "/api/v1/admin/courses",
   "/api/v1/admin/courses/:courseId/offerings",
@@ -110,6 +121,7 @@ export function getAllMappedActionKeys(): string[] {
 
 export function getAdminDefaultPermissionKeys(): string[] {
   return uniqueSorted([
+    ...AUTHENTICATED_DASHBOARD_PERMISSION_KEYS,
     ...API_ACTION_MAP.filter(
       (entry) => entry.adminBaseline || MANAGE_MARKS_API_PATHS.has(entry.path)
     ).map((entry) => entry.action),
@@ -122,6 +134,7 @@ export function getAdminDefaultPermissionKeys(): string[] {
 
 export function getPlatoonCommanderDefaultPermissionKeys(): string[] {
   return uniqueSorted([
+    ...AUTHENTICATED_DASHBOARD_PERMISSION_KEYS,
     ...PLATOON_COMMANDER_DEFAULT_PERMISSION_KEYS,
     ...COMMON_NAVIGATION_PERMISSION_KEYS,
     ...INTERVIEW_WRITE_PERMISSION_KEYS,
@@ -159,8 +172,8 @@ export function getRbacDefaultProfiles(): RbacDefaultProfile[] {
     {
       key: "platoon_commander",
       label: "Platoon Commander",
-      roleKeys: ["platoon_commander"],
-      positionKeys: ["PLATOON_COMMANDER"],
+      roleKeys: ["platoon_commander", "ptn_cdr"],
+      positionKeys: ["PLATOON_COMMANDER", "PTN_CDR"],
       permissionKeys: platoonDefaults,
     },
     {
