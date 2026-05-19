@@ -4,6 +4,15 @@ export type RbacPermission = {
   id: string;
   key: string;
   description: string | null;
+  system?: boolean;
+  defaultGrant?: boolean;
+  display?: {
+    title: string;
+    moduleLabel: string;
+    areaLabel: string;
+    actionLabel: string;
+    description: string;
+  };
 };
 
 export type RbacRole = {
@@ -32,6 +41,33 @@ export type PositionPermissionMapping = {
   permissionKey: string;
 };
 
+export type RbacDefaultProfile = {
+  key: string;
+  label: string;
+  roleKeys: string[];
+  positionKeys: string[];
+  permissionKeys: string[];
+  protected?: boolean;
+};
+
+export type RbacDefaultRoleMapping = RolePermissionMapping & {
+  profileKey: string;
+};
+
+export type RbacDefaultPositionMapping = PositionPermissionMapping & {
+  profileKey: string;
+};
+
+export type RbacPermissionDisplayMeta = {
+  permissionId: string;
+  permissionKey: string;
+  title: string;
+  moduleLabel: string;
+  areaLabel: string;
+  actionLabel: string;
+  description: string;
+};
+
 export type FieldRule = {
   id: string;
   permissionId: string;
@@ -45,6 +81,24 @@ export type FieldRule = {
   note: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type EffectiveRbacBundle = {
+  userId: string;
+  roles: string[];
+  appointment: {
+    appointmentId: string | null;
+    positionId: string | null;
+    positionKey: string | null;
+    scopeType: string | null;
+    scopeId: string | null;
+  };
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  permissions: string[];
+  deniedPermissions: string[];
+  fieldRulesByAction: Record<string, unknown[]>;
+  policyVersion: number;
 };
 
 export const rbacApi = {
@@ -108,7 +162,19 @@ export const rbacApi = {
       positions: RbacPosition[];
       roleMappings: RolePermissionMapping[];
       positionMappings: PositionPermissionMapping[];
+      defaults: {
+        defaultProfiles: RbacDefaultProfile[];
+        defaultRoleMappings: RbacDefaultRoleMapping[];
+        defaultPositionMappings: RbacDefaultPositionMapping[];
+        permissionMeta: RbacPermissionDisplayMeta[];
+      };
     }>('/api/v1/admin/rbac/mappings', { query: params });
+  },
+
+  getEffectivePermissions: async (params?: { userId?: string; appointmentId?: string }) => {
+    return api.get<{ message: string; bundle: EffectiveRbacBundle }>('/api/v1/admin/rbac/effective', {
+      query: params,
+    });
   },
 
   setRoleMappings: async (input: { roleId: string; permissionIds: string[] }) => {

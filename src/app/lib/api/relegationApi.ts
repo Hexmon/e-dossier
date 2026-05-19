@@ -223,11 +223,14 @@ export const relegationApi = {
       },
     }),
 
-  getImmediateNextCourses: (currentCourseId: string) =>
+  getTargetCourses: (currentCourseId: string, mode: RelegationTransferMode) =>
     api.get<{ items: RelegationCourseOption[] }>(endpoints.admin.relegation.nextCourses, {
       baseURL,
-      query: { currentCourseId },
+      query: { currentCourseId, mode },
     }),
+
+  getImmediateNextCourses: (currentCourseId: string) =>
+    relegationApi.getTargetCourses(currentCourseId, "PREVIOUS_SEMESTER"),
 
   getHistory: (params?: RelegationHistoryParams) =>
     api.get<RelegationHistoryResponse>(endpoints.admin.relegation.history, {

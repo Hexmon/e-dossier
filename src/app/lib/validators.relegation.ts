@@ -12,6 +12,7 @@ const optionalTrimmedText = z
 
 export const relegationCoursesQuerySchema = z.object({
   currentCourseId: z.string().uuid("currentCourseId must be a valid uuid"),
+  mode: z.enum(["COURSE_TRANSFER", "PREVIOUS_SEMESTER"]).optional().default("PREVIOUS_SEMESTER"),
 });
 
 export const relegationPdfPresignSchema = z.object({

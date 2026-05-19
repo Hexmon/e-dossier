@@ -35,4 +35,37 @@ describe("API error handling", () => {
     const error = { cause: { cause: { code: "08006" } } };
     expect(isDatabaseUnavailableError(error)).toBe(true);
   });
+
+  it("maps storage failures to a safe 503 envelope", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const error = Object.assign(
+      new Error("File storage is unavailable. Check MinIO/storage configuration."),
+      {
+        name: "StorageUnavailableError",
+        service: "storage",
+        retryable: true,
+        diagnostics: {
+          endpoint: "http://127.0.0.1:9000",
+          bucket: "edossier",
+        },
+      }
+    );
+
+    const res = handleApiError(error);
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(body).toMatchObject({
+      ok: false,
+      status: 503,
+      error: "service_unavailable",
+      retryable: true,
+      service: "storage",
+      message: "File storage is unavailable. Check MinIO/storage configuration.",
+    });
+    expect(JSON.stringify(body)).not.toContain("127.0.0.1");
+    expect(JSON.stringify(body)).not.toContain("edossier");
+
+    consoleSpy.mockRestore();
+  });
 });

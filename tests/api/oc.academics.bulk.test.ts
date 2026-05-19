@@ -52,10 +52,12 @@ function makeDecision(allow: boolean) {
 
 describe('OC academics bulk API', () => {
   const originalAuthzFlag = process.env.AUTHZ_V2_ENABLED;
+  const originalPublicAuthzFlag = process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED;
 
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.AUTHZ_V2_ENABLED = 'false';
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = 'false';
     (mustBeAuthed as any).mockResolvedValue({ userId: 'u-1', roles: ['HOAT'] });
     (assertWorkflowDirectWriteAllowed as any).mockResolvedValue(undefined);
     (getOcAcademicSemester as any).mockResolvedValue({
@@ -88,6 +90,7 @@ describe('OC academics bulk API', () => {
 
   afterEach(() => {
     process.env.AUTHZ_V2_ENABLED = originalAuthzFlag;
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = originalPublicAuthzFlag;
   });
 
   it('allows authenticated non-admin users to read bulk academics', async () => {
@@ -126,6 +129,7 @@ describe('OC academics bulk API', () => {
 
   it('returns 403 when authz denies the bulk-read action', async () => {
     process.env.AUTHZ_V2_ENABLED = 'true';
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = 'true';
     (getAuthzEngine as any).mockReturnValue({
       engine: 'test-engine',
       authorize: vi.fn(async () => makeDecision(false)),

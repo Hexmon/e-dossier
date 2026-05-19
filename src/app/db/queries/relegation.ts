@@ -94,7 +94,9 @@ export type RelegationActorScope = {
   scopePlatoonId?: string | null;
 };
 
-const COURSE_SEQUENCE_REGEX = /^([A-Za-z][A-Za-z0-9]*)-(\d+)$/;
+export type RelegationCourseTargetMode = "COURSE_TRANSFER" | "PREVIOUS_SEMESTER";
+
+const COURSE_SEQUENCE_REGEX = /^([A-Za-z][A-Za-z0-9]*)[-=](\d+)$/;
 
 export type ParsedCourseSequence = {
   prefix: string;
@@ -121,6 +123,34 @@ export function isImmediateNextCourseCode(currentCode: string, nextCode: string)
 
   if (!current || !next) return false;
   return current.prefix === next.prefix && next.number === current.number + 1;
+}
+
+export function resolveImmediateNextCourseCode(currentCode: string): string {
+  const current = assertParsableCourseCode(currentCode);
+  return `${current.prefix}-${current.number + 1}`;
+}
+
+export function isImmediatePreviousCourseCode(currentCode: string, previousCode: string): boolean {
+  const current = parseCourseSequence(currentCode);
+  const previous = parseCourseSequence(previousCode);
+
+  if (!current || !previous) return false;
+  return current.prefix === previous.prefix && previous.number === current.number - 1;
+}
+
+function compareCourseOptions(left: RelegationCourseOption, right: RelegationCourseOption): number {
+  const leftParsed = parseCourseSequence(left.courseCode);
+  const rightParsed = parseCourseSequence(right.courseCode);
+
+  if (leftParsed && rightParsed) {
+    const prefixCompare = leftParsed.prefix.localeCompare(rightParsed.prefix);
+    if (prefixCompare !== 0) return prefixCompare;
+    if (leftParsed.number !== rightParsed.number) return leftParsed.number - rightParsed.number;
+  }
+
+  if (leftParsed && !rightParsed) return -1;
+  if (!leftParsed && rightParsed) return 1;
+  return left.courseCode.localeCompare(right.courseCode);
 }
 
 export function selectNearestNextCourses(
@@ -162,6 +192,70 @@ export function selectNearestNextCourses(
     .map((entry) => entry.course);
 }
 
+export function selectImmediateNextCourses(
+  currentCode: string,
+  candidates: RelegationCourseOption[]
+): RelegationCourseOption[] {
+  const current = assertParsableCourseCode(currentCode);
+
+  return candidates
+    .map((course) => ({
+      course,
+      parsed: parseCourseSequence(course.courseCode),
+    }))
+    .filter(
+      (
+        entry
+      ): entry is {
+        course: RelegationCourseOption;
+        parsed: ParsedCourseSequence;
+      } =>
+        entry.parsed !== null &&
+        entry.parsed.prefix === current.prefix &&
+        entry.parsed.number === current.number + 1
+    )
+    .sort((left, right) => left.course.courseCode.localeCompare(right.course.courseCode))
+    .map((entry) => entry.course);
+}
+
+export function selectNearestPreviousCourses(
+  currentCode: string,
+  candidates: RelegationCourseOption[]
+): RelegationCourseOption[] {
+  const expectedPrevious = parseCourseSequence(resolveImmediatePreviousCourseCode(currentCode));
+  if (!expectedPrevious) return [];
+
+  return candidates
+    .map((course) => ({
+      course,
+      parsed: parseCourseSequence(course.courseCode),
+    }))
+    .filter(
+      (
+        entry
+      ): entry is {
+        course: RelegationCourseOption;
+        parsed: ParsedCourseSequence;
+      } =>
+        entry.parsed !== null &&
+        entry.parsed.prefix === expectedPrevious.prefix &&
+        entry.parsed.number === expectedPrevious.number
+    )
+    .sort((left, right) => {
+      return left.course.courseCode.localeCompare(right.course.courseCode);
+    })
+    .map((entry) => entry.course);
+}
+
+export function selectCourseTransferTargetCourses(
+  currentCourseId: string,
+  candidates: RelegationCourseOption[]
+): RelegationCourseOption[] {
+  return candidates
+    .filter((course) => course.courseId !== currentCourseId)
+    .sort(compareCourseOptions);
+}
+
 type CourseLookupClient = Pick<typeof db, "select">;
 
 function assertParsableCourseCode(code: string): ParsedCourseSequence {
@@ -169,11 +263,25 @@ function assertParsableCourseCode(code: string): ParsedCourseSequence {
   if (!parsed) {
     throw new ApiError(
       400,
-      `Cannot determine newer course order for code '${code}'. Expected pattern PREFIX-NUMBER (example: TES-50).`,
+      `Cannot determine course order for code '${code}'. Expected a course number like TES-50.`,
       "bad_request"
     );
   }
   return parsed;
+}
+
+export function resolveImmediatePreviousCourseCode(currentCode: string): string {
+  const current = assertParsableCourseCode(currentCode);
+  if (current.number <= 1) {
+    throw new ApiError(
+      400,
+      `No previous course exists before ${currentCode}.`,
+      "previous_course_not_available",
+      { currentCourseCode: currentCode }
+    );
+  }
+
+  return `${current.prefix}-${current.number - 1}`;
 }
 
 function toCourseOption(row: { id: string; code: string; title: string }): RelegationCourseOption {
@@ -290,6 +398,48 @@ export async function listImmediateNextCourses(
   );
 }
 
+export async function listRelegationTargetCourses(
+  currentCourseId: string,
+  mode: RelegationCourseTargetMode,
+  tx: CourseLookupClient = db
+): Promise<RelegationCourseOption[]> {
+  const currentCourse = await getActiveCourseById(currentCourseId, tx);
+
+  const candidateCourses = await tx
+    .select({
+      id: courses.id,
+      code: courses.code,
+      title: courses.title,
+    })
+    .from(courses)
+    .where(isNull(courses.deletedAt));
+
+  const options = candidateCourses.map(toCourseOption);
+  if (mode === "PREVIOUS_SEMESTER") {
+    const expectedCourseCode = resolveImmediateNextCourseCode(currentCourse.code);
+    const targetCourses = selectImmediateNextCourses(
+      currentCourse.code,
+      options.filter((course) => course.courseId !== currentCourseId)
+    );
+
+    if (targetCourses.length === 0) {
+      throw new ApiError(
+        404,
+        `Relegation target course ${expectedCourseCode} is not configured. Create ${expectedCourseCode} in Course Management before previous-semester relegation.`,
+        "relegation_target_course_not_found",
+        {
+          currentCourseCode: currentCourse.code,
+          expectedCourseCode,
+        }
+      );
+    }
+
+    return targetCourses;
+  }
+
+  return selectCourseTransferTargetCourses(currentCourseId, options);
+}
+
 async function getScopedOcForMove(
   tx: any,
   ocId: string,
@@ -363,6 +513,36 @@ async function ensureAllowedNextCourse(
     throw new ApiError(
       400,
       `Invalid transfer target. Only the next available course is allowed from ${fromCode}.`,
+      "bad_request"
+    );
+  }
+}
+
+async function ensureAllowedRelegationTargetCourse(
+  currentCourseId: string,
+  targetCourseId: string,
+  fromCode: string,
+  mode: RelegationCourseTargetMode,
+  tx: CourseLookupClient = db
+) {
+  if (mode === "COURSE_TRANSFER") {
+    if (currentCourseId === targetCourseId) {
+      throw new ApiError(
+        400,
+        "Invalid transfer target. Course transfer target must be different from the current course.",
+        "bad_request"
+      );
+    }
+    return;
+  }
+
+  const allowedPreviousCourses = await listRelegationTargetCourses(currentCourseId, mode, tx);
+  const isAllowed = allowedPreviousCourses.some((course) => course.courseId === targetCourseId);
+
+  if (!isAllowed) {
+    throw new ApiError(
+      400,
+      `Invalid previous-semester target. Only the immediate next course is allowed from ${fromCode}.`,
       "bad_request"
     );
   }
@@ -643,7 +823,13 @@ export async function applyOcRelegationTransfer(
       targetSemester: input.targetSemester ?? null,
     });
 
-    await ensureAllowedNextCourse(ocRow.fromCourseId, targetCourse.id, ocRow.fromCourseCode, tx);
+    await ensureAllowedRelegationTargetCourse(
+      ocRow.fromCourseId,
+      targetCourse.id,
+      ocRow.fromCourseCode,
+      semesterPlan.mode,
+      tx
+    );
 
     const now = new Date();
     const cleanupSummary = semesterPlan.cleanupFromSemester

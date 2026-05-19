@@ -14,6 +14,8 @@ type RouteContext<TParams = Record<string, string | string[] | undefined>> = {
   params: Promise<TParams>;
 };
 
+export const AUTHZ_ROUTE_HANDLER_MARKER = Symbol.for('e-dossier.authzRouteHandler');
+
 type AuditableRequest = Request & {
   audit?: {
     log: (event: Record<string, unknown>) => Promise<void> | void;
@@ -94,7 +96,7 @@ async function emitDecisionAudit({
 
 function isMutableMethod(method: string): boolean {
   const upper = method.toUpperCase();
-  return upper === 'PATCH' || upper === 'PUT';
+  return upper === 'POST' || upper === 'PATCH' || upper === 'PUT';
 }
 
 function patchRequestJson(req: AuditNextRequest, payload: unknown): void {
@@ -204,7 +206,7 @@ export function withAuthz<TParams = Record<string, string | string[] | undefined
   handler: AuthzRouteHandler<TParams>,
   options: WithAuthzOptions<TParams> = {}
 ): AuthzRouteHandler<TParams> {
-  return async (req: AuditNextRequest, context: RouteContext<TParams>) => {
+  const wrapped = async (req: AuditNextRequest, context: RouteContext<TParams>) => {
     if (!isAuthzV2Enabled()) {
       return handler(req, context);
     }
@@ -327,4 +329,15 @@ export function withAuthz<TParams = Record<string, string | string[] | undefined
       throw error;
     }
   };
+
+  Object.defineProperty(wrapped, AUTHZ_ROUTE_HANDLER_MARKER, {
+    value: true,
+    enumerable: false,
+  });
+
+  return wrapped;
+}
+
+export function isAuthzRouteHandler(handler: unknown): boolean {
+  return Boolean(handler && typeof handler === 'function' && (handler as any)[AUTHZ_ROUTE_HANDLER_MARKER]);
 }

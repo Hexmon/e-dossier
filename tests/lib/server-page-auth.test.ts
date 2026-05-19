@@ -55,6 +55,10 @@ vi.mock("@/app/db/client", () => ({
   },
 }));
 
+vi.mock("@/app/db/queries/authz-permissions", () => ({
+  getEffectivePermissionBundleCached: vi.fn(),
+}));
+
 vi.mock("@/lib/authorization", () => ({
   hasScopeAccess: vi.fn(() => true),
 }));
@@ -66,6 +70,7 @@ import { assertActiveAuthorityFromPayload } from "@/app/lib/active-authority";
 import { getSetupStatus } from "@/app/lib/setup-status";
 import { resolveModuleAccessForUser } from "@/app/lib/module-access";
 import { db } from "@/app/db/client";
+import { getEffectivePermissionBundleCached } from "@/app/db/queries/authz-permissions";
 import { hasScopeAccess } from "@/lib/authorization";
 import {
   requireDashboardAccess,
@@ -80,6 +85,8 @@ import {
 describe("server page auth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.AUTHZ_V2_ENABLED = "false";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "false";
     (cookies as any).mockResolvedValue({
       get: (name: string) =>
         name === "access_token"
@@ -142,6 +149,23 @@ describe("server page auth", () => {
       }),
     });
     (hasScopeAccess as any).mockReturnValue(true);
+    (getEffectivePermissionBundleCached as any).mockResolvedValue({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      appointment: {
+        appointmentId: null,
+        positionId: null,
+        positionKey: "ADMIN",
+        scopeType: "GLOBAL",
+        scopeId: null,
+      },
+      isAdmin: true,
+      isSuperAdmin: false,
+      permissions: [],
+      deniedPermissions: [],
+      fieldRulesByAction: {},
+      policyVersion: 2,
+    });
   });
 
   it("redirects ADMIN away from a disabled reports page", async () => {
@@ -313,6 +337,103 @@ describe("server page auth", () => {
 
     const ctx = await requireDashboardModuleAccess("REPORTS");
     expect(ctx.moduleAccess.canAccessReports).toBe(true);
+  });
+
+  it("allows dashboard pages by v2 page permissions even when module access is disabled", async () => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "true";
+    (headers as any).mockResolvedValueOnce({
+      get: (name: string) => (name === "x-pathname" ? "/dashboard/reports" : null),
+    });
+    (getEffectivePermissionBundleCached as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      appointment: {
+        appointmentId: null,
+        positionId: null,
+        positionKey: "ADMIN",
+        scopeType: "GLOBAL",
+        scopeId: null,
+      },
+      isAdmin: true,
+      isSuperAdmin: false,
+      permissions: ["page:dashboard:reports:view"],
+      deniedPermissions: [],
+      fieldRulesByAction: {},
+      policyVersion: 2,
+    });
+
+    const ctx = await requireDashboardModuleAccess("REPORTS");
+
+    expect(ctx.permissions).toContain("page:dashboard:reports:view");
+    expect(redirect).not.toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("redirects dashboard pages under v2 when the resolved page permission is missing", async () => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "true";
+    (headers as any).mockResolvedValueOnce({
+      get: (name: string) => (name === "x-pathname" ? "/dashboard/reports" : null),
+    });
+
+    await expect(requireDashboardAccess()).rejects.toThrow("REDIRECT:/dashboard");
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("fails closed under v2 when middleware did not provide the current pathname", async () => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "false";
+    (headers as any).mockResolvedValueOnce({
+      get: () => null,
+    });
+    (getEffectivePermissionBundleCached as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      appointment: {
+        appointmentId: null,
+        positionId: null,
+        positionKey: "ADMIN",
+        scopeType: "GLOBAL",
+        scopeId: null,
+      },
+      isAdmin: true,
+      isSuperAdmin: false,
+      permissions: ["*"],
+      deniedPermissions: [],
+      fieldRulesByAction: {},
+      policyVersion: 2,
+    });
+
+    await expect(requireDashboardAccess()).rejects.toThrow("REDIRECT:/dashboard");
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("fails closed under v2 for unmapped dashboard pages", async () => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "false";
+    (headers as any).mockResolvedValueOnce({
+      get: (name: string) => (name === "x-pathname" ? "/dashboard/unmapped-page" : null),
+    });
+    (getEffectivePermissionBundleCached as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      appointment: {
+        appointmentId: null,
+        positionId: null,
+        positionKey: "ADMIN",
+        scopeType: "GLOBAL",
+        scopeId: null,
+      },
+      isAdmin: true,
+      isSuperAdmin: false,
+      permissions: ["*"],
+      deniedPermissions: [],
+      fieldRulesByAction: {},
+      policyVersion: 2,
+    });
+
+    await expect(requireDashboardAccess()).rejects.toThrow("REDIRECT:/dashboard");
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
   });
 
   it("allows the bulk hub when ADMIN is explicitly assigned to a workflow", async () => {

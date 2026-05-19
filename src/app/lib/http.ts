@@ -3,6 +3,8 @@ import { ZodError } from 'zod';
 
 export const DATABASE_UNAVAILABLE_MESSAGE =
   'Database is temporarily unavailable. Please try again after the service is restored.';
+export const STORAGE_UNAVAILABLE_MESSAGE =
+  'File storage is unavailable. Check MinIO/storage configuration.';
 
 export class ApiError extends Error {
   status: number;
@@ -183,6 +185,18 @@ export function isDatabaseUnavailableError(error: unknown): boolean {
   return false;
 }
 
+function isStorageServiceError(error: unknown): error is {
+  service: 'storage';
+  retryable?: boolean;
+  message?: string;
+} {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { service?: unknown }).service === 'storage'
+  );
+}
+
 /** Centralized error -> response mapper (use in catch blocks) */
 export function handleApiError(err: unknown) {
   if (err instanceof ApiError) {
@@ -196,6 +210,13 @@ export function handleApiError(err: unknown) {
     return conflict('Unique constraint violated', {
       detail: (err as any).detail ?? (err as any).cause?.detail,
       constraint: (err as any).constraint ?? (err as any).cause?.constraint,
+    });
+  }
+  if (isStorageServiceError(err)) {
+    console.error('[API ERROR]', err);
+    return serviceUnavailable(err.message || STORAGE_UNAVAILABLE_MESSAGE, {
+      retryable: err.retryable ?? true,
+      service: 'storage',
     });
   }
   if (isDatabaseUnavailableError(err)) {

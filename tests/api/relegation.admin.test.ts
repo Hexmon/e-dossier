@@ -15,6 +15,7 @@ import * as storage from "@/app/lib/storage";
 vi.mock("@/app/db/queries/relegation", () => ({
   listRelegationOcOptions: vi.fn(async () => []),
   listImmediateNextCourses: vi.fn(async () => []),
+  listRelegationTargetCourses: vi.fn(async () => []),
   applyOcRelegationTransfer: vi.fn(async () => ({
     oc: {
       ocId: "11111111-1111-4111-8111-111111111111",
@@ -156,8 +157,8 @@ describe("Admin relegation APIs", () => {
     expect(res.status).toBe(400);
   });
 
-  it("GET /courses returns immediate next options", async () => {
-    vi.mocked(relegationQueries.listImmediateNextCourses).mockResolvedValueOnce([
+  it("GET /courses returns previous-semester target options", async () => {
+    vi.mocked(relegationQueries.listRelegationTargetCourses).mockResolvedValueOnce([
       {
         courseId: "33333333-3333-4333-8333-333333333333",
         courseCode: "TES-51",
@@ -167,13 +168,75 @@ describe("Admin relegation APIs", () => {
 
     const req = makeJsonRequest({
       method: "GET",
-      path: `${nextCoursesPath}?currentCourseId=22222222-2222-4222-8222-222222222222`,
+      path: `${nextCoursesPath}?currentCourseId=22222222-2222-4222-8222-222222222222&mode=PREVIOUS_SEMESTER`,
     });
     const res = await getNextCourses(req as any, createRouteContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
     expect(body.items[0].courseCode).toBe("TES-51");
+    expect(relegationQueries.listRelegationTargetCourses).toHaveBeenCalledWith(
+      "22222222-2222-4222-8222-222222222222",
+      "PREVIOUS_SEMESTER"
+    );
+  });
+
+  it("GET /courses returns a friendly error when the relegation target course is missing", async () => {
+    vi.mocked(relegationQueries.listRelegationTargetCourses).mockRejectedValueOnce(
+      new ApiError(
+        404,
+        "Relegation target course TES-51 is not configured. Create TES-51 in Course Management before previous-semester relegation.",
+        "relegation_target_course_not_found",
+        {
+          currentCourseCode: "TES-50",
+          expectedCourseCode: "TES-51",
+        }
+      )
+    );
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path: `${nextCoursesPath}?currentCourseId=22222222-2222-4222-8222-222222222222&mode=PREVIOUS_SEMESTER`,
+    });
+    const res = await getNextCourses(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(body.error).toBe("relegation_target_course_not_found");
+    expect(body.message).toContain("Relegation target course TES-51 is not configured");
+    expect(body.expectedCourseCode).toBe("TES-51");
+  });
+
+  it("GET /courses returns all course-transfer targets except current through query mode", async () => {
+    vi.mocked(relegationQueries.listRelegationTargetCourses).mockResolvedValueOnce([
+      {
+        courseId: "33333333-3333-4333-8333-333333333333",
+        courseCode: "TES-49",
+        courseName: "TES 49",
+      },
+      {
+        courseId: "44444444-4444-4444-8444-444444444444",
+        courseCode: "TES-51",
+        courseName: "TES 51",
+      },
+    ]);
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path: `${nextCoursesPath}?currentCourseId=22222222-2222-4222-8222-222222222222&mode=COURSE_TRANSFER`,
+    });
+    const res = await getNextCourses(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.items.map((item: { courseCode: string }) => item.courseCode)).toEqual([
+      "TES-49",
+      "TES-51",
+    ]);
+    expect(relegationQueries.listRelegationTargetCourses).toHaveBeenCalledWith(
+      "22222222-2222-4222-8222-222222222222",
+      "COURSE_TRANSFER"
+    );
   });
 
   it("POST /presign rejects invalid payload", async () => {
@@ -208,6 +271,39 @@ describe("Admin relegation APIs", () => {
     expect(res.status).toBe(200);
     expect(body.uploadUrl).toBe("https://upload-url");
     expect(storage.createPresignedUploadUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it("POST /presign returns storage 503 when upload signing fails", async () => {
+    vi.mocked(storage.createPresignedUploadUrl).mockRejectedValueOnce(
+      Object.assign(new Error("File storage is unavailable. Check MinIO/storage configuration."), {
+        name: "StorageUnavailableError",
+        service: "storage",
+        retryable: true,
+      })
+    );
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: presignPath,
+      body: {
+        fileName: "proof.pdf",
+        contentType: "application/pdf",
+        sizeBytes: 1024,
+      },
+    });
+
+    const res = await postPresign(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(body).toMatchObject({
+      ok: false,
+      status: 503,
+      error: "service_unavailable",
+      service: "storage",
+      retryable: true,
+      message: "File storage is unavailable. Check MinIO/storage configuration.",
+    });
   });
 
   it("POST /transfer validates payload", async () => {
@@ -268,7 +364,7 @@ describe("Admin relegation APIs", () => {
     );
   });
 
-  it("POST /transfer returns 400 when target is not immediate next", async () => {
+  it("POST /transfer returns 400 when backend rejects the target course", async () => {
     vi.mocked(relegationQueries.applyOcRelegationTransfer).mockRejectedValueOnce(
       new ApiError(400, "Invalid transfer target", "bad_request")
     );

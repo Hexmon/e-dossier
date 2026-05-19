@@ -98,18 +98,21 @@ export default function RelegationForm({
   const selectedOcId = watch("ocId");
   const currentCourseId = watch("currentCourseId");
   const selectedTransferToCourseId = watch("transferTo");
+  const [transferMode, setTransferMode] = useState<RelegationTransferMode>("PREVIOUS_SEMESTER");
+  const targetCourseMode: RelegationTransferMode =
+    mode === "transfer" ? transferMode : "COURSE_TRANSFER";
 
   const { ocOptionsQuery, nextCoursesQuery, presignMutation, transferMutation } =
-    useRelegationModule(currentCourseId || null);
+    useRelegationModule(currentCourseId || null, undefined, targetCourseMode);
   const { exceptionMutation } = useRelegationActions();
 
   const ocOptions = useMemo(() => ocOptionsQuery.data ?? [], [ocOptionsQuery.data]);
   const transferOptions = useMemo(() => nextCoursesQuery.data ?? [], [nextCoursesQuery.data]);
   const [ocNameSearch, setOcNameSearch] = useState("");
   const [isOcNameDropdownOpen, setIsOcNameDropdownOpen] = useState(false);
-  const [transferMode, setTransferMode] = useState<RelegationTransferMode>("PREVIOUS_SEMESTER");
   const [cleanupConfirmed, setCleanupConfirmed] = useState(false);
   const ocNameDropdownRef = useRef<HTMLDivElement>(null);
+  const lastTargetCourseErrorRef = useRef<string | null>(null);
 
   const isBusy =
     presignMutation.isPending || transferMutation.isPending || exceptionMutation.isPending;
@@ -121,6 +124,13 @@ export default function RelegationForm({
   const selectedTargetCourse = useMemo(
     () => transferOptions.find((item) => item.courseId === selectedTransferToCourseId) ?? null,
     [transferOptions, selectedTransferToCourseId]
+  );
+  const targetCourseErrorMessage = useMemo(
+    () =>
+      nextCoursesQuery.isError
+        ? parseApiError(nextCoursesQuery.error, "Failed to load target course options.")
+        : null,
+    [nextCoursesQuery.error, nextCoursesQuery.isError]
   );
   const selectedCurrentSemester = selectedOc?.currentSemester ?? null;
   const isPreviousSemesterMode = mode === "transfer" && transferMode === "PREVIOUS_SEMESTER";
@@ -163,6 +173,35 @@ export default function RelegationForm({
     }
     setValue("transferTo", transferOptions[0].courseId, { shouldDirty: true, shouldValidate: true });
   }, [isPreviousSemesterMode, lockTransferTo, selectedTransferToCourseId, setValue, transferOptions]);
+
+  useEffect(() => {
+    if (!targetCourseErrorMessage || !selectedOc) {
+      lastTargetCourseErrorRef.current = null;
+      return;
+    }
+
+    const key = `${currentCourseId}:${targetCourseMode}:${targetCourseErrorMessage}`;
+    if (lastTargetCourseErrorRef.current === key) return;
+
+    toast.error(targetCourseErrorMessage);
+    lastTargetCourseErrorRef.current = key;
+  }, [currentCourseId, selectedOc, targetCourseErrorMessage, targetCourseMode]);
+
+  useEffect(() => {
+    if (lockTransferTo || !selectedTransferToCourseId || nextCoursesQuery.isLoading) return;
+    const selectedStillAvailable = transferOptions.some(
+      (course) => course.courseId === selectedTransferToCourseId
+    );
+    if (!selectedStillAvailable) {
+      setValue("transferTo", "", { shouldDirty: true, shouldValidate: true });
+    }
+  }, [
+    lockTransferTo,
+    nextCoursesQuery.isLoading,
+    selectedTransferToCourseId,
+    setValue,
+    transferOptions,
+  ]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -424,7 +463,12 @@ export default function RelegationForm({
                 value={field.value || undefined}
                 onValueChange={field.onChange}
                 disabled={
-                  !selectedOc || nextCoursesQuery.isLoading || isBusy || lockTransferTo || !currentCourseId
+                  !selectedOc ||
+                  nextCoursesQuery.isLoading ||
+                  nextCoursesQuery.isError ||
+                  isBusy ||
+                  lockTransferTo ||
+                  !currentCourseId
                 }
               >
                 <SelectTrigger id="transferTo">
@@ -443,14 +487,16 @@ export default function RelegationForm({
           {errors.transferTo ? (
             <p className="text-sm text-destructive">{errors.transferTo.message}</p>
           ) : null}
-          {selectedOc && !nextCoursesQuery.isLoading && transferOptions.length === 0 ? (
+          {selectedOc && !nextCoursesQuery.isLoading && !nextCoursesQuery.isError && transferOptions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No immediate next course available for current course.
+              {isPreviousSemesterMode
+                ? "No next course batch is available for this OC's relegation."
+                : "No other course is available for transfer."}
             </p>
           ) : null}
-          {nextCoursesQuery.isError ? (
+          {targetCourseErrorMessage ? (
             <p className="text-sm text-destructive">
-              {parseApiError(nextCoursesQuery.error, "Failed to load transfer options.")}
+              {targetCourseErrorMessage}
             </p>
           ) : null}
         </div>
@@ -477,7 +523,7 @@ export default function RelegationForm({
               <>
                 <p>
                   OC {selectedOc.ocNo} will move from {selectedOc.currentCourseCode} semester {selectedCurrentSemester} to{" "}
-                  {selectedTargetCourse?.courseCode ?? "the selected next course"} semester {targetSemester}.
+                  {selectedTargetCourse?.courseCode ?? "the selected target course"} semester {targetSemester}.
                 </p>
                 <p>
                   Data from {selectedOc.currentCourseCode} semester {selectedCurrentSemester} and later will be deleted

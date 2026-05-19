@@ -28,7 +28,7 @@ function makeEngine(decision: Decision): AuthorizationEngine {
   };
 }
 
-function makePrincipal(): Principal {
+function makePrincipal(attrs: Record<string, unknown> = {}): Principal {
   return {
     id: 'user-1',
     type: 'user',
@@ -36,12 +36,22 @@ function makePrincipal(): Principal {
     roles: ['HOAT'],
     attrs: {
       permissions: ['me:read'],
+      ...attrs,
     },
   };
 }
 
-function makeRequest(url: string, method = 'GET', auditLog?: MockAuditLog): Request {
-  const req = new Request(url, { method }) as Request & { audit?: { log: MockAuditLog } };
+function makeRequest(
+  url: string,
+  method = 'GET',
+  auditLog?: MockAuditLog,
+  body?: unknown
+): Request {
+  const req = new Request(url, {
+    method,
+    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }) as Request & { audit?: { log: MockAuditLog } };
   if (auditLog) {
     req.audit = { log: auditLog };
   }
@@ -50,17 +60,21 @@ function makeRequest(url: string, method = 'GET', auditLog?: MockAuditLog): Requ
 
 describe('withAuthz', () => {
   const previousAuthzFlag = process.env.AUTHZ_V2_ENABLED;
+  const previousPublicAuthzFlag = process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED;
 
   beforeEach(() => {
     process.env.AUTHZ_V2_ENABLED = 'true';
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = 'true';
   });
 
   afterEach(() => {
     process.env.AUTHZ_V2_ENABLED = previousAuthzFlag;
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = previousPublicAuthzFlag;
   });
 
   it('passes through when feature flag is disabled', async () => {
     process.env.AUTHZ_V2_ENABLED = 'false';
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = 'false';
     const decision = makeDecision(true);
     const engine = makeEngine(decision);
     const handler = vi.fn(async () => new Response(null, { status: 204 }));
@@ -75,6 +89,26 @@ describe('withAuthz', () => {
     expect(response.status).toBe(204);
     expect(handler).toHaveBeenCalledTimes(1);
     expect(engine.authorize).not.toHaveBeenCalled();
+  });
+
+  it('keeps server authorization enabled when only the public flag is disabled', async () => {
+    process.env.AUTHZ_V2_ENABLED = 'true';
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = 'false';
+    const decision = makeDecision(true);
+    const engine = makeEngine(decision);
+    const handler = vi.fn(async () => new Response(null, { status: 204 }));
+
+    const wrapped = withAuthz(handler as any, {
+      action: 'me:read',
+      engine,
+      getPrincipal: async () => makePrincipal(),
+    });
+
+    const response = await wrapped(makeRequest('http://localhost/api/v1/unmapped') as any, { params: Promise.resolve({}) });
+
+    expect(response.status).toBe(204);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(engine.authorize).toHaveBeenCalledTimes(1);
   });
 
   it('returns 400 when no action mapping exists', async () => {
@@ -161,5 +195,74 @@ describe('withAuthz', () => {
     expect(loggedEvent.outcome).toBe('SUCCESS');
     expect(loggedEvent.metadata.authz.allow).toBe(true);
   });
-});
 
+  it('applies field rules to POST JSON payloads before the handler runs', async () => {
+    const allowDecision = makeDecision(true);
+    const engine = makeEngine(allowDecision);
+    const handler = vi.fn(async (req: Request) => {
+      const payload = await req.json();
+      return new Response(JSON.stringify(payload), { status: 200 });
+    });
+    const principal = makePrincipal({
+      fieldRulesByAction: {
+        'admin:users:create': [
+          { mode: 'OMIT', fields: ['phone'] },
+          { mode: 'MASK', fields: ['email'] },
+        ],
+      },
+    });
+
+    const wrapped = withAuthz(handler as any, {
+      action: 'admin:users:create',
+      engine,
+      getPrincipal: async () => principal,
+    });
+
+    const response = await wrapped(
+      makeRequest('http://localhost/api/v1/admin/users', 'POST', undefined, {
+        name: 'Test User',
+        email: 'test@example.mil',
+        phone: '+911234567890',
+      }) as any,
+      { params: Promise.resolve({}) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      name: 'Test User',
+      email: null,
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks POST JSON payloads that touch denied fields', async () => {
+    const allowDecision = makeDecision(true);
+    const engine = makeEngine(allowDecision);
+    const handler = vi.fn(async () => new Response(null, { status: 204 }));
+    const principal = makePrincipal({
+      fieldRulesByAction: {
+        'admin:users:create': [{ mode: 'DENY', fields: ['roleId'] }],
+      },
+    });
+
+    const wrapped = withAuthz(handler as any, {
+      action: 'admin:users:create',
+      engine,
+      getPrincipal: async () => principal,
+    });
+
+    const response = await wrapped(
+      makeRequest('http://localhost/api/v1/admin/users', 'POST', undefined, {
+        name: 'Test User',
+        roleId: 'role-1',
+      }) as any,
+      { params: Promise.resolve({}) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.error).toBe('forbidden');
+    expect(handler).not.toHaveBeenCalled();
+  });
+});

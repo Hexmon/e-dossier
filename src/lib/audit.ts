@@ -8,6 +8,8 @@ import type { AuditNextRequest, NextAuditOptions } from '@hexmon_tech/audit-next
 import { NextRequest } from 'next/server';
 import { ApiError, handleApiError } from '@/app/lib/http';
 import { normalizeDatabaseUrl } from '@/app/db/connectionString';
+import { isPublicApiPath } from '@/app/lib/access-control-policy';
+import { isAuthzV2Enabled } from '@/app/lib/acx/feature-flag';
 
 // ── Re-export types ───────────────────────────────────────────────
 export type { AuditNextRequest, AuditEventInput, AuditLogger };
@@ -227,7 +229,16 @@ export function withAuditRoute<TParams = EmptyRouteParams>(
       const requestIdHeader = req.headers.get('x-request-id');
 
       try {
-        const response = await handler(req, context);
+        const pathname = new URL(req.url).pathname;
+        let effectiveHandler = handler;
+        if (isAuthzV2Enabled() && !isPublicApiPath(pathname, req.method)) {
+          const { isAuthzRouteHandler, withAuthz } = await import('@/app/lib/acx/withAuthz');
+          effectiveHandler = isAuthzRouteHandler(handler)
+            ? handler
+            : (withAuthz(handler as any) as AuditRouteHandler<TParams>);
+        }
+
+        const response = await effectiveHandler(req, context);
         const status = response.status ?? 200;
         logAccess(req, startTime, status, inferOutcome(status));
         if (requestIdHeader && !response.headers.get('x-request-id')) {

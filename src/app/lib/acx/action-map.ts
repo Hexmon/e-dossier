@@ -1173,6 +1173,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/rbac/effective",
+    "action": "admin:rbac:effective:read",
+    "resourceType": "admin:rbac:effective",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/rbac/field-rules",
     "action": "admin:rbac:field-rules:read",
     "resourceType": "admin:rbac:field-rules",

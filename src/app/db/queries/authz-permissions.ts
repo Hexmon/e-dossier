@@ -4,9 +4,14 @@ import { appointments } from '../schema/auth/appointments';
 import { permissions, positionPermissions, rolePermissions, roles } from '../schema/auth/rbac';
 import { positions } from '../schema/auth/positions';
 import { authzPolicyState, permissionFieldRules } from '../schema/auth/rbac-extensions';
-import { API_ACTION_MAP, PAGE_ACTION_MAP } from '@/app/lib/acx/action-map';
 import { clearEffectivePermissionsCache, effectivePermissionsCache } from '@/app/lib/acx/cache';
 import { hasPlatoonCommanderRole } from '@/lib/platoon-commander-access';
+import {
+  getAllMappedActionKeys,
+  getRbacDefaultProfiles,
+  normalizeRbacKey,
+  RBAC_WILDCARD_PERMISSION,
+} from '@/app/lib/rbac/default-permissions';
 import {
   INTERVIEW_DEFAULT_ROLE_PERMISSIONS,
   INTERVIEW_WRITE_PERMISSION_KEYS,
@@ -65,40 +70,7 @@ type AppointmentContext = {
   scopeId: string | null;
 };
 
-const MANAGE_MARKS_API_PATHS = new Set<string>([
-  '/api/v1/admin/courses',
-  '/api/v1/admin/courses/:courseId/offerings',
-  '/api/v1/admin/courses/:courseId/offerings/assign',
-  '/api/v1/oc',
-]);
-
-const ADMIN_BASELINE_ACTIONS = new Set<string>([
-  ...API_ACTION_MAP.filter((entry) => entry.adminBaseline || MANAGE_MARKS_API_PATHS.has(entry.path)).map(
-    (entry) => entry.action
-  ),
-  ...PAGE_ACTION_MAP.filter((entry) => entry.adminBaseline).map((entry) => entry.action),
-]);
-
 const WRITE_ACTION_SUFFIX = new Set([':create', ':update', ':delete']);
-const DEFAULT_PLATOON_COMMANDER_MARKS_ACTIONS = new Set<string>([
-  'page:dashboard:manage-marks:view',
-  'page:dashboard:manage-pt-marks:view',
-  'page:dashboard:milmgmt:academics:view',
-  'page:dashboard:milmgmt:physical-training:view',
-  'admin:courses:read',
-  'admin:courses:offerings:read',
-  'admin:punishments:read',
-  'admin:physical-training:templates:read',
-  'oc:read',
-  'platoons:read',
-  'oc:academics:read',
-  'oc:academics:bulk:read',
-  'oc:academics:bulk:create',
-  'oc:physical-training:read',
-  'oc:physical-training:motivation-awards:read',
-  'oc:physical-training:bulk:read',
-  'oc:physical-training:bulk:create',
-]);
 
 const INTERVIEW_PERMISSION_DESCRIPTIONS: Record<string, string> = {
   'oc:interviews:initial:plcdr:update': 'Allows editing PL CDR initial interview fields.',
@@ -253,6 +225,134 @@ export async function ensureInterviewRbacDefaults(): Promise<void> {
   }
 
   await ensureInterviewRbacDefaultsPromise;
+}
+
+const RBAC_CODE_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v1';
+let ensureCodeRbacDefaultsPromise: Promise<void> | null = null;
+
+async function upsertPermissionKeys(permissionKeys: string[]): Promise<Map<string, string>> {
+  const keys = Array.from(new Set(permissionKeys)).filter(Boolean);
+  if (keys.length === 0) return new Map();
+
+  for (const key of keys) {
+    await db
+      .insert(permissions)
+      .values({
+        key,
+        description: key,
+      })
+      .onConflictDoNothing();
+  }
+
+  const rows = await db
+    .select({ id: permissions.id, key: permissions.key })
+    .from(permissions)
+    .where(inArray(permissions.key, keys));
+
+  return new Map(rows.map((row) => [row.key, row.id]));
+}
+
+async function upsertRoleByKey(roleKey: string): Promise<{ id: string; key: string }> {
+  const dbKey = roleKey.trim().toLowerCase();
+  const [existing] = await db
+    .select({ id: roles.id, key: roles.key })
+    .from(roles)
+    .where(eq(roles.key, dbKey))
+    .limit(1);
+  if (existing) return existing;
+
+  const [created] = await db
+    .insert(roles)
+    .values({
+      key: dbKey,
+      description: normalizeRbacKey(roleKey).replace(/_/g, ' '),
+    })
+    .returning({ id: roles.id, key: roles.key });
+  return created;
+}
+
+async function upsertPositionByKey(positionKey: string): Promise<{ id: string; key: string }> {
+  const dbKey = normalizeRbacKey(positionKey);
+  const [existing] = await db
+    .select({ id: positions.id, key: positions.key })
+    .from(positions)
+    .where(eq(positions.key, dbKey))
+    .limit(1);
+  if (existing) return existing;
+
+  const [created] = await db
+    .insert(positions)
+    .values({
+      key: dbKey,
+      displayName: dbKey.replace(/_/g, ' '),
+      defaultScope: dbKey.includes('PLATOON') ? 'PLATOON' : 'GLOBAL',
+      singleton: !dbKey.includes('PLATOON'),
+      description: `RBAC default position for ${dbKey}`,
+    })
+    .returning({ id: positions.id, key: positions.key });
+  return created;
+}
+
+async function addRolePermissions(roleId: string, permissionIds: string[]) {
+  const ids = Array.from(new Set(permissionIds));
+  if (ids.length === 0) return;
+  await db
+    .insert(rolePermissions)
+    .values(ids.map((permissionId) => ({ roleId, permissionId })))
+    .onConflictDoNothing();
+}
+
+async function addPositionPermissions(positionId: string, permissionIds: string[]) {
+  const ids = Array.from(new Set(permissionIds));
+  if (ids.length === 0) return;
+  await db
+    .insert(positionPermissions)
+    .values(ids.map((permissionId) => ({ positionId, permissionId })))
+    .onConflictDoNothing();
+}
+
+async function ensureCodeRbacDefaultsInner(): Promise<void> {
+  const permissionIdByKey = await upsertPermissionKeys(getAllMappedActionKeys());
+
+  const [existingState] = await db
+    .select({ key: authzPolicyState.key })
+    .from(authzPolicyState)
+    .where(eq(authzPolicyState.key, RBAC_CODE_DEFAULTS_STATE_KEY))
+    .limit(1);
+
+  if (existingState) return;
+
+  for (const profile of getRbacDefaultProfiles()) {
+    const permissionIds = profile.permissionKeys
+      .map((key) => permissionIdByKey.get(key))
+      .filter((id): id is string => Boolean(id));
+
+    for (const roleKey of profile.roleKeys) {
+      const role = await upsertRoleByKey(roleKey);
+      await addRolePermissions(role.id, permissionIds);
+    }
+
+    for (const positionKey of profile.positionKeys) {
+      const position = await upsertPositionByKey(positionKey);
+      await addPositionPermissions(position.id, permissionIds);
+    }
+  }
+
+  await db
+    .insert(authzPolicyState)
+    .values({ key: RBAC_CODE_DEFAULTS_STATE_KEY, version: 1 })
+    .onConflictDoNothing();
+  await bumpPolicyVersionAndInvalidate();
+}
+
+export async function ensureCodeRbacDefaults(): Promise<void> {
+  if (!ensureCodeRbacDefaultsPromise) {
+    ensureCodeRbacDefaultsPromise = ensureCodeRbacDefaultsInner().finally(() => {
+      ensureCodeRbacDefaultsPromise = null;
+    });
+  }
+
+  await ensureCodeRbacDefaultsPromise;
 }
 
 function buildPermissionCacheKey(input: PermissionInput, policyVersion: number): string {
@@ -440,34 +540,22 @@ export function applyAdminAndSuperAdminOverrides(
   const isAdmin = isSuperAdmin || normalizedRoles.includes('ADMIN');
 
   if (isSuperAdmin) {
-    permissionSet.add('*');
+    permissionSet.add(RBAC_WILDCARD_PERMISSION);
     return { isAdmin: true, isSuperAdmin: true };
-  }
-
-  if (isAdmin) {
-    for (const action of ADMIN_BASELINE_ACTIONS) {
-      permissionSet.add(action);
-    }
   }
 
   return { isAdmin, isSuperAdmin: false };
 }
 
 export function getAdminBaselineActions(): string[] {
-  return Array.from(ADMIN_BASELINE_ACTIONS).sort();
+  return getRbacDefaultProfiles().find((profile) => profile.key === 'admin')?.permissionKeys ?? [];
 }
 
 export function applyPlatoonCommanderMarksEntryOverrides(
   normalizedRoles: string[],
-  permissionSet: Set<string>
+  _permissionSet: Set<string>
 ): { isPlatoonCommander: boolean } {
   const isPlatoonCommander = hasPlatoonCommanderRole({ roles: normalizedRoles });
-
-  if (isPlatoonCommander) {
-    for (const action of DEFAULT_PLATOON_COMMANDER_MARKS_ACTIONS) {
-      permissionSet.add(action);
-    }
-  }
 
   return { isPlatoonCommander };
 }
@@ -495,6 +583,7 @@ export function applyInterviewPermissionFallbackOverrides(
 
 export async function getEffectivePermissionBundle(input: PermissionInput): Promise<EffectivePermissionBundle> {
   await ensureInterviewRbacDefaults();
+  await ensureCodeRbacDefaults();
   const normalizedRoles = normalizeRoleSet(input.roles);
   const appointment = await resolveAppointmentContext(input.userId, input.apt);
 

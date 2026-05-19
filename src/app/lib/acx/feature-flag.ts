@@ -7,7 +7,5 @@ function parseBoolean(value: string | undefined, fallback = false): boolean {
 }
 
 export function isAuthzV2Enabled(): boolean {
-  const fromPublic = process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED;
-  const fromServer = process.env.AUTHZ_V2_ENABLED;
-  return parseBoolean(fromPublic ?? fromServer, false);
+  return parseBoolean(process.env.AUTHZ_V2_ENABLED, true);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getPermissionDisplayMeta } from '@/app/lib/rbac/permission-display';
@@ -8,8 +8,23 @@ import { useRbacPermissions } from '@/hooks/useRbacPermissions';
 import { useRbacMappings } from '@/hooks/useRbacMappings';
 import { useRbacFieldRules } from '@/hooks/useRbacFieldRules';
 import { useRbacRoles } from '@/hooks/useRbacRoles';
+import {
+  rbacApi,
+  type EffectiveRbacBundle,
+  type PositionPermissionMapping,
+  type RbacPermission,
+  type RbacPosition,
+  type RbacRole,
+  type RolePermissionMapping,
+} from '@/app/lib/api/rbacApi';
 
 type FieldRuleMode = 'ALLOW' | 'DENY' | 'OMIT' | 'MASK';
+
+const EMPTY_PERMISSIONS: RbacPermission[] = [];
+const EMPTY_ROLE_MAPPINGS: RolePermissionMapping[] = [];
+const EMPTY_POSITION_MAPPINGS: PositionPermissionMapping[] = [];
+const EMPTY_ROLES: RbacRole[] = [];
+const EMPTY_POSITIONS: RbacPosition[] = [];
 
 function toHumanText(value: string): string {
   return value
@@ -37,11 +52,11 @@ export default function RbacManagement() {
   const fieldRules = useRbacFieldRules();
   const rolesQuery = useRbacRoles();
 
-  const permissions = permissionsQuery.data ?? [];
-  const roleMappings = mappings.mappings.data?.roleMappings ?? [];
-  const positionMappings = mappings.mappings.data?.positionMappings ?? [];
-  const roles = mappings.rolesAndPositions.data?.roles ?? [];
-  const positions = mappings.rolesAndPositions.data?.positions ?? [];
+  const permissions = permissionsQuery.data ?? EMPTY_PERMISSIONS;
+  const roleMappings = mappings.mappings.data?.roleMappings ?? EMPTY_ROLE_MAPPINGS;
+  const positionMappings = mappings.mappings.data?.positionMappings ?? EMPTY_POSITION_MAPPINGS;
+  const roles = mappings.rolesAndPositions.data?.roles ?? EMPTY_ROLES;
+  const positions = mappings.rolesAndPositions.data?.positions ?? EMPTY_POSITIONS;
 
   const [permissionKey, setPermissionKey] = useState('');
   const [permissionDescription, setPermissionDescription] = useState('');
@@ -49,6 +64,10 @@ export default function RbacManagement() {
   const [roleDescription, setRoleDescription] = useState('');
   const [permissionSearch, setPermissionSearch] = useState('');
   const [mappingSearch, setMappingSearch] = useState('');
+  const [mappingModuleFilter, setMappingModuleFilter] = useState('all');
+  const [mappingTypeFilter, setMappingTypeFilter] = useState('all');
+  const [mappingActionFilter, setMappingActionFilter] = useState('all');
+  const [mappingDefaultFilter, setMappingDefaultFilter] = useState('all');
   const [showTechnicalKeys, setShowTechnicalKeys] = useState(false);
 
   const [selectedRoleId, setSelectedRoleId] = useState('');
@@ -60,6 +79,10 @@ export default function RbacManagement() {
   const [fieldRuleRoleId, setFieldRuleRoleId] = useState('');
   const [fieldRulePositionId, setFieldRulePositionId] = useState('');
   const [fieldRuleFields, setFieldRuleFields] = useState('');
+  const [effectiveUserId, setEffectiveUserId] = useState('');
+  const [effectiveAppointmentId, setEffectiveAppointmentId] = useState('');
+  const [effectiveBundle, setEffectiveBundle] = useState<EffectiveRbacBundle | null>(null);
+  const [effectiveLoading, setEffectiveLoading] = useState(false);
 
   const activeRole = useMemo(() => roles.find((item) => item.id === selectedRoleId) ?? null, [roles, selectedRoleId]);
   const activePosition = useMemo(
@@ -79,6 +102,46 @@ export default function RbacManagement() {
     }
     return [];
   }, [positionMappings, roleMappings, selectedPositionId, selectedRoleId]);
+
+  const defaultScopePermissionIds = useMemo(() => {
+    const defaults = mappings.mappings.data?.defaults;
+    if (!defaults) return [];
+    if (selectedRoleId) {
+      return defaults.defaultRoleMappings
+        .filter((row) => row.roleId === selectedRoleId)
+        .map((row) => row.permissionId);
+    }
+    if (selectedPositionId) {
+      return defaults.defaultPositionMappings
+        .filter((row) => row.positionId === selectedPositionId)
+        .map((row) => row.permissionId);
+    }
+    return [];
+  }, [mappings.mappings.data?.defaults, selectedPositionId, selectedRoleId]);
+
+  const defaultScopePermissionIdSet = useMemo(
+    () => new Set(defaultScopePermissionIds),
+    [defaultScopePermissionIds]
+  );
+  const currentScopePermissionIdSet = useMemo(
+    () => new Set(currentScopePermissionIds),
+    [currentScopePermissionIds]
+  );
+
+  const defaultSummary = useMemo(() => {
+    const missing = defaultScopePermissionIds.filter((id) => !currentScopePermissionIdSet.has(id)).length;
+    const extra = currentScopePermissionIds.filter((id) => !defaultScopePermissionIdSet.has(id)).length;
+    return {
+      defaultCount: defaultScopePermissionIds.length,
+      missing,
+      extra,
+    };
+  }, [
+    currentScopePermissionIdSet,
+    currentScopePermissionIds,
+    defaultScopePermissionIdSet,
+    defaultScopePermissionIds,
+  ]);
 
   const hasUnsavedMappingChanges = useMemo(
     () => mappingScopeSelected && !arraysHaveSameValues(mappingPermissionIds, currentScopePermissionIds),
@@ -122,9 +185,38 @@ export default function RbacManagement() {
 
   const filteredMappingItems = useMemo(() => {
     const q = mappingSearch.trim().toLowerCase();
-    if (!q) return permissionItems;
-    return permissionItems.filter((item) => item.searchText.includes(q));
-  }, [mappingSearch, permissionItems]);
+    return permissionItems.filter((item) => {
+      const permissionKey = item.permission.key;
+      const checked = currentScopePermissionIdSet.has(item.permission.id);
+      const isDefault = defaultScopePermissionIdSet.has(item.permission.id);
+      const isMissingDefault = isDefault && !checked;
+      const isCustom = checked && !isDefault;
+
+      if (q && !item.searchText.includes(q)) return false;
+      if (mappingModuleFilter !== 'all' && item.meta.moduleLabel !== mappingModuleFilter) return false;
+      if (mappingTypeFilter === 'page' && !permissionKey.startsWith('page:')) return false;
+      if (mappingTypeFilter === 'api' && (permissionKey.startsWith('page:') || permissionKey.startsWith('sidebar:'))) return false;
+      if (mappingTypeFilter === 'sidebar' && !permissionKey.startsWith('sidebar:')) return false;
+      if (mappingActionFilter !== 'all' && !permissionKey.endsWith(`:${mappingActionFilter}`)) return false;
+      if (mappingDefaultFilter === 'default' && !isDefault) return false;
+      if (mappingDefaultFilter === 'missing' && !isMissingDefault) return false;
+      if (mappingDefaultFilter === 'custom' && !isCustom) return false;
+      return true;
+    });
+  }, [
+    currentScopePermissionIdSet,
+    defaultScopePermissionIdSet,
+    mappingActionFilter,
+    mappingDefaultFilter,
+    mappingModuleFilter,
+    mappingSearch,
+    mappingTypeFilter,
+    permissionItems,
+  ]);
+
+  const moduleFilterOptions = useMemo(() => {
+    return Array.from(new Set(permissionItems.map((item) => item.meta.moduleLabel))).sort();
+  }, [permissionItems]);
 
   const handleCreatePermission = async () => {
     if (!permissionKey.trim()) return;
@@ -162,6 +254,25 @@ export default function RbacManagement() {
     });
   };
 
+  const handleApplyDefaults = async () => {
+    if (!mappingScopeSelected) return;
+    const nextPermissionIds = Array.from(new Set(defaultScopePermissionIds));
+    setMappingPermissionIds(nextPermissionIds);
+    if (selectedRoleId) {
+      await mappings.setRoleMappings.mutateAsync({
+        roleId: selectedRoleId,
+        permissionIds: nextPermissionIds,
+      });
+      return;
+    }
+    if (selectedPositionId) {
+      await mappings.setPositionMappings.mutateAsync({
+        positionId: selectedPositionId,
+        permissionIds: nextPermissionIds,
+      });
+    }
+  };
+
   const handleSelectAllShown = () => {
     if (!mappingScopeSelected) return;
     setMappingPermissionIds((prev) =>
@@ -193,6 +304,19 @@ export default function RbacManagement() {
     });
 
     setFieldRuleFields('');
+  };
+
+  const handleLoadEffectiveAccess = async () => {
+    setEffectiveLoading(true);
+    try {
+      const response = await rbacApi.getEffectivePermissions({
+        ...(effectiveUserId.trim() ? { userId: effectiveUserId.trim() } : {}),
+        ...(effectiveAppointmentId.trim() ? { appointmentId: effectiveAppointmentId.trim() } : {}),
+      });
+      setEffectiveBundle(response.bundle);
+    } finally {
+      setEffectiveLoading(false);
+    }
   };
 
   return (
@@ -325,6 +449,18 @@ export default function RbacManagement() {
                 <tr key={permission.id} className="border-t align-top">
                   <td className="p-2">
                     <div className="font-medium">{meta.title}</div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {permission.system ? (
+                        <span className="inline-flex rounded bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          System
+                        </span>
+                      ) : null}
+                      {permission.defaultGrant ? (
+                        <span className="inline-flex rounded bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
+                          Default grant
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="mt-1 text-xs text-muted-foreground">
                       Module: {meta.moduleLabel} | Area: {meta.areaLabel}
                     </div>
@@ -337,10 +473,10 @@ export default function RbacManagement() {
                     <Button
                       size="sm"
                       variant="destructive"
-                      disabled={permissionsQuery.deletePermission.isPending}
+                      disabled={permission.system || permissionsQuery.deletePermission.isPending}
                       onClick={() => permissionsQuery.deletePermission.mutate(permission.id)}
                     >
-                      Delete
+                      {permission.system ? 'System managed' : 'Delete'}
                     </Button>
                   </td>
                 </tr>
@@ -425,6 +561,53 @@ export default function RbacManagement() {
             onChange={(event) => setMappingSearch(event.target.value)}
           />
 
+          <div className="grid gap-2 md:grid-cols-4">
+            <select
+              className="h-9 rounded border bg-background px-2 text-sm"
+              value={mappingModuleFilter}
+              onChange={(event) => setMappingModuleFilter(event.target.value)}
+            >
+              <option value="all">All modules</option>
+              {moduleFilterOptions.map((moduleLabel) => (
+                <option key={moduleLabel} value={moduleLabel}>
+                  {moduleLabel}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-9 rounded border bg-background px-2 text-sm"
+              value={mappingTypeFilter}
+              onChange={(event) => setMappingTypeFilter(event.target.value)}
+            >
+              <option value="all">All permission types</option>
+              <option value="page">Pages</option>
+              <option value="api">APIs</option>
+              <option value="sidebar">Sidebar</option>
+            </select>
+            <select
+              className="h-9 rounded border bg-background px-2 text-sm"
+              value={mappingActionFilter}
+              onChange={(event) => setMappingActionFilter(event.target.value)}
+            >
+              <option value="all">All actions</option>
+              <option value="read">Read</option>
+              <option value="view">View</option>
+              <option value="create">Create</option>
+              <option value="update">Update</option>
+              <option value="delete">Delete</option>
+            </select>
+            <select
+              className="h-9 rounded border bg-background px-2 text-sm"
+              value={mappingDefaultFilter}
+              onChange={(event) => setMappingDefaultFilter(event.target.value)}
+            >
+              <option value="all">All grant status</option>
+              <option value="default">Default grants</option>
+              <option value="missing">Missing defaults</option>
+              <option value="custom">Custom grants</option>
+            </select>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
@@ -442,12 +625,30 @@ export default function RbacManagement() {
             >
               Clear all shown
             </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleApplyDefaults}
+              disabled={
+                !mappingScopeSelected ||
+                defaultScopePermissionIds.length === 0 ||
+                mappings.setRoleMappings.isPending ||
+                mappings.setPositionMappings.isPending
+              }
+            >
+              Apply defaults
+            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span>
               Selected {mappingPermissionIds.length} of {permissions.length} permissions.
             </span>
+            {mappingScopeSelected ? (
+              <span>
+                Defaults {defaultSummary.defaultCount} | Missing {defaultSummary.missing} | Custom {defaultSummary.extra}
+              </span>
+            ) : null}
             {mappingScopeSelected ? (
               hasUnsavedMappingChanges ? (
                 <span className="rounded bg-warning/20 px-2 py-0.5 font-medium text-warning-foreground">
@@ -487,8 +688,30 @@ export default function RbacManagement() {
                 />
                 <span className="space-y-1">
                   <span className="block text-sm font-medium">{meta.title}</span>
-                  <span className="inline-flex rounded bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                    {meta.moduleLabel}
+                  <span className="flex flex-wrap gap-1">
+                    <span className="inline-flex rounded bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                      {meta.moduleLabel}
+                    </span>
+                    {defaultScopePermissionIdSet.has(permission.id) ? (
+                      <span className="inline-flex rounded bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
+                        Default
+                      </span>
+                    ) : null}
+                    {checked && !defaultScopePermissionIdSet.has(permission.id) ? (
+                      <span className="inline-flex rounded bg-warning/20 px-2 py-0.5 text-[11px] font-medium text-warning-foreground">
+                        Custom
+                      </span>
+                    ) : null}
+                    {defaultScopePermissionIdSet.has(permission.id) && !checked ? (
+                      <span className="inline-flex rounded bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                        Missing default
+                      </span>
+                    ) : null}
+                    {permission.system ? (
+                      <span className="inline-flex rounded bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                        System
+                      </span>
+                    ) : null}
                   </span>
                   <span className="block text-xs text-muted-foreground">{meta.description}</span>
                   {showTechnicalKeys ? (
@@ -520,6 +743,81 @@ export default function RbacManagement() {
             Save Position Mapping
           </Button>
         </div>
+      </section>
+
+      <section className="rounded-lg border p-4">
+        <h3 className="text-lg font-semibold">User Effective Access</h3>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Preview the final permissions a user receives from role mappings, position mappings, defaults, and field rules.
+        </p>
+
+        <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+          <Input
+            placeholder="User ID (blank = current user)"
+            value={effectiveUserId}
+            onChange={(event) => setEffectiveUserId(event.target.value)}
+          />
+          <Input
+            placeholder="Appointment ID (optional)"
+            value={effectiveAppointmentId}
+            onChange={(event) => setEffectiveAppointmentId(event.target.value)}
+          />
+          <Button onClick={handleLoadEffectiveAccess} disabled={effectiveLoading}>
+            Preview
+          </Button>
+        </div>
+
+        {effectiveBundle ? (
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="rounded border p-3 text-sm">
+              <div className="font-medium">Principal</div>
+              <div className="mt-2 text-xs text-muted-foreground">User: {effectiveBundle.userId}</div>
+              <div className="text-xs text-muted-foreground">
+                Position: {effectiveBundle.appointment.positionKey ?? '-'}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Scope: {effectiveBundle.appointment.scopeType ?? '-'} {effectiveBundle.appointment.scopeId ?? ''}
+              </div>
+            </div>
+            <div className="rounded border p-3 text-sm">
+              <div className="font-medium">Roles</div>
+              <div className="mt-2 flex max-h-32 flex-wrap gap-1 overflow-auto">
+                {effectiveBundle.roles.map((role) => (
+                  <span key={role} className="rounded bg-muted px-2 py-0.5 text-xs">
+                    {role}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="rounded border p-3 text-sm">
+              <div className="font-medium">Summary</div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                Granted: {effectiveBundle.permissions.length}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Denied: {effectiveBundle.deniedPermissions.length}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Policy version: {effectiveBundle.policyVersion}
+              </div>
+            </div>
+            <div className="rounded border p-3 text-sm md:col-span-2">
+              <div className="font-medium">Granted Permissions</div>
+              <div className="mt-2 max-h-48 whitespace-pre-wrap overflow-auto font-mono text-xs text-muted-foreground">
+                {effectiveBundle.permissions.join('\n') || '-'}
+              </div>
+            </div>
+            <div className="rounded border p-3 text-sm">
+              <div className="font-medium">Denied / Field Rules</div>
+              <div className="mt-2 max-h-48 whitespace-pre-wrap overflow-auto font-mono text-xs text-muted-foreground">
+                {[
+                  ...effectiveBundle.deniedPermissions,
+                  ...Object.keys(effectiveBundle.fieldRulesByAction),
+                ].join('\n') || '-'}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="rounded-lg border p-4">

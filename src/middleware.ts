@@ -19,6 +19,7 @@ import {
 } from '@/lib/ratelimit';
 import { isRateLimitEnabled, shouldExcludeHealthCheck } from '@/config/ratelimit.config';
 import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
+import { isAuthzV2Enabled } from '@/app/lib/acx/feature-flag';
 // NOTE: Cannot import audit-log in middleware (Edge Runtime doesn't support database operations)
 // Audit logging for middleware events should be done in API routes instead
 
@@ -152,7 +153,7 @@ export async function middleware(req: NextRequest) {
       return attachRequestId(json.unauthorized('Missing access token'));
     }
 
-    if (isProtectedAdminApiPath(pathname, method)) {
+    if (!isAuthzV2Enabled() && isProtectedAdminApiPath(pathname, method)) {
       try {
         const payload = await verifyAccessJWT(token);
         const roles = Array.isArray(payload.roles)

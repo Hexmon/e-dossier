@@ -30,28 +30,6 @@ const BASE_POLICY: PolicySet = {
       },
     },
     {
-      id: 'allow-admin-baseline',
-      effect: 'allow',
-      priority: 850,
-      actions: ['*'],
-      resourceTypes: ['*'],
-      when: {
-        op: 'and',
-        args: [
-          {
-            op: 'in',
-            item: 'ADMIN',
-            set: { ref: 'principal.roles' },
-          },
-          {
-            op: 'eq',
-            left: { ref: 'resource.attrs.adminBaseline' },
-            right: true,
-          },
-        ],
-      },
-    },
-    {
       id: 'allow-explicit-action-permission',
       effect: 'allow',
       priority: 800,
