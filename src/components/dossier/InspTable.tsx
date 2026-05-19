@@ -14,6 +14,11 @@ import { Card, CardTitle } from "../ui/card";
 
 const MANUAL_INSPECTOR_VALUE = "__manual_inspector__";
 
+function formatInspectionDate(value: string) {
+    if (!value) return "-";
+    return new Date(value).toLocaleDateString('en-GB').replaceAll('/', '-');
+}
+
 interface InspTableProps {
     data: InspFormData[];
     onDelete: (index: number) => void;
@@ -90,7 +95,7 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
                         onChange={(e) => setEditValues((p) => ({ ...p, date: e.target.value }))}
                     />
                 ) : (
-                    value ? new Date(value).toLocaleDateString('en-GB') : "-"
+                    formatInspectionDate(String(value || ""))
                 );
             },
         },
