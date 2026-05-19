@@ -213,6 +213,7 @@ export const medCatCreateSchema = z.object({
     mosAndDiagnostics: requiredNonEmptyText,
     catFrom: nullableOptionalDate,
     catTo: nullableOptionalDate,
+    category: nullableOptionalText,
     mhFrom: nullableOptionalDate,
     mhTo: nullableOptionalDate,
     absence: nullableOptionalText,
@@ -228,8 +229,8 @@ export const disciplineCreateSchema = z.object({
     awardedOn: z.coerce.date().optional(),
     awardedBy: z.string().optional(),
     numberOfPunishments: z.coerce.number().int().optional(),
-    pointsDelta: z.coerce.number().int().optional(),             // e.g. -3, -1, 0
-    pointsCumulative: z.coerce.number().int().optional(),
+    pointsDelta: z.coerce.number().optional(),
+    pointsCumulative: z.coerce.number().optional(),
 });
 export const disciplineUpdateSchema = disciplineCreateSchema.partial();
 

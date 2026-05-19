@@ -16,6 +16,8 @@ import type { Appointment } from "@/app/lib/api/appointmentApi";
 import type { User } from "@/app/lib/api/userApi";
 import { Card, CardTitle } from "../ui/card";
 
+const MANUAL_INSPECTOR_VALUE = "__manual_inspector__";
+
 interface Props {
   ocId: string;
   onSubmit?: (data: { inspections: InspFormData[] }) => void;
@@ -32,6 +34,8 @@ function areInspectionRowsEqual(a: InspFormData[], b: InspFormData[]) {
 
     return (
       row.id === next.id &&
+      row.inspectorUserId === next.inspectorUserId &&
+      row.manualInspector === next.manualInspector &&
       row.date === next.date &&
       row.rk === next.rk &&
       row.name === next.name &&
@@ -65,6 +69,8 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
           appointment: "",
           remarks: "",
           initials: "",
+          inspectorUserId: null,
+          manualInspector: false,
         },
       ],
       savedData: [],
@@ -86,6 +92,8 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
       const user = users.find((item) => item.id === insp.inspector.id);
       return {
         id: insp.id,
+        inspectorUserId: insp.inspector.id,
+        manualInspector: !insp.inspector.id,
         date: insp.date,
         rk: insp.inspector.rank,
         name: insp.inspector.name,
@@ -114,8 +122,9 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
 
   useEffect(() => {
     draftInspections.forEach((row, index) => {
+      if (row.manualInspector) return;
       if (!row.name) return;
-      const user = users.find((item) => item.name === row.name);
+      const user = users.find((item) => item.id === row.inspectorUserId || item.name === row.name);
       if (!user) return;
 
       const rank = user.rank || "";
@@ -150,14 +159,22 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
     const currentSavedData = getValues("savedData");
     const item = currentSavedData[index];
     if (item.id) {
-      const user = users.find((u) => u.name === updatedRow.name);
-      if (!user) {
+      const isManual = Boolean(updatedRow.manualInspector || !updatedRow.inspectorUserId);
+      const user = users.find((u) => u.id === updatedRow.inspectorUserId || u.name === updatedRow.name);
+      if (!isManual && !user) {
         toast.error(`User ${updatedRow.name} not found.`);
+        return;
+      }
+      if (isManual && (!updatedRow.name.trim() || !updatedRow.rk.trim() || !updatedRow.appointment.trim())) {
+        toast.error("Manual inspector name, rank, and appointment are required.");
         return;
       }
 
       const data = {
-        inspectorUserId: user.id!,
+        inspectorUserId: isManual ? null : user!.id!,
+        inspectorName: isManual ? updatedRow.name.trim() : undefined,
+        inspectorRank: isManual ? updatedRow.rk.trim() : undefined,
+        inspectorAppointment: isManual ? updatedRow.appointment.trim() : undefined,
         date: new Date(updatedRow.date),
         remarks: updatedRow.remarks || undefined,
       };
@@ -182,14 +199,22 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
     }
 
     for (const row of validRows) {
-      const user = users.find((u) => u.name === row.name);
-      if (!user) {
+      const isManual = Boolean(row.manualInspector || !row.inspectorUserId);
+      const user = users.find((u) => u.id === row.inspectorUserId || u.name === row.name);
+      if (!isManual && !user) {
         toast.error(`User ${row.name} not found.`);
+        return;
+      }
+      if (isManual && (!row.name.trim() || !row.rk.trim() || !row.appointment.trim())) {
+        toast.error("Manual inspector name, rank, and appointment are required.");
         return;
       }
 
       const data: CreateInspectionData = {
-        inspectorUserId: user.id!,
+        inspectorUserId: isManual ? null : user!.id!,
+        inspectorName: isManual ? row.name.trim() : undefined,
+        inspectorRank: isManual ? row.rk.trim() : undefined,
+        inspectorAppointment: isManual ? row.appointment.trim() : undefined,
         date: new Date(row.date),
         remarks: row.remarks || undefined,
       };
@@ -207,6 +232,8 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
           appointment: "",
           remarks: "",
           initials: "",
+          inspectorUserId: null,
+          manualInspector: false,
         },
       ],
       savedData: getValues("savedData"),
@@ -223,6 +250,8 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
           appointment: "",
           remarks: "",
           initials: "",
+          inspectorUserId: null,
+          manualInspector: false,
         },
       ],
       savedData: getValues("savedData"),
@@ -244,6 +273,8 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
       appointment: "",
       remarks: "",
       initials: "",
+      inspectorUserId: null,
+      manualInspector: false,
     });
 
   return (
@@ -276,6 +307,8 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
 
             <tbody>
               {fields.map((field, idx) => {
+                const row = draftInspections[idx];
+                const isManual = Boolean(row?.manualInspector);
                 return (
                   <tr key={field.id}>
                     <td className="p-2 border text-center">
@@ -293,20 +326,32 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
                         control={control}
                         render={({ field }) => (
                           <Select onValueChange={(val) => {
-                            field.onChange(val);
-                            const user = users.find(u => u.name === val);
+                            if (val === MANUAL_INSPECTOR_VALUE) {
+                              setValue(`inspections.${idx}.manualInspector`, true, { shouldDirty: true });
+                              setValue(`inspections.${idx}.inspectorUserId`, null, { shouldDirty: true });
+                              setValue(`inspections.${idx}.name`, "", { shouldDirty: true });
+                              setValue(`inspections.${idx}.rk`, "", { shouldDirty: true });
+                              setValue(`inspections.${idx}.appointment`, "", { shouldDirty: true });
+                              setValue(`inspections.${idx}.initials`, "", { shouldDirty: true });
+                              return;
+                            }
+                            const user = users.find(u => u.id === val);
                             if (user) {
+                              field.onChange(user.name);
+                              setValue(`inspections.${idx}.manualInspector`, false, { shouldDirty: true });
+                              setValue(`inspections.${idx}.inspectorUserId`, user.id ?? null, { shouldDirty: true });
                               setValue(`inspections.${idx}.rk`, user.rank || '');
                               setValue(`inspections.${idx}.initials`, `${user.rank} ${user.name}` || '');
                               setValue(`inspections.${idx}.appointment`, getUserAppointmentName(user, appointments));
                             }
-                          }} value={field.value || undefined}>
+                          }} value={isManual ? MANUAL_INSPECTOR_VALUE : row?.inspectorUserId || undefined}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select Inspector" />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value={MANUAL_INSPECTOR_VALUE}>Manual entry</SelectItem>
                               {users.map((user) => (
-                                <SelectItem key={user.id} value={user.name}>
+                                <SelectItem key={user.id} value={user.id!}>
                                   {user.name}
                                 </SelectItem>
                               ))}
@@ -314,19 +359,22 @@ export default function InspFormComponent({ ocId, onSubmit, disabled = false, de
                           </Select>
                         )}
                       />
+                      {isManual ? (
+                        <Input className="mt-2" {...register(`inspections.${idx}.name` as any)} placeholder="Inspector name" />
+                      ) : null}
                     </td>
                     <td className="p-2 border">
                       <Input
                         {...register(`inspections.${idx}.rk` as any)}
                         placeholder="Rank"
-                        disabled
+                        disabled={!isManual}
                       />
                     </td>
                     <td className="p-2 border">
                       <Input
                         {...register(`inspections.${idx}.appointment` as any)}
                         placeholder="Appointment"
-                        disabled
+                        disabled={!isManual}
                       />
                     </td>
                     <td className="p-2 border">

@@ -19,11 +19,12 @@ vi.mock("@/app/db/queries/site-settings", () => ({
     awardsSectionTitle: "Gallantry Awards",
     historySectionTitle: "Our History",
   })),
-  listPublicCommanders: vi.fn(async () => [
+  listPublicCommandersForDisplay: vi.fn(async () => [
     {
       id: "1",
       name: "Commander",
       imageUrl: null,
+      displayImageUrl: null,
       tenure: "2025",
       description: "desc",
       sortOrder: 1,
@@ -83,7 +84,7 @@ describe("Public site settings routes", () => {
 
     expect(res.status).toBe(200);
     expect(body.items).toHaveLength(1);
-    expect(siteQueries.listPublicCommanders).toHaveBeenCalledTimes(1);
+    expect(siteQueries.listPublicCommandersForDisplay).toHaveBeenCalledTimes(1);
   });
 
   it("returns public awards", async () => {

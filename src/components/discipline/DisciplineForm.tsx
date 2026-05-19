@@ -24,6 +24,10 @@ interface Props {
     onClear: () => void;
 }
 
+function formatDecimal(value: number) {
+    return value.toFixed(2);
+}
+
 export default function DisciplineForm({
     onSubmit,
     defaultValues,
@@ -88,8 +92,9 @@ export default function DisciplineForm({
 
             // Calculate cumulative
             total += calculatedNegativePts;
-            if (String(total) !== rec.cumulative) {
-                setValue(`records.${i}.cumulative`, String(total), {
+            const cumulative = formatDecimal(total);
+            if (cumulative !== rec.cumulative) {
+                setValue(`records.${i}.cumulative`, cumulative, {
                     shouldDirty: true,
                     shouldTouch: false,
                     shouldValidate: false

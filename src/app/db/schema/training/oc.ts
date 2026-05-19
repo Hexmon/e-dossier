@@ -392,6 +392,7 @@ export const ocMedicalCategory = pgTable('oc_medical_category', {
     mosAndDiagnostics: text('mos_and_diagnostics'),
     catFrom: timestamp('cat_from', { withTimezone: true }),
     catTo: timestamp('cat_to', { withTimezone: true }),
+    category: varchar('category', { length: 160 }),
     mhFrom: timestamp('mh_from', { withTimezone: true }),
     mhTo: timestamp('mh_to', { withTimezone: true }),
     absence: text('absence'),
@@ -414,8 +415,8 @@ export const ocDiscipline = pgTable('oc_discipline', {
     awardedOn: timestamp('awarded_on', { withTimezone: true }),
     awardedBy: varchar('awarded_by', { length: 160 }),
     numberOfPunishments: integer('number_of_punishments'),
-    pointsDelta: integer('points_delta').default(0),                    // e.g., -3, -1, 0
-    pointsCumulative: integer('points_cumulative'),                     // optional denorm for quick reads
+    pointsDelta: numeric('points_delta', { mode: 'number' }).default(0),
+    pointsCumulative: numeric('points_cumulative', { mode: 'number' }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },

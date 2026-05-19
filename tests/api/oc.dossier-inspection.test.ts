@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DELETE, GET } from "@/app/api/v1/oc/[ocId]/dossier-inspection/route";
+import { DELETE, GET, POST } from "@/app/api/v1/oc/[ocId]/dossier-inspection/route";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
 const auditLogMock = vi.fn(async () => undefined);
@@ -27,6 +27,7 @@ vi.mock("@/app/api/v1/oc/_checks", () => ({
 vi.mock("@/app/db/client", () => ({
   db: {
     select: vi.fn(),
+    insert: vi.fn(),
     update: vi.fn(),
   },
 }));
@@ -126,5 +127,81 @@ describe("GET /api/v1/oc/[ocId]/dossier-inspection", () => {
 
     expect(secondDeleteRes.status).toBe(404);
     expect(body.error).toBe("not_found");
+  });
+});
+
+describe("POST /api/v1/oc/[ocId]/dossier-inspection", () => {
+  it("creates an inspection with manual inspector details", async () => {
+    (db.select as any)
+      .mockImplementationOnce(() => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [{ id: ocId }],
+          }),
+        }),
+      }))
+      .mockImplementationOnce(() => ({
+        from: () => ({
+          leftJoin: () => ({
+            leftJoin: () => ({
+              leftJoin: () => ({
+                where: () => ({
+                  limit: async () => [
+                    {
+                      id: "inspection-1",
+                      date: new Date("2026-04-05T00:00:00Z"),
+                      remarks: "Manual inspection",
+                      inspector: {
+                        id: null,
+                        name: "Manual Inspector",
+                        rank: "Col",
+                        appointment: "External Inspector",
+                      },
+                      initials: "Col Manual Inspector",
+                    },
+                  ],
+                }),
+              }),
+            }),
+          }),
+        }),
+      }));
+    (db.insert as any).mockImplementationOnce(() => ({
+      values: (values: any) => ({
+        returning: async () => {
+          expect(values).toMatchObject({
+            ocId,
+            inspectorUserId: null,
+            inspectorName: "Manual Inspector",
+            inspectorRank: "Col",
+            inspectorAppointment: "External Inspector",
+          });
+          return [{ id: "inspection-1" }];
+        },
+      }),
+    }));
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: `/api/v1/oc/${ocId}/dossier-inspection`,
+      body: {
+        inspectorName: "Manual Inspector",
+        inspectorRank: "Col",
+        inspectorAppointment: "External Inspector",
+        date: "2026-04-05",
+        remarks: "Manual inspection",
+      },
+    });
+
+    const res = await POST(req as any, createRouteContext({ ocId }));
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body.inspection.inspector).toMatchObject({
+      id: null,
+      name: "Manual Inspector",
+      rank: "Col",
+      appointment: "External Inspector",
+    });
   });
 });

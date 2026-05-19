@@ -84,51 +84,68 @@ export function normalizePublicSiteSettings(input: Partial<PublicSiteSettings> |
   };
 }
 
-async function fetchPublicJson<T>(path: string, fallback: T): Promise<T> {
+async function withFallback<T>(load: () => Promise<T>, fallback: T): Promise<T> {
   try {
-    const origin =
-      process.env.APP_BASE_URL ??
-      process.env.NEXT_PUBLIC_API_BASE_URL ??
-      "http://localhost:3000";
-    const url = new URL(path, origin).toString();
-
-    const response = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-      next: { revalidate: 60 },
-    });
-
-    if (!response.ok) {
-      return fallback;
-    }
-
-    const payload = await response.json();
-    return payload as T;
+    return await load();
   } catch {
     return fallback;
   }
 }
 
 export async function fetchLandingSiteSettings() {
-  const [settingsRes, commandersRes, awardsRes, historyRes, eventsNewsRes, footerRes, platoonsRes] = await Promise.all([
-    fetchPublicJson<{ settings?: PublicSiteSettings }>("/api/v1/site-settings", {}),
-    fetchPublicJson<{ items?: PublicCommander[] }>("/api/v1/site-settings/commanders", {}),
-    fetchPublicJson<{ items?: PublicAward[] }>("/api/v1/site-settings/awards", {}),
-    fetchPublicJson<{ items?: PublicHistory[] }>("/api/v1/site-settings/history?sort=asc", {}),
-    fetchPublicJson<{ items?: PublicEventNews[] }>("/api/v1/site-settings/events-news?sort=desc", {}),
-    fetchPublicJson<{ item?: PublicFooter | null }>("/api/v1/site-settings/footer", {}),
-    fetchPublicJson<{ items?: PublicPlatoon[] }>("/api/v1/platoons", {}),
+  const [siteQueries, platoonQueries] = await Promise.all([
+    import("@/app/db/queries/site-settings"),
+    import("@/app/db/queries/public-platoons"),
+  ]);
+
+  const [settings, commanders, awards, history, eventsNews, footerItem, platoons] = await Promise.all([
+    withFallback(() => siteQueries.getSiteSettingsOrDefault(), FALLBACK_PUBLIC_SITE_SETTINGS),
+    withFallback(() => siteQueries.listPublicCommandersForDisplay(), []),
+    withFallback(() => siteQueries.listPublicAwards(), []),
+    withFallback(() => siteQueries.listPublicHistory("asc"), []),
+    withFallback(() => siteQueries.listPublicEventsNews("desc"), []),
+    withFallback(() => siteQueries.getPublicFooter(), null),
+    withFallback(() => platoonQueries.listPublicPlatoonsForLanding(), []),
   ]);
 
   return {
-    settings: normalizePublicSiteSettings(settingsRes.settings),
-    commanders: commandersRes.items ?? [],
-    awards: awardsRes.items ?? [],
-    history: historyRes.items ?? [],
-    eventsNews: eventsNewsRes.items ?? [],
-    footer: footerRes.item?.footer?.trim() || FALLBACK_PUBLIC_FOOTER,
-    platoons: (platoonsRes.items ?? []).map((item) => ({
-      ...item,
+    settings: normalizePublicSiteSettings(settings),
+    commanders: commanders.map((item) => ({
+      id: item.id,
+      name: item.name,
+      designation: item.designation,
+      imageUrl: item.displayImageUrl ?? item.imageUrl,
+      tenure: item.tenure,
+      description: item.description,
+      sortOrder: item.sortOrder,
+    })),
+    awards: awards.map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      category: item.category,
+      imageUrl: item.imageUrl,
+      sortOrder: item.sortOrder,
+    })),
+    history: history.map((item) => ({
+      id: item.id,
+      incidentDate: item.incidentDate,
+      description: item.description,
+    })),
+    eventsNews: eventsNews.map((item) => ({
+      id: item.id,
+      date: item.date,
+      title: item.title,
+      description: item.description,
+      location: item.location,
+      type: (item.type === "news" ? "news" : "event") as PublicEventNews["type"],
+    })),
+    footer: footerItem?.footer?.trim() || FALLBACK_PUBLIC_FOOTER,
+    platoons: platoons.map((item) => ({
+      id: item.id,
+      key: item.key,
+      name: item.name,
+      about: item.about,
       themeColor: normalizePlatoonThemeColor(item.themeColor ?? DEFAULT_PLATOON_THEME_COLOR),
       imageUrl: item.imageUrl ?? null,
     })),

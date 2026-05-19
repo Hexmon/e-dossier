@@ -21,6 +21,7 @@ import { Shield, ChevronDown } from "lucide-react";
 
 import { springPrefill, autumnPrefill, motivationPrefill } from "@/constants/app.constants";
 import { useSportsAwards } from "@/hooks/useSportsAwards";
+import { useCfeRecords } from "@/hooks/useCfeRecords";
 import { toast } from "sonner";
 
 import type { Row, SemesterData } from "@/types/sportsAwards";
@@ -32,6 +33,17 @@ import { useMe } from "@/hooks/useMe";
 import { canBypassDossierSemesterLock } from "@/lib/dossier-semester-access";
 import { useDossierSemesterRouting } from "@/hooks/useDossierSemesterRouting";
 import SemesterLockNotice from "@/components/dossier/SemesterLockNotice";
+
+const motivationAwardCategories = [
+    { activity: "Merit Card", categories: ["Sports Award Merit"] },
+    { activity: "Half Blue", categories: ["Sports Award Half-Blue", "Sports Award Half Blue"] },
+    { activity: "Blue", categories: ["Sports Award Blue"] },
+    { activity: "Blazer", categories: ["Sports Award Blazer"] },
+] as const;
+
+function normalizeAwardCategory(value: string) {
+    return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 
 export default function SportsGamesPage() {
     const { id } = useParams();
@@ -74,8 +86,30 @@ export default function SportsGamesPage() {
         loading: loadingSaved,
         loadAll,
         upsertSportsRows,
-        upsertMotivationRows,
-    } = useSportsAwards(ocId, semesters.length);
+    } = useSportsAwards(ocId, semesters.length, false);
+    const {
+        groups: cfeGroups,
+        loading: loadingCfe,
+        fetchAll: fetchAllCfe,
+    } = useCfeRecords(ocId, semesters.length);
+
+    const cfeMotivationRows = useMemo<Row[]>(() => {
+        const rows = cfeGroups[activeTab] ?? [];
+
+        return motivationAwardCategories.map(({ activity, categories }) => {
+            const categorySet = new Set(categories.map(normalizeAwardCategory));
+            const awardCount = rows.filter((row) =>
+                categorySet.has(normalizeAwardCategory(row.cat ?? ""))
+            ).length;
+
+            return {
+                activity,
+                string: "",
+                maxMarks: "",
+                obtained: String(awardCount),
+            };
+        });
+    }, [activeTab, cfeGroups]);
 
     // helpers to merge prefill with saved rows (keeps prefill order)
     const mergePrefillWithSaved = (prefill: Row[], saved: Row[]) =>
@@ -108,7 +142,11 @@ export default function SportsGamesPage() {
         // First check Redux cache for this semester
         if (savedFormData) {
             console.log('Using Redux cache data');
-            return savedFormData;
+            return {
+                spring: savedFormData.spring,
+                autumn: savedFormData.autumn,
+                motivation: cfeMotivationRows,
+            };
         }
 
         // Then check database
@@ -118,7 +156,7 @@ export default function SportsGamesPage() {
             return {
                 spring: mergePrefillWithSaved(springPrefill, current.spring),
                 autumn: mergePrefillWithSaved(autumnPrefill, current.autumn),
-                motivation: mergePrefillWithSaved(motivationPrefill, current.motivation),
+                motivation: cfeMotivationRows,
             };
         }
 
@@ -127,12 +165,12 @@ export default function SportsGamesPage() {
         return {
             spring: springPrefill,
             autumn: autumnPrefill,
-            motivation: motivationPrefill,
+            motivation: cfeMotivationRows,
         };
-    }, [savedFormData, savedData, activeTab]);
+    }, [savedFormData, savedData, activeTab, cfeMotivationRows]);
 
     // form - use a key to force remount when switching tabs
-    const { control, handleSubmit, reset, getValues, watch, formState } = useForm<SemesterData>({
+    const { control, handleSubmit, reset, getValues, watch, formState, setValue } = useForm<SemesterData>({
         mode: "onChange",
         defaultValues: getDefaultValues(),
     });
@@ -148,7 +186,8 @@ export default function SportsGamesPage() {
     useEffect(() => {
         if (!ocId) return;
         loadAll();
-    }, [ocId, loadAll]);
+        fetchAllCfe();
+    }, [ocId, loadAll, fetchAllCfe]);
 
     // Reset form only when activeTab changes
     useEffect(() => {
@@ -156,6 +195,10 @@ export default function SportsGamesPage() {
         console.log('Resetting form with:', newValues);
         reset(newValues);
     }, [activeTab, reset, getDefaultValues]);
+
+    useEffect(() => {
+        setValue("motivation", cfeMotivationRows, { shouldDirty: false });
+    }, [cfeMotivationRows, setValue]);
 
     // Auto-save to Redux on form changes with debouncing
     useEffect(() => {
@@ -234,19 +277,16 @@ export default function SportsGamesPage() {
         }
         const semesterNumber = activeTab + 1;
         const rows: Row[] = getValues(termKey) ?? [];
+        if (termKey === "motivation") return;
 
         // Validate rows
-        if (!validateTermRows(rows, termKey === "motivation")) {
+        if (!validateTermRows(rows)) {
             return;
         }
 
         setIsSaving(true);
         try {
-            if (termKey === "motivation") {
-                await upsertMotivationRows(semesterNumber, rows);
-            } else {
-                await upsertSportsRows(semesterNumber, termKey, rows);
-            }
+            await upsertSportsRows(semesterNumber, termKey, rows);
 
             toast.success(`${termKey.charAt(0).toUpperCase() + termKey.slice(1)} term saved successfully`);
             await loadAll();
@@ -293,10 +333,8 @@ export default function SportsGamesPage() {
     // memoized rows to pass to table (prefill + saved)
     const memoizedSpringRows = useMemo(() => springPrefill, []);
     const memoizedAutumnRows = useMemo(() => autumnPrefill, []);
-    const memoizedMotivationRows = useMemo(() => motivationPrefill, []);
     const memoSavedSpring = useMemo(() => savedData[activeTab]?.spring ?? [], [savedData, activeTab]);
     const memoSavedAutumn = useMemo(() => savedData[activeTab]?.autumn ?? [], [savedData, activeTab]);
-    const memoSavedMotivation = useMemo(() => savedData[activeTab]?.motivation ?? [], [savedData, activeTab]);
 
     return (
         <DashboardLayout title="Assessment: Sports / Games & Motivation Awards" description="Enter marks for sports and motivation awards.">
@@ -414,27 +452,17 @@ export default function SportsGamesPage() {
                                     <SportsGamesTable
                                         title="Motivation Awards"
                                         termKey="motivation"
-                                        rows={memoizedMotivationRows}
-                                        savedRows={memoSavedMotivation}
+                                        rows={cfeMotivationRows}
+                                        savedRows={cfeMotivationRows}
                                         control={control}
-                                        disabled={isActiveSemesterLocked || !editing.motivation}
+                                        disabled={true}
                                         hideStringAndMaxMarks={true}
                                     />
-                                    <SportsForm
-                                        termKey="motivation"
-                                        isSaving={isSaving}
-                                        editing={editing.motivation}
-                                        readOnly={isActiveSemesterLocked}
-                                        onSave={() => {
-                                            if (editing.motivation) {
-                                                submitTerm("motivation");
-                                            } else {
-                                                setEditing((s) => ({ ...s, motivation: true }));
-                                            }
-                                        }}
-                                        onCancel={() => handleCancel("motivation")}
-                                        onReset={() => handleReset("motivation")}
-                                    />
+                                    {loadingCfe ? (
+                                        <p className="text-sm text-muted-foreground text-center -mt-6 mb-6">
+                                            Loading motivation awards from CFE...
+                                        </p>
+                                    ) : null}
                                 </div>
 
                                 {/* Auto-save indicator */}

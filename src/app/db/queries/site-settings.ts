@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/app/db/client";
+import { createPresignedGetUrl } from "@/app/lib/storage";
 import {
   siteAwards,
   siteCommanders,
@@ -748,6 +749,39 @@ export async function listPublicCommanders() {
     .from(siteCommanders)
     .where(eq(siteCommanders.isDeleted, false))
     .orderBy(asc(siteCommanders.sortOrder), asc(siteCommanders.createdAt));
+}
+
+export async function withReadableSiteCommanderImageUrl<T extends { imageObjectKey?: string | null; imageUrl?: string | null }>(
+  row: T
+): Promise<T & { displayImageUrl: string | null }> {
+  if (!row.imageObjectKey) {
+    return { ...row, displayImageUrl: row.imageUrl ?? null };
+  }
+
+  try {
+    const displayImageUrl = await createPresignedGetUrl({
+      key: row.imageObjectKey,
+      expiresInSeconds: 3600,
+    });
+    return { ...row, displayImageUrl };
+  } catch {
+    return { ...row, displayImageUrl: row.imageUrl ?? null };
+  }
+}
+
+export async function listSiteCommandersForDisplay(options?: { includeDeleted?: boolean }) {
+  const items = await listSiteCommanders(options);
+  return Promise.all(items.map(withReadableSiteCommanderImageUrl));
+}
+
+export async function getSiteCommanderByIdForDisplay(id: string, options?: { includeDeleted?: boolean }) {
+  const item = await getSiteCommanderById(id, options);
+  return item ? withReadableSiteCommanderImageUrl(item) : null;
+}
+
+export async function listPublicCommandersForDisplay() {
+  const items = await listPublicCommanders();
+  return Promise.all(items.map(withReadableSiteCommanderImageUrl));
 }
 
 export async function listPublicAwards() {

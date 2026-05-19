@@ -83,7 +83,7 @@ export default function ClubDetailsAndDrillPage() {
 
     return (
         <DashboardLayout
-            title="Assessment: Club Details & Drill"
+            title="Assessment: Club and Drill Details"
             description="Maintain cadet’s club involvement and drill performance records."
         >
             <main className="flex-1 p-6">
@@ -91,7 +91,7 @@ export default function ClubDetailsAndDrillPage() {
                     paths={[
                         { label: "Dashboard", href: "/dashboard" },
                         { label: "Dossier", href: `/dashboard/${id}/milmgmt` },
-                        { label: "Club Details" }
+                        { label: "Club and Drill Details" }
                     ]}
                 />
 

@@ -1,4 +1,4 @@
-import { listPublicCommanders } from "@/app/db/queries/site-settings";
+import { listPublicCommandersForDisplay } from "@/app/db/queries/site-settings";
 import { handleApiError, json } from "@/app/lib/http";
 import { withAuditRoute, type AuditNextRequest } from "@/lib/audit";
 
@@ -10,7 +10,7 @@ const CACHE_HEADERS = {
 
 async function GETHandler(_req: AuditNextRequest) {
   try {
-    const items = await listPublicCommanders();
+    const items = await listPublicCommandersForDisplay();
 
     return json.ok(
       {
@@ -18,7 +18,7 @@ async function GETHandler(_req: AuditNextRequest) {
         items: items.map((row) => ({
           id: row.id,
           name: row.name,
-          imageUrl: row.imageUrl,
+          imageUrl: row.displayImageUrl ?? row.imageUrl,
           tenure: row.tenure,
           description: row.description,
           sortOrder: row.sortOrder,

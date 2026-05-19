@@ -13,7 +13,7 @@ export interface DossierInspection {
   createdAt: string;
   updatedAt: string;
   inspector: {
-    id: string;
+    id: string | null;
     name: string;
     rank: string;
     appointment?: string;
@@ -22,13 +22,19 @@ export interface DossierInspection {
 }
 
 export interface CreateInspectionData {
-  inspectorUserId: string;
+  inspectorUserId?: string | null;
+  inspectorName?: string;
+  inspectorRank?: string;
+  inspectorAppointment?: string;
   date: Date;
   remarks?: string;
 }
 
 export interface UpdateInspectionData {
-  inspectorUserId?: string;
+  inspectorUserId?: string | null;
+  inspectorName?: string;
+  inspectorRank?: string;
+  inspectorAppointment?: string;
   date?: Date;
   remarks?: string;
 }

@@ -101,6 +101,7 @@ export default function MedicalCategorySection({
                 (row.diagnosis && row.diagnosis.trim() !== "") ||
                 (row.catFrom && row.catFrom.trim() !== "") ||
                 (row.catTo && row.catTo.trim() !== "") ||
+                (row.category && row.category.trim() !== "") ||
                 (row.mhFrom && row.mhFrom.trim() !== "") ||
                 (row.mhTo && row.mhTo.trim() !== "") ||
                 (row.absence && row.absence.trim() !== "") ||
@@ -130,6 +131,7 @@ export default function MedicalCategorySection({
             mosAndDiagnostics: row.diagnosis.trim(),
             catFrom: emptyToNull(row.catFrom),
             catTo: emptyToNull(row.catTo),
+            category: emptyToNull(row.category),
             mhFrom: emptyToNull(row.mhFrom),
             mhTo: emptyToNull(row.mhTo),
             absence: emptyToNull(row.absence),
@@ -172,6 +174,7 @@ export default function MedicalCategorySection({
             diagnosis = "",
             catFrom = "",
             catTo = "",
+            category = "",
             mhFrom = "",
             mhTo = "",
             absence = "",
@@ -188,6 +191,7 @@ export default function MedicalCategorySection({
             mosAndDiagnostics: diagnosis.trim(),
             catFrom: emptyToNull(catFrom),
             catTo: emptyToNull(catTo),
+            category: emptyToNull(category),
             mhFrom: emptyToNull(mhFrom),
             mhTo: emptyToNull(mhTo),
             absence: emptyToNull(absence),
@@ -230,6 +234,7 @@ export default function MedicalCategorySection({
                     diagnosis: "",
                     catFrom: "",
                     catTo: "",
+                    category: "",
                     mhFrom: "",
                     mhTo: "",
                     absence: "",
@@ -302,7 +307,7 @@ export default function MedicalCategorySection({
                 />
 
                 <p className="text-xs text-muted-foreground mt-4 italic">
-                    * Name of hospital must be written in PI Cdr Initial field.
+                    * Name of hospital must be written in Remarks field.
                 </p>
             </CardContent>
         </Card>

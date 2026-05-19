@@ -209,6 +209,8 @@ export default function AdminSiteSettingsPage() {
   const [commanderModalOpen, setCommanderModalOpen] = useState(false);
   const [editingCommander, setEditingCommander] = useState<SiteCommanderModel | null>(null);
   const [commanderForm, setCommanderForm] = useState<CommanderForm>(EMPTY_COMMANDER_FORM);
+  const [commanderImagePreviewUrl, setCommanderImagePreviewUrl] = useState<string | null>(null);
+  const [commanderImagePreviewObjectUrl, setCommanderImagePreviewObjectUrl] = useState<string | null>(null);
 
   const [awardModalOpen, setAwardModalOpen] = useState(false);
   const [editingAward, setEditingAward] = useState<SiteAwardModel | null>(null);
@@ -291,6 +293,14 @@ export default function AdminSiteSettingsPage() {
     }
     setFooterForm("");
   }, [footerQuery.data?.item?.footer]);
+
+  useEffect(() => {
+    return () => {
+      if (commanderImagePreviewObjectUrl) {
+        URL.revokeObjectURL(commanderImagePreviewObjectUrl);
+      }
+    };
+  }, [commanderImagePreviewObjectUrl]);
 
   const busyMutations =
     updateSettingsMutation.isPending ||
@@ -426,6 +436,8 @@ export default function AdminSiteSettingsPage() {
   const openCreateCommander = () => {
     setEditingCommander(null);
     setCommanderForm(EMPTY_COMMANDER_FORM);
+    setCommanderImagePreviewUrl(null);
+    setCommanderImagePreviewObjectUrl(null);
     setCommanderModalOpen(true);
   };
 
@@ -439,6 +451,8 @@ export default function AdminSiteSettingsPage() {
       imageUrl: item.imageUrl ?? null,
       imageObjectKey: item.imageObjectKey ?? null,
     });
+    setCommanderImagePreviewUrl(item.displayImageUrl ?? item.imageUrl ?? null);
+    setCommanderImagePreviewObjectUrl(null);
     setCommanderModalOpen(true);
   };
 
@@ -460,6 +474,8 @@ export default function AdminSiteSettingsPage() {
 
       toast.success(editingCommander ? "Commander updated." : "Commander created.");
       setCommanderModalOpen(false);
+      setCommanderImagePreviewUrl(null);
+      setCommanderImagePreviewObjectUrl(null);
     } catch (error) {
       toast.error(parseApiError(error, "Failed to save commander."));
     }
@@ -750,6 +766,7 @@ export default function AdminSiteSettingsPage() {
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
                       onChange={async (event) => {
+                        const input = event.currentTarget;
                         const file = event.target.files?.[0];
                         if (!file) return;
 
@@ -764,7 +781,7 @@ export default function AdminSiteSettingsPage() {
                         } catch (error) {
                           toast.error(parseApiError(error, "Logo upload failed."));
                         } finally {
-                          event.currentTarget.value = "";
+                          input.value = "";
                         }
                       }}
                     />
@@ -792,6 +809,7 @@ export default function AdminSiteSettingsPage() {
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
                       onChange={async (event) => {
+                        const input = event.currentTarget;
                         const file = event.target.files?.[0];
                         if (!file) return;
 
@@ -806,7 +824,7 @@ export default function AdminSiteSettingsPage() {
                         } catch (error) {
                           toast.error(parseApiError(error, "Hero background upload failed."));
                         } finally {
-                          event.currentTarget.value = "";
+                          input.value = "";
                         }
                       }}
                     />
@@ -960,7 +978,7 @@ export default function AdminSiteSettingsPage() {
                   <div key={item.id} className="rounded-md border p-3">
                     <div className="flex items-center gap-4">
                       <SafeImage
-                        src={item.imageUrl}
+                        src={item.displayImageUrl ?? item.imageUrl}
                         alt={item.name}
                         className="h-14 w-14 rounded-full border object-cover"
                       />
@@ -1322,25 +1340,45 @@ export default function AdminSiteSettingsPage() {
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={async (event) => {
+                  const input = event.currentTarget;
                   const file = event.target.files?.[0];
                   if (!file) return;
 
                   try {
                     const uploaded = await uploadImageWithPresign(file);
+                    const previewUrl = URL.createObjectURL(file);
                     setCommanderForm((prev) => ({
                       ...prev,
                       imageUrl: uploaded.imageUrl,
                       imageObjectKey: uploaded.imageObjectKey,
                     }));
+                    setCommanderImagePreviewUrl(previewUrl);
+                    setCommanderImagePreviewObjectUrl(previewUrl);
                     toast.success("Commander image uploaded.");
                   } catch (error) {
                     toast.error(parseApiError(error, "Commander image upload failed."));
                   } finally {
-                    event.currentTarget.value = "";
+                    input.value = "";
                   }
                 }}
               />
             </div>
+
+            {commanderImagePreviewUrl ? (
+              <div className="flex items-center gap-3 rounded-md border p-3">
+                <SafeImage
+                  src={commanderImagePreviewUrl}
+                  alt={commanderForm.name || "Commander image preview"}
+                  className="h-16 w-16 rounded-full border object-cover"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Selected image</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    This image will be shown after saving the commander.
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setCommanderModalOpen(false)}>
@@ -1394,6 +1432,7 @@ export default function AdminSiteSettingsPage() {
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={async (event) => {
+                  const input = event.currentTarget;
                   const file = event.target.files?.[0];
                   if (!file) return;
 
@@ -1408,7 +1447,7 @@ export default function AdminSiteSettingsPage() {
                   } catch (error) {
                     toast.error(parseApiError(error, "Award image upload failed."));
                   } finally {
-                    event.currentTarget.value = "";
+                    input.value = "";
                   }
                 }}
               />

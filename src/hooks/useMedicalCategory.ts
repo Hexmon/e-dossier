@@ -36,6 +36,7 @@ export function useMedicalCategory(ocId: string) {
                 diagnosis: item.mosAndDiagnostics ?? "",
                 catFrom: item.catFrom ? item.catFrom.split("T")[0] : "",
                 catTo: item.catTo ? item.catTo.split("T")[0] : "",
+                category: item.category ?? "",
                 mhFrom: item.mhFrom ? item.mhFrom.split("T")[0] : "",
                 mhTo: item.mhTo ? item.mhTo.split("T")[0] : "",
                 absence: item.absence ?? "",

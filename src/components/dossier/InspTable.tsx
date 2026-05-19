@@ -12,6 +12,13 @@ import { useUsers } from "@/hooks/useUsers";
 import { useAppointments } from "@/hooks/useAppointments";
 import { Card, CardTitle } from "../ui/card";
 
+const MANUAL_INSPECTOR_VALUE = "__manual_inspector__";
+
+function formatInspectionDate(value: string) {
+    if (!value) return "-";
+    return new Date(value).toLocaleDateString('en-GB').replaceAll('/', '-');
+}
+
 interface InspTableProps {
     data: InspFormData[];
     onDelete: (index: number) => void;
@@ -34,6 +41,8 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
         appointment: "",
         remarks: "",
         initials: "",
+        inspectorUserId: null,
+        manualInspector: false,
     });
 
     const startEdit = (index: number) => {
@@ -46,6 +55,8 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
             appointment: row.appointment ?? "",
             remarks: row.remarks ?? "",
             initials: row.initials ?? "",
+            inspectorUserId: row.inspectorUserId ?? null,
+            manualInspector: Boolean(row.manualInspector),
         });
     };
 
@@ -58,6 +69,8 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
             appointment: "",
             remarks: "",
             initials: "",
+            inspectorUserId: null,
+            manualInspector: false,
         });
     };
 
@@ -82,7 +95,7 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
                         onChange={(e) => setEditValues((p) => ({ ...p, date: e.target.value }))}
                     />
                 ) : (
-                    value ? new Date(value).toLocaleDateString('en-GB') : "-"
+                    formatInspectionDate(String(value || ""))
                 );
             },
         },
@@ -92,15 +105,30 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
             render: (value, row, index) => {
                 const isEditing = editingIndex === index;
                 return isEditing ? (
+                    <div className="space-y-2">
                     <Select
-                        value={editValues.name}
+                        value={editValues.manualInspector ? MANUAL_INSPECTOR_VALUE : editValues.inspectorUserId || undefined}
                         onValueChange={(val) => {
-                            setEditValues((p) => ({ ...p, name: val }));
-                            const user = users.find(u => u.name === val);
+                            if (val === MANUAL_INSPECTOR_VALUE) {
+                                setEditValues((p) => ({
+                                    ...p,
+                                    inspectorUserId: null,
+                                    manualInspector: true,
+                                    name: "",
+                                    rk: "",
+                                    appointment: "",
+                                    initials: "",
+                                }));
+                                return;
+                            }
+                            const user = users.find(u => u.id === val);
                             if (user) {
                                 const app = appointments.find(a => a.userId === user.id);
                                 setEditValues((p) => ({
                                     ...p,
+                                    inspectorUserId: user.id ?? null,
+                                    manualInspector: false,
+                                    name: user.name,
                                     rk: user.rank || '',
                                     initials: `${user.rank} ${user.name}` || '',
                                     appointment: app?.positionName || ''
@@ -112,13 +140,22 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
                             <SelectValue placeholder="Select Inspector" />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value={MANUAL_INSPECTOR_VALUE}>Manual entry</SelectItem>
                             {users.map((user) => (
-                                <SelectItem key={user.id} value={user.name}>
+                                <SelectItem key={user.id} value={user.id!}>
                                     {user.name}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
+                    {editValues.manualInspector ? (
+                        <Input
+                            value={editValues.name}
+                            onChange={(e) => setEditValues((p) => ({ ...p, name: e.target.value }))}
+                            placeholder="Inspector name"
+                        />
+                    ) : null}
+                    </div>
                 ) : (
                     value || "-"
                 );
@@ -132,7 +169,8 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
                 return isEditing ? (
                     <Input
                         value={editValues.rk}
-                        disabled
+                        disabled={!editValues.manualInspector}
+                        onChange={(e) => setEditValues((p) => ({ ...p, rk: e.target.value }))}
                         placeholder="Rank"
                     />
                 ) : (
@@ -148,7 +186,8 @@ export default function InspTable({ data, onDelete, onUpdate }: InspTableProps) 
                 return isEditing ? (
                     <Input
                         value={editValues.appointment}
-                        disabled
+                        disabled={!editValues.manualInspector}
+                        onChange={(e) => setEditValues((p) => ({ ...p, appointment: e.target.value }))}
                         placeholder="Appointment"
                     />
                 ) : (

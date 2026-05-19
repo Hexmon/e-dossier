@@ -19,6 +19,18 @@ interface Props {
     onDelete: (row: MedCatRow) => void;
 }
 
+function formatDisplayDate(value: unknown): string {
+    if (typeof value !== "string") return "";
+
+    const datePart = value.trim().split("T")[0];
+    const match = datePart.match(/^(\d{4})[-/](\d{2})[-/](\d{2})$/);
+
+    if (!match) return datePart;
+
+    const [, year, month, day] = match;
+    return `${day}-${month}-${year}`;
+}
+
 export default function MedicalCategoryTable({
     rows,
     editingId,
@@ -45,7 +57,7 @@ export default function MedicalCategoryTable({
                         onChange={(e) => onChange("date", e.target.value as any)}
                         className="h-7 text-xs px-2"
                     />
-                ) : value;
+                ) : formatDisplayDate(value);
             }
         },
         {
@@ -76,7 +88,7 @@ export default function MedicalCategoryTable({
                         onChange={(e) => onChange("catFrom", e.target.value as any)}
                         className="h-7 text-xs px-2"
                     />
-                ) : value;
+                ) : formatDisplayDate(value);
             }
         },
         {
@@ -90,6 +102,21 @@ export default function MedicalCategoryTable({
                         type="date"
                         value={editForm?.catTo ?? ""}
                         onChange={(e) => onChange("catTo", e.target.value as any)}
+                        className="h-7 text-xs px-2"
+                    />
+                ) : formatDisplayDate(value);
+            }
+        },
+        {
+            key: "category",
+            label: "Category",
+            render: (value, row) => {
+                const isEditing = editingId === row.id;
+                return isEditing ? (
+                    <Input
+                        type="text"
+                        value={editForm?.category ?? ""}
+                        onChange={(e) => onChange("category", e.target.value as any)}
                         className="h-7 text-xs px-2"
                     />
                 ) : value;
@@ -108,7 +135,7 @@ export default function MedicalCategoryTable({
                         onChange={(e) => onChange("mhFrom", e.target.value as any)}
                         className="h-7 text-xs px-2"
                     />
-                ) : value;
+                ) : formatDisplayDate(value);
             }
         },
         {
@@ -124,12 +151,18 @@ export default function MedicalCategoryTable({
                         onChange={(e) => onChange("mhTo", e.target.value as any)}
                         className="h-7 text-xs px-2"
                     />
-                ) : value;
+                ) : formatDisplayDate(value);
             }
         },
         {
             key: "absence",
             label: "Absence",
+            headerRender: (
+                <span>
+                    Absence
+                    <span className="block text-xs font-normal">(No of Days)</span>
+                </span>
+            ),
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
@@ -144,7 +177,7 @@ export default function MedicalCategoryTable({
         },
         {
             key: "piCdrInitial",
-            label: "PI Cdr Initial",
+            label: "Remarks",
             render: (value, row) => {
                 const isEditing = editingId === row.id;
                 return isEditing ? (
