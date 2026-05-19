@@ -556,7 +556,7 @@ export const militaryTrainingCards: TrainingCard[] = [
     color: "success"
   },
   {
-    title: "Club Details",
+    title: "Club and Drill Details",
     description: "Record cadet participation in clubs and activities",
     icon: BookMarked,
     to: (id: string) => `/dashboard/${id}/milmgmt/club-detls`,
