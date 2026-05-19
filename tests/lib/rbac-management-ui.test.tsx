@@ -7,6 +7,25 @@ import { createRoot, type Root } from "react-dom/client";
 const mockState = vi.hoisted(() => ({
   setRoleMappings: vi.fn(async () => undefined),
   setPositionMappings: vi.fn(async () => undefined),
+  searchUsers: vi.fn(async () => [
+    {
+      id: "user-1",
+      username: "admin",
+      name: "Admin User",
+      rank: "MAJ",
+      activeAppointments: [
+        {
+          id: "apt-1",
+          positionId: "pos-admin",
+          positionKey: "ADMIN",
+          positionName: "Admin",
+          scopeType: "GLOBAL",
+          scopeId: null,
+          startsAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    },
+  ]),
   getEffectivePermissions: vi.fn(async () => ({
     message: "Effective RBAC permissions resolved",
     bundle: {
@@ -77,6 +96,8 @@ vi.mock("@/hooks/useRbacPermissions", () => ({
         },
       },
     ],
+    loadedCount: 3,
+    total: 560,
     createPermission: { mutateAsync: vi.fn(), isPending: false },
     deletePermission: { mutate: vi.fn(), isPending: false },
   }),
@@ -102,7 +123,20 @@ vi.mock("@/hooks/useRbacMappings", () => ({
             permissionKey: "admin:users:create",
           },
         ],
-        positionMappings: [],
+        positionMappings: [
+          {
+            positionId: "pos-admin",
+            positionKey: "ADMIN",
+            permissionId: "perm-view-rbac",
+            permissionKey: "page:dashboard:genmgmt:rbac:view",
+          },
+          {
+            positionId: "pos-admin",
+            positionKey: "ADMIN",
+            permissionId: "perm-create-users",
+            permissionKey: "admin:users:create",
+          },
+        ],
         defaults: {
           defaultProfiles: [
             {
@@ -132,7 +166,22 @@ vi.mock("@/hooks/useRbacMappings", () => ({
               permissionKey: "admin:rbac:mappings:read",
             },
           ],
-          defaultPositionMappings: [],
+          defaultPositionMappings: [
+            {
+              profileKey: "admin",
+              positionId: "pos-admin",
+              positionKey: "ADMIN",
+              permissionId: "perm-view-rbac",
+              permissionKey: "page:dashboard:genmgmt:rbac:view",
+            },
+            {
+              profileKey: "admin",
+              positionId: "pos-admin",
+              positionKey: "ADMIN",
+              permissionId: "perm-read-mappings",
+              permissionKey: "admin:rbac:mappings:read",
+            },
+          ],
           permissionMeta: [],
         },
       },
@@ -163,10 +212,35 @@ vi.mock("@/hooks/useRbacRoles", () => ({
 
 vi.mock("@/hooks/useRbacFieldRules", () => ({
   useRbacFieldRules: () => ({
-    data: [],
+    data: [
+      {
+        id: "rule-1",
+        permissionId: "perm-read-mappings",
+        permissionKey: "admin:rbac:mappings:read",
+        positionId: "pos-admin",
+        positionKey: "ADMIN",
+        roleId: null,
+        roleKey: null,
+        mode: "OMIT",
+        fields: ["phone"],
+        note: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        defaultRule: false,
+        customRule: true,
+      },
+    ],
+    defaults: {
+      defaultFieldRules: [],
+      missingDefaultFieldRules: [],
+    },
     createRule: { mutateAsync: vi.fn(), isPending: false },
     deleteRule: { mutate: vi.fn(), isPending: false },
   }),
+}));
+
+vi.mock("@/app/lib/api/userApi", () => ({
+  searchUsers: mockState.searchUsers,
 }));
 
 vi.mock("@/app/lib/api/rbacApi", () => ({
@@ -201,6 +275,12 @@ function getSelectWithOption(container: HTMLElement, optionText: string) {
   );
   expect(select, `select with option "${optionText}"`).toBeTruthy();
   return select as HTMLSelectElement;
+}
+
+function getSelectsWithOption(container: HTMLElement, optionText: string) {
+  return Array.from(container.querySelectorAll("select")).filter((item) =>
+    Array.from(item.options).some((option) => option.textContent?.includes(optionText))
+  ) as HTMLSelectElement[];
 }
 
 async function click(button: HTMLButtonElement) {
@@ -244,30 +324,88 @@ describe("RbacManagement", () => {
     vi.clearAllMocks();
   });
 
-  it("shows default mapping status and applies defaults through the mapping API", async () => {
+  it("shows default mapping status and applies defaults through the position mapping API", async () => {
     act(() => {
       root.render(<RbacManagement />);
     });
 
-    const roleSelect = getSelectWithOption(container, "Admin");
+    const positionSelect = getSelectWithOption(container, "Admin");
     act(() => {
-      roleSelect.value = "role-admin";
-      roleSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      positionSelect.value = "pos-admin";
+      positionSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    expect(container.textContent).toContain("Defaults 2 | Missing 1 | Custom 1");
-    expect(container.textContent).toContain("Default");
+    expect(container.textContent).toContain("Grants 2 | Defaults 2 | Missing 1 | Custom 1 | Field rules 1");
+    expect(container.textContent).toContain("Applied default");
     expect(container.textContent).toContain("Missing default");
-    expect(container.textContent).toContain("Custom");
+    expect(container.textContent).toContain("Custom grant");
+    expect(container.textContent).toContain("Admin default");
     expect(container.textContent).toContain("System");
     expect(container.textContent).toContain("Default grant");
+    expect(container.textContent).toContain("Loaded 3 permissions / 560 total");
+    expect(container.textContent).toContain("Default rules: 0");
+    expect(container.textContent).toContain("Custom rules: 1");
+    expect(container.textContent).toContain("No default field rules defined");
     expect(getButton(container, "System managed").disabled).toBe(true);
 
     await click(getButton(container, "Apply defaults"));
 
-    expect(mockState.setRoleMappings).toHaveBeenCalledWith({
-      roleId: "role-admin",
+    expect(mockState.setPositionMappings).toHaveBeenCalledWith({
+      positionId: "pos-admin",
       permissionIds: ["perm-view-rbac", "perm-read-mappings"],
+    });
+  });
+
+  it("keeps advanced role mappings available", () => {
+    act(() => {
+      root.render(<RbacManagement />);
+    });
+
+    const adminSelects = getSelectsWithOption(container, "Admin");
+    const advancedRoleSelect = adminSelects[1];
+    expect(container.textContent).toContain("Advanced Role Mapping");
+
+    act(() => {
+      advancedRoleSelect.value = "role-admin";
+      advancedRoleSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain("Advanced Role Mapping: Admin");
+  });
+
+  it("links searched users to appointment position mappings", async () => {
+    act(() => {
+      root.render(<RbacManagement />);
+    });
+
+    act(() => {
+      const searchInput = getInput(container, "Search user by name, username, or email");
+      setInputValue(searchInput, "admin");
+    });
+
+    await click(getButton(container, "Search Users"));
+
+    const userSelect = getSelectWithOption(container, "Admin User");
+    act(() => {
+      userSelect.value = "user-1";
+      userSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    const appointmentSelect = getSelectWithOption(container, "Admin | GLOBAL");
+    act(() => {
+      appointmentSelect.value = "apt-1";
+      appointmentSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(mockState.searchUsers).toHaveBeenCalledWith("admin", undefined, 20);
+    expect(container.textContent).toContain("Appointment Position Mapping: Admin");
+    expect(container.textContent).toContain("Auto-selected position mapping: Admin");
+
+    await click(getButton(container, "Preview Selected Access"));
+
+    expect(mockState.getEffectivePermissions).toHaveBeenCalledWith({
+      userId: "user-1",
+      appointmentId: "apt-1",
     });
   });
 
@@ -275,6 +413,8 @@ describe("RbacManagement", () => {
     act(() => {
       root.render(<RbacManagement />);
     });
+
+    await click(getButton(container, "Advanced manual IDs"));
 
     act(() => {
       const userInput = getInput(container, "User ID (blank = current user)");

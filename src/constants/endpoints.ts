@@ -65,6 +65,7 @@ export const endpoints = {
             nextCourses: "/api/v1/admin/relegation/courses",
             history: "/api/v1/admin/relegation/history",
             presign: "/api/v1/admin/relegation/presign",
+            pendingPdfCleanup: "/api/v1/admin/relegation/pending-pdf/cleanup",
             transfer: "/api/v1/admin/relegation/transfer",
             exception: "/api/v1/admin/relegation/exception",
             promoteCourse: "/api/v1/admin/relegation/promote-course",

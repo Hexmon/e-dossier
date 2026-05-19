@@ -241,6 +241,7 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: [
       'src/app/api/v1/admin/relegation/courses/route.ts',
       'src/app/api/v1/admin/relegation/ocs/route.ts',
+      'src/app/api/v1/admin/relegation/pending-pdf/cleanup/route.ts',
       'src/app/api/v1/admin/relegation/presign/route.ts',
       'src/app/api/v1/admin/relegation/promote-course/route.ts',
       'src/app/api/v1/admin/relegation/transfer/route.ts',

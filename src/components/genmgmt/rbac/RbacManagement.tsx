@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getPermissionDisplayMeta } from '@/app/lib/rbac/permission-display';
@@ -8,9 +8,11 @@ import { useRbacPermissions } from '@/hooks/useRbacPermissions';
 import { useRbacMappings } from '@/hooks/useRbacMappings';
 import { useRbacFieldRules } from '@/hooks/useRbacFieldRules';
 import { useRbacRoles } from '@/hooks/useRbacRoles';
+import { searchUsers, type User } from '@/app/lib/api/userApi';
 import {
   rbacApi,
   type EffectiveRbacBundle,
+  type FieldRule,
   type PositionPermissionMapping,
   type RbacPermission,
   type RbacPosition,
@@ -25,6 +27,9 @@ const EMPTY_ROLE_MAPPINGS: RolePermissionMapping[] = [];
 const EMPTY_POSITION_MAPPINGS: PositionPermissionMapping[] = [];
 const EMPTY_ROLES: RbacRole[] = [];
 const EMPTY_POSITIONS: RbacPosition[] = [];
+const EMPTY_USERS: User[] = [];
+const EMPTY_FIELD_RULES: FieldRule[] = [];
+const EMPTY_ACTIVE_APPOINTMENTS: NonNullable<User['activeAppointments']> = [];
 
 function toHumanText(value: string): string {
   return value
@@ -57,6 +62,11 @@ export default function RbacManagement() {
   const positionMappings = mappings.mappings.data?.positionMappings ?? EMPTY_POSITION_MAPPINGS;
   const roles = mappings.rolesAndPositions.data?.roles ?? EMPTY_ROLES;
   const positions = mappings.rolesAndPositions.data?.positions ?? EMPTY_POSITIONS;
+  const fieldRuleItems = fieldRules.data ?? EMPTY_FIELD_RULES;
+  const fieldRuleDefaults = fieldRules.defaults?.defaultFieldRules ?? [];
+  const missingDefaultFieldRules = fieldRules.defaults?.missingDefaultFieldRules ?? [];
+  const loadedPermissionCount = permissionsQuery.loadedCount ?? permissions.length;
+  const totalPermissionCount = permissionsQuery.total ?? permissions.length;
 
   const [permissionKey, setPermissionKey] = useState('');
   const [permissionDescription, setPermissionDescription] = useState('');
@@ -73,12 +83,20 @@ export default function RbacManagement() {
   const [selectedRoleId, setSelectedRoleId] = useState('');
   const [selectedPositionId, setSelectedPositionId] = useState('');
   const [mappingPermissionIds, setMappingPermissionIds] = useState<string[]>([]);
+  const [syncedMappingScopeKey, setSyncedMappingScopeKey] = useState('');
 
   const [fieldRulePermissionId, setFieldRulePermissionId] = useState('');
   const [fieldRuleMode, setFieldRuleMode] = useState<FieldRuleMode>('OMIT');
   const [fieldRuleRoleId, setFieldRuleRoleId] = useState('');
   const [fieldRulePositionId, setFieldRulePositionId] = useState('');
   const [fieldRuleFields, setFieldRuleFields] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<User[]>(EMPTY_USERS);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [userSearchError, setUserSearchError] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState('');
+  const [showManualEffectiveInputs, setShowManualEffectiveInputs] = useState(false);
   const [effectiveUserId, setEffectiveUserId] = useState('');
   const [effectiveAppointmentId, setEffectiveAppointmentId] = useState('');
   const [effectiveBundle, setEffectiveBundle] = useState<EffectiveRbacBundle | null>(null);
@@ -90,6 +108,15 @@ export default function RbacManagement() {
     [positions, selectedPositionId]
   );
   const mappingScopeSelected = Boolean(selectedRoleId || selectedPositionId);
+  const selectedUser = useMemo(
+    () => userSearchResults.find((item) => item.id === selectedUserId) ?? null,
+    [selectedUserId, userSearchResults]
+  );
+  const selectedUserAppointments = selectedUser?.activeAppointments ?? EMPTY_ACTIVE_APPOINTMENTS;
+  const selectedAppointment = useMemo(
+    () => selectedUserAppointments.find((item) => item.id === selectedAppointmentId) ?? null,
+    [selectedAppointmentId, selectedUserAppointments]
+  );
 
   const currentScopePermissionIds = useMemo(() => {
     if (selectedRoleId) {
@@ -119,6 +146,31 @@ export default function RbacManagement() {
     return [];
   }, [mappings.mappings.data?.defaults, selectedPositionId, selectedRoleId]);
 
+  const defaultProfileLabelByKey = useMemo(() => {
+    const defaults = mappings.mappings.data?.defaults;
+    const entries = defaults?.defaultProfiles ?? [];
+    return new Map(entries.map((profile) => [profile.key, profile.label]));
+  }, [mappings.mappings.data?.defaults]);
+
+  const defaultProfileLabelsByPermissionId = useMemo(() => {
+    const defaults = mappings.mappings.data?.defaults;
+    const map = new Map<string, string[]>();
+    if (!defaults) return map;
+    const rows = selectedRoleId
+      ? defaults.defaultRoleMappings.filter((row) => row.roleId === selectedRoleId)
+      : selectedPositionId
+        ? defaults.defaultPositionMappings.filter((row) => row.positionId === selectedPositionId)
+        : [];
+
+    for (const row of rows) {
+      const label = defaultProfileLabelByKey.get(row.profileKey) ?? toHumanText(row.profileKey);
+      const labels = map.get(row.permissionId) ?? [];
+      if (!labels.includes(label)) labels.push(label);
+      map.set(row.permissionId, labels);
+    }
+    return map;
+  }, [defaultProfileLabelByKey, mappings.mappings.data?.defaults, selectedPositionId, selectedRoleId]);
+
   const defaultScopePermissionIdSet = useMemo(
     () => new Set(defaultScopePermissionIds),
     [defaultScopePermissionIds]
@@ -143,6 +195,12 @@ export default function RbacManagement() {
     defaultScopePermissionIds,
   ]);
 
+  const activeScopeFieldRules = useMemo(() => {
+    if (selectedRoleId) return fieldRuleItems.filter((rule) => rule.roleId === selectedRoleId);
+    if (selectedPositionId) return fieldRuleItems.filter((rule) => rule.positionId === selectedPositionId);
+    return [];
+  }, [fieldRuleItems, selectedPositionId, selectedRoleId]);
+
   const hasUnsavedMappingChanges = useMemo(
     () => mappingScopeSelected && !arraysHaveSameValues(mappingPermissionIds, currentScopePermissionIds),
     [currentScopePermissionIds, mappingPermissionIds, mappingScopeSelected]
@@ -150,12 +208,12 @@ export default function RbacManagement() {
 
   const activeScopeLabel = useMemo(() => {
     if (activeRole) {
-      return `Mapping for Role: ${activeRole.description?.trim() || toHumanText(activeRole.key)}`;
+      return `Advanced Role Mapping: ${activeRole.description?.trim() || toHumanText(activeRole.key)}`;
     }
     if (activePosition) {
-      return `Mapping for Position: ${activePosition.displayName?.trim() || toHumanText(activePosition.key)}`;
+      return `Appointment Position Mapping: ${activePosition.displayName?.trim() || toHumanText(activePosition.key)}`;
     }
-    return 'Step 1: Select a role or position to begin.';
+    return 'Select an appointment position or advanced role to begin.';
   }, [activePosition, activeRole]);
 
   const permissionItems = useMemo(() => {
@@ -217,6 +275,81 @@ export default function RbacManagement() {
   const moduleFilterOptions = useMemo(() => {
     return Array.from(new Set(permissionItems.map((item) => item.meta.moduleLabel))).sort();
   }, [permissionItems]);
+
+  const activeScopeKey = selectedRoleId
+    ? `role:${selectedRoleId}`
+    : selectedPositionId
+      ? `position:${selectedPositionId}`
+      : '';
+
+  useEffect(() => {
+    if (!activeScopeKey) {
+      if (syncedMappingScopeKey) setSyncedMappingScopeKey('');
+      setMappingPermissionIds((prev) => (prev.length > 0 ? [] : prev));
+      return;
+    }
+    if (activeScopeKey !== syncedMappingScopeKey) {
+      setMappingPermissionIds(currentScopePermissionIds);
+      setSyncedMappingScopeKey(activeScopeKey);
+    }
+  }, [activeScopeKey, currentScopePermissionIds, syncedMappingScopeKey]);
+
+  const selectRoleMapping = (roleId: string) => {
+    setSelectedRoleId(roleId);
+    setSelectedPositionId('');
+    setSyncedMappingScopeKey('');
+    setMappingPermissionIds(roleMappings.filter((row) => row.roleId === roleId).map((row) => row.permissionId));
+  };
+
+  const selectPositionMapping = (positionId: string) => {
+    setSelectedPositionId(positionId);
+    setSelectedRoleId('');
+    setSyncedMappingScopeKey('');
+    setMappingPermissionIds(
+      positionMappings.filter((row) => row.positionId === positionId).map((row) => row.permissionId)
+    );
+  };
+
+  const handleSearchUsers = async () => {
+    const query = userSearch.trim();
+    if (!query) return;
+    setUserSearchLoading(true);
+    setUserSearchError('');
+    try {
+      const results = await searchUsers(query, undefined, 20);
+      setUserSearchResults(results);
+      if (results.length === 0) {
+        setUserSearchError('No active users found for this search.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to search users.';
+      setUserSearchError(message);
+    } finally {
+      setUserSearchLoading(false);
+    }
+  };
+
+  const handleSelectUser = (userId: string) => {
+    setSelectedUserId(userId);
+    setSelectedAppointmentId('');
+    setEffectiveBundle(null);
+    const user = userSearchResults.find((item) => item.id === userId);
+    if (user?.id) {
+      setEffectiveUserId(user.id);
+    }
+  };
+
+  const handleSelectAppointment = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setEffectiveBundle(null);
+    const appointment = selectedUserAppointments.find((item) => item.id === appointmentId);
+    if (!appointment) return;
+    selectPositionMapping(appointment.positionId);
+    if (selectedUser?.id) {
+      setEffectiveUserId(selectedUser.id);
+      setEffectiveAppointmentId(appointment.id);
+    }
+  };
 
   const handleCreatePermission = async () => {
     if (!permissionKey.trim()) return;
@@ -321,6 +454,86 @@ export default function RbacManagement() {
 
   return (
     <div className="space-y-8">
+      <section className="rounded-lg border p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Appointment-based access</h3>
+            <p className="text-sm text-muted-foreground">
+              Search a user, select an active appointment, and edit the permission mapping for that appointment position.
+            </p>
+          </div>
+          <span className="rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+            Position-first RBAC
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-[1.3fr_auto]">
+          <Input
+            placeholder="Search user by name, username, or email"
+            value={userSearch}
+            onChange={(event) => setUserSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                void handleSearchUsers();
+              }
+            }}
+          />
+          <Button onClick={handleSearchUsers} disabled={userSearchLoading || !userSearch.trim()}>
+            {userSearchLoading ? 'Searching...' : 'Search Users'}
+          </Button>
+        </div>
+
+        {userSearchError ? (
+          <p className="mt-2 text-sm text-destructive">{userSearchError}</p>
+        ) : null}
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">User</label>
+            <select
+              className="h-9 w-full rounded border bg-background px-2"
+              value={selectedUserId}
+              onChange={(event) => handleSelectUser(event.target.value)}
+            >
+              <option value="">Select searched user</option>
+              {userSearchResults.map((user) => (
+                <option key={user.id ?? user.username} value={user.id ?? ''}>
+                  {[user.rank, user.name || user.username, user.username].filter(Boolean).join(' | ')}
+                </option>
+              ))}
+            </select>
+            {selectedUser ? (
+              <p className="text-xs text-muted-foreground">
+                {selectedUser.activeAppointments?.length ?? 0} active appointment(s) available.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Active Appointment</label>
+            <select
+              className="h-9 w-full rounded border bg-background px-2"
+              value={selectedAppointmentId}
+              onChange={(event) => handleSelectAppointment(event.target.value)}
+              disabled={!selectedUser}
+            >
+              <option value="">Select appointment</option>
+              {selectedUserAppointments.map((appointment) => (
+                <option key={appointment.id} value={appointment.id}>
+                  {appointment.positionName ?? toHumanText(appointment.positionKey)} | {appointment.scopeType}
+                </option>
+              ))}
+            </select>
+            {selectedAppointment ? (
+              <p className="text-xs text-muted-foreground">
+                Auto-selected position mapping: {selectedAppointment.positionName ?? selectedAppointment.positionKey}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
       <section className="rounded-lg border p-4">
         <h3 className="text-lg font-semibold">Roles</h3>
         <p className="mb-4 text-sm text-muted-foreground">
@@ -427,6 +640,10 @@ export default function RbacManagement() {
           Examples: `admin:appointments:create`, `admin:courses:read`, `page:dashboard:genmgmt:rbac:view`
         </p>
 
+        <p className="mb-3 text-xs text-muted-foreground">
+          Loaded {loadedPermissionCount} permissions / {totalPermissionCount} total.
+        </p>
+
         <div className="mb-4">
           <Input
             placeholder="Search actions (e.g., create appointments, view reports)"
@@ -495,10 +712,12 @@ export default function RbacManagement() {
 
       <section className="rounded-lg border p-4">
         <h3 className="text-lg font-semibold">Role/Position Mappings</h3>
-        <p className="text-sm text-muted-foreground">Assign these actions to a role or position.</p>
+        <p className="text-sm text-muted-foreground">
+          Assign actions to appointment positions first. Use role mappings for global/system identities and compatibility.
+        </p>
 
         <div className="mt-3 rounded-md border bg-muted/30 p-3 text-sm">
-          <p>1. Choose Role or Position.</p>
+          <p>1. Choose an appointment above or select a position here.</p>
           <p>2. Select permissions from the list below.</p>
           <p>3. Save mapping for the chosen scope.</p>
           <p className="mt-2 font-medium">{activeScopeLabel}</p>
@@ -506,48 +725,36 @@ export default function RbacManagement() {
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Role</label>
-            <select
-              className="h-9 w-full rounded border bg-background px-2"
-              value={selectedRoleId}
-              onChange={(event) => {
-                const nextRoleId = event.target.value;
-                setSelectedRoleId(nextRoleId);
-                setSelectedPositionId('');
-                setMappingPermissionIds(
-                  roleMappings.filter((row) => row.roleId === nextRoleId).map((row) => row.permissionId)
-                );
-              }}
-            >
-              <option value="">Select role</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.description?.trim() || toHumanText(role.key)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Position</label>
+            <label className="text-sm font-medium">Appointment Position Mapping</label>
             <select
               className="h-9 w-full rounded border bg-background px-2"
               value={selectedPositionId}
               onChange={(event) => {
-                const nextPositionId = event.target.value;
-                setSelectedPositionId(nextPositionId);
-                setSelectedRoleId('');
-                setMappingPermissionIds(
-                  positionMappings
-                    .filter((row) => row.positionId === nextPositionId)
-                    .map((row) => row.permissionId)
-                );
+                selectPositionMapping(event.target.value);
               }}
             >
               <option value="">Select position</option>
               {positions.map((position) => (
                 <option key={position.id} value={position.id}>
                   {position.displayName?.trim() || toHumanText(position.key)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Advanced Role Mapping</label>
+            <select
+              className="h-9 w-full rounded border bg-background px-2"
+              value={selectedRoleId}
+              onChange={(event) => {
+                selectRoleMapping(event.target.value);
+              }}
+            >
+              <option value="">Select role</option>
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.description?.trim() || toHumanText(role.key)}
                 </option>
               ))}
             </select>
@@ -646,7 +853,8 @@ export default function RbacManagement() {
             </span>
             {mappingScopeSelected ? (
               <span>
-                Defaults {defaultSummary.defaultCount} | Missing {defaultSummary.missing} | Custom {defaultSummary.extra}
+                Grants {currentScopePermissionIds.length} | Defaults {defaultSummary.defaultCount} | Missing{' '}
+                {defaultSummary.missing} | Custom {defaultSummary.extra} | Field rules {activeScopeFieldRules.length}
               </span>
             ) : null}
             {mappingScopeSelected ? (
@@ -666,6 +874,15 @@ export default function RbacManagement() {
         <div className="mt-3 grid max-h-80 gap-2 overflow-auto rounded border p-3 md:grid-cols-2">
           {filteredMappingItems.map(({ permission, meta }) => {
             const checked = mappingPermissionIds.includes(permission.id);
+            const defaultLabels = defaultProfileLabelsByPermissionId.get(permission.id) ?? [];
+            const isDefault = defaultScopePermissionIdSet.has(permission.id);
+            const statusLabel = isDefault
+              ? checked
+                ? 'Applied default'
+                : 'Missing default'
+              : checked
+                ? 'Custom grant'
+                : 'Not granted';
             return (
               <label
                 key={permission.id}
@@ -692,19 +909,22 @@ export default function RbacManagement() {
                     <span className="inline-flex rounded bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                       {meta.moduleLabel}
                     </span>
-                    {defaultScopePermissionIdSet.has(permission.id) ? (
+                    <span
+                      className={`inline-flex rounded px-2 py-0.5 text-[11px] font-medium ${
+                        statusLabel === 'Applied default'
+                          ? 'bg-success/10 text-success'
+                          : statusLabel === 'Missing default'
+                            ? 'bg-destructive/10 text-destructive'
+                            : statusLabel === 'Custom grant'
+                              ? 'bg-warning/20 text-warning-foreground'
+                              : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {statusLabel}
+                    </span>
+                    {defaultLabels.length > 0 ? (
                       <span className="inline-flex rounded bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-                        Default
-                      </span>
-                    ) : null}
-                    {checked && !defaultScopePermissionIdSet.has(permission.id) ? (
-                      <span className="inline-flex rounded bg-warning/20 px-2 py-0.5 text-[11px] font-medium text-warning-foreground">
-                        Custom
-                      </span>
-                    ) : null}
-                    {defaultScopePermissionIdSet.has(permission.id) && !checked ? (
-                      <span className="inline-flex rounded bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
-                        Missing default
+                        {defaultLabels.map((label) => `${label} default`).join(', ')}
                       </span>
                     ) : null}
                     {permission.system ? (
@@ -730,17 +950,17 @@ export default function RbacManagement() {
 
         <div className="mt-4 flex gap-2">
           <Button
-            onClick={handleSetRoleMappings}
-            disabled={!selectedRoleId || mappings.setRoleMappings.isPending || !hasUnsavedMappingChanges}
-          >
-            Save Role Mapping
-          </Button>
-          <Button
-            variant="secondary"
             onClick={handleSetPositionMappings}
             disabled={!selectedPositionId || mappings.setPositionMappings.isPending || !hasUnsavedMappingChanges}
           >
             Save Position Mapping
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleSetRoleMappings}
+            disabled={!selectedRoleId || mappings.setRoleMappings.isPending || !hasUnsavedMappingChanges}
+          >
+            Save Role Mapping
           </Button>
         </div>
       </section>
@@ -748,23 +968,64 @@ export default function RbacManagement() {
       <section className="rounded-lg border p-4">
         <h3 className="text-lg font-semibold">User Effective Access</h3>
         <p className="mb-4 text-sm text-muted-foreground">
-          Preview the final permissions a user receives from role mappings, position mappings, defaults, and field rules.
+          Preview the final permissions a user receives from appointment position mappings, compatible role mappings, and field rules.
         </p>
 
-        <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-          <Input
-            placeholder="User ID (blank = current user)"
-            value={effectiveUserId}
-            onChange={(event) => setEffectiveUserId(event.target.value)}
-          />
-          <Input
-            placeholder="Appointment ID (optional)"
-            value={effectiveAppointmentId}
-            onChange={(event) => setEffectiveAppointmentId(event.target.value)}
-          />
-          <Button onClick={handleLoadEffectiveAccess} disabled={effectiveLoading}>
-            Preview
+        <div className="rounded-md border bg-muted/30 p-3 text-sm">
+          <div className="font-medium">
+            {selectedUser
+              ? `${selectedUser.rank ? `${selectedUser.rank} ` : ''}${selectedUser.name || selectedUser.username}`
+              : 'No appointment user selected'}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Appointment:{' '}
+            {selectedAppointment
+              ? `${selectedAppointment.positionName ?? selectedAppointment.positionKey} / ${selectedAppointment.scopeType}`
+              : 'Select a user and appointment above'}
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            onClick={handleLoadEffectiveAccess}
+            disabled={effectiveLoading || (!effectiveUserId.trim() && !selectedUser?.id)}
+          >
+            {effectiveLoading ? 'Previewing...' : 'Preview Selected Access'}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowManualEffectiveInputs((prev) => !prev)}
+          >
+            {showManualEffectiveInputs ? 'Hide manual IDs' : 'Advanced manual IDs'}
+          </Button>
+        </div>
+
+        {showManualEffectiveInputs ? (
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            <Input
+              placeholder="User ID (blank = current user)"
+              value={effectiveUserId}
+              onChange={(event) => setEffectiveUserId(event.target.value)}
+            />
+            <Input
+              placeholder="Appointment ID (optional)"
+              value={effectiveAppointmentId}
+              onChange={(event) => setEffectiveAppointmentId(event.target.value)}
+            />
+          </div>
+        ) : null}
+
+        <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
+          <div className="rounded border p-2">
+            Position grants: {selectedPositionId ? currentScopePermissionIds.length : 0}
+          </div>
+          <div className="rounded border p-2">
+            Role grants: {selectedRoleId ? currentScopePermissionIds.length : 'shown after preview'}
+          </div>
+          <div className="rounded border p-2">
+            Field rules: {activeScopeFieldRules.length}
+          </div>
         </div>
 
         {effectiveBundle ? (
@@ -825,6 +1086,16 @@ export default function RbacManagement() {
         <p className="mb-4 text-sm text-muted-foreground">
           Configure field-level control (`ALLOW`, `DENY`, `OMIT`, `MASK`) per permission/action.
         </p>
+
+        <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <span>Applied rules: {fieldRuleItems.length}</span>
+          <span>Default rules: {fieldRuleDefaults.length}</span>
+          <span>Missing defaults: {missingDefaultFieldRules.length}</span>
+          <span>Custom rules: {fieldRuleItems.filter((rule) => rule.customRule !== false).length}</span>
+          <Button type="button" size="sm" variant="outline" disabled={fieldRuleDefaults.length === 0}>
+            {fieldRuleDefaults.length === 0 ? 'No default field rules defined' : 'Apply default field rules'}
+          </Button>
+        </div>
 
         <div className="mb-3 grid gap-2 md:grid-cols-5">
           <select
@@ -913,11 +1184,16 @@ export default function RbacManagement() {
               </tr>
             </thead>
             <tbody>
-              {(fieldRules.data ?? []).map((rule) => (
+              {fieldRuleItems.map((rule) => (
                 <tr key={rule.id} className="border-t">
                   <td className="p-2 font-mono">{rule.permissionKey}</td>
                   <td className="p-2">{rule.positionKey ?? rule.roleKey ?? '-'}</td>
-                  <td className="p-2">{rule.mode}</td>
+                  <td className="p-2">
+                    <div>{rule.mode}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      {rule.defaultRule ? 'Default rule' : 'Custom rule'}
+                    </div>
+                  </td>
                   <td className="p-2">{(rule.fields ?? []).join(', ') || '-'}</td>
                   <td className="p-2">
                     <Button

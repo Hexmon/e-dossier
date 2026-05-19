@@ -83,6 +83,10 @@ export function useRelegationModule(
     mutationFn: async (payload: RelegationPdfPresignRequest) => relegationApi.presignPdf(payload),
   });
 
+  const cleanupPendingPdfMutation = useMutation({
+    mutationFn: async (payload: { objectKey: string }) => relegationApi.cleanupPendingPdf(payload),
+  });
+
   const transferMutation = useMutation({
     mutationFn: async (payload: RelegationTransferRequest) => relegationApi.applyTransfer(payload),
     onSuccess: async () => {
@@ -97,6 +101,7 @@ export function useRelegationModule(
     ocOptionsQuery,
     nextCoursesQuery,
     presignMutation,
+    cleanupPendingPdfMutation,
     transferMutation,
   };
 }
@@ -105,6 +110,7 @@ export function useRelegationHistory(params?: RelegationHistoryParams) {
   return useQuery({
     queryKey: relegationQueryKeys.history(params),
     queryFn: async () => relegationApi.getHistory(params),
+    placeholderData: (previous) => previous,
   });
 }
 

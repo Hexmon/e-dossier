@@ -7,6 +7,7 @@ import {
   selectImmediateNextCourses,
   selectNearestNextCourses,
 } from "@/app/db/queries/relegation";
+import { normalizeCourseCode } from "@/app/lib/course-code";
 
 describe("relegation course sequence helpers", () => {
   it("parses valid course codes", () => {
@@ -29,6 +30,12 @@ describe("relegation course sequence helpers", () => {
 
   it("resolves the required immediate next course code", () => {
     expect(resolveImmediateNextCourseCode("TES-50")).toBe("TES-51");
+  });
+
+  it("normalizes sequence course codes before storage", () => {
+    expect(normalizeCourseCode("tes=051")).toBe("TES-51");
+    expect(normalizeCourseCode("TES-50")).toBe("TES-50");
+    expect(normalizeCourseCode("SPECIAL")).toBe("SPECIAL");
   });
 
   it("selects the nearest higher available course when numbers are skipped", () => {

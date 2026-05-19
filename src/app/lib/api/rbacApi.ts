@@ -15,6 +15,16 @@ export type RbacPermission = {
   };
 };
 
+export type RbacPermissionPage = {
+  message: string;
+  items: RbacPermission[];
+  count: number;
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
 export type RbacRole = {
   id: string;
   key: string;
@@ -81,6 +91,24 @@ export type FieldRule = {
   note: string | null;
   createdAt: string;
   updatedAt: string;
+  defaultRule?: boolean;
+  customRule?: boolean;
+};
+
+export type RbacDefaultFieldRule = {
+  key: string;
+  label: string;
+  permissionKey: string;
+  roleKeys: string[];
+  positionKeys: string[];
+  mode: 'ALLOW' | 'DENY' | 'OMIT' | 'MASK';
+  fields: string[];
+  note?: string | null;
+};
+
+export type RbacFieldRuleDefaults = {
+  defaultFieldRules: RbacDefaultFieldRule[];
+  missingDefaultFieldRules: RbacDefaultFieldRule[];
 };
 
 export type EffectiveRbacBundle = {
@@ -103,7 +131,7 @@ export type EffectiveRbacBundle = {
 
 export const rbacApi = {
   listPermissions: async (params?: { q?: string; limit?: number; offset?: number }) => {
-    return api.get<{ message: string; items: RbacPermission[]; count: number }>(
+    return api.get<RbacPermissionPage>(
       '/api/v1/admin/rbac/permissions',
       { query: params }
     );
@@ -192,7 +220,7 @@ export const rbacApi = {
   },
 
   listFieldRules: async (params?: { permissionId?: string; positionId?: string; roleId?: string }) => {
-    return api.get<{ message: string; items: FieldRule[]; count: number }>('/api/v1/admin/rbac/field-rules', {
+    return api.get<{ message: string; items: FieldRule[]; count: number; defaults: RbacFieldRuleDefaults }>('/api/v1/admin/rbac/field-rules', {
       query: params,
     });
   },

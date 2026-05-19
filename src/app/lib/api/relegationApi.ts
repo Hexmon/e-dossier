@@ -26,9 +26,10 @@ export type RelegationMovementKind =
   | "PROMOTION_BATCH"
   | "PROMOTION_EXCEPTION"
   | "VOID_PROMOTION"
-  | "SEMESTER_RELEGATION";
+  | "SEMESTER_RELEGATION"
+  | "SEMESTER_REPEAT";
 
-export type RelegationTransferMode = "COURSE_TRANSFER" | "PREVIOUS_SEMESTER";
+export type RelegationTransferMode = "COURSE_TRANSFER" | "PREVIOUS_SEMESTER" | "REPEAT_SEMESTER";
 
 export type RelegationPdfPresignRequest = {
   fileName: string;
@@ -248,6 +249,13 @@ export const relegationApi = {
   presignPdf: (payload: RelegationPdfPresignRequest) =>
     api.post<RelegationPdfPresignResponse, RelegationPdfPresignRequest>(
       endpoints.admin.relegation.presign,
+      payload,
+      { baseURL }
+    ),
+
+  cleanupPendingPdf: (payload: { objectKey: string }) =>
+    api.post<{ deleted: boolean }, { objectKey: string }>(
+      endpoints.admin.relegation.pendingPdfCleanup,
       payload,
       { baseURL }
     ),

@@ -32,7 +32,14 @@ vi.mock('@/app/db/client', () => ({
 }));
 
 vi.mock('@/app/db/queries/rbac-admin', () => ({
-  listRbacPermissions: vi.fn(async () => []),
+  listRbacPermissions: vi.fn(async () => ({
+    items: [],
+    count: 0,
+    total: 0,
+    limit: 100,
+    offset: 0,
+    hasMore: false,
+  })),
   createRbacPermission: vi.fn(async (input: { key: string; description?: string | null }) => ({
     id: 'perm-1',
     key: input.key,
@@ -106,6 +113,10 @@ vi.mock('@/app/db/queries/rbac-admin', () => ({
   setRolePermissionMappings: vi.fn(async () => undefined),
   setPositionPermissionMappings: vi.fn(async () => undefined),
   listFieldRules: vi.fn(async () => []),
+  getRbacDefaultFieldRuleMetadata: vi.fn(() => ({
+    defaultFieldRules: [],
+    missingDefaultFieldRules: [],
+  })),
   createFieldRule: vi.fn(async () => ({
     id: 'rule-1',
     permissionId: 'perm-1',
@@ -188,22 +199,29 @@ describe('RBAC permissions routes', () => {
   });
 
   it('GET /api/v1/admin/rbac/permissions returns items', async () => {
-    vi.mocked(rbacAdminQueries.listRbacPermissions).mockResolvedValueOnce([
-      {
-        id: 'perm-1',
-        key: 'admin:rbac:permissions:read',
-        description: null,
-        system: true,
-        defaultGrant: true,
-        display: {
-          title: 'Read RBAC permissions',
-          moduleLabel: 'Admin',
-          areaLabel: 'RBAC',
-          actionLabel: 'Read',
-          description: 'Read RBAC permissions',
+    vi.mocked(rbacAdminQueries.listRbacPermissions).mockResolvedValueOnce({
+      items: [
+        {
+          id: 'perm-1',
+          key: 'admin:rbac:permissions:read',
+          description: null,
+          system: true,
+          defaultGrant: true,
+          display: {
+            title: 'Read RBAC permissions',
+            moduleLabel: 'Admin',
+            areaLabel: 'RBAC',
+            actionLabel: 'Read',
+            description: 'Read RBAC permissions',
+          },
         },
-      },
-    ]);
+      ],
+      count: 1,
+      total: 560,
+      limit: 5,
+      offset: 0,
+      hasMore: true,
+    });
 
     const req = makeJsonRequest({
       method: 'GET',
@@ -214,6 +232,11 @@ describe('RBAC permissions routes', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.items).toHaveLength(1);
+    expect(body.count).toBe(1);
+    expect(body.total).toBe(560);
+    expect(body.limit).toBe(5);
+    expect(body.offset).toBe(0);
+    expect(body.hasMore).toBe(true);
     expect(body.items[0]).toMatchObject({
       system: true,
       defaultGrant: true,
@@ -512,6 +535,8 @@ describe('RBAC mappings, roles, and field rules routes', () => {
         note: null,
         createdAt: new Date(),
         updatedAt: new Date(),
+        defaultRule: false,
+        customRule: true,
       },
     ]);
 
@@ -521,6 +546,8 @@ describe('RBAC mappings, roles, and field rules routes', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.items).toHaveLength(1);
+    expect(body.defaults.defaultFieldRules).toEqual([]);
+    expect(body.defaults.missingDefaultFieldRules).toEqual([]);
   });
 
   it('POST /api/v1/admin/rbac/field-rules validates payload', async () => {

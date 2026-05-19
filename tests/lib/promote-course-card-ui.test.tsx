@@ -22,6 +22,13 @@ const mockRelegationState = vi.hoisted(() => ({
   ocOptions: [] as MockOcOption[],
 }));
 
+const mockPromoteCourse = vi.hoisted(() => vi.fn());
+const mockRelegationApi = vi.hoisted(() => ({
+  applyTransfer: vi.fn(),
+  presignPdf: vi.fn(),
+  cleanupPendingPdf: vi.fn(),
+}));
+
 vi.mock("@/app/lib/debounce", () => ({
   useDebouncedValue: <T,>(value: T) => value,
 }));
@@ -34,11 +41,15 @@ vi.mock("@/hooks/useRelegation", () => ({
     },
   }),
   useRelegationActions: () => ({
-    promoteCourse: vi.fn(),
+    promoteCourse: mockPromoteCourse,
     promoteCourseMutation: {
       isPending: false,
     },
   }),
+}));
+
+vi.mock("@/app/lib/api/relegationApi", () => ({
+  relegationApi: mockRelegationApi,
 }));
 
 vi.mock("@/components/ui/select", async () => {
@@ -92,17 +103,61 @@ function getButton(container: HTMLElement, text: string) {
   return button as HTMLButtonElement;
 }
 
+function getButtonByLabel(container: HTMLElement, label: string) {
+  const button = Array.from(container.querySelectorAll("button")).find(
+    (item) => item.getAttribute("aria-label") === label
+  );
+  expect(button, `button with aria-label "${label}"`).toBeTruthy();
+  return button as HTMLButtonElement;
+}
+
 function click(button: HTMLButtonElement) {
   act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 }
 
-describe("PromoteCourseCard exclusion UI", () => {
+function changeField(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
+  act(() => {
+    const prototype = element instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+    setter?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+describe("PromoteCourseCard decision UI", () => {
   let container: HTMLDivElement;
   let root: Root;
 
   beforeEach(() => {
+    mockPromoteCourse.mockResolvedValue({
+      result: {
+        summary: {
+          totalEligible: 2,
+          excludedByRequest: 1,
+          excludedByException: 0,
+          promoted: 1,
+        },
+      },
+    });
+    mockRelegationApi.applyTransfer.mockResolvedValue({
+      transfer: {
+        history: {
+          movementKind: "SEMESTER_REPEAT",
+        },
+      },
+    });
+    mockRelegationApi.presignPdf.mockResolvedValue({
+      uploadUrl: "https://upload-url",
+      publicUrl: "https://public-url/relegation/pending.pdf",
+      objectKey: "relegation/pending.pdf",
+      expiresInSeconds: 300,
+    });
+    mockRelegationApi.cleanupPendingPdf.mockResolvedValue({ deleted: true });
     mockRelegationState.ocOptions = [
       {
         ocId: "11111111-1111-4111-8111-111111111111",
@@ -144,7 +199,7 @@ describe("PromoteCourseCard exclusion UI", () => {
     vi.clearAllMocks();
   });
 
-  it("makes exclusion and restore decisions clear", () => {
+  it("shows compact promote/relegate decisions for every OC", () => {
     act(() => {
       root.render(
         <PromoteCourseCard
@@ -164,25 +219,99 @@ describe("PromoteCourseCard exclusion UI", () => {
     expect(container.textContent).toContain("Promotion Status");
     expect(container.textContent).toContain("Decision");
     expect(container.textContent).toContain("Will promote: 2");
-    expect(container.textContent).toContain("Excluded: 0");
+    expect(container.textContent).toContain("For relegation: 0");
     expect(container.textContent).toContain("Will be promoted");
+    expect(getButtonByLabel(container, "Promote 7517").getAttribute("aria-pressed")).toBe("true");
+    expect(getButtonByLabel(container, "Relegate 7517").getAttribute("aria-pressed")).toBe("false");
+    expect(getButtonByLabel(container, "Promote 7515").getAttribute("aria-pressed")).toBe("true");
+    expect(getButtonByLabel(container, "Relegate 7515").getAttribute("aria-pressed")).toBe("false");
 
-    const excludeButton = getButton(container, "Exclude from promotion");
-    expect(excludeButton.className).toContain("bg-destructive");
-    click(excludeButton);
+    const relegateButton = getButtonByLabel(container, "Relegate 7517");
+    expect(relegateButton.className).toContain("text-destructive");
+    click(relegateButton);
 
     expect(container.textContent).toContain("Will promote: 1");
-    expect(container.textContent).toContain("Excluded: 1");
-    expect(container.textContent).toContain("Excluded from this batch");
-    expect(container.textContent).toContain("Restore to promotion list");
-    expect(container.textContent).toContain("Restore all");
+    expect(container.textContent).toContain("For relegation: 1");
+    expect(container.textContent).toContain("Will repeat semester");
+    expect(getButtonByLabel(container, "Promote 7517").getAttribute("aria-pressed")).toBe("false");
+    expect(getButtonByLabel(container, "Relegate 7517").getAttribute("aria-pressed")).toBe("true");
+    expect(container.textContent).toContain("Promote all");
     expect(container.textContent).not.toContain("Include");
 
-    click(getButton(container, "Restore all"));
+    click(getButton(container, "Promote all"));
 
     expect(container.textContent).toContain("Will promote: 2");
-    expect(container.textContent).toContain("Excluded: 0");
-    expect(container.textContent).not.toContain("Restore to promotion list");
-    expect(container.textContent).not.toContain("Restore all");
+    expect(container.textContent).toContain("For relegation: 0");
+    expect(getButtonByLabel(container, "Promote 7517").getAttribute("aria-pressed")).toBe("true");
+    expect(getButtonByLabel(container, "Relegate 7517").getAttribute("aria-pressed")).toBe("false");
+    expect(container.textContent).not.toContain("Promote all");
+  });
+
+  it("shows a guided repeat-semester queue for excluded OCs after promotion", async () => {
+    act(() => {
+      root.render(
+        <PromoteCourseCard
+          courses={[
+            {
+              id: "course-1",
+              code: "TES-50",
+              title: "Course TES-50",
+            },
+            {
+              id: "course-2",
+              code: "TES-51",
+              title: "Course TES-51",
+            },
+          ]}
+        />
+      );
+    });
+
+    click(getButton(container, "TES-50 | Course TES-50"));
+    click(getButtonByLabel(container, "Relegate 7517"));
+
+    await act(async () => {
+      getButton(container, "Promote Course").click();
+    });
+
+    expect(mockPromoteCourse).toHaveBeenCalledWith({
+      fromCourseId: "course-1",
+      fromSemester: 1,
+      excludeOcIds: ["11111111-1111-4111-8111-111111111111"],
+      note: null,
+    });
+    expect(container.textContent).toContain("OCs pending relegation: 1");
+    expect(container.textContent).toContain("Relegate selected OCs (1)");
+
+    click(getButton(container, "Relegate selected OCs (1)"));
+
+    expect(container.textContent).toContain("7517 | Aaryan Prashar");
+    expect(container.textContent).toContain("Current attempt");
+    expect(container.textContent).toContain("Target attempt");
+    expect(container.textContent).toContain("TES-50");
+    expect(container.textContent).toContain("TES-51");
+    expect(container.textContent).toContain("Future-semester data only");
+    expect(container.textContent).not.toContain("Select OC");
+    expect(container.textContent).not.toContain("Name of the OC");
+
+    changeField(container.querySelector("#excludedReason") as HTMLTextAreaElement, "Repeat with next course");
+    act(() => {
+      (container.querySelector('[data-slot="checkbox"]') as HTMLButtonElement).click();
+    });
+
+    await act(async () => {
+      getButton(container, "Confirm repeat-semester relegation").click();
+    });
+
+    expect(mockRelegationApi.applyTransfer).toHaveBeenCalledWith({
+      ocId: "11111111-1111-4111-8111-111111111111",
+      toCourseId: "course-2",
+      relegationMode: "REPEAT_SEMESTER",
+      targetSemester: 1,
+      reason: "Repeat with next course",
+      remark: null,
+      pdfObjectKey: null,
+      pdfUrl: null,
+    });
   });
 });

@@ -67,7 +67,7 @@ export type RelegationMovementKind = (typeof ocMovementKind.enumValues)[number];
 export type ApplyOcRelegationTransferInput = {
   ocId: string;
   toCourseId: string;
-  relegationMode?: "COURSE_TRANSFER" | "PREVIOUS_SEMESTER";
+  relegationMode?: "COURSE_TRANSFER" | "PREVIOUS_SEMESTER" | "REPEAT_SEMESTER";
   targetSemester?: number | null;
   reason: string;
   remark?: string | null;
@@ -94,7 +94,7 @@ export type RelegationActorScope = {
   scopePlatoonId?: string | null;
 };
 
-export type RelegationCourseTargetMode = "COURSE_TRANSFER" | "PREVIOUS_SEMESTER";
+export type RelegationCourseTargetMode = "COURSE_TRANSFER" | "PREVIOUS_SEMESTER" | "REPEAT_SEMESTER";
 
 const COURSE_SEQUENCE_REGEX = /^([A-Za-z][A-Za-z0-9]*)[-=](\d+)$/;
 
@@ -415,7 +415,7 @@ export async function listRelegationTargetCourses(
     .where(isNull(courses.deletedAt));
 
   const options = candidateCourses.map(toCourseOption);
-  if (mode === "PREVIOUS_SEMESTER") {
+  if (mode === "PREVIOUS_SEMESTER" || mode === "REPEAT_SEMESTER") {
     const expectedCourseCode = resolveImmediateNextCourseCode(currentCourse.code);
     const targetCourses = selectImmediateNextCourses(
       currentCourse.code,
@@ -425,7 +425,7 @@ export async function listRelegationTargetCourses(
     if (targetCourses.length === 0) {
       throw new ApiError(
         404,
-        `Relegation target course ${expectedCourseCode} is not configured. Create ${expectedCourseCode} in Course Management before previous-semester relegation.`,
+        `Relegation target course ${expectedCourseCode} is not configured. Create ${expectedCourseCode} in Course Management before relegation.`,
         "relegation_target_course_not_found",
         {
           currentCourseCode: currentCourse.code,
@@ -540,15 +540,16 @@ async function ensureAllowedRelegationTargetCourse(
   const isAllowed = allowedPreviousCourses.some((course) => course.courseId === targetCourseId);
 
   if (!isAllowed) {
+    const label = mode === "REPEAT_SEMESTER" ? "repeat-semester" : "previous-semester";
     throw new ApiError(
       400,
-      `Invalid previous-semester target. Only the immediate next course is allowed from ${fromCode}.`,
+      `Invalid ${label} target. Only the immediate next course is allowed from ${fromCode}.`,
       "bad_request"
     );
   }
 }
 
-export type RelegationTransferMode = "COURSE_TRANSFER" | "PREVIOUS_SEMESTER";
+export type RelegationTransferMode = "COURSE_TRANSFER" | "PREVIOUS_SEMESTER" | "REPEAT_SEMESTER";
 
 export type RelegationTransferSemesterPlan = {
   mode: RelegationTransferMode;
@@ -573,7 +574,7 @@ export function resolveRelegationTransferSemesterPlan(args: {
   const mode = args.relegationMode ?? "COURSE_TRANSFER";
   const fromSemester = normalizeSemester(args.currentSemester);
 
-  if (mode !== "PREVIOUS_SEMESTER") {
+  if (mode === "COURSE_TRANSFER") {
     return {
       mode: "COURSE_TRANSFER",
       movementKind: "TRANSFER",
@@ -581,6 +582,30 @@ export function resolveRelegationTransferSemesterPlan(args: {
       toSemester: null,
       cleanupFromSemester: null,
       newEnrollmentCurrentSemester: null,
+    };
+  }
+
+  if (mode === "REPEAT_SEMESTER") {
+    if (args.targetSemester !== fromSemester) {
+      throw new ApiError(
+        400,
+        `Repeat-semester relegation target must be semester ${fromSemester}.`,
+        "bad_request",
+        {
+          currentSemester: fromSemester,
+          expectedTargetSemester: fromSemester,
+          providedTargetSemester: args.targetSemester ?? null,
+        }
+      );
+    }
+
+    return {
+      mode,
+      movementKind: "SEMESTER_REPEAT",
+      fromSemester,
+      toSemester: fromSemester,
+      cleanupFromSemester: fromSemester + 1,
+      newEnrollmentCurrentSemester: fromSemester,
     };
   }
 
@@ -1799,6 +1824,16 @@ export async function getRelegationMediaReference(historyId: string, scopePlatoo
     pdfObjectKey: row.pdfObjectKey,
     pdfUrl: row.pdfUrl,
   };
+}
+
+export async function isRelegationPdfObjectCommitted(objectKey: string) {
+  const [row] = await db
+    .select({ id: ocRelegations.id })
+    .from(ocRelegations)
+    .where(eq(ocRelegations.pdfObjectKey, objectKey))
+    .limit(1);
+
+  return Boolean(row);
 }
 
 export async function getOcRelegationHistory(ocId: string) {

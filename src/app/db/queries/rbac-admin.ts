@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, inArray } from 'drizzle-orm';
+import { and, asc, eq, ilike, inArray, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { authzPolicyState, permissionFieldRules } from '../schema/auth/rbac-extensions';
 import { permissions, positionPermissions, rolePermissions, roles } from '../schema/auth/rbac';
@@ -11,6 +11,7 @@ import {
   isSystemPermissionKey,
   normalizeRbacKey,
 } from '@/app/lib/rbac/default-permissions';
+import { getRbacDefaultFieldRules } from '@/app/lib/rbac/default-field-rules';
 import { getPermissionDisplayMeta } from '@/app/lib/rbac/permission-display';
 import { ApiError } from '@/app/lib/http';
 
@@ -26,6 +27,13 @@ export async function listRbacPermissions(input: Paging = {}) {
   const limit = Math.min(Math.max(input.limit ?? 100, 1), 500);
   const offset = Math.max(input.offset ?? 0, 0);
   const q = input.q?.trim();
+  const whereClause = q ? ilike(permissions.key, `%${q}%`) : undefined;
+
+  const [totalRow] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(permissions)
+    .where(whereClause);
+  const total = Number(totalRow?.total ?? 0);
 
   const rows = await db
     .select({
@@ -34,16 +42,25 @@ export async function listRbacPermissions(input: Paging = {}) {
       description: permissions.description,
     })
     .from(permissions)
-    .where(q ? ilike(permissions.key, `%${q}%`) : undefined)
+    .where(whereClause)
     .orderBy(asc(permissions.key))
     .limit(limit)
     .offset(offset);
 
-  return rows.map((row) => ({
+  const items = rows.map((row) => ({
     ...row,
     ...getPermissionSystemMeta(row.key),
     display: getPermissionDisplayMeta(row.key, row.description),
   }));
+
+  return {
+    items,
+    count: items.length,
+    total,
+    limit,
+    offset,
+    hasMore: offset + items.length < total,
+  };
 }
 
 export async function createRbacPermission(input: { key: string; description?: string | null }) {
@@ -413,7 +430,18 @@ export async function listFieldRules(input: { permissionId?: string; positionId?
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(asc(permissions.key));
 
-  return rows;
+  return rows.map((row) => ({
+    ...row,
+    defaultRule: false,
+    customRule: true,
+  }));
+}
+
+export function getRbacDefaultFieldRuleMetadata() {
+  return {
+    defaultFieldRules: getRbacDefaultFieldRules(),
+    missingDefaultFieldRules: [],
+  };
 }
 
 export async function createFieldRule(input: {

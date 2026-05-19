@@ -9,6 +9,7 @@ export const ocMovementKind = pgEnum("oc_movement_kind", [
   "PROMOTION_EXCEPTION",
   "VOID_PROMOTION",
   "SEMESTER_RELEGATION",
+  "SEMESTER_REPEAT",
 ]);
 
 export const ocRelegations = pgTable(

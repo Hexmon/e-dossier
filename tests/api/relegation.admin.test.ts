@@ -5,6 +5,7 @@ import { createRouteContext, makeJsonRequest } from "../utils/next";
 import { GET as getOcOptions } from "@/app/api/v1/admin/relegation/ocs/route";
 import { GET as getNextCourses } from "@/app/api/v1/admin/relegation/courses/route";
 import { POST as postPresign } from "@/app/api/v1/admin/relegation/presign/route";
+import { POST as postPendingPdfCleanup } from "@/app/api/v1/admin/relegation/pending-pdf/cleanup/route";
 import { POST as postPromoteCourse } from "@/app/api/v1/admin/relegation/promote-course/route";
 import { POST as postTransfer } from "@/app/api/v1/admin/relegation/transfer/route";
 
@@ -41,6 +42,7 @@ vi.mock("@/app/db/queries/relegation", () => ({
     },
     cleanupSummary: null,
   })),
+  isRelegationPdfObjectCommitted: vi.fn(async () => false),
   promoteCourseBatch: vi.fn(async () => ({
     fromCourse: {
       courseId: "22222222-2222-4222-8222-222222222222",
@@ -78,11 +80,13 @@ vi.mock("@/app/lib/relegation-auth", () => ({
 vi.mock("@/app/lib/storage", () => ({
   createPresignedUploadUrl: vi.fn(async () => "https://upload-url"),
   getPublicObjectUrl: vi.fn(() => "https://public-url"),
+  deleteObject: vi.fn(async () => undefined),
 }));
 
 const ocOptionsPath = "/api/v1/admin/relegation/ocs";
 const nextCoursesPath = "/api/v1/admin/relegation/courses";
 const presignPath = "/api/v1/admin/relegation/presign";
+const pendingPdfCleanupPath = "/api/v1/admin/relegation/pending-pdf/cleanup";
 const promoteCoursePath = "/api/v1/admin/relegation/promote-course";
 const transferPath = "/api/v1/admin/relegation/transfer";
 
@@ -178,6 +182,30 @@ describe("Admin relegation APIs", () => {
     expect(relegationQueries.listRelegationTargetCourses).toHaveBeenCalledWith(
       "22222222-2222-4222-8222-222222222222",
       "PREVIOUS_SEMESTER"
+    );
+  });
+
+  it("GET /courses returns repeat-semester target options", async () => {
+    vi.mocked(relegationQueries.listRelegationTargetCourses).mockResolvedValueOnce([
+      {
+        courseId: "33333333-3333-4333-8333-333333333333",
+        courseCode: "TES-51",
+        courseName: "TES 51",
+      },
+    ]);
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path: `${nextCoursesPath}?currentCourseId=22222222-2222-4222-8222-222222222222&mode=REPEAT_SEMESTER`,
+    });
+    const res = await getNextCourses(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.items[0].courseCode).toBe("TES-51");
+    expect(relegationQueries.listRelegationTargetCourses).toHaveBeenCalledWith(
+      "22222222-2222-4222-8222-222222222222",
+      "REPEAT_SEMESTER"
     );
   });
 
@@ -306,6 +334,44 @@ describe("Admin relegation APIs", () => {
     });
   });
 
+  it("POST /pending-pdf/cleanup deletes an uncommitted relegation PDF", async () => {
+    vi.mocked(relegationQueries.isRelegationPdfObjectCommitted).mockResolvedValueOnce(false);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: pendingPdfCleanupPath,
+      body: {
+        objectKey: "relegation/pending.pdf",
+      },
+    });
+
+    const res = await postPendingPdfCleanup(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.deleted).toBe(true);
+    expect(storage.deleteObject).toHaveBeenCalledWith("relegation/pending.pdf");
+  });
+
+  it("POST /pending-pdf/cleanup refuses committed relegation PDFs", async () => {
+    vi.mocked(relegationQueries.isRelegationPdfObjectCommitted).mockResolvedValueOnce(true);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: pendingPdfCleanupPath,
+      body: {
+        objectKey: "relegation/committed.pdf",
+      },
+    });
+
+    const res = await postPendingPdfCleanup(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("relegation_pdf_committed");
+    expect(storage.deleteObject).not.toHaveBeenCalled();
+  });
+
   it("POST /transfer validates payload", async () => {
     const req = makeJsonRequest({
       method: "POST",
@@ -385,6 +451,32 @@ describe("Admin relegation APIs", () => {
     expect(res.status).toBe(400);
   });
 
+  it("POST /transfer cleans up pending PDF when backend rejects after upload", async () => {
+    vi.mocked(relegationQueries.applyOcRelegationTransfer).mockRejectedValueOnce(
+      new ApiError(400, "Invalid transfer target", "bad_request")
+    );
+    vi.mocked(relegationQueries.isRelegationPdfObjectCommitted).mockResolvedValueOnce(false);
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: transferPath,
+      body: {
+        ocId: "11111111-1111-4111-8111-111111111111",
+        toCourseId: "33333333-3333-4333-8333-333333333333",
+        relegationMode: "COURSE_TRANSFER",
+        targetSemester: null,
+        reason: "Failed modules",
+        pdfObjectKey: "relegation/pending.pdf",
+        pdfUrl: "https://public-url/relegation/pending.pdf",
+      },
+    });
+
+    const res = await postTransfer(req as any, createRouteContext());
+
+    expect(res.status).toBe(400);
+    expect(storage.deleteObject).toHaveBeenCalledWith("relegation/pending.pdf");
+  });
+
   it("POST /transfer applies relegation and returns summary", async () => {
     const req = makeJsonRequest({
       method: "POST",
@@ -445,6 +537,35 @@ describe("Admin relegation APIs", () => {
         relegationMode: "PREVIOUS_SEMESTER",
         targetSemester: 3,
         reason: "Late result correction",
+      },
+      "admin-1",
+      { scopePlatoonId: null }
+    );
+  });
+
+  it("POST /transfer accepts repeat-semester relegation payload", async () => {
+    const req = makeJsonRequest({
+      method: "POST",
+      path: transferPath,
+      body: {
+        ocId: "11111111-1111-4111-8111-111111111111",
+        toCourseId: "33333333-3333-4333-8333-333333333333",
+        relegationMode: "REPEAT_SEMESTER",
+        targetSemester: 2,
+        reason: "Repeat semester in next course",
+      },
+    });
+
+    const res = await postTransfer(req as any, createRouteContext());
+
+    expect(res.status).toBe(201);
+    expect(relegationQueries.applyOcRelegationTransfer).toHaveBeenCalledWith(
+      {
+        ocId: "11111111-1111-4111-8111-111111111111",
+        toCourseId: "33333333-3333-4333-8333-333333333333",
+        relegationMode: "REPEAT_SEMESTER",
+        targetSemester: 2,
+        reason: "Repeat semester in next course",
       },
       "admin-1",
       { scopePlatoonId: null }

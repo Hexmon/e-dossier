@@ -192,4 +192,28 @@ describe('POST /api/v1/courses', () => {
     expect(body.course.id).toBe('course-1');
     expect(body.course.code).toBe('TES-50');
   });
+
+  it('normalizes sequence course codes before creating a course', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({
+      userId: 'admin-1',
+      roles: ['ADMIN'],
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path,
+      body: { code: 'tes=051', title: 'Course 51' },
+    });
+
+    const res = await postCourses(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body.course.code).toBe('TES-51');
+    expect(coursesQueries.createCourse).toHaveBeenCalledWith({
+      code: 'TES-51',
+      title: 'Course 51',
+      notes: undefined,
+    });
+  });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -80,6 +80,11 @@ export function useCourses(options: UseCoursesOptions = {}) {
     const totalCount = coursesQuery.data?.total ?? coursesQuery.data?.count ?? courses.length;
     const { isLoading: loading, isFetching } = coursesQuery;
 
+    const fetchCourses = useCallback(
+        () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
+        [queryClient]
+    );
+
     useEffect(() => {
         if (!coursesQuery.isError) return;
         toast.error(getFriendlyApiErrorMessage(coursesQuery.error, "Failed to load courses"));
@@ -141,7 +146,7 @@ export function useCourses(options: UseCoursesOptions = {}) {
         pageOffset: coursesQuery.data?.offset ?? offset,
         loading,
         isFetching,
-        fetchCourses: () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
+        fetchCourses,
         addCourse: addCourseMutation.mutateAsync,
         editCourse: (id: string, data: Omit<UICourse, "id">) =>
             editCourseMutation.mutateAsync({ id, data }),

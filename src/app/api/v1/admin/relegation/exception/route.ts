@@ -2,6 +2,7 @@ import { handleApiError, json } from "@/app/lib/http";
 import { recordPromotionException } from "@/app/db/queries/relegation";
 import { relegationExceptionSchema } from "@/app/lib/validators.relegation";
 import { assertCanWriteSingle, getRelegationAccessContext } from "@/app/lib/relegation-auth";
+import { tryDeletePendingRelegationPdfObject } from "@/app/lib/relegation-pdf-cleanup";
 import {
   AuditEventType,
   AuditResourceType,
@@ -12,6 +13,7 @@ import {
 export const runtime = "nodejs";
 
 async function POSTHandler(req: AuditNextRequest) {
+  let uploadedPdfObjectKey: string | null = null;
   try {
     const access = await getRelegationAccessContext(req);
     assertCanWriteSingle(access);
@@ -20,6 +22,7 @@ async function POSTHandler(req: AuditNextRequest) {
     if (!parsed.success) {
       return json.badRequest("Validation failed.", { issues: parsed.error.flatten() });
     }
+    uploadedPdfObjectKey = parsed.data.pdfObjectKey ?? null;
 
     const result = await recordPromotionException(parsed.data, access.userId, {
       scopePlatoonId: access.scopePlatoonId,
@@ -45,6 +48,7 @@ async function POSTHandler(req: AuditNextRequest) {
       transfer: result,
     });
   } catch (error) {
+    await tryDeletePendingRelegationPdfObject(uploadedPdfObjectKey);
     return handleApiError(error);
   }
 }

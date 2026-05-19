@@ -55,4 +55,31 @@ describe("previous-semester relegation planning", () => {
       })
     ).toThrow(ApiError);
   });
+
+  it("moves an excluded OC to the same semester in the next course and cleans only future data", () => {
+    expect(
+      resolveRelegationTransferSemesterPlan({
+        currentSemester: 2,
+        relegationMode: "REPEAT_SEMESTER",
+        targetSemester: 2,
+      })
+    ).toEqual({
+      mode: "REPEAT_SEMESTER",
+      movementKind: "SEMESTER_REPEAT",
+      fromSemester: 2,
+      toSemester: 2,
+      cleanupFromSemester: 3,
+      newEnrollmentCurrentSemester: 2,
+    });
+  });
+
+  it("rejects repeat-semester relegation when target is not the current semester", () => {
+    expect(() =>
+      resolveRelegationTransferSemesterPlan({
+        currentSemester: 2,
+        relegationMode: "REPEAT_SEMESTER",
+        targetSemester: 1,
+      })
+    ).toThrow(ApiError);
+  });
 });

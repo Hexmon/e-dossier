@@ -12,7 +12,7 @@ const optionalTrimmedText = z
 
 export const relegationCoursesQuerySchema = z.object({
   currentCourseId: z.string().uuid("currentCourseId must be a valid uuid"),
-  mode: z.enum(["COURSE_TRANSFER", "PREVIOUS_SEMESTER"]).optional().default("PREVIOUS_SEMESTER"),
+  mode: z.enum(["COURSE_TRANSFER", "PREVIOUS_SEMESTER", "REPEAT_SEMESTER"]).optional().default("PREVIOUS_SEMESTER"),
 });
 
 export const relegationPdfPresignSchema = z.object({
@@ -25,11 +25,18 @@ export const relegationPdfPresignSchema = z.object({
     .max(RELEGATION_MAX_PDF_SIZE_BYTES, "PDF exceeds max allowed size"),
 });
 
+export const relegationPendingPdfCleanupSchema = z.object({
+  objectKey: z
+    .string()
+    .trim()
+    .regex(/^relegation\/[^/]+\.pdf$/i, "objectKey must be a pending relegation PDF object key"),
+});
+
 export const relegationTransferSchema = z
   .object({
     ocId: z.string().uuid("ocId must be a valid uuid"),
     toCourseId: z.string().uuid("toCourseId must be a valid uuid"),
-    relegationMode: z.enum(["COURSE_TRANSFER", "PREVIOUS_SEMESTER"]).optional().default("COURSE_TRANSFER"),
+    relegationMode: z.enum(["COURSE_TRANSFER", "PREVIOUS_SEMESTER", "REPEAT_SEMESTER"]).optional().default("COURSE_TRANSFER"),
     targetSemester: z.coerce.number().int().min(1).max(6).optional().nullable(),
     reason: z.string().trim().min(2, "reason is required").max(2000),
     remark: optionalTrimmedText,
@@ -48,11 +55,11 @@ export const relegationTransferSchema = z
       });
     }
 
-    if (value.relegationMode === "PREVIOUS_SEMESTER" && value.targetSemester == null) {
+    if ((value.relegationMode === "PREVIOUS_SEMESTER" || value.relegationMode === "REPEAT_SEMESTER") && value.targetSemester == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["targetSemester"],
-        message: "targetSemester is required for previous-semester relegation",
+        message: "targetSemester is required for semester relegation",
       });
     }
   });
@@ -68,7 +75,7 @@ export const relegationHistoryQuerySchema = z.object({
   courseFromId: z.string().uuid("courseFromId must be a valid uuid").optional(),
   courseToId: z.string().uuid("courseToId must be a valid uuid").optional(),
   movementKind: z
-    .enum(["TRANSFER", "PROMOTION_BATCH", "PROMOTION_EXCEPTION", "VOID_PROMOTION", "SEMESTER_RELEGATION"])
+    .enum(["TRANSFER", "PROMOTION_BATCH", "PROMOTION_EXCEPTION", "VOID_PROMOTION", "SEMESTER_RELEGATION", "SEMESTER_REPEAT"])
     .optional(),
   limit: z.coerce.number().int().positive().max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
@@ -141,6 +148,7 @@ export const relegationEnrollmentModulesQuerySchema = z.object({
 });
 
 export type RelegationPdfPresignInput = z.infer<typeof relegationPdfPresignSchema>;
+export type RelegationPendingPdfCleanupInput = z.infer<typeof relegationPendingPdfCleanupSchema>;
 export type RelegationTransferInput = z.infer<typeof relegationTransferSchema>;
 export type RelegationOcOptionsQueryInput = z.infer<typeof relegationOcOptionsQuerySchema>;
 export type RelegationHistoryQueryInput = z.infer<typeof relegationHistoryQuerySchema>;

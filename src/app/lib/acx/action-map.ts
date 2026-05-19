@@ -3297,6 +3297,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/relegation/pending-pdf/cleanup",
+    "action": "admin:relegation:pending-pdf:cleanup:create",
+    "resourceType": "admin:relegation:pending-pdf:cleanup",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/relegation/promote-course",
     "action": "admin:relegation:promote-course:create",
     "resourceType": "admin:relegation:promote-course",
@@ -4615,6 +4624,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/genmgmt/promotion-relegation/promote-course",
     "action": "page:dashboard:genmgmt:promotion-relegation:promote-course:view",
     "resourceType": "page:dashboard:genmgmt:promotion-relegation:promote-course",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/genmgmt/promotion-relegation/history",
+    "action": "page:dashboard:genmgmt:promotion-relegation:history:view",
+    "resourceType": "page:dashboard:genmgmt:promotion-relegation:history",
     "category": "genmgmt",
     "adminBaseline": true
   },

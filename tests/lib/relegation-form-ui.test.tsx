@@ -8,6 +8,14 @@ const mockTransferMutation = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
 }));
 
+const mockPresignMutation = vi.hoisted(() => ({
+  mutateAsync: vi.fn(),
+}));
+
+const mockCleanupPendingPdfMutation = vi.hoisted(() => ({
+  mutateAsync: vi.fn(),
+}));
+
 const mockUseRelegationModule = vi.hoisted(() => vi.fn());
 
 vi.mock("sonner", () => ({
@@ -86,6 +94,18 @@ function getButton(container: HTMLElement, text: string) {
   return button as HTMLButtonElement;
 }
 
+function changeField(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
+  act(() => {
+    const prototype = element instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+    setter?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
 describe("RelegationForm previous-semester UI", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -94,6 +114,48 @@ describe("RelegationForm previous-semester UI", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
+    mockPresignMutation.mutateAsync.mockResolvedValue({
+      uploadUrl: "https://upload-url",
+      publicUrl: "https://public-url/relegation/pending.pdf",
+      objectKey: "relegation/pending.pdf",
+      expiresInSeconds: 300,
+    });
+    mockCleanupPendingPdfMutation.mutateAsync.mockResolvedValue({ deleted: true });
+    mockTransferMutation.mutateAsync.mockResolvedValue({
+      transfer: {
+        oc: {
+          ocId: "11111111-1111-4111-8111-111111111111",
+          ocNo: "7517",
+          ocName: "Aaryan Prashar",
+        },
+        fromCourse: {
+          courseId: "22222222-2222-4222-8222-222222222222",
+          courseCode: "TES-50",
+          courseName: "Course TES-50",
+        },
+        toCourse: {
+          courseId: "44444444-4444-4444-8444-444444444444",
+          courseCode: "TES-51",
+          courseName: "Course TES-51",
+        },
+        history: {
+          id: "55555555-5555-4555-8555-555555555555",
+          movementKind: "TRANSFER",
+          fromSemester: 4,
+          toSemester: 4,
+          performedAt: new Date().toISOString(),
+        },
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => "",
+      }))
+    );
     mockUseRelegationModule.mockImplementation((_currentCourseId, _ocParams, targetMode) => ({
       ocOptionsQuery: {
         data: [
@@ -141,7 +203,11 @@ describe("RelegationForm previous-semester UI", () => {
       },
       presignMutation: {
         isPending: false,
-        mutateAsync: vi.fn(),
+        mutateAsync: mockPresignMutation.mutateAsync,
+      },
+      cleanupPendingPdfMutation: {
+        isPending: false,
+        mutateAsync: mockCleanupPendingPdfMutation.mutateAsync,
       },
       transferMutation: {
         isPending: false,
@@ -156,6 +222,7 @@ describe("RelegationForm previous-semester UI", () => {
     });
     container.remove();
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("shows the previous-semester target and cleanup warning for a semester 4 OC", () => {
@@ -240,7 +307,11 @@ describe("RelegationForm previous-semester UI", () => {
             },
       presignMutation: {
         isPending: false,
-        mutateAsync: vi.fn(),
+        mutateAsync: mockPresignMutation.mutateAsync,
+      },
+      cleanupPendingPdfMutation: {
+        isPending: false,
+        mutateAsync: mockCleanupPendingPdfMutation.mutateAsync,
       },
       transferMutation: {
         isPending: false,
@@ -258,5 +329,80 @@ describe("RelegationForm previous-semester UI", () => {
 
     expect(toast.error).toHaveBeenCalledWith(error.message);
     expect(container.textContent).toContain(error.message);
+    expect((container.querySelector("#pdfFile") as HTMLInputElement).disabled).toBe(true);
+    expect(getButton(container, "Submit").disabled).toBe(true);
+  });
+
+  it("cleans up an uploaded PDF when transfer submission fails", async () => {
+    mockTransferMutation.mutateAsync.mockRejectedValueOnce(new Error("Transfer failed"));
+
+    act(() => {
+      root.render(<RelegationForm />);
+    });
+
+    act(() => {
+      getButton(container, "7517 | Aaryan Prashar").click();
+    });
+    act(() => {
+      getButton(container, "Course transfer").click();
+    });
+    act(() => {
+      getButton(container, "TES-51 | Course TES-51").click();
+    });
+    changeField(container.querySelector("#reason") as HTMLTextAreaElement, "Failed modules");
+
+    const fileInput = container.querySelector("#pdfFile") as HTMLInputElement;
+    Object.defineProperty(fileInput, "files", {
+      value: [new File(["test"], "proof.pdf", { type: "application/pdf" })],
+      configurable: true,
+    });
+    act(() => {
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await act(async () => {
+      getButton(container, "Submit").click();
+    });
+
+    expect(mockPresignMutation.mutateAsync).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://upload-url",
+      expect.objectContaining({ method: "PUT" })
+    );
+    expect(mockCleanupPendingPdfMutation.mutateAsync).toHaveBeenCalledWith({
+      objectKey: "relegation/pending.pdf",
+    });
+    expect(toast.error).toHaveBeenCalledWith("Transfer failed");
+  });
+
+  it("clears the normal transfer form after success", async () => {
+    act(() => {
+      root.render(<RelegationForm />);
+    });
+
+    act(() => {
+      getButton(container, "7517 | Aaryan Prashar").click();
+    });
+    act(() => {
+      getButton(container, "Course transfer").click();
+    });
+    act(() => {
+      getButton(container, "TES-51 | Course TES-51").click();
+    });
+    changeField(container.querySelector("#reason") as HTMLTextAreaElement, "Course transfer");
+
+    await act(async () => {
+      getButton(container, "Submit").click();
+    });
+
+    expect(mockTransferMutation.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ocId: "11111111-1111-4111-8111-111111111111",
+        toCourseId: "44444444-4444-4444-8444-444444444444",
+        relegationMode: "COURSE_TRANSFER",
+      })
+    );
+    expect((container.querySelector("#courseNo") as HTMLInputElement).value).toBe("");
+    expect((container.querySelector("#reason") as HTMLTextAreaElement).value).toBe("");
   });
 });

@@ -4,6 +4,7 @@ import { courseOfferings } from '@/app/db/schema/training/courseOfferings';
 import { subjects } from '@/app/db/schema/training/subjects';
 import { ocCadets } from '@/app/db/schema/training/oc';
 import { and, eq, ilike, isNull, sql } from 'drizzle-orm';
+import { normalizeCourseCode } from '@/app/lib/course-code';
 
 export type CourseRow = typeof courses.$inferSelect;
 
@@ -62,7 +63,7 @@ export async function createCourse(data: { code: string; title: string; notes?: 
     const now = new Date();
     const [row] = await db
         .insert(courses)
-        .values({ code: data.code, title: data.title, notes: data.notes ?? null, createdAt: now, updatedAt: now })
+        .values({ code: normalizeCourseCode(data.code), title: data.title, notes: data.notes ?? null, createdAt: now, updatedAt: now })
         .returning({
             id: courses.id,
             code: courses.code,
@@ -76,9 +77,10 @@ export async function createCourse(data: { code: string; title: string; notes?: 
 }
 
 export async function updateCourse(id: string, patch: Partial<typeof courses.$inferInsert>) {
+    const normalizedPatch = patch.code ? { ...patch, code: normalizeCourseCode(patch.code) } : patch;
     const [row] = await db
         .update(courses)
-        .set(patch)
+        .set(normalizedPatch)
         .where(eq(courses.id, id))
         .returning();
     return row ?? null;
