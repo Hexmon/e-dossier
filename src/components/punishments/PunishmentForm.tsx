@@ -79,9 +79,9 @@ export default function PunishmentForm({
                     id="marksDeduction"
                     type="number"
                     min="0"
-                    step="1"
+                    step="any"
                     value={formData.marksDeduction}
-                    onChange={(e) => handleChange("marksDeduction", parseInt(e.target.value) || 0)}
+                    onChange={(e) => handleChange("marksDeduction", parseFloat(e.target.value) || 0)}
                     placeholder="e.g., 5"
                     required
                 />

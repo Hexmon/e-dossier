@@ -18,7 +18,7 @@ import { getMotivationAwards } from "@/app/lib/api/motivationAwardsApi";
  * Hook that wraps listing/upserting sports & motivation awards.
  * Uses the same API shapes your existing code expects.
  */
-export function useSportsAwards(ocId?: string | null, semestersCount = 6) {
+export function useSportsAwards(ocId?: string | null, semestersCount = 6, includeMotivation = true) {
     const [savedData, setSavedData] = useState<SemesterData[]>(
         () =>
             Array.from({ length: semestersCount }, () => ({
@@ -36,10 +36,12 @@ export function useSportsAwards(ocId?: string | null, semestersCount = 6) {
         loadingRef.current = true;
         setLoading(true);
         try {
-            const [sportsRes, motRes] = await Promise.all([
-                listSportsAndGames(ocId),
-                getMotivationAwards(ocId),
-            ]);
+            const [sportsRes, motRes] = includeMotivation
+                ? await Promise.all([
+                    listSportsAndGames(ocId),
+                    getMotivationAwards(ocId),
+                ])
+                : [await listSportsAndGames(ocId), []];
 
             const sportsItems = sportsRes?.items ?? [];
             const motivationItems = motRes ?? [];
@@ -116,7 +118,7 @@ export function useSportsAwards(ocId?: string | null, semestersCount = 6) {
             loadingRef.current = false;
             setLoading(false);
         }
-    }, [ocId, semestersCount]);
+    }, [ocId, semestersCount, includeMotivation]);
 
     const upsertSportsRows = useCallback(
         async (semesterNumber: number, term: "spring" | "autumn", rows: Row[]) => {

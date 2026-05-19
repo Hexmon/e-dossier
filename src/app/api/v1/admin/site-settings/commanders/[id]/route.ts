@@ -4,7 +4,7 @@ import { requireAdmin } from "@/app/lib/authz";
 import { handleApiError, json } from "@/app/lib/http";
 import { commanderUpdateSchema } from "@/app/lib/validators.site-settings";
 import {
-  getSiteCommanderById,
+  getSiteCommanderByIdForDisplay,
   softDeleteSiteCommander,
   updateSiteCommander,
 } from "@/app/db/queries/site-settings";
@@ -27,7 +27,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
     const auth = await requireAdmin(req);
     const { id } = Params.parse(await params);
 
-    const item = await getSiteCommanderById(id, { includeDeleted: true });
+    const item = await getSiteCommanderByIdForDisplay(id, { includeDeleted: true });
     if (!item) {
       return json.notFound("Commander not found.");
     }

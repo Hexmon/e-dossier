@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users2 } from "lucide-react";
 import { fetchLandingSiteSettings } from "@/app/lib/public-site-settings";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const data = await fetchLandingSiteSettings();
   const primaryCommander = data.commanders[0];

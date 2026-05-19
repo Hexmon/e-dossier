@@ -38,6 +38,7 @@ export interface MedCatRow {
     diagnosis: string;
     catFrom: string;
     catTo: string;
+    category: string;
     mhFrom: string;
     mhTo: string;
     absence: string;
@@ -54,6 +55,7 @@ export interface MedCatBackendPayload {
     mosAndDiagnostics: string;
     catFrom?: string | null;
     catTo?: string | null;
+    category?: string | null;
     mhFrom?: string | null;
     mhTo?: string | null;
     absence?: string | null;

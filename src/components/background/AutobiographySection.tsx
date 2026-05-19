@@ -43,15 +43,49 @@ type Props = {
 
 const textFields = ["general", "proficiency", "work", "additional"] as const;
 type TextFieldKey = typeof textFields[number];
+const MANUAL_COMMANDER_VALUE = "__manual_platoon_commander__";
 
 let platoonCommanderUsersPromise: Promise<User[]> | null = null;
 
+const platoonCommanderSearchTerms = [
+    "PLATOON_COMMANDER",
+    "Platoon Commander",
+    "PL_CDR",
+    "PL CDR",
+    "PLCDR",
+    "PLATOON_CDR",
+    "Platoon Cdr",
+    "PTN_CDR",
+    "PTN CDR",
+    "platoon-commander",
+];
+
+function mergeUsersByIdentity(usersByQuery: User[][]): User[] {
+    const seen = new Set<string>();
+    const merged: User[] = [];
+
+    for (const users of usersByQuery) {
+        for (const user of users) {
+            const identity = user.id ?? user.username ?? `${user.rank ?? ""}:${user.name}`;
+            if (seen.has(identity)) continue;
+            seen.add(identity);
+            merged.push(user);
+        }
+    }
+
+    return merged;
+}
+
 function getCachedPlatoonCommanderUsers() {
     if (!platoonCommanderUsersPromise) {
-        platoonCommanderUsersPromise = getUsersByQuery("pl_cdr", 100).catch((error) => {
-            platoonCommanderUsersPromise = null;
-            throw error;
-        });
+        platoonCommanderUsersPromise = Promise.all(
+            platoonCommanderSearchTerms.map((term) => getUsersByQuery(term, 100))
+        )
+            .then(mergeUsersByIdentity)
+            .catch((error) => {
+                platoonCommanderUsersPromise = null;
+                throw error;
+            });
     }
 
     return platoonCommanderUsersPromise;
@@ -118,10 +152,35 @@ function formatCommanderLabel(user: User): string {
     return user.rank ? `${user.rank} ${user.name}` : user.name;
 }
 
+function toFormValues(autoBio: AutoBioPayload, cadetName: string): AutoBio {
+    return {
+        general: autoBio.generalSelf ?? "",
+        proficiency: autoBio.proficiencySports ?? "",
+        work: autoBio.achievementsNote ?? "",
+        additional: autoBio.areasToWork || autoBio.additionalInfo || "",
+        date: toDateInputValue(autoBio.filledOn),
+        sign_oc: cadetName,
+        sign_pi: autoBio.platoonCommanderName ?? "",
+    };
+}
+
+function hasAutoBioValues(autoBio: AutoBioPayload): boolean {
+    return [
+        autoBio.generalSelf,
+        autoBio.proficiencySports,
+        autoBio.achievementsNote,
+        autoBio.areasToWork,
+        autoBio.additionalInfo,
+        autoBio.filledOn,
+        autoBio.platoonCommanderName,
+    ].some((value) => Boolean(value?.trim()));
+}
+
 export default function AutobiographySection({ ocId, cadet }: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [showClearDialog, setShowClearDialog] = useState(false);
     const [commanderOptions, setCommanderOptions] = useState<Array<{ id: string; label: string }>>([]);
+    const [isManualCommander, setIsManualCommander] = useState(false);
     const [isLoadingCommanders, setIsLoadingCommanders] = useState(false);
     const isInitialLoad = useRef(true);
 
@@ -131,7 +190,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         state.autobiography.forms[ocId]
     );
 
-    const { autoBio, exists, fetchAutoBio, save } = useAutobiography(ocId);
+    const { autoBio, hasFetched, fetchAutoBio, save } = useAutobiography(ocId);
 
     const { register, handleSubmit, reset, watch, setValue } = useForm<AutoBio>({
         defaultValues: {
@@ -148,6 +207,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
     const cadetName = cadet?.name ?? "";
     const selectedCommander = watch("sign_pi") ?? "";
     const defaultCommanderName = commanderOptions[0]?.label ?? "";
+    const hasCommanderOptions = commanderOptions.length > 0;
     const cadetPlatoonLookup = useMemo(
         () => ({
             platoonId: cadet?.platoonId,
@@ -215,9 +275,16 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
     }, [cadetPlatoonLookup, isEditing]);
 
     useEffect(() => {
-        if (!isEditing || selectedCommander || !defaultCommanderName) return;
+        if (!isEditing || isManualCommander || selectedCommander || !defaultCommanderName) return;
         setValue("sign_pi", defaultCommanderName, { shouldDirty: false });
-    }, [defaultCommanderName, isEditing, selectedCommander, setValue]);
+    }, [defaultCommanderName, isEditing, isManualCommander, selectedCommander, setValue]);
+
+    useEffect(() => {
+        if (!isEditing || isLoadingCommanders || !selectedCommander) return;
+        if (commanderOptions.length > 0 && commanderOptions.every((option) => option.label !== selectedCommander)) {
+            setIsManualCommander(true);
+        }
+    }, [commanderOptions, isEditing, isLoadingCommanders, selectedCommander]);
 
     // Auto-save to Redux on form changes (only when editing and not initial load)
     useEffect(() => {
@@ -243,31 +310,12 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         fetchAutoBio();
     }, [fetchAutoBio]);
 
-    // Initialize form data
+    // Initialize form data after the backend response is known.
     useEffect(() => {
-        if (!isInitialLoad.current) return;
+        if (!hasFetched || isEditing) return;
 
-        // If backend data exists, use it
-        if (autoBio) {
-            const {
-                generalSelf,
-                proficiencySports,
-                achievementsNote,
-                areasToWork,
-                filledOn,
-                platoonCommanderName,
-            } = autoBio;
-
-            reset({
-                general: generalSelf ?? "",
-                proficiency: proficiencySports ?? "",
-                work: achievementsNote ?? "",
-                additional: areasToWork ?? "",
-                date: toDateInputValue(filledOn),
-                sign_oc: cadetName,
-                sign_pi: platoonCommanderName ?? "",
-            });
-
+        if (autoBio && (hasAutoBioValues(autoBio) || !savedFormData || !isInitialLoad.current)) {
+            reset(toFormValues(autoBio, cadetName));
             setIsEditing(false);
             isInitialLoad.current = false;
             return;
@@ -293,7 +341,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
         });
         setIsEditing(false);
         isInitialLoad.current = false;
-    }, [autoBio, cadetName, defaultCommanderName, reset, savedFormData]);
+    }, [autoBio, cadetName, defaultCommanderName, hasFetched, isEditing, reset, savedFormData]);
 
     // Save handler
     const onSubmit = async (form: AutoBio) => {
@@ -358,6 +406,7 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
             sign_oc: cadetName,
             sign_pi: defaultCommanderName,
         });
+        setIsManualCommander(false);
         toast.info("Form cleared");
         setShowClearDialog(false);
     };
@@ -366,25 +415,9 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
     const handleCancel = () => {
         // If we have backend data, restore it
         if (autoBio) {
-            const {
-                generalSelf,
-                proficiencySports,
-                achievementsNote,
-                areasToWork,
-                filledOn,
-                platoonCommanderName,
-            } = autoBio;
-
-            reset({
-                general: generalSelf ?? "",
-                proficiency: proficiencySports ?? "",
-                work: achievementsNote ?? "",
-                additional: areasToWork ?? "",
-                date: toDateInputValue(filledOn),
-                sign_oc: cadetName,
-                sign_pi: platoonCommanderName ?? "",
-            });
+            reset(toFormValues(autoBio, cadetName));
         }
+        setIsManualCommander(false);
         setIsEditing(false);
     };
 
@@ -433,36 +466,57 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                         <div>
                             <label className="block font-semibold mb-2">Name of Platoon Commander</label>
                             {isEditing ? (
-                                <Select
-                                    value={selectedCommander || undefined}
-                                    onValueChange={(val) =>
-                                        setValue("sign_pi", val, { shouldDirty: true })
-                                    }
-                                    disabled={isLoadingCommanders}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue
-                                            placeholder={
-                                                isLoadingCommanders
-                                                    ? "Loading platoon commanders..."
-                                                    : "Select platoon commander"
+                                <div className="space-y-2">
+                                    <Select
+                                        value={isManualCommander ? MANUAL_COMMANDER_VALUE : selectedCommander || undefined}
+                                        onValueChange={(val) => {
+                                            if (val === MANUAL_COMMANDER_VALUE) {
+                                                setIsManualCommander(true);
+                                                setValue("sign_pi", "", { shouldDirty: true });
+                                                return;
                                             }
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {selectedCommander &&
-                                            !commanderOptions.some((option) => option.label === selectedCommander) && (
-                                                <SelectItem value={selectedCommander}>
-                                                    {selectedCommander}
+                                            setIsManualCommander(false);
+                                            setValue("sign_pi", val, { shouldDirty: true });
+                                        }}
+                                        disabled={isLoadingCommanders}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue
+                                                placeholder={
+                                                    isLoadingCommanders
+                                                        ? "Loading platoon commanders..."
+                                                        : "Select platoon commander"
+                                                }
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={MANUAL_COMMANDER_VALUE}>Manual entry</SelectItem>
+                                            {selectedCommander &&
+                                                !isManualCommander &&
+                                                !commanderOptions.some((option) => option.label === selectedCommander) && (
+                                                    <SelectItem value={selectedCommander}>
+                                                        {selectedCommander}
+                                                    </SelectItem>
+                                                )}
+                                            {commanderOptions.map((option) => (
+                                                <SelectItem key={option.id} value={option.label}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                            {!hasCommanderOptions && !selectedCommander && !isLoadingCommanders && (
+                                                <SelectItem value="__no_platoon_commanders__" disabled>
+                                                    No platoon commanders found
                                                 </SelectItem>
                                             )}
-                                        {commanderOptions.map((option) => (
-                                            <SelectItem key={option.id} value={option.label}>
-                                                {option.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                        </SelectContent>
+                                    </Select>
+                                    {isManualCommander ? (
+                                        <Input
+                                            {...register("sign_pi")}
+                                            placeholder="Enter platoon commander name"
+                                        />
+                                    ) : null}
+                                </div>
                             ) : (
                                 <Input disabled value={selectedCommander || defaultCommanderName || ""} />
                             )}
@@ -472,7 +526,14 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
                     {/* BUTTONS */}
                     <div className="flex justify-center gap-2 mt-6">
                         {!isEditing ? (
-                            <Button type="button" className="w-[200px]" onClick={() => setIsEditing(true)}>
+                            <Button
+                                type="button"
+                                className="w-[200px]"
+                                onClick={() => {
+                                    setIsManualCommander(false);
+                                    setIsEditing(true);
+                                }}
+                            >
                                 Edit
                             </Button>
                         ) : (

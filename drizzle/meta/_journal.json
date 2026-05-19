@@ -274,6 +274,34 @@
       "when": 1777102200000,
       "tag": "0038_reset_active_enrollment_semester_to_one",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1779120000000,
+      "tag": "0039_medical_category_category",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1779123600000,
+      "tag": "0040_decimal_punishment_marks",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779127200000,
+      "tag": "0041_decimal_discipline_points",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779177600000,
+      "tag": "0042_manual_dossier_inspector",
+      "breakpoints": true
     }
   ]
 }
