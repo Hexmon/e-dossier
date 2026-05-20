@@ -16,11 +16,13 @@ import {
   computeTheoryTotalMarks,
   derivePracticalLetterGrade,
   deriveTheoryLetterGrade,
+  isAcademicSubjectEligibleForOc,
   normalizeAcademicCredits,
   normalizeAcademicGrade,
   type AcademicCumulativeSemester,
   type AcademicGpaComponent,
 } from '@/app/lib/academic-marks-core';
+import { scaleAcademicPerformanceSummary } from '@/app/lib/performance-record-academics';
 
 type RecalculateScope = 'all' | 'courses';
 
@@ -55,14 +57,46 @@ type RowComputation = {
   subjects: SemesterSubjectRecord[];
   gradeFieldChanges: number;
   components: AcademicGpaComponent[];
+  marksScored: number | null;
+};
+
+function computeAcademicMarksScored(subjects: SemesterSubjectRecord[]): number | null {
+  let weightedScored = 0;
+  let totalCredits = 0;
+  let hasAcademicComponents = false;
+
+  for (const subject of subjects) {
+    if (subject.theory) {
+      const credits = normalizeAcademicCredits(subject.meta?.theoryCredits);
+      weightedScored += computeTheoryTotalMarks(subject.theory) * credits;
+      totalCredits += credits;
+      hasAcademicComponents = true;
+    }
+
+    if (subject.practical) {
+      const credits = normalizeAcademicCredits(subject.meta?.practicalCredits);
+      weightedScored += computePracticalTotalMarks(subject.practical) * credits;
+      totalCredits += credits;
+      hasAcademicComponents = true;
+    }
+  }
+
+  if (!hasAcademicComponents) return null;
+  return scaleAcademicPerformanceSummary({ weightedScored, weightedMax: totalCredits * 100 }, 1350);
 }
 
 function recomputeRowSubjects(
   subjects: SemesterSubjectRecord[],
+  semester: number,
+  ocBranch: string | null | undefined,
   policy: AcademicGradingPolicy
 ): RowComputation {
   let gradeFieldChanges = 0;
   const components: AcademicGpaComponent[] = [];
+
+  const eligibleSubjects = subjects.filter((subject) =>
+    isAcademicSubjectEligibleForOc(semester, ocBranch, subject.branch)
+  );
 
   const nextSubjects = subjects.map((subject) => {
     const nextSubject: SemesterSubjectRecord = {
@@ -71,6 +105,10 @@ function recomputeRowSubjects(
       practical: subject.practical ? { ...subject.practical } : subject.practical,
       meta: subject.meta ? { ...subject.meta } : subject.meta,
     };
+
+    if (!isAcademicSubjectEligibleForOc(semester, ocBranch, subject.branch)) {
+      return nextSubject;
+    }
 
     if (nextSubject.theory) {
       const marks = computeTheoryTotalMarks(nextSubject.theory);
@@ -119,6 +157,7 @@ function recomputeRowSubjects(
     subjects: nextSubjects,
     gradeFieldChanges,
     components,
+    marksScored: computeAcademicMarksScored(eligibleSubjects),
   };
 }
 
@@ -140,9 +179,11 @@ export async function recalculateAcademicGrading(
       ocId: ocSemesterMarks.ocId,
       semester: ocSemesterMarks.semester,
       courseId: ocCadets.courseId,
+      ocBranch: ocCadets.branch,
       subjects: ocSemesterMarks.subjects,
       sgpa: ocSemesterMarks.sgpa,
       cgpa: ocSemesterMarks.cgpa,
+      marksScored: ocSemesterMarks.marksScored,
     })
     .from(ocSemesterMarks)
     .innerJoin(ocCadets, eq(ocCadets.id, ocSemesterMarks.ocId))
@@ -154,10 +195,12 @@ export async function recalculateAcademicGrading(
     Array<{
       id: string;
       courseId: string;
+      ocBranch: string | null;
       semester: number;
       subjects: SemesterSubjectRecord[];
       sgpa: number | null;
       cgpa: number | null;
+      marksScored: number | null;
     }>
   >();
 
@@ -166,10 +209,12 @@ export async function recalculateAcademicGrading(
     list.push({
       id: row.id,
       courseId: row.courseId,
+      ocBranch: row.ocBranch ?? null,
       semester: row.semester,
       subjects: (row.subjects ?? []) as SemesterSubjectRecord[],
       sgpa: row.sgpa ?? null,
       cgpa: row.cgpa ?? null,
+      marksScored: row.marksScored ?? null,
     });
     rowsByOc.set(row.ocId, list);
   }
@@ -182,7 +227,9 @@ export async function recalculateAcademicGrading(
 
   for (const [ocId, ocRows] of rowsByOc.entries()) {
     const sortedRows = [...ocRows].sort((a, b) => a.semester - b.semester);
-    const semesterComputations = sortedRows.map((row) => recomputeRowSubjects(row.subjects, policy));
+    const semesterComputations = sortedRows.map((row) =>
+      recomputeRowSubjects(row.subjects, row.semester, row.ocBranch, policy)
+    );
     const sgpaValues = semesterComputations.map((entry) => computeAcademicSgpa(entry.components, policy));
     const cumulativeSemesters: AcademicCumulativeSemester[] = sgpaValues.map((sgpa, i) => ({
       sgpa,
@@ -200,13 +247,14 @@ export async function recalculateAcademicGrading(
 
       const sgpaChanged = roundPolicyValue(current.sgpa, policy.roundingScale) !== nextSgpa;
       const cgpaChanged = roundPolicyValue(current.cgpa, policy.roundingScale) !== nextCgpa;
+      const marksScoredChanged = roundPolicyValue(current.marksScored, 1) !== computation.marksScored;
       const gradesChanged = computation.gradeFieldChanges > 0;
 
-      if (!gradesChanged && !sgpaChanged && !cgpaChanged) continue;
+      if (!gradesChanged && !sgpaChanged && !cgpaChanged && !marksScoredChanged) continue;
 
       changedRows += 1;
       changedGradeFields += computation.gradeFieldChanges;
-      if (sgpaChanged || cgpaChanged) changedSummaryRows += 1;
+      if (sgpaChanged || cgpaChanged || marksScoredChanged) changedSummaryRows += 1;
       affectedOcs.add(ocId);
       affectedCourses.add(current.courseId);
 
@@ -231,6 +279,16 @@ export async function recalculateAcademicGrading(
             after: nextCgpa,
           });
         }
+        if (marksScoredChanged && sampleChanges.length < 25) {
+          sampleChanges.push({
+            ocId,
+            courseId: current.courseId,
+            semester: current.semester,
+            field: 'marksScored',
+            before: roundPolicyValue(current.marksScored, 1),
+            after: computation.marksScored,
+          });
+        }
       }
 
       if (!dryRun) {
@@ -240,6 +298,7 @@ export async function recalculateAcademicGrading(
             subjects: computation.subjects,
             sgpa: nextSgpa,
             cgpa: nextCgpa,
+            marksScored: computation.marksScored,
             updatedAt: new Date(),
           })
           .where(eq(ocSemesterMarks.id, current.id));

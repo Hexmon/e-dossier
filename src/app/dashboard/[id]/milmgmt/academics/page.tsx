@@ -31,6 +31,7 @@ export default function AcademicsPage() {
         ocNumber = "",
         ocId: cadetOcId = ocId,
         course = "",
+        branch = null,
         currentSemester = 1,
     } = cadet || {};
 
@@ -122,6 +123,7 @@ export default function AcademicsPage() {
                             canEdit={canEditAcademicsForUser && !academicsWorkflowActive}
                             currentSemester={currentSemester ?? 1}
                             canEditLockedSemesters={canEditLockedSemesters}
+                            ocBranch={branch}
                         />
                     </div>
                 </DossierTab>

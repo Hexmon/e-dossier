@@ -34,6 +34,7 @@ export function useOcDetails(ocId?: string) {
                 courseName: oc.course.code || "",
                 ocNumber: oc.ocNo,
                 ocId: oc.id,
+                branch: oc.branch ?? null,
                 currentSemester: oc.currentSemester ?? null,
                 platoonId: oc.platoon?.id ?? oc.platoonId ?? null,
                 platoonKey: oc.platoon?.key ?? oc.platoonKey ?? null,

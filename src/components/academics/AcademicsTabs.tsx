@@ -14,6 +14,7 @@ interface AcademicsTabsProps {
     canEdit?: boolean;
     currentSemester?: number | null;
     canEditLockedSemesters?: boolean;
+    ocBranch?: "E" | "M" | "O" | null;
 }
 
 export default function AcademicsTabs({
@@ -22,6 +23,7 @@ export default function AcademicsTabs({
     canEdit = false,
     currentSemester = 1,
     canEditLockedSemesters = false,
+    ocBranch = null,
 }: AcademicsTabsProps) {
     const [subTab, setSubTab] = useState<Record<number, SubTab>>({
         1: "single",
@@ -120,15 +122,15 @@ export default function AcademicsTabs({
             </div>
 
             <div>
-                {selectedTerm === 1 && <SemesterTableI ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
-                {selectedTerm === 2 && <SemesterTableII ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
-                {selectedTerm === 3 && <SemesterTableIII ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
-                {selectedTerm === 4 && <SemesterTableIV ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
+                {selectedTerm === 1 && <SemesterTableI ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} ocBranch={ocBranch} />}
+                {selectedTerm === 2 && <SemesterTableII ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} ocBranch={ocBranch} />}
+                {selectedTerm === 3 && <SemesterTableIII ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} ocBranch={ocBranch} />}
+                {selectedTerm === 4 && <SemesterTableIV ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} ocBranch={ocBranch} />}
 
-                {selectedTerm === 5 && subTab[5] === "mech" && <SemesterTableV_Mech ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
+                {selectedTerm === 5 && subTab[5] === "mech" && <SemesterTableV_Mech ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} ocBranch={ocBranch} />}
                 {selectedTerm === 5 && subTab[5] === "tech" && <TechSeminarForm ocId={ocId} />}
 
-                {selectedTerm === 6 && subTab[6] === "mech" && <SemesterTableVI_Mech ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} />}
+                {selectedTerm === 6 && subTab[6] === "mech" && <SemesterTableVI_Mech ocId={ocId} courseId={courseId} canEdit={canEditSelectedTerm} ocBranch={ocBranch} />}
                 {selectedTerm === 6 && subTab[6] === "mini" && <MiniProjectForm ocId={ocId} />}
             </div>
         </div>

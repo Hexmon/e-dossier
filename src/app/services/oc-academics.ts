@@ -18,6 +18,7 @@ import type { AcademicGradingPolicy } from '@/app/lib/grading-policy';
 import { summarizeAcademicPerformanceMarks } from '@/app/lib/performance-record-academics';
 import {
     computeAcademicCgpa,
+    isAcademicSubjectEligibleForOc,
     summarizeAcademicSubjects,
     type AcademicCumulativeSemester,
 } from '@/app/lib/academic-marks-core';
@@ -68,6 +69,19 @@ function determineBranchForSemester(semester: number, branch?: string | null): B
     if (branch === 'M') return 'M';
     if (branch === 'E') return 'E';
     return 'C';
+}
+
+function filterOfferingsForOcBranch(rows: CourseOfferingRow[], branch?: string | null) {
+    return rows.filter((row) => isAcademicSubjectEligibleForOc(row.semester, branch, row.subject.branch));
+}
+
+function filterAcademicViewsForOcBranch(views: AcademicSemesterView[], branch?: string | null) {
+    return views.map((view) => ({
+        ...view,
+        subjects: view.subjects.filter((subject) =>
+            isAcademicSubjectEligibleForOc(view.semester, branch, subject.subject.branch)
+        ),
+    }));
 }
 
 function toIsoDate(value?: Date | null) {
@@ -218,7 +232,7 @@ async function recomputeAndPersistGpa(ocId: string) {
             branchTag: view.branchTag,
             sgpa: next.sgpa,
             cgpa: next.cgpa,
-            marksScored: next.marksScored ?? undefined,
+            marksScored: next.marksScored,
         });
     }
 }
@@ -229,7 +243,7 @@ export async function getOcAcademics(ocId: string, opts?: { semester?: number })
     const policy = await getAcademicGradingPolicy();
 
     // Always load all semester rows and offerings so CGPA is accurate even when fetching a single semester.
-    const offerings = await listCourseOfferings(ocInfo.courseId);
+    const offerings = filterOfferingsForOcBranch(await listCourseOfferings(ocInfo.courseId), ocInfo.branch);
     const rows = await listSemesterMarksRows(ocId);
 
     const rowMap = new Map<number, Awaited<ReturnType<typeof getSemesterMarksRow>>>();
@@ -272,7 +286,10 @@ export async function getOcAcademics(ocId: string, opts?: { semester?: number })
         ids: Array.from(legacySubjectIds),
         codes: Array.from(legacySubjectCodes),
     });
-    const hydratedViews = hydrateAcademicViewsWithSubjectCatalog(views, subjectCatalog);
+    const hydratedViews = filterAcademicViewsForOcBranch(
+        hydrateAcademicViewsWithSubjectCatalog(views, subjectCatalog),
+        ocInfo.branch
+    );
 
     const semestersWithRows = new Set(rows.map((r) => r.semester));
     const computedViews = applyComputedGpaToViews(hydratedViews, semestersWithRows, policy);
@@ -291,7 +308,7 @@ export async function getOcAcademicSemester(ocId: string, semester: number): Pro
     }
     const ocInfo = await getOcCourseInfo(ocId);
     if (!ocInfo) throw new ApiError(404, 'OC not found', 'not_found');
-    const offerings = await listCourseOfferings(ocInfo.courseId, semester);
+    const offerings = filterOfferingsForOcBranch(await listCourseOfferings(ocInfo.courseId, semester), ocInfo.branch);
     return buildAcademicSemesterView({
         semester,
         branchTag: determineBranchForSemester(semester, ocInfo.branch),
@@ -342,7 +359,10 @@ export async function updateOcAcademicSubject(
 
     const offering = await getCourseOfferingForSubject(ocInfo.courseId, semester, subjectId);
     if (!offering) {
-        const validOfferings = await listCourseOfferings(ocInfo.courseId, semester);
+        const validOfferings = filterOfferingsForOcBranch(
+            await listCourseOfferings(ocInfo.courseId, semester),
+            ocInfo.branch
+        );
         const validSubjects = validOfferings.map((row) => ({
             subjectId: row.subject.id,
             subjectCode: row.subject.code,
@@ -350,6 +370,23 @@ export async function updateOcAcademicSubject(
         }));
         throw new ApiError(400, 'Subject is not valid for this course/semester.', 'bad_request', {
             courseId: ocInfo.courseId,
+            semester,
+            validSubjects,
+        });
+    }
+    if (!isAcademicSubjectEligibleForOc(semester, ocInfo.branch, offering.subject.branch)) {
+        const validOfferings = filterOfferingsForOcBranch(
+            await listCourseOfferings(ocInfo.courseId, semester),
+            ocInfo.branch
+        );
+        const validSubjects = validOfferings.map((row) => ({
+            subjectId: row.subject.id,
+            subjectCode: row.subject.code,
+            subjectName: row.subject.name,
+        }));
+        throw new ApiError(400, 'Subject is not valid for this OC branch/semester.', 'bad_request', {
+            courseId: ocInfo.courseId,
+            ocBranch: ocInfo.branch ?? null,
             semester,
             validSubjects,
         });
@@ -423,7 +460,10 @@ export async function deleteOcAcademicSubject(
     if (!ocInfo) throw new ApiError(404, 'OC not found', 'not_found');
     const offering = await getCourseOfferingForSubject(ocInfo.courseId, semester, subjectId);
     if (!offering) {
-        const validOfferings = await listCourseOfferings(ocInfo.courseId, semester);
+        const validOfferings = filterOfferingsForOcBranch(
+            await listCourseOfferings(ocInfo.courseId, semester),
+            ocInfo.branch
+        );
         const validSubjects = validOfferings.map((row) => ({
             subjectId: row.subject.id,
             subjectCode: row.subject.code,
@@ -433,6 +473,13 @@ export async function deleteOcAcademicSubject(
             courseId: ocInfo.courseId,
             semester,
             validSubjects,
+        });
+    }
+    if (!isAcademicSubjectEligibleForOc(semester, ocInfo.branch, offering.subject.branch)) {
+        throw new ApiError(404, 'Subject not found for this OC branch/semester.', 'not_found', {
+            courseId: ocInfo.courseId,
+            ocBranch: ocInfo.branch ?? null,
+            semester,
         });
     }
     const result = await deleteSemesterSubject(ocId, semester, offering.subject.code, opts);

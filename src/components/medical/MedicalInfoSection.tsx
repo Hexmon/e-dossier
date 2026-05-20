@@ -47,6 +47,12 @@ const calculateBmiValue = (abw?: number, heightCm?: number) => {
     return Number.isFinite(bmi) ? Number(bmi.toFixed(2)) : undefined;
 };
 
+const calculateOverwtValue = (abw?: number, ibw?: number) => {
+    if (abw === undefined || ibw === undefined || ibw <= 0) return undefined;
+    const overwt = ((abw - ibw) / ibw) * 100;
+    return Number.isFinite(overwt) ? Number(overwt.toFixed(2)) : undefined;
+};
+
 export default function MedicalInfoSection({
     selectedCadet,
     semesters,
@@ -180,10 +186,10 @@ export default function MedicalInfoSection({
                     }
                 }
 
-                const computedBmi = calculateBmiValue(
-                    payloadRow.abwKg,
-                    payloadRow.heightCm
-                );
+                const computedOverwt = calculateOverwtValue(payloadRow.abwKg, payloadRow.ibwKg);
+                if (computedOverwt !== undefined) payloadRow.overwtPct = computedOverwt;
+
+                const computedBmi = calculateBmiValue(payloadRow.abwKg, payloadRow.heightCm);
                 if (computedBmi !== undefined) payloadRow.bmi = computedBmi;
 
                 payload.push(payloadRow);
@@ -225,8 +231,18 @@ export default function MedicalInfoSection({
             if (!prev) return prev;
             const next = { ...prev, [field]: value };
 
+            const abw = parseOptionalFloat(String(next.abw ?? ""));
+
+            if (field === "abw" || field === "ibw") {
+                const ibw = parseOptionalFloat(String(next.ibw ?? ""));
+                const computedOverwt = calculateOverwtValue(
+                    typeof abw === "number" ? abw : undefined,
+                    typeof ibw === "number" ? ibw : undefined
+                );
+                next.overw = computedOverwt !== undefined ? computedOverwt.toFixed(2) : "";
+            }
+
             if (field === "abw" || field === "height") {
-                const abw = parseOptionalFloat(String(next.abw ?? ""));
                 const height = parseOptionalFloat(String(next.height ?? ""));
                 const computedBmi = calculateBmiValue(
                     typeof abw === "number" ? abw : undefined,
@@ -259,15 +275,20 @@ export default function MedicalInfoSection({
             if (parsed !== undefined) payload[field.apiKey] = parsed;
         }
 
-        const computedBmi = calculateBmiValue(
+        const computedOverwt = calculateOverwtValue(
             payload.abwKg as number | undefined,
-            payload.heightCm as number | undefined
+            payload.ibwKg as number | undefined
         );
-        const nextEditForm: MedInfoRow =
-            computedBmi !== undefined
-                ? { ...editForm, bmi: computedBmi.toFixed(2) }
-                : editForm;
+        if (computedOverwt !== undefined) payload.overwtPct = computedOverwt;
+
+        const computedBmi = calculateBmiValue(payload.abwKg as number | undefined, payload.heightCm as number | undefined);
         if (computedBmi !== undefined) payload.bmi = computedBmi;
+
+        const nextEditForm: MedInfoRow = {
+            ...editForm,
+            ...(computedOverwt !== undefined ? { overw: computedOverwt.toFixed(2) } : {}),
+            ...(computedBmi !== undefined ? { bmi: computedBmi.toFixed(2) } : {}),
+        };
 
         try {
             await updateMedicalInfo(selectedCadet.ocId, editingId, payload);
