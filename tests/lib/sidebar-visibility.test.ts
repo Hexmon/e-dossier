@@ -86,6 +86,7 @@ describe("sidebar visibility matrix", () => {
   it("defines OTHER_USERS sections in required order", () => {
     expect(sectionKeysFor("OTHER_USERS")).toEqual([
       "dashboard",
+      "dossier",
       "reports",
       "bulk_upload",
       "help",
@@ -120,6 +121,7 @@ describe("sidebar visibility matrix", () => {
     ]);
     expect(otherVisible).toEqual([
       "dashboard",
+      "dossier",
       "reports",
       "bulk_upload",
       "help",
@@ -145,9 +147,9 @@ describe("sidebar visibility matrix", () => {
     expect(hasSidebarSectionAccess("ADMIN", "bulk_upload")).toBe(false);
     expect(hasSidebarSectionAccess("PLATOON_COMMANDER", "dossier")).toBe(true);
     expect(hasSidebarSectionAccess("PLATOON_COMMANDER", "bulk_upload")).toBe(false);
+    expect(hasSidebarSectionAccess("OTHER_USERS", "dossier")).toBe(true);
     expect(hasSidebarSectionAccess("OTHER_USERS", "reports")).toBe(true);
     expect(hasSidebarSectionAccess("OTHER_USERS", "bulk_upload")).toBe(true);
-    expect(hasSidebarSectionAccess("OTHER_USERS", "dossier")).toBe(false);
     expect(hasSidebarSectionAccess("OTHER_USERS", "admin")).toBe(false);
   });
 });

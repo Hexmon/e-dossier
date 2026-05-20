@@ -215,6 +215,7 @@ export function getOtherUserDefaultPermissionKeys(): string[] {
   return uniqueSorted([
     ...AUTHENTICATED_DASHBOARD_PERMISSION_KEYS,
     ...COMMON_NAVIGATION_PERMISSION_KEYS,
+    ...DOSSIER_PERMISSION_KEYS,
     ...REPORTS_PERMISSION_KEYS,
     ...BULK_UPLOAD_PERMISSION_KEYS,
   ]);

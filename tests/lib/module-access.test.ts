@@ -104,19 +104,19 @@ describe("module access resolver", () => {
     expect(access.sections.bulk_upload).toBe(false);
   });
 
-  it("keeps other users on bulk upload, reports, home, and help only", async () => {
+  it("keeps other users on dossier, bulk upload, reports, home, and help", async () => {
     const access = await resolveModuleAccessForUser({
       userId: "user-1",
       roles: ["guest"],
       position: "HOAT",
     });
 
-    expect(access.canAccessDossier).toBe(false);
+    expect(access.canAccessDossier).toBe(true);
     expect(access.canAccessBulkUpload).toBe(true);
     expect(access.canAccessReports).toBe(true);
     expect(access.sections.admin).toBe(false);
     expect(access.sections.settings).toBe(false);
-    expect(access.sections.dossier).toBe(false);
+    expect(access.sections.dossier).toBe(true);
     expect(access.sections.bulk_upload).toBe(true);
   });
 });
@@ -227,7 +227,7 @@ describe("module API access enforcement", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("blocks other users from dossier APIs but allows bulk APIs", async () => {
+  it("allows other users to access dossier and bulk APIs", async () => {
     await expect(
       assertModuleApiAccessByPath("/api/v1/oc/physical-training/bulk", {
         userId: "user-1",
@@ -245,10 +245,7 @@ describe("module API access enforcement", () => {
           position: "HOAT",
         }
       )
-    ).rejects.toMatchObject<ApiError>({
-      status: 403,
-      code: "module_access_denied",
-    });
+    ).resolves.toBeUndefined();
   });
 
   it("keeps SUPER_ADMIN unrestricted", async () => {

@@ -17,7 +17,7 @@ export const SIDEBAR_SECTIONS_BY_ROLE_GROUP: Record<
 > = {
   ADMIN: ["dashboard", "admin", "settings", "reports", "help"],
   PLATOON_COMMANDER: ["dashboard", "dossier", "reports", "help"],
-  OTHER_USERS: ["dashboard", "reports", "bulk_upload", "help"],
+  OTHER_USERS: ["dashboard", "dossier", "reports", "bulk_upload", "help"],
 };
 
 type RoleGroupInput = {
