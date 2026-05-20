@@ -45,6 +45,23 @@ const calculateBmi = (abw: string, heightCm: string) => {
     return Number.isFinite(bmi) ? bmi.toFixed(2) : "";
 };
 
+const calculateOverwt = (abw: string, ibw: string) => {
+    const actualWeight = parseFloatValue(abw);
+    const idealWeight = parseFloatValue(ibw);
+    if (actualWeight === undefined || idealWeight === undefined || idealWeight <= 0) return "";
+    const overwt = ((actualWeight - idealWeight) / idealWeight) * 100;
+    return Number.isFinite(overwt) ? overwt.toFixed(2) : "";
+};
+
+const getDerivedMedicalValue = (
+    field: "overw" | "bmi",
+    row?: Partial<MedicalInfoForm["medInfo"][number]>
+) => {
+    if (!row) return "";
+    if (field === "overw") return calculateOverwt(row.abw ?? "", row.ibw ?? "");
+    return calculateBmi(row.abw ?? "", row.height ?? "");
+};
+
 export default function MedicalInfoFormComponent({
     onSubmit,
     disabled,
@@ -100,10 +117,15 @@ export default function MedicalInfoFormComponent({
         return () => subscription.unsubscribe();
     }, [watch, dispatch, ocId]);
 
-    // Auto-calculate BMI from ABW (kg) and Height (cm)
+    // Auto-calculate derived medical values.
     const medInfoRows = watch("medInfo");
     useEffect(() => {
         (medInfoRows ?? []).forEach((row, index) => {
+            const computedOverwt = calculateOverwt(row.abw ?? "", row.ibw ?? "");
+            if ((row.overw ?? "") !== computedOverwt) {
+                setValue(`medInfo.${index}.overw`, computedOverwt, { shouldDirty: true });
+            }
+
             const computedBmi = calculateBmi(row.abw ?? "", row.height ?? "");
             if ((row.bmi ?? "") !== computedBmi) {
                 setValue(`medInfo.${index}.bmi`, computedBmi, { shouldDirty: true });
@@ -131,12 +153,12 @@ export default function MedicalInfoFormComponent({
                             return (
                                 <tr key={field.id}>
                                     {["date", "age", "height", "ibw", "abw", "overw", "bmi", "chest"].map((f) => {
-                                        if (f === "bmi") {
+                                        if (f === "overw" || f === "bmi") {
                                             return (
                                                 <td key={f} className="border p-2">
                                                     <Input
-                                                        {...register(`medInfo.${i}.bmi` as any)}
-                                                        value={medInfoRows?.[i]?.bmi ?? ""}
+                                                        {...register(`medInfo.${i}.${f}` as any)}
+                                                        value={getDerivedMedicalValue(f, medInfoRows?.[i])}
                                                         type="number"
                                                         step="any"
                                                         inputMode="decimal"
