@@ -1,4 +1,6 @@
-export type SidebarRoleGroup = "ADMIN" | "SUPER_ADMIN" | "OTHER_USERS";
+import { hasBroadPlatoonCommanderRole } from "@/lib/platoon-commander-access";
+
+export type SidebarRoleGroup = "ADMIN" | "SUPER_ADMIN" | "PLATOON_COMMANDER" | "OTHER_USERS";
 
 export type SidebarSectionKey =
   | "dashboard"
@@ -13,8 +15,9 @@ export const SIDEBAR_SECTIONS_BY_ROLE_GROUP: Record<
   Exclude<SidebarRoleGroup, "SUPER_ADMIN">,
   readonly SidebarSectionKey[]
 > = {
-  ADMIN: ["dashboard", "admin", "settings", "help"],
-  OTHER_USERS: ["dashboard", "dossier", "bulk_upload", "reports", "settings", "help"],
+  ADMIN: ["dashboard", "admin", "settings", "reports", "help"],
+  PLATOON_COMMANDER: ["dashboard", "dossier", "reports", "help"],
+  OTHER_USERS: ["dashboard", "reports", "bulk_upload", "help"],
 };
 
 type RoleGroupInput = {
@@ -46,6 +49,10 @@ export function deriveSidebarRoleGroup({
 
   if (roleSet.has("ADMIN") || roleSet.has("COMMANDANT")) {
     return "ADMIN";
+  }
+
+  if (hasBroadPlatoonCommanderRole({ roles: Array.from(roleSet), position: normalizedPosition })) {
+    return "PLATOON_COMMANDER";
   }
 
   return "OTHER_USERS";

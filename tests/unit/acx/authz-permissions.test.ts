@@ -40,18 +40,31 @@ describe('authz-permissions helpers', () => {
     const profiles = getRbacDefaultProfiles();
     const admin = profiles.find((profile) => profile.key === 'admin');
     const platoon = profiles.find((profile) => profile.key === 'platoon_commander');
+    const otherUsers = profiles.find((profile) => profile.key === 'other_users');
 
     expect(admin?.permissionKeys).toContain('page:dashboard:genmgmt:view');
     expect(admin?.permissionKeys).toContain('admin:rbac:effective:read');
+    expect(admin?.permissionKeys).toContain('page:dashboard:settings:device:view');
+    expect(admin?.permissionKeys).toContain('page:dashboard:reports:view');
+    expect(admin?.permissionKeys).not.toContain('page:dashboard:bulk-upload:view');
+    expect(admin?.permissionKeys).not.toContain('sidebar:dossier');
     expect(admin?.permissionKeys).toContain('me:read');
     expect(admin?.permissionKeys).toContain('me:navigation:read');
     expect(admin?.permissionKeys).toContain('dashboard:data:course:read');
-    expect(platoon?.permissionKeys).toContain('page:dashboard:manage-marks:view');
-    expect(platoon?.permissionKeys).toContain('oc:physical-training:bulk:create');
+    expect(platoon?.permissionKeys).toContain('sidebar:dossier');
+    expect(platoon?.permissionKeys).toContain('page:dashboard:milmgmt:physical-training:view');
+    expect(platoon?.permissionKeys).toContain('page:dashboard:reports:view');
+    expect(platoon?.permissionKeys).not.toContain('page:dashboard:bulk-upload:view');
+    expect(platoon?.permissionKeys).not.toContain('oc:physical-training:bulk:create');
     expect(platoon?.permissionKeys).toContain('me:read');
     expect(platoon?.permissionKeys).toContain('me:navigation:read');
     expect(platoon?.positionKeys).toContain('PTN_CDR');
     expect(platoon?.roleKeys).toContain('ptn_cdr');
+    expect(otherUsers?.permissionKeys).toContain('page:dashboard:bulk-upload:view');
+    expect(otherUsers?.permissionKeys).toContain('oc:physical-training:bulk:create');
+    expect(otherUsers?.permissionKeys).toContain('page:dashboard:reports:view');
+    expect(otherUsers?.permissionKeys).not.toContain('sidebar:dossier');
+    expect(otherUsers?.positionKeys).toContain('HOAT');
   });
 
   it('recognizes platoon commanders without granting hidden permissions', () => {

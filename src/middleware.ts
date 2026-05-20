@@ -163,7 +163,7 @@ export async function middleware(req: NextRequest) {
           typeof (payload as any).apt?.position === 'string' ? (payload as any).apt.position : null;
         const roleGroup = deriveSidebarRoleGroup({ roles, position });
 
-        if (roleGroup === 'OTHER_USERS') {
+        if (roleGroup !== 'ADMIN' && roleGroup !== 'SUPER_ADMIN') {
           return attachRequestId(json.forbidden('Admin privileges required'));
         }
       } catch {
