@@ -70,7 +70,9 @@ describe('authz-permissions helpers', () => {
     expect(otherUsers?.permissionKeys).toContain('oc:physical-training:workflow:update');
     expect(otherUsers?.permissionKeys).toContain('page:dashboard:reports:view');
     expect(otherUsers?.permissionKeys).toContain('reports:academics:semester-grade:download:create');
-    expect(otherUsers?.permissionKeys).not.toContain('sidebar:dossier');
+    expect(otherUsers?.permissionKeys).toContain('sidebar:dossier');
+    expect(otherUsers?.permissionKeys).toContain('page:dashboard:milmgmt:physical-training:view');
+    expect(otherUsers?.permissionKeys).toContain('oc:physical-training:read');
     expect(otherUsers?.positionKeys).toContain('HOAT');
   });
 
@@ -91,7 +93,7 @@ describe('authz-permissions helpers', () => {
 
     expect(otherUserKeys).toContain('page:dashboard:bulk-upload:view');
     expect(otherUserKeys).toContain('page:dashboard:reports:view');
-    expect(otherUserKeys).not.toContain('sidebar:dossier');
+    expect(otherUserKeys).toContain('sidebar:dossier');
     expect(platoonKeys).toContain('sidebar:dossier');
     expect(platoonKeys).toContain('page:dashboard:reports:view');
     expect(platoonKeys).not.toContain('page:dashboard:bulk-upload:view');

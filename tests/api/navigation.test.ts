@@ -108,12 +108,12 @@ describe('GET /api/v1/me/navigation', () => {
                 dashboard: true,
                 admin: false,
                 settings: false,
-                dossier: false,
+                dossier: true,
                 bulk_upload: true,
                 reports: true,
                 help: true,
             },
-            canAccessDossier: false,
+            canAccessDossier: true,
             canAccessBulkUpload: true,
             canAccessReports: true,
         });
@@ -123,7 +123,7 @@ describe('GET /api/v1/me/navigation', () => {
         const data = await res.json();
 
         expect(data.sections.find((s: any) => s.key === 'admin')).toBeUndefined();
-        expect(data.sections.find((s: any) => s.key === 'dossier')).toBeUndefined();
+        expect(data.sections.find((s: any) => s.key === 'dossier')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'settings')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
