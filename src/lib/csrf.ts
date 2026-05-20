@@ -20,6 +20,10 @@ function getCsrfSecret(): string {
   return secret;
 }
 
+function shouldUseSecureCookies() {
+  return process.env.NODE_ENV === 'production';
+}
+
 /**
  * Generate a random token using Web Crypto API (Edge Runtime compatible)
  * @returns Random token string (base64url encoded)
@@ -121,7 +125,7 @@ export function setCsrfCookie(res: NextResponse, token: string): void {
   // for SPA clients (see apiClient.ts).
   res.cookies.set('csrf-token', token, {
     httpOnly: true,
-    secure: false,
+    secure: shouldUseSecureCookies(),
     sameSite: 'strict',
     path: '/',
     maxAge: 3600, // 1 hour
