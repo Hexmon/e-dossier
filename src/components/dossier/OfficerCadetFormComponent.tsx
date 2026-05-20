@@ -20,6 +20,26 @@ interface Props {
     ocId: string;
 }
 
+function formatDossierDate(value: string | null | undefined) {
+    if (!value) return "";
+
+    const trimmed = value.trim();
+    const standaloneDate = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(trimmed);
+    if (standaloneDate) {
+        return `${standaloneDate[3]}-${standaloneDate[2]}-${standaloneDate[1]}`;
+    }
+
+    return trimmed.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, "$3-$2-$1");
+}
+
+function formatDossierDisplayValue(label: string, value: string | null | undefined) {
+    if (["Date of Arrival", "Relegated", "Withdrawn On", "Date of Passing Out"].includes(label)) {
+        return formatDossierDate(value);
+    }
+
+    return value ?? "";
+}
+
 export default function OfficerCadetFormComponent({ ocId }: Props) {
     const [isEditMode, setIsEditMode] = useState(false);
 
@@ -231,7 +251,7 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                                     "Posted/Attached To": dossierSnapshot.postedAtt,
                                 }).map(([label, value]) => (
                                     <p key={label}>
-                                        <strong>{label}:</strong> {value || "-"}
+                                        <strong>{label}:</strong> {formatDossierDisplayValue(label, value) || "-"}
                                     </p>
                                 ))}
                             </div>
@@ -398,7 +418,7 @@ export default function OfficerCadetFormComponent({ ocId }: Props) {
                                         "Posted/Attached To": currentFormValues.postedAtt,
                                     }).map(([label, value]) => (
                                         <p key={label}>
-                                            <strong>{label}:</strong> {value || "-"}
+                                            <strong>{label}:</strong> {formatDossierDisplayValue(label, value) || "-"}
                                         </p>
                                     ))}
                                 </div>

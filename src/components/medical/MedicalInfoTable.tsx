@@ -134,8 +134,9 @@ export default function MedicalInfoTable({
                         type="number"
                         step="any"
                         inputMode="decimal"
+                        readOnly
+                        className="bg-muted"
                         value={editForm?.overw ?? ""}
-                        onChange={(e) => onChange("overw", e.target.value)}
                     />
                 ) : value;
             }
