@@ -51,7 +51,7 @@ describe("module access resolver", () => {
     expect(access.sections.admin).toBe(true);
   });
 
-  it("defaults ADMIN dossier, bulk, and reports access to false", async () => {
+  it("keeps ADMIN on admin, settings, reports, home, and help only", async () => {
     const access = await resolveModuleAccessForUser({
       userId: "admin-1",
       roles: ["ADMIN"],
@@ -60,14 +60,15 @@ describe("module access resolver", () => {
 
     expect(access.canAccessDossier).toBe(false);
     expect(access.canAccessBulkUpload).toBe(false);
-    expect(access.canAccessReports).toBe(false);
+    expect(access.canAccessReports).toBe(true);
     expect(access.sections.admin).toBe(true);
+    expect(access.sections.settings).toBe(true);
     expect(access.sections.dossier).toBe(false);
     expect(access.sections.bulk_upload).toBe(false);
-    expect(access.sections.reports).toBe(false);
+    expect(access.sections.reports).toBe(true);
   });
 
-  it("lets ADMIN reach the bulk hub when explicitly assigned to a workflow", async () => {
+  it("does not add Bulk Upload to ADMIN even when explicitly assigned to a workflow", async () => {
     (listMarksWorkflowAssignmentsForUser as any).mockResolvedValueOnce([
       {
         module: "ACADEMICS_BULK",
@@ -81,13 +82,13 @@ describe("module access resolver", () => {
       position: "ADMIN",
     });
 
-    expect(access.canAccessBulkUpload).toBe(true);
-    expect(access.canAccessAcademicsBulk).toBe(true);
+    expect(access.canAccessBulkUpload).toBe(false);
+    expect(access.canAccessAcademicsBulk).toBe(false);
     expect(access.canAccessPtBulk).toBe(false);
-    expect(access.sections.bulk_upload).toBe(true);
+    expect(access.sections.bulk_upload).toBe(false);
   });
 
-  it("keeps non-admin users on the existing dossier, bulk, and reports visibility", async () => {
+  it("keeps platoon commanders on dossier, reports, home, and help only", async () => {
     const access = await resolveModuleAccessForUser({
       userId: "user-1",
       roles: ["PLATOON_COMMANDER"],
@@ -95,9 +96,28 @@ describe("module access resolver", () => {
     });
 
     expect(access.canAccessDossier).toBe(true);
+    expect(access.canAccessBulkUpload).toBe(false);
+    expect(access.canAccessReports).toBe(true);
+    expect(access.sections.admin).toBe(false);
+    expect(access.sections.settings).toBe(false);
+    expect(access.sections.dossier).toBe(true);
+    expect(access.sections.bulk_upload).toBe(false);
+  });
+
+  it("keeps other users on bulk upload, reports, home, and help only", async () => {
+    const access = await resolveModuleAccessForUser({
+      userId: "user-1",
+      roles: ["guest"],
+      position: "HOAT",
+    });
+
+    expect(access.canAccessDossier).toBe(false);
     expect(access.canAccessBulkUpload).toBe(true);
     expect(access.canAccessReports).toBe(true);
     expect(access.sections.admin).toBe(false);
+    expect(access.sections.settings).toBe(false);
+    expect(access.sections.dossier).toBe(false);
+    expect(access.sections.bulk_upload).toBe(true);
   });
 });
 
@@ -137,20 +157,17 @@ describe("module API access enforcement", () => {
     ).toBeNull();
   });
 
-  it("blocks ADMIN report access when reports is disabled", async () => {
+  it("allows ADMIN report access", async () => {
     await expect(
       assertModuleApiAccessByPath("/api/v1/reports/metadata/course-semesters", {
         userId: "admin-1",
         roles: ["ADMIN"],
         position: "ADMIN",
       })
-    ).rejects.toMatchObject<ApiError>({
-      status: 403,
-      code: "module_access_denied",
-    });
+    ).resolves.toBeUndefined();
   });
 
-  it("allows an ADMIN workflow actor to reach the matching bulk API when bulk baseline is off", async () => {
+  it("blocks ADMIN bulk APIs even when assigned to a workflow", async () => {
     (listMarksWorkflowAssignmentsForUser as any).mockResolvedValueOnce([
       {
         module: "ACADEMICS_BULK",
@@ -164,7 +181,10 @@ describe("module API access enforcement", () => {
         roles: ["ADMIN"],
         position: "ADMIN",
       })
-    ).resolves.toBeUndefined();
+    ).rejects.toMatchObject<ApiError>({
+      status: 403,
+      code: "module_access_denied",
+    });
   });
 
   it("blocks ADMIN dossier child APIs when dossier access is disabled", async () => {
@@ -183,14 +203,17 @@ describe("module API access enforcement", () => {
     });
   });
 
-  it("keeps SUPER_ADMIN and non-admin callers unchanged", async () => {
+  it("blocks platoon commanders from bulk APIs but allows dossier APIs", async () => {
     await expect(
-      assertModuleApiAccessByPath("/api/v1/reports/metadata/course-semesters", {
-        userId: "super-1",
-        roles: ["SUPER_ADMIN"],
-        position: "SUPER_ADMIN",
+      assertModuleApiAccessByPath("/api/v1/oc/physical-training/bulk", {
+        userId: "platoon-1",
+        roles: ["PLATOON_COMMANDER"],
+        position: "PLATOON_COMMANDER",
       })
-    ).resolves.toBeUndefined();
+    ).rejects.toMatchObject<ApiError>({
+      status: 403,
+      code: "module_access_denied",
+    });
 
     await expect(
       assertModuleApiAccessByPath(
@@ -201,6 +224,48 @@ describe("module API access enforcement", () => {
           position: "PLATOON_COMMANDER",
         }
       )
+    ).resolves.toBeUndefined();
+  });
+
+  it("blocks other users from dossier APIs but allows bulk APIs", async () => {
+    await expect(
+      assertModuleApiAccessByPath("/api/v1/oc/physical-training/bulk", {
+        userId: "user-1",
+        roles: ["guest"],
+        position: "HOAT",
+      })
+    ).resolves.toBeUndefined();
+
+    await expect(
+      assertModuleApiAccessByPath(
+        "/api/v1/oc/11111111-1111-4111-8111-111111111111/dossier-snapshot",
+        {
+          userId: "user-1",
+          roles: ["guest"],
+          position: "HOAT",
+        }
+      )
+    ).rejects.toMatchObject<ApiError>({
+      status: 403,
+      code: "module_access_denied",
+    });
+  });
+
+  it("keeps SUPER_ADMIN unrestricted", async () => {
+    await expect(
+      assertModuleApiAccessByPath("/api/v1/reports/metadata/course-semesters", {
+        userId: "super-1",
+        roles: ["SUPER_ADMIN"],
+        position: "SUPER_ADMIN",
+      })
+    ).resolves.toBeUndefined();
+
+    await expect(
+      assertModuleApiAccessByPath("/api/v1/oc/physical-training/bulk", {
+        userId: "super-1",
+        roles: ["SUPER_ADMIN"],
+        position: "SUPER_ADMIN",
+      })
     ).resolves.toBeUndefined();
   });
 });

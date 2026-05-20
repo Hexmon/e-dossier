@@ -8,6 +8,7 @@ import {
   canAccessBulkWorkflowModule,
   canAccessModule,
   hasResolvedSectionAccess,
+  resolveSidebarSectionForDashboardPath,
   resolveModuleAccessForUser,
   type ModuleAccessKey,
   type ResolvedModuleAccess,
@@ -153,6 +154,11 @@ async function enforceDashboardPagePermission(authContext: AdminPageAuthContext)
   }
 
   if (authContext.roleGroup === "SUPER_ADMIN") return;
+
+  const sectionKey = resolveSidebarSectionForDashboardPath(pathname);
+  if (sectionKey && !hasResolvedSectionAccess(authContext.moduleAccess, sectionKey)) {
+    redirect("/dashboard");
+  }
 
   const permissions = new Set(authContext.permissions);
   const deniedPermissions = new Set(authContext.deniedPermissions);
