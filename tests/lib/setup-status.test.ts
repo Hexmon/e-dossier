@@ -5,6 +5,8 @@ import { deriveSetupStatus, type SetupStatusCounts } from "@/app/lib/setup-statu
 function makeCounts(overrides: Partial<SetupStatusCounts> = {}): SetupStatusCounts {
   return {
     activeSuperAdmins: 0,
+    availableAppointmentPositions: 0,
+    activeOperationalAppointments: 0,
     activePlatoons: 0,
     activeCourses: 0,
     activeOfferings: 0,
@@ -25,6 +27,7 @@ describe("setup status derivation", () => {
     expect(setup.nextStep).toBe("superAdmin");
     expect(setup.steps.superAdmin.status).toBe("pending");
     expect(setup.steps.platoons.status).toBe("blocked");
+    expect(setup.steps.appointments.status).toBe("blocked");
     expect(setup.steps.hierarchy.status).toBe("blocked");
   });
 
@@ -38,14 +41,32 @@ describe("setup status derivation", () => {
     expect(setup.bootstrapRequired).toBe(false);
     expect(setup.steps.superAdmin.status).toBe("complete");
     expect(setup.steps.platoons.status).toBe("pending");
+    expect(setup.steps.appointments.status).toBe("blocked");
     expect(setup.steps.hierarchy.status).toBe("blocked");
     expect(setup.nextStep).toBe("platoons");
+  });
+
+  it("requires operational appointments after platoons and before hierarchy", () => {
+    const setup = deriveSetupStatus(
+      makeCounts({
+        activeSuperAdmins: 1,
+        availableAppointmentPositions: 9,
+        activePlatoons: 2,
+      })
+    );
+
+    expect(setup.steps.platoons.status).toBe("complete");
+    expect(setup.steps.appointments.status).toBe("pending");
+    expect(setup.steps.hierarchy.status).toBe("blocked");
+    expect(setup.nextStep).toBe("appointments");
+    expect(setup.counts.availableAppointmentPositions).toBe(9);
   });
 
   it("marks a partially configured system with offerings pending when hierarchy and courses exist", () => {
     const setup = deriveSetupStatus(
       makeCounts({
         activeSuperAdmins: 1,
+        activeOperationalAppointments: 1,
         activePlatoons: 2,
         activeHierarchyNodes: 3,
         missingPlatoonHierarchyNodes: 0,
@@ -54,6 +75,7 @@ describe("setup status derivation", () => {
     );
 
     expect(setup.steps.platoons.status).toBe("complete");
+    expect(setup.steps.appointments.status).toBe("complete");
     expect(setup.steps.hierarchy.status).toBe("complete");
     expect(setup.steps.courses.status).toBe("complete");
     expect(setup.steps.offerings.status).toBe("pending");
@@ -65,6 +87,7 @@ describe("setup status derivation", () => {
     const setup = deriveSetupStatus(
       makeCounts({
         activeSuperAdmins: 1,
+        activeOperationalAppointments: 1,
         activePlatoons: 2,
         activeCourses: 1,
         activeOfferings: 3,

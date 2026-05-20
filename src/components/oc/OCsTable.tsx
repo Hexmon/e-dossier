@@ -34,6 +34,9 @@ type Props = {
     onView: (id: string) => void;
     onEdit: (index: number) => void;
     onDelete: (id: string) => void;
+    selectedIds?: Set<string>;
+    onToggleSelected?: (id: string, checked: boolean) => void;
+    onTogglePageSelected?: (checked: boolean) => void;
     pagination?: ServerPaginationProps;
     loading?: boolean;
     loadMore?: LoadMoreConfig; // optional: if you still want a "Load more" mode somewhere else
@@ -44,11 +47,48 @@ export default function OCsTable({
     onView,
     onEdit,
     onDelete,
+    selectedIds,
+    onToggleSelected,
+    onTogglePageSelected,
     pagination,
     loading,
     loadMore,
 }: Props) {
+    const selectableRows = ocList.filter((row) => Boolean(row.id));
+    const allPageSelected =
+        selectableRows.length > 0 &&
+        selectableRows.every((row) => selectedIds?.has(row.id));
+    const somePageSelected =
+        selectableRows.some((row) => selectedIds?.has(row.id)) && !allPageSelected;
+
     const columns: TableColumn<OCRow>[] = [
+        ...(selectedIds && onToggleSelected
+            ? [{
+                key: "__select",
+                label: "",
+                type: "custom" as const,
+                width: "48px",
+                headerRender: (
+                    <input
+                        type="checkbox"
+                        checked={allPageSelected}
+                        ref={(node) => {
+                            if (node) node.indeterminate = somePageSelected;
+                        }}
+                        onChange={(event) => onTogglePageSelected?.(event.target.checked)}
+                        aria-label="Select all OCs on this page"
+                    />
+                ),
+                render: (_value: unknown, row: OCRow) => (
+                    <input
+                        type="checkbox"
+                        checked={selectedIds.has(row.id)}
+                        onChange={(event) => onToggleSelected(row.id, event.target.checked)}
+                        aria-label={`Select ${row.name ?? row.ocNo ?? "OC"}`}
+                    />
+                ),
+            }]
+            : []),
         {
             key: "name",
             label: "Name",

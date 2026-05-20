@@ -68,3 +68,56 @@ flowchart LR
   D --> E["Apply template"]
   E --> F["Validate in OLQ Assessment page"]
 ```
+
+## 6. Detailed OLQ Template Reference {#detailed-olq-template-reference}
+
+OLQ configuration defines assessment categories and subtitles. The same course-level template supports semester/term OLQ entry pages.
+
+### 6.1 Category and subtitle detail
+
+| Category | Operator meaning | Validation focus |
+|---|---|---|
+| PLG & ORG | Planning, reasoning, organization, and expression qualities | Four subtitles with max marks of 20 each. |
+| Social Adjustment | Ability to adapt, cooperate, and accept responsibility | Three subtitles with max marks of 20 each. |
+| Social Effectiveness | Initiative, confidence, decision speed, influence, liveliness | Five subtitles with max marks of 20 each. |
+| Dynamic | Determination, courage, and stamina | Three subtitles with max marks of 20 each. |
+
+The label text matters because assessment pages and reports display it directly. Avoid spelling changes unless they are intentional organization terminology changes.
+
+### 6.2 Replace versus upsert_missing
+
+Use `replace` when:
+
+- The course should exactly match the default OLQ structure.
+- Existing active template rows are incorrect or experimental.
+- You have reviewed dry-run output and accepted the reset.
+
+Use `upsert_missing` when:
+
+- The course already has customized OLQ rows.
+- You only want missing defaults created.
+- You want canonical sort/label updates without wiping custom structure.
+
+For production-like data, run dry-run first and record the count of affected courses, created rows, updated rows, deactivated rows, warnings, and skipped rows.
+
+### 6.3 Downstream behavior
+
+OLQ template data affects:
+
+- OC OLQ Assessment page rendering.
+- Semester/term tabs that show OLQ subtitles.
+- OLQ score entry and total calculation.
+- Performance graph and reports that include OLQ-derived values.
+
+When validating, choose one OC in the target course, open every semester/term tab that the UI exposes, and confirm the category layout remains consistent.
+
+### 6.4 OLQ QA matrix
+
+| Scenario | Expected result |
+|---|---|
+| Selected course dry-run | Only selected course appears in the preview. |
+| All active courses dry-run | Every active course is scanned and warnings are visible. |
+| upsert_missing on customized course | Missing defaults are inserted and custom rows remain active. |
+| replace on customized course | Active custom rows are deactivated or replaced according to apply result. |
+| OC OLQ save after template apply | Marks save and reload under the same category/subtitle labels. |
+| Report/performance page after apply | OLQ values remain readable and no category is blank. |

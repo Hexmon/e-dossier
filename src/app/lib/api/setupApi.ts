@@ -26,6 +26,28 @@ export type BootstrapSuperAdminResponse = {
   appointmentId: string;
 };
 
+export type BootstrapTemplatePayload = {
+  module: "pt" | "camp" | "platoon" | "appointment";
+  profile?: "default";
+  dryRun?: boolean;
+};
+
+export type BootstrapTemplateStats = {
+  created: number;
+  updated: number;
+  skipped: number;
+};
+
+export type BootstrapTemplateResponse = {
+  message: string;
+  module: string;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  warnings: string[];
+  stats?: Record<string, BootstrapTemplateStats>;
+};
+
 export async function fetchSetupStatus(): Promise<SetupStatus> {
   const response = await api.get<SetupStatusResponse>(endpoints.setup.status, {
     baseURL,
@@ -46,5 +68,15 @@ export async function bootstrapSuperAdmin(
       skipAuth: true,
       skipCsrf: true,
     }
+  );
+}
+
+export async function applyBootstrapTemplate(
+  payload: BootstrapTemplatePayload
+): Promise<BootstrapTemplateResponse> {
+  return api.post<BootstrapTemplateResponse, BootstrapTemplatePayload>(
+    endpoints.admin.bootstrapTemplateApply,
+    payload,
+    { baseURL }
   );
 }

@@ -73,3 +73,86 @@ Why mismatch may happen:
 - File content was edited.
 - PDF was re-exported by another tool (byte content changed).
 - Wrong file uploaded against a valid code.
+
+## 6. Detailed Admin Operations Checklist {#detailed-admin-operations-checklist}
+
+Use this checklist for routine admin QA and handoff.
+
+### 6.1 User lifecycle
+
+Create/update user:
+
+- Confirm username is unique and not reserved.
+- Confirm rank/name fields are correct.
+- Confirm active/disabled status.
+- Confirm appointment context separately from user identity.
+
+Approve signup:
+
+- Confirm requested identity.
+- Confirm selected position.
+- Confirm selected scope.
+- Approve only after scope and position are correct.
+- Verify user can sign in only after approval and setup completion.
+
+Disable user:
+
+- Confirm user is no longer able to access dashboard.
+- Confirm active appointments are handled according to local policy.
+- Verify audit/history if available.
+
+### 6.2 Appointment handover/takeover
+
+Before handover:
+
+- Identify current holder.
+- Identify incoming holder.
+- Confirm position key and display name.
+- Confirm scope.
+- Confirm handover date.
+
+After handover:
+
+- Current table shows new holder.
+- Served history contains previous holder.
+- Login/session for previous holder no longer grants the old appointment.
+- Commander history updates if the appointment is platoon commander scoped.
+
+### 6.3 Platoon operations
+
+When editing platoons:
+
+- Keep stable keys for existing platoons.
+- Update display name/about/theme carefully.
+- Verify public platoon page if public display is enabled.
+- Verify commander history after appointment changes.
+- Verify OC assignment dropdowns.
+
+### 6.4 Report verification operations
+
+When a report is disputed:
+
+1. Ask for the PDF and version code.
+2. Verify the version code.
+3. Upload the PDF for exact checksum where possible.
+4. Compare result.
+5. If mismatch, re-download from the system and verify again.
+
+Record:
+
+- Version code.
+- Result status.
+- Whether file upload was used.
+- Operator username.
+- Date/time.
+
+### 6.5 Admin smoke checklist
+
+After a deployment or admin feature change:
+
+- User list loads.
+- Signup request list loads.
+- Appointment current/history lists load.
+- Platoon list and commander history load.
+- Report verification accepts a known valid code.
+- Module access disabled paths are blocked for Admin.

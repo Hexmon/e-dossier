@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
@@ -8,19 +9,23 @@ import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IndiaPhoneInput } from "@/components/ui/india-phone-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 
-import { signupUser, isStrongPassword, RESERVED_USERNAMES, checkUsernameAvailability } from "@/app/lib/api/authApi";
+import { signupUser, isStrongPassword, checkUsernameAvailability } from "@/app/lib/api/authApi";
 import { PASSWORD_RULE, SignupFormValues } from "../../../types/signup";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useSetupStatus } from "@/hooks/useSetupStatus";
 
 export default function Signup() {
   const router = useRouter();
   const {
     register,
     handleSubmit,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<SignupFormValues>({
@@ -40,6 +45,20 @@ export default function Signup() {
   const [isChecking, setIsChecking] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+  const setupStatusQuery = useSetupStatus(undefined, {
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+    staleTime: 0,
+  });
+  const setupIncomplete = setupStatusQuery.data?.setupComplete === false;
+  const checkingSetupStatus =
+    !setupStatusQuery.data && (setupStatusQuery.isLoading || setupStatusQuery.isFetching);
+
+  useEffect(() => {
+    if (setupIncomplete) {
+      router.replace("/login");
+    }
+  }, [router, setupIncomplete]);
 
   useEffect(() => {
     if (!username || username.length < 3) {
@@ -60,7 +79,7 @@ export default function Signup() {
         const result = await checkUsernameAvailability(username);
         setUsernameAvailable(result.available);
         setUsernameSuggestions(result.suggestions || []);
-      } catch (error) {
+      } catch {
         setUsernameAvailable(null);
       } finally {
         setIsChecking(false);
@@ -98,6 +117,43 @@ export default function Signup() {
     }
   };
 
+  if (checkingSetupStatus || setupIncomplete) {
+    return (
+      <main className="min-h-screen bg-[var(--primary)] flex items-center justify-center p-4 relative overflow-hidden">
+        <figure className="absolute inset-0 opacity-5">
+          <Image
+            src="/images/Military-College-Of-Electronics-Mechanical-Engineering.jpg"
+            alt="MCEME Background"
+            width={122}
+            height={122}
+            className="w-full h-full object-contain"
+          />
+        </figure>
+
+        <Card className="relative z-10 w-full max-w-md shadow-command">
+          <CardHeader>
+            <CardTitle className="text-center text-primary">
+              {checkingSetupStatus ? "Checking setup status" : "Initial setup in progress"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center">
+            {checkingSetupStatus ? (
+              <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+            ) : (
+              <AlertCircle className="mx-auto h-6 w-6 text-destructive" />
+            )}
+            <p className="text-sm text-muted-foreground">
+              Registration is available only after an ADMIN or SUPER_ADMIN completes initial setup.
+            </p>
+            <Button asChild variant="default" className="w-full">
+              <Link href="/login">Back to Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[var(--primary)] flex items-center justify-center p-4 relative overflow-hidden">
       <figure className="absolute inset-0 opacity-5">
@@ -134,10 +190,11 @@ export default function Signup() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Phone Number</Label>
-                  <Input
-                    type="tel"
-                    placeholder="+91 XXXXX XXXXX"
-                    {...register("phone", { required: "Phone number is required" })}
+                  <IndiaPhoneInput
+                    value={watch("phone")}
+                    onValueChange={(value) => setValue("phone", value, { shouldDirty: true, shouldValidate: true })}
+                    placeholder="9876543210"
+                    autoComplete="tel-national"
                   />
                   {errors.phone && <p className="text-destructive text-sm">{errors.phone.message}</p>}
                 </div>
@@ -223,13 +280,13 @@ export default function Signup() {
               <div className="space-y-2">
                 <Label>Password</Label>
                 <div className="relative">
-                  <Input
-                    type="password"
+                  <PasswordInput
                     placeholder="Create a strong password"
+                    autoComplete="new-password"
                     {...register("password", { required: "Password is required" })}
                   />
                   {password && (
-                    <div className="absolute right-3 top-3">
+                    <div className="absolute right-10 top-3">
                       {passwordStrong ? (
                         <CheckCircle className="h-4 w-4 text-success" />
                       ) : (
@@ -245,13 +302,13 @@ export default function Signup() {
               <div className="space-y-2">
                 <Label>Confirm Password</Label>
                 <div className="relative">
-                  <Input
-                    type="password"
+                  <PasswordInput
                     placeholder="Confirm your password"
+                    autoComplete="new-password"
                     {...register("confirmPassword", { required: "Please confirm password" })}
                   />
                   {confirmPassword && (
-                    <div className="absolute right-3 top-3">
+                    <div className="absolute right-10 top-3">
                       {passwordMatch ? (
                         <CheckCircle className="h-4 w-4 text-success" />
                       ) : (

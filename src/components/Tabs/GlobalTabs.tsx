@@ -2,10 +2,11 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import React, { useState } from "react";
 import CourseSelectModal from "@/components/modals/CourseSelectModal";
 import { cn } from "@/lib/utils";
+import { useSetupStatus } from "@/hooks/useSetupStatus";
 
 type TabItem = {
   value: string;
@@ -23,6 +24,45 @@ interface GlobalTabsProps {
   children: React.ReactNode;
 }
 
+const SETUP_RETURN_TO = "/setup";
+
+const SETUP_ALLOWED_TAB_PATHS = [
+  "/dashboard/genmgmt/platoon-management",
+  "/dashboard/genmgmt/usersmgmt",
+  "/dashboard/genmgmt/appointmentmgmt",
+  "/dashboard/genmgmt/hierarchy",
+  "/dashboard/genmgmt/coursemgmt",
+  "/dashboard/genmgmt/subjectmgmt",
+  "/dashboard/genmgmt/ocmgmt",
+  "/dashboard/help/setup-guide",
+];
+
+function pathAllowsSetupNavigation(path: string) {
+  return SETUP_ALLOWED_TAB_PATHS.some(
+    (allowedPath) => path === allowedPath || path.startsWith(`${allowedPath}/`)
+  );
+}
+
+function buildSetupHref(path: string) {
+  const [pathname, queryString = ""] = path.split("?");
+  const params = new URLSearchParams(queryString);
+  params.set("returnTo", SETUP_RETURN_TO);
+  const nextQuery = params.toString();
+  return nextQuery ? `${pathname}?${nextQuery}` : pathname;
+}
+
+function shouldShowSetupTab(tab: TabItem) {
+  if (tab.action === "offerings") {
+    return true;
+  }
+
+  if (!tab.link) {
+    return true;
+  }
+
+  return pathAllowsSetupNavigation(tab.link.split("?")[0]);
+}
+
 export default function GlobalTabs({
   tabs,
   defaultValue,
@@ -32,10 +72,16 @@ export default function GlobalTabs({
 }: GlobalTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [offeringsOpen, setOfferingsOpen] = useState(false);
+  const setupStatusQuery = useSetupStatus();
+  const setupMode =
+    searchParams.get("returnTo") === SETUP_RETURN_TO ||
+    setupStatusQuery.data?.setupComplete === false;
   const isControlled = typeof value === "string";
+  const visibleTabs = setupMode ? tabs.filter(shouldShowSetupTab) : tabs;
 
-  const hasOfferingsAction = tabs.some((tab) => tab.action === "offerings");
+  const hasOfferingsAction = visibleTabs.some((tab) => tab.action === "offerings");
   const isOfferingsPage =
     pathname.includes("/dashboard/genmgmt/coursemgmt/") && pathname.includes("/offerings");
   const sharedTabBaseClasses =
@@ -55,9 +101,9 @@ export default function GlobalTabs({
     >
       <TabsList
         className="grid w-full sticky top-16 z-40"
-        style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: `repeat(${Math.max(visibleTabs.length, 1)}, minmax(0, 1fr))` }}
       >
-        {tabs.map(({ value, title, icon: Icon, link, action }) =>
+        {visibleTabs.map(({ value, title, icon: Icon, link, action }) =>
           action === "offerings" ? (
             <button
               key={value}
@@ -75,7 +121,11 @@ export default function GlobalTabs({
               <span className="truncate">{title}</span>
             </button>
           ) : link ? (
-            <Link key={value} href={link} className="text-center hover:text-primary min-w-0">
+            <Link
+              key={value}
+              href={setupMode ? buildSetupHref(link) : link}
+              className="text-center hover:text-primary min-w-0"
+            >
               <TabsTrigger
                 value={value}
                 className={sharedTabClasses}
@@ -105,7 +155,11 @@ export default function GlobalTabs({
           open={offeringsOpen}
           onOpenChange={setOfferingsOpen}
           onSelect={(course) =>
-            router.push(`/dashboard/genmgmt/coursemgmt/${course.id}/offerings`)
+            router.push(
+              setupMode
+                ? buildSetupHref(`/dashboard/genmgmt/coursemgmt/${course.id}/offerings`)
+                : `/dashboard/genmgmt/coursemgmt/${course.id}/offerings`
+            )
           }
         />
       )}

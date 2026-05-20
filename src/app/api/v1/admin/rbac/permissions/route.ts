@@ -17,7 +17,7 @@ async function GETHandler(req: AuditNextRequest) {
     const limit = sp.get('limit') ? Number(sp.get('limit')) : undefined;
     const offset = sp.get('offset') ? Number(sp.get('offset')) : undefined;
 
-    const items = await listRbacPermissions({ q, limit, offset });
+    const page = await listRbacPermissions({ q, limit, offset });
 
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
@@ -26,11 +26,12 @@ async function GETHandler(req: AuditNextRequest) {
       target: { type: AuditResourceType.PERMISSION, id: 'collection' },
       metadata: {
         description: 'RBAC permissions retrieved successfully.',
-        count: items.length,
+        count: page.count,
+        total: page.total,
       },
     });
 
-    return json.ok({ message: 'Permissions retrieved successfully.', items, count: items.length });
+    return json.ok({ message: 'Permissions retrieved successfully.', ...page });
   } catch (error) {
     return handleApiError(error);
   }

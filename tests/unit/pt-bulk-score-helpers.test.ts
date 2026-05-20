@@ -8,6 +8,7 @@ import {
   createPTBulkTaskSelectionFromAttemptChange,
   createPTBulkTaskSelectionFromGradeChange,
   getDefaultPTBulkTaskSelection,
+  resolvePTBulkDisplayedSelection,
 } from '@/components/physic-training/bulk/ptBulkScoreHelpers';
 import { buildBulkPTSaveRequest } from '@/hooks/usePhysicalTrainingBulk';
 
@@ -113,6 +114,16 @@ describe('ptBulkScoreHelpers', () => {
       marks: '30',
       maxMarks: 30,
     });
+  });
+
+  it('does not display default marks for an unsaved blank bulk cell', () => {
+    expect(
+      resolvePTBulkDisplayedSelection({
+        initialSelection: null,
+        draftSelection: null,
+        isCleared: false,
+      }),
+    ).toBeNull();
   });
 
   it('updates max marks when the selected status changes', () => {

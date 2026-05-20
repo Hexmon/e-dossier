@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +11,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { AppointmentTable } from "@/components/appointments/AppointmentTable";
 import { ServedHistoryTable } from "@/components/appointments/ServedHistoryTable";
@@ -29,15 +28,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { delegationAdminApi } from "@/app/lib/api/delegationAdminApi";
+import {
+  DEFAULT_APPOINTMENT_TEMPLATE_POSITIONS,
+  type AppointmentTemplatePositionSummary,
+} from "@/app/lib/bootstrap/appointment-template-view";
+import { useMe } from "@/hooks/useMe";
+import { deriveSidebarRoleGroup } from "@/lib/sidebar-visibility";
+
+type AppointmentPositionTableRow = Omit<AppointmentTemplatePositionSummary, "displayName"> & {
+  displayName?: string | null;
+};
 
 export default function AppointmentManagement() {
-  const router = useRouter();
   const queryClient = useQueryClient();
+  const { data: meData } = useMe();
 
   const {
     appointments,
     servedList,
     users,
+    positions,
     loading,
     fetchAppointments,
     fetchUsersAndPositions,
@@ -48,6 +58,7 @@ export default function AppointmentManagement() {
 
   const [handoverDialog, setHandoverDialog] = useState(false);
   const [delegationDialog, setDelegationDialog] = useState(false);
+  const [positionTemplateDialog, setPositionTemplateDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [delegationDraft, setDelegationDraft] = useState({
     grantorAppointmentId: "",
@@ -56,6 +67,11 @@ export default function AppointmentManagement() {
     endsAt: "",
     reason: "",
   });
+  const actorIsSuperAdmin =
+    deriveSidebarRoleGroup({
+      roles: meData?.roles ?? [],
+      position: meData?.apt?.position ?? null,
+    }) === "SUPER_ADMIN";
 
   const delegationsQuery = useQuery({
     queryKey: ["delegations"],
@@ -70,13 +86,20 @@ export default function AppointmentManagement() {
         fetchAppointments(),
         fetchUsersAndPositions(),
         queryClient.invalidateQueries({ queryKey: ["positions"] }),
+        queryClient.invalidateQueries({ queryKey: ["servedList"] }),
       ]);
       const prefix = dryRun ? "Dry run complete." : "Default appointment template applied.";
-      toast.success(
-        `${prefix} Created: ${result.createdCount}, Updated: ${result.updatedCount}, Skipped: ${result.skippedCount}`
-      );
-      if (result.warnings.length > 0) {
-        toast.warning(`Completed with ${result.warnings.length} warning(s).`);
+      const appointmentStats = result.module === "appointment" ? result.stats : null;
+      const positionStats = appointmentStats?.positions;
+      const assignmentStats = appointmentStats?.assignments;
+      const summary =
+        positionStats && assignmentStats
+          ? ` Positions created: ${positionStats.created}, updated: ${positionStats.updated}, skipped: ${positionStats.skipped}. Holder assignments created: ${assignmentStats.created}, skipped: ${assignmentStats.skipped}.`
+          : ` Created: ${result.createdCount}, Updated: ${result.updatedCount}, Skipped: ${result.skippedCount}.`;
+      toast.success(`${prefix}${summary}`);
+      const warnings = result.warnings ?? [];
+      if (warnings.length > 0) {
+        toast.warning(`Completed with ${warnings.length} warning(s).`);
       }
     },
     onError: (error: any) => {
@@ -150,7 +173,7 @@ export default function AppointmentManagement() {
     try {
       await handleHandover(selectedAppointment, data);
       setHandoverDialog(false);
-    } catch (error) {
+    } catch {
       // Error already handled by mutation
     }
   };
@@ -181,34 +204,14 @@ export default function AppointmentManagement() {
                   <h2 className="text-2xl font-bold">Transfer / Delegate</h2>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
+                      type="button"
                       variant="outline"
-                      onClick={() => applyDefaultTemplateMutation.mutate(true)}
-                      disabled={applyDefaultTemplateMutation.isPending}
+                      onClick={() => setPositionTemplateDialog(true)}
                     >
-                      {applyDefaultTemplateMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Running
-                        </>
-                      ) : (
-                        "Preview Changes (Dry Run)"
-                      )}
+                      Default Appointment Template
                     </Button>
                     <Button
-                      variant="outline"
-                      onClick={() => applyDefaultTemplateMutation.mutate(false)}
-                      disabled={applyDefaultTemplateMutation.isPending}
-                    >
-                      {applyDefaultTemplateMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Applying
-                        </>
-                      ) : (
-                        "Apply Default Appointment Template"
-                      )}
-                    </Button>
-                    <Button
+                      type="button"
                       variant="outline"
                       onClick={() => setDelegationDialog(true)}
                     >
@@ -224,7 +227,10 @@ export default function AppointmentManagement() {
                   onEdit={handleEditAppointment}
                   onDelete={handleDeleteAppointment}
                   users={users}
+                  actorIsSuperAdmin={actorIsSuperAdmin}
                 />
+
+                <PositionDefinitionsTable positions={positions} title="Available Appointment Positions" />
 
                 <Card>
                   <CardHeader>
@@ -276,6 +282,54 @@ export default function AppointmentManagement() {
           </section>
         </main>
       </section>
+
+      <Dialog open={positionTemplateDialog} onOpenChange={setPositionTemplateDialog}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Default Appointment Template</DialogTitle>
+            <DialogDescription>
+              Review the default appointment positions before applying them. Dry run previews the same template without saving.
+            </DialogDescription>
+          </DialogHeader>
+
+          <PositionDefinitionsTable
+            positions={DEFAULT_APPOINTMENT_TEMPLATE_POSITIONS}
+            title="Template Appointment Positions"
+          />
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => applyDefaultTemplateMutation.mutate(true)}
+              disabled={applyDefaultTemplateMutation.isPending}
+            >
+              {applyDefaultTemplateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Running
+                </>
+              ) : (
+                "Preview Changes"
+              )}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => applyDefaultTemplateMutation.mutate(false)}
+              disabled={applyDefaultTemplateMutation.isPending}
+            >
+              {applyDefaultTemplateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Applying
+                </>
+              ) : (
+                "Apply Template"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={handoverDialog} onOpenChange={setHandoverDialog}>
         <DialogContent>
@@ -397,6 +451,7 @@ export default function AppointmentManagement() {
 
             <div className="flex justify-end">
               <Button
+                type="button"
                 onClick={() => createDelegationMutation.mutate()}
                 disabled={createDelegationMutation.isPending}
               >
@@ -407,5 +462,49 @@ export default function AppointmentManagement() {
         </DialogContent>
       </Dialog>
     </SidebarProvider>
+  );
+}
+
+function PositionDefinitionsTable({
+  positions,
+  title,
+}: {
+  positions: AppointmentPositionTableRow[];
+  title: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {positions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No appointment positions found.</p>
+        ) : (
+          <section className="overflow-x-auto rounded-md border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted text-foreground">
+                <tr>
+                  <th className="px-4 py-2">Key</th>
+                  <th className="px-4 py-2">Display</th>
+                  <th className="px-4 py-2">Scope</th>
+                </tr>
+              </thead>
+              <tbody>
+                {positions.map((position) => (
+                  <tr key={position.key} className="border-t">
+                    <td className="px-4 py-2 font-mono text-xs">{position.key}</td>
+                    <td className="px-4 py-2 font-medium">
+                      {position.displayName || position.key}
+                    </td>
+                    <td className="px-4 py-2">{position.defaultScope}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+      </CardContent>
+    </Card>
   );
 }

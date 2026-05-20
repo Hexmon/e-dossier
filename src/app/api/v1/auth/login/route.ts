@@ -8,10 +8,14 @@ import { credentialsLocal } from '@/app/db/schema/auth/credentials';
 import { eq } from 'drizzle-orm';
 import argon2 from 'argon2';
 import { getAuthorityForLogin, buildAuthorityRoleKeys } from '@/app/lib/effective-authority';
-import { getClientIp } from '@/lib/ratelimit';
+import { checkLoginRateLimit, getClientIp } from '@/lib/ratelimit';
 import {
+  checkAndLockAccount,
+  clearFailedAttempts,
+  isAccountLocked,
   recordLoginAttempt,
 } from '@/app/db/queries/account-lockout';
+import { assertLoginAllowedDuringSetup } from '@/app/lib/setup-gate';
 import {
   withAuditRoute,
   AuditEventType,
@@ -19,27 +23,13 @@ import {
 } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { generateCsrfToken, setCsrfCookie } from '@/lib/csrf';
+import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.EXPOSE_TOKENS_IN_DEV === 'true';
-
-/*
-Restorable login protection imports. Left commented so current behavior stays unchanged.
-
-import { checkLoginRateLimit } from '@/lib/ratelimit';
-import {
-  recordLoginAttempt,
-  isAccountLocked,
-  checkAndLockAccount,
-  clearFailedAttempts,
-} from '@/app/db/queries/account-lockout';
-*/
 
 async function POSTHandler(req: AuditNextRequest) {
   try {
     const clientIp = getClientIp(req);
-
-    /*
-    Restorable login rate-limit block. Uncomment to enforce per-login throttling again.
 
     const rateLimitResult = await checkLoginRateLimit(clientIp);
     if (!rateLimitResult.success) {
@@ -52,7 +42,6 @@ async function POSTHandler(req: AuditNextRequest) {
         }
       );
     }
-    */
 
     // 0) Parse JSON safely
     let body: unknown;
@@ -76,7 +65,6 @@ async function POSTHandler(req: AuditNextRequest) {
     if (!b.appointmentId && !b.delegationId) {
       missing.push('appointmentId|delegationId');
     }
-    if (!b.username || String(b.username).trim() === '') missing.push('username');
     if (!b.password || String(b.password).trim() === '') missing.push('password');
 
     if (missing.length) {
@@ -88,7 +76,7 @@ async function POSTHandler(req: AuditNextRequest) {
       });
       throw new ApiError(400, 'Missing required fields', 'missing_fields', {
         missing,
-        hint: 'Provide: exactly one of appointmentId or delegationId, plus username and password.',
+        hint: 'Provide: exactly one of appointmentId or delegationId, plus password.',
       });
     }
 
@@ -98,12 +86,15 @@ async function POSTHandler(req: AuditNextRequest) {
       return json.badRequest('Validation failed.', { details: parsed.error.format() });
     }
 
-    const { appointmentId, delegationId, platoonId, username, password } = parsed.data;
+    const { appointmentId, delegationId, password } = parsed.data;
 
     const authority = await getAuthorityForLogin({ appointmentId, delegationId });
-
-    /*
-    Restorable account-lockout pre-check. Uncomment to block login for locked accounts again.
+    const loginUsername = authority.username.toLowerCase();
+    const loginRoleGroup = deriveSidebarRoleGroup({
+      roles: [authority.positionKey],
+      position: authority.positionKey,
+    });
+    await assertLoginAllowedDuringSetup(loginRoleGroup);
 
     const activeLockout = await isAccountLocked(authority.userId);
     if (activeLockout) {
@@ -117,27 +108,12 @@ async function POSTHandler(req: AuditNextRequest) {
         }
       );
     }
-    */
-
-    // 3) Domain checks & auth
-    if (authority.scopeType === 'PLATOON') {
-      if (!platoonId) throw new ApiError(400, 'platoonId required for platoon-scoped identities', 'PLATOON_REQUIRED');
-      if (authority.scopeId !== platoonId) {
-        throw new ApiError(403, 'Platoon mismatch for this identity', 'PLATOON_MISMATCH');
-      }
-    } else if (platoonId) {
-      throw new ApiError(400, 'platoonId not allowed for non-platoon identities', 'PLATOON_NOT_ALLOWED');
-    }
-
-    if ((authority.username ?? '').toLowerCase() !== username.trim().toLowerCase()) {
-      throw new ApiError(403, 'Username does not match the active holder of this appointment', 'USERNAME_MISMATCH');
-    }
 
     const [cred] = await db.select().from(credentialsLocal).where(eq(credentialsLocal.userId, authority.userId)).limit(1);
     if (!cred) {
       await recordLoginAttempt({
         userId: authority.userId,
-        username: username.toLowerCase(),
+        username: loginUsername,
         ipAddress: clientIp,
         userAgent: req.headers.get('user-agent') ?? undefined,
         success: false,
@@ -149,7 +125,7 @@ async function POSTHandler(req: AuditNextRequest) {
         outcome: 'FAILURE',
         actor: { type: 'user', id: authority.userId },
         target: { type: AuditResourceType.USER, id: authority.userId },
-        metadata: { username: username.toLowerCase(), reason: 'No credentials found' },
+        metadata: { username: loginUsername, reason: 'No credentials found' },
       });
 
       throw new ApiError(401, 'invalid_credentials', 'NO_CREDENTIALS');
@@ -159,7 +135,7 @@ async function POSTHandler(req: AuditNextRequest) {
     if (!ok) {
       await recordLoginAttempt({
         userId: authority.userId,
-        username: username.toLowerCase(),
+        username: loginUsername,
         ipAddress: clientIp,
         userAgent: req.headers.get('user-agent') ?? undefined,
         success: false,
@@ -171,14 +147,11 @@ async function POSTHandler(req: AuditNextRequest) {
         outcome: 'FAILURE',
         actor: { type: 'user', id: authority.userId },
         target: { type: AuditResourceType.USER, id: authority.userId },
-        metadata: { username: username.toLowerCase(), reason: 'Invalid password' },
+        metadata: { username: loginUsername, reason: 'Invalid password' },
       });
 
-      /*
-      Restorable failed-attempt escalation. Uncomment to re-enable account lockout creation.
-
       const lockout = await checkAndLockAccount(
-        username.toLowerCase(),
+        loginUsername,
         authority.userId,
         clientIp
       );
@@ -194,7 +167,6 @@ async function POSTHandler(req: AuditNextRequest) {
           }
         );
       }
-      */
 
       throw new ApiError(401, 'invalid_credentials', 'BAD_PASSWORD');
     }
@@ -202,16 +174,13 @@ async function POSTHandler(req: AuditNextRequest) {
     // Record successful login attempt
     await recordLoginAttempt({
       userId: authority.userId,
-      username: username.toLowerCase(),
+      username: loginUsername,
       ipAddress: clientIp,
       userAgent: req.headers.get('user-agent') ?? undefined,
       success: true,
     });
 
-    /*
-    Restorable successful-login cleanup hook. Uncomment if lockout logic is re-enabled.
-    await clearFailedAttempts(username.toLowerCase());
-    */
+    await clearFailedAttempts(loginUsername);
 
     // Audit log - successful login
     await req.audit.log({
@@ -220,7 +189,7 @@ async function POSTHandler(req: AuditNextRequest) {
       actor: { type: 'user', id: authority.userId },
       target: { type: AuditResourceType.USER, id: authority.userId },
       metadata: {
-        username: username.toLowerCase(),
+        username: loginUsername,
         appointmentId: authority.appointmentId,
         delegationId: authority.delegationId,
         authorityKind: authority.authorityKind,

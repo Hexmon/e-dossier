@@ -1,6 +1,6 @@
 # Security Scanning
 
-This project uses three security scanning tools integrated into CI and available for local use. All tools run via Docker — no local installs required (except Docker itself).
+This project uses four security scanning tools integrated into CI and available for local use. The local SAST, secret scan, and DAST tools run via Docker, so no local scanner install is required beyond Docker itself.
 
 ## Tools
 
@@ -8,6 +8,7 @@ This project uses three security scanning tools integrated into CI and available
 |------|------|----------------|
 | **Semgrep** | SAST (Static Analysis) | Code patterns — injection, XSS, insecure crypto, OWASP Top 10 |
 | **pnpm audit / Snyk** | SCA (Software Composition Analysis) | Known vulnerabilities in dependencies |
+| **Gitleaks** | Secret scanning | Committed secrets, keys, and tokens |
 | **OWASP ZAP** | DAST (Dynamic Analysis) | Running application — headers, cookies, common web vulns |
 
 ## Prerequisites
@@ -34,7 +35,7 @@ corepack prepare pnpm@10.25.0 --activate
 pnpm security
 ```
 
-Runs Semgrep, dependency audit (report mode), and ZAP in sequence. Requires Docker running and (for ZAP) the app serving at `ZAP_TARGET_URL`.
+Runs Semgrep, dependency audit, secret scanning, and ZAP in sequence. This is a failing gate: high dependency findings, Semgrep findings, detected secrets, ZAP failures, or unbaselined ZAP warnings fail the command.
 
 ### Semgrep (SAST)
 
@@ -58,8 +59,16 @@ pnpm security:audit
 pnpm security:audit:report
 ```
 
-- `security:audit` — Runs `pnpm audit --audit-level=high`. Exits non-zero if high/critical vulnerabilities are found.
+- `security:audit` — Runs `pnpm audit --audit-level=high --ignore-unfixable`. Exits non-zero if fixable high/critical vulnerabilities are found.
 - `security:audit:report` — Same scan but writes JSON output to `.security/pnpm-audit.json` and always exits 0.
+
+### Secret Scan
+
+```bash
+pnpm security:secrets
+```
+
+Runs Gitleaks through Docker with `.gitleaks.toml`. Placeholders are allow-listed; real private keys, tokens, and passwords should fail the scan.
 
 ### OWASP ZAP (DAST)
 
@@ -75,6 +84,8 @@ ZAP_TARGET_URL=http://host.docker.internal:4000 pnpm security:zap
 ```
 
 ZAP runs inside Docker, so the default target is `http://host.docker.internal:3000` (Docker's alias for the host machine on macOS/Windows). The app must be running and listening on `0.0.0.0` or the default Next.js binding before you start the scan.
+
+ZAP uses `config/security/zap-baseline.conf`. Keep that file narrow: only documented, currently accepted informational warnings should be downgraded. New or unclassified warnings remain `WARN` and fail the gate.
 
 If Next.js dev server isn't reachable from Docker, start it with:
 
@@ -92,16 +103,17 @@ The security workflow (`.github/workflows/security.yml`) runs separately from th
 |-----|---------|-----------------|
 | **Semgrep** | Push to master, PRs to master | Reports findings via SARIF (GitHub Security tab) |
 | **Dependency Audit** | Push to master, PRs to master | Fails on high/critical vulnerabilities |
-| **ZAP Scan** | Weekly (Sunday 02:00 UTC), manual dispatch | Uploads HTML report as artifact |
+| **Secret Scan** | Push to master, PRs to master, weekly, manual | Fails on detected secrets |
+| **ZAP Scan** | Weekly (Sunday 02:00 UTC), manual dispatch | Fails if `ZAP_TARGET_URL` is missing or ZAP reports blocking findings |
 
 ## Required Secrets & Variables
 
 | Name | Type | Required | Used by |
 |------|------|----------|---------|
-| `SNYK_TOKEN` | Repository variable | No | Snyk scan (skipped if not set) |
-| `ZAP_TARGET_URL` | Repository variable | No | ZAP scan (skipped if not set) |
+| `SNYK_TOKEN` | Repository secret | No | Snyk scan (skipped if not set) |
+| `ZAP_TARGET_URL` | Repository variable | Yes for scheduled/manual DAST | ZAP scan target |
 
-Configure these in **Settings > Secrets and variables > Actions > Variables**.
+Configure secrets in **Settings > Secrets and variables > Actions > Secrets** and variables in **Settings > Secrets and variables > Actions > Variables**.
 
 ## Output Files
 
@@ -125,11 +137,11 @@ All scan output is gitignored (`.security/`, `.zap/`):
 
 - **Semgrep on drizzle migrations** — Excluded via `.semgrep.yml`. If you see SQL-related findings in `drizzle/`, verify the exclusion is in place.
 - **Dependency audit on transitive deps** — If a vulnerability is in a transitive dependency with no fix available, document it and monitor for updates.
-- **xlsx (SheetJS)** — The npm package `xlsx` maxes out at 0.18.5; newer versions are only available via SheetJS Pro. CVE-2023-30533 (Prototype Pollution) and CVE-2024-22363 (ReDoS) have no npm patch and are suppressed via `pnpm.auditConfig.ignoreCves` in `package.json`. Consider migrating to `exceljs` if the risk is unacceptable.
+- **xlsx (SheetJS)** — The npm package `xlsx` maxes out at 0.18.5; newer versions are only available via SheetJS Pro. CVE-2023-30533 (Prototype Pollution) and CVE-2024-22363 (ReDoS) have no npm patch and are suppressed via `pnpm.auditConfig.ignoreCves` plus `--ignore-unfixable` in the enforced audit gate. Consider migrating to `exceljs` if the risk is unacceptable.
 
 ### Workflow
 
-1. Run scans locally before pushing (`pnpm security:semgrep && pnpm security:audit`)
+1. Run scans locally before pushing (`pnpm security:semgrep && pnpm security:audit && pnpm security:secrets`)
 2. Review CI findings in the GitHub Security tab (Semgrep) or job logs (audit)
 3. For each finding: assess severity, determine if it's a true positive, and fix or document
 4. High/critical findings should block PR merges

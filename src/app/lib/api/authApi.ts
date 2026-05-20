@@ -64,9 +64,7 @@ export async function signupUser(requestBody: Record<string, any>) {
 export interface LoginPayload {
   appointmentId?: string;
   delegationId?: string;
-  username: string;
   password: string;
-  platoonId?: string;
 }
 
 export interface LoginResponse {
@@ -94,6 +92,20 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
 
     throw new Error("Something went wrong. Please try again later.");
   }
+}
+
+export type ChangePasswordPayload = {
+  userId?: string;
+  currentPassword?: string;
+  newPassword: string;
+};
+
+export async function changePassword(payload: ChangePasswordPayload): Promise<{ message: string; userId: string }> {
+  return api.post<{ message: string; userId: string }, ChangePasswordPayload>(
+    endpoints.auth.changePassword,
+    payload,
+    { baseURL }
+  );
 }
 
 export async function logout() {

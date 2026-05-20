@@ -28,6 +28,7 @@ import {
     ocCampActivityScores,
     ocCampReviews,
     ocSemesterMarks,
+    ocCourseEnrollments,
     SemesterSubjectRecord,
     TheoryMarksRecord,
     PracticalMarksRecord,
@@ -124,6 +125,7 @@ function mergeTheory(
         (next as any)[key] = value;
         changed = true;
     }
+    if (!changed) return target ?? undefined;
     if (!autoComputeGrade) {
         if (next.grade !== undefined) {
             next.grade = undefined;
@@ -156,6 +158,7 @@ function mergePractical(
         (next as any)[key] = value;
         changed = true;
     }
+    if (!changed) return target ?? undefined;
     if (!autoComputeGrade) {
         if (next.grade !== undefined) {
             next.grade = undefined;
@@ -936,76 +939,86 @@ export async function deleteSsbPoint(reportId: string, id: string) {
 
 // ---- Medicals ---------------------------------------------------------------
 export async function listMedicals(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocMedicals)
-        .where(and(eq(ocMedicals.ocId, ocId), isNull(ocMedicals.deletedAt)))
+        .where(and(eq(ocMedicals.ocId, ocId), eq(ocMedicals.enrollmentId, enrollmentId), isNull(ocMedicals.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
-export async function createMedical(ocId: string, data: Omit<typeof ocMedicals.$inferInsert, 'id' | 'ocId'>) {
-    const [row] = await db.insert(ocMedicals).values({ ocId, deletedAt: null, ...data }).returning();
+export async function createMedical(ocId: string, data: Omit<typeof ocMedicals.$inferInsert, 'id' | 'ocId' | 'enrollmentId'>) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocMedicals).values({ ocId, enrollmentId, deletedAt: null, ...data }).returning();
     return row;
 }
 export async function getMedical(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocMedicals)
-        .where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId), isNull(ocMedicals.deletedAt)))
+        .where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId), eq(ocMedicals.enrollmentId, enrollmentId), isNull(ocMedicals.deletedAt)))
         .limit(1);
     return row ?? null;
 }
 export async function updateMedical(ocId: string, id: string, data: Partial<typeof ocMedicals.$inferInsert>) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocMedicals)
         .set(data)
-        .where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId), isNull(ocMedicals.deletedAt)))
+        .where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId), eq(ocMedicals.enrollmentId, enrollmentId), isNull(ocMedicals.deletedAt)))
         .returning();
     return row ?? null;
 }
 export async function deleteMedical(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocMedicals)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId), isNull(ocMedicals.deletedAt)))
+        .where(and(eq(ocMedicals.id, id), eq(ocMedicals.ocId, ocId), eq(ocMedicals.enrollmentId, enrollmentId), isNull(ocMedicals.deletedAt)))
         .returning();
     return row ?? null;
 }
 
 // ---- Medical Category -------------------------------------------------------
 export async function listMedCats(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocMedicalCategory)
-        .where(and(eq(ocMedicalCategory.ocId, ocId), isNull(ocMedicalCategory.deletedAt)))
+        .where(and(eq(ocMedicalCategory.ocId, ocId), eq(ocMedicalCategory.enrollmentId, enrollmentId), isNull(ocMedicalCategory.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
-export async function createMedCat(ocId: string, data: Omit<typeof ocMedicalCategory.$inferInsert, 'id' | 'ocId'>) {
-    const [row] = await db.insert(ocMedicalCategory).values({ ocId, deletedAt: null, ...data }).returning();
+export async function createMedCat(ocId: string, data: Omit<typeof ocMedicalCategory.$inferInsert, 'id' | 'ocId' | 'enrollmentId'>) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocMedicalCategory).values({ ocId, enrollmentId, deletedAt: null, ...data }).returning();
     return row;
 }
 export async function getMedCat(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocMedicalCategory)
-        .where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId), isNull(ocMedicalCategory.deletedAt)))
+        .where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId), eq(ocMedicalCategory.enrollmentId, enrollmentId), isNull(ocMedicalCategory.deletedAt)))
         .limit(1);
     return row ?? null;
 }
 export async function updateMedCat(ocId: string, id: string, data: Partial<typeof ocMedicalCategory.$inferInsert>) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocMedicalCategory)
         .set(data)
-        .where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId), isNull(ocMedicalCategory.deletedAt)))
+        .where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId), eq(ocMedicalCategory.enrollmentId, enrollmentId), isNull(ocMedicalCategory.deletedAt)))
         .returning();
     return row ?? null;
 }
 export async function deleteMedCat(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocMedicalCategory)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId), isNull(ocMedicalCategory.deletedAt)))
+        .where(and(eq(ocMedicalCategory.id, id), eq(ocMedicalCategory.ocId, ocId), eq(ocMedicalCategory.enrollmentId, enrollmentId), isNull(ocMedicalCategory.deletedAt)))
         .returning();
     return row ?? null;
 }
@@ -1055,38 +1068,43 @@ export async function deleteDiscipline(ocId: string, id: string) {
 
 // ---- Parent communications --------------------------------------------------
 export async function listComms(ocId: string, limit = 100, offset = 0) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     return db
         .select()
         .from(ocParentComms)
-        .where(and(eq(ocParentComms.ocId, ocId), isNull(ocParentComms.deletedAt)))
+        .where(and(eq(ocParentComms.ocId, ocId), eq(ocParentComms.enrollmentId, enrollmentId), isNull(ocParentComms.deletedAt)))
         .limit(limit)
         .offset(offset);
 }
-export async function createComm(ocId: string, data: Omit<typeof ocParentComms.$inferInsert, 'id' | 'ocId'>) {
-    const [row] = await db.insert(ocParentComms).values({ ocId, deletedAt: null, ...data }).returning();
+export async function createComm(ocId: string, data: Omit<typeof ocParentComms.$inferInsert, 'id' | 'ocId' | 'enrollmentId'>) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
+    const [row] = await db.insert(ocParentComms).values({ ocId, enrollmentId, deletedAt: null, ...data }).returning();
     return row;
 }
 export async function getComm(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .select()
         .from(ocParentComms)
-        .where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId), isNull(ocParentComms.deletedAt)))
+        .where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId), eq(ocParentComms.enrollmentId, enrollmentId), isNull(ocParentComms.deletedAt)))
         .limit(1);
     return row ?? null;
 }
 export async function updateComm(ocId: string, id: string, data: Partial<typeof ocParentComms.$inferInsert>) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocParentComms)
         .set(data)
-        .where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId), isNull(ocParentComms.deletedAt)))
+        .where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId), eq(ocParentComms.enrollmentId, enrollmentId), isNull(ocParentComms.deletedAt)))
         .returning();
     return row ?? null;
 }
 export async function deleteComm(ocId: string, id: string) {
+    const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
         .update(ocParentComms)
         .set({ deletedAt: new Date() })
-        .where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId), isNull(ocParentComms.deletedAt)))
+        .where(and(eq(ocParentComms.id, id), eq(ocParentComms.ocId, ocId), eq(ocParentComms.enrollmentId, enrollmentId), isNull(ocParentComms.deletedAt)))
         .returning();
     return row ?? null;
 }
@@ -1711,6 +1729,12 @@ export async function listOCsFull(opts: ListOpts = {}) {
     if (base.length === 0) return [];
 
     const ocIds = base.map((b) => b.id);
+    const activeEnrollmentRows = await db
+        .select({ id: ocCourseEnrollments.id })
+        .from(ocCourseEnrollments)
+        .where(and(inArray(ocCourseEnrollments.ocId, ocIds), eq(ocCourseEnrollments.status, 'ACTIVE')));
+    const activeEnrollmentIds = activeEnrollmentRows.map((row) => row.id);
+    const hasActiveEnrollmentIds = activeEnrollmentIds.length > 0;
 
     const [
         personalRows,
@@ -1743,10 +1767,16 @@ export async function listOCsFull(opts: ListOpts = {}) {
         db.select().from(ocEducation).where(inArray(ocEducation.ocId, ocIds)),
         db.select().from(ocAchievements).where(inArray(ocAchievements.ocId, ocIds)),
         db.select().from(ocSsbReports).where(and(inArray(ocSsbReports.ocId, ocIds), isNull(ocSsbReports.deletedAt))),
-        db.select().from(ocMedicals).where(and(inArray(ocMedicals.ocId, ocIds), isNull(ocMedicals.deletedAt))),
-        db.select().from(ocMedicalCategory).where(and(inArray(ocMedicalCategory.ocId, ocIds), isNull(ocMedicalCategory.deletedAt))),
+        hasActiveEnrollmentIds
+            ? db.select().from(ocMedicals).where(and(inArray(ocMedicals.ocId, ocIds), inArray(ocMedicals.enrollmentId, activeEnrollmentIds), isNull(ocMedicals.deletedAt)))
+            : Promise.resolve([]),
+        hasActiveEnrollmentIds
+            ? db.select().from(ocMedicalCategory).where(and(inArray(ocMedicalCategory.ocId, ocIds), inArray(ocMedicalCategory.enrollmentId, activeEnrollmentIds), isNull(ocMedicalCategory.deletedAt)))
+            : Promise.resolve([]),
         db.select().from(ocDiscipline).where(and(inArray(ocDiscipline.ocId, ocIds), isNull(ocDiscipline.deletedAt))),
-        db.select().from(ocParentComms).where(and(inArray(ocParentComms.ocId, ocIds), isNull(ocParentComms.deletedAt))),
+        hasActiveEnrollmentIds
+            ? db.select().from(ocParentComms).where(and(inArray(ocParentComms.ocId, ocIds), inArray(ocParentComms.enrollmentId, activeEnrollmentIds), isNull(ocParentComms.deletedAt)))
+            : Promise.resolve([]),
         db.select().from(ocDelegations).where(inArray(ocDelegations.ocId, ocIds)),
         db.select().from(ocMotivationAwards).where(and(inArray(ocMotivationAwards.ocId, ocIds), isNull(ocMotivationAwards.deletedAt))),
         db.select().from(ocSportsAndGames).where(and(inArray(ocSportsAndGames.ocId, ocIds), isNull(ocSportsAndGames.deletedAt))),

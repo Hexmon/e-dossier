@@ -5,7 +5,17 @@ import { baseURL, endpoints } from "@/constants/endpoints";
 // Response shape from your backend
 export type GetCoursesResponse = {
     items: CourseResponse[];
-    total?: number;
+    count: number;
+    total: number;
+    limit?: number;
+    offset?: number;
+};
+
+export type GetCoursesParams = {
+    q?: string;
+    includeDeleted?: boolean | "true" | "false";
+    limit?: number;
+    offset?: number;
 };
 
 // Request body type for creating/updating a course
@@ -43,9 +53,19 @@ export type CourseResponse = {
  * Fetch all courses (supports query filters)
  */
 export async function getAllCourses(
+    params: GetCoursesParams = {}
 ): Promise<GetCoursesResponse> {
     return api.get<GetCoursesResponse>(endpoints.course.all, {
         baseURL,
+        query: {
+            q: params.q,
+            includeDeleted:
+                typeof params.includeDeleted === "boolean"
+                    ? String(params.includeDeleted)
+                    : params.includeDeleted,
+            limit: params.limit,
+            offset: params.offset,
+        },
     });
 }
 

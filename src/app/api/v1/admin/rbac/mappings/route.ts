@@ -6,6 +6,7 @@ import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { rbacMappingsUpdateSchema } from '@/app/lib/validators.rbac';
 import {
   listPositionPermissionMappings,
+  getRbacDefaultMappingMetadata,
   listRbacPositions,
   listRbacRoles,
   listRolePermissionMappings,
@@ -22,11 +23,12 @@ async function GETHandler(req: AuditNextRequest) {
     const roleId = sp.get('roleId') ?? undefined;
     const positionId = sp.get('positionId') ?? undefined;
 
-    const [roles, positions, roleMappings, positionMappings] = await Promise.all([
+    const [roles, positions, roleMappings, positionMappings, defaults] = await Promise.all([
       listRbacRoles(),
       listRbacPositions(),
       listRolePermissionMappings(roleId),
       listPositionPermissionMappings(positionId),
+      getRbacDefaultMappingMetadata(),
     ]);
 
     await req.audit.log({
@@ -49,6 +51,7 @@ async function GETHandler(req: AuditNextRequest) {
       positions,
       roleMappings,
       positionMappings,
+      defaults,
     });
   } catch (error) {
     return handleApiError(error);

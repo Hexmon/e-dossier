@@ -7,6 +7,7 @@ export const applyOrgTemplateSchema = z.object({
   module: orgTemplateModuleSchema,
   profile: ptTemplateProfileSchema.optional(),
   dryRun: z.boolean().optional(),
+  courseId: z.string().uuid().optional(),
 });
 
 export type ApplyOrgTemplateDto = z.infer<typeof applyOrgTemplateSchema>;

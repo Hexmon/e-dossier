@@ -25,7 +25,11 @@ export type RelegationMovementKind =
   | "TRANSFER"
   | "PROMOTION_BATCH"
   | "PROMOTION_EXCEPTION"
-  | "VOID_PROMOTION";
+  | "VOID_PROMOTION"
+  | "SEMESTER_RELEGATION"
+  | "SEMESTER_REPEAT";
+
+export type RelegationTransferMode = "COURSE_TRANSFER" | "PREVIOUS_SEMESTER" | "REPEAT_SEMESTER";
 
 export type RelegationPdfPresignRequest = {
   fileName: string;
@@ -43,6 +47,8 @@ export type RelegationPdfPresignResponse = {
 export type RelegationTransferRequest = {
   ocId: string;
   toCourseId: string;
+  relegationMode?: RelegationTransferMode;
+  targetSemester?: number | null;
   reason: string;
   remark?: string | null;
   pdfObjectKey?: string | null;
@@ -62,9 +68,17 @@ export type RelegationTransferResponse = {
       courseName: string;
     };
     toCourse: RelegationCourseOption;
+    cleanupSummary?: {
+      cleanupFromSemester: number;
+      deletedRows: Record<string, number>;
+      workflowTicketsUpdated: number;
+      workflowItemsRemoved: number;
+    } | null;
     history: {
       id: string;
       movementKind: RelegationMovementKind;
+      fromSemester?: number | null;
+      toSemester?: number | null;
       performedAt: string;
     };
   };
@@ -82,9 +96,11 @@ export type RelegationHistoryItem = {
   fromCourseId: string;
   fromCourseCode: string;
   fromCourseName: string | null;
+  fromSemester: number | null;
   toCourseId: string;
   toCourseCode: string;
   toCourseName: string | null;
+  toSemester: number | null;
   reason: string;
   remark: string | null;
   hasMedia: boolean;
@@ -165,6 +181,9 @@ export type RelegationEnrollmentModuleKey =
   | "interviews"
   | "pt_scores"
   | "pt_motivation"
+  | "medical"
+  | "medical_category"
+  | "parent_comms"
   | "spr"
   | "sports_games"
   | "motivation_awards"
@@ -205,11 +224,14 @@ export const relegationApi = {
       },
     }),
 
-  getImmediateNextCourses: (currentCourseId: string) =>
+  getTargetCourses: (currentCourseId: string, mode: RelegationTransferMode) =>
     api.get<{ items: RelegationCourseOption[] }>(endpoints.admin.relegation.nextCourses, {
       baseURL,
-      query: { currentCourseId },
+      query: { currentCourseId, mode },
     }),
+
+  getImmediateNextCourses: (currentCourseId: string) =>
+    relegationApi.getTargetCourses(currentCourseId, "PREVIOUS_SEMESTER"),
 
   getHistory: (params?: RelegationHistoryParams) =>
     api.get<RelegationHistoryResponse>(endpoints.admin.relegation.history, {
@@ -227,6 +249,13 @@ export const relegationApi = {
   presignPdf: (payload: RelegationPdfPresignRequest) =>
     api.post<RelegationPdfPresignResponse, RelegationPdfPresignRequest>(
       endpoints.admin.relegation.presign,
+      payload,
+      { baseURL }
+    ),
+
+  cleanupPendingPdf: (payload: { objectKey: string }) =>
+    api.post<{ deleted: boolean }, { objectKey: string }>(
+      endpoints.admin.relegation.pendingPdfCleanup,
       payload,
       { baseURL }
     ),

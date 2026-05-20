@@ -121,4 +121,37 @@ describe('POST /api/v1/platoons/image/presign', () => {
       }),
     );
   });
+
+  it('returns storage 503 when upload signing fails', async () => {
+    vi.mocked(storage.createPresignedUploadUrl).mockRejectedValueOnce(
+      Object.assign(new Error('File storage is unavailable. Check MinIO/storage configuration.'), {
+        name: 'StorageUnavailableError',
+        service: 'storage',
+        retryable: true,
+      }),
+    );
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/platoons/image/presign',
+      body: {
+        platoonKey: 'ARJUN',
+        contentType: 'image/png',
+        sizeBytes: 1024,
+      },
+    });
+
+    const res = await presignPlatoonImage(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(body).toMatchObject({
+      ok: false,
+      status: 503,
+      error: 'service_unavailable',
+      service: 'storage',
+      retryable: true,
+      message: 'File storage is unavailable. Check MinIO/storage configuration.',
+    });
+  });
 });

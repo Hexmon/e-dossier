@@ -13,6 +13,7 @@ export type ApplyOrgTemplateRequest = {
   module: OrgTemplateModule;
   profile?: PtTemplateProfile | CampTemplateProfile | PlatoonTemplateProfile | AppointmentTemplateProfile;
   dryRun?: boolean;
+  courseId?: string;
 };
 
 export type ApplyOrgTemplateResponse = OrgTemplateApplyResult & {

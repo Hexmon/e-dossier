@@ -439,14 +439,17 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
         mutationFn: ({
             dryRun,
             profile,
+            courseId: templateCourseId,
         }: {
             dryRun: boolean;
             profile?: "default";
+            courseId?: string;
         }) =>
             applyOrgTemplate({
                 module: "pt",
                 profile: profile ?? "default",
                 dryRun,
+                ...(templateCourseId ? { courseId: templateCourseId } : {}),
             }),
         onSuccess: (result, variables) => {
             if (!variables.dryRun) {
@@ -573,11 +576,13 @@ export function usePhysicalTrainingMgmt(options: UsePhysicalTrainingMgmtOptions)
         applyDefaultTemplate: ({
             dryRun = false,
             profile = "default",
+            courseId,
         }: {
             dryRun?: boolean;
             profile?: "default";
+            courseId?: string;
         } = {}): Promise<ApplyOrgTemplateResponse> =>
-            applyPtTemplateMutation.mutateAsync({ dryRun, profile }),
+            applyPtTemplateMutation.mutateAsync({ dryRun, profile, courseId }),
         copyTemplate: ({
             sourceCourseId,
             targetCourseId,

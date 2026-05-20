@@ -181,6 +181,24 @@ export const ocPreCommission = pgTable('oc_pre_commission', {
     withdrawnOn: timestamp('withdrawn_on', { withTimezone: true }),
 });
 
+export const ocReconciliationAudit = pgTable('oc_reconciliation_audit', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
+    sourceTable: varchar('source_table', { length: 96 }).notNull(),
+    targetTable: varchar('target_table', { length: 96 }).notNull(),
+    conflictType: varchar('conflict_type', { length: 96 }).notNull(),
+    fieldName: varchar('field_name', { length: 128 }).notNull(),
+    sourceValue: jsonb('source_value').$type<unknown>(),
+    targetValue: jsonb('target_value').$type<unknown>(),
+    resolution: text('resolution').notNull(),
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+    idxOcCreated: index('idx_oc_reconciliation_audit_oc_created').on(t.ocId, t.createdAt),
+    idxConflictType: index('idx_oc_reconciliation_audit_conflict_type').on(t.conflictType),
+}));
+
 // === Commissioning details (0/1 row) ========================================
 export const ocCommissioning = pgTable('oc_commissioning', {
     ocId: uuid('oc_id').primaryKey().references(() => ocCadets.id, { onDelete: 'restrict' }),
@@ -342,6 +360,7 @@ export const ocSsbPoints = pgTable('oc_ssb_points', {
 export const ocMedicals = pgTable('oc_medicals', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),                         // 1..6
     date: timestamp('date', { withTimezone: true }).notNull(),
     age: numeric('age', { mode: 'number' }),
@@ -360,12 +379,14 @@ export const ocMedicals = pgTable('oc_medicals', {
         // CHECK (semester BETWEEN 1 AND 6)
         check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)`,
     },
+    idxEnrollmentSemester: index('idx_oc_medicals_enrollment_sem').on(t.enrollmentId, t.semester),
 }));
 
 // === Medical Category (per semester) ========================================
 export const ocMedicalCategory = pgTable('oc_medical_category', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     date: timestamp('date', { withTimezone: true }).notNull(),
     mosAndDiagnostics: text('mos_and_diagnostics'),
@@ -379,6 +400,7 @@ export const ocMedicalCategory = pgTable('oc_medical_category', {
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+    idxEnrollmentSemester: index('idx_oc_medical_category_enrollment_sem').on(t.enrollmentId, t.semester),
 }));
 
 // === Discipline ==============================================================
@@ -425,6 +447,7 @@ export const ocSprRecords = pgTable('oc_spr_records', {
 export const ocParentComms = pgTable('oc_parent_comms', {
     id: uuid('id').primaryKey().defaultRandom(),
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
+    enrollmentId: uuid('enrollment_id').references(() => ocCourseEnrollments.id, { onDelete: 'set null' }),
     semester: integer('semester').notNull(),
     mode: commModeKind('mode').notNull(),
     refNo: varchar('ref_no', { length: 64 }),
@@ -435,6 +458,7 @@ export const ocParentComms = pgTable('oc_parent_comms', {
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => ({
     semCheck: { check: sql`CHECK (${t.semester.name} BETWEEN 1 AND 6)` },
+    idxEnrollmentSemester: index('idx_oc_parent_comms_enrollment_sem').on(t.enrollmentId, t.semester),
 }));
 
 // === Delegation history (when OC moves batch/course) ========================

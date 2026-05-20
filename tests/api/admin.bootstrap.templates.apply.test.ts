@@ -19,9 +19,14 @@ vi.mock('@/app/lib/bootstrap/camp-template', () => ({
   applyCampTemplateProfile: vi.fn(),
 }));
 
+vi.mock('@/app/lib/bootstrap/appointment-template', () => ({
+  applyAppointmentTemplateProfile: vi.fn(),
+}));
+
 import { requireAdmin } from '@/app/lib/authz';
 import { applyPtTemplateProfile } from '@/app/lib/bootstrap/pt-template';
 import { applyCampTemplateProfile } from '@/app/lib/bootstrap/camp-template';
+import { applyAppointmentTemplateProfile } from '@/app/lib/bootstrap/appointment-template';
 
 describe('POST /api/v1/admin/bootstrap/templates/apply', () => {
   beforeEach(() => {
@@ -76,6 +81,71 @@ describe('POST /api/v1/admin/bootstrap/templates/apply', () => {
     });
   });
 
+  it('forwards courseId when applying PT defaults to a selected course', async () => {
+    vi.mocked(applyPtTemplateProfile).mockResolvedValue({
+      module: 'pt',
+      profile: 'default',
+      courseId: '11111111-1111-4111-8111-111111111111',
+      dryRun: false,
+      createdCount: 42,
+      updatedCount: 0,
+      skippedCount: 0,
+      warnings: [],
+      stats: {
+        ptTypes: { created: 4, updated: 0, skipped: 0 },
+        attempts: { created: 5, updated: 0, skipped: 0 },
+        grades: { created: 9, updated: 0, skipped: 0 },
+        tasks: { created: 4, updated: 0, skipped: 0 },
+        taskScores: { created: 16, updated: 0, skipped: 0 },
+        motivationFields: { created: 4, updated: 0, skipped: 0 },
+      },
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/admin/bootstrap/templates/apply',
+      body: {
+        module: 'pt',
+        profile: 'default',
+        dryRun: false,
+        courseId: '11111111-1111-4111-8111-111111111111',
+      },
+    });
+
+    const res = await POST(req as any, createRouteContext() as any);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.courseId).toBe('11111111-1111-4111-8111-111111111111');
+    expect(applyPtTemplateProfile).toHaveBeenCalledWith({
+      profile: 'default',
+      dryRun: false,
+      courseId: '11111111-1111-4111-8111-111111111111',
+      actorUserId: 'admin-user-1',
+    });
+  });
+
+  it('rejects invalid PT courseId before applying defaults', async () => {
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/admin/bootstrap/templates/apply',
+      body: {
+        module: 'pt',
+        profile: 'default',
+        dryRun: false,
+        courseId: 'not-a-uuid',
+      },
+    });
+
+    const res = await POST(req as any, createRouteContext() as any);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.ok).toBe(false);
+    expect(applyPtTemplateProfile).not.toHaveBeenCalled();
+  });
+
   it('rejects unsupported module via validation', async () => {
     const req = makeJsonRequest({
       method: 'POST',
@@ -124,6 +194,45 @@ describe('POST /api/v1/admin/bootstrap/templates/apply', () => {
     expect(body.ok).toBe(true);
     expect(body.module).toBe('camp');
     expect(applyCampTemplateProfile).toHaveBeenCalledWith({
+      profile: 'default',
+      dryRun: false,
+      actorUserId: 'admin-user-1',
+    });
+  });
+
+  it('runs appointment template apply and returns position/assignment stats', async () => {
+    vi.mocked(applyAppointmentTemplateProfile).mockResolvedValue({
+      module: 'appointment',
+      profile: 'default',
+      dryRun: false,
+      createdCount: 12,
+      updatedCount: 0,
+      skippedCount: 11,
+      warnings: ['Skipped assignment for "missing@army.mil" because user does not exist.'],
+      stats: {
+        positions: { created: 9, updated: 0, skipped: 0 },
+        assignments: { created: 3, updated: 0, skipped: 11 },
+      },
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/admin/bootstrap/templates/apply',
+      body: {
+        module: 'appointment',
+        profile: 'default',
+      },
+    });
+
+    const res = await POST(req as any, createRouteContext() as any);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.module).toBe('appointment');
+    expect(body.stats.positions.created).toBe(9);
+    expect(body.warnings).toHaveLength(1);
+    expect(applyAppointmentTemplateProfile).toHaveBeenCalledWith({
       profile: 'default',
       dryRun: false,
       actorUserId: 'admin-user-1',

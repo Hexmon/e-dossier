@@ -10,6 +10,7 @@ vi.mock("argon2", () => ({
 
 vi.mock("@/app/lib/setup-status", () => ({
   getSetupStatus: vi.fn(),
+  isSetupStatusUnavailable: (status: any) => status.availability?.ok === false,
 }));
 
 vi.mock("@/app/db/client", async () => {

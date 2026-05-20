@@ -7,6 +7,8 @@ import { isProtectedAdminApiPath } from '@/app/lib/access-control-policy';
 import { assertModuleApiAccessByPath } from '@/app/lib/module-access';
 import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
 import { assertActiveAuthorityFromPayload } from '@/app/lib/active-authority';
+import { assertApiAllowedDuringSetup } from '@/app/lib/setup-gate';
+import { isAuthzV2Enabled } from '@/app/lib/acx/feature-flag';
 
 export function hasAdminRole(roles?: string[]) {
   return Array.isArray(roles) && roles.some(r =>
@@ -29,12 +31,23 @@ export async function requireAuth(req: NextRequest) {
     await assertActiveAuthorityFromPayload(payload as Record<string, any>);
 
     const pathname = new URL(req.url).pathname;
-    if (isProtectedAdminApiPath(pathname, req.method) && !hasAdminRole(authContext.roles)) {
+    const position =
+      typeof (payload as any)?.apt?.position === 'string' ? String((payload as any).apt.position) : null;
+    const roleGroup = deriveSidebarRoleGroup({
+      roles: authContext.roles,
+      position,
+    });
+
+    await assertApiAllowedDuringSetup({
+      pathname,
+      method: req.method,
+      roleGroup,
+    });
+
+    if (!isAuthzV2Enabled() && isProtectedAdminApiPath(pathname, req.method) && !hasAdminRole(authContext.roles)) {
       throw new ApiError(403, 'Admin privileges required', 'forbidden');
     }
 
-    const position =
-      typeof (payload as any)?.apt?.position === 'string' ? String((payload as any).apt.position) : null;
     await assertModuleApiAccessByPath(pathname, {
       userId: authContext.userId,
       roles: authContext.roles,
@@ -62,6 +75,10 @@ export async function requireAdmin(req: NextRequest) {
   if (pos && ADMIN_POSITIONS.has(pos)) effective.add('ADMIN');
 
   const effectiveRoles = Array.from(effective);
+  if (isAuthzV2Enabled()) {
+    return { userId, roles: effectiveRoles, claims };
+  }
+
   if (!hasAdminRole(effectiveRoles)) {
     throw new ApiError(403, 'Admin privileges required', 'forbidden');
   }
@@ -72,6 +89,19 @@ export async function requireAdmin(req: NextRequest) {
 
 export async function requireSuperAdmin(req: NextRequest) {
   const adminCtx = await requireAdmin(req);
+  if (isAuthzV2Enabled()) {
+    return adminCtx;
+  }
+
+  return assertHardSuperAdmin(adminCtx);
+}
+
+export async function requireHardSuperAdmin(req: NextRequest) {
+  const adminCtx = await requireAdmin(req);
+  return assertHardSuperAdmin(adminCtx);
+}
+
+function assertHardSuperAdmin(adminCtx: Awaited<ReturnType<typeof requireAdmin>>) {
   const roleGroup = deriveSidebarRoleGroup({
     roles: adminCtx.roles,
     position: adminCtx.claims?.apt?.position ?? null,

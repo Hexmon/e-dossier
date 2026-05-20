@@ -27,7 +27,6 @@ export default function RbacManagementPage() {
     const permissions = new Set<string>((meData?.permissions ?? []) as string[]);
 
     if (roles.includes('SUPER_ADMIN')) return true;
-    if (roles.includes('ADMIN') && page.adminBaseline) return true;
     if (permissions.has('*')) return true;
     return permissions.has(page.action);
   }, [authzV2Enabled, meData?.permissions, meData?.roles, meLoading]);

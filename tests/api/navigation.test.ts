@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('@/lib/audit', () => ({
+    withAuditRoute: (_method: string, handler: any) => handler,
+}));
+
 import { GET } from '@/app/api/v1/me/navigation/route';
 import { NextRequest } from 'next/server';
 

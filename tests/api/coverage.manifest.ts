@@ -55,7 +55,6 @@ export const ADMIN_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/admin/signup-requests/[id]/reject/route.ts',
   'src/app/api/v1/admin/signup-requests/[id]/route.ts',
   'src/app/api/v1/admin/signup-requests/route.ts',
-  'src/app/api/v1/admin/site-settings/hero-bg/presign/route.ts',
   'src/app/api/v1/admin/site-settings/hero-bg/route.ts',
   'src/app/api/v1/admin/training-camps/[campId]/activities/[activityId]/route.ts',
   'src/app/api/v1/admin/training-camps/[campId]/activities/route.ts',
@@ -89,7 +88,6 @@ export const OC_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/oc/[ocId]/family/[id]/route.ts',
   'src/app/api/v1/oc/[ocId]/family/route.ts',
   'src/app/api/v1/oc/[ocId]/images/complete/route.ts',
-  'src/app/api/v1/oc/[ocId]/images/presign/route.ts',
   'src/app/api/v1/oc/[ocId]/images/route.ts',
   'src/app/api/v1/oc/[ocId]/interviews/[interviewId]/route.ts',
   'src/app/api/v1/oc/[ocId]/interviews/route.ts',
@@ -114,7 +112,6 @@ export const OC_UNCOVERED_ROUTE_FILES = [
   'src/app/api/v1/oc/[ocId]/ssb/points/route.ts',
   'src/app/api/v1/oc/[ocId]/ssb/route.ts',
   'src/app/api/v1/oc/[ocId]/weapon-training/route.ts',
-  'src/app/api/v1/oc/bulk-upload/route.ts',
 ] as const;
 
 export const REPORT_UNCOVERED_ROUTE_FILES = [
@@ -132,11 +129,14 @@ export const REPORT_UNCOVERED_ROUTE_FILES = [
 ] as const;
 
 export const MISC_UNCOVERED_ROUTE_FILES = [
-  'src/app/api/v1/dashboard/data/course/route.ts',
   'src/app/api/v1/dashboard/data/platoon/route.ts',
 ] as const;
 
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
+  {
+    testFile: 'tests/api/dashboard.course.test.ts',
+    routeFiles: ['src/app/api/v1/dashboard/data/course/route.ts'],
+  },
   {
     testFile: 'tests/api/dashboard.appointments.test.ts',
     routeFiles: ['src/app/api/v1/dashboard/data/appointments/route.ts'],
@@ -190,6 +190,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/admin/module-access/route.ts'],
   },
   {
+    testFile: 'tests/api/admin.oc-data-health.test.ts',
+    routeFiles: ['src/app/api/v1/admin/oc-data-health/route.ts'],
+  },
+  {
     testFile: 'tests/api/admin.dossier-lock.test.ts',
     routeFiles: ['src/app/api/v1/admin/dossier-lock/route.ts'],
   },
@@ -237,6 +241,7 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: [
       'src/app/api/v1/admin/relegation/courses/route.ts',
       'src/app/api/v1/admin/relegation/ocs/route.ts',
+      'src/app/api/v1/admin/relegation/pending-pdf/cleanup/route.ts',
       'src/app/api/v1/admin/relegation/presign/route.ts',
       'src/app/api/v1/admin/relegation/promote-course/route.ts',
       'src/app/api/v1/admin/relegation/transfer/route.ts',

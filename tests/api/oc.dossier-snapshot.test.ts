@@ -10,6 +10,7 @@ import { createRouteContext, makeJsonRequest } from "../utils/next";
 import * as ocChecks from "@/app/api/v1/oc/_checks";
 import { db } from "@/app/db/client";
 import * as ocQueries from "@/app/db/queries/oc";
+import * as ocLifecycle from "@/app/db/queries/oc-lifecycle";
 
 const auditLogMock = vi.fn(async () => undefined);
 
@@ -56,6 +57,10 @@ vi.mock("@/app/db/queries/oc", () => ({
   getOcImage: vi.fn(),
   upsertOcImage: vi.fn(),
   upsertPersonal: vi.fn(),
+}));
+
+vi.mock("@/app/db/queries/oc-lifecycle", () => ({
+  syncOcLifecycleFromCadet: vi.fn(),
 }));
 
 const ocId = "11111111-1111-4111-8111-111111111111";
@@ -155,6 +160,10 @@ describe("PATCH /api/v1/oc/[ocId]/dossier-snapshot", () => {
       withdrawnOn: expect.any(Date),
     }));
     expect(ocQueries.upsertPersonal).toHaveBeenCalledWith(ocId, { pi: "PI-204" });
+    expect(ocLifecycle.syncOcLifecycleFromCadet).toHaveBeenCalledWith(ocId, {
+      actorUserId: "pc-1",
+      reason: "dossier_snapshot_canonical_sync",
+    });
     expect(commissioningSet).toHaveBeenCalledWith(expect.objectContaining({
       passOutDate: expect.any(Date),
       icNo: "IC-9",

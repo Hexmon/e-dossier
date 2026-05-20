@@ -4,7 +4,6 @@ import { useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
-import { toDisplayDMY } from "@/app/lib/dateUtils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download, FileSpreadsheet } from "lucide-react";
 import {
@@ -16,16 +15,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  OC_BULK_SAMPLE_HEADERS,
+  prepareOCBulkUploadPreview,
+  type RawRow,
+  type UploadedPreviewRow,
+} from "@/app/lib/oc/bulk-upload-format";
+import { cn } from "@/lib/utils";
 
-export type RawRow = Record<string, unknown>;
-export type UploadedPreviewRow = {
-  name: string;
-  tesNo: string;
-  course?: string;
-  branch?: string | null;
-  platoon?: string | null;
-  arrival: string; // DD-MMM-YYYY
-};
+export type { RawRow, UploadedPreviewRow } from "@/app/lib/oc/bulk-upload-format";
 
 type Props = {
   disabled?: boolean;
@@ -36,47 +34,7 @@ type Props = {
   platoonOptions?: Array<{ id: string; key?: string; name?: string }>;
 };
 
-const SAMPLE_HEADERS = [
-  "Tes No",
-  "Name",
-  "Course",
-  "Dt of Arrival",
-  "Platoon",
-  "E mail",
-  "PAN Card No",
-  "Aadhar No",
-  "UPSC Roll No",
-  "DOB",
-  "Place of Birth",
-  "Domicile",
-  "Religion",
-  "Nationality",
-  "Blood GP",
-  "Iden Marks",
-  "Father's Name",
-  "Father's Mobile",
-  "Father's Address",
-  "Father's Profession",
-  "Guardian Name",
-  "Guardian's Address",
-  "Income(parents)",
-  "Detls of NOK",
-  "Permanent & Present Address",
-  "Nearest RLY Stn",
-  "Address of Family/Friends in Secunderabad",
-  "RK Name & Relan of near Relative in Armed force",
-  "Govt Fin Asst Mob No",
-  "Passport No",
-  "Bank Detail",
-  "Iden card No",
-  "SSB Centre",
-  "Games",
-  "Hobbies",
-  "Swimmer/Non Swimmer",
-  "Language",
-  "Visible Iden Mks",
-  "PI",
-] as const;
+const SAMPLE_HEADERS = OC_BULK_SAMPLE_HEADERS;
 
 const SAMPLE_ROW: Record<(typeof SAMPLE_HEADERS)[number], string> = {
   "Tes No": "7501",
@@ -165,10 +123,10 @@ const FIELD_INSTRUCTIONS: FieldInstruction[] = [
   {
     field: "Platoon",
     required: "No",
-    acceptedHeaders: "Platoon / PlatoonId / Platoon Id / PL / Pl",
+    acceptedHeaders: "Platoon / PlatoonId / Platoon Id / PL / Pl / PI fallback",
     expectedFormat: "Existing platoon key/name/UUID",
     example: "Arjun",
-    notes: "If value is present and not found, row fails.",
+    notes: "If no Platoon column exists, PI is treated as the platoon value and must match an active platoon.",
   },
   {
     field: "Email",
@@ -251,8 +209,10 @@ export default function UploadButton({
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [alertOpen, setAlertOpen] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("Notice");
   const [alertMessage, setAlertMessage] = useState("");
   const [sampleOpen, setSampleOpen] = useState(false);
+  const [sampleNeedsAttention, setSampleNeedsAttention] = useState(false);
 
   const sortedCourseOptions = useMemo(
     () =>
@@ -267,7 +227,8 @@ export default function UploadButton({
     [platoonOptions]
   );
 
-  const openAlert = (message: string) => {
+  const openAlert = (message: string, title = "Notice") => {
+    setAlertTitle(title);
     setAlertMessage(message);
     setAlertOpen(true);
   };
@@ -287,39 +248,16 @@ export default function UploadButton({
     URL.revokeObjectURL(url);
   };
 
-  const norm = (s: string) => s.toLowerCase().replace(/['`’]/g, "'").replace(/[^a-z0-9]+/g, " ").trim();
-  const pick = (row: RawRow, aliases: string[]): unknown => {
-    const map: Record<string, unknown> = {};
-    Object.keys(row).forEach((k) => (map[norm(k)] = (row as any)[k]));
-    for (const a of aliases) {
-      const v = map[norm(a)];
-      if (v !== undefined && v !== null && String(v).trim() !== "") return v;
-    }
-    return undefined;
-  };
-
-  const toPreviewRow = (row: RawRow): UploadedPreviewRow => {
-    const arrivalRaw = pick(row, ["Dt of Arrival", "Date of Arrival", "DOA"]);
-    return {
-      name: String(pick(row, ["Name"]) ?? ""),
-      tesNo: String(pick(row, ["Tes No", "TesNo", "TES NO", "OC No", "OC Number"]) ?? ""),
-      course: String(pick(row, ["Course", "Course Code", "Course Name"]) ?? ""),
-      branch: (pick(row, ["Branch"]) as string | null | undefined) ?? null,
-      platoon: (pick(row, ["Platoon", "PlatoonId"]) as string | null | undefined) ?? null,
-      arrival: toDisplayDMY(arrivalRaw),
-    };
-  };
-
   const acceptRows = (rows: RawRow[]) => {
-    const parsed = rows
-      .filter((r) => Object.values(r).some((v) => String(v ?? "").trim() !== ""))
-      .map((rawRow) => ({ rawRow, previewRow: toPreviewRow(rawRow) }))
-      .filter(({ previewRow }) => previewRow.name || previewRow.tesNo || previewRow.course);
+    const prepared = prepareOCBulkUploadPreview(rows);
+    if (!prepared.ok) {
+      setSampleNeedsAttention(prepared.highlightSampleFormat);
+      openAlert(prepared.message, prepared.title);
+      return;
+    }
 
-    onParsed(
-      parsed.map((entry) => entry.rawRow),
-      parsed.map((entry) => entry.previewRow)
-    );
+    setSampleNeedsAttention(false);
+    onParsed(prepared.rawRows, prepared.previewRows);
   };
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -336,7 +274,10 @@ export default function UploadButton({
           acceptRows(results.data as RawRow[]);
           onParsingStateChange?.(false);
         },
-        error: () => onParsingStateChange?.(false),
+        error: () => {
+          openAlert("Could not read the CSV file. Check the file format and upload again.", "Upload failed");
+          onParsingStateChange?.(false);
+        },
       });
     } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
       const reader = new FileReader();
@@ -347,14 +288,20 @@ export default function UploadButton({
           const sheetName = workbook.SheetNames[0];
           const worksheet = XLSX.utils.sheet_to_json<RawRow>(workbook.Sheets[sheetName], { raw: true });
           acceptRows(worksheet);
+        } catch {
+          openAlert("Could not read the Excel file. Check the file format and upload again.", "Upload failed");
         } finally {
           onParsingStateChange?.(false);
         }
       };
+      reader.onerror = () => {
+        openAlert("Could not read the Excel file. Check the file format and upload again.", "Upload failed");
+        onParsingStateChange?.(false);
+      };
       reader.readAsArrayBuffer(file);
     } else {
       onParsingStateChange?.(false);
-      openAlert("Unsupported file type. Allowed files: .csv, .xlsx, .xls");
+      openAlert("Unsupported file type. Allowed files: .csv, .xlsx, .xls", "Unsupported file type");
     }
 
     // reset so same file can be chosen again
@@ -373,9 +320,17 @@ export default function UploadButton({
       <div className="flex items-center gap-2">
         <Button
           variant="outline"
-          className="cursor-pointer"
-          onClick={() => setSampleOpen(true)}
+          className={cn(
+            "cursor-pointer",
+            sampleNeedsAttention &&
+              "animate-pulse border-destructive bg-destructive/10 text-destructive ring-2 ring-destructive/40 hover:bg-destructive/15"
+          )}
+          onClick={() => {
+            setSampleNeedsAttention(false);
+            setSampleOpen(true);
+          }}
           type="button"
+          aria-invalid={sampleNeedsAttention ? "true" : undefined}
         >
           <FileSpreadsheet className="mr-2 h-4 w-4" />
           View Sample Format
@@ -385,7 +340,13 @@ export default function UploadButton({
         </Button>
       </div>
 
-      <Dialog open={sampleOpen} onOpenChange={setSampleOpen}>
+      <Dialog
+        open={sampleOpen}
+        onOpenChange={(open) => {
+          if (open) setSampleNeedsAttention(false);
+          setSampleOpen(open);
+        }}
+      >
         <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[90vw] max-h-[92vh] overflow-hidden p-0 flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <DialogTitle>OC Bulk Upload Sample Format</DialogTitle>
@@ -441,6 +402,7 @@ export default function UploadButton({
             <div className="rounded-md border bg-muted/20 p-3 text-xs leading-5 space-y-2">
               <p className="font-semibold text-sm">3. Platoon Input Rules</p>
               <p>You can put any one exact value: <span className="font-medium">Platoon Key</span> OR <span className="font-medium">Platoon Name</span> OR <span className="font-medium">Platoon UUID</span>.</p>
+              <p>If the sheet has no Platoon column, the PI column is used as the platoon value.</p>
               <p>Use exact spelling from the table below to avoid row failure.</p>
             </div>
 
@@ -543,7 +505,7 @@ export default function UploadButton({
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Notice</AlertDialogTitle>
+            <AlertDialogTitle>{alertTitle}</AlertDialogTitle>
             <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

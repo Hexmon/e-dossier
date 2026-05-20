@@ -21,7 +21,12 @@ interface FiltersProps {
     onBranchChange: (val: string) => void;
     statusFilter: string;
     onStatusChange: (val: string) => void;
+    semesterFilter: string;
+    onSemesterChange: (val: string) => void;
 }
+
+export const OC_FILTERS_GRID_CLASS = "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6";
+const OC_FILTER_SELECT_CLASS = "h-10 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground";
 
 export default function OCFilters({
     search,
@@ -36,9 +41,11 @@ export default function OCFilters({
     onBranchChange,
     statusFilter,
     onStatusChange,
+    semesterFilter,
+    onSemesterChange,
 }: FiltersProps) {
     return (
-        <div className="grid grid-cols-5 gap-3">
+        <div className={OC_FILTERS_GRID_CLASS}>
             <Input
                 placeholder="Search name / TES no..."
                 value={search}
@@ -72,7 +79,8 @@ export default function OCFilters({
             />
 
             <select
-                className="border rounded px-2 py-2"
+                aria-label="Filter by branch"
+                className={OC_FILTER_SELECT_CLASS}
                 value={branchFilter}
                 onChange={(e) => onBranchChange(e.target.value)}
             >
@@ -83,7 +91,8 @@ export default function OCFilters({
             </select>
 
             <select
-                className="border rounded px-2 py-2"
+                aria-label="Filter by OC status"
+                className={OC_FILTER_SELECT_CLASS}
                 value={statusFilter}
                 onChange={(e) => onStatusChange(e.target.value)}
             >
@@ -92,6 +101,21 @@ export default function OCFilters({
                 <option value="DELEGATED">DELEGATED</option>
                 <option value="WITHDRAWN">WITHDRAWN</option>
                 <option value="PASSED_OUT">PASSED_OUT</option>
+            </select>
+
+            <select
+                aria-label="Filter by semester"
+                className={OC_FILTER_SELECT_CLASS}
+                value={semesterFilter}
+                onChange={(e) => onSemesterChange(e.target.value)}
+            >
+                <option value="">All Semesters</option>
+                <option value="1">Semester 1</option>
+                <option value="2">Semester 2</option>
+                <option value="3">Semester 3</option>
+                <option value="4">Semester 4</option>
+                <option value="5">Semester 5</option>
+                <option value="6">Semester 6</option>
             </select>
         </div>
     );

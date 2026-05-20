@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getActiveAppointmentWithHolder } from '@/app/db/queries/appointments';
+import { json } from '@/app/lib/http';
 import {
   withAuditRoute,
   AuditEventType,
@@ -18,7 +19,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
       target: { type: AuditResourceType.APPOINTMENT, id },
       metadata: { appointmentId: id, found: false, description: 'Appointment holder lookup failed' },
     });
-    return NextResponse.json({ error: 'not_found', message: 'Active appointment holder not found.' }, { status: 404 });
+    return json.notFound('Active appointment holder not found.');
   }
   await req.audit.log({
     action: AuditEventType.API_REQUEST,

@@ -9,6 +9,7 @@ import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { buildImageKey, createPresignedUploadUrl, headObject, createPresignedGetUrl } from '@/app/lib/storage';
 import { getDossierSnapshotView, getOcImage, upsertOcImage, upsertPersonal } from '@/app/db/queries/oc';
+import { syncOcLifecycleFromCadet } from '@/app/db/queries/oc-lifecycle';
 
 const OcIdParam = z.object({ ocId: z.string().uuid() });
 
@@ -130,10 +131,14 @@ async function buildOcCadetSnapshotPatch(dto: DossierSnapshotDto) {
   return patch;
 }
 
-async function applySnapshotCoreFields(ocId: string, dto: DossierSnapshotDto) {
+async function applySnapshotCoreFields(ocId: string, dto: DossierSnapshotDto, actorUserId?: string | null) {
   const ocPatch = await buildOcCadetSnapshotPatch(dto);
   if (Object.keys(ocPatch).length > 0) {
     await db.update(ocCadets).set(ocPatch).where(eq(ocCadets.id, ocId));
+    await syncOcLifecycleFromCadet(ocId, {
+      actorUserId,
+      reason: 'dossier_snapshot_canonical_sync',
+    });
   }
 
   if (dto.pi !== undefined) {
@@ -287,7 +292,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     if (departurePhoto) {
       await uploadImage(ocId, departurePhoto, 'UNIFORM');
     }
-    await applySnapshotCoreFields(ocId, dto);
+    await applySnapshotCoreFields(ocId, dto, adminCtx.userId);
 
     const insertData: any = {
       ocId,
@@ -352,7 +357,7 @@ async function PUTHandler(req: AuditNextRequest, { params }: { params: Promise<{
     if (departurePhoto) {
       await uploadImage(ocId, departurePhoto, 'UNIFORM');
     }
-    await applySnapshotCoreFields(ocId, dto);
+    await applySnapshotCoreFields(ocId, dto, adminCtx.userId);
 
     if (!existing) {
       const insertData: any = {

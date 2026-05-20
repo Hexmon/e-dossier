@@ -4,6 +4,7 @@ import { GET as getOcList } from "@/app/api/v1/oc/route";
 import { ApiError } from "@/app/lib/http";
 import * as authz from "@/app/lib/authz";
 import * as ocQueries from "@/app/db/queries/oc";
+import * as ocLifecycle from "@/app/db/queries/oc-lifecycle";
 import { db } from "@/app/db/client";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
@@ -14,6 +15,10 @@ vi.mock("@/app/lib/authz", () => ({
 vi.mock("@/app/db/queries/oc", () => ({
   listOCsBasic: vi.fn(async () => []),
   listOCsFull: vi.fn(async () => []),
+}));
+
+vi.mock("@/app/db/queries/oc-lifecycle", () => ({
+  createOcWithLifecycle: vi.fn(),
 }));
 
 vi.mock("@/app/db/client", () => ({
@@ -262,23 +267,22 @@ describe("POST /api/v1/oc", () => {
           }),
         }),
       }));
-    (db.insert as any).mockImplementationOnce(() => ({
-      values: (payload: any) => ({
-        returning: async () => [{
-          id: "oc-1",
-          name: payload.name,
-          ocNo: payload.ocNo,
-          jnuEnrollmentNo: payload.jnuEnrollmentNo,
-          uid: payload.uid,
-          courseId: payload.courseId,
-          branch: payload.branch,
-          platoonId: payload.platoonId,
-          arrivalAtUniversity: payload.arrivalAtUniversity,
-          withdrawnOn: null,
-          createdAt: new Date("2026-03-23T00:00:00Z"),
-        }],
-      }),
-    }));
+    vi.mocked(ocLifecycle.createOcWithLifecycle).mockResolvedValueOnce({
+      oc: {
+        id: "oc-1",
+        name: "OC One",
+        ocNo: "OC-001",
+        jnuEnrollmentNo: "001",
+        uid: "UID-1",
+        courseId: "11111111-1111-4111-8111-111111111111",
+        branch: "O",
+        platoonId: "platoon-1",
+        arrivalAtUniversity: new Date("2026-03-01T00:00:00Z"),
+        withdrawnOn: null,
+        createdAt: new Date("2026-03-23T00:00:00Z"),
+      },
+      enrollment: { id: "enrollment-1" },
+    } as any);
 
     const req = makeJsonRequest({
       method: "POST",
@@ -298,5 +302,14 @@ describe("POST /api/v1/oc", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.oc.jnuEnrollmentNo).toBe("001");
+    expect(ocLifecycle.createOcWithLifecycle).toHaveBeenCalledWith(expect.objectContaining({
+      name: "OC One",
+      ocNo: "OC-001",
+      jnuEnrollmentNo: "001",
+      courseId: "11111111-1111-4111-8111-111111111111",
+      platoonId: "platoon-1",
+      branch: "O",
+      actorUserId: "admin-1",
+    }));
   });
 });

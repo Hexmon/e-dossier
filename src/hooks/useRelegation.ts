@@ -9,6 +9,7 @@ import {
   type RelegationPdfPresignRequest,
   type RelegationPromoteCourseRequest,
   type RelegationTransferRequest,
+  type RelegationTransferMode,
   type RelegationVoidPromotionRequest,
 } from "@/app/lib/api/relegationApi";
 
@@ -22,8 +23,8 @@ export const relegationQueryKeys = {
       params?.q ?? "",
       String(Boolean(params?.activeOnly)),
     ] as const,
-  nextCourses: (currentCourseId: string | null) =>
-    [...relegationQueryKeys.all, "next-courses", currentCourseId ?? "none"] as const,
+  targetCourses: (currentCourseId: string | null, mode: RelegationTransferMode) =>
+    [...relegationQueryKeys.all, "target-courses", currentCourseId ?? "none", mode] as const,
   history: (params?: RelegationHistoryParams) =>
     [
       ...relegationQueryKeys.all,
@@ -55,7 +56,8 @@ export const relegationQueryKeys = {
 
 export function useRelegationModule(
   currentCourseId: string | null,
-  ocParams?: RelegationOcOptionsParams
+  ocParams?: RelegationOcOptionsParams,
+  targetCourseMode: RelegationTransferMode = "PREVIOUS_SEMESTER"
 ) {
   const queryClient = useQueryClient();
 
@@ -68,17 +70,21 @@ export function useRelegationModule(
   });
 
   const nextCoursesQuery = useQuery({
-    queryKey: relegationQueryKeys.nextCourses(currentCourseId),
+    queryKey: relegationQueryKeys.targetCourses(currentCourseId, targetCourseMode),
     enabled: Boolean(currentCourseId),
     queryFn: async () => {
       if (!currentCourseId) return [];
-      const response = await relegationApi.getImmediateNextCourses(currentCourseId);
+      const response = await relegationApi.getTargetCourses(currentCourseId, targetCourseMode);
       return response.items ?? [];
     },
   });
 
   const presignMutation = useMutation({
     mutationFn: async (payload: RelegationPdfPresignRequest) => relegationApi.presignPdf(payload),
+  });
+
+  const cleanupPendingPdfMutation = useMutation({
+    mutationFn: async (payload: { objectKey: string }) => relegationApi.cleanupPendingPdf(payload),
   });
 
   const transferMutation = useMutation({
@@ -95,6 +101,7 @@ export function useRelegationModule(
     ocOptionsQuery,
     nextCoursesQuery,
     presignMutation,
+    cleanupPendingPdfMutation,
     transferMutation,
   };
 }
@@ -103,6 +110,7 @@ export function useRelegationHistory(params?: RelegationHistoryParams) {
   return useQuery({
     queryKey: relegationQueryKeys.history(params),
     queryFn: async () => relegationApi.getHistory(params),
+    placeholderData: (previous) => previous,
   });
 }
 

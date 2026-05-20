@@ -16,7 +16,6 @@ permissions:
 jobs:
   semgrep:
     name: Semgrep SAST
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     container:
       image: semgrep/semgrep
@@ -27,6 +26,7 @@ jobs:
       - name: Run Semgrep
         run: |
           semgrep scan \
+            --error \
             --config p/javascript \
             --config p/typescript \
             --config p/react \
@@ -52,8 +52,9 @@ jobs:
 
   dependency-audit:
     name: Dependency Audit (SCA)
-    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,29 +75,47 @@ jobs:
         run: pnpm audit --audit-level=high
 
       - name: Snyk security scan
-        if: vars.SNYK_TOKEN != ''
+        if: env.SNYK_TOKEN != ''
         run: npx snyk@latest test --severity-threshold=high
-        env:
-          SNYK_TOKEN: ${{ vars.SNYK_TOKEN }}
 
-  zap-scan:
-    name: OWASP ZAP DAST
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+  secret-scan:
+    name: Secret Scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  zap-scan:
+    name: OWASP ZAP DAST
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      ZAP_TARGET_URL: ${{ vars.ZAP_TARGET_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require ZAP target
+        run: |
+          if [ -z "${ZAP_TARGET_URL}" ]; then
+            echo "::error::ZAP_TARGET_URL repository variable is required for scheduled/manual DAST."
+            exit 1
+          fi
+
       - name: ZAP Baseline Scan
-        if: vars.ZAP_TARGET_URL != ''
         uses: zaproxy/action-baseline@v0.14.0
         with:
-          target: ${{ vars.ZAP_TARGET_URL }}
+          target: ${{ env.ZAP_TARGET_URL }}
           rules_file_name: ""
           cmd_options: "-a"
 
       - name: Upload ZAP report
-        if: always() && vars.ZAP_TARGET_URL != ''
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: zap-report

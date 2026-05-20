@@ -16,6 +16,9 @@ vi.mock("@/lib/audit", () => ({
   },
   AuditEventType: {
     API_REQUEST: "api.request",
+    APPOINTMENT_DELETED: "appointment.deleted",
+    APPOINTMENT_TRANSFERRED: "appointment.transferred",
+    APPOINTMENT_UPDATED: "appointment.updated",
     POSITION_CREATED: "position.created",
   },
   AuditResourceType: {
@@ -34,9 +37,12 @@ vi.mock("@/app/lib/authz", () => ({
 }));
 
 vi.mock("@/app/lib/admin-boundaries", () => ({
+  assertCanDeleteAppointmentRecord: vi.fn(async () => undefined),
+  assertCanEditAppointmentRecord: vi.fn(async () => undefined),
   assertCanAssignAppointment: vi.fn(async () => undefined),
   assertCanManageAppointmentRecord: vi.fn(async () => undefined),
   assertCanManageUser: vi.fn(async () => undefined),
+  assertCanTransferAppointmentRecord: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/lib/platoon-commander-access", () => ({
@@ -56,11 +62,51 @@ vi.mock("@/app/db/client", () => ({
   },
 }));
 
+vi.mock("@/app/db/queries/appointment-transfer", () => ({
+  transferAppointment: vi.fn(async () => ({
+    ended: {
+      id: "appointment-1",
+      userId: "user-old",
+      positionId: "position-1",
+      scopeType: "GLOBAL",
+      scopeId: null,
+      startsAt: new Date("2026-04-04T00:00:00.000Z"),
+      endsAt: new Date("2026-04-05T00:00:00.000Z"),
+    },
+    next: {
+      id: "appointment-2",
+      userId: "11111111-1111-4111-8111-111111111111",
+      positionId: "position-1",
+      scopeType: "GLOBAL",
+      scopeId: null,
+      startsAt: new Date("2026-04-05T00:00:00.000Z"),
+      endsAt: null,
+    },
+    audit: {
+      id: "transfer-audit-1",
+      createdAt: new Date("2026-04-05T00:00:00.000Z"),
+    },
+  })),
+}));
+
 import { requireAdmin, requireAuth } from "@/app/lib/authz";
 import { GET as getAppointmentsRoute } from "@/app/api/v1/admin/appointments/route";
 import { GET as getPositionsRoute } from "@/app/api/v1/admin/positions/route";
-import { PATCH as patchAppointmentRoute } from "@/app/api/v1/admin/appointments/[id]/route";
+import {
+  PATCH as patchAppointmentRoute,
+  DELETE as deleteAppointmentRoute,
+} from "@/app/api/v1/admin/appointments/[id]/route";
+import { POST as transferAppointmentRoute } from "@/app/api/v1/admin/appointments/[id]/transfer/route";
 import { POST as postAppointmentsRoute } from "@/app/api/v1/admin/appointments/route";
+import {
+  assertCanDeleteAppointmentRecord,
+  assertCanEditAppointmentRecord,
+  assertCanTransferAppointmentRecord,
+} from "@/app/lib/admin-boundaries";
+import { transferAppointment } from "@/app/db/queries/appointment-transfer";
+
+const appointmentUuid = "11111111-1111-4111-8111-111111111111";
+const superAppointmentUuid = "22222222-2222-4222-8222-222222222222";
 
 function buildAppointmentsSelectResult(rows: any[]) {
   return {
@@ -84,6 +130,28 @@ function buildPositionsSelectResult(rows: any[]) {
   return {
     from: vi.fn(() => ({
       orderBy: vi.fn(async () => rows),
+    })),
+  };
+}
+
+function buildSingleSelectResult(rows: any[]) {
+  return {
+    from: vi.fn(() => ({
+      where: vi.fn(() => ({
+        limit: vi.fn(async () => rows),
+      })),
+    })),
+  };
+}
+
+function buildOverlapSelectResult(rows: any[]) {
+  return {
+    from: vi.fn(() => ({
+      innerJoin: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: vi.fn(async () => rows),
+        })),
+      })),
     })),
   };
 }
@@ -309,56 +377,60 @@ describe("admin appointments and positions access", () => {
 
     transactionMock.mockImplementationOnce(async (callback: (tx: any) => Promise<any>) =>
       callback({
-        select: vi.fn(() => ({
-          from: vi.fn(() => ({
-            where: vi.fn(() => ({
-              limit: vi.fn(async () => [
-                {
-                  id: "appointment-1",
-                  userId: "user-old",
-                  positionId: "position-1",
-                },
-              ]),
-            })),
-          })),
-        })),
         update: txUpdateMock,
       })
     );
 
-    selectMock.mockImplementationOnce(() => ({
-      from: vi.fn(() => ({
-        innerJoin: vi.fn(() => ({
+    selectMock
+      .mockImplementationOnce(() =>
+        buildSingleSelectResult([
+          {
+            id: "appointment-1",
+            userId: "user-old",
+            positionId: "position-1",
+            assignment: "PRIMARY",
+            scopeType: "GLOBAL",
+            scopeId: null,
+            startsAt: new Date("2026-04-04T00:00:00.000Z"),
+            endsAt: null,
+            deletedAt: null,
+          },
+        ])
+      )
+      .mockImplementationOnce(() => buildOverlapSelectResult([]))
+      .mockImplementationOnce(() => ({
+        from: vi.fn(() => ({
           innerJoin: vi.fn(() => ({
-            leftJoin: vi.fn(() => ({
-              where: vi.fn(() => ({
-                limit: vi.fn(async () => [
-                  {
-                    id: "appointment-1",
-                    userId: "user-new",
-                    username: "new-holder",
-                    positionId: "position-1",
-                    positionKey: "ADMIN",
-                    positionName: "Admin",
-                    scopeType: "GLOBAL",
-                    scopeId: null,
-                    platoonKey: null,
-                    platoonName: null,
-                    startsAt: "2026-04-04T00:00:00.000Z",
-                    endsAt: null,
-                    reason: "Reassigned",
-                    deletedAt: null,
-                    createdAt: "2026-04-04T00:00:00.000Z",
-                    updatedAt: "2026-04-04T00:00:00.000Z",
-                    isActive: true,
-                  },
-                ]),
+            innerJoin: vi.fn(() => ({
+              leftJoin: vi.fn(() => ({
+                where: vi.fn(() => ({
+                  limit: vi.fn(async () => [
+                    {
+                      id: "appointment-1",
+                      userId: "user-new",
+                      username: "new-holder",
+                      positionId: "position-1",
+                      positionKey: "ADMIN",
+                      positionName: "Admin",
+                      scopeType: "GLOBAL",
+                      scopeId: null,
+                      platoonKey: null,
+                      platoonName: null,
+                      startsAt: "2026-04-04T00:00:00.000Z",
+                      endsAt: null,
+                      reason: "Reassigned",
+                      deletedAt: null,
+                      createdAt: "2026-04-04T00:00:00.000Z",
+                      updatedAt: "2026-04-04T00:00:00.000Z",
+                      isActive: true,
+                    },
+                  ]),
+                })),
               })),
             })),
           })),
         })),
-      })),
-    }));
+      }));
 
     const req = makeJsonRequest({
       method: "PATCH",
@@ -379,6 +451,245 @@ describe("admin appointments and positions access", () => {
     expect(res.status).toBe(200);
     expect(body.data.userId).toBe("user-new");
     expect(txUpdateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("PATCH /api/v1/admin/appointments/[id] rejects overlapping slot updates", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      claims: { apt: { position: "ADMIN" } },
+    });
+
+    selectMock
+      .mockImplementationOnce(() =>
+        buildSingleSelectResult([
+          {
+            id: "appointment-1",
+            userId: "user-old",
+            positionId: "position-1",
+            assignment: "PRIMARY",
+            scopeType: "GLOBAL",
+            scopeId: null,
+            startsAt: new Date("2026-04-04T00:00:00.000Z"),
+            endsAt: null,
+            deletedAt: null,
+          },
+        ])
+      )
+      .mockImplementationOnce(() =>
+        buildOverlapSelectResult([
+          {
+            id: "appointment-existing",
+            userId: "user-existing",
+            username: "holder-1",
+            startsAt: "2026-04-05T00:00:00.000Z",
+            endsAt: null,
+          },
+        ])
+      );
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: "/api/v1/admin/appointments/appointment-1",
+      body: {
+        startsAt: "2026-04-05T00:00:00.000Z",
+      },
+    });
+
+    const res = await patchAppointmentRoute(
+      req as any,
+      createRouteContext({ id: "appointment-1" }),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("conflict");
+    expect(body.conflictingAppointment).toEqual(
+      expect.objectContaining({
+        id: "appointment-existing",
+        username: "holder-1",
+      }),
+    );
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("PATCH /api/v1/admin/appointments/[id] blocks protected ADMIN/SUPER_ADMIN appointments", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "super-1",
+      roles: ["SUPER_ADMIN", "ADMIN"],
+      claims: { apt: { position: "SUPER_ADMIN" } },
+    });
+    (assertCanEditAppointmentRecord as any).mockRejectedValueOnce(
+      new ApiError(
+        403,
+        "Protected ADMIN/SUPER_ADMIN appointments cannot be edited from Appointment Management.",
+        "protected_appointment_forbidden",
+      ),
+    );
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: "/api/v1/admin/appointments/appointment-1",
+      body: { startsAt: "2026-04-04T00:00:00.000Z" },
+    });
+
+    const res = await patchAppointmentRoute(req as any, createRouteContext({ id: "appointment-1" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe("protected_appointment_forbidden");
+    expect(body.message).toBe("Protected ADMIN/SUPER_ADMIN appointments cannot be edited from Appointment Management.");
+  });
+
+  it("DELETE /api/v1/admin/appointments/[id] blocks protected ADMIN/SUPER_ADMIN appointments", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "super-1",
+      roles: ["SUPER_ADMIN", "ADMIN"],
+      claims: { apt: { position: "SUPER_ADMIN" } },
+    });
+    (assertCanDeleteAppointmentRecord as any).mockRejectedValueOnce(
+      new ApiError(
+        403,
+        "Protected ADMIN/SUPER_ADMIN appointments cannot be deleted from Appointment Management.",
+        "protected_appointment_forbidden",
+      ),
+    );
+
+    const req = makeJsonRequest({
+      method: "DELETE",
+      path: "/api/v1/admin/appointments/appointment-1",
+    });
+
+    const res = await deleteAppointmentRoute(req as any, createRouteContext({ id: "appointment-1" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe("protected_appointment_forbidden");
+    expect(body.message).toBe("Protected ADMIN/SUPER_ADMIN appointments cannot be deleted from Appointment Management.");
+  });
+
+  it("POST /api/v1/admin/appointments/[id]/transfer blocks ADMIN handover for ADMIN actors", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      claims: { apt: { position: "ADMIN" } },
+    });
+    (assertCanTransferAppointmentRecord as any).mockRejectedValueOnce(
+      new ApiError(
+        403,
+        "Only SUPER_ADMIN can hand over ADMIN appointment.",
+        "protected_appointment_forbidden",
+      ),
+    );
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: `/api/v1/admin/appointments/${appointmentUuid}/transfer`,
+      body: {
+        newUserId: "11111111-1111-4111-8111-111111111111",
+        prevEndsAt: "2026-04-05T00:00:00.000Z",
+        newStartsAt: "2026-04-05T00:00:00.000Z",
+      },
+    });
+
+    const res = await transferAppointmentRoute(req as any, createRouteContext({ id: appointmentUuid }));
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe("protected_appointment_forbidden");
+    expect(body.message).toBe("Only SUPER_ADMIN can hand over ADMIN appointment.");
+    expect(transferAppointment).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/admin/appointments/[id]/transfer blocks SUPER_ADMIN handover for every actor", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "super-1",
+      roles: ["SUPER_ADMIN", "ADMIN"],
+      claims: { apt: { position: "SUPER_ADMIN" } },
+    });
+    (assertCanTransferAppointmentRecord as any).mockRejectedValueOnce(
+      new ApiError(
+        403,
+        "SUPER_ADMIN appointment cannot be handed over.",
+        "protected_appointment_forbidden",
+      ),
+    );
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: `/api/v1/admin/appointments/${superAppointmentUuid}/transfer`,
+      body: {
+        newUserId: "11111111-1111-4111-8111-111111111111",
+        prevEndsAt: "2026-04-05T00:00:00.000Z",
+        newStartsAt: "2026-04-05T00:00:00.000Z",
+      },
+    });
+
+    const res = await transferAppointmentRoute(req as any, createRouteContext({ id: superAppointmentUuid }));
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe("protected_appointment_forbidden");
+    expect(body.message).toBe("SUPER_ADMIN appointment cannot be handed over.");
+    expect(transferAppointment).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/admin/appointments/[id]/transfer allows SUPER_ADMIN to hand over ADMIN appointments", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "super-1",
+      roles: ["SUPER_ADMIN", "ADMIN"],
+      claims: { apt: { position: "SUPER_ADMIN" } },
+    });
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: `/api/v1/admin/appointments/${appointmentUuid}/transfer`,
+      body: {
+        newUserId: "11111111-1111-4111-8111-111111111111",
+        prevEndsAt: "2026-04-05T00:00:00.000Z",
+        newStartsAt: "2026-04-05T00:00:00.000Z",
+      },
+    });
+
+    const res = await transferAppointmentRoute(req as any, createRouteContext({ id: appointmentUuid }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.message).toBe("Appointment transferred successfully.");
+    expect(assertCanTransferAppointmentRecord).toHaveBeenCalled();
+    expect(transferAppointment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appointmentId: appointmentUuid,
+        adminId: "super-1",
+        newUserId: "11111111-1111-4111-8111-111111111111",
+      }),
+    );
+  });
+
+  it("POST /api/v1/admin/appointments rejects creation without a user", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      claims: { apt: { position: "ADMIN" } },
+    });
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: "/api/v1/admin/appointments",
+      body: {
+        positionId: "708892f8-a211-4ad6-90c1-fe219c7ab03b",
+        scopeType: "GLOBAL",
+        startsAt: "2026-04-04T00:00:00.000Z",
+      },
+    });
+
+    const res = await postAppointmentsRoute(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("bad_request");
+    expect(body.fieldErrors.userId).toEqual(expect.arrayContaining([expect.any(String)]));
+    expect(selectMock).not.toHaveBeenCalled();
   });
 
   it("POST /api/v1/admin/appointments returns the conflicting holder in overlap responses", async () => {

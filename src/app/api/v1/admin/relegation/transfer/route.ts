@@ -2,6 +2,7 @@ import { handleApiError, json } from "@/app/lib/http";
 import { applyOcRelegationTransfer } from "@/app/db/queries/relegation";
 import { relegationTransferSchema } from "@/app/lib/validators.relegation";
 import { assertCanWriteSingle, getRelegationAccessContext } from "@/app/lib/relegation-auth";
+import { tryDeletePendingRelegationPdfObject } from "@/app/lib/relegation-pdf-cleanup";
 import {
   AuditEventType,
   AuditResourceType,
@@ -12,6 +13,7 @@ import {
 export const runtime = "nodejs";
 
 async function POSTHandler(req: AuditNextRequest) {
+  let uploadedPdfObjectKey: string | null = null;
   try {
     const access = await getRelegationAccessContext(req);
     assertCanWriteSingle(access);
@@ -20,6 +22,7 @@ async function POSTHandler(req: AuditNextRequest) {
     if (!parsed.success) {
       return json.badRequest("Validation failed.", { issues: parsed.error.flatten() });
     }
+    uploadedPdfObjectKey = parsed.data.pdfObjectKey ?? null;
 
     const transfer = await applyOcRelegationTransfer(parsed.data, access.userId, {
       scopePlatoonId: access.scopePlatoonId,
@@ -37,6 +40,9 @@ async function POSTHandler(req: AuditNextRequest) {
         fromCourseCode: transfer.fromCourse.courseCode,
         toCourseId: transfer.toCourse.courseId,
         toCourseCode: transfer.toCourse.courseCode,
+        relegationMode: parsed.data.relegationMode,
+        targetSemester: parsed.data.targetSemester ?? null,
+        cleanupSummary: transfer.cleanupSummary ?? null,
         reason: parsed.data.reason,
         remark: parsed.data.remark ?? null,
         pdfObjectKey: parsed.data.pdfObjectKey ?? null,
@@ -50,6 +56,7 @@ async function POSTHandler(req: AuditNextRequest) {
       transfer,
     });
   } catch (error) {
+    await tryDeletePendingRelegationPdfObject(uploadedPdfObjectKey);
     return handleApiError(error);
   }
 }

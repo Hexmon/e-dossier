@@ -750,6 +750,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/oc-data-health",
+    "action": "admin:oc-data-health:read",
+    "resourceType": "admin:oc-data-health",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/courses",
     "action": "admin:courses:read",
     "resourceType": "admin:courses",
@@ -1158,6 +1167,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/punishments/:id",
     "action": "admin:punishments:read",
     "resourceType": "admin:punishments",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/rbac/effective",
+    "action": "admin:rbac:effective:read",
+    "resourceType": "admin:rbac:effective",
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": true
@@ -3279,6 +3297,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/admin/relegation/pending-pdf/cleanup",
+    "action": "admin:relegation:pending-pdf:cleanup:create",
+    "resourceType": "admin:relegation:pending-pdf:cleanup",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/admin/relegation/promote-course",
     "action": "admin:relegation:promote-course:create",
     "resourceType": "admin:relegation:promote-course",
@@ -4601,6 +4628,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "route": "/dashboard/genmgmt/promotion-relegation/history",
+    "action": "page:dashboard:genmgmt:promotion-relegation:history:view",
+    "resourceType": "page:dashboard:genmgmt:promotion-relegation:history",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
     "route": "/dashboard/genmgmt/promotion-relegation/relegation",
     "action": "page:dashboard:genmgmt:promotion-relegation:relegation:view",
     "resourceType": "page:dashboard:genmgmt:promotion-relegation:relegation",
@@ -4699,6 +4733,41 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "route": "/dashboard/help/bulk-upload",
+    "action": "page:dashboard:help:bulk-upload:view",
+    "resourceType": "page:dashboard:help:bulk-upload",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/deployment-environment",
+    "action": "page:dashboard:help:deployment-environment:view",
+    "resourceType": "page:dashboard:help:deployment-environment",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/dossier-management",
+    "action": "page:dashboard:help:dossier-management:view",
+    "resourceType": "page:dashboard:help:dossier-management",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/general-management",
+    "action": "page:dashboard:help:general-management:view",
+    "resourceType": "page:dashboard:help:general-management",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/module-management",
+    "action": "page:dashboard:help:module-management:view",
+    "resourceType": "page:dashboard:help:module-management",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
     "route": "/dashboard/help/org-templates",
     "action": "page:dashboard:help:org-templates:view",
     "resourceType": "page:dashboard:help:org-templates",
@@ -4723,6 +4792,34 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/help/org-templates/physical-training",
     "action": "page:dashboard:help:org-templates:physical-training:view",
     "resourceType": "page:dashboard:help:org-templates:physical-training",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/rbac-permissions",
+    "action": "page:dashboard:help:rbac-permissions:view",
+    "resourceType": "page:dashboard:help:rbac-permissions",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/reports",
+    "action": "page:dashboard:help:reports:view",
+    "resourceType": "page:dashboard:help:reports",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/settings-controls",
+    "action": "page:dashboard:help:settings-controls:view",
+    "resourceType": "page:dashboard:help:settings-controls",
+    "category": "help",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/help/software-overview",
+    "action": "page:dashboard:help:software-overview:view",
+    "resourceType": "page:dashboard:help:software-overview",
     "category": "help",
     "adminBaseline": false
   },
