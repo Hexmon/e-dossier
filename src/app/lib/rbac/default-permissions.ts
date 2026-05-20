@@ -74,6 +74,13 @@ const DOSSIER_SUPPORT_PERMISSION_KEYS = [
 const BULK_UPLOAD_SUPPORT_PERMISSION_KEYS = [
   ...SHARED_COURSE_OC_READ_PERMISSION_KEYS,
   "admin:physical-training:templates:read",
+  "admin:physical-training:types:read",
+] as const;
+
+const REPORTS_SUPPORT_PERMISSION_KEYS = [
+  "admin:courses:read",
+  "admin:courses:offerings:read",
+  "admin:physical-training:types:read",
 ] as const;
 
 const ADMIN_EXTRA_PERMISSION_KEYS = [
@@ -127,6 +134,7 @@ const ADMIN_DEVICE_SETTINGS_PERMISSION_KEYS = [
 
 const REPORTS_PERMISSION_KEYS = [
   "sidebar:reports",
+  ...REPORTS_SUPPORT_PERMISSION_KEYS,
   ...PAGE_ACTION_MAP.filter((entry) => entry.action === "page:dashboard:reports:view").map(
     (entry) => entry.action
   ),

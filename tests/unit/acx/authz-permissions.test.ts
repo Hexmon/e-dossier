@@ -5,6 +5,7 @@ import {
   applyInterviewPermissionFallbackOverrides,
   getAdminBaselineActions,
   normalizeRoleSet,
+  resolveDefaultPermissionKeysForPosition,
 } from '@/app/db/queries/authz-permissions';
 import { INTERVIEW_WRITE_PERMISSIONS } from '@/lib/interview-access';
 import { getRbacDefaultProfiles } from '@/app/lib/rbac/default-permissions';
@@ -61,10 +62,40 @@ describe('authz-permissions helpers', () => {
     expect(platoon?.positionKeys).toContain('PTN_CDR');
     expect(platoon?.roleKeys).toContain('ptn_cdr');
     expect(otherUsers?.permissionKeys).toContain('page:dashboard:bulk-upload:view');
+    expect(otherUsers?.permissionKeys).toContain('admin:courses:read');
+    expect(otherUsers?.permissionKeys).toContain('admin:courses:offerings:read');
+    expect(otherUsers?.permissionKeys).toContain('admin:physical-training:types:read');
     expect(otherUsers?.permissionKeys).toContain('oc:physical-training:bulk:create');
+    expect(otherUsers?.permissionKeys).toContain('oc:academics:workflow:update');
+    expect(otherUsers?.permissionKeys).toContain('oc:physical-training:workflow:update');
     expect(otherUsers?.permissionKeys).toContain('page:dashboard:reports:view');
+    expect(otherUsers?.permissionKeys).toContain('reports:academics:semester-grade:download:create');
     expect(otherUsers?.permissionKeys).not.toContain('sidebar:dossier');
     expect(otherUsers?.positionKeys).toContain('HOAT');
+  });
+
+  it('adds report support APIs to platoon defaults', () => {
+    const profiles = getRbacDefaultProfiles();
+    const platoon = profiles.find((profile) => profile.key === 'platoon_commander');
+
+    expect(platoon?.permissionKeys).toContain('page:dashboard:reports:view');
+    expect(platoon?.permissionKeys).toContain('admin:courses:read');
+    expect(platoon?.permissionKeys).toContain('admin:courses:offerings:read');
+    expect(platoon?.permissionKeys).toContain('admin:physical-training:types:read');
+    expect(platoon?.permissionKeys).toContain('reports:mil-training:physical-assessment:preview:read');
+  });
+
+  it('resolves default permissions for custom appointment positions by role group', () => {
+    const otherUserKeys = resolveDefaultPermissionKeysForPosition('TRAINING_OFFICER');
+    const platoonKeys = resolveDefaultPermissionKeysForPosition('KARNA_PL_CDR');
+
+    expect(otherUserKeys).toContain('page:dashboard:bulk-upload:view');
+    expect(otherUserKeys).toContain('page:dashboard:reports:view');
+    expect(otherUserKeys).not.toContain('sidebar:dossier');
+    expect(platoonKeys).toContain('sidebar:dossier');
+    expect(platoonKeys).toContain('page:dashboard:reports:view');
+    expect(platoonKeys).not.toContain('page:dashboard:bulk-upload:view');
+    expect(resolveDefaultPermissionKeysForPosition('ADMIN')).toEqual([]);
   });
 
   it('recognizes platoon commanders without granting hidden permissions', () => {

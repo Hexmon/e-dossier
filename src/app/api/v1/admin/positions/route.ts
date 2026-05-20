@@ -10,6 +10,7 @@ import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { hasAdminRole, requireAdmin, requireAuth } from '@/app/lib/authz';
 import { isProtectedSystemPositionKeyValue } from '@/app/lib/admin-boundaries';
 import { isBroadScopedPlatoonCommander } from '@/lib/platoon-commander-access';
+import { applyDefaultPermissionsToPosition } from '@/app/db/queries/authz-permissions';
 
 export const runtime = 'nodejs';
 
@@ -161,6 +162,8 @@ async function POSTHandler(req: AuditNextRequest) {
                 description: parsed.data.description ?? null,
             })
             .returning();
+
+        await applyDefaultPermissionsToPosition(row.id, row.key);
 
         await req.audit.log({
             action: AuditEventType.POSITION_CREATED,
