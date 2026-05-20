@@ -14,6 +14,10 @@ export type RbacDefaultProfile = {
 
 export const RBAC_WILDCARD_PERMISSION = "*";
 
+function uniqueSorted(values: Iterable<string>): string[] {
+  return Array.from(new Set(values)).filter(Boolean).sort();
+}
+
 export const RBAC_SIDEBAR_PERMISSION_KEYS = [
   "sidebar:dossier",
   "sidebar:reports",
@@ -31,12 +35,53 @@ export const AUTHENTICATED_DASHBOARD_PERMISSION_KEYS = [
   "dashboard:data:platoon:read",
 ] as const;
 
-const MANAGE_MARKS_API_PATHS = new Set<string>([
+const ADMIN_SECTION_SUPPORT_API_PATHS = new Set<string>([
   "/api/v1/admin/courses",
   "/api/v1/admin/courses/:courseId/offerings",
   "/api/v1/admin/courses/:courseId/offerings/assign",
   "/api/v1/oc",
 ]);
+
+const BULK_UPLOAD_API_PATHS = new Set<string>([
+  "/api/v1/oc/academics/bulk",
+  "/api/v1/oc/academics/workflow",
+  "/api/v1/oc/physical-training/bulk",
+  "/api/v1/oc/physical-training/workflow",
+  "/api/v1/oc/bulk-upload",
+]);
+
+const SHARED_COURSE_OC_READ_PERMISSION_KEYS = [
+  "admin:courses:read",
+  "admin:courses:offerings:read",
+  "oc:read",
+  "platoons:read",
+] as const;
+
+const DOSSIER_SUPPORT_PERMISSION_KEYS = [
+  ...SHARED_COURSE_OC_READ_PERMISSION_KEYS,
+  "admin:interview:templates:read",
+  "admin:interview:templates:fields:read",
+  "admin:interview:templates:fields:options:read",
+  "admin:interview:templates:groups:read",
+  "admin:interview:templates:groups:fields:read",
+  "admin:interview:templates:sections:read",
+  "admin:interview:templates:sections:fields:read",
+  "admin:interview:templates:semesters:read",
+  "admin:physical-training:templates:read",
+  "admin:punishments:read",
+] as const;
+
+const BULK_UPLOAD_SUPPORT_PERMISSION_KEYS = [
+  ...SHARED_COURSE_OC_READ_PERMISSION_KEYS,
+  "admin:physical-training:templates:read",
+  "admin:physical-training:types:read",
+] as const;
+
+const REPORTS_SUPPORT_PERMISSION_KEYS = [
+  "admin:courses:read",
+  "admin:courses:offerings:read",
+  "admin:physical-training:types:read",
+] as const;
 
 const ADMIN_EXTRA_PERMISSION_KEYS = [
   "admin:rbac:permissions:read",
@@ -75,38 +120,65 @@ const COMMON_NAVIGATION_PERMISSION_KEYS = [
   "page:dashboard:help:settings-controls:view",
   "page:dashboard:help:setup-guide:view",
   "page:dashboard:help:software-overview:view",
+] as const;
+
+const ADMIN_DEVICE_SETTINGS_PERMISSION_KEYS = [
   "page:dashboard:settings:view",
   "page:dashboard:settings:device:view",
+  "page:dashboard:settings:device:appointments:view",
+  "settings:device-site:read",
+  "settings:device-site:update",
+  "admin:device-site-settings:read",
+  "admin:device-site-settings:update",
 ] as const;
 
-export const PLATOON_COMMANDER_DEFAULT_PERMISSION_KEYS = [
+const REPORTS_PERMISSION_KEYS = [
+  "sidebar:reports",
+  ...REPORTS_SUPPORT_PERMISSION_KEYS,
+  ...PAGE_ACTION_MAP.filter((entry) => entry.action === "page:dashboard:reports:view").map(
+    (entry) => entry.action
+  ),
+  ...API_ACTION_MAP.filter((entry) => entry.resourceType.startsWith("reports:")).map(
+    (entry) => entry.action
+  ),
+] as const;
+
+const BULK_UPLOAD_PERMISSION_KEYS = [
+  "sidebar:bulk-upload",
+  "page:dashboard:bulk-upload:view",
   "page:dashboard:manage-marks:view",
   "page:dashboard:manage-pt-marks:view",
-  "page:dashboard:milmgmt:view",
-  "page:dashboard:milmgmt:academics:view",
-  "page:dashboard:milmgmt:physical-training:view",
-  "page:dashboard:reports:view",
-  "admin:courses:read",
-  "admin:courses:offerings:read",
-  "admin:punishments:read",
-  "admin:physical-training:templates:read",
-  "oc:read",
-  "platoons:read",
-  "oc:academics:read",
-  "oc:academics:bulk:read",
-  "oc:academics:bulk:create",
-  "oc:physical-training:read",
-  "oc:physical-training:motivation-awards:read",
-  "oc:physical-training:bulk:read",
-  "oc:physical-training:bulk:create",
-  "sidebar:dossier",
-  "sidebar:reports",
-  "sidebar:bulk-upload",
+  ...BULK_UPLOAD_SUPPORT_PERMISSION_KEYS,
+  ...API_ACTION_MAP.filter((entry) => BULK_UPLOAD_API_PATHS.has(entry.path)).map(
+    (entry) => entry.action
+  ),
 ] as const;
 
-function uniqueSorted(values: Iterable<string>): string[] {
-  return Array.from(new Set(values)).filter(Boolean).sort();
-}
+const DOSSIER_PERMISSION_KEYS = [
+  "sidebar:dossier",
+  ...PAGE_ACTION_MAP.filter((entry) => entry.resourceType.startsWith("page:dashboard:milmgmt")).map(
+    (entry) => entry.action
+  ),
+  ...DOSSIER_SUPPORT_PERMISSION_KEYS,
+  ...API_ACTION_MAP.filter(
+    (entry) =>
+      entry.resourceType.startsWith("oc:") &&
+      !entry.resourceType.startsWith("oc:academics:bulk") &&
+      !entry.resourceType.startsWith("oc:academics:workflow") &&
+      !entry.resourceType.startsWith("oc:physical-training:bulk") &&
+      !entry.resourceType.startsWith("oc:physical-training:workflow") &&
+      entry.resourceType !== "oc:bulk-upload"
+  ).map((entry) => entry.action),
+] as const;
+
+const ADMIN_SECTION_PERMISSION_KEYS = [
+  ...API_ACTION_MAP.filter(
+    (entry) => entry.adminBaseline || ADMIN_SECTION_SUPPORT_API_PATHS.has(entry.path)
+  ).map((entry) => entry.action),
+  ...PAGE_ACTION_MAP.filter((entry) => entry.adminBaseline).map((entry) => entry.action),
+  ...ADMIN_EXTRA_PERMISSION_KEYS,
+  ...INTERVIEW_WRITE_PERMISSION_KEYS,
+] as const;
 
 export function getAllMappedActionKeys(): string[] {
   return uniqueSorted([
@@ -122,28 +194,36 @@ export function getAllMappedActionKeys(): string[] {
 export function getAdminDefaultPermissionKeys(): string[] {
   return uniqueSorted([
     ...AUTHENTICATED_DASHBOARD_PERMISSION_KEYS,
-    ...API_ACTION_MAP.filter(
-      (entry) => entry.adminBaseline || MANAGE_MARKS_API_PATHS.has(entry.path)
-    ).map((entry) => entry.action),
-    ...PAGE_ACTION_MAP.filter((entry) => entry.adminBaseline).map((entry) => entry.action),
     ...COMMON_NAVIGATION_PERMISSION_KEYS,
-    ...ADMIN_EXTRA_PERMISSION_KEYS,
-    ...INTERVIEW_WRITE_PERMISSION_KEYS,
+    ...ADMIN_SECTION_PERMISSION_KEYS,
+    ...ADMIN_DEVICE_SETTINGS_PERMISSION_KEYS,
+    ...REPORTS_PERMISSION_KEYS,
   ]);
 }
 
 export function getPlatoonCommanderDefaultPermissionKeys(): string[] {
   return uniqueSorted([
     ...AUTHENTICATED_DASHBOARD_PERMISSION_KEYS,
-    ...PLATOON_COMMANDER_DEFAULT_PERMISSION_KEYS,
     ...COMMON_NAVIGATION_PERMISSION_KEYS,
+    ...DOSSIER_PERMISSION_KEYS,
+    ...REPORTS_PERMISSION_KEYS,
     ...INTERVIEW_WRITE_PERMISSION_KEYS,
+  ]);
+}
+
+export function getOtherUserDefaultPermissionKeys(): string[] {
+  return uniqueSorted([
+    ...AUTHENTICATED_DASHBOARD_PERMISSION_KEYS,
+    ...COMMON_NAVIGATION_PERMISSION_KEYS,
+    ...REPORTS_PERMISSION_KEYS,
+    ...BULK_UPLOAD_PERMISSION_KEYS,
   ]);
 }
 
 export function getRbacDefaultProfiles(): RbacDefaultProfile[] {
   const adminDefaults = getAdminDefaultPermissionKeys();
   const platoonDefaults = getPlatoonCommanderDefaultPermissionKeys();
+  const otherUserDefaults = getOtherUserDefaultPermissionKeys();
   const allDefaults = getAllMappedActionKeys();
 
   return [
@@ -182,6 +262,13 @@ export function getRbacDefaultProfiles(): RbacDefaultProfile[] {
       roleKeys: ["platoon_commander_equivalent"],
       positionKeys: ["PLATOON_COMMANDER_EQUIVALENT"],
       permissionKeys: platoonDefaults,
+    },
+    {
+      key: "other_users",
+      label: "Other Users",
+      roleKeys: ["guest", "user"],
+      positionKeys: ["DEPUTY_COMMANDANT", "HOAT", "DEPUTY_SECRETARY", "CCO"],
+      permissionKeys: otherUserDefaults,
     },
   ];
 }

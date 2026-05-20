@@ -46,6 +46,22 @@ vi.mock("@/app/lib/module-access", () => {
       if (workflowModule === "PT_BULK") return Boolean(moduleAccess?.canAccessPtBulk);
       return false;
     }),
+    resolveSidebarSectionForDashboardPath: vi.fn((pathname: string) => {
+      if (pathname === "/dashboard") return "dashboard";
+      if (pathname.startsWith("/dashboard/help")) return "help";
+      if (pathname.startsWith("/dashboard/genmgmt")) return "admin";
+      if (pathname.startsWith("/dashboard/settings")) return "settings";
+      if (pathname.startsWith("/dashboard/reports")) return "reports";
+      if (
+        pathname.startsWith("/dashboard/bulk-upload") ||
+        pathname.startsWith("/dashboard/manage-marks") ||
+        pathname.startsWith("/dashboard/manage-pt-marks")
+      ) {
+        return "bulk_upload";
+      }
+      if (/^\/dashboard\/[^/]+\/milmgmt(?:\/|$)/.test(pathname)) return "dossier";
+      return null;
+    }),
   };
 });
 
@@ -123,11 +139,11 @@ describe("server page auth", () => {
       settings: {
         adminCanAccessDossier: false,
         adminCanAccessBulkUpload: false,
-        adminCanAccessReports: false,
+        adminCanAccessReports: true,
       },
       workflowAssignments: [],
       canAccessDossier: false,
-      canAccessReports: false,
+      canAccessReports: true,
       canAccessBulkUpload: false,
       canAccessAcademicsBulk: false,
       canAccessPtBulk: false,
@@ -137,7 +153,7 @@ describe("server page auth", () => {
         settings: true,
         dossier: false,
         bulk_upload: false,
-        reports: false,
+        reports: true,
         help: true,
       },
     });
@@ -168,9 +184,10 @@ describe("server page auth", () => {
     });
   });
 
-  it("redirects ADMIN away from a disabled reports page", async () => {
-    await expect(requireDashboardModuleAccess("REPORTS")).rejects.toThrow("REDIRECT:/dashboard");
-    expect(redirect).toHaveBeenCalledWith("/dashboard");
+  it("allows ADMIN onto reports by default", async () => {
+    const ctx = await requireDashboardModuleAccess("REPORTS");
+    expect(ctx.moduleAccess.canAccessReports).toBe(true);
+    expect(redirect).not.toHaveBeenCalledWith("/dashboard");
   });
 
   it("redirects dashboard access to setup while initial setup is incomplete", async () => {
@@ -339,7 +356,7 @@ describe("server page auth", () => {
     expect(ctx.moduleAccess.canAccessReports).toBe(true);
   });
 
-  it("allows dashboard pages by v2 page permissions even when module access is disabled", async () => {
+  it("allows dashboard pages under v2 when page permission and sidebar section both allow it", async () => {
     process.env.AUTHZ_V2_ENABLED = "true";
     process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "true";
     (headers as any).mockResolvedValueOnce({

@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/app/lib/http";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
 
-const { auditLogMock, selectMock, transactionMock } = vi.hoisted(() => ({
+const { auditLogMock, selectMock, insertMock, transactionMock } = vi.hoisted(() => ({
   auditLogMock: vi.fn(async () => undefined),
   selectMock: vi.fn(),
+  insertMock: vi.fn(),
   transactionMock: vi.fn(),
 }));
 
@@ -43,6 +44,7 @@ vi.mock("@/app/lib/admin-boundaries", () => ({
   assertCanManageAppointmentRecord: vi.fn(async () => undefined),
   assertCanManageUser: vi.fn(async () => undefined),
   assertCanTransferAppointmentRecord: vi.fn(async () => undefined),
+  isProtectedSystemPositionKeyValue: vi.fn(() => false),
 }));
 
 vi.mock("@/lib/platoon-commander-access", () => ({
@@ -58,8 +60,13 @@ vi.mock("@/lib/platoon-commander-access", () => ({
 vi.mock("@/app/db/client", () => ({
   db: {
     select: selectMock,
+    insert: insertMock,
     transaction: transactionMock,
   },
+}));
+
+vi.mock("@/app/db/queries/authz-permissions", () => ({
+  applyDefaultPermissionsToPosition: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/app/db/queries/appointment-transfer", () => ({
@@ -91,7 +98,10 @@ vi.mock("@/app/db/queries/appointment-transfer", () => ({
 
 import { requireAdmin, requireAuth } from "@/app/lib/authz";
 import { GET as getAppointmentsRoute } from "@/app/api/v1/admin/appointments/route";
-import { GET as getPositionsRoute } from "@/app/api/v1/admin/positions/route";
+import {
+  GET as getPositionsRoute,
+  POST as postPositionsRoute,
+} from "@/app/api/v1/admin/positions/route";
 import {
   PATCH as patchAppointmentRoute,
   DELETE as deleteAppointmentRoute,
@@ -104,6 +114,7 @@ import {
   assertCanTransferAppointmentRecord,
 } from "@/app/lib/admin-boundaries";
 import { transferAppointment } from "@/app/db/queries/appointment-transfer";
+import { applyDefaultPermissionsToPosition } from "@/app/db/queries/authz-permissions";
 
 const appointmentUuid = "11111111-1111-4111-8111-111111111111";
 const superAppointmentUuid = "22222222-2222-4222-8222-222222222222";
@@ -140,6 +151,14 @@ function buildSingleSelectResult(rows: any[]) {
       where: vi.fn(() => ({
         limit: vi.fn(async () => rows),
       })),
+    })),
+  };
+}
+
+function buildInsertReturningResult(rows: any[]) {
+  return {
+    values: vi.fn(() => ({
+      returning: vi.fn(async () => rows),
     })),
   };
 }
@@ -346,6 +365,51 @@ describe("admin appointments and positions access", () => {
 
     expect(res.status).toBe(200);
     expect(body.data[0].key).toBe("PL_CDR");
+  });
+
+  it("applies other-user default permissions when a custom position is created", async () => {
+    (requireAdmin as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      claims: { apt: { position: "ADMIN" } },
+    });
+
+    selectMock
+      .mockImplementationOnce(() => buildSingleSelectResult([]))
+      .mockImplementationOnce(() => buildSingleSelectResult([]));
+    insertMock.mockImplementationOnce(() =>
+      buildInsertReturningResult([
+        {
+          id: "position-1",
+          key: "TRAINING_OFFICER",
+          displayName: "Training Officer",
+          defaultScope: "GLOBAL",
+          singleton: true,
+          description: null,
+          createdAt: "2026-04-04T00:00:00.000Z",
+        },
+      ])
+    );
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: "/api/v1/admin/positions",
+      body: {
+        key: "TRAINING_OFFICER",
+        displayName: "Training Officer",
+        defaultScope: "GLOBAL",
+        singleton: true,
+      },
+    });
+    const res = await postPositionsRoute(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body.data.key).toBe("TRAINING_OFFICER");
+    expect(applyDefaultPermissionsToPosition).toHaveBeenCalledWith(
+      "position-1",
+      "TRAINING_OFFICER"
+    );
   });
 
   it("PATCH /api/v1/admin/appointments/[id] updates the appointment holder without mutating usernames", async () => {

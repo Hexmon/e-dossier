@@ -5,10 +5,15 @@ import { permissions, positionPermissions, rolePermissions, roles } from '../sch
 import { positions } from '../schema/auth/positions';
 import { authzPolicyState, permissionFieldRules } from '../schema/auth/rbac-extensions';
 import { clearEffectivePermissionsCache, effectivePermissionsCache } from '@/app/lib/acx/cache';
-import { hasPlatoonCommanderRole } from '@/lib/platoon-commander-access';
+import {
+  hasBroadPlatoonCommanderRole,
+  hasPlatoonCommanderRole,
+} from '@/lib/platoon-commander-access';
 import {
   AUTHENTICATED_DASHBOARD_PERMISSION_KEYS,
   getAllMappedActionKeys,
+  getOtherUserDefaultPermissionKeys,
+  getPlatoonCommanderDefaultPermissionKeys,
   getRbacDefaultProfiles,
   normalizeRbacKey,
   RBAC_WILDCARD_PERMISSION,
@@ -230,6 +235,8 @@ export async function ensureInterviewRbacDefaults(): Promise<void> {
 
 const RBAC_CODE_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v1';
 const RBAC_DASHBOARD_SESSION_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v2_dashboard_session';
+const RBAC_OTHER_USER_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v3_other_user_defaults';
+const RBAC_ROLE_GROUP_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v4_role_group_defaults';
 let ensureCodeRbacDefaultsPromise: Promise<void> | null = null;
 
 async function upsertPermissionKeys(permissionKeys: string[]): Promise<Map<string, string>> {
@@ -416,6 +423,109 @@ async function applyDashboardSessionDefaults(permissionIdByKey: Map<string, stri
   }
 }
 
+function isProtectedDefaultSubjectKey(key: string | null | undefined): boolean {
+  const normalizedKey = normalizeRbacKey(key);
+  if (!normalizedKey) return false;
+  return normalizedKey === 'SUPER_ADMIN' || normalizedKey === 'ADMIN' || normalizedKey === 'COMMANDANT';
+}
+
+function isOtherUserDefaultKey(key: string | null | undefined, kind: 'role' | 'position'): boolean {
+  const normalizedKey = normalizeRbacKey(key);
+  if (!normalizedKey || isProtectedDefaultSubjectKey(normalizedKey)) return false;
+  return !hasBroadPlatoonCommanderRole({
+    roles: kind === 'role' ? [normalizedKey] : [],
+    position: kind === 'position' ? normalizedKey : null,
+  });
+}
+
+function resolveDefaultPermissionKeysForSubject(
+  key: string | null | undefined,
+  kind: 'role' | 'position'
+): string[] {
+  const normalizedKey = normalizeRbacKey(key);
+  if (!normalizedKey || isProtectedDefaultSubjectKey(normalizedKey)) return [];
+
+  if (
+    hasBroadPlatoonCommanderRole({
+      roles: kind === 'role' ? [normalizedKey] : [],
+      position: kind === 'position' ? normalizedKey : null,
+    })
+  ) {
+    return getPlatoonCommanderDefaultPermissionKeys();
+  }
+
+  return getOtherUserDefaultPermissionKeys();
+}
+
+export function resolveDefaultPermissionKeysForPosition(positionKey: string | null | undefined): string[] {
+  return resolveDefaultPermissionKeysForSubject(positionKey, 'position');
+}
+
+async function applyOtherUserDefaultsToExistingSubjects(
+  permissionIdByKey: Map<string, string>
+): Promise<void> {
+  const permissionIds = getPermissionIds(
+    permissionIdByKey,
+    getOtherUserDefaultPermissionKeys()
+  );
+  if (permissionIds.length === 0) return;
+
+  const [roleRows, positionRows] = await Promise.all([
+    db.select({ id: roles.id, key: roles.key }).from(roles),
+    db.select({ id: positions.id, key: positions.key }).from(positions),
+  ]);
+
+  for (const role of roleRows) {
+    if (isOtherUserDefaultKey(role.key, 'role')) {
+      await addRolePermissions(role.id, permissionIds);
+    }
+  }
+
+  for (const position of positionRows) {
+    if (isOtherUserDefaultKey(position.key, 'position')) {
+      await addPositionPermissions(position.id, permissionIds);
+    }
+  }
+}
+
+async function applyRoleGroupDefaultsToExistingSubjects(
+  permissionIdByKey: Map<string, string>
+): Promise<void> {
+  const [roleRows, positionRows] = await Promise.all([
+    db.select({ id: roles.id, key: roles.key }).from(roles),
+    db.select({ id: positions.id, key: positions.key }).from(positions),
+  ]);
+
+  for (const role of roleRows) {
+    const permissionIds = getPermissionIds(
+      permissionIdByKey,
+      resolveDefaultPermissionKeysForSubject(role.key, 'role')
+    );
+    await addRolePermissions(role.id, permissionIds);
+  }
+
+  for (const position of positionRows) {
+    const permissionIds = getPermissionIds(
+      permissionIdByKey,
+      resolveDefaultPermissionKeysForSubject(position.key, 'position')
+    );
+    await addPositionPermissions(position.id, permissionIds);
+  }
+}
+
+export async function applyDefaultPermissionsToPosition(
+  positionId: string,
+  positionKey: string
+): Promise<void> {
+  const permissionKeys = resolveDefaultPermissionKeysForPosition(positionKey);
+  if (permissionKeys.length === 0) return;
+
+  const permissionIdByKey = await upsertPermissionKeys(getAllMappedActionKeys());
+  const permissionIds = getPermissionIds(permissionIdByKey, permissionKeys);
+  await addPositionPermissions(positionId, permissionIds);
+  await bumpPolicyVersionAndInvalidate();
+}
+
 async function ensureCodeRbacDefaultsInner(): Promise<void> {
   const permissionIdByKey = await upsertPermissionKeys(getAllMappedActionKeys());
   let changed = false;
@@ -429,6 +539,18 @@ async function ensureCodeRbacDefaultsInner(): Promise<void> {
   if (!(await hasRbacDefaultsState(RBAC_DASHBOARD_SESSION_DEFAULTS_STATE_KEY))) {
     await applyDashboardSessionDefaults(permissionIdByKey);
     await markRbacDefaultsState(RBAC_DASHBOARD_SESSION_DEFAULTS_STATE_KEY);
+    changed = true;
+  }
+
+  if (!(await hasRbacDefaultsState(RBAC_OTHER_USER_DEFAULTS_STATE_KEY))) {
+    await applyOtherUserDefaultsToExistingSubjects(permissionIdByKey);
+    await markRbacDefaultsState(RBAC_OTHER_USER_DEFAULTS_STATE_KEY);
+    changed = true;
+  }
+
+  if (!(await hasRbacDefaultsState(RBAC_ROLE_GROUP_DEFAULTS_STATE_KEY))) {
+    await applyRoleGroupDefaultsToExistingSubjects(permissionIdByKey);
+    await markRbacDefaultsState(RBAC_ROLE_GROUP_DEFAULTS_STATE_KEY);
     changed = true;
   }
 

@@ -34,11 +34,17 @@ async function GETHandler(req: NextRequest) {
         })
       : null;
     const visibleSections = isAuthzV2Enabled()
-      ? filterNavigationByPermissions(NAVIGATION_TREE as readonly NavSectionConfig[], {
-          roleIsSuperAdmin: authzBundle?.isSuperAdmin ?? false,
-          permissions: authzBundle?.permissions ?? [],
-          deniedPermissions: authzBundle?.deniedPermissions ?? [],
-        })
+      ? filterNavigationSectionsForResolvedAccess(
+          filterNavigationByPermissions(NAVIGATION_TREE as readonly NavSectionConfig[], {
+            roleIsSuperAdmin: authzBundle?.isSuperAdmin ?? false,
+            permissions: authzBundle?.permissions ?? [],
+            deniedPermissions: authzBundle?.deniedPermissions ?? [],
+          }),
+          moduleAccess
+        ).map((section) => ({
+          ...section,
+          items: [...section.items],
+        }))
       : filterNavigationSectionsForResolvedAccess(
           NAVIGATION_TREE as readonly NavSectionConfig[],
           moduleAccess
